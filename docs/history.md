@@ -1,5 +1,9 @@
 # History
 
+## 2026-08-22 — TestFlight on every app push
+
+Any app push (PR branch or `main`) uploads to TestFlight. Marc tests with TestFlight → Update. No GitHub tap. Daily 18:00 UTC stays as a safety net.
+
 ## 2026-08-22 — TestFlight on merge
 
 App pushes to `main` upload to TestFlight without a second “Run workflow” tap. Daily 18:00 UTC and manual branch runs stay. Marc tests by opening TestFlight → Update.

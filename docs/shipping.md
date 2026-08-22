@@ -1,10 +1,10 @@
 # Shipping
 
 ```
-Marc (phone) → cloud Cursor agent → git
+Marc (phone) → cloud Cursor agent → git push (PR or main)
   → GitHub Actions (hosted macos-26 + Xcode 26)
   → Fastlane `beta` → TestFlight
-  → Marc + friends
+  → Marc taps Update
 ```
 
 Not: agent on Marc’s laptop or home Mac → local Xcode.
@@ -14,7 +14,7 @@ Not: agent on Marc’s laptop or home Mac → local Xcode.
 | Workflow | File | When | Runner |
 | --- | --- | --- | --- |
 | Simulator | `.github/workflows/ios-build.yml` | PR + push to `main` | `macos-26` |
-| TestFlight | `.github/workflows/ios-testflight.yml` | push to `main` (app files), cron `0 18 * * *` UTC, **Run workflow** for a PR branch | `macos-26` |
+| TestFlight | `.github/workflows/ios-testflight.yml` | any app `push` (PR or `main`), cron `0 18 * * *` UTC | `macos-26` |
 
 Both **must** stay GitHub-hosted. Never `self-hosted`. Apple requires **Xcode 26 / iOS 26 SDK** to upload (Xcode 16.4 / iOS 18.5 is rejected).
 
@@ -37,9 +37,8 @@ There is a separate Expo EAS key in App Store Connect. Do not reuse it.
 
 ## What Marc still does
 
-- TestFlight install / Update (~30 min/day).
+- TestFlight install / Update when a build is ready (~10–20 min after a push).
 - Internal testers (himself) vs external friends (first external build waits on Apple beta review ~1–2 days once).
-- Same-day extra build of a **PR branch** (not yet on `main`): **Actions → TestFlight → Run workflow**, pick that branch. This agent **cannot** dispatch workflows (GitHub 403).
 - Apple account / legal / new secrets if they rotate.
 
 He should **not** operate certificates day to day, open Xcode, or use a Mac for builds.
@@ -50,6 +49,6 @@ He should **not** operate certificates day to day, open Xcode, or use a Mac for 
 - Opening/updating PRs: use the PR tool, not `gh pr create`.
 - Don’t merge unless Marc asks. He said docs go through a PR onto `main`.
 
-## After you land app changes on `main`
+## After you push app changes
 
-Push to `main` starts TestFlight by itself. Tell Marc: wait for the TestFlight notification, then **Update**. First processing of a new build is ~10–20 minutes. Do not also ask him to Run workflow for `main`.
+The push starts TestFlight. Tell Marc: wait for the TestFlight notification, then **Update**. First processing of a new build is ~10–20 minutes. That is Apple, not GitHub. Do not ask him to merge first or Run workflow.

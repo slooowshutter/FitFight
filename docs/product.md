@@ -15,6 +15,14 @@ One line: challenge your friends, winner takes the glory.
 
 Do not rename the bundle ID without Apple + CI updates.
 
+## v0.2 (design system)
+
+Four switchable themes, shared tokens, and a **Design** catalog in the app. Review looks on GitHub first (`docs/design/`), then one TestFlight to feel it.
+
+- Tokens: `FitFight/DesignSystem/themes.json`
+- Components: `FFButton`, `FFCard`, `FFChip`, `FFStat`, `FFRow`, `FFField`
+- Home uses the selected theme (persisted). Version banner stays at the top.
+
 ## v0 (now on TestFlight)
 
 One screen whose job was to prove the loop:
@@ -23,7 +31,7 @@ One screen whose job was to prove the loop:
 - Version at the **top of the screen** via `VersionBanner` / `AppVersion.label` → `MARKETING_VERSION (CFBundleVersion)`
 - **Versions** button → sheet listing `Changelog.releases` (version, date, notes). Stays in every future build.
 
-Marketing version: `0.1.0`. CI bumps **build number** from TestFlight (`latest + 1`). Don’t bump marketing version for a daily CI-only ship.
+Marketing version: `0.2.0`. CI bumps **build number** from TestFlight (`latest + 1`). Don’t bump marketing version for a daily CI-only ship.
 
 ## Not this project
 
@@ -32,4 +40,4 @@ Marketing version: `0.1.0`. CI bumps **build number** from TestFlight (`latest +
 
 ## Next product work
 
-Real challenges / friends / scoring — not started. Keep the version chrome and Versions list when you add that.
+Real challenges / friends / scoring — not started. Keep the version chrome, Versions list, and design tokens when you add that. Pick a theme before building those screens.

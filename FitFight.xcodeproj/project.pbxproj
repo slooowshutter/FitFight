@@ -13,6 +13,10 @@
 		A10000000000000000000004 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000014 /* Assets.xcassets */; };
 		A10000000000000000000005 /* Changelog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000015 /* Changelog.swift */; };
 		A10000000000000000000006 /* VersionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000016 /* VersionsView.swift */; };
+		A10000000000000000000007 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000017 /* Theme.swift */; };
+		A10000000000000000000008 /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000018 /* Components.swift */; };
+		A10000000000000000000009 /* DesignCatalogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000019 /* DesignCatalogView.swift */; };
+		A1000000000000000000000A /* themes.json in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001A /* themes.json */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -23,6 +27,10 @@
 		A10000000000000000000014 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A10000000000000000000015 /* Changelog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Changelog.swift; sourceTree = "<group>"; };
 		A10000000000000000000016 /* VersionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VersionsView.swift; sourceTree = "<group>"; };
+		A10000000000000000000017 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		A10000000000000000000018 /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
+		A10000000000000000000019 /* DesignCatalogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignCatalogView.swift; sourceTree = "<group>"; };
+		A1000000000000000000001A /* themes.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = themes.json; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -44,9 +52,21 @@
 				A10000000000000000000013 /* AppVersion.swift */,
 				A10000000000000000000015 /* Changelog.swift */,
 				A10000000000000000000016 /* VersionsView.swift */,
+				A10000000000000000000033 /* DesignSystem */,
 				A10000000000000000000014 /* Assets.xcassets */,
 			);
 			path = FitFight;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000033 /* DesignSystem */ = {
+			isa = PBXGroup;
+			children = (
+				A1000000000000000000001A /* themes.json */,
+				A10000000000000000000017 /* Theme.swift */,
+				A10000000000000000000018 /* Components.swift */,
+				A10000000000000000000019 /* DesignCatalogView.swift */,
+			);
+			path = DesignSystem;
 			sourceTree = "<group>";
 		};
 		A10000000000000000000031 /* Products */ = {
@@ -124,6 +144,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000004 /* Assets.xcassets in Resources */,
+				A1000000000000000000000A /* themes.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -139,6 +160,9 @@
 				A10000000000000000000003 /* AppVersion.swift in Sources */,
 				A10000000000000000000005 /* Changelog.swift in Sources */,
 				A10000000000000000000006 /* VersionsView.swift in Sources */,
+				A10000000000000000000007 /* Theme.swift in Sources */,
+				A10000000000000000000008 /* Components.swift in Sources */,
+				A10000000000000000000009 /* DesignCatalogView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -286,7 +310,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.fitfight.mvp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -318,7 +342,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.fitfight.mvp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";

@@ -1,5 +1,9 @@
 # History
 
+## 2026-08-22 — design system
+
+Tokens in `FitFight/DesignSystem/themes.json`. Four themes (Arena, Pulse, Locker, Rogue), in-app Design catalog, GitHub SVG previews in `docs/design/`. Marketing version `0.2.0`.
+
 ## 2026-08-22 — loop proven
 
 Cloud agent (not Marc’s Mac) created the SwiftUI app, Fastlane, and GitHub Actions in https://github.com/marclelamy/FitFight.

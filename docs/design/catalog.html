@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FitFight design catalog</title>
+  <style>
+    :root { --bg:#0b0b0b; --text:#f4f1ea; --muted:#9a9588; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    header {
+      position: sticky; top: 0; z-index: 4;
+      padding: 14px 16px 12px;
+      background: color-mix(in srgb, var(--bg) 88%, black);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
+    }
+    h1 { margin: 0; font-size: 20px; }
+    .blurb { margin: 6px 0 12px; color: var(--muted); font-size: 14px; }
+    .pills { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+    .pills button {
+      border: 0; border-radius: 999px; padding: 8px 14px;
+      font: 600 14px/1 inherit; white-space: nowrap; cursor: pointer;
+      background: color-mix(in srgb, var(--text) 10%, transparent);
+      color: var(--text);
+    }
+    .pills button[aria-selected="true"] { background: var(--accent, #e8c547); color: var(--accentText, #111); }
+    main { padding: 16px; max-width: 720px; margin: 0 auto; }
+    .phone {
+      width: min(100%, 390px);
+      margin: 0 auto 24px;
+      border-radius: 40px;
+      overflow: hidden;
+      box-shadow: 0 24px 80px rgba(0,0,0,.45);
+    }
+    .phone img { display: block; width: 100%; height: auto; }
+    .swatches { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 24px; }
+    .swatch { border-radius: 10px; min-height: 52px; border: 1px solid rgb(255 255 255 / .08); }
+    .swatch span { display:block; font-size: 11px; padding: 6px; color: var(--muted); }
+    .thumbs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .thumb { color: inherit; text-decoration: none; }
+    .thumb img { width: 100%; border-radius: 24px; }
+    .thumb span { display:block; text-align:center; margin-top: 8px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>FitFight design</h1>
+    <p class="blurb" id="blurb">Tap a theme. Same tokens as the iOS app.</p>
+    <div class="pills" id="pills"></div>
+  </header>
+  <main>
+    <div class="phone"><img id="hero" alt="Theme preview"></div>
+    <div class="swatches" id="swatches"></div>
+    <div class="thumbs">
+      <a class="thumb" href="#arena"><img src="arena.svg" alt="Arena"><span>Arena</span></a>
+<a class="thumb" href="#pulse"><img src="pulse.svg" alt="Pulse"><span>Pulse</span></a>
+<a class="thumb" href="#locker"><img src="locker.svg" alt="Locker"><span>Locker</span></a>
+<a class="thumb" href="#rogue"><img src="rogue.svg" alt="Rogue"><span>Rogue</span></a>
+    </div>
+  </main>
+  <script>
+    const themes = [{"id": "arena", "name": "Arena", "blurb": "Fight-poster dark. Gold strike, heavy rounded type.", "dark": true, "continuousCorners": true, "colors": {"bg": "#070707", "surface": "#161616", "raised": "#202020", "text": "#F4F1EA", "muted": "#9A9588", "accent": "#E8C547", "accentText": "#1A1500", "danger": "#FF4B4B", "dangerText": "#FFFFFF", "success": "#5FE0A5", "border": "#2C2C28"}, "radius": {"sm": 10, "md": 16, "lg": 24}, "space": {"xs": 4, "sm": 8, "md": 16, "lg": 24, "xl": 40}, "type": {"display": "rounded", "body": "rounded", "mono": "mono", "displaySize": 44, "displayWeight": "heavy"}}, {"id": "pulse", "name": "Pulse", "blurb": "Fitness-ring energy. Navy, mint, live stats.", "dark": true, "continuousCorners": true, "colors": {"bg": "#061018", "surface": "#0C1C28", "raised": "#122433", "text": "#E7F6FF", "muted": "#7FA3B8", "accent": "#00E5A8", "accentText": "#003328", "danger": "#FF5D73", "dangerText": "#FFFFFF", "success": "#00E5A8", "border": "#1A3548"}, "radius": {"sm": 8, "md": 14, "lg": 20}, "space": {"xs": 4, "sm": 8, "md": 16, "lg": 24, "xl": 40}, "type": {"display": "rounded", "body": "rounded", "mono": "mono", "displaySize": 40, "displayWeight": "bold"}}, {"id": "locker", "name": "Locker", "blurb": "Paper, tape, locker-room light. Square corners, black ink.", "dark": false, "continuousCorners": false, "colors": {"bg": "#F1EBE0", "surface": "#FFFCF6", "raised": "#FFFFFF", "text": "#1A1A18", "muted": "#6B675C", "accent": "#1A1A18", "accentText": "#F1EBE0", "danger": "#C1121F", "dangerText": "#FFFCF6", "success": "#2D6A4F", "border": "#D6CFC0"}, "radius": {"sm": 4, "md": 8, "lg": 12}, "space": {"xs": 4, "sm": 8, "md": 16, "lg": 24, "xl": 40}, "type": {"display": "default", "body": "default", "mono": "mono", "displaySize": 42, "displayWeight": "black"}}, {"id": "rogue", "name": "Rogue", "blurb": "Street-fight poster. Tight type, red slash, almost no radius.", "dark": true, "continuousCorners": false, "colors": {"bg": "#0B0B0B", "surface": "#141414", "raised": "#1C1C1C", "text": "#F7F7F7", "muted": "#8A8A8A", "accent": "#FF2A2A", "accentText": "#FFFFFF", "danger": "#FF2A2A", "dangerText": "#FFFFFF", "success": "#C8FF00", "border": "#2A2A2A"}, "radius": {"sm": 2, "md": 4, "lg": 6}, "space": {"xs": 4, "sm": 8, "md": 16, "lg": 24, "xl": 40}, "type": {"display": "condensed", "body": "condensed", "mono": "mono", "displaySize": 48, "displayWeight": "black"}}];
+    const pills = document.getElementById("pills");
+    const hero = document.getElementById("hero");
+    const blurb = document.getElementById("blurb");
+    const swatches = document.getElementById("swatches");
+
+    function apply(id) {
+      const theme = themes.find(t => t.id === id) || themes[0];
+      document.documentElement.style.setProperty("--bg", theme.colors.bg);
+      document.documentElement.style.setProperty("--text", theme.colors.text);
+      document.documentElement.style.setProperty("--muted", theme.colors.muted);
+      document.documentElement.style.setProperty("--accent", theme.colors.accent);
+      document.documentElement.style.setProperty("--accentText", theme.colors.accentText);
+      blurb.textContent = theme.blurb;
+      hero.src = theme.id + ".svg";
+      hero.alt = theme.name + " preview";
+      for (const button of pills.querySelectorAll("button")) {
+        button.setAttribute("aria-selected", button.dataset.id === theme.id ? "true" : "false");
+      }
+      const keys = ["bg","surface","raised","text","muted","accent","accentText","danger","dangerText","success","border"];
+      swatches.innerHTML = keys.map(k =>
+        `<div class="swatch" style="background:${theme.colors[k]}"><span>${k}</span></div>`
+      ).join("");
+      history.replaceState(null, "", "#" + theme.id);
+    }
+
+    for (const theme of themes) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.id = theme.id;
+      button.textContent = theme.name;
+      button.addEventListener("click", () => apply(theme.id));
+      pills.appendChild(button);
+    }
+
+    const initial = location.hash.replace("#", "") || themes[0].id;
+    apply(initial);
+  </script>
+</body>
+</html>

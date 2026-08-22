@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" width="390" height="844">
+  <rect width="390" height="844" rx="40" fill="#F1EBE0"/>
+  <text x="195" y="42" text-anchor="middle" font-family="ui-monospace, &quot;SF Mono&quot;, Menlo, monospace" font-size="12" font-weight="600" fill="#6B675C">0.2.0</text>
+  <text x="195" y="130" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, &quot;SF Pro Text&quot;, system-ui, sans-serif" font-size="42" font-weight="900" fill="#1A1A18">FitFight</text>
+  <text x="195" y="168" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, &quot;SF Pro Text&quot;, system-ui, sans-serif" font-size="16" fill="#6B675C">Challenge your friends.</text>
+  <text x="195" y="190" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, &quot;SF Pro Text&quot;, system-ui, sans-serif" font-size="16" fill="#6B675C">Winner takes the glory.</text>
+  <rect x="28" y="220" width="334" height="52" rx="8" fill="#1A1A18"/>
+  <text x="195" y="252" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, &quot;SF Pro Text&quot;, system-ui, sans-serif" font-size="17" font-weight="600" fill="#F1EBE0">Design</text>
+  <rect x="28" y="284" width="334" height="52" rx="8" fill="#FFFCF6" stroke="#D6CFC0"/>
+  <text x="195" y="316" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, &quot;SF Pro Text&quot;, system-ui, sans-serif" font-size="17" font-weight="600" fill="#1A1A18">Versions</text>
+  <rect x="28" y="360" width="334" height="148" rx="12" fill="#FFFCF6" stroke="#D6CFC0"/>
+  <rect x="44" y="380" width="72" height="24" rx="4" fill="#1A1A18"/>
+  <text x="80" y="397" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, &quot;SF Pro Text&quot;, system-ui, sans-serif" font-size="12" font-weight="600" fill="#F1EBE0">Locker</text>
+  <rect x="124" y="380" width="70" height="24" rx="4" fill="#FFFFFF"/>
+  <text x="159" y="397" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, &quot;SF Pro Text&quot;, system-ui, sans-serif" font-size="12" font-weight="600" fill="#1A1A18">sample</text>
+  <text x="44" y="436" font-family="-apple-system, BlinkMacSystemFont, &quot;SF Pro Text&quot;, system-ui, sans-serif" font-size="20" font-weight="700" fill="#1A1A18">5K before Sunday</text>
+  <text x="44" y="464" font-family="-apple-system, BlinkMacSystemFont, &quot;SF Pro Text&quot;, system-ui, sans-serif" font-size="14" fill="#6B675C">Placeholder card. Real fights come later.</text>
+  <rect x="28" y="528" width="106" height="78" rx="8" fill="#FFFCF6" stroke="#D6CFC0"/>
+  <text x="44" y="562" font-family="-apple-system, BlinkMacSystemFont, &quot;SF Pro Text&quot;, system-ui, sans-serif" font-size="22" font-weight="700" fill="#1A1A18">12</text>
+  <text x="44" y="584" font-family="-apple-system, BlinkMacSystemFont, &quot;SF Pro Text&quot;, system-ui, sans-serif" font-size="12" fill="#6B675C">Wins</text>
+  <rect x="142" y="528" width="106" height="78" rx="8" fill="#FFFCF6" stroke="#D6CFC0"/>
+  <text x="158" y="562" font-family="-apple-system, BlinkMacSystemFont, &quot;SF Pro Text&quot;, system-ui, sans-serif" font-size="22" font-weight="700" fill="#1A1A18">4</text>
+  <text x="158" y="584" font-family="-apple-system, BlinkMacSystemFont, &quot;SF Pro Text&quot;, system-ui, sans-serif" font-size="12" fill="#6B675C">Streak</text>
+  <rect x="256" y="528" width="106" height="78" rx="8" fill="#FFFCF6" stroke="#D6CFC0"/>
+  <text x="272" y="562" font-family="-apple-system, BlinkMacSystemFont, &quot;SF Pro Text&quot;, system-ui, sans-serif" font-size="22" font-weight="700" fill="#1A1A18">2</text>
+  <text x="272" y="584" font-family="-apple-system, BlinkMacSystemFont, &quot;SF Pro Text&quot;, system-ui, sans-serif" font-size="12" fill="#6B675C">Open</text>
+  <text x="195" y="800" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, &quot;SF Pro Text&quot;, system-ui, sans-serif" font-size="14" fill="#6B675C">Paper, tape, locker-room light. Square corners, black ink.</text>
+</svg>

@@ -11,6 +11,19 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  design-previews:
+    name: Design catalog
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Re-render previews from tokens
+        run: python3 scripts/render_design_catalog.py
+      - name: Previews must match themes.json
+        run: git diff --exit-code -- docs/design
+
   build:
     name: Simulator
     runs-on: macos-26

@@ -2,10 +2,6 @@
 # Never use self-hosted runners or a home Mac.
 name: TestFlight
 
-# Archive + upload to TestFlight on GitHub-hosted macOS.
-# Never use self-hosted runners or a home Mac.
-name: TestFlight
-
 on:
   # Any app push — PR branch or main — so Marc can Update without tapping Actions.
   # `push` (not pull_request) so this works before the workflow exists on main.

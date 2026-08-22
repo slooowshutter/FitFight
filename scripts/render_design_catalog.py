@@ -187,7 +187,13 @@ def html_catalog(themes: list[dict]) -> str:
       swatches.innerHTML = keys.map(k =>
         `<div class="swatch" style="background:${{theme.colors[k]}}"><span>${{k}}</span></div>`
       ).join("");
-      history.replaceState(null, "", "#" + theme.id);
+      if (location.hash.replace("#", "") !== theme.id) {{
+        history.replaceState(null, "", "#" + theme.id);
+      }}
+    }}
+
+    function idFromHash() {{
+      return location.hash.replace("#", "") || themes[0].id;
     }}
 
     for (const theme of themes) {{
@@ -199,8 +205,15 @@ def html_catalog(themes: list[dict]) -> str:
       pills.appendChild(button);
     }}
 
-    const initial = location.hash.replace("#", "") || themes[0].id;
-    apply(initial);
+    for (const thumb of document.querySelectorAll(".thumb")) {{
+      thumb.addEventListener("click", (event) => {{
+        event.preventDefault();
+        apply(thumb.hash.replace("#", ""));
+      }});
+    }}
+
+    window.addEventListener("hashchange", () => apply(idFromHash()));
+    apply(idFromHash());
   </script>
 </body>
 </html>

@@ -92,7 +92,7 @@ platform :ios do
         teamID: team_id
       },
       xcargs: "#{signing_flags} CURRENT_PROJECT_VERSION=#{build_number}",
-      export_xcargs: signing_flags
+      skip_profile_detection: true
     )
 
     upload_to_testflight(

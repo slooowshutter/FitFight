@@ -1,0 +1,32 @@
+# Xcode
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xccheckout
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+*.app
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+fastlane/README.md
+
+# Signing material — never commit
+*.p8
+*.p12
+*.mobileprovision
+AuthKey*.p8
+private_keys/
+
+# Bundler
+.bundle/
+vendor/bundle/
+
+# OS
+.DS_Store

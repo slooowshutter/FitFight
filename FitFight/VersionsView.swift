@@ -1,20 +1,5 @@
 import SwiftUI
 
-struct VersionBanner: View {
-    @Environment(\.ffTheme) private var theme
-
-    var body: some View {
-        Text(AppVersion.label)
-            .font(theme.monoFont(12, weight: .semibold))
-            .foregroundStyle(theme.colors.muted)
-            .frame(maxWidth: .infinity)
-            .padding(.top, 6)
-            .padding(.bottom, 10)
-            .background(theme.colors.bg)
-            .accessibilityIdentifier("app-version")
-    }
-}
-
 struct VersionsView: View {
     @Environment(\.ffTheme) private var theme
     @Environment(\.dismiss) private var dismiss
@@ -22,24 +7,17 @@ struct VersionsView: View {
     var body: some View {
         VStack(spacing: 0) {
             VersionBanner()
-
             HStack {
-                Text("Versions")
-                    .font(theme.bodyFont(22, weight: .bold))
-                    .foregroundStyle(theme.colors.text)
+                FFLabel(text: "Versions", role: .title)
                 Spacer()
-                Button("Close") {
-                    dismiss()
-                }
-                .font(theme.bodyFont(17, weight: .semibold))
-                .foregroundStyle(theme.colors.accent)
+                Button("Close") { dismiss() }
+                    .font(theme.font(.bodyStrong))
+                    .foregroundStyle(theme.accent)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
 
-            Text("You're on \(AppVersion.label)")
-                .font(theme.monoFont(13, weight: .semibold))
-                .foregroundStyle(theme.colors.muted)
+            FFLabel(text: "You're on \(AppVersion.label)", role: .caption, color: theme.muted)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 20)
                 .padding(.bottom, 8)
@@ -54,7 +32,7 @@ struct VersionsView: View {
                 .padding(.bottom, 24)
             }
         }
-        .background(theme.colors.bg.ignoresSafeArea())
+        .background(theme.bg.ignoresSafeArea())
     }
 }
 
@@ -69,41 +47,24 @@ private struct ReleaseNoteRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
-                Text(release.version)
-                    .font(theme.monoFont(16, weight: .semibold))
-                    .foregroundStyle(isCurrent ? theme.colors.accent : theme.colors.text)
+                FFLabel(text: release.version, role: .headline, color: isCurrent ? theme.accent : theme.text)
                 if isCurrent {
-                    Text("this build")
-                        .font(theme.bodyFont(12, weight: .semibold))
-                        .foregroundStyle(theme.colors.accent)
+                    FFLabel(text: "this build", role: .caption, color: theme.accent)
                 }
                 Spacer()
                 Text(release.date, format: .dateTime.month(.abbreviated).day().year())
-                    .font(theme.bodyFont(15, weight: .regular))
-                    .foregroundStyle(theme.colors.muted)
+                    .font(theme.font(.caption))
+                    .foregroundStyle(theme.muted)
             }
-
-            Text(release.notes)
-                .font(theme.bodyFont(17, weight: .regular))
-                .foregroundStyle(theme.colors.text.opacity(0.9))
-                .fixedSize(horizontal: false, vertical: true)
+            FFLabel(text: release.notes, role: .body, color: theme.muted)
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            theme.colors.surface,
-            in: RoundedRectangle(cornerRadius: theme.metrics.radiusLg, style: theme.metrics.cornerStyle)
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: theme.metrics.radiusLg, style: theme.metrics.cornerStyle)
-                .strokeBorder(theme.colors.border, lineWidth: 1)
-        }
+        .background(theme.surface, in: RoundedRectangle(cornerRadius: theme.radius.xl, style: .continuous))
     }
 }
 
 #Preview {
-    let store = ThemeStore(preview: .arena)
-    return VersionsView()
-        .environmentObject(store)
-        .fitFightTheme(store.current)
+    VersionsView()
+        .fitFightTheme(ThemeCatalog.theme(base: .dark, accent: .blue))
 }

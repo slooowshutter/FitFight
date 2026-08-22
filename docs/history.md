@@ -1,8 +1,12 @@
 # History
 
+## 2026-08-22 — approved design ported
+
+`docs/design/source/` dump from fitfight-v2. SwiftUI now has four tabs matching that kit. Arena/Pulse/Locker/Rogue retired. Marketing version `0.3.0`.
+
 ## 2026-08-22 — design system
 
-Tokens in `FitFight/DesignSystem/themes.json`. Four themes (Arena, Pulse, Locker, Rogue), in-app Design catalog, GitHub SVG previews in `docs/design/`. Marketing version `0.2.0`.
+Tokens in `FitFight/DesignSystem/themes.json` (later replaced). Four placeholder themes (Arena, Pulse, Locker, Rogue). Marketing version `0.2.0`.
 
 ## 2026-08-22 — loop proven
 

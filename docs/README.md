@@ -5,7 +5,7 @@ For Cursor cloud agents and anyone picking up this repo cold.
 | File | What’s in it |
 | --- | --- |
 | [product.md](product.md) | What FitFight is, names, current UI |
-| [design/](design/README.md) | Theme previews (SVG) and how to change tokens |
+| [design/](design/README.md) | Where the look lives (`source/` is the approved kit) |
 | [shipping.md](shipping.md) | CI, secrets **names**, how a build reaches TestFlight |
 | [history.md](history.md) | What already shipped and the traps we hit |
 

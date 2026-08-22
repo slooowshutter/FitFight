@@ -1,189 +1,179 @@
 import SwiftUI
 
-enum ThemeID: String, Codable, CaseIterable, Identifiable {
-    case arena
-    case pulse
-    case locker
-    case rogue
+enum BaseID: String, CaseIterable, Identifiable {
+    case dark
+    case light
+
+    var id: String { rawValue }
+
+    var colorScheme: ColorScheme {
+        switch self {
+        case .dark: return .dark
+        case .light: return .light
+        }
+    }
+}
+
+enum AccentID: String, CaseIterable, Identifiable {
+    case red
+    case orange
+    case yellow
+    case green
+    case teal
+    case blue
+    case indigo
+    case purple
+    case pink
+    case graphite
 
     var id: String { rawValue }
 }
 
-enum FontRole: String, Codable {
-    case rounded
-    case `default`
-    case condensed
-    case serif
-    case mono
+enum TypeRole: String {
+    case heroNumber
+    case display
+    case title
+    case headline
+    case rank
+    case bodyStrong
+    case body
+    case label
+    case caption
+    case micro
+    case eyebrow
+    case tiny
 }
 
-enum FontWeightName: String, Codable {
-    case regular
-    case medium
-    case semibold
-    case bold
-    case heavy
-    case black
-}
+struct Theme {
+    var baseID: BaseID
+    var accentID: AccentID
 
-struct ThemeColors {
     var bg: Color
     var surface: Color
-    var raised: Color
+    var surface2: Color
+    var line: Color
+    var hair: Color
     var text: Color
     var muted: Color
+    var faint: Color
+    var chip: Color
+    var track: Color
+    var scrim: Color
+
     var accent: Color
-    var accentText: Color
-    var danger: Color
-    var dangerText: Color
-    var success: Color
-    var border: Color
+    var accentDim: Color
+    var ink: Color
+    var onPhoto: Color
+
+    var green: Color
+    var blue: Color
+    var amber: Color
+    var red: Color
+
+    var type: TypeTokens
+    var space: SpaceTokens
+    var radius: RadiusTokens
+
+    var colorScheme: ColorScheme { baseID.colorScheme }
+
+    func font(_ role: TypeRole) -> Font {
+        let spec = type.spec(role)
+        return .system(size: spec.size, weight: spec.weight, design: .default)
+    }
+
+    func tracking(_ role: TypeRole) -> CGFloat {
+        let spec = type.spec(role)
+        return spec.size * spec.letterSpacing
+    }
+
+    func selectedRow() -> Color { accent.opacity(0.07) }
+    func selectedOption() -> Color { accent.opacity(0.08) }
+    func badgeFill() -> Color { accent.opacity(0.12) }
+    func focusRing() -> Color { accent.opacity(0.20) }
 }
 
-struct ThemeMetrics {
-    var radiusSm: CGFloat
-    var radiusMd: CGFloat
-    var radiusLg: CGFloat
-    var spaceXs: CGFloat
-    var spaceSm: CGFloat
-    var spaceMd: CGFloat
-    var spaceLg: CGFloat
-    var spaceXl: CGFloat
-    var continuousCorners: Bool
+struct TypeSpec {
+    var size: CGFloat
+    var weight: Font.Weight
+    var letterSpacing: CGFloat
+    var uppercase: Bool
+}
 
-    var cornerStyle: RoundedCornerStyle {
-        continuousCorners ? .continuous : .circular
+struct TypeTokens {
+    var roles: [TypeRole: TypeSpec]
+
+    func spec(_ role: TypeRole) -> TypeSpec {
+        roles[role] ?? TypeSpec(size: 14, weight: .regular, letterSpacing: 0, uppercase: false)
     }
 }
 
-struct ThemeTypography {
-    var display: FontRole
-    var body: FontRole
-    var mono: FontRole
-    var displaySize: CGFloat
-    var displayWeight: FontWeightName
+struct SpaceTokens {
+    var xs: CGFloat
+    var sm: CGFloat
+    var md: CGFloat
+    var base: CGFloat
+    var lg: CGFloat
+    var xl: CGFloat
+    var screenPadding: CGFloat
+    var cardPadding: CGFloat
+    var rowPaddingX: CGFloat
+    var rowPaddingY: CGFloat
+    var sectionGap: CGFloat
+    var cardGap: CGFloat
+    var tabBarClearance: CGFloat
 }
 
-struct Theme: Identifiable {
-    var id: ThemeID
-    var name: String
-    var blurb: String
-    var dark: Bool
-    var colors: ThemeColors
-    var metrics: ThemeMetrics
-    var type: ThemeTypography
-
-    var colorScheme: ColorScheme {
-        dark ? .dark : .light
-    }
-
-    func font(_ role: FontRole, size: CGFloat, weight: Font.Weight) -> Font {
-        switch role {
-        case .rounded:
-            return .system(size: size, weight: weight, design: .rounded)
-        case .default:
-            return .system(size: size, weight: weight, design: .default)
-        case .condensed:
-            return .system(size: size, weight: weight, design: .default).width(.condensed)
-        case .serif:
-            return .system(size: size, weight: weight, design: .serif)
-        case .mono:
-            return .system(size: size, weight: weight, design: .monospaced)
-        }
-    }
-
-    func displayFont() -> Font {
-        font(type.display, size: type.displaySize, weight: type.displayWeight.weight)
-    }
-
-    func bodyFont(_ size: CGFloat = 17, weight: Font.Weight = .regular) -> Font {
-        font(type.body, size: size, weight: weight)
-    }
-
-    func monoFont(_ size: CGFloat = 13, weight: Font.Weight = .semibold) -> Font {
-        font(type.mono, size: size, weight: weight)
-    }
+struct RadiusTokens {
+    var sm: CGFloat
+    var md: CGFloat
+    var lg: CGFloat
+    var xl: CGFloat
+    var full: CGFloat
 }
 
 enum ThemeCatalog {
-    static let all: [Theme] = load()
+    static let file: TokenFile = load()
 
-    static func named(_ id: ThemeID) -> Theme {
-        all.first(where: { $0.id == id }) ?? missing
+    static func theme(base: BaseID, accent: AccentID) -> Theme {
+        file.theme(base: base, accent: accent)
     }
 
-    private static let missing = Theme(
-        id: .arena,
-        name: "Missing",
-        blurb: "themes.json failed to load. Check the app bundle.",
-        dark: true,
-        colors: ThemeColors(
-            bg: Color(hex: "#FF00AA"),
-            surface: Color(hex: "#220011"),
-            raised: Color(hex: "#330022"),
-            text: .white,
-            muted: Color.white.opacity(0.7),
-            accent: .white,
-            accentText: .black,
-            danger: Color(hex: "#FF00AA"),
-            dangerText: .white,
-            success: .white,
-            border: .white
-        ),
-        metrics: ThemeMetrics(
-            radiusSm: 8,
-            radiusMd: 12,
-            radiusLg: 16,
-            spaceXs: 4,
-            spaceSm: 8,
-            spaceMd: 16,
-            spaceLg: 24,
-            spaceXl: 40,
-            continuousCorners: true
-        ),
-        type: ThemeTypography(
-            display: .rounded,
-            body: .rounded,
-            mono: .mono,
-            displaySize: 44,
-            displayWeight: .heavy
-        )
-    )
-
-    private static func load() -> [Theme] {
-        let url = Bundle.main.url(forResource: "themes", withExtension: "json")
+    private static func load() -> TokenFile {
+        let url = Bundle.main.url(forResource: "tokens", withExtension: "json")
         let data = url.flatMap { try? Data(contentsOf: $0) }
-        let file = data.flatMap { try? JSONDecoder().decode(ThemeFile.self, from: $0) }
-        let decoded = file?.themes.map(\.theme) ?? []
-        return decoded.isEmpty ? [missing] : decoded
+        if let data, let decoded = try? JSONDecoder().decode(TokenFile.self, from: data) {
+            return decoded
+        }
+        return .fallback
     }
 }
 
 final class ThemeStore: ObservableObject {
-    private static let defaultsKey = "ff.themeID"
-
-    @Published var themeID: ThemeID {
-        didSet {
-            UserDefaults.standard.set(themeID.rawValue, forKey: Self.defaultsKey)
-        }
+    @Published var baseID: BaseID {
+        didSet { UserDefaults.standard.set(baseID.rawValue, forKey: Self.baseKey) }
     }
 
-    var current: Theme {
-        ThemeCatalog.named(themeID)
+    @Published var accentID: AccentID {
+        didSet { UserDefaults.standard.set(accentID.rawValue, forKey: Self.accentKey) }
     }
+
+    var theme: Theme {
+        ThemeCatalog.theme(base: baseID, accent: accentID)
+    }
+
+    private static let baseKey = "ff.baseID"
+    private static let accentKey = "ff.accentID"
 
     init() {
-        let raw = UserDefaults.standard.string(forKey: Self.defaultsKey) ?? ThemeID.arena.rawValue
-        themeID = ThemeID(rawValue: raw) ?? .arena
-    }
-
-    init(preview themeID: ThemeID) {
-        self.themeID = themeID
+        let baseRaw = UserDefaults.standard.string(forKey: Self.baseKey) ?? BaseID.dark.rawValue
+        let accentRaw = UserDefaults.standard.string(forKey: Self.accentKey) ?? AccentID.blue.rawValue
+        baseID = BaseID(rawValue: baseRaw) ?? .dark
+        accentID = AccentID(rawValue: accentRaw) ?? .blue
     }
 }
 
 private struct ThemeEnvironmentKey: EnvironmentKey {
-    static let defaultValue = ThemeCatalog.named(.arena)
+    static let defaultValue = ThemeCatalog.theme(base: .dark, accent: .blue)
 }
 
 extension EnvironmentValues {
@@ -196,25 +186,202 @@ extension EnvironmentValues {
 extension View {
     func fitFightTheme(_ theme: Theme) -> some View {
         environment(\.ffTheme, theme)
-            .tint(theme.colors.accent)
+            .tint(theme.accent)
             .preferredColorScheme(theme.colorScheme)
     }
 }
 
-extension FontWeightName {
-    var weight: Font.Weight {
-        switch self {
-        case .regular: return .regular
-        case .medium: return .medium
-        case .semibold: return .semibold
-        case .bold: return .bold
-        case .heavy: return .heavy
-        case .black: return .black
+struct TokenFile: Decodable {
+    var colors: ColorFile
+    var type: TypeFile
+    var space: SpaceFile
+    var radius: RadiusFile
+
+    func theme(base: BaseID, accent: AccentID) -> Theme {
+        let baseColors = colors.bases[base.rawValue] ?? colors.bases["dark"]!
+        let accentColors = colors.accents[accent.rawValue] ?? colors.accents["blue"]!
+        return Theme(
+            baseID: base,
+            accentID: accent,
+            bg: Color(token: baseColors.bg),
+            surface: Color(token: baseColors.surface),
+            surface2: Color(token: baseColors.surface2),
+            line: Color(token: baseColors.line),
+            hair: Color(token: baseColors.hair),
+            text: Color(token: baseColors.text),
+            muted: Color(token: baseColors.muted),
+            faint: Color(token: baseColors.faint),
+            chip: Color(token: baseColors.chip),
+            track: Color(token: baseColors.track),
+            scrim: Color(scrim: baseColors.scrim).opacity(0.6),
+            accent: Color(token: accentColors.accent),
+            accentDim: Color(token: accentColors.accentDim),
+            ink: Color(token: accentColors.ink),
+            onPhoto: Color(token: colors.onPhoto),
+            green: Color(token: colors.data.green),
+            blue: Color(token: colors.data.blue),
+            amber: Color(token: colors.data.amber),
+            red: Color(token: colors.data.red),
+            type: type.tokens,
+            space: space.tokens,
+            radius: radius.tokens
+        )
+    }
+
+    static let fallback: TokenFile = {
+        let json = """
+        {"colors":{"bases":{"dark":{"bg":"#101114","surface":"#191b1f","surface2":"#212429","line":"rgba(255,255,255,0.10)","hair":"rgba(255,255,255,0.06)","text":"#ffffff","muted":"rgba(255,255,255,0.62)","faint":"rgba(255,255,255,0.40)","scrim":"16,17,20","chip":"rgba(255,255,255,0.055)","track":"rgba(255,255,255,0.09)"},"light":{"bg":"#f4f4f6","surface":"#ffffff","surface2":"#eaeaee","line":"rgba(0,0,0,0.10)","hair":"rgba(0,0,0,0.065)","text":"#15171a","muted":"rgba(0,0,0,0.58)","faint":"rgba(0,0,0,0.42)","scrim":"21,23,26","chip":"rgba(0,0,0,0.045)","track":"rgba(0,0,0,0.08)"}},"accents":{"blue":{"name":"Blue","accent":"#1a6ef5","accentDim":"#114db3","ink":"#ffffff"}},"data":{"green":"#16a34a","blue":"#2f86e0","amber":"#e0a010","red":"#e0483f"},"onPhoto":"#ffffff"},"type":{"roles":{"heroNumber":{"size":34,"weight":700},"display":{"size":26,"weight":700,"letterSpacing":-0.02},"title":{"size":23,"weight":700,"letterSpacing":-0.02},"headline":{"size":19,"weight":700},"rank":{"size":17,"weight":700},"bodyStrong":{"size":15,"weight":600},"body":{"size":14,"weight":400},"label":{"size":13,"weight":700},"caption":{"size":12,"weight":400},"micro":{"size":11,"weight":400},"eyebrow":{"size":10,"weight":600,"letterSpacing":0.16,"transform":"uppercase"},"tiny":{"size":9,"weight":600,"transform":"uppercase"}}},"space":{"scale":{"xs":4,"sm":8,"md":12,"base":16,"lg":20,"xl":28},"rules":{"screenPadding":16,"cardPadding":20,"rowPaddingX":16,"rowPaddingY":14,"sectionGap":28,"cardGap":14,"tabBarClearance":128}},"radius":{"sm":8,"md":12,"lg":16,"xl":24,"full":9999}}
+        """
+        return try! JSONDecoder().decode(TokenFile.self, from: Data(json.utf8))
+    }()
+}
+
+struct ColorFile: Decodable {
+    var bases: [String: BaseColors]
+    var accents: [String: AccentColors]
+    var data: DataColors
+    var onPhoto: String
+}
+
+struct BaseColors: Decodable {
+    var bg: String
+    var surface: String
+    var surface2: String
+    var line: String
+    var hair: String
+    var text: String
+    var muted: String
+    var faint: String
+    var scrim: String
+    var chip: String
+    var track: String
+}
+
+struct AccentColors: Decodable {
+    var name: String
+    var accent: String
+    var accentDim: String
+    var ink: String
+}
+
+struct DataColors: Decodable {
+    var green: String
+    var blue: String
+    var amber: String
+    var red: String
+}
+
+struct TypeFile: Decodable {
+    var roles: [String: RoleFile]
+
+    var tokens: TypeTokens {
+        var map: [TypeRole: TypeSpec] = [:]
+        for (key, role) in roles {
+            guard let typeRole = TypeRole(rawValue: key) else { continue }
+            map[typeRole] = TypeSpec(
+                size: role.size,
+                weight: Font.Weight(token: role.weight),
+                letterSpacing: role.letterSpacing ?? 0,
+                uppercase: role.transform == "uppercase"
+            )
+        }
+        return TypeTokens(roles: map)
+    }
+}
+
+struct RoleFile: Decodable {
+    var size: CGFloat
+    var weight: Int
+    var letterSpacing: CGFloat?
+    var transform: String?
+}
+
+struct SpaceFile: Decodable {
+    var scale: ScaleFile
+    var rules: RulesFile
+
+    var tokens: SpaceTokens {
+        SpaceTokens(
+            xs: scale.xs,
+            sm: scale.sm,
+            md: scale.md,
+            base: scale.base,
+            lg: scale.lg,
+            xl: scale.xl,
+            screenPadding: rules.screenPadding,
+            cardPadding: rules.cardPadding,
+            rowPaddingX: rules.rowPaddingX,
+            rowPaddingY: rules.rowPaddingY,
+            sectionGap: rules.sectionGap,
+            cardGap: rules.cardGap,
+            tabBarClearance: rules.tabBarClearance
+        )
+    }
+}
+
+struct ScaleFile: Decodable {
+    var xs: CGFloat
+    var sm: CGFloat
+    var md: CGFloat
+    var base: CGFloat
+    var lg: CGFloat
+    var xl: CGFloat
+}
+
+struct RulesFile: Decodable {
+    var screenPadding: CGFloat
+    var cardPadding: CGFloat
+    var rowPaddingX: CGFloat
+    var rowPaddingY: CGFloat
+    var sectionGap: CGFloat
+    var cardGap: CGFloat
+    var tabBarClearance: CGFloat
+}
+
+struct RadiusFile: Decodable {
+    var sm: CGFloat
+    var md: CGFloat
+    var lg: CGFloat
+    var xl: CGFloat
+    var full: CGFloat
+
+    var tokens: RadiusTokens {
+        RadiusTokens(sm: sm, md: md, lg: lg, xl: xl, full: full)
+    }
+}
+
+extension Font.Weight {
+    init(token value: Int) {
+        switch value {
+        case ...450: self = .regular
+        case ...550: self = .medium
+        case ...650: self = .semibold
+        default: self = .bold
         }
     }
 }
 
 extension Color {
+    init(token raw: String) {
+        let value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if value.hasPrefix("#") {
+            self.init(hex: value)
+        } else if value.hasPrefix("rgba") {
+            self.init(rgba: value)
+        } else {
+            self.init(hex: "#000000")
+        }
+    }
+
+    init(scrim raw: String) {
+        let parts = raw.split(separator: ",").compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
+        if parts.count == 3 {
+            self.init(.sRGB, red: parts[0] / 255, green: parts[1] / 255, blue: parts[2] / 255, opacity: 1)
+        } else {
+            self.init(hex: "#101114")
+        }
+    }
+
     init(hex: String) {
         let raw = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
         var value: UInt64 = 0
@@ -236,96 +403,20 @@ extension Color {
             opacity: Double(a) / 255
         )
     }
-}
 
-private struct ThemeFile: Decodable {
-    var themes: [ThemeDTO]
-}
-
-private struct ThemeDTO: Decodable {
-    var id: ThemeID
-    var name: String
-    var blurb: String
-    var dark: Bool
-    var continuousCorners: Bool
-    var colors: ColorDTO
-    var radius: RadiusDTO
-    var space: SpaceDTO
-    var type: TypeDTO
-
-    var theme: Theme {
-        Theme(
-            id: id,
-            name: name,
-            blurb: blurb,
-            dark: dark,
-            colors: ThemeColors(
-                bg: Color(hex: colors.bg),
-                surface: Color(hex: colors.surface),
-                raised: Color(hex: colors.raised),
-                text: Color(hex: colors.text),
-                muted: Color(hex: colors.muted),
-                accent: Color(hex: colors.accent),
-                accentText: Color(hex: colors.accentText),
-                danger: Color(hex: colors.danger),
-                dangerText: Color(hex: colors.dangerText),
-                success: Color(hex: colors.success),
-                border: Color(hex: colors.border)
-            ),
-            metrics: ThemeMetrics(
-                radiusSm: radius.sm,
-                radiusMd: radius.md,
-                radiusLg: radius.lg,
-                spaceXs: space.xs,
-                spaceSm: space.sm,
-                spaceMd: space.md,
-                spaceLg: space.lg,
-                spaceXl: space.xl,
-                continuousCorners: continuousCorners
-            ),
-            type: ThemeTypography(
-                display: type.display,
-                body: type.body,
-                mono: type.mono,
-                displaySize: type.displaySize,
-                displayWeight: type.displayWeight
-            )
-        )
+    init(rgba: String) {
+        let inner = rgba.drop { $0 != "(" }.dropFirst().dropLast()
+        let parts = inner.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+        let r = Double(parts[safe: 0] ?? "0") ?? 0
+        let g = Double(parts[safe: 1] ?? "0") ?? 0
+        let b = Double(parts[safe: 2] ?? "0") ?? 0
+        let a = Double(parts[safe: 3] ?? "1") ?? 1
+        self.init(.sRGB, red: r / 255, green: g / 255, blue: b / 255, opacity: a)
     }
 }
 
-private struct ColorDTO: Decodable {
-    var bg: String
-    var surface: String
-    var raised: String
-    var text: String
-    var muted: String
-    var accent: String
-    var accentText: String
-    var danger: String
-    var dangerText: String
-    var success: String
-    var border: String
-}
-
-private struct RadiusDTO: Decodable {
-    var sm: CGFloat
-    var md: CGFloat
-    var lg: CGFloat
-}
-
-private struct SpaceDTO: Decodable {
-    var xs: CGFloat
-    var sm: CGFloat
-    var md: CGFloat
-    var lg: CGFloat
-    var xl: CGFloat
-}
-
-private struct TypeDTO: Decodable {
-    var display: FontRole
-    var body: FontRole
-    var mono: FontRole
-    var displaySize: CGFloat
-    var displayWeight: FontWeightName
+private extension Array {
+    subscript(safe index: Int) -> Element? {
+        indices.contains(index) ? self[index] : nil
+    }
 }

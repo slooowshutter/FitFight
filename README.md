@@ -33,7 +33,7 @@ Optional same-day fix: ask the agent to run the TestFlight workflow, or run it y
 
 ## CI
 
-- **Simulator compile** on every PR (`macos-15`, GitHub-hosted).
+- **Simulator compile** on every PR (`macos-26`, GitHub-hosted).
 - **TestFlight** daily at 18:00 UTC + manual `workflow_dispatch`.
 - Repo is **public**, so GitHub-hosted macOS minutes are free. Keep it public if you want $0 CI. Signing keys live in Actions secrets, not in git.
 

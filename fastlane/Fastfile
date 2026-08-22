@@ -1,0 +1,106 @@
+# frozen_string_literal: true
+
+require "base64"
+require "fileutils"
+
+default_platform(:ios)
+
+BUNDLE_ID = "com.fitfight.mvp"
+XCODEPROJ = "FitFight.xcodeproj"
+SCHEME = "FitFight"
+
+def decode_api_key(raw)
+  raw = raw.strip.gsub("\r\n", "\n")
+  return raw.gsub("\\n", "\n") if raw.include?("BEGIN PRIVATE KEY")
+  return raw.gsub("\\n", "\n") if raw.include?("\\n") && !raw.include?("\n")
+
+  decoded = Base64.decode64(raw)
+  return decoded if decoded.include?("BEGIN PRIVATE KEY")
+
+  raw
+end
+
+def write_api_key_file(key_id, raw)
+  contents = decode_api_key(raw)
+  contents += "\n" unless contents.end_with?("\n")
+  dir = File.expand_path("~/private_keys")
+  FileUtils.mkdir_p(dir)
+  path = File.join(dir, "AuthKey_#{key_id}.p8")
+  File.write(path, contents)
+  path
+end
+
+def cloud_signing_flags(key_path, key_id, issuer_id, team_id)
+  [
+    "DEVELOPMENT_TEAM=#{team_id}",
+    "CODE_SIGN_STYLE=Automatic",
+    "-allowProvisioningUpdates",
+    "-allowProvisioningDeviceRegistration",
+    "-authenticationKeyPath #{key_path}",
+    "-authenticationKeyID #{key_id}",
+    "-authenticationKeyIssuerID #{issuer_id}"
+  ].join(" ")
+end
+
+platform :ios do
+  desc "Bump build number, archive, and upload to TestFlight"
+  lane :beta do
+    ENV["FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT"] = "120"
+    ENV["FASTLANE_XCODEBUILD_SETTINGS_RETRIES"] = "3"
+
+    setup_ci if is_ci
+
+    key_id = ENV.fetch("APP_STORE_CONNECT_KEY_ID")
+    issuer_id = ENV.fetch("APP_STORE_CONNECT_ISSUER_ID")
+    key_content = ENV.fetch("APP_STORE_CONNECT_API_KEY")
+    team_id = ENV.fetch("APPLE_TEAM_ID")
+    key_path = write_api_key_file(key_id, key_content)
+    signing_flags = cloud_signing_flags(key_path, key_id, issuer_id, team_id)
+
+    api_key = app_store_connect_api_key(
+      key_id: key_id,
+      issuer_id: issuer_id,
+      key_filepath: key_path,
+      duration: 1200,
+      in_house: false
+    )
+
+    build_number = begin
+      latest_testflight_build_number(
+        api_key: api_key,
+        app_identifier: BUNDLE_ID,
+        initial_build_number: 0
+      ) + 1
+    rescue StandardError => e
+      fallback = (ENV["GITHUB_RUN_NUMBER"] || "1").to_i
+      UI.important("Could not read TestFlight build number (#{e.message}); using #{fallback}")
+      fallback
+    end
+
+    version = get_version_number(xcodeproj: XCODEPROJ, target: SCHEME)
+    UI.message("Shipping #{version} (#{build_number})")
+
+    build_app(
+      project: XCODEPROJ,
+      scheme: SCHEME,
+      configuration: "Release",
+      export_method: "app-store",
+      export_team_id: team_id,
+      export_options: {
+        method: "app-store",
+        signingStyle: "automatic",
+        teamID: team_id
+      },
+      xcargs: "#{signing_flags} CURRENT_PROJECT_VERSION=#{build_number}",
+      export_xcargs: signing_flags
+    )
+
+    upload_to_testflight(
+      api_key: api_key,
+      skip_waiting_for_build_processing: true,
+      changelog: "FitFight #{version} (#{build_number})"
+    )
+  ensure
+    FileUtils.rm_f(key_path) if defined?(key_path) && key_path
+  end
+end

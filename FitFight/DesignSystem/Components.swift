@@ -206,6 +206,7 @@ struct FFAvatar: View {
             .foregroundStyle(theme.text)
             .frame(width: size, height: size)
             .background(theme.surface2, in: Circle())
+            .padding(ring ? 1.5 : 0)
             .overlay {
                 if ring {
                     Circle().strokeBorder(theme.accent, lineWidth: 2)
@@ -297,7 +298,7 @@ struct FFBadge: View {
     }
 }
 
-struct FFTab: Hashable {
+enum FFTab: Hashable {
     case fights
     case newFight
     case requests
@@ -309,18 +310,23 @@ struct FFTabBar: View {
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
-        HStack {
+        HStack(alignment: .bottom) {
             item(.fights, "trophy", "Fights")
             item(.newFight, "plus", "New")
             item(.requests, "text.bubble", "Requests")
             item(.you, "person", "You")
         }
-        .padding(.top, 10)
+        .padding(.top, 8)
         .padding(.bottom, 20)
         .padding(.horizontal, 8)
-        .background(theme.bg.opacity(0.9))
+        .background {
+            Rectangle()
+                .fill(theme.bg.opacity(0.9))
+                .background(.ultraThinMaterial)
+                .ignoresSafeArea(edges: .bottom)
+        }
         .overlay(alignment: .top) {
-            theme.line.frame(height: 1)
+            theme.hair.frame(height: 1)
         }
     }
 
@@ -331,19 +337,16 @@ struct FFTabBar: View {
         } label: {
             VStack(spacing: 4) {
                 ZStack(alignment: .top) {
-                    if on {
-                        Circle()
-                            .fill(theme.accent)
-                            .frame(width: 4, height: 4)
-                            .offset(y: -6)
-                    }
+                    Circle()
+                        .fill(on ? theme.accent : Color.clear)
+                        .frame(width: 3, height: 3)
+                        .offset(y: -7)
                     Image(systemName: icon)
                         .font(.system(size: 22, weight: .regular))
                 }
                 .frame(height: 24)
                 Text(title)
-                    .font(theme.font(.tiny))
-                    .tracking(theme.tracking(.tiny))
+                    .font(.system(size: 10, weight: .semibold))
             }
             .foregroundStyle(on ? theme.accent : theme.muted)
             .frame(maxWidth: .infinity)

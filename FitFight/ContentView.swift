@@ -10,20 +10,11 @@ struct ContentView: View {
             VersionBanner {
                 model.showingVersions = true
             }
-            ZStack(alignment: .bottom) {
-                Group {
-                    switch model.tab {
-                    case .fights:
-                        fightsStack
-                    case .newFight:
-                        NewFightView()
-                    case .requests:
-                        RequestsView()
-                    case .you:
-                        YouView()
-                    }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            ZStack {
+                tabBody
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
                 FFTabBar(tab: $model.tab)
             }
         }
@@ -32,6 +23,19 @@ struct ContentView: View {
             VersionsView()
                 .fitFightTheme(themeStore.theme)
                 .presentationBackground(themeStore.theme.bg)
+        }
+    }
+
+    private var tabBody: some View {
+        switch model.tab {
+        case .fights:
+            fightsStack
+        case .newFight:
+            NewFightView()
+        case .requests:
+            RequestsView()
+        case .you:
+            YouView()
         }
     }
 

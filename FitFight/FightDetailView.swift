@@ -20,7 +20,7 @@ struct FightDetailView: View {
                 FFButton(title: "i challenge you", icon: "square.and.arrow.up") {}
             }
             .padding(.horizontal, theme.space.screenPadding)
-            .padding(.bottom, theme.space.tabBarClearance)
+            .padding(.bottom, theme.space.xl)
         }
         .background(theme.bg)
         .navigationBarBackButtonHidden(true)

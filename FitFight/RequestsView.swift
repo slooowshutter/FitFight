@@ -53,7 +53,7 @@ struct RequestsView: View {
             }
             .padding(.horizontal, theme.space.screenPadding)
             .padding(.top, 8)
-            .padding(.bottom, theme.space.tabBarClearance)
+            .padding(.bottom, theme.space.xl)
         }
         .background(theme.bg)
     }

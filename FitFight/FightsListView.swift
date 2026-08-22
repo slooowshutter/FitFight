@@ -6,15 +6,19 @@ struct FightsListView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: theme.space.sectionGap) {
+            VStack(alignment: .leading, spacing: 0) {
                 header
-                ForEach(model.live) { fight in
-                    Button {
-                        model.openFightID = fight.id
-                    } label: {
-                        LiveFightCard(fight: fight)
+                    .padding(.bottom, theme.space.sectionGap)
+
+                VStack(spacing: theme.space.cardGap) {
+                    ForEach(model.live) { fight in
+                        Button {
+                            model.openFightID = fight.id
+                        } label: {
+                            LiveFightCard(fight: fight)
+                        }
+                        .buttonStyle(FFPressStyle(scale: 0.985))
                     }
-                    .buttonStyle(FFPressStyle(scale: 0.985))
                 }
 
                 if !model.invitations.isEmpty {
@@ -27,6 +31,7 @@ struct FightsListView: View {
                             }
                         }
                     }
+                    .padding(.top, theme.space.sectionGap)
                 }
 
                 if !model.finished.isEmpty {
@@ -39,10 +44,11 @@ struct FightsListView: View {
                         }
                         .opacity(0.85)
                     }
+                    .padding(.top, theme.space.sectionGap)
                 }
             }
             .padding(.horizontal, theme.space.screenPadding)
-            .padding(.bottom, theme.space.tabBarClearance)
+            .padding(.bottom, theme.space.xl)
         }
         .background(theme.bg)
     }

@@ -34,7 +34,7 @@ struct NewFightView: View {
                     goalSection
                 }
                 summary
-                FFButton(title: "Start fight", icon: "arrow.right") {
+                FFButton(title: "Start fight →") {
                     model.tab = .fights
                 }
             }
@@ -201,27 +201,28 @@ struct NewFightView: View {
     }
 
     private var summary: some View {
-        FFLabel(text: summaryText, role: .caption, color: theme.muted)
+        (Text("\(lengthDays)-day \(metric.eyebrow.lowercased())")
+            .font(theme.font(.bodyStrong))
+            .foregroundStyle(theme.text)
+        + Text(" fight with \(selected.count + 1) players, ending \(endDate.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))). \(stakeSummary).")
+            .font(theme.font(.caption))
+            .foregroundStyle(theme.muted))
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(theme.chip, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
     }
 
-    private var summaryText: String {
+    private var stakeSummary: String {
         let players = selected.count + 1
-        let end = endDate.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))
-        let stakeText: String = {
-            switch stake {
-            case .bragging: return "bragging rights only"
-            case .ten: return "$10 each — the winner takes all $\(10 * players)"
-            case .custom:
-                if customKind == .money {
-                    return "$\(customMoney) each"
-                }
-                return forfeit.isEmpty ? "a custom forfeit" : forfeit
+        switch stake {
+        case .bragging: return "Bragging rights only"
+        case .ten: return "$10 each — the winner takes all $\(10 * players)"
+        case .custom:
+            if customKind == .money {
+                return "$\(customMoney) each"
             }
-        }()
-        return "\(lengthDays)-day \(metric.eyebrow.lowercased()) fight with \(players) players, ending \(end). \(stakeText)."
+            return forfeit.isEmpty ? "a custom forfeit" : forfeit
+        }
     }
 
     private func lengthChip(_ title: String, on: Bool, action: @escaping () -> Void) -> some View {
@@ -236,6 +237,12 @@ struct NewFightView: View {
                     on ? theme.accent : theme.surface,
                     in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
                 )
+                .overlay {
+                    if !on {
+                        RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
+                            .strokeBorder(theme.line, lineWidth: 1)
+                    }
+                }
         }
         .buttonStyle(FFPressStyle(scale: 0.97))
     }

@@ -26,6 +26,7 @@ struct ContentView: View {
         }
     }
 
+    @ViewBuilder
     private var tabBody: some View {
         switch model.tab {
         case .fights:

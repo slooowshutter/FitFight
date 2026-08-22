@@ -33,7 +33,7 @@ struct YouView: View {
             Text("Edit")
                 .font(theme.font(.bodyStrong))
                 .foregroundStyle(theme.text)
-                .padding(.horizontal, 12)
+                .padding(.horizontal, 14)
                 .padding(.vertical, 8)
                 .overlay { Capsule().strokeBorder(theme.line, lineWidth: 1) }
         }
@@ -64,7 +64,8 @@ struct YouView: View {
                 model.tab = .fights
             }
             FFGroup {
-                ForEach(model.history) { item in
+                ForEach(Array(model.history.enumerated()), id: \.element.id) { index, item in
+                    if index > 0 { FFHairline() }
                     Button {
                         model.tab = .fights
                         model.openFightID = item.id

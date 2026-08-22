@@ -159,17 +159,101 @@ struct FFGroup<Content: View>: View {
 }
 
 struct FFHairline: View {
+    var inset: CGFloat = 16
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
         theme.hair.frame(height: 1)
-            .padding(.leading, 16)
+            .padding(.leading, inset)
+    }
+}
+
+struct FFRankBadge: View {
+    let rank: Int
+    let of: Int
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        let first = rank == 1
+        VStack(spacing: 1) {
+            Text("#\(rank)")
+                .font(theme.font(.headline))
+                .foregroundStyle(first ? theme.ink : theme.text)
+            Text("OF \(of)")
+                .font(theme.font(.tiny))
+                .tracking(theme.tracking(.tiny))
+                .foregroundStyle(first ? theme.ink.opacity(0.8) : theme.muted)
+        }
+        .monospacedDigit()
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(
+            first ? theme.accent : theme.chip,
+            in: RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous)
+        )
+    }
+}
+
+struct FFKicker: View {
+    var prefix: String = ""
+    var emphasis: String
+    var rest: String = ""
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        HStack(spacing: 4) {
+            if !prefix.isEmpty {
+                Text(prefix)
+                    .font(theme.font(.caption))
+                    .foregroundStyle(theme.muted)
+            }
+            Text(emphasis)
+                .font(theme.font(.bodyStrong))
+                .foregroundStyle(theme.text)
+                .monospacedDigit()
+            if !rest.isEmpty {
+                Text(rest)
+                    .font(theme.font(.caption))
+                    .foregroundStyle(theme.muted)
+            }
+        }
+    }
+}
+
+struct FFSegmented<Item: Hashable>: View {
+    let items: [Item]
+    @Binding var selection: Item
+    var title: (Item) -> String
+
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(items, id: \.self) { item in
+                let on = selection == item
+                Button {
+                    selection = item
+                } label: {
+                    Text(title(item))
+                        .font(theme.font(.bodyStrong))
+                        .foregroundStyle(on ? theme.text : theme.muted)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(on ? theme.surface : Color.clear, in: Capsule())
+                        .shadow(color: on ? Color.black.opacity(0.25) : Color.clear, radius: 2, y: 1)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(4)
+        .background(theme.chip, in: Capsule())
     }
 }
 
 struct FFSectionHeader: View {
     let title: String
     var action: String? = nil
+    var actionMuted = false
     var onAction: (() -> Void)? = nil
 
     @Environment(\.ffTheme) private var theme
@@ -179,13 +263,15 @@ struct FFSectionHeader: View {
             FFLabel(text: title, role: .label, color: theme.text)
             Spacer()
             if let action {
+                let color = actionMuted ? theme.muted : theme.accent
+                let role: TypeRole = actionMuted ? .caption : .label
                 if let onAction {
                     Button(action: onAction) {
-                        FFLabel(text: action, role: .label, color: theme.accent)
+                        FFLabel(text: action, role: role, color: color)
                     }
                     .buttonStyle(.plain)
                 } else {
-                    FFLabel(text: action, role: .label, color: theme.accent)
+                    FFLabel(text: action, role: role, color: color)
                 }
             }
         }
@@ -243,6 +329,7 @@ struct FFMoney: View {
 struct FFProgressBar: View {
     var progress: CGFloat
     var fill: Color
+    var height: CGFloat = 8
 
     @Environment(\.ffTheme) private var theme
 
@@ -256,13 +343,14 @@ struct FFProgressBar: View {
                         .frame(width: max(6, geo.size.width * min(1, max(0, progress))))
                 }
         }
-        .frame(height: 4)
+        .frame(height: height)
     }
 }
 
 struct FFBadge: View {
     let text: String
     var tone: Tone = .accent
+    var style: Style = .tint
 
     enum Tone {
         case accent
@@ -273,6 +361,12 @@ struct FFBadge: View {
         case blue
     }
 
+    enum Style {
+        case tint
+        case solid
+        case plain
+    }
+
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
@@ -280,10 +374,28 @@ struct FFBadge: View {
         Text(text.uppercased())
             .font(theme.font(.tiny))
             .tracking(theme.tracking(.tiny))
-            .foregroundStyle(color)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(color.opacity(0.12), in: Capsule())
+            .foregroundStyle(foreground(color))
+            .padding(.horizontal, style == .plain ? 0 : 8)
+            .padding(.vertical, style == .plain ? 0 : 4)
+            .background {
+                switch style {
+                case .tint:
+                    Capsule().fill(color.opacity(0.12))
+                case .solid:
+                    Capsule().fill(color)
+                case .plain:
+                    Color.clear
+                }
+            }
+    }
+
+    private func foreground(_ color: Color) -> Color {
+        switch style {
+        case .solid:
+            return Color(hex: "#17181c")
+        case .tint, .plain:
+            return color
+        }
     }
 
     private var colorForTone: Color {
@@ -313,7 +425,7 @@ struct FFTabBar: View {
         HStack(alignment: .bottom) {
             item(.fights, "trophy", "Fights")
             item(.newFight, "plus", "New")
-            item(.requests, "text.bubble", "Requests")
+            item(.requests, "bubble.left", "Requests", chevron: true)
             item(.you, "person", "You")
         }
         .padding(.top, 8)
@@ -330,7 +442,7 @@ struct FFTabBar: View {
         }
     }
 
-    private func item(_ value: FFTab, _ icon: String, _ title: String) -> some View {
+    private func item(_ value: FFTab, _ icon: String, _ title: String, chevron: Bool = false) -> some View {
         let on = tab == value
         return Button {
             tab = value
@@ -341,8 +453,15 @@ struct FFTabBar: View {
                         .fill(on ? theme.accent : Color.clear)
                         .frame(width: 3, height: 3)
                         .offset(y: -7)
-                    Image(systemName: icon)
-                        .font(.system(size: 22, weight: .regular))
+                    ZStack {
+                        Image(systemName: icon)
+                            .font(.system(size: 22, weight: .regular))
+                        if chevron {
+                            Image(systemName: "chevron.up")
+                                .font(.system(size: 7, weight: .bold))
+                                .offset(y: 1)
+                        }
+                    }
                 }
                 .frame(height: 24)
                 Text(title)

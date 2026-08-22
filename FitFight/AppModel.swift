@@ -23,14 +23,6 @@ enum MetricKind: String, CaseIterable, Identifiable {
         case .workouts: return "Low-friction bragging rights"
         }
     }
-
-    var unit: String {
-        switch self {
-        case .activeMinutes: return "min"
-        case .steps: return "steps"
-        case .workouts: return "workouts"
-        }
-    }
 }
 
 enum SettlementKind: String, CaseIterable, Identifiable {
@@ -51,8 +43,8 @@ enum SettlementKind: String, CaseIterable, Identifiable {
     var blurb: String {
         switch self {
         case .winner: return "First place takes everything. Everyone else is out their stake."
-        case .proportional: return "Your share of the work is your share of the pot."
-        case .goal: return "Hit the daily goal and your stake comes back. Miss it and you’re funding the ones who did."
+        case .proportional: return "Your share of the effort is your share of the pot — do 60% of the steps, take 60% of the money."
+        case .goal: return "Hit your daily goal and your money comes back. Miss it and it goes to whoever made it."
         }
     }
 }
@@ -95,11 +87,26 @@ struct Standing: Identifiable, Hashable {
     var id: String { person.id }
 }
 
+struct DayScore: Identifiable, Hashable {
+    var person: Person
+    var value: Double
+
+    var id: String { person.id }
+}
+
+struct FightDay: Identifiable, Hashable {
+    var label: String
+    var scores: [DayScore]
+
+    var id: String { label }
+}
+
 struct Fight: Identifiable, Hashable {
     var id: String
     var code: String
     var name: String
     var metric: MetricKind
+    var lengthDays: Int
     var daysLeft: Int? = nil
     var endedLabel: String? = nil
     var pot: Int
@@ -109,10 +116,18 @@ struct Fight: Identifiable, Hashable {
     var rank: Int
     var of: Int
     var pending: Int
-    var headline: String
+    var kickerPrefix: String = ""
+    var kickerEmphasis: String
+    var kickerRest: String = ""
+    var listSubtitle: String
+    var payoutLine: String
+    var invitePitch: String? = nil
+    var inviteAction: String? = nil
+    var paceNote: String? = nil
+    var standingsMeta: String? = nil
     var dailyGoal: Double? = nil
     var standings: [Standing]
-    var inviteAction: String? = nil
+    var days: [FightDay] = []
 }
 
 struct RequestItem: Identifiable, Hashable {
@@ -149,7 +164,7 @@ final class AppModel: ObservableObject {
 
     @Published var openFightID: String?
     @Published var showingVersions = false
-    @Published var voted: Set<String> = ["r1"]
+    @Published var voted: Set<String> = ["r1", "r3"]
     @Published var joined: Set<String> = []
 
     let you = Person(id: "you", name: "You", handle: "@maya.moves", initials: "MM", isYou: true)
@@ -160,11 +175,11 @@ final class AppModel: ObservableObject {
 
     init() {
         let leo = Person(id: "leo", name: "Leo", handle: "@leo.runs", initials: "L")
-        let sam = Person(id: "sam", name: "Sam", handle: "@sam.moves", initials: "S")
+        let sam = Person(id: "sam", name: "Sam", handle: "@sam.sweats", initials: "S")
         let ivy = Person(id: "ivy", name: "Ivy", handle: "@ivy.climbs", initials: "I")
-        let theo = Person(id: "theo", name: "Theo", handle: "@theo", initials: "T")
-        let nina = Person(id: "nina", name: "Nina", handle: "@nina", initials: "N")
-        people = [leo, sam, ivy, theo, nina]
+        let theo = Person(id: "theo", name: "Theo", handle: "@theo.rows", initials: "T")
+        let nina = Person(id: "nina", name: "Nina", handle: "@nina.lifts", initials: "N")
+        people = [leo, sam, nina, theo, ivy]
 
         let you = Person(id: "you", name: "You", handle: "@maya.moves", initials: "MM", isYou: true)
 
@@ -174,6 +189,7 @@ final class AppModel: ObservableObject {
                 code: "FIGHT-742",
                 name: "7-Day Sweat Ladder",
                 metric: .activeMinutes,
+                lengthDays: 7,
                 daysLeft: 4,
                 pot: 30,
                 buyIn: 10,
@@ -182,18 +198,40 @@ final class AppModel: ObservableObject {
                 rank: 2,
                 of: 3,
                 pending: 0,
-                headline: "12 min behind Leo",
+                kickerEmphasis: "12 min",
+                kickerRest: "behind Leo",
+                listSubtitle: "12 min behind Leo",
+                payoutLine: "Winner takes the whole $30",
+                paceNote: "At this pace you finish on 98 min.",
                 standings: [
-                    Standing(person: leo, score: 54, today: 18, projectedNet: 20),
-                    Standing(person: you, score: 42, today: 11, projectedNet: -10),
-                    Standing(person: sam, score: 37, today: 9, projectedNet: -10)
+                    Standing(person: leo, score: 54, today: 16, projectedNet: 20),
+                    Standing(person: you, score: 42, today: 14, projectedNet: -10),
+                    Standing(person: sam, score: 37, today: 12, projectedNet: -10)
+                ],
+                days: [
+                    FightDay(label: "Day 1", scores: [
+                        DayScore(person: leo, value: 20),
+                        DayScore(person: you, value: 12),
+                        DayScore(person: sam, value: 10)
+                    ]),
+                    FightDay(label: "Day 2", scores: [
+                        DayScore(person: leo, value: 18),
+                        DayScore(person: you, value: 16),
+                        DayScore(person: sam, value: 10)
+                    ]),
+                    FightDay(label: "Day 3", scores: [
+                        DayScore(person: leo, value: 16),
+                        DayScore(person: you, value: 14),
+                        DayScore(person: sam, value: 17)
+                    ])
                 ]
             ),
             Fight(
                 id: "derby",
-                code: "FIGHT-801",
+                code: "FIGHT-118",
                 name: "Step Derby",
                 metric: .steps,
+                lengthDays: 7,
                 daysLeft: 2,
                 pot: 50,
                 buyIn: 10,
@@ -202,11 +240,15 @@ final class AppModel: ObservableObject {
                 rank: 1,
                 of: 5,
                 pending: 1,
-                headline: "Holding 1st with 2d to go",
+                kickerPrefix: "Leading by",
+                kickerEmphasis: "1.6k steps",
+                listSubtitle: "Holding 1st with 2d to go",
+                payoutLine: "Your share of the steps is your share of the pot — 60% pays $30",
                 standings: [
-                    Standing(person: you, score: 61200, today: 8400, projectedNet: 1),
-                    Standing(person: ivy, score: 54800, today: 6100, projectedNet: -4),
-                    Standing(person: theo, score: 49100, today: 5200, projectedNet: -8),
+                    Standing(person: you, score: 61400, today: 8200, projectedNet: 1),
+                    Standing(person: ivy, score: 59800, today: 6100, projectedNet: 1),
+                    Standing(person: theo, score: 55200, today: 5200, projectedNet: 0),
+                    Standing(person: leo, score: 40100, today: 4800, projectedNet: -8),
                     Standing(person: nina, score: 22000, today: 0, projectedNet: -10, invited: true)
                 ]
             ),
@@ -215,6 +257,7 @@ final class AppModel: ObservableObject {
                 code: "FIGHT-655",
                 name: "10K Club",
                 metric: .steps,
+                lengthDays: 7,
                 daysLeft: 3,
                 pot: 80,
                 buyIn: 20,
@@ -223,31 +266,42 @@ final class AppModel: ObservableObject {
                 rank: 2,
                 of: 4,
                 pending: 2,
-                headline: "3.2k steps behind Sam",
+                kickerEmphasis: "3.2k steps",
+                kickerRest: "behind Sam",
+                listSubtitle: "3.2k steps behind Sam",
+                payoutLine: "Hit 10.0k steps/day and your $20 comes back",
                 dailyGoal: 10000,
                 standings: [
                     Standing(person: sam, score: 44800, today: 12100, projectedNet: 7, safe: true),
                     Standing(person: you, score: 41600, today: 8240, projectedNet: 7, safe: true),
-                    Standing(person: nina, score: 28100, today: 4100, projectedNet: -20, safe: false)
+                    Standing(person: nina, score: 31900, today: 4100, projectedNet: -20, safe: false),
+                    Standing(person: ivy, score: 28100, today: 3900, projectedNet: -20, safe: false)
                 ]
             ),
             Fight(
                 id: "desk",
-                code: "FIGHT-220",
+                code: "FIGHT-556",
                 name: "Desk Job Revenge",
-                metric: .activeMinutes,
+                metric: .steps,
+                lengthDays: 5,
                 daysLeft: 5,
-                pot: 0,
-                buyIn: 0,
+                pot: 50,
+                buyIn: 10,
                 settlement: .winner,
                 status: .invited,
                 rank: 0,
-                of: 2,
-                pending: 0,
-                headline: "Leo · 5 days",
+                of: 4,
+                pending: 2,
+                kickerEmphasis: "Theo wants a piece of you",
+                listSubtitle: "Theo · 5 days · $50 pot",
+                payoutLine: "Winner takes the whole $50",
+                invitePitch: "Theo wants a piece of you",
                 inviteAction: "Accept",
+                standingsMeta: "2 in · 2 not replied",
                 standings: [
-                    Standing(person: leo, score: 0, today: 0, projectedNet: 0)
+                    Standing(person: theo, score: 0, today: 0, projectedNet: 40),
+                    Standing(person: nina, score: 0, today: 0, projectedNet: -10),
+                    Standing(person: ivy, score: 0, today: 0, projectedNet: 0, invited: true)
                 ]
             ),
             Fight(
@@ -255,15 +309,19 @@ final class AppModel: ObservableObject {
                 code: "FIGHT-221",
                 name: "City Sprint",
                 metric: .steps,
-                daysLeft: 3,
-                pot: 20,
-                buyIn: 10,
+                lengthDays: 7,
+                daysLeft: 7,
+                pot: 0,
+                buyIn: 0,
                 settlement: .winner,
                 status: .invited,
                 rank: 0,
                 of: 3,
                 pending: 0,
-                headline: "Ivy · 3 days",
+                kickerEmphasis: "Ivy wants a piece of you",
+                listSubtitle: "Ivy · 7 days · No stake",
+                payoutLine: "Bragging rights only",
+                invitePitch: "Ivy wants a piece of you",
                 inviteAction: "Join",
                 standings: [
                     Standing(person: ivy, score: 0, today: 0, projectedNet: 0)
@@ -274,6 +332,7 @@ final class AppModel: ObservableObject {
                 code: "FIGHT-109",
                 name: "Weekend Step Duel",
                 metric: .steps,
+                lengthDays: 2,
                 endedLabel: "Ended Jul 13",
                 pot: 20,
                 buyIn: 10,
@@ -282,7 +341,11 @@ final class AppModel: ObservableObject {
                 rank: 1,
                 of: 2,
                 pending: 0,
-                headline: "1st of 2",
+                kickerEmphasis: "1st",
+                kickerRest: "of 2",
+                listSubtitle: "Ended Jul 13 · 1st of 2",
+                payoutLine: "You took $10",
+                paceNote: "Final: 24.0k to 18.1k",
                 standings: [
                     Standing(person: you, score: 24000, today: 0, projectedNet: 10),
                     Standing(person: sam, score: 18100, today: 0, projectedNet: -10)
@@ -293,36 +356,36 @@ final class AppModel: ObservableObject {
         requests = [
             RequestItem(
                 id: "r1",
-                title: "Apple Watch live rings on the fight card",
-                body: "See today’s close without opening Health. The card should move as the day does.",
+                title: "Custom challenge length",
+                body: "Let me pick any number of days, not just 3 / 7 / 14.",
                 kind: .feature,
                 status: .planned,
                 author: leo,
                 ago: "3d ago",
-                comments: 8,
-                votes: 24
+                comments: 12,
+                votes: 83
             ),
             RequestItem(
                 id: "r2",
-                title: "Split pots when two people finish tied",
-                body: "Winner-takes-all currently panics on a tie. Split the pot and call it a day.",
+                title: "Team fights, 2 v 2",
+                body: "Me and my wife against another couple. Scores add up per team.",
                 kind: .feature,
                 status: .open,
-                author: ivy,
-                ago: "1w ago",
-                comments: 5,
-                votes: 18
+                author: nina,
+                ago: "5d ago",
+                comments: 9,
+                votes: 71
             ),
             RequestItem(
                 id: "r3",
-                title: "Strava ride doesn’t land on the same day",
-                body: "Evening rides sometimes show up tomorrow and wreck the daily goal.",
+                title: "Strava ride counted twice",
+                body: "A ride synced from both Apple Health and Strava and I got double minutes.",
                 kind: .bug,
-                status: .open,
+                status: .planned,
                 author: theo,
-                ago: "2d ago",
-                comments: 3,
-                votes: 11
+                ago: "1d ago",
+                comments: 7,
+                votes: 62
             )
         ]
 
@@ -356,6 +419,38 @@ final class AppModel: ObservableObject {
                 return String(format: "%.1fk", value / 1000)
             }
             return String(format: "%.0f", value)
+        }
+    }
+
+    func formatDelta(_ value: Double, metric: MetricKind) -> String {
+        let body = formatScore(value, metric: metric)
+        if value > 0 { return "+\(body)" }
+        if value < 0 { return "−\(body)" }
+        return body
+    }
+
+    func projectedPace(_ row: Standing, in fight: Fight) -> Double {
+        let elapsed = max(1, fight.lengthDays - (fight.daysLeft ?? 0))
+        return row.score * Double(fight.lengthDays) / Double(elapsed)
+    }
+
+    func paceLine(_ row: Standing, in fight: Fight) -> String {
+        if row.invited { return "Hasn’t joined yet" }
+        if fight.status == .invited {
+            switch fight.metric {
+            case .activeMinutes: return "on pace for 0 min"
+            case .steps: return "on pace for 0 steps"
+            case .workouts: return "0 so far"
+            }
+        }
+        let pace = projectedPace(row, in: fight)
+        switch fight.metric {
+        case .activeMinutes:
+            return "on pace for \(Int(pace.rounded())) min"
+        case .steps:
+            return "on pace for \(formatScore(pace, metric: .steps))"
+        case .workouts:
+            return "\(Int(row.score)) so far"
         }
     }
 }

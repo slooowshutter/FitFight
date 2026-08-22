@@ -28,7 +28,7 @@ enum Changelog {
             year: 2026,
             month: 8,
             day: 22,
-            notes: "Real design system. Dark/light + 10 accents from the approved web kit. Four tabs: Fights, New, Requests, You."
+            notes: "The approved look, as a real iOS app. Four tabs matching the screenshots: Fights, New, Requests, You. Dark/light plus ten accents."
         ),
         ReleaseNote(
             version: "0.2.0",

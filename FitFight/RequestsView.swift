@@ -5,7 +5,7 @@ struct RequestsView: View {
     @Environment(\.ffTheme) private var theme
     @State private var filter: Filter = .top
 
-    enum Filter: String, CaseIterable, Identifiable {
+    enum Filter: String, CaseIterable, Identifiable, Hashable {
         case top = "Top"
         case features = "Features"
         case bugs = "Bugs"
@@ -24,26 +24,7 @@ struct RequestsView: View {
                     FFButton(title: "+ New", kind: .small) {}
                 }
 
-                HStack(spacing: 0) {
-                    ForEach(Filter.allCases) { item in
-                        Button {
-                            filter = item
-                        } label: {
-                            VStack(spacing: 8) {
-                                FFLabel(
-                                    text: item.rawValue,
-                                    role: .bodyStrong,
-                                    color: filter == item ? theme.text : theme.muted
-                                )
-                                Rectangle()
-                                    .fill(filter == item ? theme.accent : Color.clear)
-                                    .frame(height: 2)
-                            }
-                            .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
+                FFSegmented(items: Filter.allCases, selection: $filter) { $0.rawValue }
 
                 VStack(spacing: theme.space.cardGap) {
                     ForEach(filtered) { item in
@@ -77,12 +58,7 @@ struct RequestCard: View {
 
     var body: some View {
         let voted = model.voted.contains(item.id)
-        let votes: Int = {
-            if item.id == "r1" {
-                return voted ? item.votes : item.votes - 1
-            }
-            return voted ? item.votes + 1 : item.votes
-        }()
+        let votes = item.votes + (voted ? 1 : 0)
         return FFCard {
             HStack(alignment: .top, spacing: 12) {
                 Button {
@@ -96,11 +72,8 @@ struct RequestCard: View {
                             .monospacedDigit()
                     }
                     .foregroundStyle(voted ? theme.ink : theme.muted)
-                    .frame(width: 44, height: 56)
-                    .background(
-                        voted ? theme.accent : theme.chip,
-                        in: RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous)
-                    )
+                    .frame(width: 40, height: 64)
+                    .background(voted ? theme.accent : theme.chip, in: Capsule())
                 }
                 .buttonStyle(FFPressStyle(scale: 0.97))
 
@@ -110,16 +83,17 @@ struct RequestCard: View {
                             text: item.kind == .feature ? "Feature" : "Bug",
                             tone: item.kind == .feature ? .blue : .red
                         )
-                        FFBadge(text: statusText, tone: statusTone)
+                        FFBadge(text: statusText, tone: statusTone, style: .plain)
                     }
                     FFLabel(text: item.title, role: .bodyStrong)
                     FFLabel(text: item.body, role: .caption, color: theme.muted)
                     HStack(spacing: 8) {
                         FFAvatar(initials: item.author.initials, size: 18)
                         FFLabel(text: item.author.name, role: .micro, color: theme.muted)
+                        Text("·").font(theme.font(.micro)).foregroundStyle(theme.faint)
                         FFLabel(text: item.ago, role: .micro, color: theme.faint)
                         Spacer()
-                        Image(systemName: "text.bubble")
+                        Image(systemName: "bubble.left")
                             .font(.system(size: 11))
                             .foregroundStyle(theme.faint)
                         FFLabel(text: "\(item.comments)", role: .micro, color: theme.faint)

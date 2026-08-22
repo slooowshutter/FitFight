@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct ContentView: View {
+    @State private var showingVersions = false
+
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
@@ -17,20 +19,23 @@ struct ContentView: View {
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.white.opacity(0.72))
 
+                Button("Versions") {
+                    showingVersions = true
+                }
+                .font(.headline)
+                .buttonStyle(.borderedProminent)
+                .padding(.top, 8)
+
                 Spacer()
             }
             .padding()
         }
         .preferredColorScheme(.dark)
         .safeAreaInset(edge: .top, spacing: 0) {
-            Text(AppVersion.label)
-                .font(.system(.caption, design: .monospaced).weight(.semibold))
-                .foregroundStyle(.white.opacity(0.7))
-                .frame(maxWidth: .infinity)
-                .padding(.top, 6)
-                .padding(.bottom, 10)
-                .background(Color.black)
-                .accessibilityIdentifier("app-version")
+            VersionBanner()
+        }
+        .sheet(isPresented: $showingVersions) {
+            VersionsView()
         }
     }
 }

@@ -11,6 +11,8 @@
 		A10000000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000012 /* ContentView.swift */; };
 		A10000000000000000000003 /* AppVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000013 /* AppVersion.swift */; };
 		A10000000000000000000004 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000014 /* Assets.xcassets */; };
+		A10000000000000000000005 /* Changelog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000015 /* Changelog.swift */; };
+		A10000000000000000000006 /* VersionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000016 /* VersionsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -19,6 +21,8 @@
 		A10000000000000000000012 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A10000000000000000000013 /* AppVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppVersion.swift; sourceTree = "<group>"; };
 		A10000000000000000000014 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A10000000000000000000015 /* Changelog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Changelog.swift; sourceTree = "<group>"; };
+		A10000000000000000000016 /* VersionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VersionsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -38,6 +42,8 @@
 				A10000000000000000000011 /* FitFightApp.swift */,
 				A10000000000000000000012 /* ContentView.swift */,
 				A10000000000000000000013 /* AppVersion.swift */,
+				A10000000000000000000015 /* Changelog.swift */,
+				A10000000000000000000016 /* VersionsView.swift */,
 				A10000000000000000000014 /* Assets.xcassets */,
 			);
 			path = FitFight;
@@ -131,6 +137,8 @@
 				A10000000000000000000001 /* FitFightApp.swift in Sources */,
 				A10000000000000000000002 /* ContentView.swift in Sources */,
 				A10000000000000000000003 /* AppVersion.swift in Sources */,
+				A10000000000000000000005 /* Changelog.swift in Sources */,
+				A10000000000000000000006 /* VersionsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -14,7 +14,7 @@ Not: agent on Marc’s laptop or home Mac → local Xcode.
 | Workflow | File | When | Runner |
 | --- | --- | --- | --- |
 | Simulator | `.github/workflows/ios-build.yml` | PR + push to `main` | `macos-26` |
-| TestFlight | `.github/workflows/ios-testflight.yml` | cron `0 18 * * *` UTC, and **Run workflow** | `macos-26` |
+| TestFlight | `.github/workflows/ios-testflight.yml` | push to `main` (app files), cron `0 18 * * *` UTC, **Run workflow** for a PR branch | `macos-26` |
 
 Both **must** stay GitHub-hosted. Never `self-hosted`. Apple requires **Xcode 26 / iOS 26 SDK** to upload (Xcode 16.4 / iOS 18.5 is rejected).
 
@@ -39,7 +39,7 @@ There is a separate Expo EAS key in App Store Connect. Do not reuse it.
 
 - TestFlight install / Update (~30 min/day).
 - Internal testers (himself) vs external friends (first external build waits on Apple beta review ~1–2 days once).
-- Same-day extra build: **Actions → TestFlight → Run workflow** on `main`. This agent **cannot** dispatch workflows (GitHub 403).
+- Same-day extra build of a **PR branch** (not yet on `main`): **Actions → TestFlight → Run workflow**, pick that branch. This agent **cannot** dispatch workflows (GitHub 403).
 - Apple account / legal / new secrets if they rotate.
 
 He should **not** operate certificates day to day, open Xcode, or use a Mac for builds.
@@ -52,4 +52,4 @@ He should **not** operate certificates day to day, open Xcode, or use a Mac for 
 
 ## After you land app changes on `main`
 
-Daily 18:00 UTC will pick them up. For a same-day phone test, tell Marc to Run workflow (one tap). First processing of a new build is ~10–20 minutes, then TestFlight → Update.
+Push to `main` starts TestFlight by itself. Tell Marc: wait for the TestFlight notification, then **Update**. First processing of a new build is ~10–20 minutes. Do not also ask him to Run workflow for `main`.

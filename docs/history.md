@@ -1,5 +1,9 @@
 # History
 
+## 2026-08-22 — TestFlight on merge
+
+App pushes to `main` upload to TestFlight without a second “Run workflow” tap. Daily 18:00 UTC and manual branch runs stay. Marc tests by opening TestFlight → Update.
+
 ## 2026-08-22 — approved design ported
 
 `docs/design/source/` dump from fitfight-v2. SwiftUI now has four tabs matching that kit. Arena/Pulse/Locker/Rogue retired. Marketing version `0.3.0`.

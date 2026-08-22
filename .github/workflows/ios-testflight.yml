@@ -3,6 +3,15 @@
 name: TestFlight
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "FitFight/**"
+      - "FitFight.xcodeproj/**"
+      - "fastlane/**"
+      - "Gemfile"
+      - "Gemfile.lock"
+      - ".github/workflows/ios-testflight.yml"
   schedule:
     # 18:00 UTC — evening in western Europe; change if you want a different time
     - cron: "0 18 * * *"

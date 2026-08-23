@@ -145,7 +145,7 @@ struct FightDetailView: View {
                         value: model.formatDelta(you?.today ?? 0, metric: fight.metric),
                         label: "Today"
                     )
-                    FFStatTile(value: moneyTitle, label: "Standing to", color: moneyColor)
+                    FFStatTile(value: moneyTitle, label: "Standing to")
                 }
             }
             .frame(maxWidth: .infinity)

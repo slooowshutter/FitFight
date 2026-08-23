@@ -368,7 +368,7 @@ struct FFAvatar: View {
             .overlay {
                 Text(initials.prefix(1))
                     .font(.ff(size * 0.42, .bold))
-                    .foregroundStyle(Color.white.opacity(0.92))
+                    .foregroundStyle(Color.white.opacity(0.72))
             }
             .overlay {
                 Circle().strokeBorder(Color.white.opacity(0.10), lineWidth: 0.5)
@@ -386,8 +386,8 @@ struct FFAvatar: View {
         let seed = abs(initials.unicodeScalars.reduce(0) { $0 &+ Int($1.value) &* 17 })
         let hue = Double(seed % 360) / 360
         return [
-            Color(hue: hue, saturation: 0.32, brightness: 0.62),
-            Color(hue: (hue + 0.08).truncatingRemainder(dividingBy: 1), saturation: 0.42, brightness: 0.38)
+            Color(hue: hue, saturation: 0.22, brightness: 0.52),
+            Color(hue: (hue + 0.08).truncatingRemainder(dividingBy: 1), saturation: 0.30, brightness: 0.32)
         ]
     }
 }
@@ -617,7 +617,7 @@ struct FFTabBar: View {
         HStack(spacing: 0) {
             item(.fights, "figure.run", "Fights")
             item(.newFight, "plus", "New")
-            item(.requests, "bubble.left", "Requests")
+            item(.requests, "arrow.up.message", "Requests")
             item(.you, "person", "You")
         }
         .padding(.horizontal, 13)
@@ -644,7 +644,7 @@ struct FFTabBar: View {
                     .foregroundStyle(on ? theme.accent : theme.muted)
                     .frame(height: 22)
                 Text(title)
-                    .font(.ff(12, on ? .semibold : .regular))
+                    .font(.ff(10, on ? .semibold : .regular))
                     .foregroundStyle(on ? theme.text : theme.muted)
             }
             .frame(maxWidth: .infinity)

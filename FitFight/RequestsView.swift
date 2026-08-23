@@ -79,13 +79,16 @@ struct RequestCard: View {
                 } label: {
                     VStack(spacing: 3) {
                         Image(systemName: "arrow.up")
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(.system(size: 9, weight: .semibold))
                         Text("\(votes)")
-                            .font(.ff(17, .bold))
+                            .font(.ff(14, .bold))
                     }
                     .foregroundStyle(voted ? theme.ink : theme.text)
+                    .padding(.top, 10)
                     .frame(width: 44)
-                    .frame(maxHeight: .infinity)
+                    // The mock pins the arrow and the count to the top of the pill
+                    // and lets the pill stretch to the height of the card.
+                    .frame(maxHeight: .infinity, alignment: .top)
                     .background(
                         voted ? theme.accent : theme.chip,
                         in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)

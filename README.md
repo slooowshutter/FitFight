@@ -8,7 +8,7 @@ Cloud-only iOS app: Marc talks from his phone, a Cursor cloud agent codes, GitHu
 
 ## Agents
 
-Read [`AGENTS.md`](AGENTS.md) and [`docs/`](docs/README.md) before changing anything. That’s the project memory for parallel chats.
+Read [`AGENTS.md`](AGENTS.md) and [`docs/`](docs/README.md) before changing anything. That’s the project memory for parallel chats. Ideas live in [`docs/backlog.md`](docs/backlog.md).
 
 ## Marc
 

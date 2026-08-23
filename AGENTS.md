@@ -25,7 +25,9 @@ Read this first, then `docs/`. Marc talks from his phone, often transcribing. Be
 - Simulator compile on every PR.
 - Approved design dump in `docs/design/source/` (338 tokens, 76 screenshots). App has four tabs: Fights, New, Requests, You. Dark/light + 10 accents.
 
-Details: [docs/product.md](docs/product.md) · [docs/shipping.md](docs/shipping.md) · [docs/history.md](docs/history.md) · [docs/design/source/README.md](docs/design/source/README.md)
+Details: [docs/product.md](docs/product.md) · [docs/backlog.md](docs/backlog.md) · [docs/shipping.md](docs/shipping.md) · [docs/history.md](docs/history.md) · [docs/design/source/README.md](docs/design/source/README.md)
+
+Product ideas go in [`docs/backlog.md`](docs/backlog.md). Marc says “put X on the backlog”; do not open GitHub Issues or a Notion board unless he asks.
 
 ## When you change the app
 

@@ -35,4 +35,4 @@ Marketing version: `0.3.0`. CI bumps **build number** from TestFlight (`latest +
 
 ## Next product work
 
-Real challenges / friends / scoring — the screens exist as a design-accurate mock with fixture people. No HealthKit, no backend, no notifications. Don’t invent the gaps listed in [`design/source/INVENTORY.md`](design/source/INVENTORY.md).
+The living list is [`backlog.md`](backlog.md). Right now the screens are a design-accurate mock with fixture people. No HealthKit, no backend, no notifications. Don’t invent the gaps listed in [`design/source/INVENTORY.md`](design/source/INVENTORY.md).

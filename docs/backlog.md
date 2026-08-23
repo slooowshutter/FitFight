@@ -34,6 +34,8 @@ The phone’s job is: show the UI, read HealthKit / workouts when it is open (or
 
 ## Later
 
+- **All the providers.** Not one source. Include Apple Health, Apple Watch / Watch Ultra, Whoop, Strava, Garmin, Google Fit (or whatever the current Google health thing is). Goal is every provider people already use. Do not invent the connect screens yet.
+- **Overlapping sources.** If Garmin (or Whoop, Strava, …) also syncs into Apple Health, which number do we take? We need to think about this before we count. Do not pick a rule yet (not “always Health,” not average, not sum). The failure mode is double-counting the same steps.
 - **Recurring fights.** Same challenge every month (or every N days). Server rolls a new window when the last one ends. User does not recreate it by hand.
 - **End-of-window sync nudge.** Push at the close of a period: open the app so steps / workouts can upload if they did not. Copy is “open so we can sync,” not a fake score. Server sends it; the phone cannot schedule this while killed.
 - **Friend pokes (encourage / discourage).** A user writes a short line; the server sends a push to the friend. The notification is from FitFight; the words are from the friend. Apple does not ban this — every chat app does it. What they *do* require if people can send text: filter garbage, report, block, a way to reach us. Do not put health numbers or money in the lock-screen text. Rate-limit so it cannot become spam. “Discourage” is the spicy half — ship mute / block with it, or it becomes bullying and Apple *will* pull the app (guideline 1.2). Not a screen yet; do not invent one.

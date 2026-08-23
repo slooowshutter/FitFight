@@ -29,8 +29,8 @@ The phone’s job is: show the UI, read HealthKit / workouts when it is open (or
 
 ## Next
 
-- Backend. Accounts, fights, scores, pushes. Nothing below works without this.
-- HealthKit (or another data source) so a fight has real numbers.
+- Backend. Accounts, fights, scores, pushes. Nothing below works without this. Shape is [`docs/system/`](system/README.md) + [`sync.md`](sync.md): GRDB replica + outbox, not SwiftData, not `URLSession` in a view.
+- HealthKit (or another data source) so a fight has real numbers. Compile daily totals on device, upload via the score outbox. Raw samples never persist in our store.
 
 ## Later
 

@@ -1,5 +1,9 @@
 # History
 
+## 2026-08-23 — system design
+
+A–Z design for real fights: Postgres schema, SoD type layers, HealthKit compile, GRDB cache/outbox, IOU settlement. Docs only; fixtures unchanged. See [`system/README.md`](system/README.md).
+
 ## 2026-08-22 — TestFlight on every app push
 
 Any app push (PR branch or `main`) uploads to TestFlight. Marc tests with TestFlight → Update. No GitHub tap. Daily 18:00 UTC stays as a safety net.

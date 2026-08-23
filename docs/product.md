@@ -56,4 +56,4 @@ directions named Arena and Pulse are unrelated to them.
 
 ## Next product work
 
-The living list is [`backlog.md`](backlog.md). Right now the screens are a design-accurate mock with fixture people. No HealthKit, no backend, no notifications. Don’t invent the gaps listed in [`design/source/INVENTORY.md`](design/source/INVENTORY.md).
+The living list is [`backlog.md`](backlog.md). Right now the screens are a design-accurate mock with fixture people. No HealthKit, no backend, no notifications. Don’t invent the gaps listed in [`design/source/INVENTORY.md`](design/source/INVENTORY.md). When real fights start, follow [`system/README.md`](system/README.md) and [`sync.md`](sync.md) — do not put `URLSession` on a view.

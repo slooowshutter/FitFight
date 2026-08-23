@@ -30,6 +30,8 @@ jobs:
               raise SystemExit("FitFight/DesignSystem/tokens.json must match docs/design/source/tokens.json")
           print("tokens ok", len(app.get("colors", {}).get("accents", {})), "accents")
           PY
+      - name: sync architecture boundaries
+        run: python3 scripts/check-sync-boundaries.py
 
   build:
     name: Simulator

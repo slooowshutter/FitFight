@@ -1,5 +1,9 @@
 # History
 
+## 2026-08-23 — five extra looks
+
+You → Look now has Classic plus Ink, Paper, Harbor, Grid and Dusk. Classic stays the default (the approved kit). Marketing version `0.6.0`.
+
 ## 2026-08-22 — TestFlight on every app push
 
 Any app push (PR branch or `main`) uploads to TestFlight. Marc tests with TestFlight → Update. No GitHub tap. Daily 18:00 UTC stays as a safety net.

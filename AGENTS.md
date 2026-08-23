@@ -12,9 +12,9 @@ Read this first, then `docs/`. Marc talks from his phone, often transcribing. Be
 - This Linux environment cannot compile or upload iOS. CI on GitHub-hosted `macos-26` does that.
 - Never put `.p8` / API keys / provisioning profiles in git or chat.
 - Keep the repo **public** (free GitHub macOS minutes). Don’t make it private without saying so.
-- Version label stays at the **top of the screen** (not the nav bar), e.g. `0.3.0 (12)`.
+- Version label stays at the **top of the screen** (not the nav bar), e.g. `0.6.0 (12)`.
 - Permanent **Versions** button: under You → Settings, and the version label at the top. Every user-facing ship adds a row in `FitFight/Changelog.swift`.
-- Design tokens live in `FitFight/DesignSystem/tokens.json` (same file as `docs/design/source/tokens.json`). Don’t hardcode colours. Theme is **base × accent**. After token changes, copy the dump into the app bundle file.
+- Design tokens live in `FitFight/DesignSystem/tokens.json` (same file as `docs/design/source/tokens.json`). Don't hardcode colours. Theme is **look × base × accent**; default look is **Classic**, which is those tokens. Other looks are overlays in `Looks.swift` — don't copy them into `tokens.json`. After token changes, copy the dump into the app bundle file.
 - Talk to Marc only for things only he can do: Apple login, GitHub secrets, TestFlight testers, legal. Agents cannot `workflow_dispatch`. App pushes (PR branch or `main`) upload to TestFlight by themselves. Tell Marc a build is coming; he opens TestFlight → Update. Do not ask him to Run workflow.
 
 ## What exists (2026-08-22)

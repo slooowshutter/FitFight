@@ -65,7 +65,7 @@ struct FightDetailView: View {
                 .foregroundStyle(theme.text)
                 .padding(.horizontal, 14)
                 .frame(height: 36)
-                .overlay { Capsule().strokeBorder(theme.line, lineWidth: 1) }
+                .overlay { theme.rounded(theme.buttonRadius).strokeBorder(theme.line, lineWidth: 1) }
             }
             .buttonStyle(FFPressStyle(scale: 0.97))
             Spacer(minLength: 0)
@@ -239,7 +239,7 @@ struct FightDetailView: View {
     private func standingRow(index: Int, row: Standing) -> some View {
         let isLead = index == 0 && !row.invited
         let maxScore = fight.standings.map(\.score).max() ?? 1
-        let fill: Color = isLead ? theme.accent : (row.person.isYou ? theme.text : Color.white.opacity(0.45))
+        let fill: Color = isLead ? theme.accent : (row.person.isYou ? theme.text : theme.otherBar())
         return VStack(spacing: 8) {
             HStack(spacing: 0) {
                 Text("\(index + 1)")
@@ -303,7 +303,7 @@ struct FightDetailView: View {
                                     .frame(width: 56, alignment: .leading)
                                 FFProgressBar(
                                     progress: maxVal == 0 ? 0 : CGFloat(row.value / maxVal),
-                                    fill: row.person.id == leaderID ? theme.accent : Color.white.opacity(0.45)
+                                    fill: row.person.id == leaderID ? theme.accent : theme.otherBar()
                                 )
                                 Text(model.formatScore(row.value, metric: fight.metric))
                                     .font(.ff(11))

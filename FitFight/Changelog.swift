@@ -24,6 +24,13 @@ enum Changelog {
     /// Newest first. Add a row here whenever we ship a user-facing change.
     static let releases: [ReleaseNote] = [
         ReleaseNote(
+            version: "0.6.0",
+            year: 2026,
+            month: 8,
+            day: 23,
+            notes: "Five more looks in You → Look, under Dark/Light. Classic is still the default — the one that's already on your phone. Tap Ink, Paper, Harbor, Grid or Dusk and the whole app shifts. Your accent still means you / first place."
+        ),
+        ReleaseNote(
             version: "0.5.1",
             year: 2026,
             month: 8,

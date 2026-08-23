@@ -138,10 +138,10 @@ struct FFButton: View {
             .frame(maxWidth: kind == .small ? nil : .infinity)
             .padding(.horizontal, kind == .small ? 12 : 16)
             .frame(height: kind == .small ? 34 : 54)
-            .background(background, in: Capsule())
+            .background(background, in: theme.rounded(theme.buttonRadius))
             .overlay {
                 if kind == .quiet {
-                    Capsule().strokeBorder(theme.line, lineWidth: 1)
+                    theme.rounded(theme.buttonRadius).strokeBorder(theme.line, lineWidth: 1)
                 }
             }
             .opacity(enabled ? 1 : 0.6)
@@ -191,12 +191,13 @@ struct FFIconButton: View {
     }
 }
 
-/// Card: surface, 1px line border, 22pt radius, 20pt padding.
+/// Card: surface, 1px line border, 22pt radius on Classic, 20pt padding.
 struct FFCard<Content: View>: View {
     var padding: CGFloat = FFMetric.cardPadding
     /// Rows in the mock are wider inside than they are tall inside.
     var horizontal: CGFloat? = nil
-    var radius: CGFloat = FFMetric.cardRadius
+    var radius: CGFloat? = nil
+    var tight = false
     @ViewBuilder var content: () -> Content
     @Environment(\.ffTheme) private var theme
 
@@ -210,13 +211,13 @@ struct FFCard<Content: View>: View {
     }
 
     private var shape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: radius, style: .continuous)
+        theme.rounded(radius ?? (tight ? theme.tightCardRadius : theme.cardRadius))
     }
 }
 
 /// Card without padding: rows, tinted bands and footers run edge to edge.
 struct FFPanel<Content: View>: View {
-    var radius: CGFloat = FFMetric.cardRadius
+    var radius: CGFloat? = nil
     @ViewBuilder var content: () -> Content
     @Environment(\.ffTheme) private var theme
 
@@ -231,7 +232,7 @@ struct FFPanel<Content: View>: View {
     }
 
     private var shape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: radius, style: .continuous)
+        theme.rounded(radius ?? theme.cardRadius)
     }
 }
 
@@ -280,7 +281,7 @@ struct FFRankBadge: View {
         .frame(width: FFMetric.rankBadgeWidth, height: FFMetric.rankBadgeHeight)
         .background(
             first ? theme.accent : theme.chip,
-            in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
+            in: theme.rounded(theme.radius.lg)
         )
     }
 }
@@ -333,7 +334,7 @@ struct FFSegmented<Item: Hashable>: View {
                         .frame(height: 30)
                         .background {
                             if on {
-                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                theme.rounded(theme.segmentThumbRadius)
                                     .fill(theme.surface)
                                     .shadow(color: Color.black.opacity(0.25), radius: 2, y: 1)
                             }
@@ -343,7 +344,7 @@ struct FFSegmented<Item: Hashable>: View {
             }
         }
         .padding(4)
-        .background(theme.chip, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+        .background(theme.chip, in: theme.rounded(theme.segmentRadius))
     }
 }
 
@@ -541,11 +542,11 @@ struct FFStatTile: View {
         .frame(height: height)
         .background(
             onSurface ? theme.surface : theme.chip,
-            in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
+            in: theme.rounded(theme.radius.lg)
         )
         .overlay {
             if onSurface {
-                RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
+                theme.rounded(theme.radius.lg)
                     .strokeBorder(theme.line, lineWidth: 1)
             }
         }
@@ -595,7 +596,7 @@ struct FFBadge: View {
     }
 
     private var shape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: 4, style: .continuous)
+        theme.rounded(4)
     }
 
     private func foreground(_ color: Color) -> Color {
@@ -638,11 +639,11 @@ struct FFChip: View {
             .frame(height: 46)
             .background(
                 selected ? theme.accent : theme.surface,
-                in: RoundedRectangle(cornerRadius: FFMetric.chipRadius, style: .continuous)
+                in: theme.rounded(theme.chipRadius)
             )
             .overlay {
                 if !selected {
-                    RoundedRectangle(cornerRadius: FFMetric.chipRadius, style: .continuous)
+                    theme.rounded(theme.chipRadius)
                         .strokeBorder(theme.line, lineWidth: 1)
                 }
             }

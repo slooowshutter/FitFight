@@ -192,7 +192,7 @@ struct LiveFightCard: View {
     private func miniRow(index: Int, row: Standing) -> some View {
         let maxScore = joined.map(\.score).max() ?? 1
         let isLead = index == 0
-        let fill: Color = isLead ? theme.accent : (row.person.isYou ? theme.text : Color.white.opacity(0.45))
+        let fill: Color = isLead ? theme.accent : (row.person.isYou ? theme.text : theme.otherBar())
         return HStack(spacing: 0) {
             Text("\(index + 1)")
                 .font(.ff(12, .semibold))
@@ -265,7 +265,7 @@ struct FinishedRow: View {
                         .frame(width: 36, height: 36)
                         .background(
                             theme.green.opacity(0.12),
-                            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            in: theme.rounded(theme.radius.md)
                         )
                     VStack(alignment: .leading, spacing: 3) {
                         Text(fight.name)

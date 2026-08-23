@@ -60,7 +60,7 @@ private struct ReleaseNoteRow: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(theme.surface, in: RoundedRectangle(cornerRadius: theme.radius.xl, style: .continuous))
+        .background(theme.surface, in: theme.rounded(theme.radius.xl))
     }
 }
 

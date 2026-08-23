@@ -47,6 +47,7 @@ enum TypeRole: String {
 struct Theme {
     var baseID: BaseID
     var accentID: AccentID
+    var lookID: LookID
 
     var bg: Color
     var surface: Color
@@ -74,6 +75,15 @@ struct Theme {
     var space: SpaceTokens
     var radius: RadiusTokens
 
+    /// Measured card corner. Classic is 22, not `radius.xl` (24).
+    var cardRadius: CGFloat
+    var tightCardRadius: CGFloat
+    var chipRadius: CGFloat
+    var buttonRadius: CGFloat
+    var segmentRadius: CGFloat
+    var segmentThumbRadius: CGFloat
+    var cornerStyle: RoundedCornerStyle
+
     var colorScheme: ColorScheme { baseID.colorScheme }
 
     func font(_ role: TypeRole) -> Font {
@@ -85,6 +95,13 @@ struct Theme {
         let spec = type.spec(role)
         return spec.size * spec.letterSpacing
     }
+
+    func rounded(_ radius: CGFloat) -> RoundedRectangle {
+        RoundedRectangle(cornerRadius: radius, style: cornerStyle)
+    }
+
+    /// Bars that aren't first place and aren't you.
+    func otherBar() -> Color { text.opacity(0.45) }
 
     func selectedRow() -> Color { accent.opacity(0.07) }
     func selectedOption() -> Color { accent.opacity(0.08) }
@@ -134,8 +151,10 @@ struct RadiusTokens {
 enum ThemeCatalog {
     static let file: TokenFile = load()
 
-    static func theme(base: BaseID, accent: AccentID) -> Theme {
-        file.theme(base: base, accent: accent)
+    static func theme(base: BaseID, accent: AccentID, look: LookID = .classic) -> Theme {
+        var theme = file.theme(base: base, accent: accent)
+        LookCatalog.apply(look, base: base, to: &theme)
+        return theme
     }
 
     private static func load() -> TokenFile {
@@ -157,18 +176,32 @@ final class ThemeStore: ObservableObject {
         didSet { UserDefaults.standard.set(accentID.rawValue, forKey: Self.accentKey) }
     }
 
+    @Published var lookID: LookID {
+        didSet { UserDefaults.standard.set(lookID.rawValue, forKey: Self.lookKey) }
+    }
+
     var theme: Theme {
-        ThemeCatalog.theme(base: baseID, accent: accentID)
+        ThemeCatalog.theme(base: baseID, accent: accentID, look: lookID)
     }
 
     private static let baseKey = "ff.baseID"
     private static let accentKey = "ff.accentID"
+    private static let lookKey = "ff.lookID"
 
     init() {
         let baseRaw = UserDefaults.standard.string(forKey: Self.baseKey) ?? BaseID.dark.rawValue
         let accentRaw = UserDefaults.standard.string(forKey: Self.accentKey) ?? AccentID.blue.rawValue
+        let lookRaw = UserDefaults.standard.string(forKey: Self.lookKey) ?? LookID.classic.rawValue
         baseID = BaseID(rawValue: baseRaw) ?? .dark
         accentID = AccentID(rawValue: accentRaw) ?? .blue
+        lookID = LookID(rawValue: lookRaw) ?? .classic
+    }
+
+    func selectLook(_ look: LookID) {
+        guard look != lookID else { return }
+        withAnimation(.easeInOut(duration: 0.22)) {
+            lookID = look
+        }
     }
 }
 
@@ -203,6 +236,7 @@ struct TokenFile: Decodable {
         return Theme(
             baseID: base,
             accentID: accent,
+            lookID: .classic,
             bg: Color(token: baseColors.bg),
             surface: Color(token: baseColors.surface),
             surface2: Color(token: baseColors.surface2),
@@ -224,7 +258,14 @@ struct TokenFile: Decodable {
             red: Color(token: colors.data.red),
             type: type.tokens,
             space: space.tokens,
-            radius: radius.tokens
+            radius: radius.tokens,
+            cardRadius: 22,
+            tightCardRadius: 15,
+            chipRadius: 10,
+            buttonRadius: 9999,
+            segmentRadius: 11,
+            segmentThumbRadius: 8,
+            cornerStyle: .continuous
         )
     }
 

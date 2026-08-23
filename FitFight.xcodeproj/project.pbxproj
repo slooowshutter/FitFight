@@ -29,6 +29,7 @@
 		A100000000000000000000B4 /* Manrope-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A4 /* Manrope-Bold.ttf */; };
 		A100000000000000000000B5 /* Manrope-ExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A5 /* Manrope-ExtraBold.ttf */; };
 		A100000000000000000000B7 /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A7 /* Typography.swift */; };
+		A100000000000000000000B8 /* Looks.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A8 /* Looks.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -55,6 +56,7 @@
 		A100000000000000000000A4 /* Manrope-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Manrope-Bold.ttf; sourceTree = "<group>"; };
 		A100000000000000000000A5 /* Manrope-ExtraBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Manrope-ExtraBold.ttf; sourceTree = "<group>"; };
 		A100000000000000000000A7 /* Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
+		A100000000000000000000A8 /* Looks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Looks.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -97,6 +99,7 @@
 				A10000000000000000000017 /* Theme.swift */,
 				A10000000000000000000018 /* Components.swift */,
 				A100000000000000000000A7 /* Typography.swift */,
+				A100000000000000000000A8 /* Looks.swift */,
 			);
 			path = DesignSystem;
 			sourceTree = "<group>";
@@ -212,6 +215,7 @@
 				A10000000000000000000007 /* Theme.swift in Sources */,
 				A10000000000000000000008 /* Components.swift in Sources */,
 				A100000000000000000000B7 /* Typography.swift in Sources */,
+				A100000000000000000000B8 /* Looks.swift in Sources */,
 				A10000000000000000000009 /* AppModel.swift in Sources */,
 				A1000000000000000000000B /* FightsListView.swift in Sources */,
 				A1000000000000000000000C /* FightDetailView.swift in Sources */,
@@ -366,7 +370,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.5.1;
+				MARKETING_VERSION = 0.6.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.fitfight.mvp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -398,7 +402,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.5.1;
+				MARKETING_VERSION = 0.6.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.fitfight.mvp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";

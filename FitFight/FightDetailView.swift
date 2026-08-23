@@ -24,13 +24,13 @@ struct FightDetailView: View {
                 moneyCard
 
                 sectionGap
-                FFSectionHeader(title: "Standings", action: fight.standingsMeta, actionMuted: true)
+                FFSectionHeader(title: "Standings", action: fight.standingsMeta, actionMuted: true, inset: 0)
                     .padding(.bottom, 10)
                 standingsCard
 
                 if !fight.days.isEmpty {
                     sectionGap
-                    FFSectionHeader(title: "Every day so far")
+                    FFSectionHeader(title: "Every day so far", inset: 0)
                         .padding(.bottom, 10)
                     daysCard
                 }

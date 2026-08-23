@@ -31,7 +31,7 @@ struct RequestsView: View {
                 FFSegmented(items: Filter.allCases, selection: $filter) { $0.rawValue }
                     .padding(.bottom, 16)
 
-                VStack(spacing: 9) {
+                VStack(spacing: 10) {
                     ForEach(filtered) { item in
                         RequestCard(item: item)
                     }
@@ -72,7 +72,7 @@ struct RequestCard: View {
     var body: some View {
         let voted = model.voted.contains(item.id)
         let votes = item.votes + (voted ? 1 : 0)
-        return FFCard(padding: 14) {
+        return FFCard(padding: 14, radius: FFMetric.tightCardRadius) {
             HStack(alignment: .top, spacing: 12) {
                 Button {
                     if voted { model.voted.remove(item.id) } else { model.voted.insert(item.id) }
@@ -91,11 +91,11 @@ struct RequestCard: View {
                     .frame(maxHeight: .infinity, alignment: .top)
                     .background(
                         voted ? theme.accent : theme.chip,
-                        in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
+                        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
                     )
                     .overlay {
                         if !voted {
-                            RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
                                 .strokeBorder(theme.line, lineWidth: 1)
                         }
                     }
@@ -110,8 +110,7 @@ struct RequestCard: View {
                         )
                         FFBadge(text: statusText, tone: statusTone, style: .plain)
                     }
-                    .padding(.top, 1)
-                    .padding(.bottom, 6.5)
+                    .padding(.bottom, 7.5)
                     Text(item.title)
                         .font(.ff(14, .bold))
                         .foregroundStyle(theme.text)
@@ -121,7 +120,7 @@ struct RequestCard: View {
                         .foregroundStyle(theme.muted)
                         .lineSpacing(1.5)
                         .fixedSize(horizontal: false, vertical: true)
-                        .padding(.bottom, 12)
+                        .padding(.bottom, 11)
                     HStack(spacing: 8) {
                         FFAvatar(item.author, size: 18)
                         Text("\(item.author.name) · \(item.ago)")

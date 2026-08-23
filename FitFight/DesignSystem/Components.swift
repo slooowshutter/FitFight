@@ -3,8 +3,13 @@ import UIKit
 
 // Geometry measured from docs/design/source/screenshots (393pt canvas, 2x captures).
 enum FFMetric {
-    static let cardRadius: CGFloat = 24
+    static let cardRadius: CGFloat = 22
+    /// Request cards are drawn with a tighter corner than fight cards.
+    static let tightCardRadius: CGFloat = 14
     static let cardPadding: CGFloat = 20
+    /// Section titles sit 4pt inside the card edge below them, except on the
+    /// fights list and the standings, where the mock lines them up flush.
+    static let sectionTitleInset: CGFloat = 4
     /// List rows (settings, sources, options) inset 16; rows that sit inside a
     /// fight card, and the tinted bands, inset by the card padding instead.
     static let rowPaddingX: CGFloat = 16
@@ -130,7 +135,7 @@ struct FFButton: View {
             }
             .foregroundStyle(foreground)
             .frame(maxWidth: kind == .small ? nil : .infinity)
-            .padding(.horizontal, kind == .small ? 15 : 16)
+            .padding(.horizontal, kind == .small ? 12 : 16)
             .frame(height: kind == .small ? 34 : 54)
             .background(background, in: Capsule())
             .overlay {
@@ -185,11 +190,12 @@ struct FFIconButton: View {
     }
 }
 
-/// Card: surface, 1px line border, 24pt radius, 20pt padding.
+/// Card: surface, 1px line border, 22pt radius, 20pt padding.
 struct FFCard<Content: View>: View {
     var padding: CGFloat = FFMetric.cardPadding
     /// Rows in the mock are wider inside than they are tall inside.
     var horizontal: CGFloat? = nil
+    var radius: CGFloat = FFMetric.cardRadius
     @ViewBuilder var content: () -> Content
     @Environment(\.ffTheme) private var theme
 
@@ -203,12 +209,13 @@ struct FFCard<Content: View>: View {
     }
 
     private var shape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: FFMetric.cardRadius, style: .continuous)
+        RoundedRectangle(cornerRadius: radius, style: .continuous)
     }
 }
 
 /// Card without padding: rows, tinted bands and footers run edge to edge.
 struct FFPanel<Content: View>: View {
+    var radius: CGFloat = FFMetric.cardRadius
     @ViewBuilder var content: () -> Content
     @Environment(\.ffTheme) private var theme
 
@@ -223,7 +230,7 @@ struct FFPanel<Content: View>: View {
     }
 
     private var shape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: FFMetric.cardRadius, style: .continuous)
+        RoundedRectangle(cornerRadius: radius, style: .continuous)
     }
 }
 
@@ -325,7 +332,7 @@ struct FFSegmented<Item: Hashable>: View {
                         .frame(height: 30)
                         .background {
                             if on {
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
                                     .fill(theme.surface)
                                     .shadow(color: Color.black.opacity(0.25), radius: 2, y: 1)
                             }
@@ -334,8 +341,8 @@ struct FFSegmented<Item: Hashable>: View {
                 .buttonStyle(.plain)
             }
         }
-        .padding(4)
-        .background(theme.chip, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .padding(3)
+        .background(theme.chip, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
     }
 }
 
@@ -343,6 +350,7 @@ struct FFSectionHeader: View {
     let title: String
     var action: String? = nil
     var actionMuted = false
+    var inset: CGFloat = FFMetric.sectionTitleInset
     var onAction: (() -> Void)? = nil
 
     @Environment(\.ffTheme) private var theme
@@ -365,6 +373,7 @@ struct FFSectionHeader: View {
                 }
             }
         }
+        .padding(.horizontal, inset)
     }
 }
 
@@ -570,7 +579,7 @@ struct FFBadge: View {
             .font(.ff(9, .bold))
             .tracking(0.4)
             .foregroundStyle(foreground(color))
-            .padding(.horizontal, style == .plain ? 0 : 7)
+            .padding(.horizontal, style == .plain ? 0 : 5)
             .padding(.vertical, style == .plain ? 0 : 3)
             .background {
                 switch style {
@@ -585,7 +594,7 @@ struct FFBadge: View {
     }
 
     private var shape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: 6, style: .continuous)
+        RoundedRectangle(cornerRadius: 4, style: .continuous)
     }
 
     private func foreground(_ color: Color) -> Color {

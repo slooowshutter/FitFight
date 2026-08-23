@@ -22,7 +22,7 @@ struct FightsListView: View {
                 }
 
                 if !model.invitations.isEmpty {
-                    FFSectionHeader(title: "Invitations")
+                    FFSectionHeader(title: "Invitations", inset: 0)
                         .padding(.top, theme.space.sectionGap)
                         .padding(.bottom, 12)
                     VStack(spacing: 10) {
@@ -33,7 +33,7 @@ struct FightsListView: View {
                 }
 
                 if !model.finished.isEmpty {
-                    FFSectionHeader(title: "Finished")
+                    FFSectionHeader(title: "Finished", inset: 0)
                         .padding(.top, theme.space.sectionGap)
                         .padding(.bottom, 12)
                     VStack(spacing: 10) {

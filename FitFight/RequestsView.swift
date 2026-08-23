@@ -20,7 +20,7 @@ struct RequestsView: View {
                         FFLabel(text: "Requests", role: .display)
                         Text("Vote on what gets built next.")
                             .font(.ff(13))
-                            .foregroundStyle(theme.muted)
+                            .foregroundStyle(theme.faint)
                     }
                     Spacer(minLength: 0)
                     FFButton(title: "New", kind: .small, icon: "plus") {}

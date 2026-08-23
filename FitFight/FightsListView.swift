@@ -56,23 +56,23 @@ struct FightsListView: View {
                 HStack(spacing: 5) {
                     Text("If it ends like this you're")
                         .font(.ff(13))
-                        .foregroundStyle(theme.muted)
+                        .foregroundStyle(theme.faint)
                     FFMoney(dollars: model.projectedNet, size: 13)
                 }
             }
             Spacer(minLength: 0)
-            ZStack(alignment: .topTrailing) {
+            ZStack {
+                Circle().strokeBorder(theme.line, lineWidth: 1)
                 Image(systemName: "bell")
-                    .font(.system(size: 17, weight: .regular))
-                    .foregroundStyle(theme.text)
-                    .frame(width: 40, height: 40)
-                    .background(theme.chip, in: Circle())
-                    .overlay { Circle().strokeBorder(theme.line, lineWidth: 1) }
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundStyle(theme.muted)
+                // The mock hangs the dot off the bell itself, not off the circle.
                 Circle()
                     .fill(theme.red)
-                    .frame(width: 7, height: 7)
-                    .offset(x: -6, y: 6)
+                    .frame(width: 6, height: 6)
+                    .offset(x: 6, y: -7)
             }
+            .frame(width: 40, height: 40)
         }
         .padding(.top, 2)
     }
@@ -89,7 +89,7 @@ struct LiveFightCard: View {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .top, spacing: 12) {
                     VStack(alignment: .leading, spacing: 0) {
-                        FFLabel(text: fight.metric.eyebrow, role: .eyebrow, color: theme.muted)
+                        FFLabel(text: fight.metric.eyebrow, role: .eyebrow)
                             .padding(.top, 2)
                             .padding(.bottom, 6.5)
                         FFLabel(text: fight.name, role: .title)
@@ -133,7 +133,7 @@ struct LiveFightCard: View {
                 if hiddenCount > 0 {
                     Text("+\(hiddenCount) more")
                         .font(.ff(11))
-                        .foregroundStyle(theme.muted)
+                        .foregroundStyle(theme.faint)
                         .padding(.top, 11)
                 }
             }
@@ -152,7 +152,7 @@ struct LiveFightCard: View {
                             FFMoney(dollars: you.projectedNet)
                             Text("right now")
                                 .font(.ff(12))
-                                .foregroundStyle(theme.muted)
+                                .foregroundStyle(theme.faint)
                         }
                     }
                 }

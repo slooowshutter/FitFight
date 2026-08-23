@@ -84,7 +84,15 @@ struct FFLabel: View {
         Text(spec.uppercase ? text.uppercased() : text)
             .font(theme.font(role))
             .tracking(theme.tracking(role))
-            .foregroundStyle(color ?? theme.text)
+            .foregroundStyle(color ?? defaultColor)
+    }
+
+    /// Kickers and eyebrows are labels, and labels are faint everywhere in the mock.
+    private var defaultColor: Color {
+        switch role {
+        case .eyebrow, .tiny: return theme.faint
+        default: return theme.text
+        }
     }
 }
 
@@ -169,7 +177,6 @@ struct FFIconButton: View {
                 .font(.system(size: 15, weight: .regular))
                 .foregroundStyle(destructive ? theme.red : theme.text)
                 .frame(width: size, height: size)
-                .background(theme.chip, in: Circle())
                 .overlay {
                     Circle().strokeBorder(theme.line, lineWidth: 1)
                 }
@@ -313,7 +320,7 @@ struct FFSegmented<Item: Hashable>: View {
                 } label: {
                     Text(title(item))
                         .font(.ff(12, on ? .semibold : .medium))
-                        .foregroundStyle(on ? theme.text : theme.muted)
+                        .foregroundStyle(on ? theme.text : theme.faint)
                         .frame(maxWidth: .infinity)
                         .frame(height: 30)
                         .background {
@@ -349,7 +356,7 @@ struct FFSectionHeader: View {
             if let action {
                 let label = Text(action)
                     .font(.ff(12, actionMuted ? .regular : .semibold))
-                    .foregroundStyle(actionMuted ? theme.muted : theme.accent)
+                    .foregroundStyle(actionMuted ? theme.faint : theme.accent)
                 if let onAction {
                     Button(action: onAction) { label }
                         .buttonStyle(.plain)
@@ -455,12 +462,17 @@ struct FFProgressBar: View {
 
     var body: some View {
         GeometryReader { geo in
+            let filled = max(height, geo.size.width * min(1, max(0, progress)))
+            // The track is knocked out under the fill: both are translucent white, and
+            // stacking them would make every part-filled bar lighter than the mock.
             Capsule()
                 .fill(theme.track)
                 .overlay(alignment: .leading) {
-                    Capsule()
-                        .fill(fill)
-                        .frame(width: max(height, geo.size.width * min(1, max(0, progress))))
+                    Capsule().frame(width: filled).blendMode(.destinationOut)
+                }
+                .compositingGroup()
+                .overlay(alignment: .leading) {
+                    Capsule().fill(fill).frame(width: filled)
                 }
         }
         .frame(height: height)
@@ -500,6 +512,8 @@ struct FFStatTile: View {
     let label: String
     var color: Color? = nil
     var onSurface = false
+    /// The profile grid runs two points taller than the row inside a fight hero.
+    var height: CGFloat = FFMetric.statTileHeight
 
     @Environment(\.ffTheme) private var theme
 
@@ -511,10 +525,10 @@ struct FFStatTile: View {
             Text(label.uppercased())
                 .font(.ff(9, .semibold))
                 .tracking(0.2)
-                .foregroundStyle(theme.muted)
+                .foregroundStyle(theme.faint)
         }
         .frame(maxWidth: .infinity)
-        .frame(height: FFMetric.statTileHeight)
+        .frame(height: height)
         .background(
             onSurface ? theme.surface : theme.chip,
             in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)

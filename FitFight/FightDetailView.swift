@@ -65,7 +65,6 @@ struct FightDetailView: View {
                 .foregroundStyle(theme.text)
                 .padding(.horizontal, 14)
                 .frame(height: 36)
-                .background(theme.chip, in: Capsule())
                 .overlay { Capsule().strokeBorder(theme.line, lineWidth: 1) }
             }
             .buttonStyle(FFPressStyle(scale: 0.97))
@@ -73,7 +72,7 @@ struct FightDetailView: View {
             Text(fight.code)
                 .font(.ff(11, .semibold))
                 .tracking(1.2)
-                .foregroundStyle(theme.muted)
+                .foregroundStyle(theme.faint)
             Spacer(minLength: 0)
             FFIconButton(systemName: "square.and.arrow.up", size: 36) {}
         }
@@ -83,9 +82,9 @@ struct FightDetailView: View {
     }
 
     private var invitedHero: some View {
-        FFCard(padding: 24) {
+        FFCard(padding: 24, horizontal: 20) {
             VStack(spacing: 0) {
-                FFLabel(text: fight.metric.eyebrow, role: .eyebrow, color: theme.muted)
+                FFLabel(text: fight.metric.eyebrow, role: .eyebrow)
                     .padding(.top, 2)
                     .padding(.bottom, 6.5)
                 heroTitle
@@ -110,9 +109,9 @@ struct FightDetailView: View {
     }
 
     private var liveHero: some View {
-        FFCard(padding: 24) {
+        FFCard(padding: 24, horizontal: 20) {
             VStack(spacing: 0) {
-                FFLabel(text: fight.metric.eyebrow, role: .eyebrow, color: theme.muted)
+                FFLabel(text: fight.metric.eyebrow, role: .eyebrow)
                     .padding(.top, 2)
                     .padding(.bottom, 6.5)
                 heroTitle
@@ -214,7 +213,7 @@ struct FightDetailView: View {
                     .foregroundStyle(theme.text)
                 Text(model.paceLine(row, in: fight))
                     .font(.ff(11))
-                    .foregroundStyle(theme.muted)
+                    .foregroundStyle(theme.faint)
             }
             Spacer(minLength: 8)
             if let safe = row.safe {

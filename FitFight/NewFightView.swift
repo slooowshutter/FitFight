@@ -23,7 +23,7 @@ struct NewFightView: View {
                     FFLabel(text: "New fight", role: .display)
                     Text("Scores sync automatically. You settle up at the end.")
                         .font(.ff(13))
-                        .foregroundStyle(theme.muted)
+                        .foregroundStyle(theme.faint)
                 }
                 .padding(.bottom, 32)
 
@@ -123,8 +123,8 @@ struct NewFightView: View {
                     }
             }
             Text("Runs from tomorrow to \(endLabel).")
-                .font(.ff(13))
-                .foregroundStyle(theme.muted)
+                .font(.ff(11))
+                .foregroundStyle(theme.faint)
         }
     }
 
@@ -315,7 +315,7 @@ struct NewFightView: View {
                 .frame(width: Self.tickSize, height: Self.tickSize)
                 .overlay {
                     if !on {
-                        Circle().strokeBorder(theme.line, lineWidth: 2)
+                        Circle().strokeBorder(theme.faint, lineWidth: 2)
                     }
                 }
             if on {
@@ -335,7 +335,7 @@ struct NewFightView: View {
                 .overlay {
                     if !on {
                         RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .strokeBorder(theme.line, lineWidth: 2)
+                            .strokeBorder(theme.faint, lineWidth: 2)
                     }
                 }
             if on {

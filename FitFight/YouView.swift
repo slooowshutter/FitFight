@@ -52,10 +52,9 @@ struct YouView: View {
             Button {} label: {
                 Text("Edit")
                     .font(.ff(13, .semibold))
-                    .foregroundStyle(theme.text)
+                    .foregroundStyle(theme.muted)
                     .padding(.horizontal, 16)
                     .frame(height: 32)
-                    .background(theme.chip, in: Capsule())
                     .overlay { Capsule().strokeBorder(theme.line, lineWidth: 1) }
             }
             .buttonStyle(FFPressStyle(scale: 0.97))
@@ -64,10 +63,10 @@ struct YouView: View {
 
     private var stats: some View {
         HStack(spacing: 8) {
-            FFStatTile(value: "12", label: "Fights", onSurface: true)
-            FFStatTile(value: "5", label: "Wins", onSurface: true)
-            FFStatTile(value: "62%", label: "Win rate", onSurface: true)
-            FFStatTile(value: "$140", label: "Won", onSurface: true)
+            FFStatTile(value: "12", label: "Fights", onSurface: true, height: 60)
+            FFStatTile(value: "5", label: "Wins", onSurface: true, height: 60)
+            FFStatTile(value: "62%", label: "Win rate", onSurface: true, height: 60)
+            FFStatTile(value: "$140", label: "Won", onSurface: true, height: 60)
         }
     }
 
@@ -125,12 +124,12 @@ struct YouView: View {
                     .foregroundStyle(theme.text)
                 Text(detail)
                     .font(.ff(11))
-                    .foregroundStyle(theme.muted)
+                    .foregroundStyle(theme.faint)
             }
             Spacer(minLength: 8)
             Text(time)
                 .font(.ff(11))
-                .foregroundStyle(theme.muted)
+                .foregroundStyle(theme.faint)
         }
         .padding(.horizontal, FFMetric.rowPaddingX)
         .frame(height: 61)

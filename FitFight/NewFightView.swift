@@ -212,8 +212,15 @@ struct NewFightView: View {
         }
     }
 
+    /// The mocks write dates as "Mon 27 Jul", which no locale-driven style gives us.
+    private static let endFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "E d MMM"
+        return formatter
+    }()
+
     private var endLabel: String {
-        endDate.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))
+        Self.endFormatter.string(from: endDate)
     }
 
     private var summary: some View {

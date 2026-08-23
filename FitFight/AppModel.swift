@@ -50,7 +50,7 @@ enum SettlementKind: String, CaseIterable, Identifiable {
 
     var blurb: String {
         switch self {
-        case .winner: return "First place takes everything. Everyone else is out their stake."
+        case .winner: return "First place takes everything. Nobody else gets anything back."
         case .proportional: return "Your share of the effort is your share of the pot — do 60% of the steps, take 60% of the money."
         case .goal: return "Hit your daily goal and your money comes back. Miss it and it goes to whoever made it."
         }

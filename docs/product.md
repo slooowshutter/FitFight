@@ -24,9 +24,30 @@ The web kit in [`docs/design/source/`](design/source/README.md) is the look. Swi
 - Live fight cards carry their own leaderboard and money line
 - Version label at the top; Versions under You → Settings
 
-Placeholder themes (Arena, Pulse, Locker, Rogue) are retired.
-
 Marketing version: `0.3.0`. CI bumps **build number** from TestFlight (`latest + 1`). Don’t bump marketing version for a daily CI-only ship.
+
+## v0.6 (design exploration)
+
+A fifth tab, **Design**, holds eleven directions for the Fights screen — `original`
+plus ten experiments — rendered live side by side. Tap one and the whole app takes
+its palette. The pick persists in `UserDefaults` under `ff.design`.
+
+- One file per direction in [`FitFight/Designs/`](../FitFight/Designs/); `DesignVariant.swift`
+  holds the enum, the palettes and the dispatcher.
+- A direction owns colour and corner radius only. Type scale and spacing still come
+  from `tokens.json`, so the approved system is still the base underneath.
+- Every direction reads the same `AppModel`. Same fights, same names, same money.
+  If a redesign needs different data, that is a product change, not a design one.
+- `original` is the approved v0.3 design and the default. Only it follows You → Look;
+  the other ten pin their own palette and light/dark mode.
+- `ScreenshotExport` renders `design-<name>.png` for each one, so CI publishes all
+  eleven on every PR.
+
+This is an experiment shelf, not a shipped feature set. When one wins, keep it, delete
+the rest and the tab with them.
+
+Placeholder themes (Arena, Pulse, Locker, Rogue) from v0.2 are retired — the v0.6
+directions named Arena and Pulse are unrelated to them.
 
 ## Not this project
 

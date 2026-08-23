@@ -84,7 +84,10 @@ struct YouView: View {
                             .font(.ff(13, .bold))
                             .foregroundStyle(item.won ? theme.green : theme.red)
                             .frame(width: 36, height: 36)
-                            .background((item.won ? theme.green : theme.red).opacity(0.12), in: Circle())
+                            .background(
+                                (item.won ? theme.green : theme.red).opacity(0.12),
+                                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            )
                         VStack(alignment: .leading, spacing: 3) {
                             Text(item.name)
                                 .font(.ff(13, .bold))

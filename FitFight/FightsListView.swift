@@ -259,7 +259,10 @@ struct FinishedRow: View {
                         .font(.ff(13, .bold))
                         .foregroundStyle(theme.green)
                         .frame(width: 36, height: 36)
-                        .background(theme.green.opacity(0.12), in: Circle())
+                        .background(
+                            theme.green.opacity(0.12),
+                            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        )
                     VStack(alignment: .leading, spacing: 3) {
                         Text(fight.name)
                             .font(.ff(14, .bold))

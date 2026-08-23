@@ -20,18 +20,18 @@ struct FightDetailView: View {
 
                 sectionGap
                 FFSectionHeader(title: "Money right now", action: "if nothing changes", actionMuted: true)
-                    .padding(.bottom, 8)
+                    .padding(.bottom, 10)
                 moneyCard
 
                 sectionGap
                 FFSectionHeader(title: "Standings", action: fight.standingsMeta, actionMuted: true)
-                    .padding(.bottom, 8)
+                    .padding(.bottom, 10)
                 standingsCard
 
                 if !fight.days.isEmpty {
                     sectionGap
                     FFSectionHeader(title: "Every day so far")
-                        .padding(.bottom, 8)
+                        .padding(.bottom, 10)
                     daysCard
                 }
 
@@ -46,7 +46,7 @@ struct FightDetailView: View {
     }
 
     private var sectionGap: some View {
-        Color.clear.frame(height: theme.space.sectionGap)
+        Color.clear.frame(height: 30)
     }
 
     private var you: Standing? { model.youStanding(in: fight) }
@@ -86,7 +86,8 @@ struct FightDetailView: View {
         FFCard(padding: 24) {
             VStack(spacing: 0) {
                 FFLabel(text: fight.metric.eyebrow, role: .eyebrow, color: theme.muted)
-                    .padding(.bottom, 7)
+                    .padding(.top, 2)
+                    .padding(.bottom, 6.5)
                 heroTitle
                     .multilineTextAlignment(.center)
                     .padding(.bottom, 14)
@@ -112,7 +113,8 @@ struct FightDetailView: View {
         FFCard(padding: 24) {
             VStack(spacing: 0) {
                 FFLabel(text: fight.metric.eyebrow, role: .eyebrow, color: theme.muted)
-                    .padding(.bottom, 7)
+                    .padding(.top, 2)
+                    .padding(.bottom, 6.5)
                 heroTitle
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
@@ -187,7 +189,7 @@ struct FightDetailView: View {
 
     private var moneyCard: some View {
         FFPanel {
-            FFBand {
+            FFBand(vertical: 15) {
                 Text(fight.payoutLine)
                     .font(.ff(12))
                     .foregroundStyle(theme.muted)

@@ -72,7 +72,7 @@ struct RequestCard: View {
     var body: some View {
         let voted = model.voted.contains(item.id)
         let votes = item.votes + (voted ? 1 : 0)
-        return FFCard(padding: 15) {
+        return FFCard(padding: 16.5) {
             HStack(alignment: .top, spacing: 12) {
                 Button {
                     if voted { model.voted.remove(item.id) } else { model.voted.insert(item.id) }

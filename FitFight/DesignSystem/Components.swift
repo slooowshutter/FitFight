@@ -12,7 +12,8 @@ enum FFMetric {
     static let miniRowGap: CGFloat = 10
     static let miniRankWidth: CGFloat = 22
     static let miniAvatar: CGFloat = 22
-    static let miniNameWidth: CGFloat = 74
+    static let miniNameWidth: CGFloat = 75
+    static let miniNameGap: CGFloat = 10
     static let miniValueWidth: CGFloat = 58
     static let rankBadgeWidth: CGFloat = 54
     static let rankBadgeHeight: CGFloat = 50
@@ -42,16 +43,21 @@ struct FFScreen<Content: View>: View {
 
     var body: some View {
         if staticRender {
-            VStack(spacing: 0) {
-                if let top { top }
-                // Without this the greedy children a scroll view would leave alone
-                // (vote pills, filled rows) split the leftover height between them.
-                content()
-                    .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: 0)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .background(theme.bg)
+            // Color.clear takes exactly the offered size, so an overlay on top of it
+            // pins the screen to the top and lets anything taller run off the bottom
+            // instead of being centred.
+            Color.clear
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .overlay(alignment: .top) {
+                    VStack(spacing: 0) {
+                        if let top { top }
+                        // Without this the greedy children a scroll view would leave
+                        // alone (vote pills, filled rows) split the leftover height.
+                        content()
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .background(theme.bg)
         } else {
             ScrollView {
                 content()
@@ -304,7 +310,7 @@ struct FFSegmented<Item: Hashable>: View {
                         .font(.ff(12, on ? .semibold : .medium))
                         .foregroundStyle(on ? theme.text : theme.muted)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 37)
+                        .frame(height: 30)
                         .background {
                             if on {
                                 RoundedRectangle(cornerRadius: 14, style: .continuous)

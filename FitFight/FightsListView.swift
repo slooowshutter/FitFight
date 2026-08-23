@@ -90,7 +90,8 @@ struct LiveFightCard: View {
                 HStack(alignment: .top, spacing: 12) {
                     VStack(alignment: .leading, spacing: 0) {
                         FFLabel(text: fight.metric.eyebrow, role: .eyebrow, color: theme.muted)
-                            .padding(.bottom, 9)
+                            .padding(.top, 2)
+                            .padding(.bottom, 6.5)
                         FFLabel(text: fight.name, role: .title)
                             .lineLimit(1)
                             .fixedSize(horizontal: true, vertical: false)
@@ -112,19 +113,22 @@ struct LiveFightCard: View {
                         Text("\(fight.pending) pending")
                             .font(.ff(10, .semibold))
                             .foregroundStyle(theme.amber)
-                            .padding(.horizontal, 7)
+                            .padding(.horizontal, 5)
                             .frame(height: 19)
                             .background(theme.amber.opacity(0.12), in: Capsule())
                     }
                 }
-                .padding(.top, 13)
+                // Fixed so the pending pill does not make this card taller than
+                // the ones without it, the way it does in the mock.
+                .frame(height: 19)
+                .padding(.top, 10.5)
 
                 VStack(spacing: FFMetric.miniRowGap) {
                     ForEach(Array(visibleStandings.enumerated()), id: \.element.id) { index, row in
                         miniRow(index: index, row: row)
                     }
                 }
-                .padding(.top, 22)
+                .padding(.top, 20.5)
 
                 if hiddenCount > 0 {
                     Text("+\(hiddenCount) more")
@@ -199,8 +203,8 @@ struct LiveFightCard: View {
                 .font(.ff(12, .semibold))
                 .foregroundStyle(theme.text)
                 .lineLimit(1)
-                .padding(.leading, 8)
-                .frame(width: FFMetric.miniNameWidth + 8, alignment: .leading)
+                .padding(.leading, FFMetric.miniNameGap)
+                .frame(width: FFMetric.miniNameWidth + FFMetric.miniNameGap, alignment: .leading)
             FFProgressBar(
                 progress: maxScore == 0 ? 0 : CGFloat(row.score / maxScore),
                 fill: fill

@@ -19,13 +19,13 @@ struct NewFightView: View {
     var body: some View {
         FFScreen {
             VStack(alignment: .leading, spacing: 0) {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 2) {
                     FFLabel(text: "New fight", role: .display)
                     Text("Scores sync automatically. You settle up at the end.")
                         .font(.ff(13))
                         .foregroundStyle(theme.muted)
                 }
-                .padding(.bottom, theme.space.sectionGap)
+                .padding(.bottom, 32)
 
                 metricSection
                 peopleSection.padding(.top, theme.space.sectionGap)
@@ -298,7 +298,7 @@ struct NewFightView: View {
                 if !leadingRadio { radio(on) }
             }
             .padding(.horizontal, FFMetric.rowPaddingX)
-            .padding(.vertical, 12)
+            .padding(.vertical, 13.5)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(on ? theme.selectedOption() : Color.clear)
             .contentShape(Rectangle())

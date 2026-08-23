@@ -138,10 +138,10 @@ struct FFButton: View {
             .frame(maxWidth: kind == .small ? nil : .infinity)
             .padding(.horizontal, kind == .small ? 12 : 16)
             .frame(height: kind == .small ? 34 : 54)
-            .background(background, in: theme.rounded(theme.buttonRadius))
+            .background(background, in: Capsule())
             .overlay {
                 if kind == .quiet {
-                    theme.rounded(theme.buttonRadius).strokeBorder(theme.line, lineWidth: theme.strokeWidth)
+                    Capsule().strokeBorder(theme.line, lineWidth: 1)
                 }
             }
             .opacity(enabled ? 1 : 0.6)
@@ -184,81 +184,54 @@ struct FFIconButton: View {
                 .foregroundStyle(destructive ? theme.red : theme.text)
                 .frame(width: size, height: size)
                 .overlay {
-                    theme.blob(size, radius: theme.iconButtonRadius)
-                        .strokeBorder(theme.line, lineWidth: theme.strokeWidth)
+                    Circle().strokeBorder(theme.line, lineWidth: 1)
                 }
         }
         .buttonStyle(FFPressStyle(scale: 0.97))
     }
 }
 
-/// Card chrome that follows the active look: fill, stroke, rail, or outline.
-struct FFChrome<Content: View>: View {
-    var radius: CGFloat
-    @ViewBuilder var content: () -> Content
-    @Environment(\.ffTheme) private var theme
-
-    var body: some View {
-        let shape = theme.rounded(radius)
-        let inner = content().frame(maxWidth: .infinity, alignment: .leading)
-        Group {
-            switch theme.cardChrome {
-            case .filledStroke:
-                inner
-                    .background(theme.surface, in: shape)
-                    .overlay { shape.strokeBorder(theme.line, lineWidth: theme.strokeWidth) }
-            case .filled:
-                inner
-                    .background(theme.surface, in: shape)
-            case .strokeOnly:
-                inner
-                    .background(theme.bg, in: shape)
-                    .overlay { shape.strokeBorder(theme.line, lineWidth: theme.strokeWidth) }
-            case .rail:
-                HStack(spacing: 0) {
-                    theme.text.opacity(0.2)
-                        .frame(width: theme.railWidth)
-                    inner
-                }
-                .background(theme.surface)
-                .clipShape(shape)
-                .overlay { shape.strokeBorder(theme.line, lineWidth: theme.strokeWidth) }
-            }
-        }
-    }
-}
-
-/// Card: surface, 1px line border, 22pt radius on Classic, 20pt padding.
+/// Card: surface, 1px line border, 22pt radius, 20pt padding.
 struct FFCard<Content: View>: View {
     var padding: CGFloat = FFMetric.cardPadding
     /// Rows in the mock are wider inside than they are tall inside.
     var horizontal: CGFloat? = nil
-    var radius: CGFloat? = nil
-    var tight = false
+    var radius: CGFloat = FFMetric.cardRadius
     @ViewBuilder var content: () -> Content
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
-        FFChrome(radius: radius ?? (tight ? theme.tightCardRadius : theme.cardRadius)) {
-            content()
-                .padding(.vertical, padding)
-                .padding(.horizontal, horizontal ?? padding)
-        }
+        content()
+            .padding(.vertical, padding)
+            .padding(.horizontal, horizontal ?? padding)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(theme.surface, in: shape)
+            .overlay { shape.strokeBorder(theme.line, lineWidth: 1) }
+    }
+
+    private var shape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: radius, style: .continuous)
     }
 }
 
 /// Card without padding: rows, tinted bands and footers run edge to edge.
 struct FFPanel<Content: View>: View {
-    var radius: CGFloat? = nil
+    var radius: CGFloat = FFMetric.cardRadius
     @ViewBuilder var content: () -> Content
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
-        FFChrome(radius: radius ?? theme.cardRadius) {
-            VStack(spacing: 0) {
-                content()
-            }
+        VStack(spacing: 0) {
+            content()
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(theme.surface)
+        .clipShape(shape)
+        .overlay { shape.strokeBorder(theme.line, lineWidth: 1) }
+    }
+
+    private var shape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: radius, style: .continuous)
     }
 }
 
@@ -307,7 +280,7 @@ struct FFRankBadge: View {
         .frame(width: FFMetric.rankBadgeWidth, height: FFMetric.rankBadgeHeight)
         .background(
             first ? theme.accent : theme.chip,
-            in: theme.rounded(theme.radius.lg)
+            in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
         )
     }
 }
@@ -360,7 +333,7 @@ struct FFSegmented<Item: Hashable>: View {
                         .frame(height: 30)
                         .background {
                             if on {
-                                theme.rounded(theme.segmentThumbRadius)
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
                                     .fill(theme.surface)
                                     .shadow(color: Color.black.opacity(0.25), radius: 2, y: 1)
                             }
@@ -370,7 +343,7 @@ struct FFSegmented<Item: Hashable>: View {
             }
         }
         .padding(4)
-        .background(theme.chip, in: theme.rounded(theme.segmentRadius))
+        .background(theme.chip, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
     }
 }
 
@@ -417,15 +390,13 @@ struct FFAvatar: View {
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
-        let shape = theme.blob(size, radius: theme.avatarRadius)
         face
             .frame(width: size, height: size)
-            .clipShape(shape)
+            .clipShape(Circle())
             .padding(ring ? 3 : 0)
             .overlay {
                 if ring {
-                    theme.blob(size + 6, radius: theme.avatarRadius + 3)
-                        .strokeBorder(theme.accent, lineWidth: 2)
+                    Circle().strokeBorder(theme.accent, lineWidth: 2)
                 }
             }
             .opacity(pending ? 0.5 : 1)
@@ -433,14 +404,13 @@ struct FFAvatar: View {
 
     @ViewBuilder
     private var face: some View {
-        let shape = theme.blob(size, radius: theme.avatarRadius)
         if let photo, UIImage(named: photo) != nil {
             Image(photo)
                 .resizable()
                 .interpolation(.high)
                 .scaledToFill()
         } else {
-            shape
+            Circle()
                 .fill(
                     LinearGradient(
                         colors: gradient,
@@ -454,7 +424,7 @@ struct FFAvatar: View {
                         .foregroundStyle(Color.white.opacity(0.72))
                 }
                 .overlay {
-                    shape.strokeBorder(Color.white.opacity(0.10), lineWidth: 0.5)
+                    Circle().strokeBorder(Color.white.opacity(0.10), lineWidth: 0.5)
                 }
         }
     }
@@ -503,17 +473,16 @@ struct FFProgressBar: View {
     var body: some View {
         GeometryReader { geo in
             let filled = max(height, geo.size.width * min(1, max(0, progress)))
-            let bar = theme.rounded(theme.progressRadius)
             // The track is knocked out under the fill: both are translucent white, and
             // stacking them would make every part-filled bar lighter than the mock.
-            bar
+            Capsule()
                 .fill(theme.track)
                 .overlay(alignment: .leading) {
-                    bar.frame(width: filled).blendMode(.destinationOut)
+                    Capsule().frame(width: filled).blendMode(.destinationOut)
                 }
                 .compositingGroup()
                 .overlay(alignment: .leading) {
-                    bar.fill(fill).frame(width: filled)
+                    Capsule().fill(fill).frame(width: filled)
                 }
         }
         .frame(height: height)
@@ -527,12 +496,10 @@ struct FFRing<Content: View>: View {
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
-        let cap: CGLineCap = theme.ringSquircle ? .square : .round
-        let ring = theme.rounded(theme.ringSquircle ? 28 : 9999)
         ZStack {
-            ring
+            Circle()
                 .stroke(theme.track, lineWidth: FFMetric.ringStroke)
-            ring
+            Circle()
                 .trim(from: 0, to: max(0.02, min(1, progress)))
                 .stroke(
                     AngularGradient(
@@ -541,7 +508,7 @@ struct FFRing<Content: View>: View {
                         startAngle: .degrees(-90),
                         endAngle: .degrees(270)
                     ),
-                    style: StrokeStyle(lineWidth: FFMetric.ringStroke, lineCap: cap)
+                    style: StrokeStyle(lineWidth: FFMetric.ringStroke, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
             content()
@@ -574,12 +541,12 @@ struct FFStatTile: View {
         .frame(height: height)
         .background(
             onSurface ? theme.surface : theme.chip,
-            in: theme.rounded(theme.radius.lg)
+            in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
         )
         .overlay {
             if onSurface {
-                theme.rounded(theme.radius.lg)
-                    .strokeBorder(theme.line, lineWidth: theme.strokeWidth)
+                RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
+                    .strokeBorder(theme.line, lineWidth: 1)
             }
         }
     }
@@ -628,7 +595,7 @@ struct FFBadge: View {
     }
 
     private var shape: RoundedRectangle {
-        theme.rounded(4)
+        RoundedRectangle(cornerRadius: 4, style: .continuous)
     }
 
     private func foreground(_ color: Color) -> Color {
@@ -671,12 +638,12 @@ struct FFChip: View {
             .frame(height: 46)
             .background(
                 selected ? theme.accent : theme.surface,
-                in: theme.rounded(theme.chipRadius)
+                in: RoundedRectangle(cornerRadius: FFMetric.chipRadius, style: .continuous)
             )
             .overlay {
                 if !selected {
-                    theme.rounded(theme.chipRadius)
-                        .strokeBorder(theme.line, lineWidth: theme.strokeWidth)
+                    RoundedRectangle(cornerRadius: FFMetric.chipRadius, style: .continuous)
+                        .strokeBorder(theme.line, lineWidth: 1)
                 }
             }
 
@@ -701,53 +668,22 @@ struct FFTabBar: View {
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
-        let items = HStack(spacing: 0) {
+        HStack(spacing: 0) {
             item(.fights, "Tab-fights", "Fights")
             item(.newFight, "Tab-new", "New")
             item(.requests, "Tab-requests", "Requests")
             item(.you, "Tab-you", "You")
         }
-
-        switch theme.tabChrome {
-        case .classic:
-            items
-                .padding(.horizontal, 13)
-                .padding(.top, 15)
-                .padding(.bottom, 8)
-                .background {
-                    theme.bg.opacity(0.9)
-                        .background(.ultraThinMaterial)
-                        .ignoresSafeArea(edges: .bottom)
-                }
-                .overlay(alignment: .top) {
-                    theme.line.frame(height: 1)
-                }
-        case .flush:
-            items
-                .padding(.horizontal, 8)
-                .padding(.top, 12)
-                .padding(.bottom, 8)
-                .background(theme.bg.ignoresSafeArea(edges: .bottom))
-                .overlay(alignment: .top) {
-                    theme.line.frame(height: theme.strokeWidth == 0 ? 1 : theme.strokeWidth)
-                }
-        case .pill:
-            items
-                .padding(.vertical, 8)
-                .padding(.horizontal, 4)
-                .background(theme.surface, in: Capsule())
-                .overlay { Capsule().strokeBorder(theme.line, lineWidth: theme.strokeWidth) }
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
-                .padding(.bottom, 6)
-                .background(theme.bg.ignoresSafeArea(edges: .bottom))
-        case .boxed:
-            items
-                .padding(6)
-                .background(theme.bg.ignoresSafeArea(edges: .bottom))
-                .overlay(alignment: .top) {
-                    theme.line.frame(height: theme.strokeWidth)
-                }
+        .padding(.horizontal, 13)
+        .padding(.top, 15)
+        .padding(.bottom, 8)
+        .background {
+            theme.bg.opacity(0.9)
+                .background(.ultraThinMaterial)
+                .ignoresSafeArea(edges: .bottom)
+        }
+        .overlay(alignment: .top) {
+            theme.line.frame(height: 1)
         }
     }
 
@@ -763,7 +699,10 @@ struct FFTabBar: View {
                     .frame(width: 20, height: 20)
                     .foregroundStyle(on ? theme.accent : theme.muted)
                     .overlay(alignment: .top) {
-                        marker(on: on)
+                        // The mock marks the live tab with a dot floating above the glyph.
+                        Circle()
+                            .fill(on ? theme.accent : Color.clear)
+                            .frame(width: 4, height: 4)
                             .offset(y: -7.5)
                     }
                 Text(title)
@@ -771,31 +710,8 @@ struct FFTabBar: View {
                     .foregroundStyle(on ? theme.text : theme.muted)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, theme.tabChrome == .boxed ? 6 : 0)
-            .background {
-                if theme.tabChrome == .boxed && on {
-                    theme.rounded(theme.chipRadius)
-                        .strokeBorder(theme.line, lineWidth: theme.strokeWidth)
-                }
-            }
         }
         .buttonStyle(.plain)
-    }
-
-    @ViewBuilder
-    private func marker(on: Bool) -> some View {
-        switch theme.tabMarker {
-        case .dot:
-            Circle()
-                .fill(on ? theme.accent : Color.clear)
-                .frame(width: 4, height: 4)
-        case .bar:
-            theme.rounded(1)
-                .fill(on ? theme.accent : Color.clear)
-                .frame(width: 10, height: 2)
-        case .none:
-            Color.clear.frame(width: 4, height: 4)
-        }
     }
 }
 

@@ -1,8 +1,8 @@
 # History
 
-## 2026-08-23 — five extra looks
+## 2026-08-23 — Classic only
 
-You → Look / Settings → Design: Classic plus Sharp, Pill, Slab, Rail, Frame. Same colours as Classic; the looks change corners, cards, buttons and the tab bar. Marketing version `0.6.1`.
+Tried extra looks (colour, then shape). Marc kept Classic. Switcher removed. Marketing version `0.6.2`.
 
 ## 2026-08-22 — TestFlight on every app push
 

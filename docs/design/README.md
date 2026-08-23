@@ -5,5 +5,5 @@
 Rebuild SwiftUI from that folder. Ignore Arena / Pulse / Locker / Rogue; those were placeholders.
 
 - App tokens: `FitFight/DesignSystem/tokens.json` (copy of `source/tokens.json`)
-- Theme = **look** × base × accent. Default look is **Classic** (the approved kit in `tokens.json`). Five more looks in **You → Look** / **Settings → Design** change shapes, not colours. Don't put them into `tokens.json`.
+- Theme = one **base** (dark/light) × one **accent** (10 colours). Pick the accent in **You → Look**.
 - Version stays at the top of the screen. Versions lives under You → Settings.

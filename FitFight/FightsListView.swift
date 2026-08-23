@@ -62,13 +62,12 @@ struct FightsListView: View {
             }
             Spacer(minLength: 0)
             ZStack {
-                theme.blob(40, radius: theme.iconButtonRadius)
-                    .strokeBorder(theme.line, lineWidth: max(1, theme.strokeWidth))
+                Circle().strokeBorder(theme.line, lineWidth: 1)
                 Image(systemName: "bell")
                     .font(.system(size: 14, weight: .regular))
                     .foregroundStyle(theme.muted)
                 // The mock hangs the dot off the bell itself, not off the circle.
-                theme.blob(6, radius: theme.avatarRadius)
+                Circle()
                     .fill(theme.red)
                     .frame(width: 6, height: 6)
                     .offset(x: 6, y: -7)
@@ -116,7 +115,7 @@ struct LiveFightCard: View {
                             .foregroundStyle(theme.amber)
                             .padding(.horizontal, 5)
                             .frame(height: 19)
-                            .background(theme.amber.opacity(0.12), in: theme.rounded(theme.chipRadius))
+                            .background(theme.amber.opacity(0.12), in: Capsule())
                     }
                 }
                 // Fixed so the pending pill does not make this card taller than
@@ -193,7 +192,7 @@ struct LiveFightCard: View {
     private func miniRow(index: Int, row: Standing) -> some View {
         let maxScore = joined.map(\.score).max() ?? 1
         let isLead = index == 0
-        let fill: Color = isLead ? theme.accent : (row.person.isYou ? theme.text : theme.otherBar())
+        let fill: Color = isLead ? theme.accent : (row.person.isYou ? theme.text : Color.white.opacity(0.45))
         return HStack(spacing: 0) {
             Text("\(index + 1)")
                 .font(.ff(12, .semibold))
@@ -266,7 +265,7 @@ struct FinishedRow: View {
                         .frame(width: 36, height: 36)
                         .background(
                             theme.green.opacity(0.12),
-                            in: theme.rounded(theme.radius.md)
+                            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
                         )
                     VStack(alignment: .leading, spacing: 3) {
                         Text(fight.name)

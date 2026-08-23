@@ -154,9 +154,9 @@ struct NewFightView: View {
                         .foregroundStyle(theme.text)
                         .padding(.horizontal, 16)
                         .frame(height: 52)
-                        .background(theme.surface, in: theme.rounded(theme.radius.lg))
+                        .background(theme.surface, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
                         .overlay {
-                            theme.rounded(theme.radius.lg)
+                            RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
                                 .strokeBorder(theme.line, lineWidth: 1)
                         }
                     HStack(spacing: 10) {
@@ -233,7 +233,7 @@ struct NewFightView: View {
             .lineSpacing(3)
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(theme.chip, in: theme.rounded(theme.radius.lg))
+            .background(theme.chip, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
     }
 
     private var stakeSummary: String {
@@ -261,11 +261,11 @@ struct NewFightView: View {
                 .frame(height: 40)
                 .background(
                     on ? theme.accent : theme.surface,
-                    in: theme.rounded(theme.radius.lg)
+                    in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
                 )
                 .overlay {
                     if !on {
-                        theme.rounded(theme.radius.lg)
+                        RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
                             .strokeBorder(theme.line, lineWidth: 1)
                     }
                 }
@@ -331,12 +331,12 @@ struct NewFightView: View {
 
     private func checkbox(_ on: Bool) -> some View {
         ZStack {
-            theme.rounded(6)
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
                 .fill(on ? theme.accent : Color.clear)
                 .frame(width: Self.tickSize, height: Self.tickSize)
                 .overlay {
                     if !on {
-                        theme.rounded(6)
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
                             .strokeBorder(theme.faint, lineWidth: 2)
                     }
                 }
@@ -371,9 +371,9 @@ struct NewFightView: View {
         }
         .foregroundStyle(theme.text)
         .padding(12)
-        .background(theme.surface, in: theme.rounded(theme.radius.xl))
+        .background(theme.surface, in: RoundedRectangle(cornerRadius: theme.radius.xl, style: .continuous))
         .overlay {
-            theme.rounded(theme.radius.xl)
+            RoundedRectangle(cornerRadius: theme.radius.xl, style: .continuous)
                 .strokeBorder(theme.line, lineWidth: 1)
         }
     }

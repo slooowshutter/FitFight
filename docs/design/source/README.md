@@ -6,9 +6,9 @@ It is a verbatim dump of the web design system we built and approved. Every
 colour, size, component and screen in here has been looked at and signed off.
 Rebuild it natively in SwiftUI.
 
-> **Ignore the Arena, Pulse, Locker and Rogue names.** Those were placeholders.
-> Extra looks in the iOS app (Sharp, Pill, Slab, Rail, Frame) change shapes
-> only. This folder is still **Classic**. Do not port them into `tokens.json`.
+> **Ignore the Arena, Pulse, Locker and Rogue themes already in this repo.**
+> They were placeholders. They are not the design. Nothing in them should
+> influence what you build.
 
 ---
 

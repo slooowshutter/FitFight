@@ -72,7 +72,7 @@ struct RequestCard: View {
     var body: some View {
         let voted = model.voted.contains(item.id)
         let votes = item.votes + (voted ? 1 : 0)
-        return FFCard(padding: 14, tight: true) {
+        return FFCard(padding: 14, radius: FFMetric.tightCardRadius) {
             HStack(alignment: .top, spacing: 12) {
                 Button {
                     if voted { model.voted.remove(item.id) } else { model.voted.insert(item.id) }
@@ -91,11 +91,11 @@ struct RequestCard: View {
                     .frame(maxHeight: .infinity, alignment: .top)
                     .background(
                         voted ? theme.accent : theme.chip,
-                        in: theme.rounded(theme.chipRadius)
+                        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
                     )
                     .overlay {
                         if !voted {
-                            theme.rounded(theme.chipRadius)
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
                                 .strokeBorder(theme.line, lineWidth: 1)
                         }
                     }

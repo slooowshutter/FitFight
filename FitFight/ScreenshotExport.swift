@@ -15,7 +15,6 @@ enum ScreenshotExport {
 
     static func exportAll() {
         let themeStore = ThemeStore()
-        themeStore.lookID = .classic
         themeStore.baseID = .dark
         themeStore.accentID = .blue
         let model = AppModel()
@@ -28,7 +27,6 @@ enum ScreenshotExport {
         }
 
         let light = ThemeStore()
-        light.lookID = .classic
         light.baseID = .light
         light.accentID = .blue
         write(

@@ -634,13 +634,13 @@ struct FFTabBar: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            item(.fights, "figure.run", "Fights")
-            item(.newFight, "plus", "New")
-            item(.requests, "arrow.up.message", "Requests")
-            item(.you, "person", "You")
+            item(.fights, "Tab-fights", "Fights")
+            item(.newFight, "Tab-new", "New")
+            item(.requests, "Tab-requests", "Requests")
+            item(.you, "Tab-you", "You")
         }
         .padding(.horizontal, 13)
-        .padding(.top, 12)
+        .padding(.top, 15)
         .padding(.bottom, 8)
         .background {
             theme.bg.opacity(0.9)
@@ -658,10 +658,18 @@ struct FFTabBar: View {
             tab = value
         } label: {
             VStack(spacing: 5) {
-                Image(systemName: icon)
-                    .font(.system(size: 20, weight: .regular))
+                Image(icon)
+                    .renderingMode(.template)
+                    .resizable()
+                    .frame(width: 20, height: 20)
                     .foregroundStyle(on ? theme.accent : theme.muted)
-                    .frame(height: 22)
+                    .overlay(alignment: .top) {
+                        // The mock marks the live tab with a dot floating above the glyph.
+                        Circle()
+                            .fill(on ? theme.accent : Color.clear)
+                            .frame(width: 4, height: 4)
+                            .offset(y: -7.5)
+                    }
                 Text(title)
                     .font(.ff(10, on ? .semibold : .regular))
                     .foregroundStyle(on ? theme.text : theme.muted)

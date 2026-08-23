@@ -220,9 +220,9 @@ struct InvitationRow: View {
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
-        FFCard(padding: 16) {
+        FFCard(padding: 12) {
             HStack(spacing: 12) {
-                FFAvatar(fight.standings.first?.person, size: 40)
+                FFAvatar(fight.standings.first?.person, size: 36)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(fight.name)
                         .font(.ff(14, .bold))
@@ -253,12 +253,12 @@ struct FinishedRow: View {
         Button {
             model.openFightID = fight.id
         } label: {
-            FFCard(padding: 16) {
+            FFCard(padding: 12) {
                 HStack(spacing: 12) {
                     Text("W")
                         .font(.ff(13, .bold))
                         .foregroundStyle(theme.green)
-                        .frame(width: 40, height: 40)
+                        .frame(width: 36, height: 36)
                         .background(theme.green.opacity(0.12), in: Circle())
                     VStack(alignment: .leading, spacing: 3) {
                         Text(fight.name)

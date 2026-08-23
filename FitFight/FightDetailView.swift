@@ -20,18 +20,18 @@ struct FightDetailView: View {
 
                 sectionGap
                 FFSectionHeader(title: "Money right now", action: "if nothing changes", actionMuted: true)
-                    .padding(.bottom, 12)
+                    .padding(.bottom, 8)
                 moneyCard
 
                 sectionGap
                 FFSectionHeader(title: "Standings", action: fight.standingsMeta, actionMuted: true)
-                    .padding(.bottom, 12)
+                    .padding(.bottom, 8)
                 standingsCard
 
                 if !fight.days.isEmpty {
                     sectionGap
                     FFSectionHeader(title: "Every day so far")
-                        .padding(.bottom, 12)
+                        .padding(.bottom, 8)
                     daysCard
                 }
 
@@ -83,10 +83,10 @@ struct FightDetailView: View {
     }
 
     private var invitedHero: some View {
-        FFCard {
+        FFCard(padding: 24) {
             VStack(spacing: 0) {
                 FFLabel(text: fight.metric.eyebrow, role: .eyebrow, color: theme.muted)
-                    .padding(.bottom, 12)
+                    .padding(.bottom, 7)
                 heroTitle
                     .multilineTextAlignment(.center)
                     .padding(.bottom, 14)
@@ -109,14 +109,14 @@ struct FightDetailView: View {
     }
 
     private var liveHero: some View {
-        FFCard {
+        FFCard(padding: 24) {
             VStack(spacing: 0) {
                 FFLabel(text: fight.metric.eyebrow, role: .eyebrow, color: theme.muted)
-                    .padding(.bottom, 14)
+                    .padding(.bottom, 7)
                 heroTitle
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
-                    .padding(.bottom, 21)
+                    .padding(.bottom, 27)
                 FFRing(progress: ringProgress) {
                     VStack(spacing: 1) {
                         Text(fight.status == .finished ? "1st" : "#\(fight.rank)")
@@ -128,14 +128,14 @@ struct FightDetailView: View {
                             .foregroundStyle(theme.muted)
                     }
                 }
-                .padding(.bottom, 21)
+                .padding(.bottom, 24)
                 FFKicker(
                     prefix: fight.kickerPrefix,
                     emphasis: fight.kickerEmphasis,
                     rest: fight.kickerRest,
                     size: 14
                 )
-                .padding(.bottom, 21)
+                .padding(.bottom, 16)
                 HStack(spacing: 8) {
                     FFStatTile(
                         value: model.formatScore(you?.score ?? 0, metric: fight.metric),
@@ -284,15 +284,15 @@ struct FightDetailView: View {
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(fight.days.enumerated()), id: \.element.id) { index, day in
                     if index > 0 {
-                        Color.clear.frame(height: 20)
+                        Color.clear.frame(height: 22)
                     }
                     Text(day.label)
-                        .font(.ff(12))
+                        .font(.ff(11))
                         .foregroundStyle(theme.muted)
-                        .padding(.bottom, 10)
+                        .padding(.bottom, 11)
                     let maxVal = day.scores.map(\.value).max() ?? 1
                     let leaderID = fight.standings.first?.person.id
-                    VStack(spacing: 14) {
+                    VStack(spacing: 11.5) {
                         ForEach(day.scores) { row in
                             HStack(spacing: 0) {
                                 Text(row.person.name)
@@ -315,10 +315,10 @@ struct FightDetailView: View {
                 }
                 if let note = fight.paceNote {
                     FFHairline()
-                        .padding(.top, 26)
+                        .padding(.top, 24)
                         .padding(.bottom, 16)
                     Text(note)
-                        .font(.ff(12))
+                        .font(.ff(11))
                         .foregroundStyle(theme.muted)
                 }
             }

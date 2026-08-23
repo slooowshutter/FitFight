@@ -31,7 +31,7 @@ struct YouView: View {
     private func sectionHeader(_ title: String, action: String? = nil, onAction: (() -> Void)? = nil) -> some View {
         FFSectionHeader(title: title, action: action, onAction: onAction)
             .padding(.top, theme.space.sectionGap)
-            .padding(.bottom, 12)
+            .padding(.bottom, 10)
     }
 
     private var profile: some View {
@@ -83,7 +83,7 @@ struct YouView: View {
                         Text(item.won ? "W" : "L")
                             .font(.ff(13, .bold))
                             .foregroundStyle(item.won ? theme.green : theme.red)
-                            .frame(width: 40, height: 40)
+                            .frame(width: 36, height: 36)
                             .background((item.won ? theme.green : theme.red).opacity(0.12), in: Circle())
                         VStack(alignment: .leading, spacing: 3) {
                             Text(item.name)

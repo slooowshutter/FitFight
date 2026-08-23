@@ -17,6 +17,8 @@ Not: agent on Marc’s laptop or home Mac → local Xcode.
 | Screenshots | `.github/workflows/ios-screenshots.yml` | PR + push to `main` | `macos-26` |
 | TestFlight | `.github/workflows/ios-testflight.yml` | any app `push` (PR or `main`), cron `0 18 * * *` UTC | `macos-26` |
 
+[`security.md`](security.md) pick, not done in this PR: **move TestFlight to `main` + cron only** before the API and HealthKit exist. Today’s “every branch uploads” means unreviewed Fastlane on a PR runs with the App Store Connect `.p8`. Simulator + screenshots stay on PRs. Do not restore branch uploads without Marc overriding that pick.
+
 Both **must** stay GitHub-hosted. Never `self-hosted`. Apple requires **Xcode 26 / iOS 26 SDK** to upload (Xcode 16.4 / iOS 18.5 is rejected).
 
 Fastlane: `fastlane/Fastfile` lane `beta`. Archive uses automatic signing + App Store Connect API key (`-allowProvisioningUpdates`). Do **not** also set `export_xcargs` to the same `-authenticationKeyPath` flags — gym passes `xcargs` into export and duplicates the flag.
@@ -54,6 +56,8 @@ Names only. Never print values. Never ask Marc to paste the `.p8` into chat.
 | `APPLE_TEAM_ID` | `C92DPD8ME2` |
 
 There is a separate Expo EAS key in App Store Connect. Do not reuse it.
+
+Not set yet (names reserved, see [`security.md`](security.md)): Sign in with Apple `.p8` for the **server** client secret; APNs key for the **server**. Never the iOS target. Never git.
 
 ## What Marc still does
 

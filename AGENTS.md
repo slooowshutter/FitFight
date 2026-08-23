@@ -16,6 +16,7 @@ Read this first, then `docs/`. Marc talks from his phone, often transcribing. Be
 - Permanent **Versions** button: under You → Settings, and the version label at the top. Every user-facing ship adds a row in `FitFight/Changelog.swift`.
 - Design tokens live in `FitFight/DesignSystem/tokens.json` (same file as `docs/design/source/tokens.json`). Don’t hardcode colours. Theme is **base × accent**. After token changes, copy the dump into the app bundle file.
 - Talk to Marc only for things only he can do: Apple login, GitHub secrets, TestFlight testers, legal. Agents cannot `workflow_dispatch`. App pushes (PR branch or `main`) upload to TestFlight by themselves. Tell Marc a build is coming; he opens TestFlight → Update. Do not ask him to Run workflow.
+- **Auth / privacy:** [`docs/security.md`](docs/security.md). SIWA only, app-layer auth, daily health totals off the phone, no pinning, no secrets in git. That doc’s TestFlight-on-`main` pick overrides “every branch uploads” once Marc accepts it.
 
 ## What exists (2026-08-22)
 
@@ -26,7 +27,7 @@ Read this first, then `docs/`. Marc talks from his phone, often transcribing. Be
 - Approved design dump in `docs/design/source/` (338 tokens, 76 screenshots). Dark/light + 10 accents.
 - Five tabs: Fights, New, Requests, **Design**, You. The Design tab switches the Fights screen between eleven directions (`original` + ten experiments) in `FitFight/Designs/`. Only `original` follows You → Look; the rest carry their own palette. See [docs/product.md](docs/product.md#v06-design-exploration).
 
-Details: [docs/product.md](docs/product.md) · [docs/backlog.md](docs/backlog.md) · [docs/shipping.md](docs/shipping.md) · [docs/history.md](docs/history.md) · [docs/design/source/README.md](docs/design/source/README.md)
+Details: [docs/product.md](docs/product.md) · [docs/backlog.md](docs/backlog.md) · [docs/shipping.md](docs/shipping.md) · [docs/security.md](docs/security.md) · [docs/history.md](docs/history.md) · [docs/design/source/README.md](docs/design/source/README.md)
 
 Product ideas go in [`docs/backlog.md`](docs/backlog.md). Marc says “put X on the backlog”; do not open GitHub Issues or a Notion board unless he asks.
 

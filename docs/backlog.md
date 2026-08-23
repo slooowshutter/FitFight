@@ -29,8 +29,8 @@ The phone’s job is: show the UI, read HealthKit / workouts when it is open (or
 
 ## Next
 
-- Backend. Accounts, fights, scores, pushes. Nothing below works without this.
-- HealthKit (or another data source) so a fight has real numbers.
+- Backend. Accounts, fights, scores, pushes. Nothing below works without this. Follow [`docs/security.md`](security.md): SIWA only, app-layer auth (not RLS-only), daily health totals only, join codes with real entropy, TestFlight on `main` not on every branch.
+- HealthKit (or another data source) so a fight has real numbers. Same doc: denial looks like zeros; skip failed queries; no upload in the window means unscored, not a fake 0.
 
 ## Later
 
@@ -49,6 +49,7 @@ From [`design/source/INVENTORY.md`](design/source/INVENTORY.md) — honest holes
 - Request compose + request thread
 - Profile edit, settings sub-screens, payouts
 - Sign-in, onboarding, HealthKit permission prompts
+- Account deletion, data export, signed-in devices (required when accounts exist; do not invent the layout)
 - Per-person goals in create (data model allows it; UI is one shared goal)
 - Settle-up / payment at the end of a fight
 

@@ -1,0 +1,61 @@
+# Renders every screen in the simulator and publishes the PNGs as an artifact,
+# so agents (and Marc) can see the UI without installing a build.
+name: Screenshots
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ios-screenshots-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  shots:
+    name: Render screens
+    runs-on: macos-26
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build for the simulator
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project FitFight.xcodeproj \
+            -scheme FitFight \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Run the app with FF_SHOOT=1
+        run: |
+          set -euo pipefail
+          RUNTIME=$(xcrun simctl list runtimes --json | python3 -c "import json,sys;rs=[r for r in json.load(sys.stdin)['runtimes'] if r['isAvailable'] and 'iOS' in r['name']];print(sorted(rs,key=lambda r:r['version'])[-1]['identifier'])")
+          DEVICE_TYPE=$(xcrun simctl list devicetypes --json | python3 -c "import json,sys;ds=[d for d in json.load(sys.stdin)['devicetypes'] if d['name'] in ('iPhone 16','iPhone 15','iPhone 17')];print(ds[0]['identifier'])")
+          echo "runtime=$RUNTIME devicetype=$DEVICE_TYPE"
+          UDID=$(xcrun simctl create ff-shots "$DEVICE_TYPE" "$RUNTIME")
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl install "$UDID" build/Build/Products/Debug-iphonesimulator/FitFight.app
+          SIMCTL_CHILD_FF_SHOOT=1 xcrun simctl launch "$UDID" com.fitfight.mvp
+          CONTAINER=$(xcrun simctl get_app_container "$UDID" com.fitfight.mvp data)
+          for i in $(seq 1 60); do
+            if [ -f "$CONTAINER/Documents/shots/done.txt" ]; then break; fi
+            sleep 2
+          done
+          mkdir -p shots
+          cp "$CONTAINER"/Documents/shots/*.png shots/ || (echo "no screenshots written"; exit 1)
+          ls -la shots
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: screens
+          path: shots
+          retention-days: 14

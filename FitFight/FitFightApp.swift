@@ -11,6 +11,11 @@ struct FitFightApp: App {
                 .environmentObject(themeStore)
                 .environmentObject(model)
                 .fitFightTheme(themeStore.theme)
+                .task {
+                    if ScreenshotExport.isEnabled {
+                        ScreenshotExport.exportAll()
+                    }
+                }
         }
     }
 }

@@ -22,6 +22,7 @@
 		A1000000000000000000000D /* NewFightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001D /* NewFightView.swift */; };
 		A1000000000000000000000E /* RequestsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001E /* RequestsView.swift */; };
 		A1000000000000000000000F /* YouView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001F /* YouView.swift */; };
+		A10000000000000000000040 /* ScreenshotExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000041 /* ScreenshotExport.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -41,6 +42,7 @@
 		A1000000000000000000001D /* NewFightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewFightView.swift; sourceTree = "<group>"; };
 		A1000000000000000000001E /* RequestsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestsView.swift; sourceTree = "<group>"; };
 		A1000000000000000000001F /* YouView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouView.swift; sourceTree = "<group>"; };
+		A10000000000000000000041 /* ScreenshotExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotExport.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -68,6 +70,7 @@
 				A10000000000000000000013 /* AppVersion.swift */,
 				A10000000000000000000015 /* Changelog.swift */,
 				A10000000000000000000016 /* VersionsView.swift */,
+				A10000000000000000000041 /* ScreenshotExport.swift */,
 				A10000000000000000000033 /* DesignSystem */,
 				A10000000000000000000014 /* Assets.xcassets */,
 			);
@@ -183,6 +186,7 @@
 				A1000000000000000000000D /* NewFightView.swift in Sources */,
 				A1000000000000000000000E /* RequestsView.swift in Sources */,
 				A1000000000000000000000F /* YouView.swift in Sources */,
+				A10000000000000000000040 /* ScreenshotExport.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

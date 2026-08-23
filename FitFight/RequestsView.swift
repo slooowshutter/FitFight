@@ -31,7 +31,7 @@ struct RequestsView: View {
                 FFSegmented(items: Filter.allCases, selection: $filter) { $0.rawValue }
                     .padding(.bottom, 16)
 
-                VStack(spacing: theme.space.cardGap) {
+                VStack(spacing: 10) {
                     ForEach(filtered) { item in
                         RequestCard(item: item)
                     }
@@ -107,19 +107,19 @@ struct RequestCard: View {
                         )
                         FFBadge(text: statusText, tone: statusTone, style: .plain)
                     }
-                    .padding(.bottom, 8)
+                    .padding(.bottom, 5.5)
                     Text(item.title)
                         .font(.ff(14, .bold))
                         .foregroundStyle(theme.text)
-                        .padding(.bottom, 5)
+                        .padding(.bottom, 4)
                     Text(item.body)
                         .font(.ff(12))
                         .foregroundStyle(theme.muted)
                         .lineSpacing(3)
                         .fixedSize(horizontal: false, vertical: true)
-                        .padding(.bottom, 11)
+                        .padding(.bottom, 9.5)
                     HStack(spacing: 8) {
-                        FFAvatar(item.author, size: 15)
+                        FFAvatar(item.author, size: 17)
                         Text("\(item.author.name) · \(item.ago)")
                             .font(.ff(11))
                             .foregroundStyle(theme.muted)
@@ -132,7 +132,6 @@ struct RequestCard: View {
                             .foregroundStyle(theme.faint)
                     }
                 }
-                .padding(.vertical, 4)
             }
         }
     }

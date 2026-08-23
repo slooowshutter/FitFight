@@ -14,6 +14,7 @@ Not: agent on Marc’s laptop or home Mac → local Xcode.
 | Workflow | File | When | Runner |
 | --- | --- | --- | --- |
 | Simulator | `.github/workflows/ios-build.yml` | PR + push to `main` | `macos-26` |
+| Screenshots | `.github/workflows/ios-screenshots.yml` | PR + push to `main` | `macos-26` |
 | TestFlight | `.github/workflows/ios-testflight.yml` | any app `push` (PR or `main`), cron `0 18 * * *` UTC | `macos-26` |
 
 Both **must** stay GitHub-hosted. Never `self-hosted`. Apple requires **Xcode 26 / iOS 26 SDK** to upload (Xcode 16.4 / iOS 18.5 is rejected).
@@ -21,6 +22,24 @@ Both **must** stay GitHub-hosted. Never `self-hosted`. Apple requires **Xcode 26
 Fastlane: `fastlane/Fastfile` lane `beta`. Archive uses automatic signing + App Store Connect API key (`-allowProvisioningUpdates`). Do **not** also set `export_xcargs` to the same `-authenticationKeyPath` flags — gym passes `xcargs` into export and duplicates the flag.
 
 Build number is not committed; CI sets `CURRENT_PROJECT_VERSION` at archive time.
+
+## Seeing the UI without a build
+
+Every PR renders each screen in the simulator and uploads them as the `screens` artifact.
+`FitFight/ScreenshotExport.swift` runs when the app is launched with `FF_SHOOT=1`, renders
+each screen with `ImageRenderer` (scroll views stay blank in that renderer, so `FFScreen`
+switches to a plain stack via `\.ffStaticRender`) and writes PNGs the workflow copies out
+of the simulator container.
+
+An agent can pull them and measure them against the design:
+
+```bash
+gh run list --branch <branch> --workflow Screenshots --limit 1
+gh run download <run-id> -n screens -D /tmp/shots
+```
+
+That is the fidelity loop: measure `docs/design/source/screenshots/app/*.png`, change the
+SwiftUI, push, download `screens`, compare the same numbers. Don't ask Marc to eyeball it.
 
 ## GitHub secrets (already set)
 

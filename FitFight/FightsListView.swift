@@ -55,7 +55,7 @@ struct FightsListView: View {
                 FFLabel(text: "\(model.live.count) live fights", role: .display)
                 HStack(spacing: 5) {
                     Text("If it ends like this you're")
-                        .font(.system(size: 14))
+                        .font(.ff(14))
                         .foregroundStyle(theme.muted)
                     FFMoney(dollars: model.projectedNet, size: 14)
                 }
@@ -105,12 +105,12 @@ struct LiveFightCard: View {
                     meta(icon: "dollarsign.circle", text: "$\(fight.pot)")
                     dot
                     Text(fight.settlement.title)
-                        .font(.system(size: 13))
+                        .font(.ff(12))
                         .foregroundStyle(theme.muted)
                     Spacer(minLength: 8)
                     if fight.pending > 0 {
                         Text("\(fight.pending) pending")
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.ff(12, .semibold))
                             .foregroundStyle(theme.amber)
                             .padding(.horizontal, 8)
                             .frame(height: 19)
@@ -128,7 +128,7 @@ struct LiveFightCard: View {
 
                 if hiddenCount > 0 {
                     Text("+\(hiddenCount) more")
-                        .font(.system(size: 12))
+                        .font(.ff(12))
                         .foregroundStyle(theme.muted)
                         .padding(.top, 11)
                 }
@@ -147,7 +147,7 @@ struct LiveFightCard: View {
                         HStack(spacing: 6) {
                             FFMoney(dollars: you.projectedNet)
                             Text("right now")
-                                .font(.system(size: 13))
+                                .font(.ff(13))
                                 .foregroundStyle(theme.muted)
                         }
                     }
@@ -170,7 +170,7 @@ struct LiveFightCard: View {
 
     private var dot: some View {
         Text("·")
-            .font(.system(size: 13))
+            .font(.ff(12))
             .foregroundStyle(theme.faint)
             .padding(.horizontal, 7)
     }
@@ -178,10 +178,9 @@ struct LiveFightCard: View {
     private func meta(icon: String, text: String) -> some View {
         HStack(spacing: 4) {
             Image(systemName: icon)
-                .font(.system(size: 12, weight: .regular))
+                .font(.system(size: 10, weight: .regular))
             Text(text)
-                .font(.system(size: 13))
-                .monospacedDigit()
+                .font(.ff(12))
         }
         .foregroundStyle(theme.muted)
     }
@@ -192,13 +191,12 @@ struct LiveFightCard: View {
         let fill: Color = isLead ? theme.accent : (row.person.isYou ? theme.text : Color.white.opacity(0.45))
         return HStack(spacing: 0) {
             Text("\(index + 1)")
-                .font(.system(size: 12, weight: .semibold))
+                .font(.ff(12, .semibold))
                 .foregroundStyle(isLead ? theme.accent : theme.muted)
-                .monospacedDigit()
                 .frame(width: FFMetric.miniRankWidth, alignment: .leading)
             FFAvatar(initials: row.person.initials, size: FFMetric.miniAvatar)
             Text(row.person.name)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.ff(12, .semibold))
                 .foregroundStyle(theme.text)
                 .lineLimit(1)
                 .padding(.leading, 8)
@@ -208,9 +206,8 @@ struct LiveFightCard: View {
                 fill: fill
             )
             Text(model.formatScore(row.score, metric: fight.metric))
-                .font(.system(size: 13, weight: .bold))
+                .font(.ff(12, .bold))
                 .foregroundStyle(theme.text)
-                .monospacedDigit()
                 .frame(width: FFMetric.miniValueWidth, alignment: .trailing)
         }
         .frame(height: FFMetric.miniRowHeight)
@@ -228,10 +225,10 @@ struct InvitationRow: View {
                 FFAvatar(initials: fight.standings.first?.person.initials ?? "?", size: 40)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(fight.name)
-                        .font(.system(size: 17, weight: .bold))
+                        .font(.ff(17, .bold))
                         .foregroundStyle(theme.text)
                     Text(fight.listSubtitle)
-                        .font(.system(size: 13))
+                        .font(.ff(13))
                         .foregroundStyle(theme.muted)
                 }
                 Spacer(minLength: 8)
@@ -259,16 +256,16 @@ struct FinishedRow: View {
             FFCard(padding: 16) {
                 HStack(spacing: 12) {
                     Text("W")
-                        .font(.system(size: 15, weight: .bold))
+                        .font(.ff(15, .bold))
                         .foregroundStyle(theme.green)
                         .frame(width: 40, height: 40)
                         .background(theme.green.opacity(0.12), in: Circle())
                     VStack(alignment: .leading, spacing: 3) {
                         Text(fight.name)
-                            .font(.system(size: 17, weight: .bold))
+                            .font(.ff(17, .bold))
                             .foregroundStyle(theme.text)
                         Text(fight.listSubtitle)
-                            .font(.system(size: 13))
+                            .font(.ff(13))
                             .foregroundStyle(theme.muted)
                     }
                     Spacer(minLength: 8)

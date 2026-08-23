@@ -10,7 +10,7 @@ enum FFMetric {
     static let miniRowHeight: CGFloat = 24
     static let miniRowGap: CGFloat = 10
     static let miniRankWidth: CGFloat = 22
-    static let miniAvatar: CGFloat = 24
+    static let miniAvatar: CGFloat = 22
     static let miniNameWidth: CGFloat = 74
     static let miniValueWidth: CGFloat = 58
     static let rankBadgeWidth: CGFloat = 54
@@ -73,7 +73,6 @@ struct FFLabel: View {
             .font(theme.font(role))
             .tracking(theme.tracking(role))
             .foregroundStyle(color ?? theme.text)
-            .monospacedDigit()
     }
 }
 
@@ -103,7 +102,7 @@ struct FFButton: View {
                         .font(.system(size: kind == .small ? 12 : 15, weight: .semibold))
                 }
                 Text(title)
-                    .font(.system(size: kind == .small ? 14 : 17, weight: kind == .small ? .semibold : .bold))
+                    .font(.ff(kind == .small ? 14 : 17, kind == .small ? .semibold : .bold))
                 if let icon, iconTrailing {
                     Image(systemName: icon)
                         .font(.system(size: kind == .small ? 12 : 15, weight: .semibold))
@@ -241,14 +240,13 @@ struct FFRankBadge: View {
         let first = rank == 1
         VStack(spacing: 2) {
             Text("#\(rank)")
-                .font(.system(size: 19, weight: .bold))
+                .font(.ff(19, .bold))
                 .foregroundStyle(first ? theme.ink : theme.text)
             Text("OF \(of)")
-                .font(.system(size: 10, weight: .semibold))
+                .font(.ff(10, .semibold))
                 .tracking(0.6)
                 .foregroundStyle(first ? theme.ink.opacity(0.75) : theme.muted)
         }
-        .monospacedDigit()
         .frame(width: FFMetric.rankBadgeWidth, height: FFMetric.rankBadgeHeight)
         .background(
             first ? theme.accent : theme.chip,
@@ -269,16 +267,15 @@ struct FFKicker: View {
         HStack(spacing: 4) {
             if !prefix.isEmpty {
                 Text(prefix)
-                    .font(.system(size: size, weight: .regular))
+                    .font(.ff(size, .regular))
                     .foregroundStyle(theme.muted)
             }
             Text(emphasis)
-                .font(.system(size: size, weight: .bold))
+                .font(.ff(size, .bold))
                 .foregroundStyle(theme.text)
-                .monospacedDigit()
             if !rest.isEmpty {
                 Text(rest)
-                    .font(.system(size: size, weight: .regular))
+                    .font(.ff(size, .regular))
                     .foregroundStyle(theme.muted)
             }
         }
@@ -300,7 +297,7 @@ struct FFSegmented<Item: Hashable>: View {
                     selection = item
                 } label: {
                     Text(title(item))
-                        .font(.system(size: 15, weight: on ? .semibold : .medium))
+                        .font(.ff(15, on ? .semibold : .medium))
                         .foregroundStyle(on ? theme.text : theme.muted)
                         .frame(maxWidth: .infinity)
                         .frame(height: 37)
@@ -331,12 +328,12 @@ struct FFSectionHeader: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
             Text(title)
-                .font(.system(size: 15, weight: .bold))
+                .font(.ff(15, .bold))
                 .foregroundStyle(theme.text)
             Spacer(minLength: 12)
             if let action {
                 let label = Text(action)
-                    .font(.system(size: 13, weight: actionMuted ? .regular : .semibold))
+                    .font(.ff(13, actionMuted ? .regular : .semibold))
                     .foregroundStyle(actionMuted ? theme.muted : theme.accent)
                 if let onAction {
                     Button(action: onAction) { label }
@@ -370,7 +367,7 @@ struct FFAvatar: View {
             .frame(width: size, height: size)
             .overlay {
                 Text(initials.prefix(1))
-                    .font(.system(size: size * 0.42, weight: .bold))
+                    .font(.ff(size * 0.42, .bold))
                     .foregroundStyle(Color.white.opacity(0.92))
             }
             .overlay {
@@ -414,9 +411,8 @@ struct FFMoney: View {
             return evenText
         }()
         Text(label)
-            .font(.system(size: size, weight: .bold))
+            .font(.ff(size, .bold))
             .foregroundStyle(color)
-            .monospacedDigit()
     }
 }
 
@@ -480,11 +476,10 @@ struct FFStatTile: View {
     var body: some View {
         VStack(spacing: 3) {
             Text(value)
-                .font(.system(size: 19, weight: .bold))
+                .font(.ff(19, .bold))
                 .foregroundStyle(color ?? theme.text)
-                .monospacedDigit()
             Text(label.uppercased())
-                .font(.system(size: 9, weight: .semibold))
+                .font(.ff(9, .semibold))
                 .tracking(0.5)
                 .foregroundStyle(theme.muted)
         }
@@ -528,7 +523,7 @@ struct FFBadge: View {
     var body: some View {
         let color = colorForTone
         Text(text.uppercased())
-            .font(.system(size: 10, weight: .bold))
+            .font(.ff(10, .bold))
             .tracking(0.5)
             .foregroundStyle(foreground(color))
             .padding(.horizontal, style == .plain ? 0 : 8)
@@ -577,7 +572,7 @@ struct FFChip: View {
 
     var body: some View {
         let label = Text(text)
-            .font(.system(size: 15, weight: .semibold))
+            .font(.ff(15, .semibold))
             .foregroundStyle(selected ? theme.ink : (suggestion ? theme.accent : theme.text))
             .lineLimit(1)
             .padding(.horizontal, 14)
@@ -645,7 +640,7 @@ struct FFTabBar: View {
                     .foregroundStyle(on ? theme.accent : theme.muted)
                     .frame(height: 22)
                 Text(title)
-                    .font(.system(size: 12, weight: on ? .semibold : .regular))
+                    .font(.ff(12, on ? .semibold : .regular))
                     .foregroundStyle(on ? theme.text : theme.muted)
             }
             .frame(maxWidth: .infinity)
@@ -675,7 +670,6 @@ struct VersionBanner: View {
             Text(AppVersion.label)
                 .font(theme.font(.micro))
                 .foregroundStyle(theme.faint)
-                .monospacedDigit()
                 .frame(maxWidth: .infinity)
                 .padding(.top, 4)
                 .padding(.bottom, 6)

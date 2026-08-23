@@ -60,7 +60,7 @@ struct FightDetailView: View {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 13, weight: .semibold))
                     Text("Fights")
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.ff(15, .semibold))
                 }
                 .foregroundStyle(theme.text)
                 .padding(.horizontal, 14)
@@ -71,7 +71,7 @@ struct FightDetailView: View {
             .buttonStyle(FFPressStyle(scale: 0.97))
             Spacer(minLength: 0)
             Text(fight.code)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.ff(12, .semibold))
                 .tracking(1.2)
                 .foregroundStyle(theme.muted)
             Spacer(minLength: 0)
@@ -92,12 +92,12 @@ struct FightDetailView: View {
                     .padding(.bottom, 14)
                 if let pitch = fight.invitePitch {
                     Text(pitch)
-                        .font(.system(size: 16))
+                        .font(.ff(16))
                         .foregroundStyle(theme.text)
                         .padding(.bottom, 8)
                 }
                 Text("\(fight.lengthDays) days · \(fight.payoutLine)")
-                    .font(.system(size: 14))
+                    .font(.ff(14))
                     .foregroundStyle(theme.muted)
                     .padding(.bottom, 22)
                 FFButton(title: fight.inviteAction == "Accept" ? "Accept challenge" : "Join fight") {
@@ -120,11 +120,10 @@ struct FightDetailView: View {
                 FFRing(progress: ringProgress) {
                     VStack(spacing: 1) {
                         Text(fight.status == .finished ? "1st" : "#\(fight.rank)")
-                            .font(.system(size: 30, weight: .bold))
+                            .font(.ff(30, .bold))
                             .foregroundStyle(theme.text)
-                            .monospacedDigit()
                         Text("OF \(fight.of)")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.ff(11, .semibold))
                             .tracking(0.6)
                             .foregroundStyle(theme.muted)
                     }
@@ -182,7 +181,7 @@ struct FightDetailView: View {
         FFPanel {
             FFBand {
                 Text(fight.payoutLine)
-                    .font(.system(size: 14))
+                    .font(.ff(14))
                     .foregroundStyle(theme.muted)
             }
             ForEach(Array(joinedStandings.enumerated()), id: \.element.id) { index, row in
@@ -201,10 +200,10 @@ struct FightDetailView: View {
             FFAvatar(initials: row.person.initials, size: 30)
             VStack(alignment: .leading, spacing: 2) {
                 Text(row.person.name)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.ff(15, .semibold))
                     .foregroundStyle(theme.text)
                 Text(model.paceLine(row, in: fight))
-                    .font(.system(size: 13))
+                    .font(.ff(13))
                     .foregroundStyle(theme.muted)
             }
             Spacer(minLength: 8)
@@ -235,13 +234,12 @@ struct FightDetailView: View {
         return VStack(spacing: 8) {
             HStack(spacing: 0) {
                 Text("\(index + 1)")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.ff(13, .semibold))
                     .foregroundStyle(isLead ? theme.accent : theme.muted)
-                    .monospacedDigit()
                     .frame(width: 22, alignment: .leading)
                 FFAvatar(initials: row.person.initials, size: 26, pending: row.invited)
                 Text(row.person.name)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.ff(15, .semibold))
                     .foregroundStyle(row.invited ? theme.muted : theme.text)
                     .lineLimit(1)
                     .padding(.leading, 10)
@@ -251,15 +249,13 @@ struct FightDetailView: View {
                 } else {
                     if row.today != 0 {
                         Text(model.formatDelta(row.today, metric: fight.metric))
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.ff(12, .semibold))
                             .foregroundStyle(row.today > 0 ? theme.green : theme.red)
-                            .monospacedDigit()
                             .padding(.trailing, 14)
                     }
                     Text(model.formatScore(row.score, metric: fight.metric))
-                        .font(.system(size: 15, weight: .bold))
+                        .font(.ff(15, .bold))
                         .foregroundStyle(theme.text)
-                        .monospacedDigit()
                 }
             }
             .frame(height: 26)
@@ -283,7 +279,7 @@ struct FightDetailView: View {
                         Color.clear.frame(height: 20)
                     }
                     Text(day.label)
-                        .font(.system(size: 14))
+                        .font(.ff(14))
                         .foregroundStyle(theme.muted)
                         .padding(.bottom, 10)
                     let maxVal = day.scores.map(\.value).max() ?? 1
@@ -292,7 +288,7 @@ struct FightDetailView: View {
                         ForEach(day.scores) { row in
                             HStack(spacing: 0) {
                                 Text(row.person.name)
-                                    .font(.system(size: 13))
+                                    .font(.ff(13))
                                     .foregroundStyle(theme.muted)
                                     .lineLimit(1)
                                     .frame(width: 56, alignment: .leading)
@@ -301,9 +297,8 @@ struct FightDetailView: View {
                                     fill: row.person.id == leaderID ? theme.accent : Color.white.opacity(0.45)
                                 )
                                 Text(model.formatScore(row.value, metric: fight.metric))
-                                    .font(.system(size: 13))
+                                    .font(.ff(13))
                                     .foregroundStyle(theme.muted)
-                                    .monospacedDigit()
                                     .frame(width: 56, alignment: .trailing)
                             }
                             .frame(height: 9)
@@ -315,7 +310,7 @@ struct FightDetailView: View {
                         .padding(.top, 26)
                         .padding(.bottom, 16)
                     Text(note)
-                        .font(.system(size: 14))
+                        .font(.ff(14))
                         .foregroundStyle(theme.muted)
                 }
             }

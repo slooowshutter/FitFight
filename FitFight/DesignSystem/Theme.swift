@@ -78,7 +78,7 @@ struct Theme {
 
     func font(_ role: TypeRole) -> Font {
         let spec = type.spec(role)
-        return .system(size: spec.size, weight: spec.weight, design: .default)
+        return .ff(spec.size, spec.weight)
     }
 
     func tracking(_ role: TypeRole) -> CGFloat {

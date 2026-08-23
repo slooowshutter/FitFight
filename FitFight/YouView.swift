@@ -37,10 +37,10 @@ struct YouView: View {
             FFAvatar(initials: "MM", size: 56, ring: true)
             VStack(alignment: .leading, spacing: 2) {
                 Text("Maya Moves")
-                    .font(.system(size: 19, weight: .bold))
+                    .font(.ff(19, .bold))
                     .foregroundStyle(theme.text)
                 Text("@maya.moves · joined Mar 2026")
-                    .font(.system(size: 13))
+                    .font(.ff(13))
                     .foregroundStyle(theme.muted)
                     .lineLimit(1)
                     .fixedSize()
@@ -49,7 +49,7 @@ struct YouView: View {
             Spacer(minLength: 4)
             Button {} label: {
                 Text("Edit")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.ff(14, .semibold))
                     .foregroundStyle(theme.text)
                     .padding(.horizontal, 16)
                     .frame(height: 32)
@@ -79,16 +79,16 @@ struct YouView: View {
                 } label: {
                     HStack(spacing: 12) {
                         Text(item.won ? "W" : "L")
-                            .font(.system(size: 15, weight: .bold))
+                            .font(.ff(15, .bold))
                             .foregroundStyle(item.won ? theme.green : theme.red)
                             .frame(width: 40, height: 40)
                             .background((item.won ? theme.green : theme.red).opacity(0.12), in: Circle())
                         VStack(alignment: .leading, spacing: 3) {
                             Text(item.name)
-                                .font(.system(size: 16, weight: .bold))
+                                .font(.ff(16, .bold))
                                 .foregroundStyle(theme.text)
                             Text(item.detail)
-                                .font(.system(size: 13))
+                                .font(.ff(13))
                                 .foregroundStyle(theme.muted)
                         }
                         Spacer(minLength: 8)
@@ -116,15 +116,15 @@ struct YouView: View {
             Circle().fill(theme.green).frame(width: 8, height: 8)
             VStack(alignment: .leading, spacing: 3) {
                 Text(name)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.ff(16, .semibold))
                     .foregroundStyle(theme.text)
                 Text(detail)
-                    .font(.system(size: 13))
+                    .font(.ff(13))
                     .foregroundStyle(theme.muted)
             }
             Spacer(minLength: 8)
             Text(time)
-                .font(.system(size: 13))
+                .font(.ff(13))
                 .foregroundStyle(theme.muted)
         }
         .padding(.horizontal, FFMetric.rowPaddingX)
@@ -140,7 +140,7 @@ struct YouView: View {
                         themeStore.baseID = base
                     } label: {
                         Text(base.rawValue.capitalized)
-                            .font(.system(size: 15, weight: .semibold))
+                            .font(.ff(15, .semibold))
                             .foregroundStyle(on ? theme.ink : theme.text)
                             .frame(maxWidth: .infinity)
                             .frame(height: 40)
@@ -198,7 +198,7 @@ struct YouView: View {
         Button(action: action) {
             HStack {
                 Text(title)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.ff(16, .semibold))
                     .foregroundStyle(theme.text)
                 Spacer()
                 Image(systemName: "chevron.right")

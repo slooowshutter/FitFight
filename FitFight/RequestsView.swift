@@ -19,7 +19,7 @@ struct RequestsView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         FFLabel(text: "Requests", role: .display)
                         Text("Vote on what gets built next.")
-                            .font(.system(size: 14))
+                            .font(.ff(14))
                             .foregroundStyle(theme.muted)
                     }
                     Spacer(minLength: 0)
@@ -38,7 +38,7 @@ struct RequestsView: View {
                 }
 
                 Text("Anything you post is public to everyone using FitFight.")
-                    .font(.system(size: 13))
+                    .font(.ff(13))
                     .foregroundStyle(theme.faint)
                     .frame(maxWidth: .infinity)
                     .padding(.top, 24)
@@ -81,8 +81,7 @@ struct RequestCard: View {
                         Image(systemName: "arrow.up")
                             .font(.system(size: 13, weight: .semibold))
                         Text("\(votes)")
-                            .font(.system(size: 17, weight: .bold))
-                            .monospacedDigit()
+                            .font(.ff(17, .bold))
                     }
                     .foregroundStyle(voted ? theme.ink : theme.text)
                     .frame(width: 44)
@@ -110,11 +109,11 @@ struct RequestCard: View {
                     }
                     .padding(.bottom, 8)
                     Text(item.title)
-                        .font(.system(size: 15, weight: .bold))
+                        .font(.ff(15, .bold))
                         .foregroundStyle(theme.text)
                         .padding(.bottom, 5)
                     Text(item.body)
-                        .font(.system(size: 13))
+                        .font(.ff(13))
                         .foregroundStyle(theme.muted)
                         .lineSpacing(3)
                         .fixedSize(horizontal: false, vertical: true)
@@ -122,16 +121,15 @@ struct RequestCard: View {
                     HStack(spacing: 8) {
                         FFAvatar(initials: item.author.initials, size: 18)
                         Text("\(item.author.name) · \(item.ago)")
-                            .font(.system(size: 12))
+                            .font(.ff(12))
                             .foregroundStyle(theme.muted)
                         Spacer(minLength: 8)
                         Image(systemName: "bubble.left")
                             .font(.system(size: 11))
                             .foregroundStyle(theme.faint)
                         Text("\(item.comments)")
-                            .font(.system(size: 12))
+                            .font(.ff(12))
                             .foregroundStyle(theme.faint)
-                            .monospacedDigit()
                     }
                 }
                 .padding(.vertical, 4)

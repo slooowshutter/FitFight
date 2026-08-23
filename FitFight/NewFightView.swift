@@ -22,7 +22,7 @@ struct NewFightView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     FFLabel(text: "New fight", role: .display)
                     Text("Scores sync automatically. You settle up at the end.")
-                        .font(.system(size: 14))
+                        .font(.ff(14))
                         .foregroundStyle(theme.muted)
                 }
                 .padding(.bottom, theme.space.sectionGap)
@@ -78,10 +78,10 @@ struct NewFightView: View {
                             FFAvatar(initials: person.initials, size: 36)
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(person.name)
-                                    .font(.system(size: 15, weight: .semibold))
+                                    .font(.ff(15, .semibold))
                                     .foregroundStyle(theme.text)
                                 Text(person.handle)
-                                    .font(.system(size: 13))
+                                    .font(.ff(13))
                                     .foregroundStyle(theme.muted)
                             }
                             Spacer(minLength: 8)
@@ -123,7 +123,7 @@ struct NewFightView: View {
                     }
             }
             Text("Runs from tomorrow to \(endLabel).")
-                .font(.system(size: 13))
+                .font(.ff(13))
                 .foregroundStyle(theme.muted)
         }
     }
@@ -150,7 +150,7 @@ struct NewFightView: View {
                     stepper("$\(customMoney)", minus: { customMoney = max(5, customMoney - 5) }, plus: { customMoney += 5 })
                 } else {
                     TextField("what does the loser owe?", text: $forfeit)
-                        .font(.system(size: 15))
+                        .font(.ff(15))
                         .foregroundStyle(theme.text)
                         .padding(.horizontal, 16)
                         .frame(height: 52)
@@ -218,10 +218,10 @@ struct NewFightView: View {
 
     private var summary: some View {
         (Text("\(lengthDays)-day \(metric.eyebrow.lowercased())")
-            .font(.system(size: 14, weight: .bold))
+            .font(.ff(14, .bold))
             .foregroundStyle(theme.text)
         + Text(" fight with \(selected.count + 1) players, ending \(endLabel). \(stakeSummary).")
-            .font(.system(size: 14))
+            .font(.ff(14))
             .foregroundStyle(theme.muted))
             .lineSpacing(3)
             .padding(16)
@@ -245,7 +245,7 @@ struct NewFightView: View {
     private func chip(_ title: String, on: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.ff(15, .semibold))
                 .foregroundStyle(on ? theme.ink : theme.text)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
@@ -278,10 +278,10 @@ struct NewFightView: View {
                 if leadingRadio { radio(on) }
                 VStack(alignment: .leading, spacing: 3) {
                     Text(title)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.ff(15, .semibold))
                         .foregroundStyle(theme.text)
                     Text(subtitle)
-                        .font(.system(size: 13))
+                        .font(.ff(13))
                         .foregroundStyle(theme.muted)
                         .multilineTextAlignment(.leading)
                         .lineSpacing(2)
@@ -348,9 +348,8 @@ struct NewFightView: View {
             .buttonStyle(.plain)
             Spacer()
             Text(label)
-                .font(.system(size: 19, weight: .bold))
+                .font(.ff(19, .bold))
                 .foregroundStyle(theme.text)
-                .monospacedDigit()
             Spacer()
             Button(action: plus) {
                 Image(systemName: "plus")

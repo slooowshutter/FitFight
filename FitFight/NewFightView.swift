@@ -100,7 +100,7 @@ struct NewFightView: View {
     private var lengthSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             FFSectionHeader(title: "Ends", action: "\(lengthDays) days")
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 ForEach([3, 7, 14], id: \.self) { days in
                     chip("\(days)d", on: !pickingDate && lengthDays == days) {
                         pickingDate = false
@@ -131,7 +131,7 @@ struct NewFightView: View {
     private var stakeSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             FFSectionHeader(title: "What’s on the line")
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 chip("Bragging rights", on: stake == .bragging) { stake = .bragging }
                 chip("$10", on: stake == .ten) { stake = .ten }
                 chip("Custom", on: stake == .custom) { stake = .custom }
@@ -248,8 +248,8 @@ struct NewFightView: View {
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(on ? theme.ink : theme.text)
                 .lineLimit(1)
-                .minimumScaleFactor(0.85)
-                .padding(.horizontal, 12)
+                .minimumScaleFactor(0.75)
+                .padding(.horizontal, 6)
                 .frame(maxWidth: .infinity)
                 .frame(height: 40)
                 .background(

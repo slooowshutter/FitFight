@@ -51,7 +51,7 @@ struct FightsListView: View {
 
     private var header: some View {
         HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 0) {
                 FFLabel(text: "\(model.live.count) live fights", role: .display)
                 HStack(spacing: 5) {
                     Text("If it ends like this you're")
@@ -93,7 +93,7 @@ struct LiveFightCard: View {
                             .padding(.bottom, 9)
                         FFLabel(text: fight.name, role: .title)
                             .lineLimit(1)
-                            .minimumScaleFactor(0.8)
+                            .fixedSize(horizontal: true, vertical: false)
                     }
                     Spacer(minLength: 0)
                     FFRankBadge(rank: fight.rank, of: fight.of)

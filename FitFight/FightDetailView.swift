@@ -115,7 +115,7 @@ struct FightDetailView: View {
                     .padding(.bottom, 14)
                 FFLabel(text: fight.name, role: .display)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.7)
+                    .fixedSize(horizontal: true, vertical: false)
                     .padding(.bottom, 21)
                 FFRing(progress: ringProgress) {
                     VStack(spacing: 1) {

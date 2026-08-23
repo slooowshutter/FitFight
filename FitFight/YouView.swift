@@ -42,8 +42,11 @@ struct YouView: View {
                 Text("@maya.moves · joined Mar 2026")
                     .font(.system(size: 13))
                     .foregroundStyle(theme.muted)
+                    .lineLimit(1)
+                    .fixedSize()
             }
-            Spacer(minLength: 8)
+            .layoutPriority(1)
+            Spacer(minLength: 4)
             Button {} label: {
                 Text("Edit")
                     .font(.system(size: 14, weight: .semibold))

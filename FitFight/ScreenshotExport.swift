@@ -89,7 +89,8 @@ enum ScreenshotExport {
             VStack(spacing: 0) {
                 VersionBanner()
                 content
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    .clipped()
                 FFTabBar(tab: .constant(tab))
             }
             .background(theme.bg)

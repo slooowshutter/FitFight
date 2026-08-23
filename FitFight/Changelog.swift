@@ -24,6 +24,13 @@ enum Changelog {
     /// Newest first. Add a row here whenever we ship a user-facing change.
     static let releases: [ReleaseNote] = [
         ReleaseNote(
+            version: "0.7.0",
+            year: 2026,
+            month: 8,
+            day: 23,
+            notes: "Requests has a Talk to the boss button. It opens a private chat with Marc — not the public vote board. What you send is emailed to him; he writes back from his inbox until the app has a server."
+        ),
+        ReleaseNote(
             version: "0.6.0",
             year: 2026,
             month: 8,

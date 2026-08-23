@@ -49,6 +49,12 @@ the rest and the tab with them.
 Placeholder themes (Arena, Pulse, Locker, Rogue) from v0.2 are retired — the v0.6
 directions named Arena and Pulse are unrelated to them.
 
+## v0.7 (talk to the boss)
+
+Requests has a **Talk to the boss** button. It opens a private chat with Marc,
+separate from the public vote board. There is still no server, so sending a
+message opens Mail to `marc@marclamy.com`. He replies from his inbox.
+
 ## Not this project
 
 - Hermes (a home-Mac agent) is unrelated. Ignore it.

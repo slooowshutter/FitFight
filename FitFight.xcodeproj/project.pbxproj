@@ -41,6 +41,7 @@
 		A1000000000000000000E009 /* D8Pulse.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D009 /* D8Pulse.swift */; };
 		A1000000000000000000E00A /* D9Bento.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D00A /* D9Bento.swift */; };
 		A1000000000000000000E00B /* D10Zine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D00B /* D10Zine.swift */; };
+		A10000000000000000000101 /* BossChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000102 /* BossChatView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -79,6 +80,7 @@
 		A1000000000000000000D009 /* D8Pulse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = D8Pulse.swift; sourceTree = "<group>"; };
 		A1000000000000000000D00A /* D9Bento.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = D9Bento.swift; sourceTree = "<group>"; };
 		A1000000000000000000D00B /* D10Zine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = D10Zine.swift; sourceTree = "<group>"; };
+		A10000000000000000000102 /* BossChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BossChatView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -102,6 +104,7 @@
 				A1000000000000000000001C /* FightDetailView.swift */,
 				A1000000000000000000001D /* NewFightView.swift */,
 				A1000000000000000000001E /* RequestsView.swift */,
+				A10000000000000000000102 /* BossChatView.swift */,
 				A1000000000000000000001F /* YouView.swift */,
 				A10000000000000000000013 /* AppVersion.swift */,
 				A10000000000000000000015 /* Changelog.swift */,
@@ -261,6 +264,7 @@
 				A1000000000000000000000C /* FightDetailView.swift in Sources */,
 				A1000000000000000000000D /* NewFightView.swift in Sources */,
 				A1000000000000000000000E /* RequestsView.swift in Sources */,
+				A10000000000000000000101 /* BossChatView.swift in Sources */,
 				A1000000000000000000000F /* YouView.swift in Sources */,
 				A10000000000000000000021 /* ScreenshotExport.swift in Sources */,
 				A1000000000000000000E000 /* DesignVariant.swift in Sources */,
@@ -422,7 +426,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.6.0;
+				MARKETING_VERSION = 0.7.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.fitfight.mvp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -454,7 +458,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.6.0;
+				MARKETING_VERSION = 0.7.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.fitfight.mvp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";

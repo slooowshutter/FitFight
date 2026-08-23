@@ -76,6 +76,9 @@ enum ScreenshotExport {
             },
             Shot(name: "06-you") { store, model in
                 frame(YouView(), tab: .you, themeStore: store, model: model)
+            },
+            Shot(name: "07-boss-chat") { store, model in
+                frame(BossChatView(store: .screenshot), tab: .requests, themeStore: store, model: model)
             }
         ]
     }

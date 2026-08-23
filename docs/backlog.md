@@ -58,3 +58,4 @@ From [`design/source/INVENTORY.md`](design/source/INVENTORY.md) — honest holes
 ## Done
 
 - v0.3 design port: four tabs, dark/light, 10 accents, fixture fights.
+- Talk to the boss on Requests: private chat with Marc, emailed to him.

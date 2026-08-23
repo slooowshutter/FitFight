@@ -123,6 +123,7 @@ Three settlement modes change the copy and the money maths, not the layout:
 | Element | Tap does |
 |---|---|
 | `+ New` button, top right | Opens the compose form (not designed yet) |
+| **Talk to the boss** | Opens a private chat with Marc. Sending emails him at marc@marclamy.com. He replies from his inbox. |
 | Segment `Top` / `Features` / `Bugs` | Filters and re-sorts the list |
 | **Upvote button** on each row | Toggles your vote. Count changes, button fills with the accent |
 | Row body | Opens the request thread (not designed yet) |

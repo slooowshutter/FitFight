@@ -1,5 +1,25 @@
 import SwiftUI
 
+// Geometry measured from docs/design/source/screenshots (393pt canvas, 2x captures).
+enum FFMetric {
+    static let cardRadius: CGFloat = 24
+    static let cardPadding: CGFloat = 20
+    static let rowPaddingX: CGFloat = 20
+    static let rowPaddingY: CGFloat = 14
+    static let barHeight: CGFloat = 6
+    static let miniRowHeight: CGFloat = 24
+    static let miniRowGap: CGFloat = 10
+    static let miniRankWidth: CGFloat = 22
+    static let miniAvatar: CGFloat = 24
+    static let miniNameWidth: CGFloat = 74
+    static let miniValueWidth: CGFloat = 58
+    static let rankBadgeWidth: CGFloat = 54
+    static let rankBadgeHeight: CGFloat = 50
+    static let statTileHeight: CGFloat = 58
+    static let ringSize: CGFloat = 132
+    static let ringStroke: CGFloat = 11
+}
+
 struct FFLabel: View {
     let text: String
     var role: TypeRole
@@ -29,6 +49,7 @@ struct FFButton: View {
     let title: String
     var kind: FFButtonKind = .primary
     var icon: String? = nil
+    var iconTrailing = false
     var enabled = true
     var action: () -> Void
 
@@ -36,18 +57,22 @@ struct FFButton: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 6) {
-                if let icon {
+            HStack(spacing: 8) {
+                if let icon, !iconTrailing {
                     Image(systemName: icon)
-                        .font(.system(size: kind == .small ? 13 : 16, weight: .semibold))
+                        .font(.system(size: kind == .small ? 12 : 15, weight: .semibold))
                 }
                 Text(title)
-                    .font(theme.font(kind == .small ? .caption : .bodyStrong))
+                    .font(.system(size: kind == .small ? 14 : 17, weight: kind == .small ? .semibold : .bold))
+                if let icon, iconTrailing {
+                    Image(systemName: icon)
+                        .font(.system(size: kind == .small ? 12 : 15, weight: .semibold))
+                }
             }
             .foregroundStyle(foreground)
             .frame(maxWidth: kind == .small ? nil : .infinity)
             .padding(.horizontal, kind == .small ? 14 : 16)
-            .padding(.vertical, kind == .small ? 8 : 14)
+            .frame(height: kind == .small ? 36 : 58)
             .background(background, in: Capsule())
             .overlay {
                 if kind == .quiet {
@@ -64,7 +89,7 @@ struct FFButton: View {
         switch kind {
         case .primary, .small: return theme.ink
         case .secondary: return theme.accent
-        case .quiet: return theme.muted
+        case .quiet: return theme.text
         case .destructive: return theme.red
         }
     }
@@ -81,6 +106,7 @@ struct FFButton: View {
 
 struct FFIconButton: View {
     let systemName: String
+    var size: CGFloat = 40
     var destructive = false
     var action: () -> Void
 
@@ -89,9 +115,10 @@ struct FFIconButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: systemName)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.system(size: 15, weight: .regular))
                 .foregroundStyle(destructive ? theme.red : theme.text)
-                .frame(width: 40, height: 40)
+                .frame(width: size, height: size)
+                .background(theme.chip, in: Circle())
                 .overlay {
                     Circle().strokeBorder(theme.line, lineWidth: 1)
                 }
@@ -100,53 +127,27 @@ struct FFIconButton: View {
     }
 }
 
-struct FFChip: View {
-    let text: String
-    var selected = false
-    var suggestion = false
-    var action: (() -> Void)? = nil
-
-    @Environment(\.ffTheme) private var theme
-
-    var body: some View {
-        let label = Text(text)
-            .font(theme.font(.bodyStrong))
-            .foregroundStyle(selected ? theme.ink : (suggestion ? theme.accent : theme.text))
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background(
-                selected ? theme.accent : (suggestion ? theme.chip : theme.surface),
-                in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
-            )
-            .overlay {
-                if !selected {
-                    RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
-                        .strokeBorder(theme.line, lineWidth: 1)
-                }
-            }
-
-        if let action {
-            Button(action: action) { label }
-                .buttonStyle(FFPressStyle(scale: 0.97))
-        } else {
-            label
-        }
-    }
-}
-
+/// Card: surface, 1px line border, 24pt radius, 20pt padding.
 struct FFCard<Content: View>: View {
+    var padding: CGFloat = FFMetric.cardPadding
     @ViewBuilder var content: () -> Content
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
         content()
-            .padding(theme.space.cardPadding)
+            .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(theme.surface, in: RoundedRectangle(cornerRadius: theme.radius.xl, style: .continuous))
+            .background(theme.surface, in: shape)
+            .overlay { shape.strokeBorder(theme.line, lineWidth: 1) }
+    }
+
+    private var shape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: FFMetric.cardRadius, style: .continuous)
     }
 }
 
-struct FFGroup<Content: View>: View {
+/// Card without padding: rows, tinted bands and footers run edge to edge.
+struct FFPanel<Content: View>: View {
     @ViewBuilder var content: () -> Content
     @Environment(\.ffTheme) private var theme
 
@@ -154,16 +155,39 @@ struct FFGroup<Content: View>: View {
         VStack(spacing: 0) {
             content()
         }
-        .background(theme.surface, in: RoundedRectangle(cornerRadius: theme.radius.xl, style: .continuous))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(theme.surface)
+        .clipShape(shape)
+        .overlay { shape.strokeBorder(theme.line, lineWidth: 1) }
+    }
+
+    private var shape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: FFMetric.cardRadius, style: .continuous)
+    }
+}
+
+/// The chip-tinted band at the top or bottom of a card.
+struct FFBand<Content: View>: View {
+    var vertical: CGFloat = 14
+    @ViewBuilder var content: () -> Content
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        content()
+            .padding(.horizontal, FFMetric.rowPaddingX)
+            .padding(.vertical, vertical)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(theme.chip)
     }
 }
 
 struct FFHairline: View {
-    var inset: CGFloat = 16
+    var inset: CGFloat = 0
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
-        theme.hair.frame(height: 1)
+        theme.hair
+            .frame(height: 1)
             .padding(.leading, inset)
     }
 }
@@ -175,45 +199,46 @@ struct FFRankBadge: View {
 
     var body: some View {
         let first = rank == 1
-        VStack(spacing: 1) {
+        VStack(spacing: 2) {
             Text("#\(rank)")
-                .font(theme.font(.headline))
+                .font(.system(size: 19, weight: .bold))
                 .foregroundStyle(first ? theme.ink : theme.text)
             Text("OF \(of)")
-                .font(theme.font(.tiny))
-                .tracking(theme.tracking(.tiny))
-                .foregroundStyle(first ? theme.ink.opacity(0.8) : theme.muted)
+                .font(.system(size: 10, weight: .semibold))
+                .tracking(0.6)
+                .foregroundStyle(first ? theme.ink.opacity(0.75) : theme.muted)
         }
         .monospacedDigit()
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
+        .frame(width: FFMetric.rankBadgeWidth, height: FFMetric.rankBadgeHeight)
         .background(
             first ? theme.accent : theme.chip,
-            in: RoundedRectangle(cornerRadius: theme.radius.md, style: .continuous)
+            in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
         )
     }
 }
 
+/// "12 min behind Leo" — muted words around one bold value.
 struct FFKicker: View {
     var prefix: String = ""
     var emphasis: String
     var rest: String = ""
+    var size: CGFloat = 13
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
         HStack(spacing: 4) {
             if !prefix.isEmpty {
                 Text(prefix)
-                    .font(theme.font(.caption))
+                    .font(.system(size: size, weight: .regular))
                     .foregroundStyle(theme.muted)
             }
             Text(emphasis)
-                .font(theme.font(.bodyStrong))
+                .font(.system(size: size, weight: .bold))
                 .foregroundStyle(theme.text)
                 .monospacedDigit()
             if !rest.isEmpty {
                 Text(rest)
-                    .font(theme.font(.caption))
+                    .font(.system(size: size, weight: .regular))
                     .foregroundStyle(theme.muted)
             }
         }
@@ -235,18 +260,23 @@ struct FFSegmented<Item: Hashable>: View {
                     selection = item
                 } label: {
                     Text(title(item))
-                        .font(theme.font(.bodyStrong))
+                        .font(.system(size: 15, weight: on ? .semibold : .medium))
                         .foregroundStyle(on ? theme.text : theme.muted)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
-                        .background(on ? theme.surface : Color.clear, in: Capsule())
-                        .shadow(color: on ? Color.black.opacity(0.25) : Color.clear, radius: 2, y: 1)
+                        .frame(height: 37)
+                        .background {
+                            if on {
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .fill(theme.surface)
+                                    .shadow(color: Color.black.opacity(0.25), radius: 2, y: 1)
+                            }
+                        }
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(4)
-        .background(theme.chip, in: Capsule())
+        .background(theme.chip, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 }
 
@@ -259,40 +289,54 @@ struct FFSectionHeader: View {
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
-        HStack {
-            FFLabel(text: title, role: .label, color: theme.text)
-            Spacer()
+        HStack(alignment: .firstTextBaseline) {
+            Text(title)
+                .font(.system(size: 15, weight: .bold))
+                .foregroundStyle(theme.text)
+            Spacer(minLength: 12)
             if let action {
-                let color = actionMuted ? theme.muted : theme.accent
-                let role: TypeRole = actionMuted ? .caption : .label
+                let label = Text(action)
+                    .font(.system(size: 13, weight: actionMuted ? .regular : .semibold))
+                    .foregroundStyle(actionMuted ? theme.muted : theme.accent)
                 if let onAction {
-                    Button(action: onAction) {
-                        FFLabel(text: action, role: role, color: color)
-                    }
-                    .buttonStyle(.plain)
+                    Button(action: onAction) { label }
+                        .buttonStyle(.plain)
                 } else {
-                    FFLabel(text: action, role: role, color: color)
+                    label
                 }
             }
         }
     }
 }
 
+/// Stand-in for the web mock's photo avatars: a stable two-tone disc per person.
 struct FFAvatar: View {
     let initials: String
-    var size: CGFloat = 32
+    var size: CGFloat = 24
     var ring = false
     var pending = false
 
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
-        Text(initials)
-            .font(.system(size: size * 0.36, weight: .bold))
-            .foregroundStyle(theme.text)
+        Circle()
+            .fill(
+                LinearGradient(
+                    colors: gradient,
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
             .frame(width: size, height: size)
-            .background(theme.surface2, in: Circle())
-            .padding(ring ? 1.5 : 0)
+            .overlay {
+                Text(initials.prefix(1))
+                    .font(.system(size: size * 0.42, weight: .bold))
+                    .foregroundStyle(Color.white.opacity(0.92))
+            }
+            .overlay {
+                Circle().strokeBorder(Color.white.opacity(0.10), lineWidth: 0.5)
+            }
+            .padding(ring ? 3 : 0)
             .overlay {
                 if ring {
                     Circle().strokeBorder(theme.accent, lineWidth: 2)
@@ -300,10 +344,20 @@ struct FFAvatar: View {
             }
             .opacity(pending ? 0.5 : 1)
     }
+
+    private var gradient: [Color] {
+        let seed = abs(initials.unicodeScalars.reduce(0) { $0 &+ Int($1.value) &* 17 })
+        let hue = Double(seed % 360) / 360
+        return [
+            Color(hue: hue, saturation: 0.32, brightness: 0.62),
+            Color(hue: (hue + 0.08).truncatingRemainder(dividingBy: 1), saturation: 0.42, brightness: 0.38)
+        ]
+    }
 }
 
 struct FFMoney: View {
     let dollars: Int
+    var size: CGFloat = 13
     var evenText = "even"
 
     @Environment(\.ffTheme) private var theme
@@ -320,7 +374,7 @@ struct FFMoney: View {
             return evenText
         }()
         Text(label)
-            .font(theme.font(.bodyStrong))
+            .font(.system(size: size, weight: .bold))
             .foregroundStyle(color)
             .monospacedDigit()
     }
@@ -329,7 +383,7 @@ struct FFMoney: View {
 struct FFProgressBar: View {
     var progress: CGFloat
     var fill: Color
-    var height: CGFloat = 8
+    var height: CGFloat = FFMetric.barHeight
 
     @Environment(\.ffTheme) private var theme
 
@@ -340,10 +394,72 @@ struct FFProgressBar: View {
                 .overlay(alignment: .leading) {
                     Capsule()
                         .fill(fill)
-                        .frame(width: max(6, geo.size.width * min(1, max(0, progress))))
+                        .frame(width: max(height, geo.size.width * min(1, max(0, progress))))
                 }
         }
         .frame(height: height)
+    }
+}
+
+/// The big rank ring on a fight detail hero.
+struct FFRing<Content: View>: View {
+    var progress: CGFloat
+    @ViewBuilder var content: () -> Content
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(theme.track, lineWidth: FFMetric.ringStroke)
+            Circle()
+                .trim(from: 0, to: max(0.02, min(1, progress)))
+                .stroke(
+                    AngularGradient(
+                        colors: [theme.accent, theme.accent, theme.accentDim],
+                        center: .center,
+                        startAngle: .degrees(-90),
+                        endAngle: .degrees(270)
+                    ),
+                    style: StrokeStyle(lineWidth: FFMetric.ringStroke, lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+            content()
+        }
+        .frame(width: FFMetric.ringSize, height: FFMetric.ringSize)
+    }
+}
+
+struct FFStatTile: View {
+    let value: String
+    let label: String
+    var color: Color? = nil
+    var onSurface = false
+
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        VStack(spacing: 3) {
+            Text(value)
+                .font(.system(size: 19, weight: .bold))
+                .foregroundStyle(color ?? theme.text)
+                .monospacedDigit()
+            Text(label.uppercased())
+                .font(.system(size: 9, weight: .semibold))
+                .tracking(0.5)
+                .foregroundStyle(theme.muted)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: FFMetric.statTileHeight)
+        .background(
+            onSurface ? theme.surface : theme.chip,
+            in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
+        )
+        .overlay {
+            if onSurface {
+                RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
+                    .strokeBorder(theme.line, lineWidth: 1)
+            }
+        }
     }
 }
 
@@ -372,8 +488,8 @@ struct FFBadge: View {
     var body: some View {
         let color = colorForTone
         Text(text.uppercased())
-            .font(theme.font(.tiny))
-            .tracking(theme.tracking(.tiny))
+            .font(.system(size: 10, weight: .bold))
+            .tracking(0.5)
             .foregroundStyle(foreground(color))
             .padding(.horizontal, style == .plain ? 0 : 8)
             .padding(.vertical, style == .plain ? 0 : 4)
@@ -410,6 +526,43 @@ struct FFBadge: View {
     }
 }
 
+struct FFChip: View {
+    let text: String
+    var selected = false
+    var suggestion = false
+    var fill = false
+    var action: (() -> Void)? = nil
+
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        let label = Text(text)
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(selected ? theme.ink : (suggestion ? theme.accent : theme.text))
+            .lineLimit(1)
+            .padding(.horizontal, 14)
+            .frame(maxWidth: fill ? .infinity : nil)
+            .frame(height: 46)
+            .background(
+                selected ? theme.accent : theme.surface,
+                in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
+            )
+            .overlay {
+                if !selected {
+                    RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
+                        .strokeBorder(theme.line, lineWidth: 1)
+                }
+            }
+
+        if let action {
+            Button(action: action) { label }
+                .buttonStyle(FFPressStyle(scale: 0.97))
+        } else {
+            label
+        }
+    }
+}
+
 enum FFTab: Hashable {
     case fights
     case newFight
@@ -422,52 +575,39 @@ struct FFTabBar: View {
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
-        HStack(alignment: .bottom) {
-            item(.fights, "trophy", "Fights")
+        HStack(spacing: 0) {
+            item(.fights, "figure.run", "Fights")
             item(.newFight, "plus", "New")
-            item(.requests, "bubble.left", "Requests", chevron: true)
+            item(.requests, "bubble.left", "Requests")
             item(.you, "person", "You")
         }
-        .padding(.top, 8)
-        .padding(.bottom, 20)
-        .padding(.horizontal, 8)
+        .padding(.horizontal, 13)
+        .padding(.top, 12)
+        .padding(.bottom, 8)
         .background {
-            Rectangle()
-                .fill(theme.bg.opacity(0.9))
+            theme.bg.opacity(0.9)
                 .background(.ultraThinMaterial)
                 .ignoresSafeArea(edges: .bottom)
         }
         .overlay(alignment: .top) {
-            theme.hair.frame(height: 1)
+            theme.line.frame(height: 1)
         }
     }
 
-    private func item(_ value: FFTab, _ icon: String, _ title: String, chevron: Bool = false) -> some View {
+    private func item(_ value: FFTab, _ icon: String, _ title: String) -> some View {
         let on = tab == value
         return Button {
             tab = value
         } label: {
-            VStack(spacing: 4) {
-                ZStack(alignment: .top) {
-                    Circle()
-                        .fill(on ? theme.accent : Color.clear)
-                        .frame(width: 3, height: 3)
-                        .offset(y: -7)
-                    ZStack {
-                        Image(systemName: icon)
-                            .font(.system(size: 22, weight: .regular))
-                        if chevron {
-                            Image(systemName: "chevron.up")
-                                .font(.system(size: 7, weight: .bold))
-                                .offset(y: 1)
-                        }
-                    }
-                }
-                .frame(height: 24)
+            VStack(spacing: 5) {
+                Image(systemName: icon)
+                    .font(.system(size: 20, weight: .regular))
+                    .foregroundStyle(on ? theme.accent : theme.muted)
+                    .frame(height: 22)
                 Text(title)
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.system(size: 12, weight: on ? .semibold : .regular))
+                    .foregroundStyle(on ? theme.text : theme.muted)
             }
-            .foregroundStyle(on ? theme.accent : theme.muted)
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(.plain)

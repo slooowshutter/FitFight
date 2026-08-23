@@ -16,6 +16,14 @@ enum MetricKind: String, CaseIterable, Identifiable {
         }
     }
 
+    var title: String {
+        switch self {
+        case .activeMinutes: return "Active Minutes"
+        case .steps: return "Steps Total"
+        case .workouts: return "Workout Count"
+        }
+    }
+
     var blurb: String {
         switch self {
         case .activeMinutes: return "Best cross-source metric"
@@ -164,7 +172,7 @@ final class AppModel: ObservableObject {
 
     @Published var openFightID: String?
     @Published var showingVersions = false
-    @Published var voted: Set<String> = ["r1", "r3"]
+    @Published var voted: Set<String> = ["r1", "r3", "r6"]
     @Published var joined: Set<String> = []
 
     let you = Person(id: "you", name: "You", handle: "@maya.moves", initials: "MM", isYou: true)
@@ -212,7 +220,7 @@ final class AppModel: ObservableObject {
                     FightDay(label: "Day 1", scores: [
                         DayScore(person: leo, value: 20),
                         DayScore(person: you, value: 12),
-                        DayScore(person: sam, value: 10)
+                        DayScore(person: sam, value: 15)
                     ]),
                     FightDay(label: "Day 2", scores: [
                         DayScore(person: leo, value: 18),
@@ -222,7 +230,7 @@ final class AppModel: ObservableObject {
                     FightDay(label: "Day 3", scores: [
                         DayScore(person: leo, value: 16),
                         DayScore(person: you, value: 14),
-                        DayScore(person: sam, value: 17)
+                        DayScore(person: sam, value: 12)
                     ])
                 ]
             ),
@@ -240,8 +248,9 @@ final class AppModel: ObservableObject {
                 rank: 1,
                 of: 5,
                 pending: 1,
-                kickerPrefix: "Leading by",
-                kickerEmphasis: "1.6k steps",
+                kickerPrefix: "Holding",
+                kickerEmphasis: "1st",
+                kickerRest: "with 2d to go",
                 listSubtitle: "Holding 1st with 2d to go",
                 payoutLine: "Your share of the steps is your share of the pot — 60% pays $30",
                 standings: [
@@ -329,7 +338,7 @@ final class AppModel: ObservableObject {
             ),
             Fight(
                 id: "weekend",
-                code: "FIGHT-109",
+                code: "FIGHT-088",
                 name: "Weekend Step Duel",
                 metric: .steps,
                 lengthDays: 2,
@@ -341,14 +350,14 @@ final class AppModel: ObservableObject {
                 rank: 1,
                 of: 2,
                 pending: 0,
-                kickerEmphasis: "1st",
-                kickerRest: "of 2",
+                kickerPrefix: "Leading by",
+                kickerEmphasis: "2.2k steps",
                 listSubtitle: "Ended Jul 13 · 1st of 2",
-                payoutLine: "You took $10",
-                paceNote: "Final: 24.0k to 18.1k",
+                payoutLine: "Winner takes the whole $20",
+                standingsMeta: "2 in",
                 standings: [
-                    Standing(person: you, score: 24000, today: 0, projectedNet: 10),
-                    Standing(person: sam, score: 18100, today: 0, projectedNet: -10)
+                    Standing(person: you, score: 24100, today: 0, projectedNet: 10),
+                    Standing(person: leo, score: 21900, today: 0, projectedNet: -10)
                 ]
             )
         ]
@@ -386,6 +395,50 @@ final class AppModel: ObservableObject {
                 ago: "1d ago",
                 comments: 7,
                 votes: 62
+            ),
+            RequestItem(
+                id: "r4",
+                title: "Rest days that don’t break a streak",
+                body: "One planned rest day per week should not reset the streak counter.",
+                kind: .feature,
+                status: .open,
+                author: ivy,
+                ago: "1w ago",
+                comments: 5,
+                votes: 48
+            ),
+            RequestItem(
+                id: "r5",
+                title: "Apple Watch live standings",
+                body: "A complication showing my position without opening the phone.",
+                kind: .feature,
+                status: .open,
+                author: sam,
+                ago: "1w ago",
+                comments: 3,
+                votes: 39
+            ),
+            RequestItem(
+                id: "r6",
+                title: "Pot shows the old amount after someone joins",
+                body: "Joined a fight, the pot on the card kept the pre-join number until I killed the app.",
+                kind: .bug,
+                status: .shipped,
+                author: Person(id: "maya", name: "Maya", handle: "@maya.moves", initials: "MM", isYou: true),
+                ago: "2w ago",
+                comments: 4,
+                votes: 26
+            ),
+            RequestItem(
+                id: "r7",
+                title: "Pause a fight when you’re ill",
+                body: "Freeze the clock for everyone rather than forcing a forfeit.",
+                kind: .feature,
+                status: .open,
+                author: leo,
+                ago: "2w ago",
+                comments: 8,
+                votes: 22
             )
         ]
 

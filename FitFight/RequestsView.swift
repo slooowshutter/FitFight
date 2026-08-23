@@ -14,26 +14,36 @@ struct RequestsView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: theme.space.sectionGap) {
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
                         FFLabel(text: "Requests", role: .display)
-                        FFLabel(text: "Vote on what gets built next", role: .body, color: theme.muted)
+                        Text("Vote on what gets built next.")
+                            .font(.system(size: 14))
+                            .foregroundStyle(theme.muted)
                     }
-                    Spacer()
-                    FFButton(title: "+ New", kind: .small) {}
+                    Spacer(minLength: 0)
+                    FFButton(title: "New", kind: .small, icon: "plus") {}
                 }
+                .padding(.top, 2)
+                .padding(.bottom, 20)
 
                 FFSegmented(items: Filter.allCases, selection: $filter) { $0.rawValue }
+                    .padding(.bottom, 16)
 
                 VStack(spacing: theme.space.cardGap) {
                     ForEach(filtered) { item in
                         RequestCard(item: item)
                     }
                 }
+
+                Text("Anything you post is public to everyone using FitFight.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(theme.faint)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 24)
             }
             .padding(.horizontal, theme.space.screenPadding)
-            .padding(.top, 8)
             .padding(.bottom, theme.space.xl)
         }
         .background(theme.bg)
@@ -42,12 +52,16 @@ struct RequestsView: View {
     private var filtered: [RequestItem] {
         switch filter {
         case .top:
-            return model.requests.sorted { $0.votes > $1.votes }
+            return model.requests.sorted { votes($0) > votes($1) }
         case .features:
             return model.requests.filter { $0.kind == .feature }
         case .bugs:
             return model.requests.filter { $0.kind == .bug }
         }
+    }
+
+    private func votes(_ item: RequestItem) -> Int {
+        item.votes + (model.voted.contains(item.id) ? 1 : 0)
     }
 }
 
@@ -59,46 +73,69 @@ struct RequestCard: View {
     var body: some View {
         let voted = model.voted.contains(item.id)
         let votes = item.votes + (voted ? 1 : 0)
-        return FFCard {
+        return FFCard(padding: 12) {
             HStack(alignment: .top, spacing: 12) {
                 Button {
                     if voted { model.voted.remove(item.id) } else { model.voted.insert(item.id) }
                 } label: {
-                    VStack(spacing: 4) {
+                    VStack(spacing: 3) {
                         Image(systemName: "arrow.up")
-                            .font(.system(size: 13, weight: .bold))
+                            .font(.system(size: 13, weight: .semibold))
                         Text("\(votes)")
-                            .font(theme.font(.bodyStrong))
+                            .font(.system(size: 17, weight: .bold))
                             .monospacedDigit()
                     }
-                    .foregroundStyle(voted ? theme.ink : theme.muted)
-                    .frame(width: 40, height: 64)
-                    .background(voted ? theme.accent : theme.chip, in: Capsule())
+                    .foregroundStyle(voted ? theme.ink : theme.text)
+                    .frame(width: 44)
+                    .frame(maxHeight: .infinity)
+                    .background(
+                        voted ? theme.accent : theme.chip,
+                        in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
+                    )
+                    .overlay {
+                        if !voted {
+                            RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
+                                .strokeBorder(theme.line, lineWidth: 1)
+                        }
+                    }
                 }
                 .buttonStyle(FFPressStyle(scale: 0.97))
 
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 6) {
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack(spacing: 8) {
                         FFBadge(
                             text: item.kind == .feature ? "Feature" : "Bug",
                             tone: item.kind == .feature ? .blue : .red
                         )
                         FFBadge(text: statusText, tone: statusTone, style: .plain)
                     }
-                    FFLabel(text: item.title, role: .bodyStrong)
-                    FFLabel(text: item.body, role: .caption, color: theme.muted)
+                    .padding(.bottom, 8)
+                    Text(item.title)
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(theme.text)
+                        .padding(.bottom, 5)
+                    Text(item.body)
+                        .font(.system(size: 13))
+                        .foregroundStyle(theme.muted)
+                        .lineSpacing(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.bottom, 11)
                     HStack(spacing: 8) {
                         FFAvatar(initials: item.author.initials, size: 18)
-                        FFLabel(text: item.author.name, role: .micro, color: theme.muted)
-                        Text("·").font(theme.font(.micro)).foregroundStyle(theme.faint)
-                        FFLabel(text: item.ago, role: .micro, color: theme.faint)
-                        Spacer()
+                        Text("\(item.author.name) · \(item.ago)")
+                            .font(.system(size: 12))
+                            .foregroundStyle(theme.muted)
+                        Spacer(minLength: 8)
                         Image(systemName: "bubble.left")
                             .font(.system(size: 11))
                             .foregroundStyle(theme.faint)
-                        FFLabel(text: "\(item.comments)", role: .micro, color: theme.faint)
+                        Text("\(item.comments)")
+                            .font(.system(size: 12))
+                            .foregroundStyle(theme.faint)
+                            .monospacedDigit()
                     }
                 }
+                .padding(.vertical, 4)
             }
         }
     }

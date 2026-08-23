@@ -24,6 +24,13 @@ enum Changelog {
     /// Newest first. Add a row here whenever we ship a user-facing change.
     static let releases: [ReleaseNote] = [
         ReleaseNote(
+            version: "0.3.1",
+            year: 2026,
+            month: 8,
+            day: 23,
+            notes: "Rebuilt every screen against pixel measurements of the design screenshots: inline standings bars, tinted card footers, the rank ring on a fight, and the real spacing everywhere."
+        ),
+        ReleaseNote(
             version: "0.3.0",
             year: 2026,
             month: 8,

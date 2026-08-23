@@ -62,12 +62,13 @@ struct FightsListView: View {
             }
             Spacer(minLength: 0)
             ZStack {
-                Circle().strokeBorder(theme.line, lineWidth: 1)
+                theme.blob(40, radius: theme.iconButtonRadius)
+                    .strokeBorder(theme.line, lineWidth: max(1, theme.strokeWidth))
                 Image(systemName: "bell")
                     .font(.system(size: 14, weight: .regular))
                     .foregroundStyle(theme.muted)
                 // The mock hangs the dot off the bell itself, not off the circle.
-                Circle()
+                theme.blob(6, radius: theme.avatarRadius)
                     .fill(theme.red)
                     .frame(width: 6, height: 6)
                     .offset(x: 6, y: -7)
@@ -115,7 +116,7 @@ struct LiveFightCard: View {
                             .foregroundStyle(theme.amber)
                             .padding(.horizontal, 5)
                             .frame(height: 19)
-                            .background(theme.amber.opacity(0.12), in: Capsule())
+                            .background(theme.amber.opacity(0.12), in: theme.rounded(theme.chipRadius))
                     }
                 }
                 // Fixed so the pending pill does not make this card taller than

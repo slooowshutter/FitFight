@@ -2,7 +2,7 @@
 
 ## 2026-08-23 — five extra looks
 
-You → Look now has Classic plus Ink, Paper, Harbor, Grid and Dusk. Classic stays the default (the approved kit). Marketing version `0.6.0`.
+You → Look / Settings → Design: Classic plus Sharp, Pill, Slab, Rail, Frame. Same colours as Classic; the looks change corners, cards, buttons and the tab bar. Marketing version `0.6.1`.
 
 ## 2026-08-22 — TestFlight on every app push
 

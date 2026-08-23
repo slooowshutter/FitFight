@@ -20,13 +20,13 @@ Do not rename the bundle ID without Apple + CI updates.
 The web kit in [`docs/design/source/`](design/source/README.md) is the look. SwiftUI ports it:
 
 - Four tabs: **Fights**, **New**, **Requests**, **You**
-- Theme = look × dark/light × one of ten accents (default **Classic** + dark + blue). Five other looks in You → Look; Classic is the approved kit.
+- Theme = look × dark/light × one of ten accents (default **Classic** + dark + blue). Five other looks change **shapes**, not colours: Sharp, Pill, Slab, Rail, Frame.
 - Live fight cards carry their own leaderboard and money line
 - Version label at the top; Versions under You → Settings
 
 Placeholder themes (Arena, Pulse, Locker, Rogue) are retired.
 
-Marketing version: `0.6.0`. CI bumps **build number** from TestFlight (`latest + 1`). Don’t bump marketing version for a daily CI-only ship.
+Marketing version: `0.6.1`. CI bumps **build number** from TestFlight (`latest + 1`). Don’t bump marketing version for a daily CI-only ship.
 
 ## Not this project
 

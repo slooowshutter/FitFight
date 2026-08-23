@@ -82,6 +82,15 @@ struct Theme {
     var buttonRadius: CGFloat
     var segmentRadius: CGFloat
     var segmentThumbRadius: CGFloat
+    var avatarRadius: CGFloat
+    var progressRadius: CGFloat
+    var iconButtonRadius: CGFloat
+    var railWidth: CGFloat
+    var strokeWidth: CGFloat
+    var cardChrome: CardChrome
+    var tabChrome: TabChrome
+    var tabMarker: TabMarker
+    var ringSquircle: Bool
     var cornerStyle: RoundedCornerStyle
 
     var colorScheme: ColorScheme { baseID.colorScheme }
@@ -98,6 +107,10 @@ struct Theme {
 
     func rounded(_ radius: CGFloat) -> RoundedRectangle {
         RoundedRectangle(cornerRadius: radius, style: cornerStyle)
+    }
+
+    func blob(_ size: CGFloat, radius: CGFloat) -> RoundedRectangle {
+        rounded(min(radius, size / 2))
     }
 
     /// Bars that aren't first place and aren't you.
@@ -153,7 +166,7 @@ enum ThemeCatalog {
 
     static func theme(base: BaseID, accent: AccentID, look: LookID = .classic) -> Theme {
         var theme = file.theme(base: base, accent: accent)
-        LookCatalog.apply(look, base: base, to: &theme)
+        LookCatalog.apply(look, to: &theme)
         return theme
     }
 
@@ -194,7 +207,7 @@ final class ThemeStore: ObservableObject {
         let lookRaw = UserDefaults.standard.string(forKey: Self.lookKey) ?? LookID.classic.rawValue
         baseID = BaseID(rawValue: baseRaw) ?? .dark
         accentID = AccentID(rawValue: accentRaw) ?? .blue
-        lookID = LookID(rawValue: lookRaw) ?? .classic
+        lookID = LookID.resolved(lookRaw)
     }
 
     func selectLook(_ look: LookID) {
@@ -265,6 +278,15 @@ struct TokenFile: Decodable {
             buttonRadius: 9999,
             segmentRadius: 11,
             segmentThumbRadius: 8,
+            avatarRadius: 9999,
+            progressRadius: 9999,
+            iconButtonRadius: 9999,
+            railWidth: 0,
+            strokeWidth: 1,
+            cardChrome: .filledStroke,
+            tabChrome: .classic,
+            tabMarker: .dot,
+            ringSquircle: false,
             cornerStyle: .continuous
         )
     }

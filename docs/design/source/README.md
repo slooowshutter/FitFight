@@ -7,8 +7,8 @@ colour, size, component and screen in here has been looked at and signed off.
 Rebuild it natively in SwiftUI.
 
 > **Ignore the Arena, Pulse, Locker and Rogue names.** Those were placeholders.
-> Extra looks in the iOS app (Ink, Paper, Harbor, Grid, Dusk) are optional
-> overlays. This folder is still **Classic**. Do not port them into `tokens.json`.
+> Extra looks in the iOS app (Sharp, Pill, Slab, Rail, Frame) change shapes
+> only. This folder is still **Classic**. Do not port them into `tokens.json`.
 
 ---
 

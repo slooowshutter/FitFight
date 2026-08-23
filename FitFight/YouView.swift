@@ -143,7 +143,7 @@ struct YouView: View {
 
     private var appearance: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Classic is the original. The others keep Dark/Light and your accent.")
+            Text("Same colours as Classic. The others change the shapes.")
                 .font(.ff(12))
                 .foregroundStyle(theme.faint)
                 .fixedSize(horizontal: false, vertical: true)
@@ -279,10 +279,11 @@ private struct LookChoice: View {
         } label: {
             VStack(alignment: .leading, spacing: 8) {
                 LookThumbnail(theme: sample)
-                    .frame(height: 64)
-                    .clipShape(sample.rounded(10))
+                    .frame(height: 72)
+                    .clipShape(sample.rounded(min(10, max(0, sample.cardRadius))))
                     .overlay {
-                        sample.rounded(10).strokeBorder(sample.line, lineWidth: 1)
+                        sample.rounded(min(10, max(0, sample.cardRadius)))
+                            .strokeBorder(sample.line, lineWidth: max(1, sample.strokeWidth))
                     }
                 Text(look.name)
                     .font(.ff(13, .semibold))
@@ -311,39 +312,55 @@ private struct LookThumbnail: View {
     let theme: Theme
 
     var body: some View {
+        let card = theme.rounded(min(14, theme.cardRadius == 0 ? 0 : max(4, theme.cardRadius * 0.45)))
         ZStack {
             theme.bg
-            VStack(spacing: 6) {
-                HStack {
-                    Capsule()
-                        .fill(theme.accent)
-                        .frame(width: 22, height: 4)
-                    Spacer()
-                    Circle()
-                        .fill(theme.chip)
-                        .frame(width: 8, height: 8)
-                }
-                theme.rounded(min(12, theme.cardRadius * 0.55))
-                    .fill(theme.surface)
-                    .overlay(alignment: .leading) {
-                        HStack(spacing: 5) {
-                            Circle().fill(theme.accent).frame(width: 7, height: 7)
-                            VStack(alignment: .leading, spacing: 3) {
-                                Capsule().fill(theme.text.opacity(0.55)).frame(width: 44, height: 3)
-                                Capsule().fill(theme.faint.opacity(0.7)).frame(width: 28, height: 2)
-                            }
-                            Spacer(minLength: 0)
-                            Capsule().fill(theme.green.opacity(0.85)).frame(width: 16, height: 3)
+            VStack(spacing: 8) {
+                HStack(spacing: 0) {
+                    if theme.cardChrome == .rail {
+                        theme.text.opacity(0.2).frame(width: 4)
+                    }
+                    HStack(spacing: 6) {
+                        theme.blob(14, radius: theme.avatarRadius)
+                            .fill(theme.accent)
+                        VStack(alignment: .leading, spacing: 3) {
+                            theme.rounded(theme.progressRadius)
+                                .fill(theme.text.opacity(0.55))
+                                .frame(width: 40, height: 4)
+                            theme.rounded(theme.progressRadius)
+                                .fill(theme.faint.opacity(0.7))
+                                .frame(width: 24, height: 3)
                         }
-                        .padding(.horizontal, 8)
+                        Spacer(minLength: 0)
                     }
-                    .overlay {
-                        theme.rounded(min(12, theme.cardRadius * 0.55))
-                            .strokeBorder(theme.line, lineWidth: 1)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 7)
+                }
+                .background(cardFill, in: card)
+                .overlay {
+                    if theme.cardChrome != .filled {
+                        card.strokeBorder(theme.line, lineWidth: max(1, theme.strokeWidth))
                     }
-                    .frame(height: 30)
+                }
+                .frame(height: 32)
+
+                HStack(spacing: 6) {
+                    theme.rounded(theme.buttonRadius)
+                        .fill(theme.accent)
+                        .frame(height: 12)
+                    theme.blob(12, radius: theme.iconButtonRadius)
+                        .strokeBorder(theme.line, lineWidth: max(1, theme.strokeWidth))
+                        .frame(width: 12, height: 12)
+                }
             }
             .padding(8)
+        }
+    }
+
+    private var cardFill: Color {
+        switch theme.cardChrome {
+        case .strokeOnly: return theme.bg
+        case .filledStroke, .filled, .rail: return theme.surface
         }
     }
 }
@@ -366,7 +383,7 @@ private struct DesignPickerSheet: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
 
-            Text("Classic is the original. Tap another and the app shifts behind this sheet.")
+            Text("Same colours. Tap a shape and the app shifts behind this sheet.")
                 .font(.ff(13))
                 .foregroundStyle(theme.faint)
                 .fixedSize(horizontal: false, vertical: true)

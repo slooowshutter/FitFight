@@ -54,8 +54,20 @@ jobs:
           cp "$CONTAINER"/Documents/shots/*.png shots/ || (echo "no screenshots written"; exit 1)
           ls -la shots
 
+      - name: Compare against the design mocks
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet --user pillow numpy
+          python3 scripts/compare_screens.py shots compare
+
       - uses: actions/upload-artifact@v4
         with:
           name: screens
           path: shots
+          retention-days: 14
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: design-comparison
+          path: compare
           retention-days: 14

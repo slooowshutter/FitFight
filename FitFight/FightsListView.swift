@@ -5,7 +5,7 @@ struct FightsListView: View {
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
-        ScrollView {
+        FFScreen {
             VStack(alignment: .leading, spacing: 0) {
                 header
                     .padding(.bottom, 19)
@@ -47,7 +47,6 @@ struct FightsListView: View {
             .padding(.horizontal, theme.space.screenPadding)
             .padding(.bottom, theme.space.xl)
         }
-        .background(theme.bg)
     }
 
     private var header: some View {

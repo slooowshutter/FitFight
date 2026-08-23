@@ -97,6 +97,7 @@ enum ScreenshotExport {
             .environmentObject(model)
             .environment(\.ffTheme, theme)
             .environment(\.colorScheme, theme.colorScheme)
+            .environment(\.ffStaticRender, true)
         )
     }
 

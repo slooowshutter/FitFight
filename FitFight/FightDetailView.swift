@@ -10,7 +10,7 @@ struct FightDetailView: View {
     }
 
     var body: some View {
-        ScrollView {
+        FFScreen(top: AnyView(nav)) {
             VStack(alignment: .leading, spacing: 0) {
                 if pendingJoin {
                     invitedHero
@@ -41,12 +41,8 @@ struct FightDetailView: View {
             .padding(.horizontal, theme.space.screenPadding)
             .padding(.bottom, theme.space.xl)
         }
-        .background(theme.bg)
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
-        .safeAreaInset(edge: .top, spacing: 0) {
-            nav
-        }
     }
 
     private var sectionGap: some View {

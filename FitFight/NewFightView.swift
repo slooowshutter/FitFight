@@ -17,7 +17,7 @@ struct NewFightView: View {
     @State private var dailyGoal = 10000.0
 
     var body: some View {
-        ScrollView {
+        FFScreen {
             VStack(alignment: .leading, spacing: 0) {
                 VStack(alignment: .leading, spacing: 4) {
                     FFLabel(text: "New fight", role: .display)
@@ -47,7 +47,6 @@ struct NewFightView: View {
             .padding(.top, 2)
             .padding(.bottom, theme.space.xl)
         }
-        .background(theme.bg)
     }
 
     private var metricSection: some View {

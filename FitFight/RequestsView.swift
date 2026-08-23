@@ -13,7 +13,7 @@ struct RequestsView: View {
     }
 
     var body: some View {
-        ScrollView {
+        FFScreen {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .top, spacing: 12) {
                     VStack(alignment: .leading, spacing: 4) {
@@ -46,7 +46,6 @@ struct RequestsView: View {
             .padding(.horizontal, theme.space.screenPadding)
             .padding(.bottom, theme.space.xl)
         }
-        .background(theme.bg)
     }
 
     private var filtered: [RequestItem] {

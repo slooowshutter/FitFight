@@ -20,6 +20,46 @@ enum FFMetric {
     static let ringStroke: CGFloat = 11
 }
 
+private struct FFStaticRenderKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    /// True while ScreenshotExport renders screens off-screen, where scroll views stay blank.
+    var ffStaticRender: Bool {
+        get { self[FFStaticRenderKey.self] }
+        set { self[FFStaticRenderKey.self] = newValue }
+    }
+}
+
+struct FFScreen<Content: View>: View {
+    var top: AnyView? = nil
+    @ViewBuilder var content: () -> Content
+
+    @Environment(\.ffStaticRender) private var staticRender
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        if staticRender {
+            VStack(spacing: 0) {
+                if let top { top }
+                content()
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .background(theme.bg)
+        } else {
+            ScrollView {
+                content()
+            }
+            .background(theme.bg)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if let top { top }
+            }
+        }
+    }
+}
+
 struct FFLabel: View {
     let text: String
     var role: TypeRole

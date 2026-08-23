@@ -6,7 +6,7 @@ struct YouView: View {
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
-        ScrollView {
+        FFScreen {
             VStack(alignment: .leading, spacing: 0) {
                 profile
                     .padding(.bottom, 15)
@@ -24,7 +24,6 @@ struct YouView: View {
             .padding(.top, 2)
             .padding(.bottom, theme.space.xl)
         }
-        .background(theme.bg)
     }
 
     private func sectionHeader(_ title: String, action: String? = nil, onAction: (() -> Void)? = nil) -> some View {

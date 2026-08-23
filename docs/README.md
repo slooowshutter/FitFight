@@ -5,6 +5,7 @@ For Cursor cloud agents and anyone picking up this repo cold.
 | File | What’s in it |
 | --- | --- |
 | [product.md](product.md) | What FitFight is, names, current UI |
+| [architecture.md](architecture.md) | Type layers from HealthKit/API → UI, SoD, what leaves `AppModel` |
 | [backlog.md](backlog.md) | Now / Next / Later. Marc talks, agent edits this file |
 | [design/](design/README.md) | Where the look lives (`source/` is the approved kit) |
 | [shipping.md](shipping.md) | CI, secrets **names**, how a build reaches TestFlight |

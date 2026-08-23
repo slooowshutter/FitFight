@@ -53,6 +53,31 @@ rescue StandardError => e
   UI.important("Skipping certificate cleanup: #{e.message}")
 end
 
+# Uploading a build does not put it in anyone's TestFlight app: App Store Connect
+# only shows a build to testers once it belongs to a group. Nobody is at a desk to
+# click that, so hand the finished build to every internal group we have.
+def distribute_to_internal_groups(build_version)
+  require "spaceship"
+
+  app = Spaceship::ConnectAPI::App.find(BUNDLE_ID)
+  return UI.important("No App Store Connect app for #{BUNDLE_ID}; skipping distribution") if app.nil?
+
+  build = app.get_builds(filter: { version: build_version }, includes: "betaGroups").first
+  return UI.important("Build #{build_version} not visible yet; skipping distribution") if build.nil?
+
+  groups = app.get_beta_groups.select(&:is_internal_group)
+  return UI.important("No internal TestFlight group to distribute to") if groups.empty?
+
+  groups.each do |group|
+    build.add_beta_groups(beta_groups: [group])
+    UI.success("Build #{build_version} is now in the '#{group.name}' group")
+  rescue StandardError => e
+    UI.important("Could not add build to '#{group.name}': #{e.message}")
+  end
+rescue StandardError => e
+  UI.important("Skipping TestFlight distribution: #{e.message}")
+end
+
 def cloud_signing_flags(key_path, key_id, issuer_id, team_id)
   [
     "DEVELOPMENT_TEAM=#{team_id}",
@@ -125,6 +150,8 @@ platform :ios do
       skip_waiting_for_build_processing: true,
       changelog: "FitFight #{version} (#{build_number})"
     )
+
+    distribute_to_internal_groups(build_number.to_s)
   ensure
     FileUtils.rm_f(key_path) if defined?(key_path) && key_path
   end

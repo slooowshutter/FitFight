@@ -37,10 +37,10 @@ struct YouView: View {
             FFAvatar(initials: "MM", size: 56, ring: true)
             VStack(alignment: .leading, spacing: 2) {
                 Text("Maya Moves")
-                    .font(.ff(19, .bold))
+                    .font(.ff(17, .bold))
                     .foregroundStyle(theme.text)
                 Text("@maya.moves · joined Mar 2026")
-                    .font(.ff(13))
+                    .font(.ff(12))
                     .foregroundStyle(theme.muted)
                     .lineLimit(1)
                     .fixedSize()
@@ -49,7 +49,7 @@ struct YouView: View {
             Spacer(minLength: 4)
             Button {} label: {
                 Text("Edit")
-                    .font(.ff(14, .semibold))
+                    .font(.ff(13, .semibold))
                     .foregroundStyle(theme.text)
                     .padding(.horizontal, 16)
                     .frame(height: 32)
@@ -79,20 +79,20 @@ struct YouView: View {
                 } label: {
                     HStack(spacing: 12) {
                         Text(item.won ? "W" : "L")
-                            .font(.ff(15, .bold))
+                            .font(.ff(13, .bold))
                             .foregroundStyle(item.won ? theme.green : theme.red)
                             .frame(width: 40, height: 40)
                             .background((item.won ? theme.green : theme.red).opacity(0.12), in: Circle())
                         VStack(alignment: .leading, spacing: 3) {
                             Text(item.name)
-                                .font(.ff(16, .bold))
+                                .font(.ff(13, .bold))
                                 .foregroundStyle(theme.text)
                             Text(item.detail)
-                                .font(.ff(13))
+                                .font(.ff(11))
                                 .foregroundStyle(theme.muted)
                         }
                         Spacer(minLength: 8)
-                        FFMoney(dollars: item.net, size: 15)
+                        FFMoney(dollars: item.net, size: 13)
                     }
                     .padding(.horizontal, FFMetric.rowPaddingX)
                     .frame(height: 64)
@@ -116,15 +116,15 @@ struct YouView: View {
             Circle().fill(theme.green).frame(width: 8, height: 8)
             VStack(alignment: .leading, spacing: 3) {
                 Text(name)
-                    .font(.ff(16, .semibold))
+                    .font(.ff(13, .semibold))
                     .foregroundStyle(theme.text)
                 Text(detail)
-                    .font(.ff(13))
+                    .font(.ff(11))
                     .foregroundStyle(theme.muted)
             }
             Spacer(minLength: 8)
             Text(time)
-                .font(.ff(13))
+                .font(.ff(11))
                 .foregroundStyle(theme.muted)
         }
         .padding(.horizontal, FFMetric.rowPaddingX)
@@ -140,7 +140,7 @@ struct YouView: View {
                         themeStore.baseID = base
                     } label: {
                         Text(base.rawValue.capitalized)
-                            .font(.ff(15, .semibold))
+                            .font(.ff(13, .semibold))
                             .foregroundStyle(on ? theme.ink : theme.text)
                             .frame(maxWidth: .infinity)
                             .frame(height: 40)

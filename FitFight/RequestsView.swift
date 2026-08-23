@@ -19,7 +19,7 @@ struct RequestsView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         FFLabel(text: "Requests", role: .display)
                         Text("Vote on what gets built next.")
-                            .font(.ff(14))
+                            .font(.ff(13))
                             .foregroundStyle(theme.muted)
                     }
                     Spacer(minLength: 0)
@@ -72,7 +72,7 @@ struct RequestCard: View {
     var body: some View {
         let voted = model.voted.contains(item.id)
         let votes = item.votes + (voted ? 1 : 0)
-        return FFCard(padding: 12) {
+        return FFCard(padding: 15) {
             HStack(alignment: .top, spacing: 12) {
                 Button {
                     if voted { model.voted.remove(item.id) } else { model.voted.insert(item.id) }
@@ -109,19 +109,19 @@ struct RequestCard: View {
                     }
                     .padding(.bottom, 8)
                     Text(item.title)
-                        .font(.ff(15, .bold))
+                        .font(.ff(14, .bold))
                         .foregroundStyle(theme.text)
                         .padding(.bottom, 5)
                     Text(item.body)
-                        .font(.ff(13))
+                        .font(.ff(12))
                         .foregroundStyle(theme.muted)
                         .lineSpacing(3)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.bottom, 11)
                     HStack(spacing: 8) {
-                        FFAvatar(initials: item.author.initials, size: 18)
+                        FFAvatar(initials: item.author.initials, size: 15)
                         Text("\(item.author.name) · \(item.ago)")
-                            .font(.ff(12))
+                            .font(.ff(11))
                             .foregroundStyle(theme.muted)
                         Spacer(minLength: 8)
                         Image(systemName: "bubble.left")

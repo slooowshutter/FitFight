@@ -55,9 +55,9 @@ struct FightsListView: View {
                 FFLabel(text: "\(model.live.count) live fights", role: .display)
                 HStack(spacing: 5) {
                     Text("If it ends like this you're")
-                        .font(.ff(14))
+                        .font(.ff(13))
                         .foregroundStyle(theme.muted)
-                    FFMoney(dollars: model.projectedNet, size: 14)
+                    FFMoney(dollars: model.projectedNet, size: 13)
                 }
             }
             Spacer(minLength: 0)
@@ -117,14 +117,14 @@ struct LiveFightCard: View {
                             .background(theme.amber.opacity(0.12), in: Capsule())
                     }
                 }
-                .padding(.top, 17)
+                .padding(.top, 13)
 
                 VStack(spacing: FFMetric.miniRowGap) {
                     ForEach(Array(visibleStandings.enumerated()), id: \.element.id) { index, row in
                         miniRow(index: index, row: row)
                     }
                 }
-                .padding(.top, 26)
+                .padding(.top, 22)
 
                 if hiddenCount > 0 {
                     Text("+\(hiddenCount) more")
@@ -147,7 +147,7 @@ struct LiveFightCard: View {
                         HStack(spacing: 6) {
                             FFMoney(dollars: you.projectedNet)
                             Text("right now")
-                                .font(.ff(13))
+                                .font(.ff(12))
                                 .foregroundStyle(theme.muted)
                         }
                     }
@@ -225,10 +225,10 @@ struct InvitationRow: View {
                 FFAvatar(initials: fight.standings.first?.person.initials ?? "?", size: 40)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(fight.name)
-                        .font(.ff(17, .bold))
+                        .font(.ff(14, .bold))
                         .foregroundStyle(theme.text)
                     Text(fight.listSubtitle)
-                        .font(.ff(13))
+                        .font(.ff(11))
                         .foregroundStyle(theme.muted)
                 }
                 Spacer(minLength: 8)
@@ -256,16 +256,16 @@ struct FinishedRow: View {
             FFCard(padding: 16) {
                 HStack(spacing: 12) {
                     Text("W")
-                        .font(.ff(15, .bold))
+                        .font(.ff(13, .bold))
                         .foregroundStyle(theme.green)
                         .frame(width: 40, height: 40)
                         .background(theme.green.opacity(0.12), in: Circle())
                     VStack(alignment: .leading, spacing: 3) {
                         Text(fight.name)
-                            .font(.ff(17, .bold))
+                            .font(.ff(14, .bold))
                             .foregroundStyle(theme.text)
                         Text(fight.listSubtitle)
-                            .font(.ff(13))
+                            .font(.ff(11))
                             .foregroundStyle(theme.muted)
                     }
                     Spacer(minLength: 8)

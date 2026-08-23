@@ -22,7 +22,7 @@ struct NewFightView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     FFLabel(text: "New fight", role: .display)
                     Text("Scores sync automatically. You settle up at the end.")
-                        .font(.ff(14))
+                        .font(.ff(13))
                         .foregroundStyle(theme.muted)
                 }
                 .padding(.bottom, theme.space.sectionGap)
@@ -78,10 +78,10 @@ struct NewFightView: View {
                             FFAvatar(initials: person.initials, size: 36)
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(person.name)
-                                    .font(.ff(15, .semibold))
+                                    .font(.ff(13, .semibold))
                                     .foregroundStyle(theme.text)
                                 Text(person.handle)
-                                    .font(.ff(13))
+                                    .font(.ff(11))
                                     .foregroundStyle(theme.muted)
                             }
                             Spacer(minLength: 8)
@@ -278,10 +278,10 @@ struct NewFightView: View {
                 if leadingRadio { radio(on) }
                 VStack(alignment: .leading, spacing: 3) {
                     Text(title)
-                        .font(.ff(15, .semibold))
+                        .font(.ff(13, .semibold))
                         .foregroundStyle(theme.text)
                     Text(subtitle)
-                        .font(.ff(13))
+                        .font(.ff(11))
                         .foregroundStyle(theme.muted)
                         .multilineTextAlignment(.leading)
                         .lineSpacing(2)

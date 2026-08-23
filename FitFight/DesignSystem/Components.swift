@@ -16,7 +16,7 @@ enum FFMetric {
     static let rankBadgeWidth: CGFloat = 54
     static let rankBadgeHeight: CGFloat = 50
     static let statTileHeight: CGFloat = 58
-    static let ringSize: CGFloat = 132
+    static let ringSize: CGFloat = 121
     static let ringStroke: CGFloat = 11
 }
 
@@ -207,7 +207,7 @@ struct FFPanel<Content: View>: View {
 
 /// The chip-tinted band at the top or bottom of a card.
 struct FFBand<Content: View>: View {
-    var vertical: CGFloat = 14
+    var vertical: CGFloat = 17
     @ViewBuilder var content: () -> Content
     @Environment(\.ffTheme) private var theme
 
@@ -260,7 +260,7 @@ struct FFKicker: View {
     var prefix: String = ""
     var emphasis: String
     var rest: String = ""
-    var size: CGFloat = 13
+    var size: CGFloat = 12
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
@@ -297,7 +297,7 @@ struct FFSegmented<Item: Hashable>: View {
                     selection = item
                 } label: {
                     Text(title(item))
-                        .font(.ff(15, on ? .semibold : .medium))
+                        .font(.ff(12, on ? .semibold : .medium))
                         .foregroundStyle(on ? theme.text : theme.muted)
                         .frame(maxWidth: .infinity)
                         .frame(height: 37)
@@ -328,12 +328,12 @@ struct FFSectionHeader: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
             Text(title)
-                .font(.ff(15, .bold))
+                .font(.ff(13, .bold))
                 .foregroundStyle(theme.text)
             Spacer(minLength: 12)
             if let action {
                 let label = Text(action)
-                    .font(.ff(13, actionMuted ? .regular : .semibold))
+                    .font(.ff(12, actionMuted ? .regular : .semibold))
                     .foregroundStyle(actionMuted ? theme.muted : theme.accent)
                 if let onAction {
                     Button(action: onAction) { label }
@@ -476,11 +476,11 @@ struct FFStatTile: View {
     var body: some View {
         VStack(spacing: 3) {
             Text(value)
-                .font(.ff(19, .bold))
+                .font(.ff(17, .bold))
                 .foregroundStyle(color ?? theme.text)
             Text(label.uppercased())
                 .font(.ff(9, .semibold))
-                .tracking(0.5)
+                .tracking(0.2)
                 .foregroundStyle(theme.muted)
         }
         .frame(maxWidth: .infinity)
@@ -523,21 +523,25 @@ struct FFBadge: View {
     var body: some View {
         let color = colorForTone
         Text(text.uppercased())
-            .font(.ff(10, .bold))
-            .tracking(0.5)
+            .font(.ff(9, .bold))
+            .tracking(0.4)
             .foregroundStyle(foreground(color))
-            .padding(.horizontal, style == .plain ? 0 : 8)
-            .padding(.vertical, style == .plain ? 0 : 4)
+            .padding(.horizontal, style == .plain ? 0 : 7)
+            .padding(.vertical, style == .plain ? 0 : 3)
             .background {
                 switch style {
                 case .tint:
-                    Capsule().fill(color.opacity(0.12))
+                    shape.fill(color.opacity(0.12))
                 case .solid:
-                    Capsule().fill(color)
+                    shape.fill(color)
                 case .plain:
                     Color.clear
                 }
             }
+    }
+
+    private var shape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: 6, style: .continuous)
     }
 
     private func foreground(_ color: Color) -> Color {

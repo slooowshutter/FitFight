@@ -60,7 +60,7 @@ struct FightDetailView: View {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 13, weight: .semibold))
                     Text("Fights")
-                        .font(.ff(15, .semibold))
+                        .font(.ff(13, .semibold))
                 }
                 .foregroundStyle(theme.text)
                 .padding(.horizontal, 14)
@@ -71,7 +71,7 @@ struct FightDetailView: View {
             .buttonStyle(FFPressStyle(scale: 0.97))
             Spacer(minLength: 0)
             Text(fight.code)
-                .font(.ff(12, .semibold))
+                .font(.ff(11, .semibold))
                 .tracking(1.2)
                 .foregroundStyle(theme.muted)
             Spacer(minLength: 0)
@@ -87,17 +87,17 @@ struct FightDetailView: View {
             VStack(spacing: 0) {
                 FFLabel(text: fight.metric.eyebrow, role: .eyebrow, color: theme.muted)
                     .padding(.bottom, 12)
-                FFLabel(text: fight.name, role: .display)
+                heroTitle
                     .multilineTextAlignment(.center)
                     .padding(.bottom, 14)
                 if let pitch = fight.invitePitch {
                     Text(pitch)
-                        .font(.ff(16))
+                        .font(.ff(14))
                         .foregroundStyle(theme.text)
                         .padding(.bottom, 8)
                 }
                 Text("\(fight.lengthDays) days · \(fight.payoutLine)")
-                    .font(.ff(14))
+                    .font(.ff(13))
                     .foregroundStyle(theme.muted)
                     .padding(.bottom, 22)
                 FFButton(title: fight.inviteAction == "Accept" ? "Accept challenge" : "Join fight") {
@@ -113,17 +113,17 @@ struct FightDetailView: View {
             VStack(spacing: 0) {
                 FFLabel(text: fight.metric.eyebrow, role: .eyebrow, color: theme.muted)
                     .padding(.bottom, 14)
-                FFLabel(text: fight.name, role: .display)
+                heroTitle
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
                     .padding(.bottom, 21)
                 FFRing(progress: ringProgress) {
                     VStack(spacing: 1) {
                         Text(fight.status == .finished ? "1st" : "#\(fight.rank)")
-                            .font(.ff(30, .bold))
+                            .font(.ff(34, .bold))
                             .foregroundStyle(theme.text)
                         Text("OF \(fight.of)")
-                            .font(.ff(11, .semibold))
+                            .font(.ff(10, .semibold))
                             .tracking(0.6)
                             .foregroundStyle(theme.muted)
                     }
@@ -133,7 +133,7 @@ struct FightDetailView: View {
                     prefix: fight.kickerPrefix,
                     emphasis: fight.kickerEmphasis,
                     rest: fight.kickerRest,
-                    size: 15
+                    size: 14
                 )
                 .padding(.bottom, 21)
                 HStack(spacing: 8) {
@@ -150,6 +150,14 @@ struct FightDetailView: View {
             }
             .frame(maxWidth: .infinity)
         }
+    }
+
+    /// A shade larger than a screen title: the fight name is the hero of this screen.
+    private var heroTitle: some View {
+        Text(fight.name)
+            .font(.ff(27, .bold))
+            .tracking(-0.54)
+            .foregroundStyle(theme.text)
     }
 
     private var ringProgress: CGFloat {
@@ -181,7 +189,7 @@ struct FightDetailView: View {
         FFPanel {
             FFBand {
                 Text(fight.payoutLine)
-                    .font(.ff(14))
+                    .font(.ff(12))
                     .foregroundStyle(theme.muted)
             }
             ForEach(Array(joinedStandings.enumerated()), id: \.element.id) { index, row in
@@ -197,20 +205,20 @@ struct FightDetailView: View {
 
     private func moneyRow(_ row: Standing) -> some View {
         HStack(spacing: 10) {
-            FFAvatar(initials: row.person.initials, size: 30)
+            FFAvatar(initials: row.person.initials, size: 26)
             VStack(alignment: .leading, spacing: 2) {
                 Text(row.person.name)
-                    .font(.ff(15, .semibold))
+                    .font(.ff(13, .semibold))
                     .foregroundStyle(theme.text)
                 Text(model.paceLine(row, in: fight))
-                    .font(.ff(13))
+                    .font(.ff(11))
                     .foregroundStyle(theme.muted)
             }
             Spacer(minLength: 8)
             if let safe = row.safe {
                 FFBadge(text: safe ? "Safe" : "At risk", tone: safe ? .green : .red)
             } else {
-                FFMoney(dollars: row.projectedNet, size: 15)
+                FFMoney(dollars: row.projectedNet, size: 13)
             }
         }
         .padding(.horizontal, FFMetric.rowPaddingX)
@@ -279,7 +287,7 @@ struct FightDetailView: View {
                         Color.clear.frame(height: 20)
                     }
                     Text(day.label)
-                        .font(.ff(14))
+                        .font(.ff(12))
                         .foregroundStyle(theme.muted)
                         .padding(.bottom, 10)
                     let maxVal = day.scores.map(\.value).max() ?? 1
@@ -288,7 +296,7 @@ struct FightDetailView: View {
                         ForEach(day.scores) { row in
                             HStack(spacing: 0) {
                                 Text(row.person.name)
-                                    .font(.ff(13))
+                                    .font(.ff(11))
                                     .foregroundStyle(theme.muted)
                                     .lineLimit(1)
                                     .frame(width: 56, alignment: .leading)
@@ -297,7 +305,7 @@ struct FightDetailView: View {
                                     fill: row.person.id == leaderID ? theme.accent : Color.white.opacity(0.45)
                                 )
                                 Text(model.formatScore(row.value, metric: fight.metric))
-                                    .font(.ff(13))
+                                    .font(.ff(11))
                                     .foregroundStyle(theme.muted)
                                     .frame(width: 56, alignment: .trailing)
                             }
@@ -310,7 +318,7 @@ struct FightDetailView: View {
                         .padding(.top, 26)
                         .padding(.bottom, 16)
                     Text(note)
-                        .font(.ff(14))
+                        .font(.ff(12))
                         .foregroundStyle(theme.muted)
                 }
             }

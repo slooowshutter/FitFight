@@ -56,21 +56,30 @@ end
 # Uploading a build does not put it in anyone's TestFlight app: App Store Connect
 # only shows a build to testers once it belongs to a group. Nobody is at a desk to
 # click that, so hand the finished build to every internal group we have.
-def distribute_to_internal_groups(build_version)
+def distribute_to_internal_groups(version, build_number)
   require "spaceship"
 
   app = Spaceship::ConnectAPI::App.find(BUNDLE_ID)
   return UI.important("No App Store Connect app for #{BUNDLE_ID}; skipping distribution") if app.nil?
 
-  build = app.get_builds(filter: { version: build_version }, includes: "betaGroups").first
-  return UI.important("Build #{build_version} not visible yet; skipping distribution") if build.nil?
+  build = Spaceship::ConnectAPI::Build.all(
+    app_id: app.id,
+    version: version,
+    build_number: build_number.to_s
+  ).first
+  return UI.important("Build #{version} (#{build_number}) not visible yet; skipping distribution") if build.nil?
 
   groups = app.get_beta_groups.select(&:is_internal_group)
-  return UI.important("No internal TestFlight group to distribute to") if groups.empty?
+  if groups.empty?
+    return UI.important(
+      "This app has no internal TestFlight group, so no tester can see the build. " \
+      "Create one in App Store Connect under TestFlight → Internal Testing."
+    )
+  end
 
   groups.each do |group|
     build.add_beta_groups(beta_groups: [group])
-    UI.success("Build #{build_version} is now in the '#{group.name}' group")
+    UI.success("Build #{version} (#{build_number}) is now in the '#{group.name}' group")
   rescue StandardError => e
     UI.important("Could not add build to '#{group.name}': #{e.message}")
   end
@@ -151,7 +160,7 @@ platform :ios do
       changelog: "FitFight #{version} (#{build_number})"
     )
 
-    distribute_to_internal_groups(build_number.to_s)
+    distribute_to_internal_groups(version, build_number)
   ensure
     FileUtils.rm_f(key_path) if defined?(key_path) && key_path
   end

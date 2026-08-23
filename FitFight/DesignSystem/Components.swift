@@ -6,6 +6,7 @@ enum FFMetric {
     static let cardRadius: CGFloat = 22
     /// Request cards are drawn with a tighter corner than fight cards.
     static let tightCardRadius: CGFloat = 14
+    static let chipRadius: CGFloat = 10
     static let cardPadding: CGFloat = 20
     /// Section titles sit 4pt inside the card edge below them, except on the
     /// fights list and the standings, where the mock lines them up flush.
@@ -637,11 +638,11 @@ struct FFChip: View {
             .frame(height: 46)
             .background(
                 selected ? theme.accent : theme.surface,
-                in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
+                in: RoundedRectangle(cornerRadius: FFMetric.chipRadius, style: .continuous)
             )
             .overlay {
                 if !selected {
-                    RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
+                    RoundedRectangle(cornerRadius: FFMetric.chipRadius, style: .continuous)
                         .strokeBorder(theme.line, lineWidth: 1)
                 }
             }

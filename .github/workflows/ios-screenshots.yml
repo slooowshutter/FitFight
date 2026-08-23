@@ -57,16 +57,19 @@ jobs:
       - name: Compare against the design mocks
         run: |
           set -euo pipefail
-          python3 -m pip install --quiet --user pillow numpy
-          python3 scripts/compare_screens.py shots compare
+          python3 -m venv .venv
+          .venv/bin/pip install --quiet pillow numpy
+          .venv/bin/python scripts/compare_screens.py shots compare
 
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: screens
           path: shots
           retention-days: 14
 
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: design-comparison
           path: compare

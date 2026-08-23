@@ -1,0 +1,133 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Challenge your friends.\nWinner takes the glory." : {
+      "comment" : "Home screen tagline under the FitFight title.",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Défie tes amis.\nLe gagnant rafle la gloire."
+          }
+        }
+      }
+    },
+    "Close" : {
+      "comment" : "Button that dismisses the Versions or Settings sheet.",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fermer"
+          }
+        }
+      }
+    },
+    "English and French. The app follows your iPhone language, and you can change it in Settings." : {
+      "comment" : "Changelog notes for the localization release.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anglais et français. L'app suit la langue de ton iPhone, et tu peux la changer dans Réglages."
+          }
+        }
+      }
+    },
+    "First TestFlight. App name on screen, version at the top, and a Versions list for every release." : {
+      "comment" : "Changelog notes for the first TestFlight release.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Premier TestFlight. Nom de l'app à l'écran, version en haut, et une liste Versions pour chaque publication."
+          }
+        }
+      }
+    },
+    "FitFight" : {
+      "comment" : "App name on the home screen. Keep as FitFight in every language.",
+      "shouldTranslate" : false
+    },
+    "Follows your iPhone language. Pick another here if you prefer." : {
+      "comment" : "Explanation under the Language heading in Settings.",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suit la langue de ton iPhone. Choisis-en une autre ici si tu préfères."
+          }
+        }
+      }
+    },
+    "Language" : {
+      "comment" : "Section heading in Settings for the app language picker.",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Langue"
+          }
+        }
+      }
+    },
+    "Settings" : {
+      "comment" : "Home screen button and Settings sheet title.",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réglages"
+          }
+        }
+      }
+    },
+    "System" : {
+      "comment" : "Language picker row that follows the iPhone language.",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Système"
+          }
+        }
+      }
+    },
+    "Versions" : {
+      "comment" : "Home screen button and Versions sheet title.",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Versions"
+          }
+        }
+      }
+    },
+    "You're on %@" : {
+      "comment" : "Versions sheet subtitle. Placeholder is the marketing version and build, e.g. 0.1.0 (12).",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu es sur %@"
+          }
+        }
+      }
+    },
+    "this build" : {
+      "comment" : "Badge on the changelog row that matches the installed marketing version.",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "cette version"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

@@ -60,7 +60,7 @@ private struct ReleaseNoteRow: View {
     let release: ReleaseNote
 
     private var isCurrent: Bool {
-        release.version == AppVersion.marketing
+        release.id == Changelog.currentRelease?.id
     }
 
     var body: some View {
@@ -80,7 +80,7 @@ private struct ReleaseNoteRow: View {
                     .foregroundStyle(.white.opacity(0.55))
             }
 
-            Text(release.notes)
+            Text(LocalizedStringKey(release.notes))
                 .font(.body)
                 .foregroundStyle(.white.opacity(0.82))
                 .fixedSize(horizontal: false, vertical: true)
@@ -91,6 +91,12 @@ private struct ReleaseNoteRow: View {
     }
 }
 
-#Preview {
+#Preview("English") {
     VersionsView()
+        .environment(\.locale, Locale(identifier: "en"))
+}
+
+#Preview("French") {
+    VersionsView()
+        .environment(\.locale, Locale(identifier: "fr"))
 }

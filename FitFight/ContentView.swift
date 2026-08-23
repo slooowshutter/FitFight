@@ -1,7 +1,9 @@
 import SwiftUI
 
 struct ContentView: View {
+    @Environment(LanguageSettings.self) private var languageSettings
     @State private var showingVersions = false
+    @State private var showingSettings = false
 
     var body: some View {
         ZStack {
@@ -26,6 +28,12 @@ struct ContentView: View {
                 .buttonStyle(.borderedProminent)
                 .padding(.top, 8)
 
+                Button("Settings") {
+                    showingSettings = true
+                }
+                .font(.headline)
+                .buttonStyle(.bordered)
+
                 Spacer()
             }
             .padding()
@@ -37,9 +45,21 @@ struct ContentView: View {
         .sheet(isPresented: $showingVersions) {
             VersionsView()
         }
+        .sheet(isPresented: $showingSettings) {
+            SettingsView()
+                .environment(languageSettings)
+        }
     }
 }
 
-#Preview {
+#Preview("English") {
     ContentView()
+        .environment(LanguageSettings(selection: .english))
+        .environment(\.locale, Locale(identifier: "en"))
+}
+
+#Preview("French") {
+    ContentView()
+        .environment(LanguageSettings(selection: .french))
+        .environment(\.locale, Locale(identifier: "fr"))
 }

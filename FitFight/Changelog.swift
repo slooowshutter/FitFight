@@ -27,6 +27,13 @@ enum Changelog {
             version: "0.1.0",
             year: 2026,
             month: 8,
+            day: 23,
+            notes: "English and French. The app follows your iPhone language, and you can change it in Settings."
+        ),
+        ReleaseNote(
+            version: "0.1.0",
+            year: 2026,
+            month: 8,
             day: 22,
             notes: "First TestFlight. App name on screen, version at the top, and a Versions list for every release."
         ),
@@ -37,5 +44,10 @@ enum Changelog {
             if lhs.date != rhs.date { return lhs.date > rhs.date }
             return lhs.version > rhs.version
         }
+    }
+
+    /// Newest changelog row whose version matches the installed marketing version.
+    static var currentRelease: ReleaseNote? {
+        newestFirst.first { $0.version == AppVersion.marketing }
     }
 }

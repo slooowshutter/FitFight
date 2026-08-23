@@ -30,6 +30,29 @@ def write_api_key_file(key_id, raw)
   path
 end
 
+# Automatic cloud signing mints a fresh certificate on every archive, and Apple caps how
+# many an account may hold. Nobody signs from a Mac here, so the old ones are dead weight:
+# clear them out before the archive asks for another.
+def revoke_stale_certificates(key_id, issuer_id, key_path)
+  require "spaceship"
+
+  token = Spaceship::ConnectAPI::Token.create(
+    key_id: key_id,
+    issuer_id: issuer_id,
+    filepath: key_path
+  )
+  Spaceship::ConnectAPI.token = token
+
+  Spaceship::ConnectAPI::Certificate.all.each do |certificate|
+    UI.message("Revoking #{certificate.certificate_type} certificate #{certificate.id}")
+    certificate.delete!
+  rescue StandardError => e
+    UI.important("Could not revoke certificate #{certificate.id}: #{e.message}")
+  end
+rescue StandardError => e
+  UI.important("Skipping certificate cleanup: #{e.message}")
+end
+
 def cloud_signing_flags(key_path, key_id, issuer_id, team_id)
   [
     "DEVELOPMENT_TEAM=#{team_id}",
@@ -79,6 +102,8 @@ platform :ios do
 
     version = get_version_number(xcodeproj: XCODEPROJ, target: SCHEME)
     UI.message("Shipping #{version} (#{build_number})")
+
+    revoke_stale_certificates(key_id, issuer_id, key_path)
 
     build_app(
       project: XCODEPROJ,

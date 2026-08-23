@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct ContentView: View {
-    @Environment(LanguageSettings.self) private var languageSettings
     @State private var showingVersions = false
     @State private var showingSettings = false
 
@@ -47,19 +46,16 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showingSettings) {
             SettingsView()
-                .environment(languageSettings)
         }
     }
 }
 
 #Preview("English") {
     ContentView()
-        .environment(LanguageSettings(selection: .english))
         .environment(\.locale, Locale(identifier: "en"))
 }
 
 #Preview("French") {
     ContentView()
-        .environment(LanguageSettings(selection: .french))
         .environment(\.locale, Locale(identifier: "fr"))
 }

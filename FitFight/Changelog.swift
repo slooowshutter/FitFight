@@ -28,7 +28,7 @@ enum Changelog {
             year: 2026,
             month: 8,
             day: 23,
-            notes: "English and French. The app follows your iPhone language, and you can change it in Settings."
+            notes: "English and French. Follows your iPhone language. Change FitFight only in iOS Settings."
         ),
         ReleaseNote(
             version: "0.1.0",

@@ -23,14 +23,14 @@
         }
       }
     },
-    "English and French. The app follows your iPhone language, and you can change it in Settings." : {
+    "English and French. Follows your iPhone language. Change FitFight only in iOS Settings." : {
       "comment" : "Changelog notes for the localization release.",
       "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anglais et français. L'app suit la langue de ton iPhone, et tu peux la changer dans Réglages."
+            "value" : "Anglais et français. Suit la langue de ton iPhone. Change FitFight seulement dans Réglages iOS."
           }
         }
       }
@@ -51,19 +51,19 @@
       "comment" : "App name on the home screen. Keep as FitFight in every language.",
       "shouldTranslate" : false
     },
-    "Follows your iPhone language. Pick another here if you prefer." : {
+    "FitFight follows your iPhone language. Tap Language to pick English or French for this app only." : {
       "comment" : "Explanation under the Language heading in Settings.",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Suit la langue de ton iPhone. Choisis-en une autre ici si tu préfères."
+            "value" : "FitFight suit la langue de ton iPhone. Touche Langue pour choisir l'anglais ou le français pour cette app seulement."
           }
         }
       }
     },
     "Language" : {
-      "comment" : "Section heading in Settings for the app language picker.",
+      "comment" : "Settings heading and row that opens iOS Settings for per-app language.",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -80,17 +80,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Réglages"
-          }
-        }
-      }
-    },
-    "System" : {
-      "comment" : "Language picker row that follows the iPhone language.",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Système"
           }
         }
       }

@@ -30,5 +30,5 @@ Details: [docs/product.md](docs/product.md) · [docs/shipping.md](docs/shipping.
 1. Branch off `main`. PR unless Marc says otherwise.
 2. Add new `.swift` files to `FitFight.xcodeproj/project.pbxproj` (explicit file list, not a synchronized group).
 3. If users will see it: append a `ReleaseNote` in `Changelog.swift` (and bump `MARKETING_VERSION` when it’s a real version, not just a daily CI build).
-4. User-facing copy: SwiftUI string literals plus a French translation in `FitFight/Localizable.xcstrings` in the same PR. Don’t hardcode new UI text.
+4. User-facing copy: SwiftUI string literals plus a French translation in `FitFight/Localizable.xcstrings` in the same PR. Don’t hardcode new UI text. Don’t add a custom in-app language override — iOS Settings is the language switch.
 5. Don’t ask Marc to open Xcode or his Mac.

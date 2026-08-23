@@ -14,7 +14,6 @@
 		A10000000000000000000005 /* Changelog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000015 /* Changelog.swift */; };
 		A10000000000000000000006 /* VersionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000016 /* VersionsView.swift */; };
 		A10000000000000000000007 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000017 /* Localizable.xcstrings */; };
-		A10000000000000000000008 /* LanguageSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000018 /* LanguageSettings.swift */; };
 		A10000000000000000000009 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000019 /* SettingsView.swift */; };
 /* End PBXBuildFile section */
 
@@ -27,7 +26,6 @@
 		A10000000000000000000015 /* Changelog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Changelog.swift; sourceTree = "<group>"; };
 		A10000000000000000000016 /* VersionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VersionsView.swift; sourceTree = "<group>"; };
 		A10000000000000000000017 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
-		A10000000000000000000018 /* LanguageSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageSettings.swift; sourceTree = "<group>"; };
 		A10000000000000000000019 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A1000000000000000000001A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -51,7 +49,6 @@
 				A10000000000000000000013 /* AppVersion.swift */,
 				A10000000000000000000015 /* Changelog.swift */,
 				A10000000000000000000016 /* VersionsView.swift */,
-				A10000000000000000000018 /* LanguageSettings.swift */,
 				A10000000000000000000019 /* SettingsView.swift */,
 				A10000000000000000000017 /* Localizable.xcstrings */,
 				A1000000000000000000001A /* Info.plist */,
@@ -152,7 +149,6 @@
 				A10000000000000000000003 /* AppVersion.swift in Sources */,
 				A10000000000000000000005 /* Changelog.swift in Sources */,
 				A10000000000000000000006 /* VersionsView.swift in Sources */,
-				A10000000000000000000008 /* LanguageSettings.swift in Sources */,
 				A10000000000000000000009 /* SettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

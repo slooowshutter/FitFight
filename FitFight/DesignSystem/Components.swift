@@ -222,7 +222,7 @@ struct FFPanel<Content: View>: View {
 
 /// The chip-tinted band at the top or bottom of a card.
 struct FFBand<Content: View>: View {
-    var vertical: CGFloat = 17
+    var vertical: CGFloat = 16.5
     @ViewBuilder var content: () -> Content
     @Environment(\.ffTheme) private var theme
 

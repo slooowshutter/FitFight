@@ -53,35 +53,51 @@ rescue StandardError => e
   UI.important("Skipping certificate cleanup: #{e.message}")
 end
 
-# Uploading a build does not put it in anyone's TestFlight app: App Store Connect
-# only shows a build to testers once it belongs to a group. Nobody is at a desk to
-# click that, so hand the finished build to every internal group we have.
-def distribute_to_internal_groups(version, build_number)
+# Uploading a build does not put it in anyone's TestFlight app. Internal groups get
+# every build automatically; external ones have to be handed each build. Nobody is at
+# a desk to click that, so do it here — and print where the build actually stands, so
+# a run's log answers "why can't I install this yet".
+def distribute_and_report(version, build_number)
   require "spaceship"
 
   app = Spaceship::ConnectAPI::App.find(BUNDLE_ID)
-  return UI.important("No App Store Connect app for #{BUNDLE_ID}; skipping distribution") if app.nil?
+  return UI.important("No App Store Connect app for #{BUNDLE_ID}") if app.nil?
 
   build = Spaceship::ConnectAPI::Build.all(
     app_id: app.id,
     version: version,
     build_number: build_number.to_s
   ).first
-  return UI.important("Build #{version} (#{build_number}) not visible yet; skipping distribution") if build.nil?
+  return UI.important("Build #{version} (#{build_number}) is not on App Store Connect yet") if build.nil?
 
-  groups = app.get_beta_groups.select(&:is_internal_group)
+  UI.message("Build #{version} (#{build_number}): processing=#{build.processing_state} expired=#{build.expired}")
+
+  groups = app.get_beta_groups
   if groups.empty?
     return UI.important(
-      "This app has no internal TestFlight group, so no tester can see the build. " \
-      "Create one in App Store Connect under TestFlight → Internal Testing."
+      "This app has no TestFlight group, so no tester can see any build. " \
+      "Add one in App Store Connect under TestFlight."
     )
   end
 
   groups.each do |group|
-    build.add_beta_groups(beta_groups: [group])
-    UI.success("Build #{version} (#{build_number}) is now in the '#{group.name}' group")
-  rescue StandardError => e
-    UI.important("Could not add build to '#{group.name}': #{e.message}")
+    kind = group.is_internal_group ? "internal" : "external"
+    testers = begin
+      group.get_beta_testers.count
+    rescue StandardError
+      "?"
+    end
+    UI.message("Group '#{group.name}' (#{kind}), #{testers} tester(s)")
+
+    # Internal groups always see every build; Apple rejects assigning one by hand.
+    next if group.is_internal_group
+
+    begin
+      build.add_beta_groups(beta_groups: [group])
+      UI.success("Build #{version} (#{build_number}) is now in '#{group.name}'")
+    rescue StandardError => e
+      UI.important("Could not add build to '#{group.name}': #{e.message}")
+    end
   end
 rescue StandardError => e
   UI.important("Skipping TestFlight distribution: #{e.message}")
@@ -160,7 +176,7 @@ platform :ios do
       changelog: "FitFight #{version} (#{build_number})"
     )
 
-    distribute_to_internal_groups(version, build_number)
+    distribute_and_report(version, build_number)
   ensure
     FileUtils.rm_f(key_path) if defined?(key_path) && key_path
   end

@@ -5,7 +5,7 @@ import UIKit
 enum FFMetric {
     static let cardRadius: CGFloat = 22
     /// Request cards are drawn with a tighter corner than fight cards.
-    static let tightCardRadius: CGFloat = 14
+    static let tightCardRadius: CGFloat = 15
     static let chipRadius: CGFloat = 10
     static let cardPadding: CGFloat = 20
     /// Section titles sit 4pt inside the card edge below them, except on the
@@ -342,7 +342,7 @@ struct FFSegmented<Item: Hashable>: View {
                 .buttonStyle(.plain)
             }
         }
-        .padding(3)
+        .padding(4)
         .background(theme.chip, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
     }
 }

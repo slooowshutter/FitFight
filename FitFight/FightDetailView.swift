@@ -205,7 +205,7 @@ struct FightDetailView: View {
 
     private func moneyRow(_ row: Standing) -> some View {
         HStack(spacing: 10) {
-            FFAvatar(initials: row.person.initials, size: 26)
+            FFAvatar(row.person, size: 26)
             VStack(alignment: .leading, spacing: 2) {
                 Text(row.person.name)
                     .font(.ff(13, .semibold))
@@ -245,7 +245,7 @@ struct FightDetailView: View {
                     .font(.ff(13, .semibold))
                     .foregroundStyle(isLead ? theme.accent : theme.muted)
                     .frame(width: 22, alignment: .leading)
-                FFAvatar(initials: row.person.initials, size: 26, pending: row.invited)
+                FFAvatar(row.person, size: 26, pending: row.invited)
                 Text(row.person.name)
                     .font(.ff(15, .semibold))
                     .foregroundStyle(row.invited ? theme.muted : theme.text)

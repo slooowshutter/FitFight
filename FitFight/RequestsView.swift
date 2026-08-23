@@ -119,7 +119,7 @@ struct RequestCard: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.bottom, 11)
                     HStack(spacing: 8) {
-                        FFAvatar(initials: item.author.initials, size: 15)
+                        FFAvatar(item.author, size: 15)
                         Text("\(item.author.name) · \(item.ago)")
                             .font(.ff(11))
                             .foregroundStyle(theme.muted)

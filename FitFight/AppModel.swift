@@ -82,6 +82,21 @@ struct Person: Identifiable, Hashable {
     var handle: String
     var initials: String
     var isYou: Bool = false
+
+    /// The design's cast photographs, cut out of the mocks into the asset catalogue.
+    var photo: String { "Avatar-\(isYou ? "maya" : id)" }
+}
+
+extension FFAvatar {
+    init(_ person: Person?, size: CGFloat = 24, ring: Bool = false, pending: Bool = false) {
+        self.init(
+            initials: person?.initials ?? "?",
+            photo: person?.photo,
+            size: size,
+            ring: ring,
+            pending: pending
+        )
+    }
 }
 
 struct Standing: Identifiable, Hashable {

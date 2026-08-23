@@ -15,10 +15,12 @@ struct YouView: View {
                 history
                 sectionHeader("Data sources")
                 sources
-                sectionHeader("Look")
-                appearance
                 sectionHeader("Settings")
                 settings
+                sectionHeader("Look")
+                appearance
+                sectionHeader("This build")
+                buildPanel
             }
             .padding(.horizontal, theme.space.screenPadding)
             .padding(.top, 2)
@@ -34,7 +36,7 @@ struct YouView: View {
 
     private var profile: some View {
         HStack(spacing: 12) {
-            FFAvatar(initials: "MM", size: 56, ring: true)
+            FFAvatar(model.you, size: 56, ring: true)
             VStack(alignment: .leading, spacing: 2) {
                 Text("Maya Moves")
                     .font(.ff(17, .bold))
@@ -128,7 +130,7 @@ struct YouView: View {
                 .foregroundStyle(theme.muted)
         }
         .padding(.horizontal, FFMetric.rowPaddingX)
-        .frame(height: 63)
+        .frame(height: 61)
     }
 
     private var appearance: some View {
@@ -180,10 +182,14 @@ struct YouView: View {
         }
     }
 
-    private var settings: some View {
+    private var buildPanel: some View {
         FFPanel {
             navRow("Versions") { model.showingVersions = true }
-            FFHairline()
+        }
+    }
+
+    private var settings: some View {
+        FFPanel {
             navRow("Units & goals") {}
             FFHairline()
             navRow("Notifications") {}
@@ -198,15 +204,15 @@ struct YouView: View {
         Button(action: action) {
             HStack {
                 Text(title)
-                    .font(.ff(16, .semibold))
+                    .font(.ff(13, .semibold))
                     .foregroundStyle(theme.text)
                 Spacer()
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(theme.faint)
             }
             .padding(.horizontal, FFMetric.rowPaddingX)
-            .frame(height: 53)
+            .frame(height: 44)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

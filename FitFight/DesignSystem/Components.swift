@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // Geometry measured from docs/design/source/screenshots (393pt canvas, 2x captures).
 enum FFMetric {
@@ -43,7 +44,10 @@ struct FFScreen<Content: View>: View {
         if staticRender {
             VStack(spacing: 0) {
                 if let top { top }
+                // Without this the greedy children a scroll view would leave alone
+                // (vote pills, filled rows) split the leftover height between them.
                 content()
+                    .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -349,6 +353,8 @@ struct FFSectionHeader: View {
 /// Stand-in for the web mock's photo avatars: a stable two-tone disc per person.
 struct FFAvatar: View {
     let initials: String
+    /// Asset name of the person's photo, cut from the design mocks. Falls back to a monogram.
+    var photo: String? = nil
     var size: CGFloat = 24
     var ring = false
     var pending = false
@@ -356,23 +362,9 @@ struct FFAvatar: View {
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
-        Circle()
-            .fill(
-                LinearGradient(
-                    colors: gradient,
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
+        face
             .frame(width: size, height: size)
-            .overlay {
-                Text(initials.prefix(1))
-                    .font(.ff(size * 0.42, .bold))
-                    .foregroundStyle(Color.white.opacity(0.72))
-            }
-            .overlay {
-                Circle().strokeBorder(Color.white.opacity(0.10), lineWidth: 0.5)
-            }
+            .clipShape(Circle())
             .padding(ring ? 3 : 0)
             .overlay {
                 if ring {
@@ -380,6 +372,33 @@ struct FFAvatar: View {
                 }
             }
             .opacity(pending ? 0.5 : 1)
+    }
+
+    @ViewBuilder
+    private var face: some View {
+        if let photo, UIImage(named: photo) != nil {
+            Image(photo)
+                .resizable()
+                .interpolation(.high)
+                .scaledToFill()
+        } else {
+            Circle()
+                .fill(
+                    LinearGradient(
+                        colors: gradient,
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .overlay {
+                    Text(initials.prefix(1))
+                        .font(.ff(size * 0.42, .bold))
+                        .foregroundStyle(Color.white.opacity(0.72))
+                }
+                .overlay {
+                    Circle().strokeBorder(Color.white.opacity(0.10), lineWidth: 0.5)
+                }
+        }
     }
 
     private var gradient: [Color] {

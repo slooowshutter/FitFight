@@ -75,7 +75,7 @@ struct NewFightView: View {
                         if on { selected.remove(person.id) } else { selected.insert(person.id) }
                     } label: {
                         HStack(spacing: 12) {
-                            FFAvatar(initials: person.initials, size: 36)
+                            FFAvatar(person, size: 36)
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(person.name)
                                     .font(.ff(13, .semibold))
@@ -276,7 +276,7 @@ struct NewFightView: View {
         Button(action: action) {
             HStack(alignment: .top, spacing: 14) {
                 if leadingRadio { radio(on) }
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(title)
                         .font(.ff(13, .semibold))
                         .foregroundStyle(theme.text)
@@ -291,7 +291,7 @@ struct NewFightView: View {
                 if !leadingRadio { radio(on) }
             }
             .padding(.horizontal, FFMetric.rowPaddingX)
-            .padding(.vertical, 15)
+            .padding(.vertical, 12)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(on ? theme.selectedOption() : Color.clear)
             .contentShape(Rectangle())

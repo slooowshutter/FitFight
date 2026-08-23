@@ -110,9 +110,9 @@ struct LiveFightCard: View {
                     Spacer(minLength: 8)
                     if fight.pending > 0 {
                         Text("\(fight.pending) pending")
-                            .font(.ff(12, .semibold))
+                            .font(.ff(10, .semibold))
                             .foregroundStyle(theme.amber)
-                            .padding(.horizontal, 8)
+                            .padding(.horizontal, 7)
                             .frame(height: 19)
                             .background(theme.amber.opacity(0.12), in: Capsule())
                     }
@@ -128,7 +128,7 @@ struct LiveFightCard: View {
 
                 if hiddenCount > 0 {
                     Text("+\(hiddenCount) more")
-                        .font(.ff(12))
+                        .font(.ff(11))
                         .foregroundStyle(theme.muted)
                         .padding(.top, 11)
                 }
@@ -165,7 +165,7 @@ struct LiveFightCard: View {
     }
 
     private var hiddenCount: Int {
-        max(0, joined.count - 3)
+        max(0, fight.standings.count - 3)
     }
 
     private var dot: some View {
@@ -194,7 +194,7 @@ struct LiveFightCard: View {
                 .font(.ff(12, .semibold))
                 .foregroundStyle(isLead ? theme.accent : theme.muted)
                 .frame(width: FFMetric.miniRankWidth, alignment: .leading)
-            FFAvatar(initials: row.person.initials, size: FFMetric.miniAvatar)
+            FFAvatar(row.person, size: FFMetric.miniAvatar)
             Text(row.person.name)
                 .font(.ff(12, .semibold))
                 .foregroundStyle(theme.text)
@@ -222,7 +222,7 @@ struct InvitationRow: View {
     var body: some View {
         FFCard(padding: 16) {
             HStack(spacing: 12) {
-                FFAvatar(initials: fight.standings.first?.person.initials ?? "?", size: 40)
+                FFAvatar(fight.standings.first?.person, size: 40)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(fight.name)
                         .font(.ff(14, .bold))
@@ -271,7 +271,7 @@ struct FinishedRow: View {
                     Spacer(minLength: 8)
                     HStack(spacing: -8) {
                         ForEach(fight.standings.prefix(2)) { row in
-                            FFAvatar(initials: row.person.initials, size: 26)
+                            FFAvatar(row.person, size: 26)
                         }
                     }
                 }

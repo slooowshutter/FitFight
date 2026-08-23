@@ -74,8 +74,8 @@ struct NewFightView: View {
                     Button {
                         if on { selected.remove(person.id) } else { selected.insert(person.id) }
                     } label: {
-                        HStack(spacing: 12) {
-                            FFAvatar(person, size: 36)
+                        HStack(spacing: 13) {
+                            FFAvatar(person, size: 32)
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(person.name)
                                     .font(.ff(13, .semibold))
@@ -281,7 +281,7 @@ struct NewFightView: View {
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            HStack(alignment: .top, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
                 if leadingRadio { radio(on) }
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
@@ -306,43 +306,45 @@ struct NewFightView: View {
         .buttonStyle(.plain)
     }
 
+    private static let tickSize: CGFloat = 20
+
     private func radio(_ on: Bool) -> some View {
         ZStack {
             Circle()
                 .fill(on ? theme.accent : Color.clear)
-                .frame(width: 26, height: 26)
+                .frame(width: Self.tickSize, height: Self.tickSize)
                 .overlay {
                     if !on {
-                        Circle().strokeBorder(theme.line, lineWidth: 1.5)
+                        Circle().strokeBorder(theme.line, lineWidth: 2)
                     }
                 }
             if on {
                 Image(systemName: "checkmark")
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(theme.ink)
             }
         }
-        .frame(width: 26, height: 26)
+        .frame(width: Self.tickSize, height: Self.tickSize)
     }
 
     private func checkbox(_ on: Bool) -> some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
                 .fill(on ? theme.accent : Color.clear)
-                .frame(width: 26, height: 26)
+                .frame(width: Self.tickSize, height: Self.tickSize)
                 .overlay {
                     if !on {
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .strokeBorder(theme.line, lineWidth: 1.5)
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .strokeBorder(theme.line, lineWidth: 2)
                     }
                 }
             if on {
                 Image(systemName: "checkmark")
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(theme.ink)
             }
         }
-        .frame(width: 26, height: 26)
+        .frame(width: Self.tickSize, height: Self.tickSize)
     }
 
     private func stepper(_ label: String, minus: @escaping () -> Void, plus: @escaping () -> Void) -> some View {

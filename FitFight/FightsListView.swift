@@ -25,7 +25,7 @@ struct FightsListView: View {
                     FFSectionHeader(title: "Invitations")
                         .padding(.top, theme.space.sectionGap)
                         .padding(.bottom, 12)
-                    VStack(spacing: theme.space.cardGap) {
+                    VStack(spacing: 10) {
                         ForEach(model.invitations) { fight in
                             InvitationRow(fight: fight)
                         }
@@ -36,7 +36,7 @@ struct FightsListView: View {
                     FFSectionHeader(title: "Finished")
                         .padding(.top, theme.space.sectionGap)
                         .padding(.bottom, 12)
-                    VStack(spacing: theme.space.cardGap) {
+                    VStack(spacing: 10) {
                         ForEach(model.finished) { fight in
                             FinishedRow(fight: fight)
                         }
@@ -224,7 +224,7 @@ struct InvitationRow: View {
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
-        FFCard(padding: 12) {
+        FFCard(padding: 13, horizontal: 16) {
             HStack(spacing: 12) {
                 FFAvatar(fight.standings.first?.person, size: 36)
                 VStack(alignment: .leading, spacing: 3) {
@@ -257,7 +257,7 @@ struct FinishedRow: View {
         Button {
             model.openFightID = fight.id
         } label: {
-            FFCard(padding: 12) {
+            FFCard(padding: 13, horizontal: 16) {
                 HStack(spacing: 12) {
                     Text("W")
                         .font(.ff(13, .bold))

@@ -72,7 +72,7 @@ struct RequestCard: View {
     var body: some View {
         let voted = model.voted.contains(item.id)
         let votes = item.votes + (voted ? 1 : 0)
-        return FFCard(padding: 16.5) {
+        return FFCard(padding: 14) {
             HStack(alignment: .top, spacing: 12) {
                 Button {
                     if voted { model.voted.remove(item.id) } else { model.voted.insert(item.id) }
@@ -115,11 +115,11 @@ struct RequestCard: View {
                     Text(item.body)
                         .font(.ff(12))
                         .foregroundStyle(theme.muted)
-                        .lineSpacing(3)
+                        .lineSpacing(1.5)
                         .fixedSize(horizontal: false, vertical: true)
-                        .padding(.bottom, 9.5)
+                        .padding(.bottom, 11.5)
                     HStack(spacing: 8) {
-                        FFAvatar(item.author, size: 17)
+                        FFAvatar(item.author, size: 18)
                         Text("\(item.author.name) · \(item.ago)")
                             .font(.ff(11))
                             .foregroundStyle(theme.muted)

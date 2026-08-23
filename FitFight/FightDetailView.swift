@@ -223,7 +223,7 @@ struct FightDetailView: View {
                 FFMoney(dollars: row.projectedNet, size: 13)
             }
         }
-        .padding(.horizontal, FFMetric.rowPaddingX)
+        .padding(.horizontal, FFMetric.cardPadding)
         .frame(height: 60)
         .background(row.person.isYou ? theme.selectedRow() : Color.clear)
     }
@@ -276,7 +276,7 @@ struct FightDetailView: View {
                 )
             }
         }
-        .padding(.horizontal, FFMetric.rowPaddingX)
+        .padding(.horizontal, FFMetric.cardPadding)
         .padding(.vertical, FFMetric.rowPaddingY)
         .background(row.person.isYou ? theme.selectedRow() : Color.clear)
     }
@@ -286,12 +286,12 @@ struct FightDetailView: View {
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(fight.days.enumerated()), id: \.element.id) { index, day in
                     if index > 0 {
-                        Color.clear.frame(height: 22)
+                        Color.clear.frame(height: 24)
                     }
                     Text(day.label)
                         .font(.ff(11))
                         .foregroundStyle(theme.muted)
-                        .padding(.bottom, 11)
+                        .padding(.bottom, 12.5)
                     let maxVal = day.scores.map(\.value).max() ?? 1
                     let leaderID = fight.standings.first?.person.id
                     VStack(spacing: 11.5) {
@@ -317,7 +317,7 @@ struct FightDetailView: View {
                 }
                 if let note = fight.paceNote {
                     FFHairline()
-                        .padding(.top, 24)
+                        .padding(.top, 26)
                         .padding(.bottom, 16)
                     Text(note)
                         .font(.ff(11))

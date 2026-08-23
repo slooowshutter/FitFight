@@ -5,7 +5,9 @@ import UIKit
 enum FFMetric {
     static let cardRadius: CGFloat = 24
     static let cardPadding: CGFloat = 20
-    static let rowPaddingX: CGFloat = 20
+    /// List rows (settings, sources, options) inset 16; rows that sit inside a
+    /// fight card, and the tinted bands, inset by the card padding instead.
+    static let rowPaddingX: CGFloat = 16
     static let rowPaddingY: CGFloat = 14
     static let barHeight: CGFloat = 6
     static let miniRowHeight: CGFloat = 24
@@ -179,12 +181,15 @@ struct FFIconButton: View {
 /// Card: surface, 1px line border, 24pt radius, 20pt padding.
 struct FFCard<Content: View>: View {
     var padding: CGFloat = FFMetric.cardPadding
+    /// Rows in the mock are wider inside than they are tall inside.
+    var horizontal: CGFloat? = nil
     @ViewBuilder var content: () -> Content
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
         content()
-            .padding(padding)
+            .padding(.vertical, padding)
+            .padding(.horizontal, horizontal ?? padding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(theme.surface, in: shape)
             .overlay { shape.strokeBorder(theme.line, lineWidth: 1) }
@@ -223,7 +228,7 @@ struct FFBand<Content: View>: View {
 
     var body: some View {
         content()
-            .padding(.horizontal, FFMetric.rowPaddingX)
+            .padding(.horizontal, FFMetric.cardPadding)
             .padding(.vertical, vertical)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(theme.chip)

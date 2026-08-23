@@ -1,42 +1,23 @@
 import SwiftUI
 
-struct VersionBanner: View {
-    var body: some View {
-        Text(AppVersion.label)
-            .font(.system(.caption, design: .monospaced).weight(.semibold))
-            .foregroundStyle(.white.opacity(0.7))
-            .frame(maxWidth: .infinity)
-            .padding(.top, 6)
-            .padding(.bottom, 10)
-            .background(Color.black)
-            .accessibilityIdentifier("app-version")
-    }
-}
-
 struct VersionsView: View {
+    @Environment(\.ffTheme) private var theme
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         VStack(spacing: 0) {
             VersionBanner()
-
             HStack {
-                Text("Versions")
-                    .font(.title2.weight(.bold))
-                    .foregroundStyle(.white)
+                FFLabel(text: "Versions", role: .title)
                 Spacer()
-                Button("Close") {
-                    dismiss()
-                }
-                .font(.body.weight(.semibold))
-                .foregroundStyle(Color.accentColor)
+                Button("Close") { dismiss() }
+                    .font(theme.font(.bodyStrong))
+                    .foregroundStyle(theme.accent)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
 
-            Text("You're on \(AppVersion.label)")
-                .font(.system(.footnote, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.6))
+            FFLabel(text: "You're on \(AppVersion.label)", role: .caption, color: theme.muted)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 20)
                 .padding(.bottom, 8)
@@ -51,13 +32,13 @@ struct VersionsView: View {
                 .padding(.bottom, 24)
             }
         }
-        .background(Color.black.ignoresSafeArea())
-        .preferredColorScheme(.dark)
+        .background(theme.bg.ignoresSafeArea())
     }
 }
 
 private struct ReleaseNoteRow: View {
     let release: ReleaseNote
+    @Environment(\.ffTheme) private var theme
 
     private var isCurrent: Bool {
         release.version == AppVersion.marketing
@@ -66,31 +47,24 @@ private struct ReleaseNoteRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
-                Text(release.version)
-                    .font(.system(.headline, design: .monospaced))
-                    .foregroundStyle(isCurrent ? Color.accentColor : .white)
+                FFLabel(text: release.version, role: .headline, color: isCurrent ? theme.accent : theme.text)
                 if isCurrent {
-                    Text("this build")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color.accentColor)
+                    FFLabel(text: "this build", role: .caption, color: theme.accent)
                 }
                 Spacer()
                 Text(release.date, format: .dateTime.month(.abbreviated).day().year())
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.55))
+                    .font(theme.font(.caption))
+                    .foregroundStyle(theme.muted)
             }
-
-            Text(release.notes)
-                .font(.body)
-                .foregroundStyle(.white.opacity(0.82))
-                .fixedSize(horizontal: false, vertical: true)
+            FFLabel(text: release.notes, role: .body, color: theme.muted)
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(theme.surface, in: RoundedRectangle(cornerRadius: theme.radius.xl, style: .continuous))
     }
 }
 
 #Preview {
     VersionsView()
+        .fitFightTheme(ThemeCatalog.theme(base: .dark, accent: .blue))
 }

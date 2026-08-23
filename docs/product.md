@@ -15,15 +15,18 @@ One line: challenge your friends, winner takes the glory.
 
 Do not rename the bundle ID without Apple + CI updates.
 
-## v0 (now on TestFlight)
+## v0.3 (approved design)
 
-One screen whose job was to prove the loop:
+The web kit in [`docs/design/source/`](design/source/README.md) is the look. SwiftUI ports it:
 
-- Title **FitFight** and tagline
-- Version at the **top of the screen** via `VersionBanner` / `AppVersion.label` → `MARKETING_VERSION (CFBundleVersion)`
-- **Versions** button → sheet listing `Changelog.releases` (version, date, notes). Stays in every future build.
+- Four tabs: **Fights**, **New**, **Requests**, **You**
+- Theme = dark/light × one of ten accents (default dark + blue)
+- Live fight cards carry their own leaderboard and money line
+- Version label at the top; Versions under You → Settings
 
-Marketing version: `0.1.0`. CI bumps **build number** from TestFlight (`latest + 1`). Don’t bump marketing version for a daily CI-only ship.
+Placeholder themes (Arena, Pulse, Locker, Rogue) are retired.
+
+Marketing version: `0.3.0`. CI bumps **build number** from TestFlight (`latest + 1`). Don’t bump marketing version for a daily CI-only ship.
 
 ## Not this project
 
@@ -32,4 +35,4 @@ Marketing version: `0.1.0`. CI bumps **build number** from TestFlight (`latest +
 
 ## Next product work
 
-Real challenges / friends / scoring — not started. Keep the version chrome and Versions list when you add that.
+Real challenges / friends / scoring — the screens exist as a design-accurate mock with fixture people. No HealthKit, no backend, no notifications. Don’t invent the gaps listed in [`design/source/INVENTORY.md`](design/source/INVENTORY.md).

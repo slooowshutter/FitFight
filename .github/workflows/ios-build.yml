@@ -11,6 +11,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  design-previews:
+    name: Design tokens
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: tokens.json is valid and in sync
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          app = json.loads(Path("FitFight/DesignSystem/tokens.json").read_text())
+          source = json.loads(Path("docs/design/source/tokens.json").read_text())
+          if app != source:
+              raise SystemExit("FitFight/DesignSystem/tokens.json must match docs/design/source/tokens.json")
+          print("tokens ok", len(app.get("colors", {}).get("accents", {})), "accents")
+          PY
+
   build:
     name: Simulator
     runs-on: macos-26

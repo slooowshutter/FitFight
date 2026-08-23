@@ -4,7 +4,7 @@ Challenge your friends. Winner takes the glory.
 
 Cloud-only iOS app: Marc talks from his phone, a Cursor cloud agent codes, GitHub Actions (`macos-26`) ships to TestFlight. No home Mac.
 
-**v0 is on TestFlight** (`0.1.0`): name on screen, version at the top, Versions list.
+**v0.3** ports the approved design: four tabs, dark/light, 10 accents. Spec in [`docs/design/source/`](docs/design/source/README.md).
 
 ## Agents
 

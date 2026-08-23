@@ -30,6 +30,80 @@ def write_api_key_file(key_id, raw)
   path
 end
 
+# Automatic cloud signing mints a fresh certificate on every archive, and Apple caps how
+# many an account may hold. Nobody signs from a Mac here, so the old ones are dead weight:
+# clear them out before the archive asks for another.
+def revoke_stale_certificates(key_id, issuer_id, key_path)
+  require "spaceship"
+
+  token = Spaceship::ConnectAPI::Token.create(
+    key_id: key_id,
+    issuer_id: issuer_id,
+    filepath: key_path
+  )
+  Spaceship::ConnectAPI.token = token
+
+  Spaceship::ConnectAPI::Certificate.all.each do |certificate|
+    UI.message("Revoking #{certificate.certificate_type} certificate #{certificate.id}")
+    certificate.delete!
+  rescue StandardError => e
+    UI.important("Could not revoke certificate #{certificate.id}: #{e.message}")
+  end
+rescue StandardError => e
+  UI.important("Skipping certificate cleanup: #{e.message}")
+end
+
+# Uploading a build does not put it in anyone's TestFlight app. Internal groups get
+# every build automatically; external ones have to be handed each build. Nobody is at
+# a desk to click that, so do it here — and print where the build actually stands, so
+# a run's log answers "why can't I install this yet".
+def distribute_and_report(version, build_number)
+  require "spaceship"
+
+  app = Spaceship::ConnectAPI::App.find(BUNDLE_ID)
+  return UI.important("No App Store Connect app for #{BUNDLE_ID}") if app.nil?
+
+  build = Spaceship::ConnectAPI::Build.all(
+    app_id: app.id,
+    version: version,
+    build_number: build_number.to_s
+  ).first
+  return UI.important("Build #{version} (#{build_number}) is not on App Store Connect yet") if build.nil?
+
+  UI.message("Build #{version} (#{build_number}): processing=#{build.processing_state} expired=#{build.expired}")
+
+  groups = app.get_beta_groups
+  if groups.empty?
+    return UI.important(
+      "This app has no TestFlight group, so no tester can see any build. " \
+      "Add one in App Store Connect under TestFlight."
+    )
+  end
+
+  groups.each do |group|
+    kind = group.is_internal_group ? "internal" : "external"
+    # Count only — this log is public, so no tester addresses go in it.
+    testers = begin
+      Spaceship::ConnectAPI::BetaTester.all(filter: { betaGroups: group.id }).count
+    rescue StandardError => e
+      "unknown (#{e.message})"
+    end
+    UI.message("Group '#{group.name}' (#{kind}), #{testers} tester(s)")
+
+    # Internal groups always see every build; Apple rejects assigning one by hand.
+    next if group.is_internal_group
+
+    begin
+      build.add_beta_groups(beta_groups: [group])
+      UI.success("Build #{version} (#{build_number}) is now in '#{group.name}'")
+    rescue StandardError => e
+      UI.important("Could not add build to '#{group.name}': #{e.message}")
+    end
+  end
+rescue StandardError => e
+  UI.important("Skipping TestFlight distribution: #{e.message}")
+end
+
 def cloud_signing_flags(key_path, key_id, issuer_id, team_id)
   [
     "DEVELOPMENT_TEAM=#{team_id}",
@@ -80,6 +154,8 @@ platform :ios do
     version = get_version_number(xcodeproj: XCODEPROJ, target: SCHEME)
     UI.message("Shipping #{version} (#{build_number})")
 
+    revoke_stale_certificates(key_id, issuer_id, key_path)
+
     build_app(
       project: XCODEPROJ,
       scheme: SCHEME,
@@ -100,6 +176,8 @@ platform :ios do
       skip_waiting_for_build_processing: true,
       changelog: "FitFight #{version} (#{build_number})"
     )
+
+    distribute_and_report(version, build_number)
   ensure
     FileUtils.rm_f(key_path) if defined?(key_path) && key_path
   end

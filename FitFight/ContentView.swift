@@ -1,45 +1,62 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var showingVersions = false
+    @EnvironmentObject private var themeStore: ThemeStore
+    @EnvironmentObject private var model: AppModel
+    @Environment(\.ffTheme) private var theme
 
     var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
-
-            VStack(spacing: 16) {
-                Spacer()
-
-                Text("FitFight")
-                    .font(.system(size: 44, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.white)
-
-                Text("Challenge your friends.\nWinner takes the glory.")
-                    .font(.title3)
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.white.opacity(0.72))
-
-                Button("Versions") {
-                    showingVersions = true
-                }
-                .font(.headline)
-                .buttonStyle(.borderedProminent)
-                .padding(.top, 8)
-
-                Spacer()
+        VStack(spacing: 0) {
+            VersionBanner {
+                model.showingVersions = true
             }
-            .padding()
+            ZStack {
+                tabBody
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                FFTabBar(tab: $model.tab)
+            }
         }
-        .preferredColorScheme(.dark)
-        .safeAreaInset(edge: .top, spacing: 0) {
-            VersionBanner()
-        }
-        .sheet(isPresented: $showingVersions) {
+        .background(theme.bg.ignoresSafeArea())
+        .sheet(isPresented: $model.showingVersions) {
             VersionsView()
+                .fitFightTheme(themeStore.theme)
+                .presentationBackground(themeStore.theme.bg)
+        }
+    }
+
+    @ViewBuilder
+    private var tabBody: some View {
+        switch model.tab {
+        case .fights:
+            fightsStack
+        case .newFight:
+            NewFightView()
+        case .requests:
+            RequestsView()
+        case .you:
+            YouView()
+        }
+    }
+
+    private var fightsStack: some View {
+        NavigationStack {
+            FightsListView()
+                .toolbar(.hidden, for: .navigationBar)
+                .navigationDestination(item: $model.openFightID) { id in
+                    if let fight = model.fight(id: id) {
+                        FightDetailView(fight: fight)
+                    }
+                }
         }
     }
 }
 
 #Preview {
-    ContentView()
+    let themeStore = ThemeStore()
+    return ContentView()
+        .environmentObject(themeStore)
+        .environmentObject(AppModel())
+        .fitFightTheme(themeStore.theme)
 }

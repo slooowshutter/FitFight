@@ -82,10 +82,11 @@ def distribute_and_report(version, build_number)
 
   groups.each do |group|
     kind = group.is_internal_group ? "internal" : "external"
+    # Count only — this log is public, so no tester addresses go in it.
     testers = begin
-      group.get_beta_testers.count
-    rescue StandardError
-      "?"
+      Spaceship::ConnectAPI::BetaTester.all(filter: { betaGroups: group.id }).count
+    rescue StandardError => e
+      "unknown (#{e.message})"
     end
     UI.message("Group '#{group.name}' (#{kind}), #{testers} tester(s)")
 

@@ -43,7 +43,7 @@ struct YouView: View {
                     .foregroundStyle(theme.text)
                 Text("@maya.moves · joined Mar 2026")
                     .font(.ff(12))
-                    .foregroundStyle(theme.muted)
+                    .foregroundStyle(theme.faint)
                     .lineLimit(1)
                     .fixedSize()
             }

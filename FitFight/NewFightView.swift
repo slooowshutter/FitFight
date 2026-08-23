@@ -82,7 +82,7 @@ struct NewFightView: View {
                                     .foregroundStyle(theme.text)
                                 Text(person.handle)
                                     .font(.ff(11))
-                                    .foregroundStyle(theme.muted)
+                                    .foregroundStyle(theme.faint)
                             }
                             Spacer(minLength: 8)
                             checkbox(on)
@@ -289,12 +289,14 @@ struct NewFightView: View {
                         .foregroundStyle(theme.text)
                     Text(subtitle)
                         .font(.ff(11))
-                        .foregroundStyle(theme.muted)
+                        .foregroundStyle(theme.faint)
                         .multilineTextAlignment(.leading)
                         .lineSpacing(2)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                Spacer(minLength: 8)
+                // The text takes the whole remaining width; a Spacer here would
+                // compete with it and wrap the sentence a word early.
+                .frame(maxWidth: .infinity, alignment: .leading)
                 if !leadingRadio { radio(on) }
             }
             .padding(.horizontal, FFMetric.rowPaddingX)

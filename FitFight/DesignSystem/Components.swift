@@ -116,22 +116,22 @@ struct FFButton: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 8) {
+            HStack(spacing: kind == .small ? 7 : 12) {
                 if let icon, !iconTrailing {
                     Image(systemName: icon)
-                        .font(.system(size: kind == .small ? 12 : 15, weight: .semibold))
+                        .font(.system(size: kind == .small ? 11 : 13, weight: .semibold))
                 }
                 Text(title)
-                    .font(.ff(kind == .small ? 14 : 17, kind == .small ? .semibold : .bold))
+                    .font(.ff(kind == .small ? 13 : 15, kind == .small ? .semibold : .bold))
                 if let icon, iconTrailing {
                     Image(systemName: icon)
-                        .font(.system(size: kind == .small ? 12 : 15, weight: .semibold))
+                        .font(.system(size: kind == .small ? 11 : 13, weight: .semibold))
                 }
             }
             .foregroundStyle(foreground)
             .frame(maxWidth: kind == .small ? nil : .infinity)
-            .padding(.horizontal, kind == .small ? 14 : 16)
-            .frame(height: kind == .small ? 36 : 58)
+            .padding(.horizontal, kind == .small ? 15 : 16)
+            .frame(height: kind == .small ? 34 : 54)
             .background(background, in: Capsule())
             .overlay {
                 if kind == .quiet {

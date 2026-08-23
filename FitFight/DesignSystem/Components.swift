@@ -660,6 +660,7 @@ enum FFTab: Hashable {
     case fights
     case newFight
     case requests
+    case designs
     case you
 }
 
@@ -672,9 +673,10 @@ struct FFTabBar: View {
             item(.fights, "Tab-fights", "Fights")
             item(.newFight, "Tab-new", "New")
             item(.requests, "Tab-requests", "Requests")
+            item(.designs, "square.grid.2x2", "Design", system: true)
             item(.you, "Tab-you", "You")
         }
-        .padding(.horizontal, 13)
+        .padding(.horizontal, 8)
         .padding(.top, 15)
         .padding(.bottom, 8)
         .background {
@@ -687,15 +689,13 @@ struct FFTabBar: View {
         }
     }
 
-    private func item(_ value: FFTab, _ icon: String, _ title: String) -> some View {
+    private func item(_ value: FFTab, _ icon: String, _ title: String, system: Bool = false) -> some View {
         let on = tab == value
         return Button {
             tab = value
         } label: {
             VStack(spacing: 5) {
-                Image(icon)
-                    .renderingMode(.template)
-                    .resizable()
+                glyph(icon, system: system)
                     .frame(width: 20, height: 20)
                     .foregroundStyle(on ? theme.accent : theme.muted)
                     .overlay(alignment: .top) {
@@ -712,6 +712,19 @@ struct FFTabBar: View {
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(.plain)
+    }
+
+    /// The four original tabs ship as image assets; the Design tab uses a symbol.
+    @ViewBuilder
+    private func glyph(_ icon: String, system: Bool) -> some View {
+        if system {
+            Image(systemName: icon)
+                .font(.system(size: 17, weight: .medium))
+        } else {
+            Image(icon)
+                .renderingMode(.template)
+                .resizable()
+        }
     }
 }
 

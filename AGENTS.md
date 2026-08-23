@@ -23,7 +23,8 @@ Read this first, then `docs/`. Marc talks from his phone, often transcribing. Be
 - First TestFlight upload **succeeded** (build `0.1.0 (1)`).
 - TestFlight on every app push (PR branch or `main`), plus daily **18:00 UTC**.
 - Simulator compile on every PR.
-- Approved design dump in `docs/design/source/` (338 tokens, 76 screenshots). App has four tabs: Fights, New, Requests, You. Dark/light + 10 accents.
+- Approved design dump in `docs/design/source/` (338 tokens, 76 screenshots). Dark/light + 10 accents.
+- Five tabs: Fights, New, Requests, **Design**, You. The Design tab switches the Fights screen between eleven directions (`original` + ten experiments) in `FitFight/Designs/`. Only `original` follows You → Look; the rest carry their own palette. See [docs/product.md](docs/product.md#v06-design-exploration).
 
 Details: [docs/product.md](docs/product.md) · [docs/backlog.md](docs/backlog.md) · [docs/shipping.md](docs/shipping.md) · [docs/history.md](docs/history.md) · [docs/design/source/README.md](docs/design/source/README.md)
 

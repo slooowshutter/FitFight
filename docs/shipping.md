@@ -25,7 +25,8 @@ Build number is not committed; CI sets `CURRENT_PROJECT_VERSION` at archive time
 
 ## Seeing the UI without a build
 
-Every PR renders each screen in the simulator and uploads them as the `screens` artifact.
+Every PR renders each screen in the simulator and uploads them as the `screens` artifact,
+including `design-<name>.png` for each of the eleven design directions.
 `FitFight/ScreenshotExport.swift` runs when the app is launched with `FF_SHOOT=1`, renders
 each screen with `ImageRenderer` (scroll views stay blank in that renderer, so `FFScreen`
 switches to a plain stack via `\.ffStaticRender`) and writes PNGs the workflow copies out

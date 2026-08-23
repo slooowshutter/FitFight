@@ -3,6 +3,7 @@ import SwiftUI
 struct YouView: View {
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var themeStore: ThemeStore
+    @EnvironmentObject private var designStore: DesignStore
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
@@ -137,6 +138,14 @@ struct YouView: View {
 
     private var appearance: some View {
         VStack(alignment: .leading, spacing: 12) {
+            // Every design except Original carries its own fixed palette, so say so
+            // rather than let these controls look broken.
+            if designStore.variant != .original {
+                Text("The \(designStore.variant.title) design brings its own colours. Switch back to Original under Design to use these.")
+                    .font(.ff(11))
+                    .foregroundStyle(theme.faint)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             HStack(spacing: 10) {
                 ForEach(BaseID.allCases) { base in
                     let on = themeStore.baseID == base

@@ -4,13 +4,23 @@ struct YouView: View {
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var themeStore: ThemeStore
     @EnvironmentObject private var designStore: DesignStore
+    @EnvironmentObject private var session: SessionStore
+    @EnvironmentObject private var steps: HealthKitStepsStore
     @Environment(\.ffTheme) private var theme
+    @Environment(\.ffStaticRender) private var staticRender
+    @State private var confirmDelete = false
 
     var body: some View {
         FFScreen {
             VStack(alignment: .leading, spacing: 0) {
                 profile
                     .padding(.bottom, 15)
+                if session.isSignedIn, let authError = session.authError {
+                    Text(authError)
+                        .font(.ff(11))
+                        .foregroundStyle(theme.red)
+                        .padding(.bottom, 10)
+                }
                 stats
                 sectionHeader("Fight history", action: "All 12") { model.tab = .fights }
                 history
@@ -27,6 +37,22 @@ struct YouView: View {
             .padding(.top, 2)
             .padding(.bottom, theme.space.xl)
         }
+        .task {
+            guard !staticRender else { return }
+            await steps.refresh(requestAccess: false)
+        }
+        .confirmationDialog(
+            "Delete account?",
+            isPresented: $confirmDelete,
+            titleVisibility: .visible
+        ) {
+            Button("Delete account", role: .destructive) {
+                Task { await session.deleteAccount() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This signs you out and deletes your FitFight account.")
+        }
     }
 
     private func sectionHeader(_ title: String, action: String? = nil, onAction: (() -> Void)? = nil) -> some View {
@@ -35,14 +61,27 @@ struct YouView: View {
             .padding(.bottom, 10)
     }
 
+    @ViewBuilder
     private var profile: some View {
+        if session.isSignedIn {
+            signedInProfile
+        } else {
+            AppleSignInControl()
+        }
+    }
+
+    private var signedInProfile: some View {
         HStack(spacing: 12) {
-            FFAvatar(model.you, size: 56, ring: true)
+            FFAvatar(
+                initials: session.profile?.initials ?? "FF",
+                size: 56,
+                ring: true
+            )
             VStack(alignment: .leading, spacing: 2) {
-                Text("Maya Moves")
+                Text(session.profile?.displayName ?? "Signed in")
                     .font(.ff(17, .bold))
                     .foregroundStyle(theme.text)
-                Text("@maya.moves · joined Mar 2026")
+                Text(session.profile?.atHandle ?? "Profile isn’t ready yet")
                     .font(.ff(12))
                     .foregroundStyle(theme.faint)
                     .lineLimit(1)
@@ -110,15 +149,29 @@ struct YouView: View {
 
     private var sources: some View {
         FFPanel {
-            sourceRow("Apple Health", "8,240 steps today", "Synced 9:32")
-            FFHairline()
-            sourceRow("Strava", "Morning ride synced", "Synced 8:05")
+            Button {
+                Task { await steps.refresh(requestAccess: true) }
+            } label: {
+                sourceRow(
+                    "Apple Health",
+                    steps.detailText,
+                    steps.metaText,
+                    connected: steps.isConnected
+                )
+            }
+            .buttonStyle(.plain)
+            .disabled(steps.status == .reading)
         }
     }
 
-    private func sourceRow(_ name: String, _ detail: String, _ time: String) -> some View {
+    private func sourceRow(
+        _ name: String,
+        _ detail: String,
+        _ time: String,
+        connected: Bool
+    ) -> some View {
         HStack(spacing: 12) {
-            Circle().fill(theme.green).frame(width: 8, height: 8)
+            Circle().fill(connected ? theme.green : theme.faint).frame(width: 8, height: 8)
             VStack(alignment: .leading, spacing: 3) {
                 Text(name)
                     .font(.ff(13, .semibold))
@@ -126,14 +179,18 @@ struct YouView: View {
                 Text(detail)
                     .font(.ff(11))
                     .foregroundStyle(theme.faint)
+                    .lineLimit(2)
             }
             Spacer(minLength: 8)
             Text(time)
                 .font(.ff(11))
                 .foregroundStyle(theme.faint)
+                .lineLimit(2)
+                .multilineTextAlignment(.trailing)
         }
         .padding(.horizontal, FFMetric.rowPaddingX)
-        .frame(height: 61)
+        .frame(minHeight: 61)
+        .contentShape(Rectangle())
     }
 
     private var appearance: some View {
@@ -208,15 +265,29 @@ struct YouView: View {
             navRow("Privacy") {}
             FFHairline()
             navRow("Payouts") {}
+            if session.isSignedIn {
+                FFHairline()
+                navRow("Sign out") {
+                    Task { await session.signOut() }
+                }
+                FFHairline()
+                navRow("Delete account", destructive: true) {
+                    confirmDelete = true
+                }
+            }
         }
     }
 
-    private func navRow(_ title: String, action: @escaping () -> Void) -> some View {
+    private func navRow(
+        _ title: String,
+        destructive: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
         Button(action: action) {
             HStack {
                 Text(title)
                     .font(.ff(13, .semibold))
-                    .foregroundStyle(theme.text)
+                    .foregroundStyle(destructive ? theme.red : theme.text)
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.system(size: 12, weight: .semibold))
@@ -227,5 +298,6 @@ struct YouView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .disabled(session.isBusy)
     }
 }

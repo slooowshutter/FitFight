@@ -1,5 +1,5 @@
 begin;
-select plan(24);
+select plan(27);
 
 select has_schema('private', 'private schema exists');
 select has_table('public', 'profiles', 'profiles exists');
@@ -94,6 +94,22 @@ select ok(
 select ok(
   exists (select 1 from pg_constraint where conname = 'metric_observations_metric_steps_only'),
   'observations are locked to steps'
+);
+
+select has_function(
+  'public',
+  'delete_own_account',
+  'delete_own_account exists'
+);
+select is(
+  has_function_privilege('anon', 'public.delete_own_account()', 'EXECUTE'),
+  false,
+  'anon cannot execute delete_own_account'
+);
+select is(
+  has_function_privilege('authenticated', 'public.delete_own_account()', 'EXECUTE'),
+  true,
+  'signed-in users can execute delete_own_account'
 );
 
 select * from finish();

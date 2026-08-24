@@ -62,4 +62,4 @@ npx supabase@2.115.0 test db --local
 
 Pin the CLI to **2.115.0** until you mean to bump it (`config.toml` was generated with that version).
 
-The iOS publishable key (`sb_publishable_...`) is client configuration later. The secret key is not.
+The iOS publishable key (`sb_publishable_...`) lives in `FitFight/SupabaseConfig.swift`. The secret key is not.

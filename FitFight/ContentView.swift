@@ -68,5 +68,7 @@ struct ContentView: View {
         .environmentObject(themeStore)
         .environmentObject(designStore)
         .environmentObject(AppModel())
+        .environmentObject(SessionStore(preview: ()))
+        .environmentObject(HealthKitStepsStore())
         .fitFightTheme(designStore.variant.theme(themeStore.theme))
 }

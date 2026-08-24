@@ -59,7 +59,7 @@ jobs:
             echo "Fork PR head — skip ${HEAD_BRANCH}"
           fi
 
-          echo "Sweep leftover merged feature branches"
+          echo "Sweep leftover merged feature branches whose tip has not moved"
           gh api --paginate "repos/${REPO}/branches?per_page=100" --jq '.[].name' \
           | while IFS= read -r branch; do
               [ -n "$branch" ] || continue
@@ -74,9 +74,21 @@ jobs:
                 echo "Keep ${branch}: open PR"
                 continue
               fi
-              merged_count="$(gh pr list --repo "$REPO" --head "$branch" --state merged --json number --jq 'length')"
-              if [ "$merged_count" = "0" ]; then
+              merged_sha="$(
+                gh pr list --repo "$REPO" --head "$branch" --state merged --limit 20 \
+                  --json headRefOid,mergedAt \
+                  --jq 'sort_by(.mergedAt) | reverse | .[0].headRefOid // empty'
+              )"
+              if [ -z "$merged_sha" ]; then
                 echo "Keep ${branch}: not a merged PR head"
+                continue
+              fi
+              if ! current_sha="$(gh api "repos/${REPO}/branches/${branch}" --jq .commit.sha)"; then
+                echo "Skip ${branch}: already gone"
+                continue
+              fi
+              if [ "$current_sha" != "$merged_sha" ]; then
+                echo "Keep ${branch}: tip moved since merge"
                 continue
               fi
               delete_branch "$branch"

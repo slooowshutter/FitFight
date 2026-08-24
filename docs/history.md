@@ -1,5 +1,9 @@
 # History
 
+## 2026-08-24 — delete feature branches on merge
+
+CI deletes the merged PR’s head branch. `main` and `develop` are kept. GitHub’s repo toggle stays off so shipping `develop` → `main` cannot delete `develop`.
+
 ## 2026-08-24 — develop is staging, main is production
 
 GitHub `develop` is the testing branch. Feature PRs merge into `develop`. Production is merging `develop` into `main`. The persistent Supabase branch is also named `develop`.

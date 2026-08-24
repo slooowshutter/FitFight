@@ -26,7 +26,7 @@ Read this first, then `docs/`. Marc talks from his phone, often transcribing. Be
 - Approved design dump in `docs/design/source/` (338 tokens, 76 screenshots). Dark/light + 10 accents.
 - Five tabs: Fights, New, Requests, **Design**, You. The Design tab switches the Fights screen between eleven directions (`original` + ten experiments) in `FitFight/Designs/`. Only `original` follows You → Look; the rest carry their own palette. See [docs/product.md](docs/product.md#v06-design-exploration).
 
-Details: [docs/product.md](docs/product.md) · [docs/backlog.md](docs/backlog.md) · [docs/shipping.md](docs/shipping.md) · [docs/history.md](docs/history.md) · [docs/design/source/README.md](docs/design/source/README.md) · [docs/system/README.md](docs/system/README.md)
+Details: [docs/product.md](docs/product.md) · [docs/backlog.md](docs/backlog.md) · [docs/shipping.md](docs/shipping.md) · [docs/history.md](docs/history.md) · [docs/design/source/README.md](docs/design/source/README.md) · [docs/system.md](docs/system.md)
 
 Product ideas go in [`docs/backlog.md`](docs/backlog.md). Marc says “put X on the backlog”; do not open GitHub Issues or a Notion board unless he asks.
 

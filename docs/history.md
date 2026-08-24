@@ -2,7 +2,7 @@
 
 ## 2026-08-24 — system design (docs only)
 
-Backend is designed, not built. Read [`docs/system/README.md`](system/README.md). Stack is Supabase + Vercel. No schema applied, no TestFlight change.
+Backend is designed, not built. Read [`docs/system.md`](system.md). Stack is Supabase + Vercel. No schema applied, no TestFlight change.
 
 ## 2026-08-23 — Talk to the boss
 

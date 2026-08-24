@@ -55,6 +55,14 @@ Requests has a **Talk to the boss** button. It opens a private chat with Marc,
 separate from the public vote board. There is still no server, so sending a
 message opens Mail to `marc@marclamy.com`. He replies from his inbox.
 
+## v0.8 (Apple account + HealthKit Steps)
+
+You can **Sign in with Apple**. You shows the real `profiles` handle. You → Data sources
+reads today’s Apple Health **Steps** aggregate (not a sum of every raw source) and
+lists contributing apps when HealthKit names them. Empty reads say “No accessible data”.
+You → Settings has **Delete account**. Fights are still fixtures. HealthKit is not
+uploaded to the server yet.
+
 ## Not this project
 
 - Hermes (a home-Mac agent) is unrelated. Ignore it.
@@ -62,4 +70,4 @@ message opens Mail to `marc@marclamy.com`. He replies from his inbox.
 
 ## Next product work
 
-The living list is [`backlog.md`](backlog.md). Right now the screens are a design-accurate mock with fixture people. The golden guide for the real product is [`system-design.md`](system-design.md) — follow it, do not implement all of it. First real Metric is **Steps**. Don’t invent the gaps listed in [`design/source/INVENTORY.md`](design/source/INVENTORY.md).
+The living list is [`backlog.md`](backlog.md). You can sign in with Apple and read Apple Health Steps on You. Fights are still fixtures. The golden guide is [`system-design.md`](system-design.md) — follow it, do not implement all of it. First real Metric is **Steps**. Don’t invent the gaps listed in [`design/source/INVENTORY.md`](design/source/INVENTORY.md).

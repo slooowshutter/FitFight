@@ -111,6 +111,8 @@ enum ScreenshotExport {
             .environmentObject(themeStore)
             .environmentObject(model)
             .environmentObject(DesignStore())
+            .environmentObject(SessionStore(preview: ()))
+            .environmentObject(HealthKitStepsStore())
             .environment(\.ffTheme, theme)
             .environment(\.colorScheme, theme.colorScheme)
             .environment(\.ffStaticRender, true)

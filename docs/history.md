@@ -1,5 +1,9 @@
 # History
 
+## 2026-08-24 — Sign in with Apple + HealthKit Steps read
+
+First slice of a real Steps Fight, still on the fixture Fights tab. You signs in with Apple (Supabase Auth), shows the `profiles` handle, reads today’s Apple Health aggregate Steps on Data sources, and can delete the account from Settings. HealthKit is not uploaded yet. Marketing version `0.8.0`.
+
 ## 2026-08-24 — develop is staging, main is production
 
 GitHub `develop` is the testing branch. Feature PRs merge into `develop`. Production is merging `develop` into `main`. The persistent Supabase branch is also named `develop`.

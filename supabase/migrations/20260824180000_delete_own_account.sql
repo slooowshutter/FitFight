@@ -23,7 +23,7 @@ begin
    where user_id = uid;
 
   delete from auth.sessions where user_id = uid;
-  delete from auth.refresh_tokens where user_id = uid;
+  delete from auth.refresh_tokens where user_id = uid::text;
   delete from auth.identities where user_id = uid;
 
   keep_profile := exists (

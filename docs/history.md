@@ -1,5 +1,9 @@
 # History
 
+## 2026-08-24 — develop is staging, main is production
+
+GitHub `develop` is the testing branch. Feature PRs merge into `develop`. Production is merging `develop` into `main`. The persistent Supabase branch is also named `develop`.
+
 ## 2026-08-24 — hosted project + no-nuke rules
 
 Production project URL is `https://pvqntpteehdvhqyctwum.supabase.co`. GitHub Integration deploys migrations on merge to `main`. CI blocks destructive SQL. Secret/service keys stay out of GitHub.

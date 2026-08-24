@@ -3,7 +3,7 @@
 This is the product list. Not GitHub Issues, not Notion.
 
 Marc talks from the phone: “put X on the backlog” or “do the next one.”
-The agent edits this file, commits, opens a PR.
+The agent edits this file, commits, opens a PR into `develop`.
 
 | Column | Meaning |
 | --- | --- |
@@ -27,7 +27,7 @@ The phone’s job is: show the UI, read HealthKit / workouts when it is open (or
 
 ## Now
 
-- Finish GitHub Integration on the hosted project, merge this platform PR, create `staging`. See [`backend.md`](backend.md).
+- Persistent Supabase branch named `develop` (tracks GitHub `develop`). See [`backend.md`](backend.md).
 - After that: the minimum real Fight — authenticated people, Apple Health **Steps**, server-owned scores. Not Active Minutes. Not Workout Count. Not the rest of the system design.
 
 ## Next

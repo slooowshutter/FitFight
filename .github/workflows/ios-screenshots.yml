@@ -4,8 +4,16 @@ name: Screenshots
 
 on:
   pull_request:
+    paths:
+      - "FitFight/**"
+      - "FitFight.xcodeproj/**"
+      - ".github/workflows/ios-screenshots.yml"
   push:
     branches: [main]
+    paths:
+      - "FitFight/**"
+      - "FitFight.xcodeproj/**"
+      - ".github/workflows/ios-screenshots.yml"
   workflow_dispatch:
 
 concurrency:

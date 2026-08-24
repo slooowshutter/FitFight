@@ -10,7 +10,7 @@ A cloud agent writes SQL in `supabase/migrations` and tests in `supabase/tests`,
 
 GitHub-hosted **Ubuntu** (not a Mac) runs `supabase db start`, lints the schema, and runs pgTAP. That is the proof the database works. This Linux cloud VM has no Docker, so agents do not run the stack here.
 
-iOS TestFlight is unchanged and still ignores this folder.
+iOS TestFlight is unchanged and still ignores this folder. iOS simulator and screenshot jobs skip when the PR does not touch the app.
 
 ## Marc, once
 

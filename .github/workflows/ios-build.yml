@@ -3,8 +3,18 @@ name: iOS simulator build
 
 on:
   pull_request:
+    paths:
+      - "FitFight/**"
+      - "FitFight.xcodeproj/**"
+      - "docs/design/source/tokens.json"
+      - ".github/workflows/ios-build.yml"
   push:
     branches: [main]
+    paths:
+      - "FitFight/**"
+      - "FitFight.xcodeproj/**"
+      - "docs/design/source/tokens.json"
+      - ".github/workflows/ios-build.yml"
 
 concurrency:
   group: ios-build-${{ github.ref }}

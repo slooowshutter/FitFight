@@ -5,8 +5,7 @@ import Foundation
 enum SupabaseConfig {
     static let projectURL = URL(string: "https://pvqntpteehdvhqyctwum.supabase.co")!
 
-    /// Paste the `sb_publishable_...` key from Supabase → Project Settings → API Keys.
-    static let publishableKey = ""
+    static let publishableKey = "sb_publishable_6wP1KNFvJwIE_hX1U2aTfg_u3sk40Li"
 
     static var isConfigured: Bool {
         publishableKey.hasPrefix("sb_publishable_")

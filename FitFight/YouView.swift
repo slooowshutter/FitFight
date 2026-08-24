@@ -169,8 +169,10 @@ struct YouView: View {
                             }
                     }
                     .buttonStyle(FFPressStyle(scale: 0.97))
+                    .disabled(designStore.variant != .original)
                 }
             }
+            .opacity(designStore.variant == .original ? 1 : 0.45)
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 30), spacing: 12)], alignment: .leading, spacing: 12) {
                 ForEach(AccentID.allCases) { accent in
                     let color = ThemeCatalog.theme(base: themeStore.baseID, accent: accent).accent
@@ -187,9 +189,11 @@ struct YouView: View {
                             }
                     }
                     .buttonStyle(.plain)
+                    .disabled(designStore.variant != .original)
                     .accessibilityLabel(accent.rawValue)
                 }
             }
+            .opacity(designStore.variant == .original ? 1 : 0.45)
         }
     }
 

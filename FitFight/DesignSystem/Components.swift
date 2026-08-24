@@ -710,6 +710,7 @@ struct FFTabBar: View {
                     .foregroundStyle(on ? theme.text : theme.muted)
             }
             .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

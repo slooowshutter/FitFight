@@ -84,35 +84,48 @@ private struct DesignTile: View {
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
-        Button(action: action) {
-            VStack(alignment: .leading, spacing: 8) {
-                DesignPreview(variant: variant, width: width)
-                    .clipShape(shape)
-                    .overlay {
-                        shape.strokeBorder(active ? theme.accent : theme.line, lineWidth: active ? 2 : 1)
-                    }
-
-                HStack(spacing: 5) {
-                    Text(variant.title)
-                        .font(.ff(13, .bold))
-                        .foregroundStyle(theme.text)
-                    if active {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 12))
-                            .foregroundStyle(theme.accent)
-                    }
-                    Spacer(minLength: 0)
-                    swatches
+        // Not a Button. Each preview is a full Fights screen full of Buttons;
+        // iOS then treats the outer Button as nested and drops the tap. The
+        // scaled preview also keeps a phone-sized hit box, so the first tile
+        // can swallow the rest of the grid. A transparent overlay on the
+        // *layout* size is the tap target instead.
+        VStack(alignment: .leading, spacing: 8) {
+            DesignPreview(variant: variant, width: width)
+                .clipShape(shape)
+                .overlay {
+                    shape.strokeBorder(active ? theme.accent : theme.line, lineWidth: active ? 2 : 1)
                 }
 
-                Text(variant.blurb)
-                    .font(.ff(10.5))
-                    .foregroundStyle(theme.faint)
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 5) {
+                Text(variant.title)
+                    .font(.ff(13, .bold))
+                    .foregroundStyle(theme.text)
+                if active {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 12))
+                        .foregroundStyle(theme.accent)
+                }
+                Spacer(minLength: 0)
+                swatches
             }
+
+            Text(variant.blurb)
+                .font(.ff(10.5))
+                .foregroundStyle(theme.faint)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .buttonStyle(FFPressStyle(scale: 0.97))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+        .overlay {
+            Rectangle()
+                .fill(Color.white.opacity(0.001))
+                .onTapGesture(perform: action)
+                .accessibilityHidden(true)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAddTraits(active ? .isSelected : [])
         .accessibilityLabel("\(variant.title) design\(active ? ", selected" : "")")
     }
 
@@ -155,6 +168,7 @@ private struct DesignPreview: View {
             .scaleEffect(scale, anchor: .topLeading)
             .frame(width: width, height: Self.source.height * scale, alignment: .topLeading)
             .clipped()
+            .contentShape(.interaction, Rectangle())
             .allowsHitTesting(false)
     }
 }

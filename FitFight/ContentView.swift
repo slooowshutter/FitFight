@@ -4,7 +4,6 @@ struct ContentView: View {
     @EnvironmentObject private var themeStore: ThemeStore
     @EnvironmentObject private var designStore: DesignStore
     @EnvironmentObject private var model: AppModel
-    @Environment(\.ffTheme) private var theme
 
     var body: some View {
         VStack(spacing: 0) {
@@ -19,7 +18,8 @@ struct ContentView: View {
                 FFTabBar(tab: $model.tab)
             }
         }
-        .background(theme.bg.ignoresSafeArea())
+        .background(resolved.bg.ignoresSafeArea())
+        .fitFightTheme(resolved)
         .sheet(isPresented: $model.showingVersions) {
             VersionsView()
                 .fitFightTheme(resolved)

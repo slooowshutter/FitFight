@@ -1,0 +1,37 @@
+# Local Postgres via the Supabase CLI. GitHub-hosted Ubuntu, never a Mac.
+name: Database
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: database-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Migrations and RLS
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Forbid destructive SQL
+        run: python3 scripts/forbid-destructive-sql.py
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.115.0
+
+      - name: Start local database
+        run: supabase db start
+
+      - name: Lint schema
+        run: supabase db lint --local --schema public,private --fail-on error
+
+      - name: pgTAP
+        run: supabase test db --local

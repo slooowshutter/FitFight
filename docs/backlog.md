@@ -15,6 +15,8 @@ The agent edits this file, commits, opens a PR.
 
 Do not invent UI for anything in **Ask first** or undesigned Later items.
 
+[`system-design.md`](system-design.md) is the golden guide. Follow it. Do not implement the whole document. Production Metric is **Steps**; Active Minutes and Workout Count stay later.
+
 ## Principle: server does the work
 
 Most fight logic has to live on a server, not on the phone.
@@ -25,12 +27,13 @@ The phone’s job is: show the UI, read HealthKit / workouts when it is open (or
 
 ## Now
 
-- Real fights, not fixtures. People, scores, and money lines have to come from somewhere other than the mock.
+- Finish GitHub Integration on the hosted project, merge this platform PR, create `staging`. See [`backend.md`](backend.md).
+- After that: the minimum real Fight — authenticated people, Apple Health **Steps**, server-owned scores. Not Active Minutes. Not Workout Count. Not the rest of the system design.
 
 ## Next
 
-- Backend. Accounts, fights, scores, pushes. Nothing below works without this.
-- HealthKit (or another data source) so a fight has real numbers.
+- Smallest command API (create / invite / accept a Steps Fight).
+- HealthKit Steps upload. Not other metrics.
 
 ## Later
 
@@ -42,7 +45,7 @@ The phone’s job is: show the UI, read HealthKit / workouts when it is open (or
 - **Company-sponsored credits.** Companies (example: Anthropic, OpenAI, or Blend) give credits or money to users who complete a challenge — enough sport / steps in a month, e.g. $20 of credits. Kind of philanthropy / partnership. No screen yet; do not invent one.
 - **Challenge social / activity social.** The app is also a small social for friends on a fight. On a recurring bet (e.g. 45 kg dumbbell), people post progress — videos, what they did — to the challenge, both to share and to prove they made it. See what friends did, compare, encourage. Mix of Strava-style activity sharing and the bet. Fitness because people do it together.
   Also a place for accomplishments across apps and sports: one friend hikes, another bikes, they don’t share an app today so they send photos in Messages. Here they can post the activity, show the source (which provider), and share stats if they want. A friend feed even when you don’t have a fight with them. Maybe later: more than one feed (friends / fights / groups). Do not invent those tabs yet.
-  Faking is fine for now. People will fake it. Figure anti-cheat later. For now: build the app, make it fun, let people share if they want. Real fights and backend still come first as Next; social is Later, not blocked on proof.
+  Faking is fine for now. People will fake it. Figure anti-cheat later. For now: build the app, make it fun, let people share if they want. Steps Fights still come first; social is Later, not blocked on proof.
 
 ## Ask first
 

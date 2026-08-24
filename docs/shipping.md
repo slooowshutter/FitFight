@@ -16,6 +16,7 @@ Not: agent on Marc’s laptop or home Mac → local Xcode.
 | Simulator | `.github/workflows/ios-build.yml` | PR + push to `main` | `macos-26` |
 | Screenshots | `.github/workflows/ios-screenshots.yml` | PR + push to `main` | `macos-26` |
 | TestFlight | `.github/workflows/ios-testflight.yml` | any app `push` (PR or `main`), cron `0 18 * * *` UTC | `macos-26` |
+| Database | `.github/workflows/database.yml` | PR + push to `main` | `ubuntu-latest` |
 
 Both **must** stay GitHub-hosted. Never `self-hosted`. Apple requires **Xcode 26 / iOS 26 SDK** to upload (Xcode 16.4 / iOS 18.5 is rejected).
 
@@ -54,6 +55,8 @@ Names only. Never print values. Never ask Marc to paste the `.p8` into chat.
 | `APPLE_TEAM_ID` | `C92DPD8ME2` |
 
 There is a separate Expo EAS key in App Store Connect. Do not reuse it.
+
+Do **not** add a Supabase `service_role` or `sb_secret_...` key to GitHub. Deploys use GitHub Integration. See [`backend.md`](backend.md).
 
 ## What Marc still does
 

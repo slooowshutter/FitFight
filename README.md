@@ -8,10 +8,10 @@ Cloud-only iOS app: Marc talks from his phone, a Cursor cloud agent codes, GitHu
 
 ## Agents
 
-Read [`AGENTS.md`](AGENTS.md) and [`docs/`](docs/README.md) before changing anything. That’s the project memory for parallel chats. Ideas live in [`docs/backlog.md`](docs/backlog.md).
+Read [`AGENTS.md`](AGENTS.md) and [`docs/`](docs/README.md) before changing anything. That’s the project memory for parallel chats. Ideas live in [`docs/backlog.md`](docs/backlog.md). The production architecture is [`docs/system-design.md`](docs/system-design.md); follow it, don’t build all of it. First real Metric is Steps.
 
 ## Marc
 
-Talk to the agent. Test ~30 min/day. Evening: TestFlight → Update. Same-day build: Actions → **TestFlight** → Run workflow.
+Talk to the agent. Test ~30 min/day. Evening: TestFlight → Update. App pushes upload by themselves.
 
 Do not paste the `.p8` into chat. Setup (Apple app, API key, GitHub secrets) is already done — see `docs/shipping.md`.

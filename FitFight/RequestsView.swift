@@ -4,6 +4,7 @@ struct RequestsView: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.ffTheme) private var theme
     @State private var filter: Filter = .top
+    @State private var showingBossChat = false
 
     enum Filter: String, CaseIterable, Identifiable, Hashable {
         case top = "Top"
@@ -26,7 +27,12 @@ struct RequestsView: View {
                     FFButton(title: "New", kind: .small, icon: "plus") {}
                 }
                 .padding(.top, 2)
-                .padding(.bottom, 20)
+                .padding(.bottom, 16)
+
+                FFButton(title: "Talk to the boss", kind: .secondary, icon: "bubble.left") {
+                    showingBossChat = true
+                }
+                .padding(.bottom, 16)
 
                 FFSegmented(items: Filter.allCases, selection: $filter) { $0.rawValue }
                     .padding(.bottom, 16)
@@ -45,6 +51,11 @@ struct RequestsView: View {
             }
             .padding(.horizontal, theme.space.screenPadding)
             .padding(.bottom, theme.space.xl)
+        }
+        .sheet(isPresented: $showingBossChat) {
+            BossChatView()
+                .fitFightTheme(theme)
+                .presentationBackground(theme.bg)
         }
     }
 

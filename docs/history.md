@@ -1,5 +1,10 @@
 # History
 
+## 2026-08-23 — Talk to the boss
+
+Requests tab gained a private chat with Marc. Messages are emailed to him until
+there is a backend. Marketing version `0.7.0`.
+
 ## 2026-08-22 — TestFlight on every app push
 
 Any app push (PR branch or `main`) uploads to TestFlight. Marc tests with TestFlight → Update. No GitHub tap. Daily 18:00 UTC stays as a safety net.

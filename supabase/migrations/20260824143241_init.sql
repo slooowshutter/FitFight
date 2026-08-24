@@ -5,7 +5,7 @@ create schema if not exists private;
 
 revoke all on schema private from public;
 revoke all on schema private from anon, authenticated;
-grant usage on schema private to postgres, service_role;
+grant usage on schema private to postgres, service_role, authenticated;
 
 -- ---------------------------------------------------------------------------
 -- Enums
@@ -308,6 +308,7 @@ create policy friendships_insert_self
   with check (
     requester_id = (select auth.uid())
     and requester_id <> addressee_id
+    and state = 'pending'
   );
 
 create policy friendships_update_addressee
@@ -315,7 +316,47 @@ create policy friendships_update_addressee
   for update
   to authenticated
   using (addressee_id = (select auth.uid()))
-  with check (addressee_id = (select auth.uid()));
+  with check (
+    addressee_id = (select auth.uid())
+    and state in ('accepted', 'declined')
+  );
+
+create function private.current_user_can_see_fight(_fight_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.fight_members
+    where fight_id = _fight_id
+      and user_id = auth.uid()
+      and state in ('invited', 'accepted')
+  );
+$$;
+
+create function private.current_user_is_accepted_member(_fight_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.fight_members
+    where fight_id = _fight_id
+      and user_id = auth.uid()
+      and state = 'accepted'
+  );
+$$;
+
+revoke all on function private.current_user_can_see_fight(uuid) from public;
+revoke all on function private.current_user_is_accepted_member(uuid) from public;
+grant execute on function private.current_user_can_see_fight(uuid) to authenticated;
+grant execute on function private.current_user_is_accepted_member(uuid) to authenticated;
 
 create policy fights_select_involved
   on public.fights
@@ -323,13 +364,7 @@ create policy fights_select_involved
   to authenticated
   using (
     owner_id = (select auth.uid())
-    or exists (
-      select 1
-      from public.fight_members as membership
-      where membership.fight_id = fights.id
-        and membership.user_id = (select auth.uid())
-        and membership.state in ('invited', 'accepted')
-    )
+    or private.current_user_can_see_fight(id)
   );
 
 create policy fight_members_select_self_or_accepted_peer
@@ -338,13 +373,7 @@ create policy fight_members_select_self_or_accepted_peer
   to authenticated
   using (
     user_id = (select auth.uid())
-    or exists (
-      select 1
-      from public.fight_members as me
-      where me.fight_id = fight_members.fight_id
-        and me.user_id = (select auth.uid())
-        and me.state = 'accepted'
-    )
+    or private.current_user_is_accepted_member(fight_id)
   );
 
 create policy fight_invites_select_owner_or_invitee

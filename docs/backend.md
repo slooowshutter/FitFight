@@ -10,7 +10,7 @@ Hosted production (no secrets): https://pvqntpteehdvhqyctwum.supabase.co
 
 A cloud agent writes SQL in `supabase/migrations` and tests in `supabase/tests`, then opens a PR. Marc merges. GitHub Integration applies new migrations to production. Agents do not get the database password or `sb_secret_...` key, and they do not merge unless Marc asked.
 
-GitHub-hosted **Ubuntu** (not a Mac) runs `supabase db start`, lints the schema, runs pgTAP, and rejects `DROP TABLE` / `TRUNCATE` / similar unless the file starts with `-- allow-destructive`. This Linux cloud VM has no Docker, so agents do not run the stack here.
+GitHub-hosted **Ubuntu** (not a Mac) runs `supabase db start`, lints the schema, runs pgTAP as `authenticated`, and rejects `DROP TABLE` / `TRUNCATE` / `DROP COLUMN` unless the **first line** of the file is exactly `-- allow-destructive`. This Linux cloud VM has no Docker, so agents do not run the stack here.
 
 iOS TestFlight is unchanged and still ignores this folder. iOS simulator and screenshot jobs skip when the PR does not touch the app.
 
@@ -35,7 +35,7 @@ After it is on: **Branching** → one long-lived branch named `staging`. Then me
 ## So an agent cannot nuke production
 
 - Production changes only by merging to `main`. Agents open PRs. They do not merge unless Marc said so in that chat.
-- CI refuses destructive SQL (`DROP TABLE`, `DROP SCHEMA`, `TRUNCATE`, `DROP COLUMN`) unless Marc approved it and the file starts with `-- allow-destructive`.
+- CI refuses destructive SQL (`DROP TABLE`, `DROP SCHEMA`, `TRUNCATE`, `DROP COLUMN`) unless Marc approved it and the **first line** of the migration is exactly `-- allow-destructive`.
 - Agents never receive `sb_secret_...`, the old `service_role` JWT, or the database password. Never put those in git, chat, or iOS.
 - Never run `supabase db reset`, `supabase db push`, or `DROP DATABASE` against the hosted project.
 - Prefer additive migrations (expand → migrate → contract).

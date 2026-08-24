@@ -9,6 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 MIGRATIONS = ROOT / "supabase" / "migrations"
+ALLOW_MARKER = "-- allow-destructive"
 
 FORBIDDEN = re.compile(
     r"""
@@ -16,8 +17,8 @@ FORBIDDEN = re.compile(
         drop\s+table\b
         | drop\s+schema\b
         | drop\s+database\b
+        | drop\s+column\b
         | truncate\s+
-        | alter\s+table\b[\s\S]{0,80}?\bdrop\s+column\b
     )
     """,
     re.IGNORECASE | re.VERBOSE,
@@ -29,24 +30,45 @@ def without_comments(sql: str) -> str:
     return re.sub(r"/\*.*?\*/", "", sql, flags=re.DOTALL)
 
 
+def first_line_allows_destructive(text: str) -> bool:
+    if not text:
+        return False
+    first = text.lstrip("\ufeff").splitlines()[0].strip()
+    return first == ALLOW_MARKER
+
+
+def is_blocked(text: str) -> bool:
+    if first_line_allows_destructive(text):
+        return False
+    return FORBIDDEN.search(without_comments(text)) is not None
+
+
+def selftest() -> None:
+    assert is_blocked("drop table public.fights;")
+    assert is_blocked("TRUNCATE public.fights;")
+    assert is_blocked("alter table public.fights\n\n  drop column name;")
+    assert not is_blocked(f"{ALLOW_MARKER}\ndrop table public.fights;")
+    assert is_blocked(f"select 1;\n{ALLOW_MARKER}\ndrop table public.fights;")
+    assert is_blocked(f"/* {ALLOW_MARKER} */\ndrop table public.fights;")
+    assert not is_blocked("create table public.fights (id uuid);")
+
+
 def main() -> int:
+    selftest()
     if not MIGRATIONS.is_dir():
         print("no supabase/migrations directory", file=sys.stderr)
         return 1
 
     blocked: list[str] = []
     for path in sorted(MIGRATIONS.glob("*.sql")):
-        text = path.read_text()
-        if re.search(r"(?m)^--\s*allow-destructive\b", text):
-            continue
-        if FORBIDDEN.search(without_comments(text)):
+        if is_blocked(path.read_text()):
             blocked.append(path.name)
 
     if blocked:
         print("Destructive SQL is blocked:", ", ".join(blocked))
         print(
             "Use an additive migration. If Marc asked to drop data in this chat, "
-            "the file must start with: -- allow-destructive"
+            f"the file must start with: {ALLOW_MARKER}"
         )
         return 1
 

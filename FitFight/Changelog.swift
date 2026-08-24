@@ -7,7 +7,8 @@ struct ReleaseNote: Identifiable, Hashable {
     let day: Int
     let notes: String
 
-    var id: String { "\(version)-\(year)-\(month)-\(day)" }
+    /// Several notes may share one marketing version (TestFlight does not bump it).
+    var id: String { "\(version)-\(year)-\(month)-\(day)-\(notes)" }
 
     var date: Date {
         var components = DateComponents()
@@ -109,10 +110,17 @@ enum Changelog {
         ),
     ]
 
+    /// Array is newest-first; same-day rows keep that order.
     static var newestFirst: [ReleaseNote] {
-        releases.sorted { lhs, rhs in
-            if lhs.date != rhs.date { return lhs.date > rhs.date }
-            return lhs.version > rhs.version
-        }
+        releases.enumerated().sorted { lhs, rhs in
+            if lhs.element.date != rhs.element.date {
+                return lhs.element.date > rhs.element.date
+            }
+            return lhs.offset < rhs.offset
+        }.map(\.element)
+    }
+
+    static var current: ReleaseNote? {
+        newestFirst.first { $0.version == AppVersion.marketing }
     }
 }

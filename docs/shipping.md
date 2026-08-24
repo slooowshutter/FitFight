@@ -16,6 +16,7 @@ Not: agent on Marc’s laptop or home Mac → local Xcode.
 | Simulator | `.github/workflows/ios-build.yml` | PR + push to `main` | `macos-26` |
 | Screenshots | `.github/workflows/ios-screenshots.yml` | PR + push to `main` | `macos-26` |
 | TestFlight | `.github/workflows/ios-testflight.yml` | any app `push` (PR or `main`), cron `0 18 * * *` UTC | `macos-26` |
+| Database | `.github/workflows/database.yml` | PR + push to `main` | `ubuntu-latest` |
 
 Both **must** stay GitHub-hosted. Never `self-hosted`. Apple requires **Xcode 26 / iOS 26 SDK** to upload (Xcode 16.4 / iOS 18.5 is rejected).
 

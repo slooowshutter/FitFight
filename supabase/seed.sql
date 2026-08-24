@@ -1,0 +1,1 @@
+-- No product fixtures. Real people come from Auth after the hosted project exists.

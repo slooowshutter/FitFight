@@ -7,6 +7,8 @@ Decision horizon: **the next 6–12 months**
 
 This is the source of truth for how the real FitFight product should be built. It covers the iOS app, website, backend, authentication, access, fitness providers, synchronization, scoring, notifications, links, privacy, operations, and repository layout.
 
+**How to use this document:** it is a golden guide, not a build checklist. Follow it so new work fits the same model. Do not implement the whole thing. Current work is the empty platform (`supabase/`) and then the minimum Apple Health **Steps** Fight. Do not build Active Minutes, Workout Count, direct WHOOP/Strava, payments, notifications, social, or the website until [`backlog.md`](backlog.md) says so. The mock New screen may still show three metrics because that is the approved design kit; production scoring is Steps only.
+
 This is a reference, not a requirement to build everything at once. Sections 1–9 contain the product and architecture decisions; the later sections explain how those decisions can be implemented safely when their phase arrives.
 
 The product language is fixed in [`CONTEXT.md`](../CONTEXT.md). The current SwiftUI app is a design-accurate mock with fixtures; this document describes the production system that replaces those fixtures.

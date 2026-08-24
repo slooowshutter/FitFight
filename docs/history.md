@@ -1,5 +1,9 @@
 # History
 
+## 2026-08-24 — system design and empty platform
+
+Approved architecture lives in `docs/system-design.md` (golden guide, not a build-all checklist). `supabase/` is the empty Steps-only schema plus Ubuntu CI. Hosted US East project is still Marc, once. No HealthKit and no Next.js yet.
+
 ## 2026-08-23 — Talk to the boss
 
 Requests tab gained a private chat with Marc. Messages are emailed to him until

@@ -62,4 +62,4 @@ message opens Mail to `marc@marclamy.com`. He replies from his inbox.
 
 ## Next product work
 
-The living list is [`backlog.md`](backlog.md). Right now the screens are a design-accurate mock with fixture people. No HealthKit, no backend, no notifications. Don’t invent the gaps listed in [`design/source/INVENTORY.md`](design/source/INVENTORY.md).
+The living list is [`backlog.md`](backlog.md). Right now the screens are a design-accurate mock with fixture people. The golden guide for the real product is [`system-design.md`](system-design.md) — follow it, do not implement all of it. First real Metric is **Steps**. Don’t invent the gaps listed in [`design/source/INVENTORY.md`](design/source/INVENTORY.md).

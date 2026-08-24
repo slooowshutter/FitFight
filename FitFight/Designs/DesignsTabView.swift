@@ -84,11 +84,11 @@ private struct DesignTile: View {
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
-        // Not a Button. Each preview is a full Fights screen full of Buttons;
-        // iOS then treats the outer Button as nested and drops the tap. The
+        // Visuals are not a Button. Each preview is a full Fights screen of
+        // Buttons; wrapping that in a Button makes iOS drop the tap. The
         // scaled preview also keeps a phone-sized hit box, so the first tile
-        // can swallow the rest of the grid. A transparent overlay on the
-        // *layout* size is the tap target instead.
+        // can swallow the rest of the grid. An overlay Button on the *layout*
+        // size is the tap target — its label is empty, so nothing is nested.
         VStack(alignment: .leading, spacing: 8) {
             DesignPreview(variant: variant, width: width)
                 .clipShape(shape)
@@ -116,17 +116,20 @@ private struct DesignTile: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .contentShape(Rectangle())
+        // Hide the live preview from VoiceOver — it is a full Fights screen
+        // of its own controls. The overlay Button is the only accessible
+        // element, so double-tap actually switches the look.
+        .accessibilityHidden(true)
         .overlay {
-            Rectangle()
-                .fill(Color.white.opacity(0.001))
-                .onTapGesture(perform: action)
-                .accessibilityHidden(true)
+            Button(action: action) {
+                Rectangle()
+                    .fill(Color.white.opacity(0.001))
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("\(variant.title) design\(active ? ", selected" : "")")
+            .accessibilityAddTraits(active ? .isSelected : [])
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isButton)
-        .accessibilityAddTraits(active ? .isSelected : [])
-        .accessibilityLabel("\(variant.title) design\(active ? ", selected" : "")")
     }
 
     private var shape: RoundedRectangle {

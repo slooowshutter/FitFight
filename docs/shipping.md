@@ -1,7 +1,9 @@
 # Shipping
 
 ```
-Marc (phone) → cloud Cursor agent → git push (PR or main)
+Marc (phone) → cloud Cursor agent → PR into develop
+  → you try it on staging
+  → merge develop → main when it should be production
   → GitHub Actions (hosted macos-26 + Xcode 26)
   → Fastlane `beta` → TestFlight
   → Marc taps Update
@@ -13,10 +15,10 @@ Not: agent on Marc’s laptop or home Mac → local Xcode.
 
 | Workflow | File | When | Runner |
 | --- | --- | --- | --- |
-| Simulator | `.github/workflows/ios-build.yml` | PR + push to `main` | `macos-26` |
-| Screenshots | `.github/workflows/ios-screenshots.yml` | PR + push to `main` | `macos-26` |
-| TestFlight | `.github/workflows/ios-testflight.yml` | any app `push` (PR or `main`), cron `0 18 * * *` UTC | `macos-26` |
-| Database | `.github/workflows/database.yml` | PR + push to `main` | `ubuntu-latest` |
+| Simulator | `.github/workflows/ios-build.yml` | PR + push to `main` or `develop` | `macos-26` |
+| Screenshots | `.github/workflows/ios-screenshots.yml` | PR + push to `main` or `develop` | `macos-26` |
+| TestFlight | `.github/workflows/ios-testflight.yml` | any app `push` (PR, `develop`, or `main`), cron `0 18 * * *` UTC | `macos-26` |
+| Database | `.github/workflows/database.yml` | PR + push to `main` or `develop` | `ubuntu-latest` |
 
 Both **must** stay GitHub-hosted. Never `self-hosted`. Apple requires **Xcode 26 / iOS 26 SDK** to upload (Xcode 16.4 / iOS 18.5 is rejected).
 
@@ -70,7 +72,7 @@ He should **not** operate certificates day to day, open Xcode, or use a Mac for 
 
 - `gh` here is effectively read-only for Actions (cannot `workflow_dispatch` or set secrets).
 - Opening/updating PRs: use the PR tool, not `gh pr create`.
-- Don’t merge unless Marc asks. He said docs go through a PR onto `main`.
+- Don’t merge unless Marc asks. Feature PRs go onto `develop`. Production is merging `develop` into `main`.
 
 ## After you push app changes
 

@@ -62,16 +62,16 @@ begin
 end;
 $$;
 
-select pg_temp.make_user('00000000-0000-4000-8000-000000000001', 'maya@example.com');
-select pg_temp.make_user('00000000-0000-4000-8000-000000000002', 'leo@example.com');
-select pg_temp.make_user('00000000-0000-4000-8000-000000000003', 'ivy@example.com');
+select pg_temp.make_user('11111111-1111-4111-8111-111111111111', 'maya@example.com');
+select pg_temp.make_user('22222222-2222-4222-8222-222222222222', 'leo@example.com');
+select pg_temp.make_user('33333333-3333-4333-8333-333333333333', 'ivy@example.com');
 
 insert into public.fights (
   id, owner_id, name, state, starts_at, ends_at, time_zone,
   outcome_rule, goal_policy
 ) values (
-  '00000000-0000-4000-8000-0000000000aa',
-  '00000000-0000-4000-8000-000000000001',
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  '11111111-1111-4111-8111-111111111111',
   'Steps',
   'live',
   now(),
@@ -82,9 +82,9 @@ insert into public.fights (
 );
 
 insert into public.fight_members (fight_id, user_id, state) values
-  ('00000000-0000-4000-8000-0000000000aa', '00000000-0000-4000-8000-000000000001', 'accepted'),
-  ('00000000-0000-4000-8000-0000000000aa', '00000000-0000-4000-8000-000000000002', 'accepted'),
-  ('00000000-0000-4000-8000-0000000000aa', '00000000-0000-4000-8000-000000000003', 'invited');
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '11111111-1111-4111-8111-111111111111', 'accepted'),
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '22222222-2222-4222-8222-222222222222', 'accepted'),
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '33333333-3333-4333-8333-333333333333', 'invited');
 
 create function pg_temp.as_user(uid uuid)
 returns void
@@ -101,7 +101,7 @@ begin
 end;
 $$;
 
-select pg_temp.as_user('00000000-0000-4000-8000-000000000001');
+select pg_temp.as_user('11111111-1111-4111-8111-111111111111');
 set local role authenticated;
 
 select lives_ok(
@@ -118,8 +118,8 @@ select is(
 select throws_ok(
   $$ insert into public.friendships (requester_id, addressee_id, state)
      values (
-       '00000000-0000-4000-8000-000000000001',
-       '00000000-0000-4000-8000-000000000002',
+       '11111111-1111-4111-8111-111111111111',
+       '22222222-2222-4222-8222-222222222222',
        'accepted'
      ) $$,
   '42501',
@@ -127,7 +127,7 @@ select throws_ok(
 );
 
 reset role;
-select pg_temp.as_user('00000000-0000-4000-8000-000000000003');
+select pg_temp.as_user('33333333-3333-4333-8333-333333333333');
 set local role authenticated;
 
 select is(
@@ -143,14 +143,14 @@ select is(
 );
 
 reset role;
-select pg_temp.as_user('00000000-0000-4000-8000-000000000001');
+select pg_temp.as_user('11111111-1111-4111-8111-111111111111');
 set local role authenticated;
 
 select lives_ok(
   $$ insert into public.friendships (requester_id, addressee_id, state)
      values (
-       '00000000-0000-4000-8000-000000000001',
-       '00000000-0000-4000-8000-000000000002',
+       '11111111-1111-4111-8111-111111111111',
+       '22222222-2222-4222-8222-222222222222',
        'pending'
      ) $$,
   'requester can insert a pending friendship'

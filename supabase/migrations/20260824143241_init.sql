@@ -208,7 +208,7 @@ as $$
 declare
   generated_handle text;
 begin
-  generated_handle := 'user_' || substr(replace(new.id::text, '-', ''), 1, 12);
+  generated_handle := 'user_' || right(replace(new.id::text, '-', ''), 12);
   insert into public.profiles (user_id, handle, display_name)
   values (
     new.id,

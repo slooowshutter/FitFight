@@ -1,5 +1,9 @@
 # History
 
+## 2026-08-24 — hosted project + no-nuke rules
+
+Production project URL is `https://pvqntpteehdvhqyctwum.supabase.co`. GitHub Integration deploys migrations on merge to `main`. CI blocks destructive SQL. Secret/service keys stay out of GitHub.
+
 ## 2026-08-24 — system design and empty platform
 
 Approved architecture lives in `docs/system-design.md` (golden guide, not a build-all checklist). `supabase/` is the empty Steps-only schema plus Ubuntu CI. Hosted US East project is still Marc, once. No HealthKit and no Next.js yet.

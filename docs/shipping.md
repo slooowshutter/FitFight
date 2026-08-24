@@ -56,6 +56,8 @@ Names only. Never print values. Never ask Marc to paste the `.p8` into chat.
 
 There is a separate Expo EAS key in App Store Connect. Do not reuse it.
 
+Do **not** add a Supabase `service_role` or `sb_secret_...` key to GitHub. Deploys use GitHub Integration. See [`backend.md`](backend.md).
+
 ## What Marc still does
 
 - TestFlight install / Update when a build is ready (~10–20 min after a push).

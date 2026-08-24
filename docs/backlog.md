@@ -27,7 +27,7 @@ The phone’s job is: show the UI, read HealthKit / workouts when it is open (or
 
 ## Now
 
-- Empty backend platform: `supabase/` migrations, RLS, pgTAP on Ubuntu CI. Hosted US East project is the one thing Marc creates (see [`backend.md`](backend.md)).
+- Finish GitHub Integration on the hosted project, merge this platform PR, create `staging`. See [`backend.md`](backend.md).
 - After that: the minimum real Fight — authenticated people, Apple Health **Steps**, server-owned scores. Not Active Minutes. Not Workout Count. Not the rest of the system design.
 
 ## Next

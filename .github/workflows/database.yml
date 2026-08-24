@@ -20,6 +20,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Forbid destructive SQL
+        run: python3 scripts/forbid-destructive-sql.py
+
       - uses: supabase/setup-cli@v1
         with:
           version: 2.115.0

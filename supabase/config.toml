@@ -1,4 +1,5 @@
-# Local stack only. Hosted production is US East (North Virginia).
+# Local stack only. Hosted production is US East (North Virginia):
+# https://pvqntpteehdvhqyctwum.supabase.co
 # Do not put secrets here. Edge Functions are not part of FitFight.
 # https://supabase.com/docs/guides/local-development/cli/config
 project_id = "fitfight"

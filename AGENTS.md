@@ -4,7 +4,7 @@ Read this first, then `docs/`. Marc talks from his phone, often transcribing. Be
 
 **Owner:** Marc Lamy (`marc@marclamy.com`)  
 **Repo:** https://github.com/marclelamy/FitFight (public)  
-**Loop:** Marc (phone) → Cursor **cloud** agent → git push → GitHub Actions `macos-26` → TestFlight → iPhone.
+**Loop:** Marc (phone) → Cursor **cloud** agent → PR into `develop` → you try it → merge `develop` into `main` when it should be production → GitHub Actions `macos-26` → TestFlight → iPhone.
 
 ## Hard rules
 
@@ -15,8 +15,8 @@ Read this first, then `docs/`. Marc talks from his phone, often transcribing. Be
 - Version label stays at the **top of the screen** (not the nav bar), e.g. `0.3.0 (12)`.
 - Permanent **Versions** button: under You → Settings, and the version label at the top. Every user-facing ship adds a row in `FitFight/Changelog.swift`.
 - Design tokens live in `FitFight/DesignSystem/tokens.json` (same file as `docs/design/source/tokens.json`). Don’t hardcode colours. Theme is **base × accent**. After token changes, copy the dump into the app bundle file.
-- Talk to Marc only for things only he can do: Apple login, GitHub secrets, TestFlight testers, legal, the hosted Supabase dashboard. Agents cannot `workflow_dispatch`. App pushes (PR branch or `main`) upload to TestFlight by themselves. Tell Marc a build is coming; he opens TestFlight → Update. Do not ask him to Run workflow.
-- Never nuke the hosted database. No `supabase db reset` / `db push` against production or staging, no `DROP TABLE` / `TRUNCATE` / `DROP SCHEMA` / `DROP DATABASE` unless Marc asked in that chat and the migration starts with `-- allow-destructive`. Never put `sb_secret_...`, `service_role`, or the database password in git, chat, or iOS. Never merge to `main` unless Marc asked. Production migrations apply only after that merge.
+- Talk to Marc only for things only he can do: Apple login, GitHub secrets, TestFlight testers, legal, the hosted Supabase dashboard. Agents cannot `workflow_dispatch`. App pushes (PR branch, `develop`, or `main`) upload to TestFlight by themselves. Tell Marc a build is coming; he opens TestFlight → Update. Do not ask him to Run workflow.
+- Never nuke the hosted database. No `supabase db reset` / `db push` against production or `develop`, no `DROP TABLE` / `TRUNCATE` / `DROP SCHEMA` / `DROP DATABASE` unless Marc asked in that chat and the migration starts with `-- allow-destructive`. Never put `sb_secret_...`, `service_role`, or the database password in git, chat, or iOS. Never merge to `main` unless Marc asked to ship to production. Never merge to `develop` unless Marc asked. Production migrations apply only after `develop` is merged to `main`.
 
 ## What exists (2026-08-22)
 
@@ -37,7 +37,8 @@ Product ideas go in [`docs/backlog.md`](docs/backlog.md). Marc says “put X on 
 
 ## When you change the app
 
-1. Branch off `main`. PR unless Marc says otherwise.
+1. Branch off `develop`. Open a PR **into `develop`**. Do not PR into `main` unless Marc is shipping to production.
 2. Add new `.swift` files to `FitFight.xcodeproj/project.pbxproj` (explicit file list, not a synchronized group). JSON in `DesignSystem/` must also be in the Resources build phase.
 3. If users will see it: append a `ReleaseNote` in `Changelog.swift` (and bump `MARKETING_VERSION` when it’s a real version, not just a daily CI build).
 4. Don’t ask Marc to open Xcode or his Mac. After you push app code, TestFlight uploads itself. He opens TestFlight → Update. Do not ask him to merge first, or to Run workflow.
+5. Shipping to production is Marc merging `develop` → `main`. Agents do not do that unless he said so in that chat.

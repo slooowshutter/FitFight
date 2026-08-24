@@ -123,6 +123,7 @@ select throws_ok(
        'accepted'
      ) $$,
   '42501',
+  'new row violates row-level security policy for table "friendships"',
   'cannot insert an already-accepted friendship'
 );
 

@@ -22,7 +22,7 @@ struct YouView: View {
                         .padding(.bottom, 10)
                 }
                 stats
-                sectionHeader("Fight history", action: "All 12") { model.tab = .fights }
+                sectionHeader("Fight history", action: "All \(model.history.count)") { model.tab = .fights }
                 history
                 sectionHeader("Data sources")
                 sources
@@ -103,11 +103,41 @@ struct YouView: View {
 
     private var stats: some View {
         HStack(spacing: 8) {
-            FFStatTile(value: "12", label: "Fights", onSurface: true, height: 60)
-            FFStatTile(value: "5", label: "Wins", onSurface: true, height: 60)
-            FFStatTile(value: "62%", label: "Win rate", onSurface: true, height: 60)
-            FFStatTile(value: "$140", label: "Won", onSurface: true, height: 60)
+            FFStatTile(value: "\(youStats.fights)", label: "Fights", onSurface: true, height: 60)
+            FFStatTile(value: "\(youStats.wins)", label: "Wins", onSurface: true, height: 60)
+            FFStatTile(value: youStats.winRate, label: "Win rate", onSurface: true, height: 60)
+            FFStatTile(value: youStats.won, label: "Won", onSurface: true, height: 60)
         }
+    }
+
+    /// Finished fights from history plus any finished rows not already listed there.
+    private var youStats: (fights: Int, wins: Int, winRate: String, won: String) {
+        var seen = Set<String>()
+        var fights = 0
+        var wins = 0
+        var wonMoney = 0
+
+        for item in model.history {
+            seen.insert(item.id)
+            fights += 1
+            if item.won {
+                wins += 1
+                if item.net > 0 { wonMoney += item.net }
+            }
+        }
+        for fight in model.fights where fight.status == .finished {
+            guard seen.insert(fight.id).inserted else { continue }
+            fights += 1
+            if fight.rank == 1 {
+                wins += 1
+                if let you = model.youStanding(in: fight), you.projectedNet > 0 {
+                    wonMoney += you.projectedNet
+                }
+            }
+        }
+
+        let rate = fights == 0 ? "0%" : "\(Int((Double(wins) / Double(fights) * 100).rounded()))%"
+        return (fights, wins, rate, "$\(wonMoney)")
     }
 
     private var history: some View {

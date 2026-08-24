@@ -1,5 +1,9 @@
 # History
 
+## 2026-08-24 — Live Steps Fight
+
+New fight and fight detail talk to the server: add friends by handle, start a real Steps fight, Accept/Join a live invite. Apple Health uploads; standings come from the database. Fights are no longer the fixture people. Marketing version `0.9.0`.
+
 ## 2026-08-24 — Sign in with Apple + HealthKit Steps read
 
 First slice of a real Steps Fight, still on the fixture Fights tab. You signs in with Apple (Supabase Auth), shows the `profiles` handle, reads today’s Apple Health aggregate Steps on Data sources, and can delete the account from Settings. HealthKit is not uploaded yet. Marketing version `0.8.0`.

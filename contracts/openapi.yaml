@@ -1,0 +1,226 @@
+openapi: 3.1.0
+info:
+  title: FitFight iOS API
+  version: 0.9.0
+  description: >
+    Next.js Route Handlers under /api/v1. Swift sends the User JWT.
+    Clients never write fights, scores, sources, or private.metric_observations.
+servers:
+  - url: /api/v1
+paths:
+  /provider-connections/apple-health:
+    post:
+      operationId: connectAppleHealth
+      summary: Create or refresh the Apple Health data_sources row.
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Existing or created source
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DataSource" }
+  /healthkit/batches:
+    post:
+      operationId: uploadHealthKitBatch
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "./schemas/healthkit-batch.json"
+      responses:
+        "200":
+          description: Upserted observation count and recalculated fights
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BatchAck" }
+  /fights:
+    post:
+      operationId: createFight
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateFight" }
+      responses:
+        "201":
+          description: Created fight
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FightSummary" }
+  /fights/{fightID}/invites:
+    post:
+      operationId: inviteByHandle
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: fightID
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [handle]
+              properties:
+                handle: { type: string }
+      responses:
+        "200":
+          description: Invite created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InviteCreated" }
+  /invites/{token}/accept:
+    post:
+      operationId: acceptInvite
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                personalTarget: { type: number }
+      responses:
+        "200":
+          description: Accepted
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FightSummary" }
+  /fights/{fightID}/accept:
+    post:
+      operationId: acceptFight
+      summary: Accept an in-app invite (caller is already an invited member).
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: fightID
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Accepted
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FightSummary" }
+  /fights/{fightID}/start:
+    post:
+      operationId: startFight
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: fightID
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                when:
+                  type: string
+                  enum: [now, scheduled]
+      responses:
+        "200":
+          description: Fight is live or scheduled
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FightSummary" }
+  /fights/{fightID}/cancel:
+    post:
+      operationId: cancelFight
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: fightID
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Cancelled
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    DataSource:
+      type: object
+      required: [id, provider, sourceLabel]
+      properties:
+        id: { type: string, format: uuid }
+        provider: { type: string, enum: [apple_health] }
+        sourceLabel: { type: string }
+        contributingSourceLabels:
+          type: array
+          items: { type: string }
+    BatchAck:
+      type: object
+      required: [upserted, sourceId]
+      properties:
+        upserted: { type: integer }
+        sourceId: { type: string, format: uuid }
+        recalculatedFightIds:
+          type: array
+          items: { type: string, format: uuid }
+    CreateFight:
+      type: object
+      required: [name, startsAt, endsAt, timeZone, outcomeRule, stakeKind]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 80 }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        timeZone: { type: string }
+        outcomeRule:
+          type: string
+          enum: [highest_total, proportional, hit_your_goal]
+        goalPolicy:
+          type: string
+          enum: [shared, personal]
+          default: shared
+        defaultGoalValue: { type: number }
+        stakeKind:
+          type: string
+          enum: [bragging, money, action]
+        stakeMinor: { type: integer, minimum: 0 }
+        currency: { type: string, default: USD }
+        actionText: { type: string }
+        inviteHandles:
+          type: array
+          items: { type: string }
+        start:
+          type: string
+          enum: [now, scheduled]
+          default: now
+    FightSummary:
+      type: object
+      required: [id, state]
+      properties:
+        id: { type: string, format: uuid }
+        state: { type: string }
+    InviteCreated:
+      type: object
+      required: [token, invitedUserId]
+      properties:
+        token: { type: string }
+        invitedUserId: { type: string, format: uuid }

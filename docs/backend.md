@@ -62,4 +62,6 @@ npx supabase@2.115.0 test db --local
 
 Pin the CLI to **2.115.0** until you mean to bump it (`config.toml` was generated with that version).
 
-The iOS publishable key (`sb_publishable_...`) lives in `FitFight/SupabaseConfig.swift`. The secret key is not.
+The iOS publishable key (`sb_publishable_...`) production fallback lives in `FitFight/SupabaseConfig.swift`. The secret key is not.
+
+TestFlight binaries that are **not** built from `main` read staging from GitHub Actions **variables** (not secrets): `SUPABASE_STAGING_URL`, `SUPABASE_STAGING_PUBLISHABLE_KEY`, `FITFIGHT_API_URL`. CI writes those into `FitFight/Generated/BuildEnv.swift` before archive. `main` uses the production URL/key plus `FITFIGHT_API_PRODUCTION_URL`. If the staging variables are empty, the job warns and the app keeps the production fallback so the archive still succeeds. See [`shipping.md`](shipping.md).

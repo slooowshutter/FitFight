@@ -46,6 +46,10 @@
 		A10000000000000000000312 /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000302 /* SessionStore.swift */; };
 		A10000000000000000000313 /* AppleSignInControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000303 /* AppleSignInControl.swift */; };
 		A10000000000000000000314 /* HealthKitStepsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000304 /* HealthKitStepsStore.swift */; };
+		A10000000000000000000315 /* BuildEnv.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000305 /* BuildEnv.swift */; };
+		A10000000000000000000316 /* APIConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000306 /* APIConfig.swift */; };
+		A10000000000000000000317 /* FitFightAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000307 /* FitFightAPI.swift */; };
+		A10000000000000000000318 /* FriendshipStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000308 /* FriendshipStore.swift */; };
 		A1000000000000000000F002 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = A1000000000000000000F001 /* Supabase */; };
 /* End PBXBuildFile section */
 
@@ -90,6 +94,10 @@
 		A10000000000000000000302 /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
 		A10000000000000000000303 /* AppleSignInControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignInControl.swift; sourceTree = "<group>"; };
 		A10000000000000000000304 /* HealthKitStepsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitStepsStore.swift; sourceTree = "<group>"; };
+		A10000000000000000000305 /* BuildEnv.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Generated/BuildEnv.swift; sourceTree = "<group>"; };
+		A10000000000000000000306 /* APIConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIConfig.swift; sourceTree = "<group>"; };
+		A10000000000000000000307 /* FitFightAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FitFightAPI.swift; sourceTree = "<group>"; };
+		A10000000000000000000308 /* FriendshipStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendshipStore.swift; sourceTree = "<group>"; };
 		A10000000000000000000320 /* FitFight.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FitFight.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -118,6 +126,10 @@
 				A10000000000000000000102 /* BossChatView.swift */,
 				A1000000000000000000001F /* YouView.swift */,
 				A10000000000000000000301 /* SupabaseConfig.swift */,
+				A10000000000000000000305 /* BuildEnv.swift */,
+				A10000000000000000000306 /* APIConfig.swift */,
+				A10000000000000000000307 /* FitFightAPI.swift */,
+				A10000000000000000000308 /* FriendshipStore.swift */,
 				A10000000000000000000302 /* SessionStore.swift */,
 				A10000000000000000000303 /* AppleSignInControl.swift */,
 				A10000000000000000000304 /* HealthKitStepsStore.swift */,
@@ -290,6 +302,10 @@
 				A1000000000000000000000F /* YouView.swift in Sources */,
 				A10000000000000000000021 /* ScreenshotExport.swift in Sources */,
 				A10000000000000000000311 /* SupabaseConfig.swift in Sources */,
+				A10000000000000000000315 /* BuildEnv.swift in Sources */,
+				A10000000000000000000316 /* APIConfig.swift in Sources */,
+				A10000000000000000000317 /* FitFightAPI.swift in Sources */,
+				A10000000000000000000318 /* FriendshipStore.swift in Sources */,
 				A10000000000000000000312 /* SessionStore.swift in Sources */,
 				A10000000000000000000313 /* AppleSignInControl.swift in Sources */,
 				A10000000000000000000314 /* HealthKitStepsStore.swift in Sources */,
@@ -456,7 +472,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.8.0;
+				MARKETING_VERSION = 0.9.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.fitfight.mvp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -492,7 +508,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.8.0;
+				MARKETING_VERSION = 0.9.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.fitfight.mvp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";

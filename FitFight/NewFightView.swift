@@ -2,10 +2,12 @@ import SwiftUI
 
 struct NewFightView: View {
     @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
 
     @State private var metric: MetricKind = .steps
-    @State private var selected: Set<String> = ["leo", "sam"]
+    @State private var selected: Set<String> = []
+    @State private var friendHandle = ""
     @State private var lengthDays = 7
     @State private var pickingDate = false
     @State private var endDate = Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
@@ -15,6 +17,14 @@ struct NewFightView: View {
     @State private var forfeit = ""
     @State private var settlement: SettlementKind = .winner
     @State private var dailyGoal = 10000.0
+
+    private var selectedPeople: [Person] {
+        model.people.filter { selected.contains($0.id) }
+    }
+
+    private var playerCount: Int { selectedPeople.count + 1 }
+
+    private var canStartSteps: Bool { metric == .steps }
 
     var body: some View {
         FFScreen {
@@ -38,10 +48,27 @@ struct NewFightView: View {
                     goalSection.padding(.top, theme.space.sectionGap)
                 }
                 summary.padding(.top, theme.space.sectionGap)
-                FFButton(title: "Start fight", icon: "arrow.right", iconTrailing: true) {
-                    model.tab = .fights
+                FFButton(
+                    title: "Start fight",
+                    icon: "arrow.right",
+                    iconTrailing: true,
+                    enabled: canStartSteps
+                ) {
+                    startFight()
                 }
                 .padding(.top, 16)
+                if !canStartSteps {
+                    Text("Steps only for now")
+                        .font(.ff(11))
+                        .foregroundStyle(theme.faint)
+                        .padding(.top, 8)
+                }
+                if let error = model.createError, !error.isEmpty {
+                    Text(error)
+                        .font(.ff(11))
+                        .foregroundStyle(theme.red)
+                        .padding(.top, 8)
+                }
             }
             .padding(.horizontal, theme.space.screenPadding)
             .padding(.top, 2)
@@ -66,7 +93,21 @@ struct NewFightView: View {
 
     private var peopleSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            FFSectionHeader(title: "Who's in", action: "\(selected.count + 1) players")
+            FFSectionHeader(title: "Who's in", action: "\(playerCount) players")
+            TextField("@handle", text: $friendHandle)
+                .font(.ff(15))
+                .foregroundStyle(theme.text)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .submitLabel(.join)
+                .padding(.horizontal, 16)
+                .frame(height: 52)
+                .background(theme.surface, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
+                        .strokeBorder(theme.line, lineWidth: 1)
+                }
+                .onSubmit { addFriendFromField() }
             FFPanel {
                 ForEach(Array(model.people.enumerated()), id: \.element.id) { index, person in
                     if index > 0 { FFHairline() }
@@ -227,7 +268,7 @@ struct NewFightView: View {
         (Text("\(lengthDays)-day \(metric.eyebrow.lowercased())")
             .font(.ff(14, .bold))
             .foregroundStyle(theme.text)
-        + Text(" fight with \(selected.count + 1) players, ending \(endLabel). \(stakeSummary).")
+        + Text(" fight with \(playerCount) players, ending \(endLabel). \(stakeSummary).")
             .font(.ff(14))
             .foregroundStyle(theme.muted))
             .lineSpacing(3)
@@ -237,7 +278,7 @@ struct NewFightView: View {
     }
 
     private var stakeSummary: String {
-        let players = selected.count + 1
+        let players = playerCount
         switch stake {
         case .bragging: return "Bragging rights only"
         case .ten: return "$10 each — the winner takes all $\(10 * players)"
@@ -347,6 +388,51 @@ struct NewFightView: View {
             }
         }
         .frame(width: Self.tickSize, height: Self.tickSize)
+    }
+
+    private func bareHandle(_ handle: String) -> String {
+        handle.hasPrefix("@") ? String(handle.dropFirst()) : handle
+    }
+
+    private func addFriendFromField() {
+        let raw = friendHandle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !raw.isEmpty else { return }
+        let handle = bareHandle(raw)
+        friendHandle = ""
+        Task {
+            await model.addFriend(handle: handle)
+            await model.refreshFromServer()
+        }
+    }
+
+    private func startFight() {
+        guard canStartSteps else { return }
+        guard session.isSignedIn else {
+            model.tab = .you
+            return
+        }
+        var inviteHandles = selectedPeople.map { bareHandle($0.handle) }
+        let typed = bareHandle(friendHandle.trimmingCharacters(in: .whitespacesAndNewlines))
+        if !typed.isEmpty, !inviteHandles.contains(typed) {
+            inviteHandles.append(typed)
+        }
+        Task {
+            await model.createAndStartFight(
+                startsAt: Date(),
+                endsAt: endDate,
+                outcomeRule: settlement,
+                stake: stake,
+                customKind: customKind,
+                customMoney: customMoney,
+                actionText: forfeit,
+                dailyGoal: dailyGoal,
+                inviteHandles: inviteHandles
+            )
+            if (model.createError ?? "").isEmpty {
+                model.tab = .fights
+                await model.refreshFromServer()
+            }
+        }
     }
 
     private func stepper(_ label: String, minus: @escaping () -> Void, plus: @escaping () -> Void) -> some View {

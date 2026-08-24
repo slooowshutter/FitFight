@@ -63,6 +63,12 @@ lists contributing apps when HealthKit names them. Empty reads say “No accessi
 You → Settings has **Delete account**. Fights are still fixtures. HealthKit is not
 uploaded to the server yet.
 
+## v0.9 (live Steps Fight)
+
+Sign in, add friends by handle, start a real Steps fight. Apple Health uploads to the
+server. Standings come from the database. Fights are no longer the fixture people.
+The Design tab still previews the old mock. Requests is unchanged.
+
 ## Not this project
 
 - Hermes (a home-Mac agent) is unrelated. Ignore it.
@@ -70,4 +76,4 @@ uploaded to the server yet.
 
 ## Next product work
 
-The living list is [`backlog.md`](backlog.md). You can sign in with Apple and read Apple Health Steps on You. Fights are still fixtures. The golden guide is [`system-design.md`](system-design.md) — follow it, do not implement all of it. First real Metric is **Steps**. Don’t invent the gaps listed in [`design/source/INVENTORY.md`](design/source/INVENTORY.md).
+The living list is [`backlog.md`](backlog.md). You can sign in, add friends, start a Steps fight, and see live standings. The golden guide is [`system-design.md`](system-design.md) — follow it, do not implement all of it. First real Metric is **Steps**. Don’t invent the gaps listed in [`design/source/INVENTORY.md`](design/source/INVENTORY.md).

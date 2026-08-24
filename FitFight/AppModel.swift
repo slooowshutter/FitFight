@@ -1,4 +1,5 @@
 import Foundation
+import Supabase
 import SwiftUI
 
 enum MetricKind: String, CaseIterable, Identifiable {
@@ -176,6 +177,7 @@ struct HistoryItem: Identifiable, Hashable {
     var won: Bool
 }
 
+@MainActor
 final class AppModel: ObservableObject {
     @Published var tab: FFTab = .fights {
         didSet {
@@ -189,24 +191,667 @@ final class AppModel: ObservableObject {
     @Published var showingVersions = false
     @Published var voted: Set<String> = ["r1", "r3", "r6"]
     @Published var joined: Set<String> = []
+    @Published var createError: String?
 
-    let you = Person(id: "you", name: "You", handle: "@maya.moves", initials: "MM", isYou: true)
-    let people: [Person]
-    let fights: [Fight]
+    @Published var you: Person
+    @Published var people: [Person]
+    @Published var fights: [Fight]
+    @Published var history: [HistoryItem]
+
     let requests: [RequestItem]
-    let history: [HistoryItem]
 
-    init() {
+    private var session: SessionStore?
+    private let api = FitFightAPI()
+    private var inviteTokens: [String: String] = [:]
+
+    static var preview: AppModel { AppModel(fixtures: true) }
+
+    static var shouldLoadFixtures: Bool {
+        let env = ProcessInfo.processInfo.environment
+        return env["FF_SHOOT"] == "1" || env["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
+    }
+
+    convenience init() {
+        self.init(fixtures: Self.shouldLoadFixtures)
+    }
+
+    convenience init(preview: Void) {
+        self.init(fixtures: true)
+    }
+
+    init(fixtures: Bool) {
+        let bundle = AppModelFixtures.load()
+        you = bundle.you
+        requests = bundle.requests
+        if fixtures {
+            people = bundle.people
+            fights = bundle.fights
+            history = bundle.history
+        } else {
+            people = []
+            fights = []
+            history = []
+        }
+    }
+
+    func fight(id: String) -> Fight? {
+        fights.first { $0.id == id }
+    }
+
+    var live: [Fight] { fights.filter { $0.status == .live } }
+    var invitations: [Fight] { fights.filter { $0.status == .invited } }
+    var finished: [Fight] { fights.filter { $0.status == .finished } }
+
+    var projectedNet: Int {
+        live.reduce(0) { $0 + (youStanding(in: $1)?.projectedNet ?? 0) }
+    }
+
+    func youStanding(in fight: Fight) -> Standing? {
+        fight.standings.first { $0.person.isYou }
+    }
+
+    func formatScore(_ value: Double, metric: MetricKind) -> String {
+        switch metric {
+        case .activeMinutes, .workouts:
+            return String(format: "%.0f", value)
+        case .steps:
+            if value >= 1000 {
+                return String(format: "%.1fk", value / 1000)
+            }
+            return String(format: "%.0f", value)
+        }
+    }
+
+    func formatDelta(_ value: Double, metric: MetricKind) -> String {
+        let body = formatScore(value, metric: metric)
+        if value > 0 { return "+\(body)" }
+        if value < 0 { return "−\(body)" }
+        return body
+    }
+
+    func projectedPace(_ row: Standing, in fight: Fight) -> Double {
+        let elapsed = max(1, fight.lengthDays - (fight.daysLeft ?? 0))
+        return row.score * Double(fight.lengthDays) / Double(elapsed)
+    }
+
+    func paceLine(_ row: Standing, in fight: Fight) -> String {
+        if row.invited { return "Hasn’t joined yet" }
+        if fight.status == .invited {
+            switch fight.metric {
+            case .activeMinutes: return "on pace for 0 min"
+            case .steps: return "on pace for 0 steps"
+            case .workouts: return "0 so far"
+            }
+        }
+        let pace = projectedPace(row, in: fight)
+        switch fight.metric {
+        case .activeMinutes:
+            return "on pace for \(Int(pace.rounded())) min"
+        case .steps:
+            return "on pace for \(formatScore(pace, metric: .steps))"
+        case .workouts:
+            return "\(Int(row.score)) so far"
+        }
+    }
+
+    func refreshFromServer() async {
+        guard let session else { return }
+        await refreshFromServer(session: session)
+    }
+
+    func refreshFromServer(session: SessionStore) async {
+        self.session = session
+        guard let userId = session.authSession?.user.id ?? session.client.auth.currentUser?.id else {
+            return
+        }
+        if let profile = session.profile {
+            you = Self.person(from: profile, isYou: true)
+        }
+
+        let friends = FriendshipStore(client: session.client)
+        do {
+            try await friends.load(userId: userId)
+            people = friends.friends.map { Self.person(from: $0, isYou: false) }
+        } catch {
+            people = []
+        }
+
+        do {
+            fights = try await loadFights(client: session.client, userId: userId)
+            history = fights
+                .filter { $0.status == .finished }
+                .map { fight in
+                    let net = youStanding(in: fight)?.projectedNet ?? 0
+                    return HistoryItem(
+                        id: fight.id,
+                        name: fight.name,
+                        detail: fight.listSubtitle,
+                        net: net,
+                        won: fight.rank == 1
+                    )
+                }
+        } catch {
+            fights = []
+            history = []
+        }
+    }
+
+    func createAndStartFight(
+        name: String = "Steps Fight",
+        startsAt: Date,
+        endsAt: Date,
+        outcomeRule: SettlementKind,
+        stake: StakeKind,
+        customKind: CustomStakeKind = .money,
+        customMoney: Int = 15,
+        actionText: String? = nil,
+        dailyGoal: Double? = nil,
+        inviteHandles: [String]
+    ) async {
+        createError = nil
+        guard let token = session?.authSession?.accessToken else {
+            createError = "Sign in to start a fight."
+            return
+        }
+
+        let stakePair = Self.apiStake(stake: stake, customKind: customKind, customMoney: customMoney)
+        let payload = FitFightCreateFight(
+            name: name,
+            startsAt: startsAt,
+            endsAt: max(endsAt, startsAt.addingTimeInterval(60)),
+            timeZone: TimeZone.current.identifier,
+            outcomeRule: Self.apiOutcome(outcomeRule),
+            goalPolicy: outcomeRule == .goal ? "shared" : nil,
+            defaultGoalValue: outcomeRule == .goal ? dailyGoal : nil,
+            stakeKind: stakePair.kind,
+            stakeMinor: stakePair.minor,
+            currency: stakePair.kind == "money" ? "USD" : nil,
+            actionText: stake == .custom && customKind == .action ? actionText : nil,
+            inviteHandles: inviteHandles,
+            start: "now"
+        )
+
+        do {
+            let created = try await api.createFight(
+                payload,
+                accessToken: token,
+                idempotencyKey: UUID().uuidString
+            )
+            if created.state != "live" && created.state != "scheduled" {
+                _ = try? await api.start(fightID: created.id, accessToken: token)
+            }
+            await refreshFromServer()
+        } catch {
+            createError = (error as? LocalizedError)?.errorDescription ?? "Couldn’t start the fight."
+        }
+    }
+
+    func acceptInvite(token: String) async throws {
+        createError = nil
+        guard let access = session?.authSession?.accessToken else {
+            throw FitFightAPIError.notConfigured
+        }
+        let summary = try await api.accept(token: token, accessToken: access)
+        inviteTokens[summary.id.uuidString] = token
+        await refreshFromServer()
+    }
+
+    func acceptFight(id: String) async {
+        createError = nil
+        if let token = inviteTokens[id] {
+            do {
+                try await acceptInvite(token: token)
+            } catch {
+                createError = (error as? LocalizedError)?.errorDescription ?? "Couldn’t accept."
+            }
+            return
+        }
+        guard let access = session?.authSession?.accessToken, let fightID = UUID(uuidString: id) else {
+            createError = "Sign in to accept this fight."
+            return
+        }
+        do {
+            _ = try await api.acceptFight(fightID: fightID, accessToken: access)
+            joined.insert(id)
+            await refreshFromServer()
+        } catch {
+            createError = (error as? LocalizedError)?.errorDescription ?? "Couldn’t accept."
+        }
+    }
+
+    func addFriend(handle: String) async {
+        createError = nil
+        guard let session, let userId = session.authSession?.user.id else {
+            createError = "Sign in to add a friend."
+            return
+        }
+        let store = FriendshipStore(client: session.client)
+        do {
+            try await store.requestFriendship(handle: handle, requesterId: userId)
+            await refreshFromServer(session: session)
+        } catch {
+            createError = (error as? LocalizedError)?.errorDescription ?? "Couldn’t add that friend."
+        }
+    }
+
+    private func loadFights(client: SupabaseClient, userId: UUID) async throws -> [Fight] {
+        let memberSelect = "fight_id, user_id, state, current_value, rank, outcome_minor, personal_target, final_value"
+        let fightSelect = "id, owner_id, name, state, starts_at, ends_at, time_zone, metric, outcome_rule, goal_policy, default_goal_value, stake_kind, stake_minor, currency, action_text"
+
+        let myRows: [MemberRow] = try await client.from("fight_members")
+            .select(memberSelect)
+            .eq("user_id", value: userId)
+            .execute()
+            .value
+        var fightIDs = Set(myRows.map(\.fightId))
+
+        let owned: [FightRow] = try await client.from("fights")
+            .select(fightSelect)
+            .eq("owner_id", value: userId)
+            .execute()
+            .value
+        owned.forEach { fightIDs.insert($0.id) }
+
+        guard !fightIDs.isEmpty else { return [] }
+
+        let fightRows: [FightRow] = try await client.from("fights")
+            .select(fightSelect)
+            .in("id", values: fightIDs.map(\.uuidString))
+            .execute()
+            .value
+
+        let memberRows: [MemberRow] = try await client.from("fight_members")
+            .select(memberSelect)
+            .in("fight_id", values: fightIDs.map(\.uuidString))
+            .execute()
+            .value
+
+        var profileIDs = Set(memberRows.map(\.userId))
+        fightRows.forEach { profileIDs.insert($0.ownerId) }
+        let profiles = try await Self.fetchProfiles(client: client, ids: Array(profileIDs))
+        let byProfile = Dictionary(uniqueKeysWithValues: profiles.map { ($0.userId, $0) })
+        let membersByFight = Dictionary(grouping: memberRows, by: \.fightId)
+        let myByFight = Dictionary(uniqueKeysWithValues: myRows.map { ($0.fightId, $0) })
+
+        return fightRows.compactMap { row in
+            Self.mapFight(
+                row,
+                members: membersByFight[row.id] ?? [],
+                mine: myByFight[row.id],
+                profiles: byProfile,
+                userId: userId,
+                formatScore: formatScore
+            )
+        }
+    }
+
+    private static func fetchProfiles(client: SupabaseClient, ids: [UUID]) async throws -> [FitFightProfile] {
+        guard !ids.isEmpty else { return [] }
+        return try await client.from("profiles")
+            .select("user_id, handle, display_name")
+            .in("user_id", values: ids.map(\.uuidString))
+            .execute()
+            .value
+    }
+
+    private static func person(from profile: FitFightProfile, isYou: Bool) -> Person {
+        Person(
+            id: profile.userId.uuidString,
+            name: isYou ? (profile.displayName.isEmpty ? "You" : profile.displayName) : profile.displayName,
+            handle: profile.atHandle,
+            initials: profile.initials,
+            isYou: isYou
+        )
+    }
+
+    private static func apiOutcome(_ settlement: SettlementKind) -> String {
+        switch settlement {
+        case .winner: return "highest_total"
+        case .proportional: return "proportional"
+        case .goal: return "hit_your_goal"
+        }
+    }
+
+    private static func apiStake(
+        stake: StakeKind,
+        customKind: CustomStakeKind,
+        customMoney: Int
+    ) -> (kind: String, minor: Int?) {
+        switch stake {
+        case .bragging:
+            return ("bragging", nil)
+        case .ten:
+            return ("money", 1000)
+        case .custom:
+            if customKind == .action { return ("action", nil) }
+            return ("money", max(0, customMoney) * 100)
+        }
+    }
+
+    private static func mapFight(
+        _ row: FightRow,
+        members: [MemberRow],
+        mine: MemberRow?,
+        profiles: [UUID: FitFightProfile],
+        userId: UUID,
+        formatScore: (Double, MetricKind) -> String
+    ) -> Fight? {
+        if row.state == "draft" { return nil }
+
+        let settlement: SettlementKind
+        switch row.outcomeRule {
+        case "proportional": settlement = .proportional
+        case "hit_your_goal": settlement = .goal
+        default: settlement = .winner
+        }
+
+        let accepted = members.filter { $0.state == "accepted" }
+        let pendingMembers = members.filter { $0.state == "invited" }
+        let buyIn = row.stakeKind == "money" ? (row.stakeMinor ?? 0) / 100 : 0
+        let pot = row.stakeKind == "money" ? buyIn * accepted.count : 0
+
+        let starts = row.startsAtDate
+        let ends = row.endsAtDate
+        let lengthDays = max(1, Calendar.current.dateComponents([.day], from: starts, to: ends).day ?? 1)
+
+        let status: FightStatus
+        switch row.state {
+        case "final", "cancelled":
+            status = .finished
+        case "inviting" where mine?.state == "invited":
+            status = .invited
+        default:
+            status = .live
+        }
+
+        let daysLeft: Int?
+        if row.state == "awaiting_final_sync" {
+            daysLeft = 0
+        } else if status == .finished {
+            daysLeft = nil
+        } else {
+            daysLeft = max(0, Calendar.current.dateComponents([.day], from: Date(), to: ends).day ?? 0)
+        }
+
+        let people = members.map { member -> Standing in
+            let profile = profiles[member.userId]
+            let person: Person
+            if let profile {
+                person = Self.person(from: profile, isYou: member.userId == userId)
+            } else {
+                person = Person(
+                    id: member.userId.uuidString,
+                    name: member.userId == userId ? "You" : "Fighter",
+                    handle: "@user",
+                    initials: "FF",
+                    isYou: member.userId == userId
+                )
+            }
+            let score = member.currentValue ?? member.finalValue ?? 0
+            let net = (member.outcomeMinor ?? 0) / 100
+            return Standing(
+                person: person,
+                score: score,
+                today: 0,
+                projectedNet: net,
+                invited: member.state == "invited"
+            )
+        }
+        .sorted { lhs, rhs in
+            if lhs.invited != rhs.invited { return !lhs.invited && rhs.invited }
+            if lhs.score == rhs.score { return lhs.person.name < rhs.person.name }
+            return lhs.score > rhs.score
+        }
+
+        let joined = people.filter { !$0.invited }
+        let youRow = people.first { $0.person.isYou }
+        let rank = youRow.flatMap { row in joined.firstIndex { $0.person.id == row.person.id }.map { $0 + 1 } }
+            ?? mine?.rank
+            ?? 0
+        let of = max(joined.count, 1)
+        let owner = profiles[row.ownerId].map { Self.person(from: $0, isYou: $0.userId == userId) }
+        let ownerName = owner?.name ?? "Someone"
+
+        let payoutLine: String
+        if row.stakeKind == "bragging" || pot == 0 && row.stakeKind != "money" {
+            payoutLine = row.actionText?.isEmpty == false ? (row.actionText ?? "Bragging rights only") : "Bragging rights only"
+        } else {
+            switch settlement {
+            case .winner:
+                payoutLine = "Winner takes the whole $\(pot)"
+            case .proportional:
+                payoutLine = "Your share of the steps is your share of the pot"
+            case .goal:
+                let goal = row.defaultGoalValue ?? 10000
+                payoutLine = "Hit \(Self.shortSteps(goal)) steps/day and your $\(buyIn) comes back"
+            }
+        }
+
+        var kickerPrefix = ""
+        var kickerEmphasis = ""
+        var kickerRest = ""
+        var listSubtitle = ""
+        var invitePitch: String?
+        var inviteAction: String?
+        var endedLabel: String?
+        var standingsMeta: String?
+
+        switch status {
+        case .invited:
+            invitePitch = "\(ownerName) wants a piece of you"
+            inviteAction = "Accept"
+            kickerEmphasis = invitePitch ?? ""
+            let stakeBit = pot > 0 ? "$\(pot) pot" : "No stake"
+            listSubtitle = "\(ownerName) · \(lengthDays) days · \(stakeBit)"
+            standingsMeta = "\(accepted.count) in · \(pendingMembers.count) not replied"
+        case .finished:
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MMM d"
+            endedLabel = "Ended \(formatter.string(from: ends))"
+            listSubtitle = "\(endedLabel ?? "Ended") · \(Self.ordinal(rank)) of \(of)"
+            kickerPrefix = rank == 1 ? "Won by" : "Finished"
+            kickerEmphasis = Self.ordinal(rank)
+        case .live:
+            if row.state == "awaiting_final_sync" {
+                kickerEmphasis = "Syncing final steps"
+                listSubtitle = "0d left"
+            } else if let youRow, let leader = joined.first, !youRow.invited {
+                if youRow.person.id == leader.person.id {
+                    kickerPrefix = "Holding"
+                    kickerEmphasis = "1st"
+                    kickerRest = "with \(daysLeft ?? 0)d to go"
+                    listSubtitle = "Holding 1st with \(daysLeft ?? 0)d to go"
+                } else {
+                    let gap = leader.score - youRow.score
+                    kickerEmphasis = formatScore(max(0, gap), .steps)
+                    kickerRest = "behind \(leader.person.name)"
+                    listSubtitle = "\(kickerEmphasis) behind \(leader.person.name)"
+                }
+            } else {
+                kickerEmphasis = "\(daysLeft ?? 0)d left"
+                listSubtitle = kickerEmphasis
+            }
+        }
+
+        let short = row.id.uuidString.replacingOccurrences(of: "-", with: "")
+        let code = "FIGHT-" + String(short.prefix(3)).uppercased()
+
+        return Fight(
+            id: row.id.uuidString,
+            code: code,
+            name: row.name,
+            metric: .steps,
+            lengthDays: lengthDays,
+            daysLeft: daysLeft,
+            endedLabel: endedLabel,
+            pot: pot,
+            buyIn: buyIn,
+            settlement: settlement,
+            status: status,
+            rank: rank,
+            of: of,
+            pending: pendingMembers.count,
+            kickerPrefix: kickerPrefix,
+            kickerEmphasis: kickerEmphasis,
+            kickerRest: kickerRest,
+            listSubtitle: listSubtitle,
+            payoutLine: payoutLine,
+            invitePitch: invitePitch,
+            inviteAction: inviteAction,
+            standingsMeta: standingsMeta,
+            dailyGoal: row.defaultGoalValue,
+            standings: people
+        )
+    }
+
+    private static func shortSteps(_ value: Double) -> String {
+        if value >= 1000 { return String(format: "%.1fk", value / 1000) }
+        return String(format: "%.0f", value)
+    }
+
+    private static func ordinal(_ value: Int) -> String {
+        switch value {
+        case 1: return "1st"
+        case 2: return "2nd"
+        case 3: return "3rd"
+        default: return "\(value)th"
+        }
+    }
+}
+
+private struct FightRow: Decodable {
+    let id: UUID
+    let ownerId: UUID
+    let name: String
+    let state: String
+    let startsAt: String
+    let endsAt: String
+    let timeZone: String
+    let metric: String
+    let outcomeRule: String
+    let goalPolicy: String
+    let defaultGoalValue: Double?
+    let stakeKind: String
+    let stakeMinor: Int?
+    let currency: String?
+    let actionText: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case ownerId = "owner_id"
+        case name
+        case state
+        case startsAt = "starts_at"
+        case endsAt = "ends_at"
+        case timeZone = "time_zone"
+        case metric
+        case outcomeRule = "outcome_rule"
+        case goalPolicy = "goal_policy"
+        case defaultGoalValue = "default_goal_value"
+        case stakeKind = "stake_kind"
+        case stakeMinor = "stake_minor"
+        case currency
+        case actionText = "action_text"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        ownerId = try container.decode(UUID.self, forKey: .ownerId)
+        name = try container.decode(String.self, forKey: .name)
+        state = try container.decode(String.self, forKey: .state)
+        startsAt = try container.decode(String.self, forKey: .startsAt)
+        endsAt = try container.decode(String.self, forKey: .endsAt)
+        timeZone = try container.decode(String.self, forKey: .timeZone)
+        metric = try container.decode(String.self, forKey: .metric)
+        outcomeRule = try container.decode(String.self, forKey: .outcomeRule)
+        goalPolicy = try container.decode(String.self, forKey: .goalPolicy)
+        stakeKind = try container.decode(String.self, forKey: .stakeKind)
+        stakeMinor = try container.decodeIfPresent(Int.self, forKey: .stakeMinor)
+        currency = try container.decodeIfPresent(String.self, forKey: .currency)
+        actionText = try container.decodeIfPresent(String.self, forKey: .actionText)
+        if let value = try? container.decode(Double.self, forKey: .defaultGoalValue) {
+            defaultGoalValue = value
+        } else if let value = try? container.decode(Int.self, forKey: .defaultGoalValue) {
+            defaultGoalValue = Double(value)
+        } else if let value = try? container.decode(String.self, forKey: .defaultGoalValue) {
+            defaultGoalValue = Double(value)
+        } else {
+            defaultGoalValue = nil
+        }
+    }
+
+    var startsAtDate: Date { Self.parse(startsAt) ?? Date() }
+    var endsAtDate: Date { Self.parse(endsAt) ?? Date().addingTimeInterval(86400) }
+
+    private static func parse(_ raw: String) -> Date? {
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = iso.date(from: raw) { return date }
+        iso.formatOptions = [.withInternetDateTime]
+        return iso.date(from: raw)
+    }
+}
+
+private struct MemberRow: Decodable {
+    let fightId: UUID
+    let userId: UUID
+    let state: String
+    let currentValue: Double?
+    let rank: Int?
+    let outcomeMinor: Int?
+    let personalTarget: Double?
+    let finalValue: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case fightId = "fight_id"
+        case userId = "user_id"
+        case state
+        case currentValue = "current_value"
+        case rank
+        case outcomeMinor = "outcome_minor"
+        case personalTarget = "personal_target"
+        case finalValue = "final_value"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        fightId = try container.decode(UUID.self, forKey: .fightId)
+        userId = try container.decode(UUID.self, forKey: .userId)
+        state = try container.decode(String.self, forKey: .state)
+        rank = try container.decodeIfPresent(Int.self, forKey: .rank)
+        outcomeMinor = try container.decodeIfPresent(Int.self, forKey: .outcomeMinor)
+        currentValue = Self.number(container, .currentValue)
+        personalTarget = Self.number(container, .personalTarget)
+        finalValue = Self.number(container, .finalValue)
+    }
+
+    private static func number(_ container: KeyedDecodingContainer<CodingKeys>, _ key: CodingKeys) -> Double? {
+        if let value = try? container.decode(Double.self, forKey: key) { return value }
+        if let value = try? container.decode(Int.self, forKey: key) { return Double(value) }
+        if let value = try? container.decode(String.self, forKey: key) { return Double(value) }
+        return nil
+    }
+}
+
+private enum AppModelFixtures {
+    struct Bundle {
+        var you: Person
+        var people: [Person]
+        var fights: [Fight]
+        var requests: [RequestItem]
+        var history: [HistoryItem]
+    }
+
+    static func load() -> Bundle {
         let leo = Person(id: "leo", name: "Leo", handle: "@leo.runs", initials: "L")
         let sam = Person(id: "sam", name: "Sam", handle: "@sam.sweats", initials: "S")
         let ivy = Person(id: "ivy", name: "Ivy", handle: "@ivy.climbs", initials: "I")
         let theo = Person(id: "theo", name: "Theo", handle: "@theo.rows", initials: "T")
         let nina = Person(id: "nina", name: "Nina", handle: "@nina.lifts", initials: "N")
-        people = [leo, sam, nina, theo, ivy]
-
         let you = Person(id: "you", name: "You", handle: "@maya.moves", initials: "MM", isYou: true)
 
-        fights = [
+        let fights = [
             Fight(
                 id: "sweat",
                 code: "FIGHT-742",
@@ -377,7 +1022,7 @@ final class AppModel: ObservableObject {
             )
         ]
 
-        requests = [
+        let requests = [
             RequestItem(
                 id: "r1",
                 title: "Custom challenge length",
@@ -457,68 +1102,14 @@ final class AppModel: ObservableObject {
             )
         ]
 
-        history = [
-            HistoryItem(id: "weekend", name: "Weekend Step Duel", detail: "Ended Jul 13 · 1st of 2", net: 10, won: true)
-        ]
-    }
-
-    func fight(id: String) -> Fight? {
-        fights.first { $0.id == id }
-    }
-
-    var live: [Fight] { fights.filter { $0.status == .live } }
-    var invitations: [Fight] { fights.filter { $0.status == .invited } }
-    var finished: [Fight] { fights.filter { $0.status == .finished } }
-
-    var projectedNet: Int {
-        live.reduce(0) { $0 + (youStanding(in: $1)?.projectedNet ?? 0) }
-    }
-
-    func youStanding(in fight: Fight) -> Standing? {
-        fight.standings.first { $0.person.isYou }
-    }
-
-    func formatScore(_ value: Double, metric: MetricKind) -> String {
-        switch metric {
-        case .activeMinutes, .workouts:
-            return String(format: "%.0f", value)
-        case .steps:
-            if value >= 1000 {
-                return String(format: "%.1fk", value / 1000)
-            }
-            return String(format: "%.0f", value)
-        }
-    }
-
-    func formatDelta(_ value: Double, metric: MetricKind) -> String {
-        let body = formatScore(value, metric: metric)
-        if value > 0 { return "+\(body)" }
-        if value < 0 { return "−\(body)" }
-        return body
-    }
-
-    func projectedPace(_ row: Standing, in fight: Fight) -> Double {
-        let elapsed = max(1, fight.lengthDays - (fight.daysLeft ?? 0))
-        return row.score * Double(fight.lengthDays) / Double(elapsed)
-    }
-
-    func paceLine(_ row: Standing, in fight: Fight) -> String {
-        if row.invited { return "Hasn’t joined yet" }
-        if fight.status == .invited {
-            switch fight.metric {
-            case .activeMinutes: return "on pace for 0 min"
-            case .steps: return "on pace for 0 steps"
-            case .workouts: return "0 so far"
-            }
-        }
-        let pace = projectedPace(row, in: fight)
-        switch fight.metric {
-        case .activeMinutes:
-            return "on pace for \(Int(pace.rounded())) min"
-        case .steps:
-            return "on pace for \(formatScore(pace, metric: .steps))"
-        case .workouts:
-            return "\(Int(row.score)) so far"
-        }
+        return Bundle(
+            you: you,
+            people: [leo, sam, nina, theo, ivy],
+            fights: fights,
+            requests: requests,
+            history: [
+                HistoryItem(id: "weekend", name: "Weekend Step Duel", detail: "Ended Jul 13 · 1st of 2", net: 10, won: true)
+            ]
+        )
     }
 }

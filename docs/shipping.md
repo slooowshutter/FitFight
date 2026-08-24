@@ -60,6 +60,19 @@ There is a separate Expo EAS key in App Store Connect. Do not reuse it.
 
 Do **not** add a Supabase `service_role` or `sb_secret_...` key to GitHub. Deploys use GitHub Integration. See [`backend.md`](backend.md).
 
+## GitHub variables (TestFlight environment)
+
+Names only. Never print values. Settings → Secrets and variables → Actions → Variables.
+
+| Variable | Used when | What it is |
+| --- | --- | --- |
+| `SUPABASE_STAGING_URL` | any TestFlight that is not `main` | Persistent `develop` Supabase project URL |
+| `SUPABASE_STAGING_PUBLISHABLE_KEY` | any TestFlight that is not `main` | Publishable key for that project (`sb_publishable_...`) |
+| `FITFIGHT_API_URL` | any TestFlight that is not `main` | Staging API base URL (empty = commands off) |
+| `FITFIGHT_API_PRODUCTION_URL` | TestFlight from `main` | Production API base URL (empty = commands off) |
+
+`main` always ships the known production Supabase URL/key. Missing staging variables warn and fall back to production; the job does not fail.
+
 ## What Marc still does
 
 - TestFlight install / Update when a build is ready (~10–20 min after a push).

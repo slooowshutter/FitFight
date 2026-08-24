@@ -143,11 +143,13 @@ private struct DesignPreview: View {
     @EnvironmentObject private var themeStore: ThemeStore
 
     private static let source = CGSize(width: 393, height: 620)
+    private static let fixtures = AppModel.preview
 
     var body: some View {
         let scale = width / Self.source.width
         let skin = variant.theme(themeStore.theme)
         return variant.fightsScreen
+            .environmentObject(Self.fixtures)
             .environment(\.ffStaticRender, true)
             .ffThemeOnly(skin)
             .frame(width: Self.source.width, height: Self.source.height, alignment: .top)

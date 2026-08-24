@@ -27,8 +27,12 @@ The phone’s job is: show the UI, read HealthKit / workouts when it is open (or
 
 ## Now
 
-- Smallest command API (create / invite / accept a Steps Fight).
-- HealthKit Steps upload. Not other metrics. Then replace fixture fights with server scores.
+- Marc: GitHub Actions variables `SUPABASE_STAGING_URL`, `SUPABASE_STAGING_PUBLISHABLE_KEY`, `FITFIGHT_API_URL` (and `FITFIGHT_API_PRODUCTION_URL` later). Apple Sign In On on the Supabase `develop` branch.
+- Marc: Vercel project, root `web/`, Preview + develop → Supabase develop secret; Production → main project.
+
+## Next
+
+- Try the two-phone loop on TestFlight (`develop` + staging API). Then App Store review when Marc says ship (`develop` → `main`).
 
 ## Later
 
@@ -58,4 +62,6 @@ From [`design/source/INVENTORY.md`](design/source/INVENTORY.md) — honest holes
 - v0.3 design port: four tabs, dark/light, 10 accents, fixture fights.
 - Talk to the boss on Requests: private chat with Marc, emailed to him.
 - Persistent GitHub `develop` + hosted Supabase branch `develop`.
-- Sign in with Apple on You, real `profiles` handle, Apple Health Steps read on You → Data sources, Delete account under You → Settings. No HealthKit upload yet. Fixture fights stay.
+- Sign in with Apple on You, real `profiles` handle, Apple Health Steps read on You → Data sources, Delete account under You → Settings.
+- Smallest command API: create / invite / accept a Steps Fight. New fight starts a real fight; fight detail Accept/Join accepts it.
+- HealthKit Steps upload. Standings come from the database. Fights are no longer the fixture people. Design tab still previews the old mock.

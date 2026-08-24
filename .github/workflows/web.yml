@@ -1,0 +1,37 @@
+name: Web API
+
+on:
+  pull_request:
+    paths:
+      - "web/**"
+      - "contracts/**"
+      - ".github/workflows/web.yml"
+  push:
+    branches: [main, develop]
+    paths:
+      - "web/**"
+      - "contracts/**"
+      - ".github/workflows/web.yml"
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck:
+    name: Typecheck and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test

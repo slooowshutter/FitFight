@@ -15,6 +15,9 @@ final class HealthKitStepsStore: ObservableObject {
 
     private let store = HKHealthStore()
     private let askedKey = "ff.healthkit.stepsAsked"
+    private let connectedKey = "ff.healthkit.appleHealthConnected"
+    private let lastUploadDayKey = "ff.healthkit.lastUploadDay"
+    private var isUploading = false
 
     var hasAsked: Bool {
         UserDefaults.standard.bool(forKey: askedKey)
@@ -81,9 +84,105 @@ final class HealthKitStepsStore: ObservableObject {
         }
     }
 
+    /// Upload Apple Health daily aggregates. No-ops if the command API is missing.
+    func syncToServer(api: FitFightAPI, accessToken: String) async {
+        guard api.isConfigured, hasAsked, !isUploading else { return }
+        guard
+            HKHealthStore.isHealthDataAvailable(),
+            let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount)
+        else { return }
+
+        isUploading = true
+        defer { isUploading = false }
+
+        do {
+            if !UserDefaults.standard.bool(forKey: connectedKey) {
+                _ = try await api.connectAppleHealth(accessToken: accessToken)
+                UserDefaults.standard.set(true, forKey: connectedKey)
+            }
+
+            let calendar = Calendar.current
+            let today = calendar.startOfDay(for: Date())
+            let formatter = DateFormatter()
+            formatter.calendar = calendar
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.timeZone = calendar.timeZone
+            formatter.dateFormat = "yyyy-MM-dd"
+
+            let lastUploaded = UserDefaults.standard.string(forKey: lastUploadDayKey)
+            var days: [FitFightHealthKitDay] = []
+            days.reserveCapacity(31)
+            for offset in 0...30 {
+                guard let start = calendar.date(byAdding: .day, value: -offset, to: today) else { continue }
+                let day = formatter.string(from: start)
+                if offset > 0, let lastUploaded, day < lastUploaded { continue }
+                let end = offset == 0 ? Date() : calendar.date(byAdding: .day, value: 1, to: start) ?? start
+                let value = try await Self.dayAggregate(store: store, type: stepsType, start: start, end: end)
+                days.append(
+                    FitFightHealthKitDay(
+                        day: day,
+                        value: value,
+                        revision: 1
+                    )
+                )
+            }
+            guard !days.isEmpty else { return }
+
+            let sources: [String]
+            if case .steps(_, let labels) = status {
+                sources = labels
+            } else {
+                sources = []
+            }
+
+            let ack = try await api.uploadBatch(
+                FitFightHealthKitBatch(
+                    idempotencyKey: UUID().uuidString,
+                    sourceLabel: "Apple Health",
+                    contributingSourceLabels: sources,
+                    days: days
+                ),
+                accessToken: accessToken
+            )
+            _ = ack
+            UserDefaults.standard.set(formatter.string(from: today), forKey: lastUploadDayKey)
+        } catch {
+            // Command API may be missing or the upload may fail. Local read still works.
+        }
+    }
+
     private struct TodayAggregate {
         var count: Int
         var sources: [String]
+    }
+
+    /// One civil day's Apple Health aggregate. Do not sum every raw sample/source.
+    private static func dayAggregate(
+        store: HKHealthStore,
+        type: HKQuantityType,
+        start: Date,
+        end: Date
+    ) async throws -> Double {
+        try await withCheckedThrowingContinuation { continuation in
+            let predicate = HKQuery.predicateForSamples(
+                withStart: start,
+                end: end,
+                options: .strictStartDate
+            )
+            let query = HKStatisticsQuery(
+                quantityType: type,
+                quantitySamplePredicate: predicate,
+                options: .cumulativeSum
+            ) { _, stats, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                let value = stats?.sumQuantity()?.doubleValue(for: .count()) ?? 0
+                continuation.resume(returning: value)
+            }
+            store.execute(query)
+        }
     }
 
     /// HealthKit aggregate for today. Do not sum every raw sample/source.

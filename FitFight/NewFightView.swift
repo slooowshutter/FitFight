@@ -450,7 +450,6 @@ struct NewFightView: View {
             )
             if (model.createError ?? "").isEmpty {
                 model.tab = .fights
-                await model.refreshFromServer()
             }
         }
     }

@@ -11,9 +11,7 @@ struct FightDetailView: View {
 
     private var fight: Fight { model.fight(id: opened.id) ?? opened }
 
-    private var pendingJoin: Bool {
-        fight.status == .invited && !model.joined.contains(fight.id)
-    }
+    private var pendingJoin: Bool { fight.status == .invited }
 
     var body: some View {
         FFScreen(top: AnyView(nav)) {
@@ -107,13 +105,7 @@ struct FightDetailView: View {
                     .foregroundStyle(theme.muted)
                     .padding(.bottom, 22)
                 FFButton(title: fight.inviteAction == "Accept" ? "Accept challenge" : "Join fight") {
-                    Task {
-                        await model.acceptFight(id: fight.id)
-                        if (model.createError ?? "").isEmpty {
-                            model.joined.insert(fight.id)
-                            await model.refreshFromServer()
-                        }
-                    }
+                    Task { await model.acceptFight(id: fight.id) }
                 }
                 if let error = model.createError, !error.isEmpty {
                     Text(error)

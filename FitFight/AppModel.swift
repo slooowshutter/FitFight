@@ -192,7 +192,6 @@ final class AppModel: ObservableObject {
     @Published var openFightID: String?
     @Published var showingVersions = false
     @Published var voted: Set<String> = ["r1", "r3", "r6"]
-    @Published var joined: Set<String> = []
     @Published var createError: String?
     @Published var loadError: String?
 
@@ -297,15 +296,17 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func refreshFromServer() async {
-        guard let session else { return }
-        await refreshFromServer(session: session)
+    @discardableResult
+    func refreshFromServer() async -> Bool {
+        guard let session else { return false }
+        return await refreshFromServer(session: session)
     }
 
-    func refreshFromServer(session: SessionStore) async {
+    @discardableResult
+    func refreshFromServer(session: SessionStore) async -> Bool {
         self.session = session
         guard let userId = session.authSession?.user.id ?? session.client.auth.currentUser?.id else {
-            return
+            return false
         }
         if let profile = session.profile {
             you = Self.person(from: profile, isYou: true)
@@ -341,8 +342,10 @@ final class AppModel: ObservableObject {
                     )
                 }
             loadError = nil
+            return true
         } catch {
             loadError = "Couldn’t refresh fights. Pull to try again."
+            return false
         }
     }
 
@@ -386,7 +389,9 @@ final class AppModel: ObservableObject {
                 payload,
                 inviteHandles: inviteHandles
             )
-            await refreshFromServer()
+            if await !refreshFromServer() {
+                loadError = "Fight started. Pull to see it."
+            }
         } catch {
             createError = (error as? LocalizedError)?.errorDescription ?? "Couldn’t start the fight."
         }
@@ -399,31 +404,26 @@ final class AppModel: ObservableObject {
         }
         let summary = try await api.accept(token: token, accessToken: access)
         inviteTokens[summary.id.uuidString] = token
-        await refreshFromServer()
     }
 
     func acceptFight(id: String) async {
         createError = nil
-        if let token = inviteTokens[id], api.isConfigured {
-            do {
-                try await acceptInvite(token: token)
-            } catch {
-                createError = (error as? LocalizedError)?.errorDescription ?? "Couldn’t accept."
-            }
-            return
-        }
-        guard let session, let userId = session.authSession?.user.id, let fightID = UUID(uuidString: id) else {
-            createError = "Sign in to accept this fight."
-            return
-        }
         do {
-            try await session.client.from("fight_members")
-                .update(MemberAcceptUpdate(state: "accepted", acceptedAt: Self.isoNow()))
-                .eq("fight_id", value: fightID)
-                .eq("user_id", value: userId)
-                .execute()
-            joined.insert(id)
-            await refreshFromServer()
+            if let token = inviteTokens[id], api.isConfigured {
+                try await acceptInvite(token: token)
+            } else if let session, let userId = session.authSession?.user.id, let fightID = UUID(uuidString: id) {
+                try await session.client.from("fight_members")
+                    .update(MemberAcceptUpdate(state: "accepted", acceptedAt: Self.isoNow()))
+                    .eq("fight_id", value: fightID)
+                    .eq("user_id", value: userId)
+                    .execute()
+            } else {
+                createError = "Sign in to accept this fight."
+                return
+            }
+            if await !refreshFromServer() {
+                createError = loadError
+            }
         } catch {
             createError = (error as? LocalizedError)?.errorDescription ?? "Couldn’t accept."
         }

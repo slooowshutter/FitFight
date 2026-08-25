@@ -1,5 +1,13 @@
 # History
 
+## 2026-08-24 — freeze marketing version for TestFlight
+
+Apple beta-reviews the first build of each marketing version for external testers. We were bumping `0.4.1`, `0.5.0`, `0.8.0` on every user-facing PR, so friends waited every time. Rule: keep `MARKETING_VERSION` at `0.8.0`; CI still increments the build number; Changelog rows reuse `0.8.0`. Bump marketing version only for an App Store ship or if Marc asks.
+
+## 2026-08-24 — Sign in with Apple + HealthKit Steps read
+
+First slice of a real Steps Fight, still on the fixture Fights tab. You signs in with Apple (Supabase Auth), shows the `profiles` handle, reads today’s Apple Health aggregate Steps on Data sources, and can delete the account from Settings. HealthKit is not uploaded yet. Marketing version `0.8.0`.
+
 ## 2026-08-24 — delete feature branches on merge
 
 CI deletes the merged PR’s head branch. `main` and `develop` are kept. GitHub’s repo toggle stays off so shipping `develop` → `main` cannot delete `develop`.

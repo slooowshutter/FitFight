@@ -27,13 +27,8 @@ The phone’s job is: show the UI, read HealthKit / workouts when it is open (or
 
 ## Now
 
-- Persistent Supabase branch named `develop` (tracks GitHub `develop`). See [`backend.md`](backend.md).
-- After that: the minimum real Fight — authenticated people, Apple Health **Steps**, server-owned scores. Not Active Minutes. Not Workout Count. Not the rest of the system design.
-
-## Next
-
 - Smallest command API (create / invite / accept a Steps Fight).
-- HealthKit Steps upload. Not other metrics.
+- HealthKit Steps upload. Not other metrics. Then replace fixture fights with server scores.
 
 ## Later
 
@@ -62,3 +57,5 @@ From [`design/source/INVENTORY.md`](design/source/INVENTORY.md) — honest holes
 
 - v0.3 design port: four tabs, dark/light, 10 accents, fixture fights.
 - Talk to the boss on Requests: private chat with Marc, emailed to him.
+- Persistent GitHub `develop` + hosted Supabase branch `develop`.
+- Sign in with Apple on You, real `profiles` handle, Apple Health Steps read on You → Data sources, Delete account under You → Settings. No HealthKit upload yet. Fixture fights stay.

@@ -7,7 +7,8 @@ struct ReleaseNote: Identifiable, Hashable {
     let day: Int
     let notes: String
 
-    var id: String { "\(version)-\(year)-\(month)-\(day)" }
+    /// Several notes may share one marketing version (TestFlight does not bump it).
+    var id: String { "\(version)-\(year)-\(month)-\(day)-\(notes)" }
 
     var date: Date {
         var components = DateComponents()
@@ -23,6 +24,13 @@ struct ReleaseNote: Identifiable, Hashable {
 enum Changelog {
     /// Newest first. Add a row here whenever we ship a user-facing change.
     static let releases: [ReleaseNote] = [
+        ReleaseNote(
+            version: "0.8.0",
+            year: 2026,
+            month: 8,
+            day: 24,
+            notes: "You can sign in with Apple. You shows your real handle. You → Data sources reads today’s Steps from Apple Health (the HealthKit total, not every source added together) and lists contributing apps when HealthKit names them. Empty reads say “No accessible data”. You → Settings has Delete account."
+        ),
         ReleaseNote(
             version: "0.7.0",
             year: 2026,
@@ -102,10 +110,17 @@ enum Changelog {
         ),
     ]
 
+    /// Array is newest-first; same-day rows keep that order.
     static var newestFirst: [ReleaseNote] {
-        releases.sorted { lhs, rhs in
-            if lhs.date != rhs.date { return lhs.date > rhs.date }
-            return lhs.version > rhs.version
-        }
+        releases.enumerated().sorted { lhs, rhs in
+            if lhs.element.date != rhs.element.date {
+                return lhs.element.date > rhs.element.date
+            }
+            return lhs.offset < rhs.offset
+        }.map(\.element)
+    }
+
+    static var current: ReleaseNote? {
+        newestFirst.first { $0.version == AppVersion.marketing }
     }
 }

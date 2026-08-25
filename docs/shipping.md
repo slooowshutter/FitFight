@@ -24,7 +24,21 @@ Both **must** stay GitHub-hosted. Never `self-hosted`. Apple requires **Xcode 26
 
 Fastlane: `fastlane/Fastfile` lane `beta`. Archive uses automatic signing + App Store Connect API key (`-allowProvisioningUpdates`). Do **not** also set `export_xcargs` to the same `-authenticationKeyPath` flags — gym passes `xcargs` into export and duplicates the flag.
 
-Build number is not committed; CI sets `CURRENT_PROJECT_VERSION` at archive time.
+Build number is not committed; CI sets `CURRENT_PROJECT_VERSION` at archive time from TestFlight (`latest + 1`). Leave `MARKETING_VERSION` at `0.8.0`.
+
+## Versions vs builds (why friends wait)
+
+Apple beta-reviews the **first build of each marketing version** for external TestFlight groups (~1–2 days). Later builds of the *same* version — `0.8.0 (13)`, `0.8.0 (14)` — usually skip that wait and show up after processing (~10–20 min).
+
+That is why we do **not** bump `MARKETING_VERSION` on ordinary ships. We used to (0.4.1, 0.4.2, 0.5.0…) and every feature made testers wait for Apple again.
+
+| What | Who sets it | When it changes |
+| --- | --- | --- |
+| Marketing version (`0.8.0`) | `MARKETING_VERSION` in `project.pbxproj` | App Store ship, or Marc asked |
+| Build number (`13`) | CI / Fastlane at archive time | Every TestFlight upload |
+| Versions list | `FitFight/Changelog.swift` | Every user-facing change; reuse `0.8.0` |
+
+On-screen label is `0.8.0 (13)`. Testers tap Update; they do not need a new `0.8.x`.
 
 ## Seeing the UI without a build
 
@@ -78,7 +92,7 @@ Vercel also needs `CRON_SECRET` (Preview + Production). Vercel Cron sends it as 
 ## What Marc still does
 
 - TestFlight install / Update when a build is ready (~10–20 min after a push).
-- Internal testers (himself) vs external friends (first external build waits on Apple beta review ~1–2 days once).
+- Internal testers (himself) vs external friends. Internal: no Apple review. External: wait ~1–2 days **once per marketing version**, then later builds of that version skip the long review.
 - Apple account / legal / new secrets if they rotate.
 
 He should **not** operate certificates day to day, open Xcode, or use a Mac for builds.

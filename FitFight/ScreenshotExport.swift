@@ -36,17 +36,6 @@ enum ScreenshotExport {
             to: folder
         )
 
-        // One shot per design direction, so a change to any of them can be checked
-        // the same way the approved design is: download the artifact, look at it.
-        for variant in DesignVariant.allCases {
-            write(
-                variantFrame(variant, themeStore: themeStore, model: model),
-                name: "design-\(variant.rawValue)",
-                height: canvas.height,
-                to: folder
-            )
-        }
-
         try? Data("ok".utf8).write(to: folder.appendingPathComponent("done.txt"))
     }
 
@@ -69,8 +58,8 @@ enum ScreenshotExport {
                     .background(theme.bg)
                     .environmentObject(store)
                     .environmentObject(model)
-                    .environmentObject(DesignStore())
                     .environmentObject(SessionStore(preview: ()))
+                    .environmentObject(FriendshipStore(client: SessionStore(preview: ()).client))
                     .environmentObject(HealthKitStepsStore())
                     .environment(\.ffTheme, theme)
                     .environment(\.colorScheme, theme.colorScheme)
@@ -117,6 +106,7 @@ enum ScreenshotExport {
         model: AppModel
     ) -> AnyView {
         let theme = themeStore.theme
+        let session = SessionStore(preview: ())
         return AnyView(
             VStack(spacing: 0) {
                 VersionBanner()
@@ -128,33 +118,9 @@ enum ScreenshotExport {
             .background(theme.bg)
             .environmentObject(themeStore)
             .environmentObject(model)
-            .environmentObject(DesignStore())
-            .environmentObject(SessionStore(preview: ()))
+            .environmentObject(session)
+            .environmentObject(FriendshipStore(client: session.client))
             .environmentObject(HealthKitStepsStore())
-            .environment(\.ffTheme, theme)
-            .environment(\.colorScheme, theme.colorScheme)
-            .environment(\.ffStaticRender, true)
-        )
-    }
-
-    private static func variantFrame(
-        _ variant: DesignVariant,
-        themeStore: ThemeStore,
-        model: AppModel
-    ) -> AnyView {
-        let theme = variant.theme(themeStore.theme)
-        return AnyView(
-            VStack(spacing: 0) {
-                VersionBanner()
-                variant.fightsScreen
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                    .clipped()
-                FFTabBar(tab: .constant(.fights))
-            }
-            .background(theme.bg)
-            .environmentObject(themeStore)
-            .environmentObject(model)
-            .environmentObject(DesignStore())
             .environment(\.ffTheme, theme)
             .environment(\.colorScheme, theme.colorScheme)
             .environment(\.ffStaticRender, true)

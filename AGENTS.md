@@ -21,14 +21,14 @@ Read this first, then `docs/`. Marc talks from his phone, often transcribing. Be
 
 ## What exists (2026-08-25)
 
-Current map: [`docs/status.md`](docs/status.md). Sign-in works on TestFlight **0.9.0**. Live fight create / HealthKit upload / standings need Vercel (not live).
+Current map: [`docs/status.md`](docs/status.md). Sign-in, username, create/accept Steps fight, HealthKit upload, and standings work on staging after #30 is merged. No Vercel required for that path.
 
 - Native SwiftUI iOS app, scheme `FitFight`, bundle ID `com.fitfight.mvp`.
 - First TestFlight upload **succeeded** (build `0.1.0 (1)`). Latest user-facing ship: **0.9.0** welcome + develop Supabase.
 - TestFlight on every app push (PR branch or `main`), plus daily **18:00 UTC**.
 - Simulator compile on every PR.
 - Approved design dump in `docs/design/source/` (338 tokens, 76 screenshots). Dark/light + 10 accents.
-- Five tabs: Fights, New, Requests, **Design**, You. The Design tab switches the Fights screen between eleven directions (`original` + ten experiments) in `FitFight/Designs/`. Only `original` follows You → Look; the rest carry their own palette. See [docs/product.md](docs/product.md#v06-design-exploration).
+- Four tabs: Fights, New, Requests, You. The Design experiment tab is gone.
 
 **What works vs fake vs next:** [`docs/status.md`](docs/status.md). Read that before building.
 

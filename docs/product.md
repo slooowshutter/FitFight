@@ -26,13 +26,19 @@ The web kit in [`docs/design/source/`](design/source/README.md) is the look. Swi
 
 Marketing version: `0.8.0`. Frozen for TestFlight. CI bumps **build number** from TestFlight (`latest + 1`). Do **not** bump marketing version for a TestFlight ship — Apple re-reviews each new `0.8.x` / `0.9.0` for external testers. See [`shipping.md`](shipping.md#versions-vs-builds-why-friends-wait).
 
-## v0.6 (design exploration)
+## v0.6 (design exploration) — retired 25 Aug 2026
 
-A fifth tab, **Design**, holds eleven directions for the Fights screen — `original`
+The Design tab and the eleven experiment layouts are gone. The app is the
+approved v0.3 Fights screen plus You → Look. Source mocks stay in
+[`docs/design/source/`](design/source/README.md).
+
+Historical note (what it was):
+
+A fifth tab, **Design**, held eleven directions for the Fights screen — `original`
 plus ten experiments — rendered live side by side. Tap one and the whole app takes
 its palette. The pick persists in `UserDefaults` under `ff.design`.
 
-- One file per direction in [`FitFight/Designs/`](../FitFight/Designs/); `DesignVariant.swift`
+- One file per direction lived in `FitFight/Designs/`; `DesignVariant.swift`
   holds the enum, the palettes and the dispatcher.
 - A direction owns colour and corner radius only. Type scale and spacing still come
   from `tokens.json`, so the approved system is still the base underneath.
@@ -67,13 +73,12 @@ uploaded to the server yet.
 
 Sign in, add friends by handle, start a real Steps fight. Apple Health uploads to the
 server. Standings come from the database. Fights are no longer the fixture people.
-When the days are up the server closes the fight (app open or cron). Signed out, the
-app is only a welcome screen plus Sign in with Apple. The Design tab still previews
-the old mock. Requests is unchanged.
+When the days are up, opening the app marks the fight finished. Signed out, the
+app is only a welcome screen plus Sign in with Apple. Requests is unchanged.
 
-**Honest status (25 Aug 2026):** the iOS + `web/` code for that path is in PR #30.
-The phone can sign in and read local HealthKit. Create fight, upload, and standings
-are waiting on Vercel. See [`status.md`](status.md).
+**Honest status (25 Aug 2026):** the phone creates the fight, uploads Apple Health
+Steps, and reads standings from Supabase. Username onboarding is required. See
+[`status.md`](status.md).
 
 ## Not this project
 
@@ -82,4 +87,4 @@ are waiting on Vercel. See [`status.md`](status.md).
 
 ## Next product work
 
-Honest works / doesn’t / next: [`status.md`](status.md). The living list is [`backlog.md`](backlog.md). Sign-in works. Friends-by-handle talks to Supabase. Create fight, HealthKit upload, and standings need the Vercel API (not live yet). The golden guide is [`system-design.md`](system-design.md) — follow it, do not implement all of it. First real Metric is **Steps**. Don’t invent the gaps listed in [`design/source/INVENTORY.md`](design/source/INVENTORY.md).
+Honest works / doesn’t / next: [`status.md`](status.md). The living list is [`backlog.md`](backlog.md). Sign-in, username, create/accept a Steps fight, HealthKit upload, and standings work on the phone against staging Supabase. The golden guide is [`system-design.md`](system-design.md) — follow it, do not implement all of it. First real Metric is **Steps**. Don’t invent the gaps listed in [`design/source/INVENTORY.md`](design/source/INVENTORY.md).

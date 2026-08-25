@@ -4,9 +4,9 @@ enum AppVersion {
     static var label: String {
         let date = shippedOn
         if date.isEmpty {
-            return "\(marketing) (\(build)) · \(backend)"
+            return "\(marketing) · build \(build) · \(backend)"
         }
-        return "\(marketing) (\(build)) · \(backend) · \(date)"
+        return "\(marketing) · build \(build) · \(backend) · \(date)"
     }
 
     /// Date of the newest Changelog row for this marketing version.

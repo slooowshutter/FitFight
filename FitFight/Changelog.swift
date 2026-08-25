@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 8,
             day: 25,
+            notes: "Pick a username after sign-in. Start a Steps fight from the phone (no extra server). Apple Health uploads. Standings come from the database. Add friends on You with their username. Design tab is gone. Version line shows version and build number."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
+            day: 25,
             notes: "If you are not signed in you get a welcome screen (FitFight, a line of copy, Sign in with Apple). The tabs stay hidden until you are in."
         ),
         ReleaseNote(

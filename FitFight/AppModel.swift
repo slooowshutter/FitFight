@@ -152,6 +152,8 @@ struct Fight: Identifiable, Hashable {
     var dailyGoal: Double? = nil
     var standings: [Standing]
     var days: [FightDay] = []
+    var windowStart: Date = Date()
+    var windowEnd: Date = Date().addingTimeInterval(86400)
 }
 
 struct RequestItem: Identifiable, Hashable {
@@ -321,8 +323,11 @@ final class AppModel: ObservableObject {
         }
 
         do {
-            fights = try await loadFights(client: session.client, userId: userId)
-            history = fights
+            try await closeDueFights(client: session.client, userId: userId)
+            var loaded = try await loadFights(client: session.client, userId: userId)
+            loaded = try await overlayStepDays(loaded, client: session.client, userId: userId)
+            fights = loaded
+            history = loaded
                 .filter { $0.status == .finished }
                 .map { fight in
                     let net = youStanding(in: fight)?.projectedNet ?? 0
@@ -353,7 +358,7 @@ final class AppModel: ObservableObject {
         inviteHandles: [String]
     ) async {
         createError = nil
-        guard let token = session?.authSession?.accessToken else {
+        guard session?.authSession?.accessToken != nil else {
             createError = "Sign in to start a fight."
             return
         }
@@ -376,14 +381,10 @@ final class AppModel: ObservableObject {
         )
 
         do {
-            let created = try await api.createFight(
+            try await createFightOnClient(
                 payload,
-                accessToken: token,
-                idempotencyKey: UUID().uuidString
+                inviteHandles: inviteHandles
             )
-            if created.state != "live" && created.state != "scheduled" {
-                _ = try? await api.start(fightID: created.id, accessToken: token)
-            }
             await refreshFromServer()
         } catch {
             createError = (error as? LocalizedError)?.errorDescription ?? "Couldn’t start the fight."
@@ -402,7 +403,7 @@ final class AppModel: ObservableObject {
 
     func acceptFight(id: String) async {
         createError = nil
-        if let token = inviteTokens[id] {
+        if let token = inviteTokens[id], api.isConfigured {
             do {
                 try await acceptInvite(token: token)
             } catch {
@@ -410,17 +411,226 @@ final class AppModel: ObservableObject {
             }
             return
         }
-        guard let access = session?.authSession?.accessToken, let fightID = UUID(uuidString: id) else {
+        guard let session, let userId = session.authSession?.user.id, let fightID = UUID(uuidString: id) else {
             createError = "Sign in to accept this fight."
             return
         }
         do {
-            _ = try await api.acceptFight(fightID: fightID, accessToken: access)
+            try await session.client.from("fight_members")
+                .update(MemberAcceptUpdate(state: "accepted", acceptedAt: Self.isoNow()))
+                .eq("fight_id", value: fightID)
+                .eq("user_id", value: userId)
+                .execute()
             joined.insert(id)
             await refreshFromServer()
         } catch {
             createError = (error as? LocalizedError)?.errorDescription ?? "Couldn’t accept."
         }
+    }
+
+    private func createFightOnClient(
+        _ payload: FitFightCreateFight,
+        inviteHandles: [String]
+    ) async throws {
+        guard let session, let userId = session.authSession?.user.id else {
+            throw LiveFightError.notSignedIn
+        }
+
+        var inviteIds: [UUID] = []
+        let handles = inviteHandles
+            .map { FriendshipStore.strippedHandle($0) }
+            .filter { !$0.isEmpty }
+        if !handles.isEmpty {
+            let found: [FitFightProfile] = try await session.client.from("profiles")
+                .select("user_id, handle, display_name")
+                .in("handle", values: handles)
+                .execute()
+                .value
+            if let missing = handles.first(where: { want in !found.contains { $0.handle == want } }) {
+                throw LiveFightError.unknownHandle(missing)
+            }
+            inviteIds = found.map(\.userId).filter { $0 != userId }
+        }
+
+        let inserted: FightIDRow = try await session.client.from("fights")
+            .insert(
+                FightInsert(
+                    ownerId: userId,
+                    name: payload.name,
+                    state: "live",
+                    startsAt: Self.isoString(payload.startsAt),
+                    endsAt: Self.isoString(payload.endsAt),
+                    timeZone: payload.timeZone,
+                    metric: "steps",
+                    outcomeRule: payload.outcomeRule,
+                    goalPolicy: payload.goalPolicy ?? "shared",
+                    defaultGoalValue: payload.defaultGoalValue,
+                    stakeKind: payload.stakeKind,
+                    stakeMinor: payload.stakeMinor,
+                    currency: payload.currency,
+                    actionText: payload.actionText
+                )
+            )
+            .select("id")
+            .single()
+            .execute()
+            .value
+
+        var members = [
+            MemberInsert(
+                fightId: inserted.id,
+                userId: userId,
+                state: "accepted",
+                acceptedAt: Self.isoNow()
+            )
+        ]
+        members += inviteIds.map {
+            MemberInsert(fightId: inserted.id, userId: $0, state: "invited", acceptedAt: nil)
+        }
+        try await session.client.from("fight_members").insert(members).execute()
+    }
+
+    private func closeDueFights(client: SupabaseClient, userId: UUID) async throws {
+        let mine: [MemberRow] = try await client.from("fight_members")
+            .select("fight_id, user_id, state, current_value, rank, outcome_minor, personal_target, final_value")
+            .eq("user_id", value: userId)
+            .execute()
+            .value
+        var ids = Set(mine.map(\.fightId))
+        let owned: [FightIDRow] = try await client.from("fights")
+            .select("id")
+            .eq("owner_id", value: userId)
+            .execute()
+            .value
+        owned.forEach { ids.insert($0.id) }
+        guard !ids.isEmpty else { return }
+
+        let rows: [FightRow] = try await client.from("fights")
+            .select("id, owner_id, name, state, starts_at, ends_at, time_zone, metric, outcome_rule, goal_policy, default_goal_value, stake_kind, stake_minor, currency, action_text")
+            .in("id", values: ids.map(\.uuidString))
+            .execute()
+            .value
+        let due = rows.filter { row in
+            row.endsAtDate < Date() && row.state != "final" && row.state != "cancelled"
+        }
+        for row in due {
+            try? await client.from("fights")
+                .update(["state": "final"])
+                .eq("id", value: row.id)
+                .execute()
+        }
+    }
+
+    private func overlayStepDays(
+        _ fights: [Fight],
+        client: SupabaseClient,
+        userId: UUID
+    ) async throws -> [Fight] {
+        let ids = fights.flatMap { fight in
+            fight.standings.compactMap { UUID(uuidString: $0.person.id) }
+        }
+        guard !ids.isEmpty else { return fights }
+
+        let days: [StepDayRow]
+        do {
+            days = try await client.from("step_days")
+                .select("user_id, day, steps")
+                .in("user_id", values: ids.map(\.uuidString))
+                .execute()
+                .value
+        } catch {
+            return fights
+        }
+
+        let today = Self.dayStamp(Date())
+        var updated: [Fight] = []
+        updated.reserveCapacity(fights.count)
+        for fight in fights {
+            var next = fight
+            let window = Self.fightDayWindow(fight)
+            let people = fight.standings.map { row -> Standing in
+                var standing = row
+                guard let personID = UUID(uuidString: row.person.id) else { return row }
+                let mine = days.filter { $0.userId == personID && window.contains($0.day) }
+                standing.score = Double(mine.reduce(0) { $0 + $1.steps })
+                standing.today = Double(mine.first { $0.day == today }?.steps ?? 0)
+                return standing
+            }
+            .sorted { lhs, rhs in
+                if lhs.invited != rhs.invited { return !lhs.invited && rhs.invited }
+                if lhs.score == rhs.score { return lhs.person.name < rhs.person.name }
+                return lhs.score > rhs.score
+            }
+            next.standings = people
+            next.days = Self.dayCards(from: days, standings: people, window: window)
+            if let you = people.first(where: { $0.person.isYou }) {
+                next.rank = people.filter { !$0.invited }.firstIndex { $0.person.id == you.person.id }.map { $0 + 1 } ?? next.rank
+                if let fightID = UUID(uuidString: fight.id) {
+                    try? await client.from("fight_members")
+                        .update(CurrentValueUpdate(currentValue: you.score))
+                        .eq("fight_id", value: fightID)
+                        .eq("user_id", value: userId)
+                        .execute()
+                }
+            }
+            updated.append(next)
+        }
+        return updated
+    }
+
+    private static func fightDayWindow(_ fight: Fight) -> Set<String> {
+        let calendar = Calendar.current
+        var days: [String] = []
+        var cursor = calendar.startOfDay(for: fight.windowStart)
+        while cursor < fight.windowEnd && days.count <= 40 {
+            days.append(dayStamp(cursor))
+            guard let next = calendar.date(byAdding: .day, value: 1, to: cursor) else { break }
+            cursor = next
+        }
+        return Set(days)
+    }
+
+    private static func isoString(_ date: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.string(from: date)
+    }
+
+    private static func dayCards(
+        from days: [StepDayRow],
+        standings: [Standing],
+        window: Set<String>
+    ) -> [FightDay] {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar.current
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        let label = DateFormatter()
+        label.dateFormat = "EEE d MMM"
+        return window.sorted().map { day in
+            let scores = standings.map { row in
+                let personID = UUID(uuidString: row.person.id)
+                let value = days.first { $0.userId == personID && $0.day == day }?.steps ?? 0
+                return DayScore(person: row.person, value: Double(value))
+            }
+            let date = formatter.date(from: day) ?? Date()
+            return FightDay(label: label.string(from: date), scores: scores)
+        }
+    }
+
+    private static func dayStamp(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar.current
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone.current
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
+    }
+
+    private static func isoNow() -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.string(from: Date())
     }
 
     func addFriend(handle: String) async {
@@ -559,12 +769,11 @@ final class AppModel: ObservableObject {
         let lengthDays = max(1, Calendar.current.dateComponents([.day], from: starts, to: ends).day ?? 1)
 
         let status: FightStatus
-        switch row.state {
-        case "final", "cancelled":
-            status = .finished
-        case "inviting" where mine?.state == "invited":
+        if mine?.state == "invited" && row.state != "final" && row.state != "cancelled" {
             status = .invited
-        default:
+        } else if row.state == "final" || row.state == "cancelled" || ends < Date() {
+            status = .finished
+        } else {
             status = .live
         }
 
@@ -704,7 +913,9 @@ final class AppModel: ObservableObject {
             inviteAction: inviteAction,
             standingsMeta: standingsMeta,
             dailyGoal: row.defaultGoalValue,
-            standings: people
+            standings: people,
+            windowStart: starts,
+            windowEnd: ends
         )
     }
 
@@ -720,6 +931,102 @@ final class AppModel: ObservableObject {
         case 3: return "3rd"
         default: return "\(value)th"
         }
+    }
+}
+
+enum LiveFightError: LocalizedError {
+    case notSignedIn
+    case unknownHandle(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .notSignedIn:
+            return "Sign in to start a fight."
+        case .unknownHandle(let handle):
+            return "No one with @\(handle). They need to open the app and pick a username first."
+        }
+    }
+}
+
+private struct FightIDRow: Decodable {
+    let id: UUID
+}
+
+private struct FightInsert: Encodable {
+    let ownerId: UUID
+    let name: String
+    let state: String
+    let startsAt: String
+    let endsAt: String
+    let timeZone: String
+    let metric: String
+    let outcomeRule: String
+    let goalPolicy: String
+    let defaultGoalValue: Double?
+    let stakeKind: String
+    let stakeMinor: Int?
+    let currency: String?
+    let actionText: String?
+
+    enum CodingKeys: String, CodingKey {
+        case ownerId = "owner_id"
+        case name
+        case state
+        case startsAt = "starts_at"
+        case endsAt = "ends_at"
+        case timeZone = "time_zone"
+        case metric
+        case outcomeRule = "outcome_rule"
+        case goalPolicy = "goal_policy"
+        case defaultGoalValue = "default_goal_value"
+        case stakeKind = "stake_kind"
+        case stakeMinor = "stake_minor"
+        case currency
+        case actionText = "action_text"
+    }
+}
+
+private struct MemberInsert: Encodable {
+    let fightId: UUID
+    let userId: UUID
+    let state: String
+    let acceptedAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case fightId = "fight_id"
+        case userId = "user_id"
+        case state
+        case acceptedAt = "accepted_at"
+    }
+}
+
+private struct MemberAcceptUpdate: Encodable {
+    let state: String
+    let acceptedAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case state
+        case acceptedAt = "accepted_at"
+    }
+}
+
+private struct CurrentValueUpdate: Encodable {
+    let currentValue: Double
+
+    enum CodingKeys: String, CodingKey {
+        case currentValue = "current_value"
+    }
+}
+
+private struct StepDayRow: Decodable {
+    let userId: UUID
+    let day: String
+    let steps: Int
+
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case day
+        case steps
     }
 }
 

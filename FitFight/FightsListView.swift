@@ -10,6 +10,13 @@ struct FightsListView: View {
                 header
                     .padding(.bottom, 19)
 
+                if model.live.isEmpty && model.invitations.isEmpty && model.finished.isEmpty {
+                    Text("No fights yet. Start one under New. Add people with their username — they must have signed in once.")
+                        .font(.ff(13))
+                        .foregroundStyle(theme.faint)
+                        .padding(.bottom, 16)
+                }
+
                 VStack(spacing: theme.space.cardGap) {
                     ForEach(model.live) { fight in
                         Button {

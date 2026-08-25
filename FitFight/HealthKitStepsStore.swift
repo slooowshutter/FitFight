@@ -1,6 +1,7 @@
 import Combine
 import Foundation
 import HealthKit
+import Supabase
 
 @MainActor
 final class HealthKitStepsStore: ObservableObject {
@@ -84,9 +85,9 @@ final class HealthKitStepsStore: ObservableObject {
         }
     }
 
-    /// Upload Apple Health daily aggregates. No-ops if the command API is missing.
-    func syncToServer(api: FitFightAPI, accessToken: String) async {
-        guard api.isConfigured, hasAsked, !isUploading else { return }
+    /// Upload Apple Health daily aggregates to `step_days`. Skips if Health was never asked.
+    func syncToSupabase(client: SupabaseClient, userId: UUID) async {
+        guard hasAsked, !isUploading else { return }
         guard
             HKHealthStore.isHealthDataAvailable(),
             let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount)
@@ -96,11 +97,6 @@ final class HealthKitStepsStore: ObservableObject {
         defer { isUploading = false }
 
         do {
-            if !UserDefaults.standard.bool(forKey: connectedKey) {
-                _ = try await api.connectAppleHealth(accessToken: accessToken)
-                UserDefaults.standard.set(true, forKey: connectedKey)
-            }
-
             let calendar = Calendar.current
             let today = calendar.startOfDay(for: Date())
             let formatter = DateFormatter()
@@ -109,45 +105,24 @@ final class HealthKitStepsStore: ObservableObject {
             formatter.timeZone = calendar.timeZone
             formatter.dateFormat = "yyyy-MM-dd"
 
-            let lastUploaded = UserDefaults.standard.string(forKey: lastUploadDayKey)
-            var days: [FitFightHealthKitDay] = []
-            days.reserveCapacity(31)
+            var rows: [StepDayUpload] = []
+            rows.reserveCapacity(31)
             for offset in 0...30 {
                 guard let start = calendar.date(byAdding: .day, value: -offset, to: today) else { continue }
                 let day = formatter.string(from: start)
-                if offset > 0, let lastUploaded, day < lastUploaded { continue }
                 let end = offset == 0 ? Date() : calendar.date(byAdding: .day, value: 1, to: start) ?? start
                 let value = try await Self.dayAggregate(store: store, type: stepsType, start: start, end: end)
-                days.append(
-                    FitFightHealthKitDay(
-                        day: day,
-                        value: value,
-                        revision: 1
-                    )
-                )
+                rows.append(StepDayUpload(userId: userId, day: day, steps: Int(value.rounded())))
             }
-            guard !days.isEmpty else { return }
+            guard !rows.isEmpty else { return }
 
-            let sources: [String]
-            if case .steps(_, let labels) = status {
-                sources = labels
-            } else {
-                sources = []
-            }
-
-            let ack = try await api.uploadBatch(
-                FitFightHealthKitBatch(
-                    idempotencyKey: UUID().uuidString,
-                    sourceLabel: "Apple Health",
-                    contributingSourceLabels: sources,
-                    days: days
-                ),
-                accessToken: accessToken
-            )
-            _ = ack
+            try await client.from("step_days")
+                .upsert(rows, onConflict: "user_id,day")
+                .execute()
             UserDefaults.standard.set(formatter.string(from: today), forKey: lastUploadDayKey)
+            UserDefaults.standard.set(true, forKey: connectedKey)
         } catch {
-            // Command API may be missing or the upload may fail. Local read still works.
+            // Local read still works if the table is not on this project yet.
         }
     }
 
@@ -219,5 +194,17 @@ final class HealthKitStepsStore: ObservableObject {
 
     private static func format(_ value: Int) -> String {
         value.formatted(.number.grouping(.automatic))
+    }
+}
+
+private struct StepDayUpload: Encodable {
+    let userId: UUID
+    let day: String
+    let steps: Int
+
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case day
+        case steps
     }
 }

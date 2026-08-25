@@ -27,20 +27,19 @@ If the app is closed or killed, iOS will not reliably run timers, settle a month
 
 The phone’s job is: show the UI, read HealthKit / workouts when it is open (or briefly woken), upload, receive pushes.
 
-**Last TestFlight:** 25 Aug 2026 — welcome screen when signed out; tabs only after Apple sign-in. Still `0.9.0`. Look for `staging · 25 Aug`. PR #30.
+**Last TestFlight:** 25 Aug 2026 — username onboarding, live Steps fight from the phone, HealthKit upload, Design tab removed. Still `0.9.0`. Look for `0.9.0 · build N · staging`. PR #30.
 
 ## Now
 
-- Marc: merge PR #30 into **`develop`**. Do not merge to `main`.
-- Marc: Apple Sign In On on the Supabase `develop` branch (Authentication → Providers → Apple → On, client ID `com.fitfight.mvp`). TestFlight now compiles the develop project in; a new sign-in there is a new user.
-- Marc: Vercel project, root `web/`, Preview + develop → Supabase develop secret; Production → main project. Also set `CRON_SECRET` on Vercel (Preview + Production). Never paste it in chat. Send the `https://….vercel.app` URL so the next ship can set `FITFIGHT_API_URL`. Until that URL is in the app, Start fight / Accept / HealthKit upload do nothing useful.
-- Marc: Supabase develop Data API — expose schema `private`.
-- Friends on TestFlight. Marc adds them as internal testers. Same build. They sign in with their own Apple ID (staging users, not production). Start a 3-day Steps fight with one friend **after** Vercel is live.
+- Marc: merge PR #30 into **`develop`**. Wait for the SQL to land. Then TestFlight → Update. Do not merge to `main`.
+- Marc: pick a username, allow Apple Health, start a Steps fight (alone is fine). Add a friend by username on You.
+- Friends on TestFlight Internal Testing. Same build. Their own Apple IDs. 3-day Steps fight after they have usernames.
+- Marc: Apple Sign In On on Supabase `develop` only if sign-in fails (client ID `com.fitfight.mvp`).
 
 ## Next
 
-- **Watch a real 3-day fight close.** Clock tests already fake 1 / 3 / 7 / 14 days. The closer job and app-open sync are in. The missing proof is two phones: fight ends, someone opens or cron runs, standings go final, steps after `ends_at` do not count. Do that before App Store.
-- Try the two-phone loop on TestFlight (`develop` + staging API). Then App Store review when Marc says ship (`develop` → `main`).
+- **Watch a real 3-day fight close.** Opening the app marks a due fight finished. No cron. Proof is two phones: standings match, fight ends, steps after `ends_at` do not count. Do that before App Store.
+- App Store when Marc says ship (`develop` → `main`).
 
 ## Later
 
@@ -61,13 +60,13 @@ From [`design/source/INVENTORY.md`](design/source/INVENTORY.md) — honest holes
 - Notifications inbox (the bell has no destination)
 - Request compose + request thread
 - Profile edit, settings sub-screens, payouts
-- Onboarding after sign-in, HealthKit permission prompts
+- HealthKit permission prompts (we request on username continue and on Data sources tap; no extra designed screen)
 - Per-person goals in create (data model allows it; UI is one shared goal)
 - Settle-up / payment at the end of a fight
 
 ## Done
 
-Code for the live fight path is in the repo. It is **not live on the phone** until Vercel exists — see [`status.md`](status.md).
+The phone writes fights and steps to staging after this PR is merged. See [`status.md`](status.md).
 
 - v0.3 design port: four tabs, dark/light, 10 accents, fixture fights.
 - Talk to the boss on Requests: private chat with Marc, emailed to him.
@@ -77,3 +76,4 @@ Code for the live fight path is in the repo. It is **not live on the phone** unt
 - HealthKit Steps upload. Standings come from the database. Fights are no longer the fixture people. Design tab still previews the old mock.
 - Fight closer: `live → awaiting_final_sync → final` on a server clock. Tests fake `now` for 1 / 3 / 7 / 14 day windows. Opening the app closes your due fights; Vercel cron closes the rest if nobody opens. No push yet.
 - Welcome screen when signed out. Apple Sign In is the only way in; the tabs stay hidden until then.
+- Username onboarding after sign-in. Phone-written Steps fights, HealthKit → `step_days`, standings from the database. Design tab removed.

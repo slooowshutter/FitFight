@@ -1,14 +1,17 @@
 import SwiftUI
+import UIKit
 
 struct YouView: View {
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var themeStore: ThemeStore
-    @EnvironmentObject private var designStore: DesignStore
     @EnvironmentObject private var session: SessionStore
+    @EnvironmentObject private var friends: FriendshipStore
     @EnvironmentObject private var steps: HealthKitStepsStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
     @State private var confirmDelete = false
+    @State private var friendHandle = ""
+    @State private var copied = false
 
     var body: some View {
         FFScreen {
@@ -22,6 +25,8 @@ struct YouView: View {
                         .padding(.bottom, 10)
                 }
                 stats
+                sectionHeader("Friends")
+                friendsPanel
                 sectionHeader("Fight history", action: "All \(model.history.count)") { model.tab = .fights }
                 history
                 sectionHeader("Data sources")
@@ -40,6 +45,9 @@ struct YouView: View {
         .task {
             guard !staticRender else { return }
             await steps.refresh(requestAccess: false)
+            if let userId = session.authSession?.user.id {
+                try? await friends.load(userId: userId)
+            }
         }
         .confirmationDialog(
             "Delete account?",
@@ -86,6 +94,17 @@ struct YouView: View {
                     .foregroundStyle(theme.faint)
                     .lineLimit(1)
                     .fixedSize()
+                if session.profile != nil {
+                    Button {
+                        UIPasteboard.general.string = session.profile?.atHandle ?? ""
+                        copied = true
+                    } label: {
+                        Text(copied ? "Copied" : "Copy username")
+                            .font(.ff(11, .semibold))
+                            .foregroundStyle(theme.accent)
+                    }
+                    .buttonStyle(.plain)
+                }
             }
             .layoutPriority(1)
             Spacer(minLength: 4)
@@ -223,16 +242,100 @@ struct YouView: View {
         .contentShape(Rectangle())
     }
 
+    private var friendsPanel: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("People add you with \(session.profile?.atHandle ?? "your username"). Add them the same way.")
+                .font(.ff(12))
+                .foregroundStyle(theme.faint)
+            HStack(spacing: 8) {
+                TextField("@username", text: $friendHandle)
+                    .font(.ff(15))
+                    .foregroundStyle(theme.text)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .submitLabel(.join)
+                    .padding(.horizontal, 16)
+                    .frame(height: 48)
+                    .background(theme.surface, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
+                            .strokeBorder(theme.line, lineWidth: 1)
+                    }
+                    .onSubmit { addFriend() }
+                FFButton(title: "Add", kind: .small, enabled: !friendHandle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) {
+                    addFriend()
+                }
+            }
+            if !friends.incoming.isEmpty {
+                FFPanel {
+                    ForEach(Array(friends.incoming.enumerated()), id: \.element.userId) { index, person in
+                        if index > 0 { FFHairline() }
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(person.displayName)
+                                    .font(.ff(13, .semibold))
+                                    .foregroundStyle(theme.text)
+                                Text(person.atHandle)
+                                    .font(.ff(11))
+                                    .foregroundStyle(theme.faint)
+                            }
+                            Spacer()
+                            FFButton(title: "Accept", kind: .small) {
+                                Task {
+                                    guard let me = session.authSession?.user.id else { return }
+                                    try? await friends.accept(requesterId: person.userId, addresseeId: me)
+                                    try? await friends.load(userId: me)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, FFMetric.rowPaddingX)
+                        .frame(height: 56)
+                    }
+                }
+            }
+            if !model.people.isEmpty {
+                FFPanel {
+                    ForEach(Array(model.people.enumerated()), id: \.element.id) { index, person in
+                        if index > 0 { FFHairline() }
+                        HStack(spacing: 12) {
+                            FFAvatar(person, size: 32)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(person.name)
+                                    .font(.ff(13, .semibold))
+                                    .foregroundStyle(theme.text)
+                                Text(person.handle)
+                                    .font(.ff(11))
+                                    .foregroundStyle(theme.faint)
+                            }
+                            Spacer()
+                        }
+                        .padding(.horizontal, FFMetric.rowPaddingX)
+                        .frame(height: 56)
+                    }
+                }
+            }
+            if let error = model.createError, !error.isEmpty {
+                Text(error)
+                    .font(.ff(11))
+                    .foregroundStyle(theme.red)
+            }
+        }
+    }
+
+    private func addFriend() {
+        let handle = FriendshipStore.strippedHandle(friendHandle)
+        guard !handle.isEmpty else { return }
+        friendHandle = ""
+        Task {
+            await model.addFriend(handle: handle)
+            if let userId = session.authSession?.user.id {
+                try? await friends.load(userId: userId)
+            }
+        }
+    }
+
     private var appearance: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Every design except Original carries its own fixed palette, so say so
-            // rather than let these controls look broken.
-            if designStore.variant != .original {
-                Text("The \(designStore.variant.title) design brings its own colours. Switch back to Original under Design to use these.")
-                    .font(.ff(11))
-                    .foregroundStyle(theme.faint)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
             HStack(spacing: 10) {
                 ForEach(BaseID.allCases) { base in
                     let on = themeStore.baseID == base

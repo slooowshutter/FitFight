@@ -94,7 +94,10 @@ struct NewFightView: View {
     private var peopleSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             FFSectionHeader(title: "Who's in", action: "\(playerCount) players")
-            TextField("@handle", text: $friendHandle)
+            Text("Type their username. They must have opened the app and picked one. You can start alone.")
+                .font(.ff(12))
+                .foregroundStyle(theme.faint)
+            TextField("@username", text: $friendHandle)
                 .font(.ff(15))
                 .foregroundStyle(theme.text)
                 .textInputAutocapitalization(.never)

@@ -75,15 +75,19 @@ final class FriendshipStore: ObservableObject {
         guard addressee.userId != requesterId else {
             throw FriendshipError.selfRequest
         }
-        try await client.from("friendships")
-            .insert(
-                FriendshipInsert(
-                    requesterId: requesterId,
-                    addresseeId: addressee.userId,
-                    state: "pending"
+        do {
+            try await client.from("friendships")
+                .insert(
+                    FriendshipInsert(
+                        requesterId: requesterId,
+                        addresseeId: addressee.userId,
+                        state: "accepted"
+                    )
                 )
-            )
-            .execute()
+                .execute()
+        } catch {
+            try await accept(requesterId: addressee.userId, addresseeId: requesterId)
+        }
     }
 
     func accept(requesterId: UUID, addresseeId: UUID) async throws {

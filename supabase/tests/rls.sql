@@ -1,5 +1,5 @@
 begin;
-select plan(6);
+select plan(14);
 
 create function pg_temp.make_user(uid uuid, email text)
 returns void
@@ -115,16 +115,14 @@ select is(
   'accepted member sees the whole lineup'
 );
 
-select throws_ok(
+select lives_ok(
   $$ insert into public.friendships (requester_id, addressee_id, state)
      values (
        '11111111-1111-4111-8111-111111111111',
        '22222222-2222-4222-8222-222222222222',
        'accepted'
      ) $$,
-  '42501',
-  'new row violates row-level security policy for table "friendships"',
-  'cannot insert an already-accepted friendship'
+  'requester can add a friend without a pending request'
 );
 
 reset role;
@@ -151,10 +149,109 @@ select lives_ok(
   $$ insert into public.friendships (requester_id, addressee_id, state)
      values (
        '11111111-1111-4111-8111-111111111111',
-       '22222222-2222-4222-8222-222222222222',
+       '33333333-3333-4333-8333-333333333333',
        'pending'
      ) $$,
-  'requester can insert a pending friendship'
+  'requester can still insert a pending friendship'
+);
+
+select lives_ok(
+  $$ insert into public.fights (
+       id, owner_id, name, state, starts_at, ends_at, time_zone,
+       outcome_rule, goal_policy
+     ) values (
+       'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+       '11111111-1111-4111-8111-111111111111',
+       'Phone fight',
+       'live',
+       now(),
+       now() + interval '3 days',
+       'America/New_York',
+       'highest_total',
+       'shared'
+     ) $$,
+  'owner can insert a steps fight'
+);
+
+select lives_ok(
+  $$ insert into public.fight_members (fight_id, user_id, state)
+     values (
+       'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+       '11111111-1111-4111-8111-111111111111',
+       'accepted'
+     ) $$,
+  'owner can join their fight'
+);
+
+select lives_ok(
+  $$ insert into public.fight_members (fight_id, user_id, state)
+     values (
+       'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+       '22222222-2222-4222-8222-222222222222',
+       'invited'
+     ) $$,
+  'owner can invite a friend'
+);
+
+select lives_ok(
+  $$ insert into public.step_days (user_id, day, steps)
+     values (
+       '11111111-1111-4111-8111-111111111111',
+       current_date,
+       8000
+     ) $$,
+  'user can upload their own steps'
+);
+
+reset role;
+select pg_temp.as_user('22222222-2222-4222-8222-222222222222');
+set local role authenticated;
+
+select throws_ok(
+  $$ insert into public.fights (
+       id, owner_id, name, state, starts_at, ends_at, time_zone,
+       outcome_rule, goal_policy
+     ) values (
+       'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+       '11111111-1111-4111-8111-111111111111',
+       'Stolen',
+       'live',
+       now(),
+       now() + interval '3 days',
+       'America/New_York',
+       'highest_total',
+       'shared'
+     ) $$,
+  '42501',
+  'new row violates row-level security policy for table "fights"',
+  'cannot create a fight as someone else'
+);
+
+select is(
+  (select steps from public.step_days
+    where user_id = '11111111-1111-4111-8111-111111111111'
+      and day = current_date),
+  8000,
+  'accepted fight peer can read the other person steps'
+);
+
+reset role;
+select pg_temp.as_user('33333333-3333-4333-8333-333333333333');
+set local role authenticated;
+
+select is(
+  (select count(*)::integer from public.step_days),
+  0,
+  'invitee who has not accepted cannot read peer steps'
+);
+
+select lives_ok(
+  $$ update public.fight_members
+        set state = 'accepted',
+            accepted_at = now()
+      where fight_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+        and user_id = '33333333-3333-4333-8333-333333333333' $$,
+  'invitee can accept their own membership'
 );
 
 select * from finish();

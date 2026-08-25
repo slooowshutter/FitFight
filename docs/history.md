@@ -4,9 +4,13 @@
 
 Apple beta-reviews the first build of each marketing version for external testers. We were bumping `0.4.1`, `0.5.0`, `0.8.0` on every user-facing PR, so friends waited every time. Rule: keep `MARKETING_VERSION` at `0.8.0`; CI still increments the build number; Changelog rows reuse `0.8.0`. Bump marketing version only for an App Store ship or if Marc asks.
 
+## 2026-08-25 — phone writes the fight
+
+Create / accept / HealthKit upload / standings no longer wait on Vercel. The phone writes to Supabase. Username onboarding. Design tab removed. Version line shows version and build. Cron is optional later, not required.
+
 ## 2026-08-25 — status map
 
-[`status.md`](status.md) is the works / fake / dead / next list. Merge #30 into `develop` only. Vercel is still the hole: no `FITFIGHT_API_URL`, so Start fight and HealthKit upload do not run. Do not invent Ask-first screens.
+[`status.md`](status.md) is the works / fake / dead / next list. Merge #30 into `develop` only. Do not invent Ask-first screens.
 
 ## 2026-08-25 — welcome gate
 

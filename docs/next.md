@@ -6,8 +6,8 @@ Do **not** merge `develop` → `main`.
 
 ## You (Marc)
 
-1. If this chat left a follow-up PR open (fight window / Accept standings), merge it into **`develop`**. Wait for TestFlight.
-2. TestFlight → **Update**. Look for `0.9.0 · build N · staging · 26 Aug` (or 25 Aug if you grab 53 before the follow-up lands).
+1. Merge **[#31](https://github.com/slooowshutter/FitFight/pull/31) into `develop`**. Wait for TestFlight (another `0.9.0` build).
+2. TestFlight → **Update**. Look for `0.9.0 · build N · staging · 26 Aug`.
 3. Sign in. Pick a **username**.
 4. You → Apple Health (allow Steps). Copy your username. Add a friend the same way.
 5. New → **3d** → Start fight (alone is fine). Type `@username` on Start if Add friend is fussy.

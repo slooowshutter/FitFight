@@ -4,6 +4,10 @@
 
 Apple beta-reviews the first build of each marketing version for external testers. We were bumping `0.4.1`, `0.5.0`, `0.8.0` on every user-facing PR, so friends waited every time. Rule: keep `MARKETING_VERSION` at `0.8.0`; CI still increments the build number; Changelog rows reuse `0.8.0`. Bump marketing version only for an App Store ship or if Marc asks.
 
+## 2026-08-25 — date on the version line
+
+Every TestFlight ship adds a Changelog row and puts that date on the top version line (`0.8.0 (n) · staging · 25 Aug`) plus **Last TestFlight** in `docs/backlog.md`. Marketing version stays `0.8.0`.
+
 ## 2026-08-25 — version label shows prod vs staging
 
 TestFlight that is not `main` compiles the persistent develop project (`jldjgftoxmluiswpebbd`). The top version label ends in `prod` or `staging`. Production is only `main`.

@@ -2,7 +2,22 @@ import Foundation
 
 enum AppVersion {
     static var label: String {
-        "\(marketing) (\(build)) · \(backend)"
+        let date = shippedOn
+        if date.isEmpty {
+            return "\(marketing) (\(build)) · \(backend)"
+        }
+        return "\(marketing) (\(build)) · \(backend) · \(date)"
+    }
+
+    /// Date of the newest Changelog row for this marketing version.
+    static var shippedOn: String {
+        guard let note = Changelog.current else { return "" }
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "d MMM"
+        return formatter.string(from: note.date)
     }
 
     /// Which hosted database this binary talks to. TestFlight that is not `main`

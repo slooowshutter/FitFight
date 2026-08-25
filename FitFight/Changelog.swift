@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 8,
             day: 25,
+            notes: "This TestFlight talks to develop. The version at the top now includes the date of the last ship (still 0.8.0 — only the build number and the date change)."
+        ),
+        ReleaseNote(
+            version: "0.8.0",
+            year: 2026,
+            month: 8,
+            day: 25,
             notes: "The version at the top now says prod or staging, so you can see which Supabase the phone is talking to."
         ),
         ReleaseNote(

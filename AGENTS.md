@@ -12,8 +12,8 @@ Read this first, then `docs/`. Marc talks from his phone, often transcribing. Be
 - This Linux environment cannot compile or upload iOS. CI on GitHub-hosted `macos-26` does that.
 - Never put `.p8` / API keys / provisioning profiles in git or chat.
 - Keep the repo **public** (free GitHub macOS minutes). Don’t make it private without saying so.
-- Version label stays at the **top of the screen** (not the nav bar), e.g. `0.8.0 (12)`.
-- Permanent **Versions** button: under You → Settings, and the version label at the top. Every user-facing ship adds a row in `FitFight/Changelog.swift`.
+- Version label stays at the **top of the screen** (not the nav bar), e.g. `0.8.0 (12) · staging · 25 Aug`.
+- Permanent **Versions** button: under You → Settings, and the version label at the top. Every user-facing ship adds a `ReleaseNote` in `FitFight/Changelog.swift` (same `0.8.0`, new date/notes) and updates **Last TestFlight** in `docs/backlog.md`.
 - **Do not bump `MARKETING_VERSION` for TestFlight.** Every CI upload already gets a new **build number** (`0.8.0 (12)`, then `(13)`). That is the new thing testers install. Apple beta-reviews the first build of each *marketing* version for external testers (~1–2 days). Bumping `0.8.0` → `0.8.1` makes friends wait again. Keep `0.8.0` in `project.pbxproj` until Marc is shipping to the App Store or he explicitly asks to bump. Changelog rows reuse that same marketing version; several rows may all say `0.8.0`.
 - Design tokens live in `FitFight/DesignSystem/tokens.json` (same file as `docs/design/source/tokens.json`). Don’t hardcode colours. Theme is **base × accent**. After token changes, copy the dump into the app bundle file.
 - Talk to Marc only for things only he can do: Apple login, GitHub secrets, TestFlight testers, legal, the hosted Supabase dashboard. Agents cannot `workflow_dispatch`. App pushes (PR branch, `develop`, or `main`) upload to TestFlight by themselves. Tell Marc a build is coming; he opens TestFlight → Update. Do not ask him to Run workflow.

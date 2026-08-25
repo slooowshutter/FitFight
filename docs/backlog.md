@@ -25,6 +25,8 @@ If the app is closed or killed, iOS will not reliably run timers, settle a month
 
 The phone’s job is: show the UI, read HealthKit / workouts when it is open (or briefly woken), upload, receive pushes.
 
+**Last TestFlight:** 25 Aug 2026 — phone on develop (`staging` on the version line). PR #30. Still marketing `0.8.0`; build number and the date on the version line change each ship.
+
 ## Now
 
 - Marc: Apple Sign In On on the Supabase `develop` branch (Authentication → Providers → Apple → On, client ID `com.fitfight.mvp`). TestFlight now compiles the develop project in; a new sign-in there is a new user. `FITFIGHT_API_URL` when Vercel exists.

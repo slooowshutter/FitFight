@@ -71,6 +71,10 @@ When the days are up the server closes the fight (app open or cron). Signed out,
 app is only a welcome screen plus Sign in with Apple. The Design tab still previews
 the old mock. Requests is unchanged.
 
+**Honest status (25 Aug 2026):** the iOS + `web/` code for that path is in PR #30.
+The phone can sign in and read local HealthKit. Create fight, upload, and standings
+are waiting on Vercel. See [`status.md`](status.md).
+
 ## Not this project
 
 - Hermes (a home-Mac agent) is unrelated. Ignore it.
@@ -78,4 +82,4 @@ the old mock. Requests is unchanged.
 
 ## Next product work
 
-The living list is [`backlog.md`](backlog.md). You can sign in, add friends, start a Steps fight, and see live standings. The golden guide is [`system-design.md`](system-design.md) — follow it, do not implement all of it. First real Metric is **Steps**. Don’t invent the gaps listed in [`design/source/INVENTORY.md`](design/source/INVENTORY.md).
+Honest works / doesn’t / next: [`status.md`](status.md). The living list is [`backlog.md`](backlog.md). Sign-in works. Friends-by-handle talks to Supabase. Create fight, HealthKit upload, and standings need the Vercel API (not live yet). The golden guide is [`system-design.md`](system-design.md) — follow it, do not implement all of it. First real Metric is **Steps**. Don’t invent the gaps listed in [`design/source/INVENTORY.md`](design/source/INVENTORY.md).

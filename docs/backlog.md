@@ -15,6 +15,8 @@ The agent edits this file, commits, opens a PR into `develop`.
 
 Do not invent UI for anything in **Ask first** or undesigned Later items.
 
+Honest works / doesn’t / next: [`status.md`](status.md). Read that before the next build.
+
 [`system-design.md`](system-design.md) is the golden guide. Follow it. Do not implement the whole document. Production Metric is **Steps**; Active Minutes and Workout Count stay later.
 
 ## Principle: server does the work
@@ -29,9 +31,11 @@ The phone’s job is: show the UI, read HealthKit / workouts when it is open (or
 
 ## Now
 
-- Marc: Apple Sign In On on the Supabase `develop` branch (Authentication → Providers → Apple → On, client ID `com.fitfight.mvp`). TestFlight now compiles the develop project in; a new sign-in there is a new user. `FITFIGHT_API_URL` when Vercel exists.
-- Marc: Vercel project, root `web/`, Preview + develop → Supabase develop secret; Production → main project. Also set `CRON_SECRET` on Vercel (Preview + Production). Never paste it in chat.
-- Friends on TestFlight. Marc adds them as internal testers. Same build. They sign in with their own Apple ID (staging users, not production). Start a 3-day Steps fight with one friend and leave it running.
+- Marc: merge PR #30 into **`develop`**. Do not merge to `main`.
+- Marc: Apple Sign In On on the Supabase `develop` branch (Authentication → Providers → Apple → On, client ID `com.fitfight.mvp`). TestFlight now compiles the develop project in; a new sign-in there is a new user.
+- Marc: Vercel project, root `web/`, Preview + develop → Supabase develop secret; Production → main project. Also set `CRON_SECRET` on Vercel (Preview + Production). Never paste it in chat. Send the `https://….vercel.app` URL so the next ship can set `FITFIGHT_API_URL`. Until that URL is in the app, Start fight / Accept / HealthKit upload do nothing useful.
+- Marc: Supabase develop Data API — expose schema `private`.
+- Friends on TestFlight. Marc adds them as internal testers. Same build. They sign in with their own Apple ID (staging users, not production). Start a 3-day Steps fight with one friend **after** Vercel is live.
 
 ## Next
 
@@ -62,6 +66,8 @@ From [`design/source/INVENTORY.md`](design/source/INVENTORY.md) — honest holes
 - Settle-up / payment at the end of a fight
 
 ## Done
+
+Code for the live fight path is in the repo. It is **not live on the phone** until Vercel exists — see [`status.md`](status.md).
 
 - v0.3 design port: four tabs, dark/light, 10 accents, fixture fights.
 - Talk to the boss on Requests: private chat with Marc, emailed to him.

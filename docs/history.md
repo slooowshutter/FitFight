@@ -4,6 +4,10 @@
 
 Apple beta-reviews the first build of each marketing version for external testers. We were bumping `0.4.1`, `0.5.0`, `0.8.0` on every user-facing PR, so friends waited every time. Rule: keep `MARKETING_VERSION` at `0.8.0`; CI still increments the build number; Changelog rows reuse `0.8.0`. Bump marketing version only for an App Store ship or if Marc asks.
 
+## 2026-08-25 — status map
+
+[`status.md`](status.md) is the works / fake / dead / next list. Merge #30 into `develop` only. Vercel is still the hole: no `FITFIGHT_API_URL`, so Start fight and HealthKit upload do not run. Do not invent Ask-first screens.
+
 ## 2026-08-25 — welcome gate
 
 Signed-out Users see FitFight, one line of copy, and Sign in with Apple. The five tabs stay hidden until they are in.

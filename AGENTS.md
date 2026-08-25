@@ -19,16 +19,20 @@ Read this first, then `docs/`. Marc talks from his phone, often transcribing. Be
 - Talk to Marc only for things only he can do: Apple login, GitHub secrets, TestFlight testers, legal, the hosted Supabase dashboard. Agents cannot `workflow_dispatch`. App pushes (PR branch, `develop`, or `main`) upload to TestFlight by themselves. Tell Marc a build is coming; he opens TestFlight → Update. Do not ask him to Run workflow.
 - Never nuke the hosted database. No `supabase db reset` / `db push` against production or `develop`, no `DROP TABLE` / `TRUNCATE` / `DROP SCHEMA` / `DROP DATABASE` unless Marc asked in that chat and the migration starts with `-- allow-destructive`. Never put `sb_secret_...`, `service_role`, or the database password in git, chat, or iOS. Never merge to `main` unless Marc asked to ship to production. Never merge to `develop` unless Marc asked. Production migrations apply only after `develop` is merged to `main`.
 
-## What exists (2026-08-22)
+## What exists (2026-08-25)
+
+Current map: [`docs/status.md`](docs/status.md). Sign-in works on TestFlight **0.9.0**. Live fight create / HealthKit upload / standings need Vercel (not live).
 
 - Native SwiftUI iOS app, scheme `FitFight`, bundle ID `com.fitfight.mvp`.
-- First TestFlight upload **succeeded** (build `0.1.0 (1)`).
+- First TestFlight upload **succeeded** (build `0.1.0 (1)`). Latest user-facing ship: **0.9.0** welcome + develop Supabase.
 - TestFlight on every app push (PR branch or `main`), plus daily **18:00 UTC**.
 - Simulator compile on every PR.
 - Approved design dump in `docs/design/source/` (338 tokens, 76 screenshots). Dark/light + 10 accents.
 - Five tabs: Fights, New, Requests, **Design**, You. The Design tab switches the Fights screen between eleven directions (`original` + ten experiments) in `FitFight/Designs/`. Only `original` follows You → Look; the rest carry their own palette. See [docs/product.md](docs/product.md#v06-design-exploration).
 
-Details: [docs/product.md](docs/product.md) · [docs/backlog.md](docs/backlog.md) · [docs/system-design.md](docs/system-design.md) · [docs/backend.md](docs/backend.md) · [docs/shipping.md](docs/shipping.md) · [docs/history.md](docs/history.md) · [docs/design/source/README.md](docs/design/source/README.md)
+**What works vs fake vs next:** [`docs/status.md`](docs/status.md). Read that before building.
+
+Details: [docs/status.md](docs/status.md) · [docs/product.md](docs/product.md) · [docs/backlog.md](docs/backlog.md) · [docs/system-design.md](docs/system-design.md) · [docs/backend.md](docs/backend.md) · [docs/shipping.md](docs/shipping.md) · [docs/history.md](docs/history.md) · [docs/design/source/README.md](docs/design/source/README.md)
 
 [`docs/system-design.md`](docs/system-design.md) is the golden guide for production. Follow it so new work fits. Do **not** implement that document. Do **not** build Active Minutes, Workout Count, WHOOP, Strava, payments, notifications, social, or the website until the backlog says so.
 

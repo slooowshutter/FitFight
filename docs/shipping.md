@@ -73,6 +73,8 @@ Names only. Never print values. Settings → Secrets and variables → Actions �
 
 `main` always ships the known production Supabase URL/key. Missing staging variables warn and fall back to production; the job does not fail.
 
+Vercel also needs `CRON_SECRET` (Preview + Production). Vercel Cron sends it as `Authorization: Bearer …` to `/api/internal/close-fights` every 15 minutes. Hobby Vercel may only run cron once a day — that is still enough; opening the app also closes due fights. Never put this value in git or chat.
+
 ## What Marc still does
 
 - TestFlight install / Update when a build is ready (~10–20 min after a push).

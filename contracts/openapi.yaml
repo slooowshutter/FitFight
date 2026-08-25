@@ -59,6 +59,17 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/FightSummary" }
+  /fights/sync-due:
+    post:
+      operationId: syncDueFights
+      summary: Close this user's fights whose clock has run out. Safe to call on every app open.
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: How many due fights were recalculated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SyncDue" }
   /fights/{fightID}/invites:
     post:
       operationId: inviteByHandle
@@ -224,3 +235,12 @@ components:
       properties:
         token: { type: string }
         invitedUserId: { type: string, format: uuid }
+    SyncDue:
+      type: object
+      required: [checked, closed]
+      properties:
+        checked: { type: integer }
+        closed: { type: integer }
+        fightIds:
+          type: array
+          items: { type: string, format: uuid }

@@ -57,6 +57,12 @@ struct FitFightInviteCreated: Codable, Equatable {
     var invitedUserId: UUID
 }
 
+struct FitFightSyncDue: Codable, Equatable {
+    var checked: Int
+    var closed: Int
+    var fightIds: [UUID]?
+}
+
 struct FitFightHealthKitDay: Codable, Equatable {
     var day: String
     var value: Double
@@ -171,6 +177,15 @@ struct FitFightAPI {
             path: "fights/\(fightID.uuidString.lowercased())/start",
             accessToken: accessToken,
             body: StartBody(when: when),
+            expected: [200]
+        )
+    }
+
+    func syncDueFights(accessToken: String) async throws -> FitFightSyncDue {
+        try await post(
+            path: "fights/sync-due",
+            accessToken: accessToken,
+            body: EmptyJSON(),
             expected: [200]
         )
     }

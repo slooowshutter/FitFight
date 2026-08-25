@@ -316,6 +316,10 @@ final class AppModel: ObservableObject {
             people = []
         }
 
+        if let token = session.authSession?.accessToken, api.isConfigured {
+            _ = try? await api.syncDueFights(accessToken: token)
+        }
+
         do {
             fights = try await loadFights(client: session.client, userId: userId)
             history = fights

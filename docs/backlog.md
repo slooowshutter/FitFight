@@ -28,12 +28,12 @@ The phone’s job is: show the UI, read HealthKit / workouts when it is open (or
 ## Now
 
 - Marc: GitHub Actions variables `SUPABASE_STAGING_URL`, `SUPABASE_STAGING_PUBLISHABLE_KEY`, `FITFIGHT_API_URL` (and `FITFIGHT_API_PRODUCTION_URL` later). Apple Sign In On on the Supabase `develop` branch.
-- Marc: Vercel project, root `web/`, Preview + develop → Supabase develop secret; Production → main project.
+- Marc: Vercel project, root `web/`, Preview + develop → Supabase develop secret; Production → main project. Also set `CRON_SECRET` on Vercel (Preview + Production). Never paste it in chat.
+- Friends on TestFlight. Marc adds them as internal testers. Same build. They sign in with their own Apple ID (staging users, not production). Start a 3-day Steps fight with one friend and leave it running.
 
 ## Next
 
-- Friends on TestFlight. Marc adds them as internal testers. Same build. They sign in with their own Apple ID (staging users, not production).
-- **Fight closer.** Today a fight only moves `live → awaiting_final_sync → final` when someone opens the app and steps upload. If everyone is asleep, it sits. A server job should walk due fights with a clock (tests already fake `now` — see `web/src/server/scoring/fightClock.test.ts`). No push yet.
+- **Watch a real 3-day fight close.** Clock tests already fake 1 / 3 / 7 / 14 days. The closer job and app-open sync are in. The missing proof is two phones: fight ends, someone opens or cron runs, standings go final, steps after `ends_at` do not count. Do that before App Store.
 - Try the two-phone loop on TestFlight (`develop` + staging API). Then App Store review when Marc says ship (`develop` → `main`).
 
 ## Later
@@ -67,3 +67,4 @@ From [`design/source/INVENTORY.md`](design/source/INVENTORY.md) — honest holes
 - Sign in with Apple on You, real `profiles` handle, Apple Health Steps read on You → Data sources, Delete account under You → Settings.
 - Smallest command API: create / invite / accept a Steps Fight. New fight starts a real fight; fight detail Accept/Join accepts it.
 - HealthKit Steps upload. Standings come from the database. Fights are no longer the fixture people. Design tab still previews the old mock.
+- Fight closer: `live → awaiting_final_sync → final` on a server clock. Tests fake `now` for 1 / 3 / 7 / 14 day windows. Opening the app closes your due fights; Vercel cron closes the rest if nobody opens. No push yet.

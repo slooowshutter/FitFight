@@ -7,7 +7,8 @@ struct ReleaseNote: Identifiable, Hashable {
     let day: Int
     let notes: String
 
-    var id: String { "\(version)-\(year)-\(month)-\(day)" }
+    /// Several notes may share one marketing version (TestFlight does not bump it).
+    var id: String { "\(version)-\(year)-\(month)-\(day)-\(notes)" }
 
     var date: Date {
         var components = DateComponents()
@@ -24,11 +25,11 @@ enum Changelog {
     /// Newest first. Add a row here whenever we ship a user-facing change.
     static let releases: [ReleaseNote] = [
         ReleaseNote(
-            version: "0.9.0",
+            version: "0.8.0",
             year: 2026,
             month: 8,
-            day: 24,
-            notes: "Sign in, add friends by handle, start a real Steps fight, Apple Health uploads to the server, standings come from the database. Fights are no longer the fixture people. Design tab still previews the old mock. Requests is unchanged."
+            day: 25,
+            notes: "Sign in, add friends by handle, start a real Steps fight, Apple Health uploads to the server, standings come from the database. Fights are no longer the fixture people. When the days are up the fight closes on the server — you do not have to leave the app open. Design tab still previews the old mock. Requests is unchanged."
         ),
         ReleaseNote(
             version: "0.8.0",
@@ -116,10 +117,17 @@ enum Changelog {
         ),
     ]
 
+    /// Array is newest-first; same-day rows keep that order.
     static var newestFirst: [ReleaseNote] {
-        releases.sorted { lhs, rhs in
-            if lhs.date != rhs.date { return lhs.date > rhs.date }
-            return lhs.version > rhs.version
-        }
+        releases.enumerated().sorted { lhs, rhs in
+            if lhs.element.date != rhs.element.date {
+                return lhs.element.date > rhs.element.date
+            }
+            return lhs.offset < rhs.offset
+        }.map(\.element)
+    }
+
+    static var current: ReleaseNote? {
+        newestFirst.first { $0.version == AppVersion.marketing }
     }
 }

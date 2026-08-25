@@ -165,6 +165,7 @@ export async function recalculateFight(
   const nextState = nextFightState({
     state: fight.state,
     nowMs: now.getTime(),
+    startsAtMs: new Date(fight.starts_at).getTime(),
     endsAtMs: endsAt.getTime(),
     graceEndsMs: graceEnds.getTime(),
     allSourcesCompleteThroughEnd: allComplete,

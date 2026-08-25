@@ -1,8 +1,16 @@
 # History
 
+## 2026-08-24 — freeze marketing version for TestFlight
+
+Apple beta-reviews the first build of each marketing version for external testers. We were bumping `0.4.1`, `0.5.0`, `0.8.0` on every user-facing PR, so friends waited every time. Rule: keep `MARKETING_VERSION` at `0.8.0`; CI still increments the build number; Changelog rows reuse `0.8.0`. Bump marketing version only for an App Store ship or if Marc asks.
+
+## 2026-08-25 — Fight duration closer
+
+A 3 / 7 / 14 day fight can now finish without waiting those days in real time: tests pass a fake clock. Opening the app closes due fights. A Vercel cron hits `/api/internal/close-fights` so a fight still settles if nobody opens. Steps after `ends_at` do not count. 24h grace, then final even if someone never uploaded.
+
 ## 2026-08-24 — Live Steps Fight
 
-New fight and fight detail talk to the server: add friends by handle, start a real Steps fight, Accept/Join a live invite. Apple Health uploads; standings come from the database. Fights are no longer the fixture people. Marketing version `0.9.0`.
+New fight and fight detail talk to the server: add friends by handle, start a real Steps fight, Accept/Join a live invite. Apple Health uploads; standings come from the database. Fights are no longer the fixture people. Marketing version stays `0.8.0`; CI bumps the build number.
 
 ## 2026-08-24 — Sign in with Apple + HealthKit Steps read
 

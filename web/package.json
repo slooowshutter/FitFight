@@ -6,7 +6,7 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/server/scoring/scoreFight.test.ts src/server/scoring/civilDay.test.ts src/server/scoring/fightClock.test.ts"
+    "test": "tsx --test src/server/scoring/scoreFight.test.ts src/server/scoring/civilDay.test.ts src/server/scoring/fightClock.test.ts src/server/scoring/closeDueFights.test.ts"
   },
   "engines": {
     "node": ">=20"

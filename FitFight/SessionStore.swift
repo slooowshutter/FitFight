@@ -141,9 +141,6 @@ final class SessionStore: ObservableObject {
     func retryLoadProfile() async {
         authError = nil
         await loadProfile()
-        if profile == nil {
-            authError = "Couldn’t load your account. Try again."
-        }
     }
 
     func deleteAccount() async {

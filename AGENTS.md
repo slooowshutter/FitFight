@@ -2,6 +2,20 @@
 
 Read this first, then `docs/`. Marc talks from his phone, often transcribing. Be concise. Do the work in the cloud. Do not send him into Apple/GitHub docs.
 
+## How to write (Blend)
+
+Short sentences. One idea each. One term per meaning. Active voice. Common words. No padding.
+
+Non-trivial code, plans, and reviews: a nested call tree in a `text` fence. Exact symbol names. Label it `CURRENT`, `PROPOSED`, or `AFTER CHANGE`.
+
+```text
+CURRENT: AppModel.refreshFromServer()
+  ├─ FightStore.load()
+  └─ fightDayWindow(fight)   // civil days in [start, end)
+```
+
+Code: fewer lines. Default to zero comments. A comment must say a why, a gotcha, or an invariant. Never narrate the next line.
+
 **Owner:** Marc Lamy (`marc@marclamy.com`)  
 **Repo:** https://github.com/marclelamy/FitFight (public)  
 **Loop:** Marc (phone) → Cursor **cloud** agent → PR into `develop` → you try it → merge `develop` into `main` when it should be production → GitHub Actions `macos-26` → TestFlight → iPhone.

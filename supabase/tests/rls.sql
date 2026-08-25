@@ -205,11 +205,7 @@ select lives_ok(
 
 select lives_ok(
   $$ insert into public.step_days (user_id, day, steps)
-     values (
-       '11111111-1111-4111-8111-111111111111',
-       current_date,
-       9000
-     )
+     values ('11111111-1111-4111-8111-111111111111', current_date, 9000)
      on conflict (user_id, day) do update set steps = excluded.steps $$,
   'user can upsert their own steps'
 );
@@ -248,11 +244,7 @@ select is(
 
 select throws_ok(
   $$ insert into public.step_days (user_id, day, steps)
-     values (
-       '11111111-1111-4111-8111-111111111111',
-       current_date - 1,
-       100
-     ) $$,
+     values ('11111111-1111-4111-8111-111111111111', current_date - 1, 100) $$,
   '42501',
   'new row violates row-level security policy for table "step_days"',
   'cannot upload someone else steps'
@@ -287,11 +279,7 @@ select is(
 
 select throws_ok(
   $$ insert into public.fight_members (fight_id, user_id, state)
-     values (
-       'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
-       '33333333-3333-4333-8333-333333333333',
-       'accepted'
-     ) $$,
+     values ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', '33333333-3333-4333-8333-333333333333', 'accepted') $$,
   '42501',
   'new row violates row-level security policy for table "fight_members"',
   'cannot join a fight you were not invited to'
@@ -302,9 +290,7 @@ select throws_ok(
         set fight_id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
       where fight_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
         and user_id = '33333333-3333-4333-8333-333333333333' $$,
-  '42501',
-  NULL,
-  'cannot move a membership onto another fight'
+  '42501', NULL, 'cannot move a membership onto another fight'
 );
 
 reset role;
@@ -312,18 +298,12 @@ select pg_temp.as_user('11111111-1111-4111-8111-111111111111');
 set local role authenticated;
 
 select throws_ok(
-  $$ update public.fights
-        set name = 'Hacked'
-      where id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' $$,
-  '42501',
-  NULL,
-  'cannot rewrite a fight name from the phone'
+  $$ update public.fights set name = 'Hacked' where id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' $$,
+  '42501', NULL, 'cannot rewrite a fight name from the phone'
 );
 
 select lives_ok(
-  $$ update public.fights
-        set state = 'final'
-      where id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' $$,
+  $$ update public.fights set state = 'final' where id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' $$,
   'owner can close a fight'
 );
 

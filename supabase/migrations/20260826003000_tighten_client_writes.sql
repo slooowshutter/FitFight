@@ -1,5 +1,4 @@
--- Phone still writes fights, memberships, and step_days.
--- Stop joining any fight, moving a membership, or rewriting a due fight's name.
+-- Column grants only. Stops rewriting fight names, moving memberships, or joining uninvited.
 
 revoke update on public.fights from authenticated;
 grant update (state) on public.fights to authenticated;

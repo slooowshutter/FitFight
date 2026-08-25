@@ -1,18 +1,15 @@
 import SwiftUI
 
 struct FightDetailView: View {
-    private let seed: Fight
+    private let opened: Fight
     @EnvironmentObject private var model: AppModel
     @Environment(\.ffTheme) private var theme
 
     init(fight: Fight) {
-        seed = fight
+        opened = fight
     }
 
-    /// Follow the model after Accept / refresh so standings are not a stale snapshot.
-    private var fight: Fight {
-        model.fight(id: seed.id) ?? seed
-    }
+    private var fight: Fight { model.fight(id: opened.id) ?? opened }
 
     private var pendingJoin: Bool {
         fight.status == .invited && !model.joined.contains(fight.id)

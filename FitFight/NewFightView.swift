@@ -399,18 +399,19 @@ struct NewFightView: View {
         handle.hasPrefix("@") ? String(handle.dropFirst()) : handle
     }
 
-    /// Date-only pickers land on midnight. Keep today’s clock so a 3-day fight is still 72 hours.
+    // Date-only picker lands on midnight — keep today’s clock so 3d is still ~72 hours.
     private func alignPickedEnd(_ picked: Date) {
         let calendar = Calendar.current
         let now = Date()
-        var parts = calendar.dateComponents([.year, .month, .day], from: picked)
-        let time = calendar.dateComponents([.hour, .minute, .second], from: now)
-        parts.hour = time.hour
-        parts.minute = time.minute
-        parts.second = time.second
-        let combined = max(calendar.date(from: parts) ?? picked, now.addingTimeInterval(60))
-        endDate = combined
-        lengthDays = max(1, calendar.dateComponents([.day], from: now, to: combined).day ?? 1)
+        let clock = calendar.dateComponents([.hour, .minute, .second], from: now)
+        let combined = calendar.date(
+            bySettingHour: clock.hour ?? 0,
+            minute: clock.minute ?? 0,
+            second: clock.second ?? 0,
+            of: picked
+        ) ?? picked
+        endDate = max(combined, now.addingTimeInterval(60))
+        lengthDays = max(1, calendar.dateComponents([.day], from: now, to: endDate).day ?? 1)
     }
 
     private func addFriendFromField() {

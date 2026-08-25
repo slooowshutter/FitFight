@@ -1,5 +1,5 @@
 begin;
-select plan(36);
+select plan(34);
 
 select has_schema('private', 'private schema exists');
 select has_table('public', 'profiles', 'profiles exists');
@@ -67,16 +67,6 @@ select is(
   has_table_privilege('authenticated', 'public.fights', 'INSERT'),
   true,
   'clients can insert their own fights'
-);
-select is(
-  has_table_privilege('authenticated', 'public.fights', 'UPDATE'),
-  true,
-  'clients can update fights they own or that are due'
-);
-select is(
-  has_table_privilege('authenticated', 'public.fight_members', 'UPDATE'),
-  true,
-  'clients can update their own membership'
 );
 select is(
   has_table_privilege('authenticated', 'public.data_sources', 'INSERT'),

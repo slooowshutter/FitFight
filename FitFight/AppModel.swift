@@ -579,21 +579,18 @@ final class AppModel: ObservableObject {
         return updated
     }
 
-    /// Civil days in `[windowStart, windowEnd)`. A 3-day chip is three dates, not four.
+    // `[windowStart, windowEnd)` in civil days — a 3-day chip is three dates, not four.
     private static func fightDayWindow(_ fight: Fight) -> Set<String> {
         let calendar = Calendar.current
-        var days: [String] = []
-        var cursor = calendar.startOfDay(for: fight.windowStart)
         let last = calendar.startOfDay(for: fight.windowEnd)
-        while cursor < last && days.count <= 40 {
+        var cursor = calendar.startOfDay(for: fight.windowStart)
+        var days: [String] = []
+        while cursor < last, days.count <= 40 {
             days.append(dayStamp(cursor))
             guard let next = calendar.date(byAdding: .day, value: 1, to: cursor) else { break }
             cursor = next
         }
-        if days.isEmpty {
-            days.append(dayStamp(fight.windowStart))
-        }
-        return Set(days)
+        return Set(days.isEmpty ? [dayStamp(fight.windowStart)] : days)
     }
 
     private static func isoString(_ date: Date) -> String {

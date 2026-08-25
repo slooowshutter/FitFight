@@ -87,9 +87,6 @@ final class FriendshipStore: ObservableObject {
                 .execute()
             return
         } catch {
-            if await hasAcceptedPair(requesterId, addressee.userId) {
-                return
-            }
             try? await accept(requesterId: addressee.userId, addresseeId: requesterId)
             guard await hasAcceptedPair(requesterId, addressee.userId) else {
                 throw FriendshipError.failed
@@ -98,19 +95,12 @@ final class FriendshipStore: ObservableObject {
     }
 
     private func hasAcceptedPair(_ a: UUID, _ b: UUID) async -> Bool {
-        let rows: [FriendshipRow]
-        do {
-            rows = try await client.from("friendships")
-                .select("requester_id, addressee_id, state")
-                .or("requester_id.eq.\(a.uuidString),addressee_id.eq.\(a.uuidString)")
-                .execute()
-                .value
-        } catch {
-            return false
-        }
-        return rows.contains {
-            $0.state == "accepted" && $0.otherId(than: a) == b
-        }
+        let rows: [FriendshipRow] = (try? await client.from("friendships")
+            .select("requester_id, addressee_id, state")
+            .or("requester_id.eq.\(a.uuidString),addressee_id.eq.\(a.uuidString)")
+            .execute()
+            .value) ?? []
+        return rows.contains { $0.state == "accepted" && $0.otherId(than: a) == b }
     }
 
     func accept(requesterId: UUID, addresseeId: UUID) async throws {

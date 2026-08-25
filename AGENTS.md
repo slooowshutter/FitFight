@@ -19,9 +19,9 @@ Read this first, then `docs/`. Marc talks from his phone, often transcribing. Be
 - Talk to Marc only for things only he can do: Apple login, GitHub secrets, TestFlight testers, legal, the hosted Supabase dashboard. Agents cannot `workflow_dispatch`. App pushes (PR branch, `develop`, or `main`) upload to TestFlight by themselves. Tell Marc a build is coming; he opens TestFlight → Update. Do not ask him to Run workflow.
 - Never nuke the hosted database. No `supabase db reset` / `db push` against production or `develop`, no `DROP TABLE` / `TRUNCATE` / `DROP SCHEMA` / `DROP DATABASE` unless Marc asked in that chat and the migration starts with `-- allow-destructive`. Never put `sb_secret_...`, `service_role`, or the database password in git, chat, or iOS. Never merge to `main` unless Marc asked to ship to production. Never merge to `develop` unless Marc asked. Production migrations apply only after `develop` is merged to `main`.
 
-## What exists (2026-08-25)
+## What exists (2026-08-26)
 
-Current map: [`docs/status.md`](docs/status.md). Sign-in, username, create/accept Steps fight, HealthKit upload, and standings work on staging after #30 is merged. No Vercel required for that path.
+Current map: [`docs/status.md`](docs/status.md). Sign-in, username, create/accept Steps fight, HealthKit upload, and standings work on staging. #30 is on `develop`. No Vercel required for that path.
 
 - Native SwiftUI iOS app, scheme `FitFight`, bundle ID `com.fitfight.mvp`.
 - First TestFlight upload **succeeded** (build `0.1.0 (1)`). Latest user-facing ship: **0.9.0** welcome + develop Supabase.

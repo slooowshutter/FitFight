@@ -38,6 +38,11 @@ struct ContentView: View {
                         .font(.ff(13))
                         .foregroundStyle(theme.red)
                 }
+                Button("Try again") {
+                    Task { await session.retryLoadProfile() }
+                }
+                .font(.ff(13, .semibold))
+                .foregroundStyle(theme.accent)
             }
             .padding(.horizontal, theme.space.screenPadding)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)

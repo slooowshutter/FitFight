@@ -210,6 +210,14 @@ struct YouView: View {
             }
             .buttonStyle(.plain)
             .disabled(steps.status == .reading)
+            if let error = steps.uploadError, !error.isEmpty {
+                FFHairline()
+                Text(error)
+                    .font(.ff(11))
+                    .foregroundStyle(theme.red)
+                    .padding(.horizontal, FFMetric.rowPaddingX)
+                    .padding(.vertical, 10)
+            }
         }
     }
 

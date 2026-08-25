@@ -10,6 +10,13 @@ struct FightsListView: View {
                 header
                     .padding(.bottom, 19)
 
+                if let error = model.loadError, !error.isEmpty {
+                    Text(error)
+                        .font(.ff(13))
+                        .foregroundStyle(theme.red)
+                        .padding(.bottom, 16)
+                }
+
                 if model.live.isEmpty && model.invitations.isEmpty && model.finished.isEmpty {
                     Text("No fights yet. Start one under New. Add people with their username — they must have signed in once.")
                         .font(.ff(13))
@@ -53,6 +60,9 @@ struct FightsListView: View {
             }
             .padding(.horizontal, theme.space.screenPadding)
             .padding(.bottom, theme.space.xl)
+        }
+        .refreshable {
+            await model.refreshFromServer()
         }
     }
 
@@ -266,12 +276,12 @@ struct FinishedRow: View {
         } label: {
             FFCard(padding: 13.5, horizontal: 16) {
                 HStack(spacing: 12) {
-                    Text("W")
+                    Text(fight.rank == 1 ? "W" : "L")
                         .font(.ff(13, .bold))
-                        .foregroundStyle(theme.green)
+                        .foregroundStyle(fight.rank == 1 ? theme.green : theme.red)
                         .frame(width: 36, height: 36)
                         .background(
-                            theme.green.opacity(0.12),
+                            (fight.rank == 1 ? theme.green : theme.red).opacity(0.12),
                             in: RoundedRectangle(cornerRadius: 12, style: .continuous)
                         )
                     VStack(alignment: .leading, spacing: 3) {

@@ -85,8 +85,31 @@ final class FriendshipStore: ObservableObject {
                     )
                 )
                 .execute()
+            return
         } catch {
-            try await accept(requesterId: addressee.userId, addresseeId: requesterId)
+            if await hasAcceptedPair(requesterId, addressee.userId) {
+                return
+            }
+            try? await accept(requesterId: addressee.userId, addresseeId: requesterId)
+            guard await hasAcceptedPair(requesterId, addressee.userId) else {
+                throw FriendshipError.failed
+            }
+        }
+    }
+
+    private func hasAcceptedPair(_ a: UUID, _ b: UUID) async -> Bool {
+        let rows: [FriendshipRow]
+        do {
+            rows = try await client.from("friendships")
+                .select("requester_id, addressee_id, state")
+                .or("requester_id.eq.\(a.uuidString),addressee_id.eq.\(a.uuidString)")
+                .execute()
+                .value
+        } catch {
+            return false
+        }
+        return rows.contains {
+            $0.state == "accepted" && $0.otherId(than: a) == b
         }
     }
 
@@ -136,11 +159,13 @@ final class FriendshipStore: ObservableObject {
 enum FriendshipError: LocalizedError {
     case notFound
     case selfRequest
+    case failed
 
     var errorDescription: String? {
         switch self {
         case .notFound: return "No one with that handle."
         case .selfRequest: return "That’s you."
+        case .failed: return "Couldn’t add that friend."
         }
     }
 }

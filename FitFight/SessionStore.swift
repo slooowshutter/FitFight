@@ -138,6 +138,14 @@ final class SessionStore: ObservableObject {
         await loadProfile()
     }
 
+    func retryLoadProfile() async {
+        authError = nil
+        await loadProfile()
+        if profile == nil {
+            authError = "Couldn’t load your account. Try again."
+        }
+    }
+
     func deleteAccount() async {
         authError = nil
         isBusy = true
@@ -191,6 +199,7 @@ final class SessionStore: ObservableObject {
                         return
                     }
                     profile = nil
+                    authError = "Couldn’t load your account. Try again."
                 } else {
                     try? await Task.sleep(nanoseconds: 400_000_000)
                 }

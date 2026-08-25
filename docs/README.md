@@ -4,6 +4,8 @@ For Cursor cloud agents and anyone picking up this repo cold.
 
 | File | What’s in it |
 | --- | --- |
+| [status.md](status.md) | What works, what’s fake, what’s next |
+| [next.md](next.md) | What Marc / the next chat does now |
 | [product.md](product.md) | What FitFight is, names, current UI |
 | [system-design.md](system-design.md) | Golden guide for production. Not a build-everything checklist |
 | [backend.md](backend.md) | Empty Supabase platform: CLI, CI, what Marc creates once |

@@ -11,6 +11,7 @@ struct NewFightView: View {
     @State private var lengthDays = 7
     @State private var pickingDate = false
     @State private var endDate = Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
+    @State private var pickedDay = Date()
     @State private var stake: StakeKind = .ten
     @State private var customKind: CustomStakeKind = .money
     @State private var customMoney = 15
@@ -154,19 +155,20 @@ struct NewFightView: View {
                 }
                 chip("Pick a date", on: pickingDate) {
                     pickingDate = true
+                    pickedDay = endDate
+                    alignPickedEnd(endDate)
                 }
             }
             if pickingDate {
-                DatePicker("End date", selection: $endDate, in: Date()..., displayedComponents: .date)
+                DatePicker("End date", selection: $pickedDay, in: Date()..., displayedComponents: .date)
                     .datePickerStyle(.compact)
                     .labelsHidden()
                     .tint(theme.accent)
-                    .onChange(of: endDate) { _, new in
-                        let days = Calendar.current.dateComponents([.day], from: Date(), to: new).day ?? 1
-                        lengthDays = max(1, days)
+                    .onChange(of: pickedDay) { _, new in
+                        alignPickedEnd(new)
                     }
             }
-            Text("Runs from tomorrow to \(endLabel).")
+            Text("Starts now. Ends \(endLabel).")
                 .font(.ff(11))
                 .foregroundStyle(theme.faint)
         }
@@ -395,6 +397,20 @@ struct NewFightView: View {
 
     private func bareHandle(_ handle: String) -> String {
         handle.hasPrefix("@") ? String(handle.dropFirst()) : handle
+    }
+
+    /// Date-only pickers land on midnight. Keep today’s clock so a 3-day fight is still 72 hours.
+    private func alignPickedEnd(_ picked: Date) {
+        let calendar = Calendar.current
+        let now = Date()
+        var parts = calendar.dateComponents([.year, .month, .day], from: picked)
+        let time = calendar.dateComponents([.hour, .minute, .second], from: now)
+        parts.hour = time.hour
+        parts.minute = time.minute
+        parts.second = time.second
+        let combined = max(calendar.date(from: parts) ?? picked, now.addingTimeInterval(60))
+        endDate = combined
+        lengthDays = max(1, calendar.dateComponents([.day], from: now, to: combined).day ?? 1)
     }
 
     private func addFriendFromField() {

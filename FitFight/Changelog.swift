@@ -28,6 +28,13 @@ enum Changelog {
             version: "0.9.0",
             year: 2026,
             month: 8,
+            day: 26,
+            notes: "A 3-day fight is three days of steps, not four. It starts now (the line under Ends said tomorrow before). Accepting a fight refreshes standings on that screen. Add friend errors show up. Apple Health says so if the upload fails. Pull to refresh on Fights."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
             day: 25,
             notes: "Pick a username after sign-in. Start a Steps fight from the phone (no extra server). Apple Health uploads. Standings come from the database. Add friends on You with their username. Design tab is gone. Version line shows version and build number."
         ),

@@ -194,6 +194,7 @@ final class AppModel: ObservableObject {
     @Published var voted: Set<String> = ["r1", "r3", "r6"]
     @Published var joined: Set<String> = []
     @Published var createError: String?
+    @Published var loadError: String?
 
     @Published var you: Person
     @Published var people: [Person]
@@ -339,9 +340,9 @@ final class AppModel: ObservableObject {
                         won: fight.rank == 1
                     )
                 }
+            loadError = nil
         } catch {
-            fights = []
-            history = []
+            loadError = "Couldn’t refresh fights. Pull to try again."
         }
     }
 
@@ -578,14 +579,19 @@ final class AppModel: ObservableObject {
         return updated
     }
 
+    /// Civil days in `[windowStart, windowEnd)`. A 3-day chip is three dates, not four.
     private static func fightDayWindow(_ fight: Fight) -> Set<String> {
         let calendar = Calendar.current
         var days: [String] = []
         var cursor = calendar.startOfDay(for: fight.windowStart)
-        while cursor < fight.windowEnd && days.count <= 40 {
+        let last = calendar.startOfDay(for: fight.windowEnd)
+        while cursor < last && days.count <= 40 {
             days.append(dayStamp(cursor))
             guard let next = calendar.date(byAdding: .day, value: 1, to: cursor) else { break }
             cursor = next
+        }
+        if days.isEmpty {
+            days.append(dayStamp(fight.windowStart))
         }
         return Set(days)
     }

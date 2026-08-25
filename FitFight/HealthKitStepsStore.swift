@@ -13,6 +13,7 @@ final class HealthKitStepsStore: ObservableObject {
     }
 
     @Published private(set) var status: Status = .idle
+    @Published private(set) var uploadError: String?
 
     private let store = HKHealthStore()
     private let askedKey = "ff.healthkit.stepsAsked"
@@ -121,8 +122,9 @@ final class HealthKitStepsStore: ObservableObject {
                 .execute()
             UserDefaults.standard.set(formatter.string(from: today), forKey: lastUploadDayKey)
             UserDefaults.standard.set(true, forKey: connectedKey)
+            uploadError = nil
         } catch {
-            // Local read still works if the table is not on this project yet.
+            uploadError = "Couldn’t upload steps. Tap Apple Health again."
         }
     }
 

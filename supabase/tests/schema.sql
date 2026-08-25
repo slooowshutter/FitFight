@@ -1,5 +1,5 @@
 begin;
-select plan(31);
+select plan(36);
 
 select has_schema('private', 'private schema exists');
 select has_table('public', 'profiles', 'profiles exists');
@@ -102,6 +102,31 @@ select is(
   has_column_privilege('authenticated', 'public.profiles', 'display_name', 'UPDATE'),
   true,
   'users can update their display name'
+);
+select is(
+  has_column_privilege('authenticated', 'public.fights', 'state', 'UPDATE'),
+  true,
+  'clients can close a due fight'
+);
+select is(
+  has_column_privilege('authenticated', 'public.fights', 'name', 'UPDATE'),
+  false,
+  'clients cannot rewrite fight names'
+);
+select is(
+  has_column_privilege('authenticated', 'public.fight_members', 'state', 'UPDATE'),
+  true,
+  'clients can accept a membership'
+);
+select is(
+  has_column_privilege('authenticated', 'public.fight_members', 'current_value', 'UPDATE'),
+  true,
+  'clients can write their own current value'
+);
+select is(
+  has_column_privilege('authenticated', 'public.fight_members', 'fight_id', 'UPDATE'),
+  false,
+  'clients cannot move a membership to another fight'
 );
 
 select ok(

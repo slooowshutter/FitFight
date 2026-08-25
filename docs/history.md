@@ -1,5 +1,9 @@
 # History
 
+## 2026-08-26 — #30 on develop, morning fight fixes
+
+Merged **#30** into `develop` (not `main`). TestFlight **0.9.0 (53)** uploaded. Follow-up: 3-day window is three days, fight starts now, Accept refreshes standings, add-friend errors show, HealthKit upload errors show.
+
 ## 2026-08-24 — freeze marketing version for TestFlight
 
 Apple beta-reviews the first build of each marketing version for external testers. We were bumping `0.4.1`, `0.5.0`, `0.8.0` on every user-facing PR, so friends waited every time. Rule: keep `MARKETING_VERSION` at `0.8.0`; CI still increments the build number; Changelog rows reuse `0.8.0`. Bump marketing version only for an App Store ship or if Marc asks.
@@ -10,7 +14,7 @@ Create / accept / HealthKit upload / standings no longer wait on Vercel. The pho
 
 ## 2026-08-25 — status map
 
-[`status.md`](status.md) is the works / fake / dead / next list. Merge #30 into `develop` only. Do not invent Ask-first screens.
+[`status.md`](status.md) is the works / fake / dead / next list. #30 is on `develop`. Do not invent Ask-first screens.
 
 ## 2026-08-25 — welcome gate
 

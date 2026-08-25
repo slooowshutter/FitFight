@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 8,
             day: 25,
+            notes: "The version at the top now says prod or staging, so you can see which Supabase the phone is talking to."
+        ),
+        ReleaseNote(
+            version: "0.8.0",
+            year: 2026,
+            month: 8,
+            day: 25,
             notes: "Sign in, add friends by handle, start a real Steps fight, Apple Health uploads to the server, standings come from the database. Fights are no longer the fixture people. When the days are up the fight closes on the server — you do not have to leave the app open. Design tab still previews the old mock. Requests is unchanged."
         ),
         ReleaseNote(

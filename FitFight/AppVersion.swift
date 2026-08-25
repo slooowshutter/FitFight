@@ -2,7 +2,17 @@ import Foundation
 
 enum AppVersion {
     static var label: String {
-        "\(marketing) (\(build))"
+        "\(marketing) (\(build)) · \(backend)"
+    }
+
+    /// Which hosted database this binary talks to. TestFlight that is not `main`
+    /// should say `staging` (Supabase develop). `prod` means the production fallback.
+    static var backend: String {
+        let host = SupabaseConfig.projectURL.host ?? ""
+        if host.contains("pvqntpteehdvhqyctwum") {
+            return "prod"
+        }
+        return "staging"
     }
 
     static var marketing: String {

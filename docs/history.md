@@ -4,6 +4,10 @@
 
 Apple beta-reviews the first build of each marketing version for external testers. We were bumping `0.4.1`, `0.5.0`, `0.8.0` on every user-facing PR, so friends waited every time. Rule: keep `MARKETING_VERSION` at `0.8.0`; CI still increments the build number; Changelog rows reuse `0.8.0`. Bump marketing version only for an App Store ship or if Marc asks.
 
+## 2026-08-25 — version label shows prod vs staging
+
+TestFlight that is not `main` is supposed to use the Supabase `develop` branch. If the GitHub staging variables are empty, the binary silently falls back to production — which is why the phone can look “working” while the develop dashboard is empty. The top version label now ends in `prod` or `staging`.
+
 ## 2026-08-25 — Fight duration closer
 
 A 3 / 7 / 14 day fight can now finish without waiting those days in real time: tests pass a fake clock. Opening the app closes due fights. A Vercel cron hits `/api/internal/close-fights` so a fight still settles if nobody opens. Steps after `ends_at` do not count. 24h grace, then final even if someone never uploaded.

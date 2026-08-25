@@ -85,7 +85,7 @@ Names only. Never print values. Settings → Secrets and variables → Actions �
 | `FITFIGHT_API_URL` | any TestFlight that is not `main` | Staging API base URL (empty = commands off) |
 | `FITFIGHT_API_PRODUCTION_URL` | TestFlight from `main` | Production API base URL (empty = commands off) |
 
-`main` always ships the known production Supabase URL/key. Missing staging variables warn and fall back to production; the job does not fail.
+`main` always ships the known production Supabase URL/key. Missing staging variables warn and fall back to production; the job does not fail. That fallback is why the phone can look fine while the Supabase `develop` dashboard is empty. The top version label shows `prod` or `staging` so you can see which one you are on.
 
 Vercel also needs `CRON_SECRET` (Preview + Production). Vercel Cron sends it as `Authorization: Bearer …` to `/api/internal/close-fights` every 15 minutes. Hobby Vercel may only run cron once a day — that is still enough; opening the app also closes due fights. Never put this value in git or chat.
 

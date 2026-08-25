@@ -27,7 +27,7 @@ The phone’s job is: show the UI, read HealthKit / workouts when it is open (or
 
 ## Now
 
-- Marc: GitHub Actions variables `SUPABASE_STAGING_URL`, `SUPABASE_STAGING_PUBLISHABLE_KEY`, `FITFIGHT_API_URL` (and `FITFIGHT_API_PRODUCTION_URL` later). Apple Sign In On on the Supabase `develop` branch.
+- Marc: point TestFlight at Supabase `develop` (it is on production today). GitHub repo → Settings → Secrets and variables → Actions → **Variables** (not Secrets): `SUPABASE_STAGING_URL` and `SUPABASE_STAGING_PUBLISHABLE_KEY` from the develop branch API settings. Publishable key only. Do not paste them in chat. Also Apple Sign In On on that develop branch. `FITFIGHT_API_URL` when Vercel exists.
 - Marc: Vercel project, root `web/`, Preview + develop → Supabase develop secret; Production → main project. Also set `CRON_SECRET` on Vercel (Preview + Production). Never paste it in chat.
 - Friends on TestFlight. Marc adds them as internal testers. Same build. They sign in with their own Apple ID (staging users, not production). Start a 3-day Steps fight with one friend and leave it running.
 

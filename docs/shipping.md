@@ -24,7 +24,7 @@ Both **must** stay GitHub-hosted. Never `self-hosted`. Apple requires **Xcode 26
 
 Fastlane: `fastlane/Fastfile` lane `beta`. Archive uses automatic signing + App Store Connect API key (`-allowProvisioningUpdates`). Do **not** also set `export_xcargs` to the same `-authenticationKeyPath` flags — gym passes `xcargs` into export and duplicates the flag.
 
-Build number is not committed; CI sets `CURRENT_PROJECT_VERSION` at archive time from TestFlight (`latest + 1`). Leave `MARKETING_VERSION` at `0.8.0`.
+Build number is not committed; CI sets `CURRENT_PROJECT_VERSION` at archive time from TestFlight (`latest + 1`). Leave `MARKETING_VERSION` at `0.9.0` (already on phones). Do not drop it — TestFlight will not offer `0.8.0` over an installed `0.9.0`.
 
 ## Versions vs builds (why friends wait)
 

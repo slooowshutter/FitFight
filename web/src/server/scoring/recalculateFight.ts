@@ -9,6 +9,7 @@ import {
   type ObservationRow,
 } from "../db/types";
 import { ApiError, ERROR_CODES } from "../http";
+import { nextFightState, observationOverlapsWindow } from "./fightClock";
 import { scoreFight } from "./scoreFight";
 
 const SCORABLE_STATES = ["live", "scheduled", "awaiting_final_sync"] as const;
@@ -25,13 +26,6 @@ function latestObservations(rows: ObservationRow[]): ObservationRow[] {
   return [...latest.values()];
 }
 
-function overlapping(
-  observation: ObservationRow,
-  startsAt: string,
-  endsAt: string,
-): boolean {
-  return observation.starts_at < endsAt && observation.ends_at > startsAt;
-}
 
 export async function listFightsToRecalculate(
   userId: string,
@@ -110,7 +104,7 @@ export async function recalculateFight(
       throw new ApiError(500, ERROR_CODES.db_error, "Could not load observations");
     }
     observations = latestObservations((observationData ?? []) as ObservationRow[]).filter((row) =>
-      overlapping(row, fight.starts_at, fight.ends_at),
+      observationOverlapsWindow(row.starts_at, row.ends_at, fight.starts_at, fight.ends_at),
     );
   }
 
@@ -155,11 +149,6 @@ export async function recalculateFight(
   const endsAt = new Date(fight.ends_at);
   const graceEnds = new Date(endsAt.getTime() + fight.final_sync_grace_seconds * 1000);
 
-  let nextState: FightState = fight.state;
-  if (fight.state === "live" && now.getTime() > endsAt.getTime()) {
-    nextState = "awaiting_final_sync";
-  }
-
   const allComplete =
     members.length > 0 &&
     members.every((member) => {
@@ -173,13 +162,13 @@ export async function recalculateFight(
       return source.complete_through >= fight.ends_at;
     });
 
-  const shouldFinalize =
-    nextState === "awaiting_final_sync" &&
-    (now.getTime() > graceEnds.getTime() || allComplete);
-
-  if (shouldFinalize) {
-    nextState = "final";
-  }
+  const nextState = nextFightState({
+    state: fight.state,
+    nowMs: now.getTime(),
+    endsAtMs: endsAt.getTime(),
+    graceEndsMs: graceEnds.getTime(),
+    allSourcesCompleteThroughEnd: allComplete,
+  });
 
   const byUser = new Map(scored.map((row) => [row.userId, row]));
   for (const member of members) {

@@ -32,6 +32,8 @@ The phone’s job is: show the UI, read HealthKit / workouts when it is open (or
 
 ## Next
 
+- Friends on TestFlight. Marc adds them as internal testers. Same build. They sign in with their own Apple ID (staging users, not production).
+- **Fight closer.** Today a fight only moves `live → awaiting_final_sync → final` when someone opens the app and steps upload. If everyone is asleep, it sits. A server job should walk due fights with a clock (tests already fake `now` — see `web/src/server/scoring/fightClock.test.ts`). No push yet.
 - Try the two-phone loop on TestFlight (`develop` + staging API). Then App Store review when Marc says ship (`develop` → `main`).
 
 ## Later

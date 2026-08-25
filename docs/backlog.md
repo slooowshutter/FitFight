@@ -25,7 +25,7 @@ If the app is closed or killed, iOS will not reliably run timers, settle a month
 
 The phone’s job is: show the UI, read HealthKit / workouts when it is open (or briefly woken), upload, receive pushes.
 
-**Last TestFlight:** 25 Aug 2026 — next Update is `0.9.0` (same number already on your phone) so TestFlight will actually offer it. Look for `staging · 25 Aug` on the version line. PR #30.
+**Last TestFlight:** 25 Aug 2026 — welcome screen when signed out; tabs only after Apple sign-in. Still `0.9.0`. Look for `staging · 25 Aug`. PR #30.
 
 ## Now
 
@@ -57,7 +57,7 @@ From [`design/source/INVENTORY.md`](design/source/INVENTORY.md) — honest holes
 - Notifications inbox (the bell has no destination)
 - Request compose + request thread
 - Profile edit, settings sub-screens, payouts
-- Sign-in, onboarding, HealthKit permission prompts
+- Onboarding after sign-in, HealthKit permission prompts
 - Per-person goals in create (data model allows it; UI is one shared goal)
 - Settle-up / payment at the end of a fight
 
@@ -70,3 +70,4 @@ From [`design/source/INVENTORY.md`](design/source/INVENTORY.md) — honest holes
 - Smallest command API: create / invite / accept a Steps Fight. New fight starts a real fight; fight detail Accept/Join accepts it.
 - HealthKit Steps upload. Standings come from the database. Fights are no longer the fixture people. Design tab still previews the old mock.
 - Fight closer: `live → awaiting_final_sync → final` on a server clock. Tests fake `now` for 1 / 3 / 7 / 14 day windows. Opening the app closes your due fights; Vercel cron closes the rest if nobody opens. No push yet.
+- Welcome screen when signed out. Apple Sign In is the only way in; the tabs stay hidden until then.

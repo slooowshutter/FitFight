@@ -4,6 +4,7 @@ struct ContentView: View {
     @EnvironmentObject private var themeStore: ThemeStore
     @EnvironmentObject private var designStore: DesignStore
     @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
@@ -11,12 +12,11 @@ struct ContentView: View {
             VersionBanner {
                 model.showingVersions = true
             }
-            ZStack {
-                tabBody
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                FFTabBar(tab: $model.tab)
+            if session.isSignedIn {
+                signedInApp
+            } else {
+                WelcomeView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .background(theme.bg.ignoresSafeArea())
@@ -24,6 +24,16 @@ struct ContentView: View {
             VersionsView()
                 .fitFightTheme(resolved)
                 .presentationBackground(resolved.bg)
+        }
+    }
+
+    private var signedInApp: some View {
+        ZStack {
+            tabBody
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            FFTabBar(tab: $model.tab)
         }
     }
 

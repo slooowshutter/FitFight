@@ -4,6 +4,10 @@
 
 Apple beta-reviews the first build of each marketing version for external testers. We were bumping `0.4.1`, `0.5.0`, `0.8.0` on every user-facing PR, so friends waited every time. Rule: keep `MARKETING_VERSION` at `0.8.0`; CI still increments the build number; Changelog rows reuse `0.8.0`. Bump marketing version only for an App Store ship or if Marc asks.
 
+## 2026-08-25 — welcome gate
+
+Signed-out Users see FitFight, one line of copy, and Sign in with Apple. The five tabs stay hidden until they are in.
+
 ## 2026-08-25 — date on the version line
 
 Every TestFlight ship adds a Changelog row and puts that date on the top version line (`0.9.0 (n) · staging · 25 Aug`) plus **Last TestFlight** in `docs/backlog.md`. Stay on `0.9.0` — phones already have it; TestFlight will not replace it with `0.8.0`.

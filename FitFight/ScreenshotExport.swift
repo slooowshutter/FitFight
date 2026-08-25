@@ -59,6 +59,24 @@ enum ScreenshotExport {
         let fight = model.fights.first { $0.id == "sweat" }
         let invited = model.fights.first { $0.id == "desk" }
         return [
+            Shot(name: "00-welcome") { store, _ in
+                let theme = store.theme
+                return AnyView(
+                    VStack(spacing: 0) {
+                        VersionBanner()
+                        WelcomeView()
+                    }
+                    .background(theme.bg)
+                    .environmentObject(store)
+                    .environmentObject(model)
+                    .environmentObject(DesignStore())
+                    .environmentObject(SessionStore(preview: ()))
+                    .environmentObject(HealthKitStepsStore())
+                    .environment(\.ffTheme, theme)
+                    .environment(\.colorScheme, theme.colorScheme)
+                    .environment(\.ffStaticRender, true)
+                )
+            },
             Shot(name: "01-fights") { store, model in
                 frame(FightsListView(), tab: .fights, themeStore: store, model: model)
             },

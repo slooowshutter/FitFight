@@ -67,8 +67,9 @@ uploaded to the server yet.
 
 Sign in, add friends by handle, start a real Steps fight. Apple Health uploads to the
 server. Standings come from the database. Fights are no longer the fixture people.
-When the days are up the server closes the fight (app open or cron). The Design tab
-still previews the old mock. Requests is unchanged.
+When the days are up the server closes the fight (app open or cron). Signed out, the
+app is only a welcome screen plus Sign in with Apple. The Design tab still previews
+the old mock. Requests is unchanged.
 
 ## Not this project
 

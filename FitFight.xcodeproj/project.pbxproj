@@ -50,6 +50,7 @@
 		A10000000000000000000316 /* APIConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000306 /* APIConfig.swift */; };
 		A10000000000000000000317 /* FitFightAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000307 /* FitFightAPI.swift */; };
 		A10000000000000000000318 /* FriendshipStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000308 /* FriendshipStore.swift */; };
+		A10000000000000000000319 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000309 /* WelcomeView.swift */; };
 		A1000000000000000000F002 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = A1000000000000000000F001 /* Supabase */; };
 /* End PBXBuildFile section */
 
@@ -98,6 +99,7 @@
 		A10000000000000000000306 /* APIConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIConfig.swift; sourceTree = "<group>"; };
 		A10000000000000000000307 /* FitFightAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FitFightAPI.swift; sourceTree = "<group>"; };
 		A10000000000000000000308 /* FriendshipStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendshipStore.swift; sourceTree = "<group>"; };
+		A10000000000000000000309 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
 		A10000000000000000000320 /* FitFight.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FitFight.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -132,6 +134,7 @@
 				A10000000000000000000308 /* FriendshipStore.swift */,
 				A10000000000000000000302 /* SessionStore.swift */,
 				A10000000000000000000303 /* AppleSignInControl.swift */,
+				A10000000000000000000309 /* WelcomeView.swift */,
 				A10000000000000000000304 /* HealthKitStepsStore.swift */,
 				A10000000000000000000013 /* AppVersion.swift */,
 				A10000000000000000000015 /* Changelog.swift */,
@@ -308,6 +311,7 @@
 				A10000000000000000000318 /* FriendshipStore.swift in Sources */,
 				A10000000000000000000312 /* SessionStore.swift in Sources */,
 				A10000000000000000000313 /* AppleSignInControl.swift in Sources */,
+				A10000000000000000000319 /* WelcomeView.swift in Sources */,
 				A10000000000000000000314 /* HealthKitStepsStore.swift in Sources */,
 				A1000000000000000000E000 /* DesignVariant.swift in Sources */,
 				A1000000000000000000E001 /* DesignsTabView.swift in Sources */,

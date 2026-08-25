@@ -25,7 +25,7 @@ Both **must** stay GitHub-hosted. Never `self-hosted`. Apple requires **Xcode 26
 
 Fastlane: `fastlane/Fastfile` lane `beta`. Archive uses automatic signing + App Store Connect API key (`-allowProvisioningUpdates`). Do **not** also set `export_xcargs` to the same `-authenticationKeyPath` flags — gym passes `xcargs` into export and duplicates the flag.
 
-Build number is not committed; CI sets `CURRENT_PROJECT_VERSION` at archive time from TestFlight (`latest + 1`). Leave `MARKETING_VERSION` at `0.8.0`.
+Build number is not committed; CI sets `CURRENT_PROJECT_VERSION` at archive time from TestFlight (`latest + 1`). Leave `MARKETING_VERSION` at `0.9.0` (already on phones). Do not drop it — TestFlight will not offer `0.8.0` over an installed `0.9.0`.
 
 ## Versions vs builds (why friends wait)
 
@@ -74,6 +74,21 @@ Names only. Never print values. Never ask Marc to paste the `.p8` into chat.
 There is a separate Expo EAS key in App Store Connect. Do not reuse it.
 
 Do **not** add a Supabase `service_role` or `sb_secret_...` key to GitHub. Deploys use GitHub Integration. See [`backend.md`](backend.md).
+
+## GitHub variables (TestFlight environment)
+
+Names only. Never print values. Settings → Secrets and variables → Actions → Variables.
+
+| Variable | Used when | What it is |
+| --- | --- | --- |
+| `SUPABASE_STAGING_URL` | any TestFlight that is not `main` | Persistent `develop` Supabase project URL |
+| `SUPABASE_STAGING_PUBLISHABLE_KEY` | any TestFlight that is not `main` | Publishable key for that project (`sb_publishable_...`) |
+| `FITFIGHT_API_URL` | any TestFlight that is not `main` | Staging API base URL (empty = commands off) |
+| `FITFIGHT_API_PRODUCTION_URL` | TestFlight from `main` | Production API base URL (empty = commands off) |
+
+`main` always ships the known production Supabase URL/key. Non-`main` TestFlight ships the known develop project (GitHub `SUPABASE_STAGING_*` variables override if set). The top version label shows `prod` or `staging`.
+
+Vercel also needs `CRON_SECRET` (Preview + Production). Vercel Cron sends it as `Authorization: Bearer …` to `/api/internal/close-fights` every 15 minutes. Hobby Vercel may only run cron once a day — that is still enough; opening the app also closes due fights. Never put this value in git or chat.
 
 ## What Marc still does
 

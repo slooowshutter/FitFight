@@ -101,7 +101,19 @@ struct FightDetailView: View {
                     .foregroundStyle(theme.muted)
                     .padding(.bottom, 22)
                 FFButton(title: fight.inviteAction == "Accept" ? "Accept challenge" : "Join fight") {
-                    model.joined.insert(fight.id)
+                    Task {
+                        await model.acceptFight(id: fight.id)
+                        if (model.createError ?? "").isEmpty {
+                            model.joined.insert(fight.id)
+                            await model.refreshFromServer()
+                        }
+                    }
+                }
+                if let error = model.createError, !error.isEmpty {
+                    Text(error)
+                        .font(.ff(11))
+                        .foregroundStyle(theme.red)
+                        .padding(.top, 10)
                 }
             }
             .frame(maxWidth: .infinity)

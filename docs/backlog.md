@@ -15,6 +15,8 @@ The agent edits this file, commits, opens a PR into `develop`.
 
 Do not invent UI for anything in **Ask first** or undesigned Later items.
 
+Honest works / doesn’t / next: [`status.md`](status.md). Read that before the next build.
+
 [`system-design.md`](system-design.md) is the golden guide. Follow it. Do not implement the whole document. Production Metric is **Steps**; Active Minutes and Workout Count stay later.
 
 ## Principle: server does the work
@@ -25,10 +27,19 @@ If the app is closed or killed, iOS will not reliably run timers, settle a month
 
 The phone’s job is: show the UI, read HealthKit / workouts when it is open (or briefly woken), upload, receive pushes.
 
+**Last TestFlight:** 25 Aug 2026 — username onboarding, live Steps fight from the phone, HealthKit upload, Design tab removed. Still `0.9.0`. Look for `0.9.0 · build N · staging`. PR #30.
+
 ## Now
 
-- Smallest command API (create / invite / accept a Steps Fight).
-- HealthKit Steps upload. Not other metrics. Then replace fixture fights with server scores.
+- Marc: merge PR #30 into **`develop`**. Wait for the SQL to land. Then TestFlight → Update. Do not merge to `main`.
+- Marc: pick a username, allow Apple Health, start a Steps fight (alone is fine). Add a friend by username on You.
+- Friends on TestFlight Internal Testing. Same build. Their own Apple IDs. 3-day Steps fight after they have usernames.
+- Marc: Apple Sign In On on Supabase `develop` only if sign-in fails (client ID `com.fitfight.mvp`).
+
+## Next
+
+- **Watch a real 3-day fight close.** Opening the app marks a due fight finished. No cron. Proof is two phones: standings match, fight ends, steps after `ends_at` do not count. Do that before App Store.
+- App Store when Marc says ship (`develop` → `main`).
 
 ## Later
 
@@ -49,13 +60,20 @@ From [`design/source/INVENTORY.md`](design/source/INVENTORY.md) — honest holes
 - Notifications inbox (the bell has no destination)
 - Request compose + request thread
 - Profile edit, settings sub-screens, payouts
-- Sign-in, onboarding, HealthKit permission prompts
+- HealthKit permission prompts (we request on username continue and on Data sources tap; no extra designed screen)
 - Per-person goals in create (data model allows it; UI is one shared goal)
 - Settle-up / payment at the end of a fight
 
 ## Done
 
+The phone writes fights and steps to staging after this PR is merged. See [`status.md`](status.md).
+
 - v0.3 design port: four tabs, dark/light, 10 accents, fixture fights.
 - Talk to the boss on Requests: private chat with Marc, emailed to him.
 - Persistent GitHub `develop` + hosted Supabase branch `develop`.
-- Sign in with Apple on You, real `profiles` handle, Apple Health Steps read on You → Data sources, Delete account under You → Settings. No HealthKit upload yet. Fixture fights stay.
+- Sign in with Apple on You, real `profiles` handle, Apple Health Steps read on You → Data sources, Delete account under You → Settings.
+- Smallest command API: create / invite / accept a Steps Fight. New fight starts a real fight; fight detail Accept/Join accepts it.
+- HealthKit Steps upload. Standings come from the database. Fights are no longer the fixture people. Design tab still previews the old mock.
+- Fight closer: `live → awaiting_final_sync → final` on a server clock. Tests fake `now` for 1 / 3 / 7 / 14 day windows. Opening the app closes your due fights; Vercel cron closes the rest if nobody opens. No push yet.
+- Welcome screen when signed out. Apple Sign In is the only way in; the tabs stay hidden until then.
+- Username onboarding after sign-in. Phone-written Steps fights, HealthKit → `step_days`, standings from the database. Design tab removed.

@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fitfight.app/schemas/healthkit-batch.json",
+  "title": "HealthKitStepsBatch",
+  "description": "Idempotent daily Steps upload. Apple Health aggregate only. Do not sum raw sources.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["idempotencyKey", "days"],
+  "properties": {
+    "idempotencyKey": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 128
+    },
+    "sourceLabel": { "type": "string", "default": "Apple Health" },
+    "contributingSourceLabels": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "days": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 400,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["day", "value"],
+        "properties": {
+          "day": {
+            "type": "string",
+            "description": "Civil day YYYY-MM-DD in the User's time zone."
+          },
+          "value": {
+            "type": "number",
+            "minimum": 0,
+            "description": "HealthKit aggregate step count for that day."
+          },
+          "revision": { "type": "integer", "minimum": 1, "default": 1 }
+        }
+      }
+    }
+  }
+}

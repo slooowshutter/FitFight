@@ -19,6 +19,7 @@ Not: agent on Marc’s laptop or home Mac → local Xcode.
 | Screenshots | `.github/workflows/ios-screenshots.yml` | PR + push to `main` or `develop` | `macos-26` |
 | TestFlight | `.github/workflows/ios-testflight.yml` | any app `push` (PR, `develop`, or `main`), cron `0 18 * * *` UTC | `macos-26` |
 | Database | `.github/workflows/database.yml` | PR + push to `main` or `develop` | `ubuntu-latest` |
+| Delete merged branch | `.github/workflows/delete-merged-branch.yml` | PR merged | `ubuntu-latest` |
 
 Both **must** stay GitHub-hosted. Never `self-hosted`. Apple requires **Xcode 26 / iOS 26 SDK** to upload (Xcode 16.4 / iOS 18.5 is rejected).
 
@@ -81,6 +82,10 @@ Do **not** add a Supabase `service_role` or `sb_secret_...` key to GitHub. Deplo
 - Apple account / legal / new secrets if they rotate.
 
 He should **not** operate certificates day to day, open Xcode, or use a Mac for builds.
+
+## Feature branches
+
+After a feature PR merges, CI deletes that branch. `main` and `develop` stay — we ship by merging `develop` into `main`, so GitHub’s “Automatically delete head branches” toggle must stay **off** (it would delete `develop`).
 
 ## Agent limits on GitHub
 

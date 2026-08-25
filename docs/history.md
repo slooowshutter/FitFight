@@ -8,6 +8,10 @@ Apple beta-reviews the first build of each marketing version for external tester
 
 First slice of a real Steps Fight, still on the fixture Fights tab. You signs in with Apple (Supabase Auth), shows the `profiles` handle, reads today’s Apple Health aggregate Steps on Data sources, and can delete the account from Settings. HealthKit is not uploaded yet. Marketing version `0.8.0`.
 
+## 2026-08-24 — delete feature branches on merge
+
+CI deletes the merged PR’s head branch. `main` and `develop` are kept. GitHub’s repo toggle stays off so shipping `develop` → `main` cannot delete `develop`.
+
 ## 2026-08-24 — develop is staging, main is production
 
 GitHub `develop` is the testing branch. Feature PRs merge into `develop`. Production is merging `develop` into `main`. The persistent Supabase branch is also named `develop`.

@@ -43,3 +43,4 @@ Product ideas go in [`docs/backlog.md`](docs/backlog.md). Marc says “put X on 
 3. If users will see it: append a `ReleaseNote` in `Changelog.swift` using the current `MARKETING_VERSION` (`0.8.0`). Do **not** change `MARKETING_VERSION` in `project.pbxproj`. CI bumps the build number. Only bump marketing version when Marc is shipping to the App Store or he asked in that chat.
 4. Don’t ask Marc to open Xcode or his Mac. After you push app code, TestFlight uploads itself. He opens TestFlight → Update. Do not ask him to merge first, or to Run workflow.
 5. Shipping to production is Marc merging `develop` → `main`. Agents do not do that unless he said so in that chat.
+6. Merged feature branches are deleted by CI. `main` and `develop` stay. Do not enable GitHub’s “Automatically delete head branches.”

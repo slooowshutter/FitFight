@@ -75,7 +75,7 @@ jobs:
             echo "staging key set: ${#SUPABASE_STAGING_PUBLISHABLE_KEY}"
             echo "staging api url set: ${#FITFIGHT_API_URL}"
             if [ -z "${SUPABASE_STAGING_URL}" ] || [ -z "${SUPABASE_STAGING_PUBLISHABLE_KEY}" ]; then
-              echo "::warning::Staging GitHub variables are empty; this TestFlight will use the production Supabase fallback. Add SUPABASE_STAGING_URL and SUPABASE_STAGING_PUBLISHABLE_KEY when staging is ready."
+              echo "GitHub staging variables empty; using the compiled develop project fallback."
             fi
           fi
           python3 - "${GITHUB_REF:-}" <<'PY'
@@ -95,18 +95,17 @@ jobs:
           is_main = sys.argv[1] == "refs/heads/main"
           production_url = "https://pvqntpteehdvhqyctwum.supabase.co"
           production_key = "sb_publishable_6wP1KNFvJwIE_hX1U2aTfg_u3sk40Li"
+          develop_url = "https://jldjgftoxmluiswpebbd.supabase.co"
+          develop_key = "sb_publishable_2nugoyApCuXfOPCWYevktg_kx4nVJPp"
 
           if is_main:
               url = production_url
               key = production_key
               api = os.environ.get("FITFIGHT_API_PRODUCTION_URL", "").strip()
           else:
-              url = os.environ.get("SUPABASE_STAGING_URL", "").strip()
-              key = os.environ.get("SUPABASE_STAGING_PUBLISHABLE_KEY", "").strip()
+              url = os.environ.get("SUPABASE_STAGING_URL", "").strip() or develop_url
+              key = os.environ.get("SUPABASE_STAGING_PUBLISHABLE_KEY", "").strip() or develop_key
               api = os.environ.get("FITFIGHT_API_URL", "").strip()
-              if not url or not key:
-                  url = ""
-                  key = ""
 
           path = Path("FitFight/Generated/BuildEnv.swift")
           path.write_text(

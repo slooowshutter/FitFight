@@ -4,7 +4,8 @@ Empty platform first. Feature code later. Production Metric is **Steps**.
 
 [`system-design.md`](system-design.md) is the golden guide. This folder is the first slice of it, not the whole thing. Do not add Active Minutes, Workout Count, WHOOP, Strava, payments, notifications, social, or a website until the backlog says so.
 
-Hosted production (no secrets): https://pvqntpteehdvhqyctwum.supabase.co
+Hosted production (no secrets): https://pvqntpteehdvhqyctwum.supabase.co  
+Hosted staging / git `develop` (no secrets): https://jldjgftoxmluiswpebbd.supabase.co
 
 ## Loop
 
@@ -64,4 +65,4 @@ Pin the CLI to **2.115.0** until you mean to bump it (`config.toml` was generate
 
 The iOS publishable key (`sb_publishable_...`) production fallback lives in `FitFight/SupabaseConfig.swift`. The secret key is not.
 
-TestFlight binaries that are **not** built from `main` read staging from GitHub Actions **variables** (not secrets): `SUPABASE_STAGING_URL`, `SUPABASE_STAGING_PUBLISHABLE_KEY`, `FITFIGHT_API_URL`. CI writes those into `FitFight/Generated/BuildEnv.swift` before archive. `main` uses the production URL/key plus `FITFIGHT_API_PRODUCTION_URL`. If the staging variables are empty, the job warns and the app keeps the production fallback so the archive still succeeds. See [`shipping.md`](shipping.md).
+TestFlight binaries that are **not** built from `main` talk to the develop project. CI writes `FitFight/Generated/BuildEnv.swift` before archive. GitHub variables `SUPABASE_STAGING_*` override if set; otherwise the known develop URL and publishable key are compiled in. `main` uses the production URL/key plus `FITFIGHT_API_PRODUCTION_URL`. See [`shipping.md`](shipping.md).

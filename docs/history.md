@@ -6,7 +6,7 @@ Apple beta-reviews the first build of each marketing version for external tester
 
 ## 2026-08-25 — version label shows prod vs staging
 
-TestFlight that is not `main` is supposed to use the Supabase `develop` branch. If the GitHub staging variables are empty, the binary silently falls back to production — which is why the phone can look “working” while the develop dashboard is empty. The top version label now ends in `prod` or `staging`.
+TestFlight that is not `main` compiles the persistent develop project (`jldjgftoxmluiswpebbd`). The top version label ends in `prod` or `staging`. Production is only `main`.
 
 ## 2026-08-25 — Fight duration closer
 

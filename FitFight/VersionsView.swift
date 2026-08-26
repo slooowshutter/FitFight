@@ -41,7 +41,7 @@ private struct ReleaseNoteRow: View {
     @Environment(\.ffTheme) private var theme
 
     private var isCurrent: Bool {
-        release.version == AppVersion.marketing
+        release.id == Changelog.current?.id
     }
 
     var body: some View {

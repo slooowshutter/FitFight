@@ -55,5 +55,69 @@ jobs:
       - name: Install Fastlane
         run: bundle install
 
+      # Non-main TestFlight talks to staging. main talks to production.
+      # Values go into FitFight/Generated/BuildEnv.swift (compiled in). Never print them.
+      - name: Write backend environment
+        env:
+          SUPABASE_STAGING_URL: ${{ vars.SUPABASE_STAGING_URL }}
+          SUPABASE_STAGING_PUBLISHABLE_KEY: ${{ vars.SUPABASE_STAGING_PUBLISHABLE_KEY }}
+          FITFIGHT_API_URL: ${{ vars.FITFIGHT_API_URL }}
+          FITFIGHT_API_PRODUCTION_URL: ${{ vars.FITFIGHT_API_PRODUCTION_URL }}
+        run: |
+          set -euo pipefail
+          mkdir -p FitFight/Generated
+          if [ "${GITHUB_REF:-}" = "refs/heads/main" ]; then
+            echo "TestFlight target: production"
+            echo "production api url set: ${#FITFIGHT_API_PRODUCTION_URL}"
+          else
+            echo "TestFlight target: staging"
+            echo "staging url set: ${#SUPABASE_STAGING_URL}"
+            echo "staging key set: ${#SUPABASE_STAGING_PUBLISHABLE_KEY}"
+            echo "staging api url set: ${#FITFIGHT_API_URL}"
+            if [ -z "${SUPABASE_STAGING_URL}" ] || [ -z "${SUPABASE_STAGING_PUBLISHABLE_KEY}" ]; then
+              echo "GitHub staging variables empty; using the compiled develop project fallback."
+            fi
+          fi
+          python3 - "${GITHUB_REF:-}" <<'PY'
+          import os
+          import sys
+          from pathlib import Path
+
+          def swift_string(value: str) -> str:
+              escaped = (
+                  value.replace("\\", "\\\\")
+                  .replace("\"", "\\\"")
+                  .replace("\n", "\\n")
+                  .replace("\r", "\\r")
+              )
+              return f'"{escaped}"'
+
+          is_main = sys.argv[1] == "refs/heads/main"
+          production_url = "https://pvqntpteehdvhqyctwum.supabase.co"
+          production_key = "sb_publishable_6wP1KNFvJwIE_hX1U2aTfg_u3sk40Li"
+          develop_url = "https://jldjgftoxmluiswpebbd.supabase.co"
+          develop_key = "sb_publishable_2nugoyApCuXfOPCWYevktg_kx4nVJPp"
+
+          if is_main:
+              url = production_url
+              key = production_key
+              api = os.environ.get("FITFIGHT_API_PRODUCTION_URL", "").strip()
+          else:
+              url = os.environ.get("SUPABASE_STAGING_URL", "").strip() or develop_url
+              key = os.environ.get("SUPABASE_STAGING_PUBLISHABLE_KEY", "").strip() or develop_key
+              api = os.environ.get("FITFIGHT_API_URL", "").strip()
+
+          path = Path("FitFight/Generated/BuildEnv.swift")
+          path.write_text(
+              "/// Written by TestFlight CI before archive. Empty strings use fallbacks.\n"
+              "enum BuildEnv {\n"
+              f"    static let supabaseURL = {swift_string(url)}\n"
+              f"    static let supabasePublishableKey = {swift_string(key)}\n"
+              f"    static let apiBaseURL = {swift_string(api)}\n"
+              "}\n"
+          )
+          print("Wrote FitFight/Generated/BuildEnv.swift")
+          PY
+
       - name: Upload to TestFlight
         run: bundle exec fastlane beta

@@ -1,0 +1,95 @@
+# Delete the merged PR's head. Never main or develop.
+# Do not turn on GitHub's "Automatically delete head branches" — that would
+# also delete `develop` when we merge develop → main to ship production.
+name: Delete merged feature branch
+
+on:
+  pull_request:
+    types: [closed]
+
+concurrency:
+  group: delete-merged-branch
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  delete:
+    name: Delete head
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+      HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+    steps:
+      - name: Delete merged feature branches
+        run: |
+          set -euo pipefail
+
+          keep() {
+            case "$1" in
+              main|develop) return 0 ;;
+              *) return 1 ;;
+            esac
+          }
+
+          delete_branch() {
+            local branch="$1"
+            echo "Deleting ${branch}"
+            if gh api -X DELETE "repos/${REPO}/git/refs/heads/${branch}"; then
+              echo "Deleted ${branch}"
+            else
+              echo "Skip ${branch}: already gone or protected"
+            fi
+          }
+
+          if [ "$HEAD_REPO" = "$REPO" ]; then
+            if keep "$HEAD_BRANCH"; then
+              echo "Keeping long-lived branch ${HEAD_BRANCH}"
+            else
+              delete_branch "$HEAD_BRANCH"
+            fi
+          else
+            echo "Fork PR head — skip ${HEAD_BRANCH}"
+          fi
+
+          echo "Sweep leftover merged feature branches whose tip has not moved"
+          gh api --paginate "repos/${REPO}/branches?per_page=100" --jq '.[].name' \
+          | while IFS= read -r branch; do
+              [ -n "$branch" ] || continue
+              if keep "$branch"; then
+                continue
+              fi
+              if [ "$branch" = "$HEAD_BRANCH" ]; then
+                continue
+              fi
+              open_count="$(gh pr list --repo "$REPO" --head "$branch" --state open --json number --jq 'length')"
+              if [ "$open_count" != "0" ]; then
+                echo "Keep ${branch}: open PR"
+                continue
+              fi
+              merged_sha="$(
+                gh pr list --repo "$REPO" --head "$branch" --state merged --limit 20 \
+                  --json headRefOid,mergedAt \
+                  --jq 'sort_by(.mergedAt) | reverse | .[0].headRefOid // empty'
+              )"
+              if [ -z "$merged_sha" ]; then
+                echo "Keep ${branch}: not a merged PR head"
+                continue
+              fi
+              if ! current_sha="$(gh api "repos/${REPO}/git/ref/heads/${branch}" --jq .object.sha)"; then
+                echo "Skip ${branch}: already gone"
+                continue
+              fi
+              if [ "$current_sha" != "$merged_sha" ]; then
+                echo "Keep ${branch}: tip moved since merge"
+                continue
+              fi
+              delete_branch "$branch"
+            done

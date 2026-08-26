@@ -1,18 +1,33 @@
 import SwiftUI
+import UIKit
 
 struct YouView: View {
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var themeStore: ThemeStore
-    @EnvironmentObject private var designStore: DesignStore
+    @EnvironmentObject private var session: SessionStore
+    @EnvironmentObject private var friends: FriendshipStore
+    @EnvironmentObject private var steps: HealthKitStepsStore
     @Environment(\.ffTheme) private var theme
+    @Environment(\.ffStaticRender) private var staticRender
+    @State private var confirmDelete = false
+    @State private var friendHandle = ""
+    @State private var copied = false
 
     var body: some View {
         FFScreen {
             VStack(alignment: .leading, spacing: 0) {
                 profile
                     .padding(.bottom, 15)
+                if session.isSignedIn, let authError = session.authError {
+                    Text(authError)
+                        .font(.ff(11))
+                        .foregroundStyle(theme.red)
+                        .padding(.bottom, 10)
+                }
                 stats
-                sectionHeader("Fight history", action: "All 12") { model.tab = .fights }
+                sectionHeader("Friends")
+                friendsPanel
+                sectionHeader("Fight history", action: "All \(model.history.count)") { model.tab = .fights }
                 history
                 sectionHeader("Data sources")
                 sources
@@ -27,6 +42,25 @@ struct YouView: View {
             .padding(.top, 2)
             .padding(.bottom, theme.space.xl)
         }
+        .task {
+            guard !staticRender else { return }
+            await steps.refresh(requestAccess: false)
+            if let userId = session.authSession?.user.id {
+                try? await friends.load(userId: userId)
+            }
+        }
+        .confirmationDialog(
+            "Delete account?",
+            isPresented: $confirmDelete,
+            titleVisibility: .visible
+        ) {
+            Button("Delete account", role: .destructive) {
+                Task { await session.deleteAccount() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This signs you out and deletes your FitFight account.")
+        }
     }
 
     private func sectionHeader(_ title: String, action: String? = nil, onAction: (() -> Void)? = nil) -> some View {
@@ -35,18 +69,42 @@ struct YouView: View {
             .padding(.bottom, 10)
     }
 
+    @ViewBuilder
     private var profile: some View {
+        if session.isSignedIn {
+            signedInProfile
+        } else {
+            AppleSignInControl()
+        }
+    }
+
+    private var signedInProfile: some View {
         HStack(spacing: 12) {
-            FFAvatar(model.you, size: 56, ring: true)
+            FFAvatar(
+                initials: session.profile?.initials ?? "FF",
+                size: 56,
+                ring: true
+            )
             VStack(alignment: .leading, spacing: 2) {
-                Text("Maya Moves")
+                Text(session.profile?.displayName ?? "Signed in")
                     .font(.ff(17, .bold))
                     .foregroundStyle(theme.text)
-                Text("@maya.moves · joined Mar 2026")
+                Text(session.profile?.atHandle ?? "Profile isn’t ready yet")
                     .font(.ff(12))
                     .foregroundStyle(theme.faint)
                     .lineLimit(1)
                     .fixedSize()
+                if session.profile != nil {
+                    Button {
+                        UIPasteboard.general.string = session.profile?.atHandle ?? ""
+                        copied = true
+                    } label: {
+                        Text(copied ? "Copied" : "Copy username")
+                            .font(.ff(11, .semibold))
+                            .foregroundStyle(theme.accent)
+                    }
+                    .buttonStyle(.plain)
+                }
             }
             .layoutPriority(1)
             Spacer(minLength: 4)
@@ -64,11 +122,41 @@ struct YouView: View {
 
     private var stats: some View {
         HStack(spacing: 8) {
-            FFStatTile(value: "12", label: "Fights", onSurface: true, height: 60)
-            FFStatTile(value: "5", label: "Wins", onSurface: true, height: 60)
-            FFStatTile(value: "62%", label: "Win rate", onSurface: true, height: 60)
-            FFStatTile(value: "$140", label: "Won", onSurface: true, height: 60)
+            FFStatTile(value: "\(youStats.fights)", label: "Fights", onSurface: true, height: 60)
+            FFStatTile(value: "\(youStats.wins)", label: "Wins", onSurface: true, height: 60)
+            FFStatTile(value: youStats.winRate, label: "Win rate", onSurface: true, height: 60)
+            FFStatTile(value: youStats.won, label: "Won", onSurface: true, height: 60)
         }
+    }
+
+    /// Finished fights from history plus any finished rows not already listed there.
+    private var youStats: (fights: Int, wins: Int, winRate: String, won: String) {
+        var seen = Set<String>()
+        var fights = 0
+        var wins = 0
+        var wonMoney = 0
+
+        for item in model.history {
+            seen.insert(item.id)
+            fights += 1
+            if item.won {
+                wins += 1
+                if item.net > 0 { wonMoney += item.net }
+            }
+        }
+        for fight in model.fights where fight.status == .finished {
+            guard seen.insert(fight.id).inserted else { continue }
+            fights += 1
+            if fight.rank == 1 {
+                wins += 1
+                if let you = model.youStanding(in: fight), you.projectedNet > 0 {
+                    wonMoney += you.projectedNet
+                }
+            }
+        }
+
+        let rate = fights == 0 ? "0%" : "\(Int((Double(wins) / Double(fights) * 100).rounded()))%"
+        return (fights, wins, rate, "$\(wonMoney)")
     }
 
     private var history: some View {
@@ -110,15 +198,29 @@ struct YouView: View {
 
     private var sources: some View {
         FFPanel {
-            sourceRow("Apple Health", "8,240 steps today", "Synced 9:32")
-            FFHairline()
-            sourceRow("Strava", "Morning ride synced", "Synced 8:05")
+            Button {
+                Task { await steps.refresh(requestAccess: true) }
+            } label: {
+                sourceRow(
+                    "Apple Health",
+                    steps.detailText,
+                    steps.metaText,
+                    connected: steps.isConnected
+                )
+            }
+            .buttonStyle(.plain)
+            .disabled(steps.status == .reading)
         }
     }
 
-    private func sourceRow(_ name: String, _ detail: String, _ time: String) -> some View {
+    private func sourceRow(
+        _ name: String,
+        _ detail: String,
+        _ time: String,
+        connected: Bool
+    ) -> some View {
         HStack(spacing: 12) {
-            Circle().fill(theme.green).frame(width: 8, height: 8)
+            Circle().fill(connected ? theme.green : theme.faint).frame(width: 8, height: 8)
             VStack(alignment: .leading, spacing: 3) {
                 Text(name)
                     .font(.ff(13, .semibold))
@@ -126,26 +228,114 @@ struct YouView: View {
                 Text(detail)
                     .font(.ff(11))
                     .foregroundStyle(theme.faint)
+                    .lineLimit(2)
             }
             Spacer(minLength: 8)
             Text(time)
                 .font(.ff(11))
                 .foregroundStyle(theme.faint)
+                .lineLimit(2)
+                .multilineTextAlignment(.trailing)
         }
         .padding(.horizontal, FFMetric.rowPaddingX)
-        .frame(height: 61)
+        .frame(minHeight: 61)
+        .contentShape(Rectangle())
+    }
+
+    private var friendsPanel: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("People add you with \(session.profile?.atHandle ?? "your username"). Add them the same way.")
+                .font(.ff(12))
+                .foregroundStyle(theme.faint)
+            HStack(spacing: 8) {
+                TextField("@username", text: $friendHandle)
+                    .font(.ff(15))
+                    .foregroundStyle(theme.text)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .submitLabel(.join)
+                    .padding(.horizontal, 16)
+                    .frame(height: 48)
+                    .background(theme.surface, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
+                            .strokeBorder(theme.line, lineWidth: 1)
+                    }
+                    .onSubmit { addFriend() }
+                FFButton(title: "Add", kind: .small, enabled: !friendHandle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) {
+                    addFriend()
+                }
+            }
+            if !friends.incoming.isEmpty {
+                FFPanel {
+                    ForEach(Array(friends.incoming.enumerated()), id: \.element.userId) { index, person in
+                        if index > 0 { FFHairline() }
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(person.displayName)
+                                    .font(.ff(13, .semibold))
+                                    .foregroundStyle(theme.text)
+                                Text(person.atHandle)
+                                    .font(.ff(11))
+                                    .foregroundStyle(theme.faint)
+                            }
+                            Spacer()
+                            FFButton(title: "Accept", kind: .small) {
+                                Task {
+                                    guard let me = session.authSession?.user.id else { return }
+                                    try? await friends.accept(requesterId: person.userId, addresseeId: me)
+                                    try? await friends.load(userId: me)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, FFMetric.rowPaddingX)
+                        .frame(height: 56)
+                    }
+                }
+            }
+            if !model.people.isEmpty {
+                FFPanel {
+                    ForEach(Array(model.people.enumerated()), id: \.element.id) { index, person in
+                        if index > 0 { FFHairline() }
+                        HStack(spacing: 12) {
+                            FFAvatar(person, size: 32)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(person.name)
+                                    .font(.ff(13, .semibold))
+                                    .foregroundStyle(theme.text)
+                                Text(person.handle)
+                                    .font(.ff(11))
+                                    .foregroundStyle(theme.faint)
+                            }
+                            Spacer()
+                        }
+                        .padding(.horizontal, FFMetric.rowPaddingX)
+                        .frame(height: 56)
+                    }
+                }
+            }
+            if let error = model.createError, !error.isEmpty {
+                Text(error)
+                    .font(.ff(11))
+                    .foregroundStyle(theme.red)
+            }
+        }
+    }
+
+    private func addFriend() {
+        let handle = FriendshipStore.strippedHandle(friendHandle)
+        guard !handle.isEmpty else { return }
+        friendHandle = ""
+        Task {
+            await model.addFriend(handle: handle)
+            if let userId = session.authSession?.user.id {
+                try? await friends.load(userId: userId)
+            }
+        }
     }
 
     private var appearance: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Every design except Original carries its own fixed palette, so say so
-            // rather than let these controls look broken.
-            if designStore.variant != .original {
-                Text("The \(designStore.variant.title) design brings its own colours. Switch back to Original under Design to use these.")
-                    .font(.ff(11))
-                    .foregroundStyle(theme.faint)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
             HStack(spacing: 10) {
                 ForEach(BaseID.allCases) { base in
                     let on = themeStore.baseID == base
@@ -208,15 +398,29 @@ struct YouView: View {
             navRow("Privacy") {}
             FFHairline()
             navRow("Payouts") {}
+            if session.isSignedIn {
+                FFHairline()
+                navRow("Sign out") {
+                    Task { await session.signOut() }
+                }
+                FFHairline()
+                navRow("Delete account", destructive: true) {
+                    confirmDelete = true
+                }
+            }
         }
     }
 
-    private func navRow(_ title: String, action: @escaping () -> Void) -> some View {
+    private func navRow(
+        _ title: String,
+        destructive: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
         Button(action: action) {
             HStack {
                 Text(title)
                     .font(.ff(13, .semibold))
-                    .foregroundStyle(theme.text)
+                    .foregroundStyle(destructive ? theme.red : theme.text)
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.system(size: 12, weight: .semibold))
@@ -227,5 +431,6 @@ struct YouView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .disabled(session.isBusy)
     }
 }

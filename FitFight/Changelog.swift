@@ -7,7 +7,8 @@ struct ReleaseNote: Identifiable, Hashable {
     let day: Int
     let notes: String
 
-    var id: String { "\(version)-\(year)-\(month)-\(day)" }
+    /// Several notes may share one marketing version (TestFlight does not bump it).
+    var id: String { "\(version)-\(year)-\(month)-\(day)-\(notes)" }
 
     var date: Date {
         var components = DateComponents()
@@ -23,6 +24,48 @@ struct ReleaseNote: Identifiable, Hashable {
 enum Changelog {
     /// Newest first. Add a row here whenever we ship a user-facing change.
     static let releases: [ReleaseNote] = [
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
+            day: 25,
+            notes: "Pick a username after sign-in. Start a Steps fight from the phone (no extra server). Apple Health uploads. Standings come from the database. Add friends on You with their username. Design tab is gone. Version line shows version and build number."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
+            day: 25,
+            notes: "If you are not signed in you get a welcome screen (FitFight, a line of copy, Sign in with Apple). The tabs stay hidden until you are in."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
+            day: 25,
+            notes: "This TestFlight talks to develop. The version at the top includes staging and the date of the last ship. Still 0.9.0 — only the build number and the date change."
+        ),
+        ReleaseNote(
+            version: "0.8.0",
+            year: 2026,
+            month: 8,
+            day: 25,
+            notes: "The version at the top now says prod or staging, so you can see which Supabase the phone is talking to."
+        ),
+        ReleaseNote(
+            version: "0.8.0",
+            year: 2026,
+            month: 8,
+            day: 25,
+            notes: "Sign in, add friends by handle, start a real Steps fight, Apple Health uploads to the server, standings come from the database. Fights are no longer the fixture people. When the days are up the fight closes on the server — you do not have to leave the app open. Design tab still previews the old mock. Requests is unchanged."
+        ),
+        ReleaseNote(
+            version: "0.8.0",
+            year: 2026,
+            month: 8,
+            day: 24,
+            notes: "You can sign in with Apple. You shows your real handle. You → Data sources reads today’s Steps from Apple Health (the HealthKit total, not every source added together) and lists contributing apps when HealthKit names them. Empty reads say “No accessible data”. You → Settings has Delete account."
+        ),
         ReleaseNote(
             version: "0.7.0",
             year: 2026,
@@ -102,10 +145,17 @@ enum Changelog {
         ),
     ]
 
+    /// Array is newest-first; same-day rows keep that order.
     static var newestFirst: [ReleaseNote] {
-        releases.sorted { lhs, rhs in
-            if lhs.date != rhs.date { return lhs.date > rhs.date }
-            return lhs.version > rhs.version
-        }
+        releases.enumerated().sorted { lhs, rhs in
+            if lhs.element.date != rhs.element.date {
+                return lhs.element.date > rhs.element.date
+            }
+            return lhs.offset < rhs.offset
+        }.map(\.element)
+    }
+
+    static var current: ReleaseNote? {
+        newestFirst.first { $0.version == AppVersion.marketing }
     }
 }

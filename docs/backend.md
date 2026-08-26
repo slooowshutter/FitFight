@@ -1,10 +1,11 @@
 # Backend
 
-Empty platform first. Feature code later. Production Metric is **Steps**.
+Empty platform first. Feature code later. Production Metric is **Steps**. Phone vs server status: [`status.md`](status.md). The phone may write its own fights, memberships, and `step_days`. It still cannot write `private.metric_observations`.
 
 [`system-design.md`](system-design.md) is the golden guide. This folder is the first slice of it, not the whole thing. Do not add Active Minutes, Workout Count, WHOOP, Strava, payments, notifications, social, or a website until the backlog says so.
 
-Hosted production (no secrets): https://pvqntpteehdvhqyctwum.supabase.co
+Hosted production (no secrets): https://pvqntpteehdvhqyctwum.supabase.co  
+Hosted staging / git `develop` (no secrets): https://jldjgftoxmluiswpebbd.supabase.co
 
 ## Loop
 
@@ -62,4 +63,6 @@ npx supabase@2.115.0 test db --local
 
 Pin the CLI to **2.115.0** until you mean to bump it (`config.toml` was generated with that version).
 
-The iOS publishable key (`sb_publishable_...`) is client configuration later. The secret key is not.
+The iOS publishable key (`sb_publishable_...`) production fallback lives in `FitFight/SupabaseConfig.swift`. The secret key is not.
+
+TestFlight binaries that are **not** built from `main` talk to the develop project. CI writes `FitFight/Generated/BuildEnv.swift` before archive. GitHub variables `SUPABASE_STAGING_*` override if set; otherwise the known develop URL and publishable key are compiled in. `main` uses the production URL/key plus `FITFIGHT_API_PRODUCTION_URL`. See [`shipping.md`](shipping.md). What is live on the phone: [`status.md`](status.md).

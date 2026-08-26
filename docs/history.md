@@ -1,5 +1,45 @@
 # History
 
+## 2026-08-24 — freeze marketing version for TestFlight
+
+Apple beta-reviews the first build of each marketing version for external testers. We were bumping `0.4.1`, `0.5.0`, `0.8.0` on every user-facing PR, so friends waited every time. Rule: keep `MARKETING_VERSION` at `0.8.0`; CI still increments the build number; Changelog rows reuse `0.8.0`. Bump marketing version only for an App Store ship or if Marc asks.
+
+## 2026-08-25 — phone writes the fight
+
+Create / accept / HealthKit upload / standings no longer wait on Vercel. The phone writes to Supabase. Username onboarding. Design tab removed. Version line shows version and build. Cron is optional later, not required.
+
+## 2026-08-25 — status map
+
+[`status.md`](status.md) is the works / fake / dead / next list. Merge #30 into `develop` only. Do not invent Ask-first screens.
+
+## 2026-08-25 — welcome gate
+
+Signed-out Users see FitFight, one line of copy, and Sign in with Apple. The five tabs stay hidden until they are in.
+
+## 2026-08-25 — date on the version line
+
+Every TestFlight ship adds a Changelog row and puts that date on the top version line (`0.9.0 (n) · staging · 25 Aug`) plus **Last TestFlight** in `docs/backlog.md`. Stay on `0.9.0` — phones already have it; TestFlight will not replace it with `0.8.0`.
+
+## 2026-08-25 — version label shows prod vs staging
+
+TestFlight that is not `main` compiles the persistent develop project (`jldjgftoxmluiswpebbd`). The top version label ends in `prod` or `staging`. Production is only `main`.
+
+## 2026-08-25 — Fight duration closer
+
+A 3 / 7 / 14 day fight can now finish without waiting those days in real time: tests pass a fake clock. Opening the app closes due fights. A Vercel cron hits `/api/internal/close-fights` so a fight still settles if nobody opens. Steps after `ends_at` do not count. 24h grace, then final even if someone never uploaded.
+
+## 2026-08-24 — Live Steps Fight
+
+New fight and fight detail talk to the server: add friends by handle, start a real Steps fight, Accept/Join a live invite. Apple Health uploads; standings come from the database. Fights are no longer the fixture people. Marketing version stays `0.8.0`; CI bumps the build number.
+
+## 2026-08-24 — Sign in with Apple + HealthKit Steps read
+
+First slice of a real Steps Fight, still on the fixture Fights tab. You signs in with Apple (Supabase Auth), shows the `profiles` handle, reads today’s Apple Health aggregate Steps on Data sources, and can delete the account from Settings. HealthKit is not uploaded yet. Marketing version `0.8.0`.
+
+## 2026-08-24 — delete feature branches on merge
+
+CI deletes the merged PR’s head branch. `main` and `develop` are kept. GitHub’s repo toggle stays off so shipping `develop` → `main` cannot delete `develop`.
+
 ## 2026-08-24 — develop is staging, main is production
 
 GitHub `develop` is the testing branch. Feature PRs merge into `develop`. Production is merging `develop` into `main`. The persistent Supabase branch is also named `develop`.

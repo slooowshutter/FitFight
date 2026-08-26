@@ -1,0 +1,45 @@
+import { createAdminClient } from "../db/supabaseAdmin";
+import { ApiError, ERROR_CODES } from "../http";
+
+export type AuthedUser = {
+  userId: string;
+};
+
+function bearerToken(request: Request): string {
+  const header = request.headers.get("authorization") ?? request.headers.get("Authorization");
+  if (!header) {
+    throw new ApiError(401, ERROR_CODES.unauthorized, "Missing bearer token");
+  }
+  const match = /^Bearer\s+(\S+)/i.exec(header.trim());
+  if (!match?.[1]) {
+    throw new ApiError(401, ERROR_CODES.unauthorized, "Missing bearer token");
+  }
+  return match[1];
+}
+
+function claimSub(claims: unknown): string | null {
+  if (!claims || typeof claims !== "object") {
+    return null;
+  }
+  const sub = (claims as { sub?: unknown }).sub;
+  return typeof sub === "string" && sub.length > 0 ? sub : null;
+}
+
+export async function verifyUser(request: Request): Promise<AuthedUser> {
+  const jwt = bearerToken(request);
+  const admin = createAdminClient();
+
+  const claimsResult = await admin.auth.getClaims(jwt);
+  const fromClaims = claimSub(claimsResult.data?.claims);
+  if (fromClaims) {
+    return { userId: fromClaims };
+  }
+
+  const userResult = await admin.auth.getUser(jwt);
+  const userId = userResult.data.user?.id;
+  if (userId) {
+    return { userId };
+  }
+
+  throw new ApiError(401, ERROR_CODES.unauthorized, "Invalid or expired token");
+}

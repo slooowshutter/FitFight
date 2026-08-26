@@ -1,5 +1,5 @@
 begin;
-select plan(24);
+select plan(31);
 
 select has_schema('private', 'private schema exists');
 select has_table('public', 'profiles', 'profiles exists');
@@ -8,6 +8,7 @@ select has_table('public', 'fights', 'fights exists');
 select has_table('public', 'fight_members', 'fight_members exists');
 select has_table('public', 'fight_invites', 'fight_invites exists');
 select has_table('public', 'data_sources', 'data_sources exists');
+select has_table('public', 'step_days', 'step_days exists');
 select has_table('private', 'metric_observations', 'observations stay private');
 
 select ok(
@@ -40,6 +41,12 @@ select ok(
     where n.nspname = 'private' and c.relname = 'metric_observations'),
   'metric_observations has RLS'
 );
+select ok(
+  (select relrowsecurity from pg_class c
+     join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relname = 'step_days'),
+  'step_days has RLS'
+);
 
 select is(
   has_table_privilege('anon', 'public.fights', 'SELECT'),
@@ -58,23 +65,33 @@ select is(
 );
 select is(
   has_table_privilege('authenticated', 'public.fights', 'INSERT'),
-  false,
-  'clients cannot insert fights'
+  true,
+  'clients can insert their own fights'
 );
 select is(
   has_table_privilege('authenticated', 'public.fights', 'UPDATE'),
-  false,
-  'clients cannot update fights'
+  true,
+  'clients can update fights they own or that are due'
 );
 select is(
   has_table_privilege('authenticated', 'public.fight_members', 'UPDATE'),
-  false,
-  'clients cannot write scores'
+  true,
+  'clients can update their own membership'
 );
 select is(
   has_table_privilege('authenticated', 'public.data_sources', 'INSERT'),
+  true,
+  'clients can insert their own sources'
+);
+select is(
+  has_column_privilege('authenticated', 'public.profiles', 'handle', 'UPDATE'),
+  true,
+  'users can set their handle'
+);
+select is(
+  has_table_privilege('authenticated', 'private.metric_observations', 'INSERT'),
   false,
-  'clients cannot insert sources'
+  'authenticated still cannot write private observations'
 );
 select is(
   has_column_privilege('authenticated', 'public.fight_invites', 'token_hash', 'SELECT'),
@@ -94,6 +111,22 @@ select ok(
 select ok(
   exists (select 1 from pg_constraint where conname = 'metric_observations_metric_steps_only'),
   'observations are locked to steps'
+);
+
+select has_function(
+  'public',
+  'delete_own_account',
+  'delete_own_account exists'
+);
+select is(
+  has_function_privilege('anon', 'public.delete_own_account()', 'EXECUTE'),
+  false,
+  'anon cannot execute delete_own_account'
+);
+select is(
+  has_function_privilege('authenticated', 'public.delete_own_account()', 'EXECUTE'),
+  true,
+  'signed-in users can execute delete_own_account'
 );
 
 select * from finish();

@@ -660,7 +660,6 @@ enum FFTab: Hashable {
     case fights
     case newFight
     case requests
-    case designs
     case you
 }
 
@@ -673,7 +672,6 @@ struct FFTabBar: View {
             item(.fights, "Tab-fights", "Fights")
             item(.newFight, "Tab-new", "New")
             item(.requests, "Tab-requests", "Requests")
-            item(.designs, "square.grid.2x2", "Design", system: true)
             item(.you, "Tab-you", "You")
         }
         .padding(.horizontal, 8)
@@ -714,7 +712,6 @@ struct FFTabBar: View {
         .buttonStyle(.plain)
     }
 
-    /// The four original tabs ship as image assets; the Design tab uses a symbol.
     @ViewBuilder
     private func glyph(_ icon: String, system: Bool) -> some View {
         if system {

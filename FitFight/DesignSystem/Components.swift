@@ -196,6 +196,28 @@ struct FFIconButton: View {
     }
 }
 
+enum FFShare {
+    static func present(text: String) {
+        let activity = UIActivityViewController(activityItems: [text], applicationActivities: nil)
+        guard let presenter = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .flatMap(\.windows)
+            .first(where: \.isKeyWindow)?
+            .rootViewController
+        else { return }
+        var top = presenter
+        while let shown = top.presentedViewController {
+            top = shown
+        }
+        if let popover = activity.popoverPresentationController {
+            popover.sourceView = top.view
+            popover.sourceRect = CGRect(x: top.view.bounds.midX, y: top.view.bounds.midY, width: 0, height: 0)
+            popover.permittedArrowDirections = []
+        }
+        top.present(activity, animated: true)
+    }
+}
+
 /// Card: surface, 1px line border, 22pt radius, 20pt padding.
 struct FFCard<Content: View>: View {
     var padding: CGFloat = FFMetric.cardPadding

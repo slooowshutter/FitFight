@@ -27,12 +27,11 @@ If the app is closed or killed, iOS will not reliably run timers, settle a month
 
 The phone’s job is: show the UI, read HealthKit / workouts when it is open (or briefly woken), upload, receive pushes.
 
-**Last TestFlight:** 26 Aug 2026 — live Steps Fight on **prod** (`develop` → `main`, #32). Look for `0.9.0 · build N · prod`. Start fight loading (no duplicate taps) is the next staging build.
+**Last TestFlight:** 26 Aug 2026 — Apple Health connection screen (today, last sync, 31-day history, Sync now). Share sheet on fight detail. Invite Accept on the list. Still `0.9.0`. Look for `0.9.0 · build N · staging` on this PR.
 
 ## Now
 
-- Marc: on the **prod** TestFlight, one real Steps fight. Username, Apple Health, Start **once**, confirm it on Fights with steps. Extra copies from mashing Start are leftover test rows — ignore them.
-- Start fight: button shows Starting… and extra taps do nothing (this PR). Then TestFlight → Update.
+- Marc: TestFlight → **Update** on this staging build. You → Apple Health → allow Steps → **Sync now**. Confirm today + history. Then Start fight once and pull Fights.
 - Friends on TestFlight Internal Testing. Same build. Their own Apple IDs. 3-day Steps fight after they have usernames.
 - Marc: Apple Sign In On on hosted **production** only if sign-in fails (client ID `com.fitfight.mvp`). Staging is already on.
 
@@ -77,3 +76,4 @@ The phone writes fights and steps to staging after this PR is merged. See [`stat
 - Fight closer: `live → awaiting_final_sync → final` on a server clock. Tests fake `now` for 1 / 3 / 7 / 14 day windows. Opening the app closes your due fights; Vercel cron closes the rest if nobody opens. No push yet.
 - Welcome screen when signed out. Apple Sign In is the only way in; the tabs stay hidden until then.
 - Username onboarding after sign-in. Phone-written Steps fights, HealthKit → `step_days`, standings from the database. Design tab removed.
+- Apple Health connection screen: today, last sync, 31-day history, Sync now. `data_sources` row. Fight share sheet. Invite Accept on the list.

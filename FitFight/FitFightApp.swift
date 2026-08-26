@@ -7,6 +7,7 @@ struct FitFightApp: App {
     @StateObject private var session: SessionStore
     @StateObject private var friends: FriendshipStore
     @StateObject private var steps = HealthKitStepsStore()
+    @Environment(\.scenePhase) private var scenePhase
 
     init() {
         let session = SessionStore()
@@ -29,14 +30,14 @@ struct FitFightApp: App {
                     }
                 }
                 .task(id: session.authSession?.user.id) {
-                    await steps.refresh(requestAccess: false)
-                    if let userId = session.authSession?.user.id {
-                        await steps.syncToSupabase(client: session.client, userId: userId)
-                    }
-                    await model.refreshFromServer(session: session)
+                    await syncHealthAndFights()
+                }
+                .onChange(of: scenePhase) { _, phase in
+                    guard phase == .active else { return }
+                    Task { await syncHealthAndFights() }
                 }
                 .onChange(of: steps.status) { _, status in
-                    guard case .steps = status else { return }
+                    guard status != .idle, status != .reading else { return }
                     guard let userId = session.authSession?.user.id else { return }
                     Task {
                         await steps.syncToSupabase(client: session.client, userId: userId)
@@ -44,5 +45,16 @@ struct FitFightApp: App {
                     }
                 }
         }
+    }
+
+    private func syncHealthAndFights() async {
+        await steps.refresh(requestAccess: false)
+        if let userId = session.authSession?.user.id {
+            await steps.syncToSupabase(client: session.client, userId: userId)
+            if steps.history.isEmpty {
+                await steps.loadServerHistory(client: session.client, userId: userId)
+            }
+        }
+        await model.refreshFromServer(session: session)
     }
 }

@@ -61,7 +61,10 @@ struct OnboardingView: View {
         defer { isSaving = false }
         do {
             try await session.setHandle(handle)
-            await steps.refresh(requestAccess: true)
+            await steps.connectAndSync(
+                client: session.client,
+                userId: session.authSession?.user.id
+            )
         } catch {
             self.error = error.localizedDescription
         }

@@ -1,9 +1,18 @@
 import SwiftUI
 
 struct FightDetailView: View {
-    let fight: Fight
+    private let seed: Fight
     @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
+
+    init(fight: Fight) {
+        self.seed = fight
+    }
+
+    private var fight: Fight {
+        model.fight(id: seed.id) ?? seed
+    }
 
     private var pendingJoin: Bool {
         fight.status == .invited && !model.joined.contains(fight.id)
@@ -35,7 +44,9 @@ struct FightDetailView: View {
                     daysCard
                 }
 
-                FFButton(title: "i challenge you", icon: "square.and.arrow.up") {}
+                FFButton(title: "i challenge you", icon: "square.and.arrow.up") {
+                    shareFight()
+                }
                     .padding(.top, theme.space.sectionGap)
             }
             .padding(.horizontal, theme.space.screenPadding)
@@ -74,7 +85,9 @@ struct FightDetailView: View {
                 .tracking(1.2)
                 .foregroundStyle(theme.faint)
             Spacer(minLength: 0)
-            FFIconButton(systemName: "square.and.arrow.up", size: 36) {}
+            FFIconButton(systemName: "square.and.arrow.up", size: 36) {
+                shareFight()
+            }
         }
         .padding(.horizontal, theme.space.screenPadding)
         .padding(.bottom, 16)
@@ -336,5 +349,11 @@ struct FightDetailView: View {
                 }
             }
         }
+    }
+
+    private func shareFight() {
+        let handle = session.profile?.atHandle ?? "FitFight"
+        let text = "Join my FitFight “\(fight.name)”. Add me as \(handle) in the app and accept the invite."
+        FFShare.present(text: text)
     }
 }

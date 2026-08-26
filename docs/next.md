@@ -1,9 +1,8 @@
 # Next
 
-Merge, then a new chat. Don’t keep stacking work on this PR.
+Merge this Apple Health PR into **`develop`**. Not `main`. Then TestFlight → Update.
 
-1. Merge **[#30](https://github.com/slooowshutter/FitFight/pull/30) into `develop`**. Not `main`.
-2. TestFlight → **Update**.
-3. New conversation. Point it at this file, then [`status.md`](status.md).
-
-After the merge this file lives on `develop`. The next agent branches from `develop`.
+1. You → Apple Health. Allow Steps. Sync now. History should list days.
+2. Start a Steps fight once. Pull Fights. Your steps should show.
+3. Share on fight detail should open the system sheet.
+4. New conversation after that. Point it at [`status.md`](status.md).

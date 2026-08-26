@@ -12,8 +12,23 @@ struct YouView: View {
     @State private var confirmDelete = false
     @State private var friendHandle = ""
     @State private var copied = false
+    @State private var showingAppleHealth = false
 
     var body: some View {
+        if staticRender {
+            youBody
+        } else {
+            NavigationStack {
+                youBody
+                    .toolbar(.hidden, for: .navigationBar)
+                    .navigationDestination(isPresented: $showingAppleHealth) {
+                        AppleHealthSourceView()
+                    }
+            }
+        }
+    }
+
+    private var youBody: some View {
         FFScreen {
             VStack(alignment: .leading, spacing: 0) {
                 profile
@@ -42,10 +57,21 @@ struct YouView: View {
             .padding(.top, 2)
             .padding(.bottom, theme.space.xl)
         }
+        .refreshable {
+            await steps.refresh(requestAccess: false)
+            if let userId = session.authSession?.user.id {
+                await steps.syncToSupabase(client: session.client, userId: userId)
+                try? await friends.load(userId: userId)
+            }
+            await model.refreshFromServer(session: session)
+        }
         .task {
             guard !staticRender else { return }
             await steps.refresh(requestAccess: false)
             if let userId = session.authSession?.user.id {
+                if steps.history.isEmpty {
+                    await steps.loadServerHistory(client: session.client, userId: userId)
+                }
                 try? await friends.load(userId: userId)
             }
         }
@@ -199,7 +225,7 @@ struct YouView: View {
     private var sources: some View {
         FFPanel {
             Button {
-                Task { await steps.refresh(requestAccess: true) }
+                showingAppleHealth = true
             } label: {
                 sourceRow(
                     "Apple Health",
@@ -209,7 +235,6 @@ struct YouView: View {
                 )
             }
             .buttonStyle(.plain)
-            .disabled(steps.status == .reading)
         }
     }
 
@@ -236,6 +261,9 @@ struct YouView: View {
                 .foregroundStyle(theme.faint)
                 .lineLimit(2)
                 .multilineTextAlignment(.trailing)
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(theme.faint)
         }
         .padding(.horizontal, FFMetric.rowPaddingX)
         .frame(minHeight: 61)

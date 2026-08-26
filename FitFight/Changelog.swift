@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 8,
             day: 26,
+            notes: "You → Apple Health opens a connection screen: today’s steps, last sync, and the last 31 days. Sync now uploads to the fight. Opening the app also syncs. Share on a fight uses the system share sheet. Accept on an invite row accepts in place."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
+            day: 26,
             notes: "Start fight shows Starting… and ignores extra taps so one tap cannot create duplicate fights."
         ),
         ReleaseNote(

@@ -2,6 +2,8 @@ import SwiftUI
 
 struct FightsListView: View {
     @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var session: SessionStore
+    @EnvironmentObject private var steps: HealthKitStepsStore
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
@@ -53,6 +55,13 @@ struct FightsListView: View {
             }
             .padding(.horizontal, theme.space.screenPadding)
             .padding(.bottom, theme.space.xl)
+        }
+        .refreshable {
+            await steps.refresh(requestAccess: false)
+            if let userId = session.authSession?.user.id {
+                await steps.syncToSupabase(client: session.client, userId: userId)
+            }
+            await model.refreshFromServer(session: session)
         }
     }
 
@@ -244,7 +253,7 @@ struct InvitationRow: View {
                 }
                 Spacer(minLength: 8)
                 FFButton(title: fight.inviteAction ?? "Join", kind: .small) {
-                    model.openFightID = fight.id
+                    Task { await model.acceptFight(id: fight.id) }
                 }
             }
         }
@@ -266,12 +275,13 @@ struct FinishedRow: View {
         } label: {
             FFCard(padding: 13.5, horizontal: 16) {
                 HStack(spacing: 12) {
-                    Text("W")
+                    let won = fight.rank == 1
+                    Text(won ? "W" : "L")
                         .font(.ff(13, .bold))
-                        .foregroundStyle(theme.green)
+                        .foregroundStyle(won ? theme.green : theme.red)
                         .frame(width: 36, height: 36)
                         .background(
-                            theme.green.opacity(0.12),
+                            (won ? theme.green : theme.red).opacity(0.12),
                             in: RoundedRectangle(cornerRadius: 12, style: .continuous)
                         )
                     VStack(alignment: .leading, spacing: 3) {

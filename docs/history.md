@@ -1,5 +1,9 @@
 # History
 
+## 2026-08-26 — Apple Health history
+
+You → Apple Health opens a connection screen: today’s aggregate, last sync, last 31 civil days, Sync now. Phone still writes `step_days` (no Vercel). It also upserts `public.data_sources` and binds that source on create/accept. Opening the app and pull-to-refresh sync. Fight share uses the system sheet. A 3-day window is 3 civil days.
+
 ## 2026-08-26 — production + Start fight lock
 
 `develop` merged to `main` (#32). Production TestFlight talks to prod Supabase. Start fight shows Starting… and ignores extra taps so one tap cannot insert duplicate fights.

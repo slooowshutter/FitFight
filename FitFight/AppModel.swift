@@ -429,8 +429,16 @@ final class AppModel: ObservableObject {
             return
         }
         do {
+            let source = await Self.loadAppleHealthSource(client: session.client, userId: userId)
             try await session.client.from("fight_members")
-                .update(MemberAcceptUpdate(state: "accepted", acceptedAt: Self.isoNow()))
+                .update(
+                    MemberAcceptUpdate(
+                        state: "accepted",
+                        acceptedAt: Self.isoNow(),
+                        selectedSourceId: source?.id,
+                        sourceLabel: source?.label
+                    )
+                )
                 .eq("fight_id", value: fightID)
                 .eq("user_id", value: userId)
                 .execute()
@@ -489,18 +497,52 @@ final class AppModel: ObservableObject {
             .execute()
             .value
 
+        let source = await Self.loadAppleHealthSource(client: session.client, userId: userId)
         var members = [
             MemberInsert(
                 fightId: inserted.id,
                 userId: userId,
                 state: "accepted",
-                acceptedAt: Self.isoNow()
+                acceptedAt: Self.isoNow(),
+                selectedSourceId: source?.id,
+                sourceLabel: source?.label
             )
         ]
         members += inviteIds.map {
-            MemberInsert(fightId: inserted.id, userId: $0, state: "invited", acceptedAt: nil)
+            MemberInsert(
+                fightId: inserted.id,
+                userId: $0,
+                state: "invited",
+                acceptedAt: nil,
+                selectedSourceId: nil,
+                sourceLabel: nil
+            )
         }
         try await session.client.from("fight_members").insert(members).execute()
+    }
+
+    private static func loadAppleHealthSource(
+        client: SupabaseClient,
+        userId: UUID
+    ) async -> (id: UUID, label: String)? {
+        struct Row: Decodable {
+            let id: UUID
+            let sourceLabel: String
+
+            enum CodingKeys: String, CodingKey {
+                case id
+                case sourceLabel = "source_label"
+            }
+        }
+        let rows: [Row] = (try? await client.from("data_sources")
+            .select("id, source_label")
+            .eq("user_id", value: userId)
+            .eq("provider", value: "apple_health")
+            .eq("connection_route", value: "healthkit")
+            .limit(1)
+            .execute()
+            .value) ?? []
+        return rows.first.map { ($0.id, $0.sourceLabel) }
     }
 
     private func closeDueFights(client: SupabaseClient, userId: UUID) async throws {
@@ -591,11 +633,17 @@ final class AppModel: ObservableObject {
         return updated
     }
 
+    /// Civil days in `[startOfDay(starts_at), startOfDay(ends_at))`. A 3-day fight is 3 days, not 4.
     private static func fightDayWindow(_ fight: Fight) -> Set<String> {
         let calendar = Calendar.current
+        let start = calendar.startOfDay(for: fight.windowStart)
+        var endExclusive = calendar.startOfDay(for: fight.windowEnd)
+        if endExclusive <= start {
+            endExclusive = calendar.date(byAdding: .day, value: 1, to: start) ?? start
+        }
         var days: [String] = []
-        var cursor = calendar.startOfDay(for: fight.windowStart)
-        while cursor < fight.windowEnd && days.count <= 40 {
+        var cursor = start
+        while cursor < endExclusive && days.count <= 40 {
             days.append(dayStamp(cursor))
             guard let next = calendar.date(byAdding: .day, value: 1, to: cursor) else { break }
             cursor = next
@@ -1004,22 +1052,30 @@ private struct MemberInsert: Encodable {
     let userId: UUID
     let state: String
     let acceptedAt: String?
+    let selectedSourceId: UUID?
+    let sourceLabel: String?
 
     enum CodingKeys: String, CodingKey {
         case fightId = "fight_id"
         case userId = "user_id"
         case state
         case acceptedAt = "accepted_at"
+        case selectedSourceId = "selected_source_id"
+        case sourceLabel = "source_label"
     }
 }
 
 private struct MemberAcceptUpdate: Encodable {
     let state: String
     let acceptedAt: String
+    let selectedSourceId: UUID?
+    let sourceLabel: String?
 
     enum CodingKeys: String, CodingKey {
         case state
         case acceptedAt = "accepted_at"
+        case selectedSourceId = "selected_source_id"
+        case sourceLabel = "source_label"
     }
 }
 

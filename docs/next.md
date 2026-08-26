@@ -1,6 +1,6 @@
 # Next
 
-You want **Vercel**. Keep it. The last chat wrote “no Vercel” after the no-cron turn. That was the agent, not you.
+Who uses what: [`environments.md`](environments.md). You want **Vercel**. Keep it. The last chat wrote “no Vercel” after the no-cron turn. That was the agent, not you.
 
 The phone already works **without** Vercel (it writes to Supabase). Vercel is the **server**: close fights if nobody opens, write `private.metric_observations`, later pushes. Code is in `web/`. Nothing is deployed until you create the project.
 

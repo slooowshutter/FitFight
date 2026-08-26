@@ -8,7 +8,7 @@ Do **not** merge `develop` → `main` until Marc says ship to production. Do **n
 
 ## GitHub vs Supabase (the two pairs)
 
-There are two **git** branches and two **hosted databases**. They line up.
+There are two **git** branches and two **hosted databases**. They line up. Full map: [`environments.md`](environments.md).
 
 | | Testing | Real users / App Store |
 |---|---|---|

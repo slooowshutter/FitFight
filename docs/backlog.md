@@ -27,14 +27,14 @@ If the app is closed or killed, iOS will not reliably run timers, settle a month
 
 The phone’s job is: show the UI, read HealthKit / workouts when it is open (or briefly woken), upload, receive pushes.
 
-**Last TestFlight:** 25 Aug 2026 — username onboarding, live Steps fight from the phone, HealthKit upload, Design tab removed. Still `0.9.0`. Look for `0.9.0 · build N · staging`. PR #30.
+**Last TestFlight:** 26 Aug 2026 — live Steps Fight on **prod** (`develop` → `main`, #32). Look for `0.9.0 · build N · prod`. Start fight loading (no duplicate taps) is the next staging build.
 
 ## Now
 
-- Marc: merge PR #30 into **`develop`**. Wait for the SQL to land. Then TestFlight → Update. Do not merge to `main`.
-- Marc: pick a username, allow Apple Health, start a Steps fight (alone is fine). Add a friend by username on You.
+- Marc: on the **prod** TestFlight, one real Steps fight. Username, Apple Health, Start **once**, confirm it on Fights with steps. Extra copies from mashing Start are leftover test rows — ignore them.
+- Start fight: button shows Starting… and extra taps do nothing (this PR). Then TestFlight → Update.
 - Friends on TestFlight Internal Testing. Same build. Their own Apple IDs. 3-day Steps fight after they have usernames.
-- Marc: Apple Sign In On on Supabase `develop` only if sign-in fails (client ID `com.fitfight.mvp`).
+- Marc: Apple Sign In On on hosted **production** only if sign-in fails (client ID `com.fitfight.mvp`). Staging is already on.
 
 ## Next
 

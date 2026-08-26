@@ -194,6 +194,7 @@ final class AppModel: ObservableObject {
     @Published var voted: Set<String> = ["r1", "r3", "r6"]
     @Published var joined: Set<String> = []
     @Published var createError: String?
+    @Published private(set) var isCreatingFight = false
 
     @Published var you: Person
     @Published var people: [Person]
@@ -345,6 +346,14 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// Locks Start fight immediately so extra taps cannot insert another row.
+    func beginCreateFight() -> Bool {
+        guard !isCreatingFight else { return false }
+        isCreatingFight = true
+        createError = nil
+        return true
+    }
+
     func createAndStartFight(
         name: String = "Steps Fight",
         startsAt: Date,
@@ -357,6 +366,10 @@ final class AppModel: ObservableObject {
         dailyGoal: Double? = nil,
         inviteHandles: [String]
     ) async {
+        if !isCreatingFight {
+            isCreatingFight = true
+        }
+        defer { isCreatingFight = false }
         createError = nil
         guard session?.authSession?.accessToken != nil else {
             createError = "Sign in to start a fight."

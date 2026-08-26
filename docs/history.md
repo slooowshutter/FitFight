@@ -1,5 +1,9 @@
 # History
 
+## 2026-08-26 — production + Start fight lock
+
+`develop` merged to `main` (#32). Production TestFlight talks to prod Supabase. Start fight shows Starting… and ignores extra taps so one tap cannot insert duplicate fights.
+
 ## 2026-08-24 — freeze marketing version for TestFlight
 
 Apple beta-reviews the first build of each marketing version for external testers. We were bumping `0.4.1`, `0.5.0`, `0.8.0` on every user-facing PR, so friends waited every time. Rule: keep `MARKETING_VERSION` at `0.8.0`; CI still increments the build number; Changelog rows reuse `0.8.0`. Bump marketing version only for an App Store ship or if Marc asks.

@@ -116,6 +116,7 @@ struct FFButton: View {
     var icon: String? = nil
     var iconTrailing = false
     var enabled = true
+    var busy = false
     var action: () -> Void
 
     @Environment(\.ffTheme) private var theme
@@ -123,13 +124,17 @@ struct FFButton: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: kind == .small ? 7 : 12) {
-                if let icon, !iconTrailing {
+                if busy {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(foreground)
+                } else if let icon, !iconTrailing {
                     Image(systemName: icon)
                         .font(.system(size: kind == .small ? 11 : 13, weight: .semibold))
                 }
                 Text(title)
                     .font(.ff(kind == .small ? 13 : 15, kind == .small ? .semibold : .bold))
-                if let icon, iconTrailing {
+                if !busy, let icon, iconTrailing {
                     Image(systemName: icon)
                         .font(.system(size: kind == .small ? 11 : 13, weight: .semibold))
                 }
@@ -144,10 +149,10 @@ struct FFButton: View {
                     Capsule().strokeBorder(theme.line, lineWidth: 1)
                 }
             }
-            .opacity(enabled ? 1 : 0.6)
+            .opacity(enabled || busy ? 1 : 0.6)
         }
         .buttonStyle(FFPressStyle(scale: 0.97))
-        .disabled(!enabled)
+        .disabled(!enabled || busy)
     }
 
     private var foreground: Color {

@@ -1,8 +1,8 @@
 # FitFight status — what works, what’s fake, what’s next
 
-Read this before building. Last updated **25 Aug 2026**. App: **0.9.0**. Git: PR **#30** → `develop`.
+Read this before building. Last updated **26 Aug 2026**. App: **0.9.0**. Git: **#32** merged `develop` → `main` (production).
 
-Do **not** merge `develop` → `main` until Marc says ship to production. Do **not** invent screens for dead buttons. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, notifications, social, or the marketing site unless [`backlog.md`](backlog.md) says so.
+Do **not** invent screens for dead buttons. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, notifications, social, or the marketing site unless [`backlog.md`](backlog.md) says so.
 
 ---
 
@@ -25,24 +25,14 @@ You still do **not** paste `sb_secret_...` anywhere.
 
 ---
 
-## Merge this PR?
+## After #32 (production — only you)
 
-**Yes — merge #30 into `develop`.** Wait a minute for the new SQL to land on staging. Then TestFlight → **Update**.
-
-**Do not merge into `main`.**
-
-If you Update before the merge, Start fight / upload can fail (the new tables are not on staging yet).
-
----
-
-## After you merge (only you)
-
-1. GitHub: merge #30 into **`develop`**. Not `main`.
-2. TestFlight → **Update**. Look for `0.9.0 · build N · staging` at the top.
-3. Sign in. Pick a **username**. That’s how friends find you.
-4. You → Apple Health (allow Steps). You → Friends: copy your username, add theirs.
-5. If sign-in fails: Supabase **develop** → Authentication → Providers → Apple → On, client ID `com.fitfight.mvp`.
-6. Friends: TestFlight → Internal Testing → their emails. Same build. Their own Apple IDs (they are staging users). Then a 3-day Steps fight.
+1. TestFlight → **Update**. Look for `0.9.0 · build N · prod` at the top.
+2. Sign in. Pick a **username** if you have not. That’s how friends find you.
+3. You → Apple Health (allow Steps).
+4. New → **Start fight once**. Wait until Fights shows it. Extra copies from mashing Start are leftover test rows.
+5. Confirm your steps show on the fight. Alone is fine.
+6. If sign-in fails: hosted **production** Supabase → Authentication → Providers → Apple → On, client ID `com.fitfight.mvp`.
 
 No Vercel. No cron secret. No “expose schema private”.
 
@@ -52,9 +42,9 @@ No Vercel. No cron secret. No “expose schema private”.
 
 | Surface | Status |
 |---|---|
-| Welcome + Apple sign-in | Works (develop / staging) |
+| Welcome + Apple sign-in | Works |
 | Username onboarding | Works. Required once after sign-in. |
-| Version line | `0.9.0 · build N · staging · 25 Aug` |
+| Version line | `0.9.0 · build N · prod` on main builds; `staging` on the rest |
 | Create Steps fight | Phone writes the fight to Supabase |
 | Accept / Join | Phone updates your membership |
 | Add friend / add to a fight | Username. They must have signed in and picked one. No request dance — add is enough. You can start alone. |
@@ -77,4 +67,4 @@ No Vercel. No cron secret. No “expose schema private”.
 
 ## Next product work
 
-Two phones, 3-day Steps fight, standings match, fight shows finished after the days. Then Marc can say ship (`develop` → `main`).
+Two phones, 3-day Steps fight, standings match, fight shows finished after the days. Then App Store when Marc says.

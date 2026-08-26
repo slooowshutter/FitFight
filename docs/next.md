@@ -1,22 +1,42 @@
 # Next
 
-#30 is merged into `develop`. Staging SQL is on. TestFlight **0.9.0 (53)** already uploaded from that merge.
+You want **Vercel**. Keep it. The last chat wrote “no Vercel” after the no-cron turn. That was the agent, not you.
+
+The phone already works **without** Vercel (it writes to Supabase). Vercel is the **server**: close fights if nobody opens, write `private.metric_observations`, later pushes. Code is in `web/`. Nothing is deployed until you create the project.
 
 Do **not** merge `develop` → `main`.
 
-## You (Marc)
+## Now (phone, 5 min)
 
-1. Merge **[#31](https://github.com/slooowshutter/FitFight/pull/31) into `develop`**. Wait for TestFlight (another `0.9.0` build).
-2. TestFlight → **Update**. Look for `0.9.0 · build N · staging · 26 Aug`.
-3. Sign in. Pick a **username**.
-4. You → Apple Health (allow Steps). Copy your username. Add a friend the same way.
-5. New → **3d** → Start fight (alone is fine). Type `@username` on Start if Add friend is fussy.
-6. Friends: TestFlight → Internal Testing → their emails. Same build. Their own Apple IDs. Then a 3-day Steps fight.
+1. TestFlight → **Update**. `0.9.0 (56)` is this PR’s build. Or merge [#31](https://github.com/slooowshutter/FitFight/pull/31) into `develop` first, then Update again.
+2. Sign in. Pick a **username**.
+3. You → Apple Health. Copy your username. Add a friend the same way.
+4. New → **3d** → Start fight (alone is fine).
 
 If sign-in fails: Supabase **develop** → Authentication → Providers → Apple → On, client ID `com.fitfight.mvp`.
 
-No Vercel. No cron. No “expose schema private”.
+## Then (Vercel — only you can do this)
 
-## After you try it
+In the Vercel site (not Apple/GitHub docs):
 
-New conversation. Point it at this file, then [`status.md`](status.md). Proof we want: two phones, standings match, fight shows finished after the days.
+1. New project → this GitHub repo (`slooowshutter/FitFight` or `marclelamy/FitFight`).
+2. **Root Directory:** `web/`
+3. Production branch: `main`. Preview / `develop` uses staging.
+4. Env (dashboard only — never paste in chat or git):
+
+| Name | Preview + `develop` | Production (`main`) |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | develop project URL (`jldjgf…`) | production (`pvqn…`) |
+| `SUPABASE_SECRET_KEY` | develop secret | production secret |
+| `CRON_SECRET` | long random string | same or different |
+
+5. Deploy. Copy the **staging / develop** URL (looks like `https://….vercel.app`).
+6. GitHub → this repo → Settings → Secrets and variables → Actions → Variables → `FITFIGHT_API_URL` = that URL (no trailing slash).
+
+Then tell this chat “Vercel URL is in the GitHub variable.” Next TestFlight will call the server. Do not paste the secret key here.
+
+Hobby cron may run once a day. Opening the app still closes a due fight.
+
+## After you try the fight
+
+New conversation. Point it at this file, then [`status.md`](status.md). Proof: two phones, standings match, fight shows finished after the days.

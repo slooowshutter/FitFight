@@ -17,7 +17,9 @@ There are two **git** branches and two **hosted databases**. They line up.
 | Supabase | develop project (`jldjgf…`, version line says `staging`) | production (`pvqn…`, version line says `prod`) |
 | What you do | Merge PRs **into `develop`**. Try the app. | Merge `develop` → `main` only when Marc says ship |
 
-You do **not** need Vercel or a cron job for the first real fight. The phone writes fights and steps to Supabase. Opening the app closes a fight whose days are up. Standings are a comparison of rows already in the database.
+The first real fight does **not** wait on Vercel: the phone writes fights and steps to Supabase. Opening the app closes a fight whose days are up. Standings are a comparison of those rows.
+
+Marc wants Vercel on. The Next.js API lives in `web/`. It is not live until he creates the Vercel project (see [`next.md`](next.md)). After `FITFIGHT_API_URL` is set, TestFlight calls that server. Preview must use the **develop** Supabase project, never production.
 
 You still do **not** paste `sb_secret_...` anywhere.
 
@@ -32,7 +34,7 @@ You still do **not** paste `sb_secret_...` anywhere.
 5. If sign-in fails: Supabase **develop** → Authentication → Providers → Apple → On, client ID `com.fitfight.mvp`.
 6. Friends: TestFlight → Internal Testing → their emails. Same build. Their own Apple IDs (they are staging users). Then a 3-day Steps fight.
 
-No Vercel. No cron secret. No “expose schema private”.
+Vercel is the next server step (`web/`). Not required to start a fight today.
 
 ---
 

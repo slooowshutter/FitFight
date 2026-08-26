@@ -23,7 +23,7 @@ Next.js / server rules live in [`web/AGENTS.md`](web/AGENTS.md) (copied from Ble
 
 ## What exists (2026-08-26)
 
-Current map: [`docs/status.md`](docs/status.md). Sign-in, username, create/accept Steps fight, HealthKit upload, and standings work on staging. #30 is on `develop`. No Vercel required for that path.
+Current map: [`docs/status.md`](docs/status.md). Sign-in, username, create/accept Steps fight, HealthKit upload, and standings work on staging. #30 is on `develop`. That path does not wait on Vercel. Marc wants Vercel on — `web/` is the Next.js API; he creates the project (see [`docs/next.md`](docs/next.md)).
 
 - Native SwiftUI iOS app, scheme `FitFight`, bundle ID `com.fitfight.mvp`.
 - First TestFlight upload **succeeded** (build `0.1.0 (1)`). Latest user-facing ship: **0.9.0** welcome + develop Supabase.

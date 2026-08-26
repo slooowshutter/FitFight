@@ -50,11 +50,12 @@ struct AppleHealthSourceView: View {
         .toolbar(.hidden, for: .navigationBar)
         .task {
             guard !staticRender else { return }
-            await steps.refresh(requestAccess: !steps.hasAsked)
-            if let userId = session.authSession?.user.id {
-                if steps.history.isEmpty {
-                    await steps.loadServerHistory(client: session.client, userId: userId)
-                }
+            await steps.connectAndSync(
+                client: session.client,
+                userId: session.authSession?.user.id
+            )
+            if steps.history.isEmpty, let userId = session.authSession?.user.id {
+                await steps.loadServerHistory(client: session.client, userId: userId)
             }
         }
     }

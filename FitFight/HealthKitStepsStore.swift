@@ -3,7 +3,7 @@ import Foundation
 import HealthKit
 import Supabase
 
-struct StepDayHistory: Identifiable, Equatable, Hashable {
+struct StepDayHistory: Identifiable, Equatable, Hashable, Codable {
     var day: String
     var date: Date
     var steps: Int
@@ -34,6 +34,7 @@ final class HealthKitStepsStore: ObservableObject {
     private let lastUploadDayKey = "ff.healthkit.lastUploadDay"
     private let lastSyncedAtKey = "ff.healthkit.lastSyncedAt"
     private let sourceIdKey = "ff.healthkit.sourceId"
+    private let historyKey = "ff.healthkit.history"
     private var isUploading = false
 
     init() {
@@ -43,6 +44,12 @@ final class HealthKitStepsStore: ObservableObject {
         }
         if let raw = defaults.string(forKey: sourceIdKey), let id = UUID(uuidString: raw) {
             sourceId = id
+        }
+        if let data = defaults.data(forKey: historyKey),
+           let cached = try? JSONDecoder().decode([StepDayHistory].self, from: data),
+           !cached.isEmpty {
+            history = cached
+            applyStatus(from: cached)
         }
     }
 
@@ -101,7 +108,7 @@ final class HealthKitStepsStore: ObservableObject {
             HKHealthStore.isHealthDataAvailable(),
             let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount)
         else {
-            if requestAccess || hasAsked {
+            if (requestAccess || hasAsked) && history.isEmpty {
                 status = .empty
             }
             return
@@ -121,15 +128,17 @@ final class HealthKitStepsStore: ObservableObject {
         status = .reading
         do {
             let days = try await Self.collectDays(store: store, type: stepsType)
-            history = days
-            applyStatus(from: days)
+            persistHistory(days)
         } catch {
             do {
                 let days = try await Self.collectDaysLegacy(store: store, type: stepsType)
-                history = days
-                applyStatus(from: days)
+                persistHistory(days)
             } catch {
-                status = .empty
+                if history.isEmpty {
+                    status = .empty
+                } else {
+                    applyStatus(from: history)
+                }
             }
         }
     }
@@ -205,13 +214,21 @@ final class HealthKitStepsStore: ObservableObject {
                 .value
             guard history.isEmpty, !rows.isEmpty else { return }
             let formatter = Self.dayFormatter()
-            history = rows.compactMap { row in
+            let days = rows.compactMap { row -> StepDayHistory? in
                 guard let date = formatter.date(from: row.day) else { return nil }
                 return StepDayHistory(day: row.day, date: date, steps: row.steps, sources: [])
             }
-            applyStatus(from: history)
+            persistHistory(days)
         } catch {
             // Local HealthKit history still shows if the table is missing.
+        }
+    }
+
+    private func persistHistory(_ days: [StepDayHistory]) {
+        history = days
+        applyStatus(from: days)
+        if let data = try? JSONEncoder().encode(days) {
+            UserDefaults.standard.set(data, forKey: historyKey)
         }
     }
 

@@ -52,6 +52,7 @@ The phone’s job is: show the UI, read HealthKit / workouts when it is open (or
 - **Challenge social / activity social.** The app is also a small social for friends on a fight. On a recurring bet (e.g. 45 kg dumbbell), people post progress — videos, what they did — to the challenge, both to share and to prove they made it. See what friends did, compare, encourage. Mix of Strava-style activity sharing and the bet. Fitness because people do it together.
   Also a place for accomplishments across apps and sports: one friend hikes, another bikes, they don’t share an app today so they send photos in Messages. Here they can post the activity, show the source (which provider), and share stats if they want. A friend feed even when you don’t have a fight with them. Maybe later: more than one feed (friends / fights / groups). Do not invent those tabs yet.
   Faking is fine for now. People will fake it. Figure anti-cheat later. For now: build the app, make it fun, let people share if they want. Steps Fights still come first; social is Later, not blocked on proof.
+- **Home-screen widget.** iOS widget on the phone home screen for live fights: which challenges you are in, standings / rank, and how much money you are up or down. Maybe a few layouts (compact vs more detail). Glanceable, not a second app. No design yet; do not invent one.
 
 ## Ask first
 

@@ -76,9 +76,9 @@ Env **inside** Vercel (dashboard, never chat):
 | `SUPABASE_SECRET_KEY` | develop secret | production secret |
 | `CRON_SECRET` | random string | random string |
 
-Root Directory: `web/`. Production branch: `main`.
+One Vercel **project**. Production branch = `main`. GitHub `develop` is a Preview/staging deploy of that same project — not a second project.
 
-Vercel’s folder picker uses the **git branch you selected on Import**. `web/` is on `develop` (and on feature PRs). It is **not** on `main` until you ship. If you only see `FitFight`, `docs`, `supabase` — switch the import branch to **`develop`**, then pick `web`.
+Root Directory: type `web` in Settings. The Import picker on `main` may hide it because `web/` is not on `main` yet. A red Production deploy is fine until you ship. Use the **`develop`** deploy URL for `FITFIGHT_API_URL`.
 
 Until those GitHub variables are set, the phone writes straight to Supabase. That is OK for V1.
 

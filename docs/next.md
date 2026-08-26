@@ -19,10 +19,9 @@ If sign-in fails: Supabase **develop** → Authentication → Providers → Appl
 
 In the Vercel site (not Apple/GitHub docs):
 
-1. New project → this GitHub repo (`slooowshutter/FitFight` or `marclelamy/FitFight`).
-2. Import branch: **`develop`** (not `main`). `web/` is not on `main` yet.
-3. **Root Directory:** `web/`
-4. Later, set Production branch to `main`. Preview / `develop` stays on staging keys.
+1. New project → this GitHub repo. That is the **project**. Production branch stays **`main`**.
+2. Settings → Root Directory: type **`web`**. The picker on `main` may not list `web/` yet. Type it. A failed Production deploy is fine — `web/` is not on `main` until you ship.
+3. Vercel already sees GitHub `develop`. You do not create a second Vercel project. Deploy / open the **`develop`** Preview. That URL is staging.
 4. Env (dashboard only — never paste in chat or git):
 
 | Name | Preview + `develop` | Production (`main`) |
@@ -31,8 +30,8 @@ In the Vercel site (not Apple/GitHub docs):
 | `SUPABASE_SECRET_KEY` | develop secret | production secret |
 | `CRON_SECRET` | long random string | same or different |
 
-5. Deploy. Copy the **staging / develop** URL (looks like `https://….vercel.app`).
-6. GitHub → this repo → Settings → Secrets and variables → Actions → Variables → `FITFIGHT_API_URL` = that URL (no trailing slash).
+6. Deploy. Copy the **staging / develop** URL (looks like `https://….vercel.app`).
+7. GitHub → this repo → Settings → Secrets and variables → Actions → Variables → `FITFIGHT_API_URL` = that URL (no trailing slash).
 
 Then tell this chat “Vercel URL is in the GitHub variable.” Next TestFlight will call the server. Do not paste the secret key here.
 

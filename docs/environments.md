@@ -78,6 +78,8 @@ Env **inside** Vercel (dashboard, never chat):
 
 Root Directory: `web/`. Production branch: `main`.
 
+Vercel’s folder picker uses the **git branch you selected on Import**. `web/` is on `develop` (and on feature PRs). It is **not** on `main` until you ship. If you only see `FitFight`, `docs`, `supabase` — switch the import branch to **`develop`**, then pick `web`.
+
 Until those GitHub variables are set, the phone writes straight to Supabase. That is OK for V1.
 
 ---

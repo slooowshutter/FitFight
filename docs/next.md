@@ -20,8 +20,9 @@ If sign-in fails: Supabase **develop** → Authentication → Providers → Appl
 In the Vercel site (not Apple/GitHub docs):
 
 1. New project → this GitHub repo (`slooowshutter/FitFight` or `marclelamy/FitFight`).
-2. **Root Directory:** `web/`
-3. Production branch: `main`. Preview / `develop` uses staging.
+2. Import branch: **`develop`** (not `main`). `web/` is not on `main` yet.
+3. **Root Directory:** `web/`
+4. Later, set Production branch to `main`. Preview / `develop` stays on staging keys.
 4. Env (dashboard only — never paste in chat or git):
 
 | Name | Preview + `develop` | Production (`main`) |

@@ -1,6 +1,6 @@
 # FitFight status — what works, what’s fake, what’s next
 
-Read this before building. Last updated **26 Aug 2026**. App: **0.9.0**. Git: PR into `develop` (Apple Health history). Production is **#32** (`develop` → `main`).
+Read this before building. Last updated **27 Aug 2026**. App: **0.9.0**. Git: PR into `develop` (Apple Health history). Staging is persistent develop `zstzbf…`. Production is **#32** (`develop` → `main`).
 
 Do **not** invent screens for dead buttons. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, notifications, social, or the marketing site unless [`backlog.md`](backlog.md) says so.
 
@@ -14,7 +14,7 @@ There are two **git** branches and two **hosted databases**. They line up.
 |---|---|---|
 | GitHub | `develop` | `main` |
 | TestFlight | any push that is **not** `main` | only builds from `main` |
-| Supabase | develop project (`jldjgf…`, version line says `staging`) | production (`pvqn…`, version line says `prod`) |
+| Supabase | develop project (`zstzbf…`, version line says `staging`) | production (`pvqn…`, version line says `prod`) |
 | What you do | Merge PRs **into `develop`**. Try the app. | Merge `develop` → `main` only when Marc says ship |
 
 A feature PR is a third git branch. Merge that **into `develop`**. That updates the **staging** database (new SQL) and is the home for later chats.

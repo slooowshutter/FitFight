@@ -28,6 +28,13 @@ enum Changelog {
             version: "0.9.0",
             year: 2026,
             month: 8,
+            day: 27,
+            notes: "Staging talks to the new persistent develop database. Sign in again on this build (the old staging host is gone)."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
             day: 26,
             notes: "You → Apple Health opens a connection screen: today’s steps, last sync, and the last 31 days. Sync now uploads to the fight. Opening the app also syncs. Share on a fight uses the system share sheet. Accept on an invite row accepts in place."
         ),

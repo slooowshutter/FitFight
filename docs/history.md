@@ -1,5 +1,9 @@
 # History
 
+## 2026-08-27 — recreate persistent develop
+
+The old staging host `jldjgftoxmluiswpebbd` was a preview branch and died when `develop` merged to `main`. Recreate staging as a **persistent** Supabase branch named `develop` so that does not happen again. New host: `zstzbfocunthczzubggz`. GitHub `develop` was never deleted.
+
 ## 2026-08-26 — Apple Health history
 
 You → Apple Health opens a connection screen: today’s aggregate, last sync, last 31 civil days, Sync now. Phone still writes `step_days` (no Vercel). It also upserts `public.data_sources` and binds that source on create/accept. Opening the app and pull-to-refresh sync. Fight share uses the system sheet. A 3-day window is 3 civil days.
@@ -30,7 +34,7 @@ Every TestFlight ship adds a Changelog row and puts that date on the top version
 
 ## 2026-08-25 — version label shows prod vs staging
 
-TestFlight that is not `main` compiles the persistent develop project (`jldjgftoxmluiswpebbd`). The top version label ends in `prod` or `staging`. Production is only `main`.
+TestFlight that is not `main` compiles the persistent develop project. The top version label ends in `prod` or `staging`. Production is only `main`.
 
 ## 2026-08-25 — Fight duration closer
 

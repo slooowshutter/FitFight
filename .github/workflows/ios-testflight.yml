@@ -59,10 +59,10 @@ jobs:
       # Values go into FitFight/Generated/BuildEnv.swift (compiled in). Never print them.
       - name: Write backend environment
         env:
-          SUPABASE_STAGING_URL: ${{ vars.SUPABASE_STAGING_URL }}
-          SUPABASE_STAGING_PUBLISHABLE_KEY: ${{ vars.SUPABASE_STAGING_PUBLISHABLE_KEY }}
-          FITFIGHT_API_URL: ${{ vars.FITFIGHT_API_URL }}
-          FITFIGHT_API_PRODUCTION_URL: ${{ vars.FITFIGHT_API_PRODUCTION_URL }}
+          SUPABASE_STAGING_URL: ${{ vars.SUPABASE_STAGING_URL || secrets.SUPABASE_STAGING_URL }}
+          SUPABASE_STAGING_PUBLISHABLE_KEY: ${{ vars.SUPABASE_STAGING_PUBLISHABLE_KEY || secrets.SUPABASE_STAGING_PUBLISHABLE_KEY }}
+          FITFIGHT_API_URL: ${{ vars.FITFIGHT_API_URL || secrets.FITFIGHT_API_URL }}
+          FITFIGHT_API_PRODUCTION_URL: ${{ vars.FITFIGHT_API_PRODUCTION_URL || secrets.FITFIGHT_API_PRODUCTION_URL }}
         run: |
           set -euo pipefail
           mkdir -p FitFight/Generated

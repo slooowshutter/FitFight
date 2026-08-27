@@ -28,6 +28,13 @@ enum Changelog {
             version: "0.9.0",
             year: 2026,
             month: 8,
+            day: 27,
+            notes: "Staging talks to the new persistent develop database. Sign in again on this build (the old staging host is gone)."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
             day: 26,
             notes: "Start fight shows Starting… and ignores extra taps so one tap cannot create duplicate fights."
         ),

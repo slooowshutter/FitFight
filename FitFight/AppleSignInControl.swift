@@ -28,8 +28,11 @@ struct AppleSignInControl: View {
 
     private func handle(_ result: Result<ASAuthorization, Error>) async {
         switch result {
-        case .failure:
-            session.authError = "Couldn’t sign in. Try again."
+        case .failure(let error):
+            if (error as? ASAuthorizationError)?.code == .canceled {
+                return
+            }
+            session.authError = "Apple sign-in didn’t finish. Try again."
         case .success(let authorization):
             guard
                 let credential = authorization.credential as? ASAuthorizationAppleIDCredential,

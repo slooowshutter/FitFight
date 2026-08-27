@@ -5,7 +5,7 @@ Empty platform first. Feature code later. Production Metric is **Steps**. Phone 
 [`system-design.md`](system-design.md) is the golden guide. This folder is the first slice of it, not the whole thing. Do not add Active Minutes, Workout Count, WHOOP, Strava, payments, notifications, social, or a website until the backlog says so.
 
 Hosted production (no secrets): https://pvqntpteehdvhqyctwum.supabase.co  
-Hosted staging / git `develop` (no secrets): https://jldjgftoxmluiswpebbd.supabase.co
+Hosted staging / git `develop` (no secrets): https://zstzbfocunthczzubggz.supabase.co
 
 ## Loop
 

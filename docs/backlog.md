@@ -27,14 +27,14 @@ If the app is closed or killed, iOS will not reliably run timers, settle a month
 
 The phone’s job is: show the UI, read HealthKit / workouts when it is open (or briefly woken), upload, receive pushes.
 
-**Last TestFlight:** 26 Aug 2026 — live Steps Fight on **prod** (`develop` → `main`, #32). Look for `0.9.0 · build N · prod`. Start fight loading (no duplicate taps) is the next staging build.
+**Last TestFlight:** 27 Aug 2026 — pointing staging at persistent develop `zstzbfocunthczzubggz`. Look for `0.9.0 · build N · staging`.
 
 ## Now
 
-- Marc: on the **prod** TestFlight, one real Steps fight. Username, Apple Health, Start **once**, confirm it on Fights with steps. Extra copies from mashing Start are leftover test rows — ignore them.
-- Start fight: button shows Starting… and extra taps do nothing (this PR). Then TestFlight → Update.
+- Marc: GitHub variable `SUPABASE_STAGING_PUBLISHABLE_KEY` must be the **develop** project’s `sb_publishable_…`, not production’s. Then TestFlight → Update and sign in.
+- Marc: Apple → On on the **new** develop Auth ([providers](https://supabase.com/dashboard/project/zstzbfocunthczzubggz/auth/providers)), client ID `com.fitfight.mvp`.
+- Marc: one Steps fight on staging. Username, Apple Health, Start **once**.
 - Friends on TestFlight Internal Testing. Same build. Their own Apple IDs. 3-day Steps fight after they have usernames.
-- Marc: Apple Sign In On on hosted **production** only if sign-in fails (client ID `com.fitfight.mvp`). Staging is already on.
 
 ## Next
 

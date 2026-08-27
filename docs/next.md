@@ -26,7 +26,7 @@ In the Vercel site (not Apple/GitHub docs):
 
 | Name | Preview + `develop` | Production (`main`) |
 |---|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | develop project URL (`jldjgf…`) | production (`pvqn…`) |
+| `NEXT_PUBLIC_SUPABASE_URL` | develop project URL (`zstzbf…`) | production (`pvqn…`) |
 | `SUPABASE_SECRET_KEY` | develop secret | production secret |
 | `CRON_SECRET` | long random string | same or different |
 

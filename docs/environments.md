@@ -14,7 +14,7 @@ Do **not** make one Supabase branch per Cursor chat. Preview DBs cost money (max
 |---|---|---|
 | GitHub | `develop` | `main` |
 | Your phone | TestFlight, line says **staging** | TestFlight from `main`, or App Store, line says **prod** |
-| Supabase | develop project `jldjgf…` | production `pvqn…` |
+| Supabase | develop project `zstzbf…` | production `pvqn…` |
 | Vercel | Preview + the `develop` deploy | Production deploy (`main` only) |
 | Keys | develop publishable + develop secret | production publishable + production secret |
 | GitHub variable for the API | `FITFIGHT_API_URL` | `FITFIGHT_API_PRODUCTION_URL` |
@@ -39,7 +39,7 @@ Two **projects**, not three. Ignore extra names.
 
 | Project | When it changes |
 |---|---|
-| develop (`jldjgf…`) | After you merge a PR **into GitHub `develop`** |
+| develop (`zstzbf…`) | After you merge a PR **into GitHub `develop`** |
 | production (`pvqn…`) | After you merge GitHub `develop` → `main` |
 
 SQL in a `cursor/…` PR is tested in GitHub CI (fake Postgres). It is **not** on hosted develop until you merge.
@@ -72,7 +72,7 @@ Env **inside** Vercel (dashboard, never chat):
 
 | Name | Preview + develop | Production |
 |---|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | `jldjgf…` | `pvqn…` |
+| `NEXT_PUBLIC_SUPABASE_URL` | `zstzbf…` | `pvqn…` |
 | `SUPABASE_SECRET_KEY` | develop secret | production secret |
 | `CRON_SECRET` | random string | random string |
 

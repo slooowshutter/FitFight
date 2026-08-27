@@ -50,10 +50,11 @@ struct NewFightView: View {
                 }
                 summary.padding(.top, theme.space.sectionGap)
                 FFButton(
-                    title: "Start fight",
+                    title: model.isCreatingFight ? "Starting…" : "Start fight",
                     icon: "arrow.right",
                     iconTrailing: true,
-                    enabled: canStartSteps
+                    enabled: canStartSteps && !model.isCreatingFight,
+                    busy: model.isCreatingFight
                 ) {
                     startFight()
                 }
@@ -431,6 +432,7 @@ struct NewFightView: View {
             model.tab = .you
             return
         }
+        guard model.beginCreateFight() else { return }
         var inviteHandles = selectedPeople.map { bareHandle($0.handle) }
         let typed = bareHandle(friendHandle.trimmingCharacters(in: .whitespacesAndNewlines))
         if !typed.isEmpty, !inviteHandles.contains(typed) {

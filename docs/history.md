@@ -1,8 +1,16 @@
 # History
 
-## 2026-08-26 — #30 on develop, morning fight fixes
+## 2026-08-27 — recreate persistent develop
 
-Merged **#30** into `develop` (not `main`). TestFlight **0.9.0 (53)** uploaded. Follow-up: 3-day window is three days, fight starts now, Accept refreshes standings, add-friend errors show, HealthKit upload errors show.
+The old staging host `jldjgftoxmluiswpebbd` was a preview branch and died when `develop` merged to `main`. Recreate staging as a **persistent** Supabase branch named `develop` so that does not happen again. New host: `zstzbfocunthczzubggz`. GitHub `develop` was never deleted.
+
+## 2026-08-26 — morning fight fixes
+
+Follow-up on #30: 3-day window is three days, fight starts now, Accept refreshes standings, add-friend errors show, HealthKit upload errors show.
+
+## 2026-08-26 — production + Start fight lock
+
+`develop` merged to `main` (#32). Production TestFlight talks to prod Supabase. Start fight shows Starting… and ignores extra taps so one tap cannot insert duplicate fights.
 
 ## 2026-08-24 — freeze marketing version for TestFlight
 
@@ -26,7 +34,7 @@ Every TestFlight ship adds a Changelog row and puts that date on the top version
 
 ## 2026-08-25 — version label shows prod vs staging
 
-TestFlight that is not `main` compiles the persistent develop project (`jldjgftoxmluiswpebbd`). The top version label ends in `prod` or `staging`. Production is only `main`.
+TestFlight that is not `main` compiles the persistent develop project. The top version label ends in `prod` or `staging`. Production is only `main`.
 
 ## 2026-08-25 — Fight duration closer
 

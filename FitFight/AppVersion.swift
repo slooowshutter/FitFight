@@ -27,7 +27,7 @@ enum AppVersion {
         if host.contains("pvqntpteehdvhqyctwum") {
             return "prod"
         }
-        if host.contains("jldjgftoxmluiswpebbd") {
+        if host.contains("zstzbfocunthczzubggz") {
             return "staging"
         }
         return "staging"

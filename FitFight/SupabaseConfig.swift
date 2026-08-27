@@ -8,6 +8,7 @@ import Foundation
 enum SupabaseConfig {
     private static let productionURL = URL(string: "https://pvqntpteehdvhqyctwum.supabase.co")!
     private static let productionPublishableKey = "sb_publishable_6wP1KNFvJwIE_hX1U2aTfg_u3sk40Li"
+    /// Persistent `develop` branch (not a preview). New host after 27 Aug 2026.
     static let stagingURL = URL(string: "https://zstzbfocunthczzubggz.supabase.co")!
 
     static let projectURL: URL = {

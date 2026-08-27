@@ -14,7 +14,7 @@ There are two **git** branches and two **hosted databases**. They line up.
 |---|---|---|
 | GitHub | `develop` | `main` |
 | TestFlight | any push that is **not** `main` | only builds from `main` |
-| Supabase | develop project (`jldjgf…`, version line says `staging`) | production (`pvqn…`, version line says `prod`) |
+| Supabase | develop project (`zstzbf…`, version line says `staging`) | production (`pvqn…`, version line says `prod`) |
 | What you do | Merge PRs **into `develop`**. Try the app. | Merge `develop` → `main` only when Marc says ship |
 
 A feature PR (like #30) is a third git branch. Merge that **into `develop`**. That updates the **staging** database (new SQL) and is the home for later chats.

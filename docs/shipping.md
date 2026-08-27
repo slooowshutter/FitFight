@@ -86,7 +86,7 @@ Names only. Never print values. Settings → Secrets and variables → Actions �
 | `FITFIGHT_API_URL` | any TestFlight that is not `main` | Staging API base URL (empty = commands off) |
 | `FITFIGHT_API_PRODUCTION_URL` | TestFlight from `main` | Production API base URL (empty = commands off) |
 
-`main` always ships the known production Supabase URL/key. Non-`main` TestFlight ships the known develop project (GitHub `SUPABASE_STAGING_*` variables override if set). The top version label shows `prod` or `staging`.
+`main` always ships the known production Supabase URL/key. Non-`main` TestFlight ships `https://zstzbfocunthczzubggz.supabase.co` (GitHub `SUPABASE_STAGING_*` variables override if set). The staging publishable key must be that project’s key, not production’s. Persistent `develop` must stay persistent so merging to `main` does not delete it. The top version label shows `prod` or `staging`.
 
 Vercel also needs `CRON_SECRET` (Preview + Production). Vercel Cron sends it as `Authorization: Bearer …` to `/api/internal/close-fights` every 15 minutes. Hobby Vercel may only run cron once a day — that is still enough; opening the app also closes due fights. Never put this value in git or chat.
 

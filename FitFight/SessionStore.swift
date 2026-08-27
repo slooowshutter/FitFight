@@ -91,7 +91,7 @@ final class SessionStore: ObservableObject {
             }
             await loadProfile()
         } catch {
-            authError = "Couldn’t sign in. Try again."
+            authError = Self.signInFailureMessage(error)
         }
     }
 
@@ -101,6 +101,26 @@ final class SessionStore: ObservableObject {
         authSession = nil
         profile = nil
         UserDefaults.standard.removeObject(forKey: Self.handleChosenKey)
+    }
+
+    static func signInFailureMessage(_ error: Error) -> String {
+        let text = error.localizedDescription.lowercased()
+        if text.contains("invalid api key") || text.contains("another supabase project") {
+            return "This build’s key doesn’t match the staging database."
+        }
+        if text.contains("provider is not enabled")
+            || text.contains("unsupported provider")
+            || text.contains("provider not enabled") {
+            return "Apple Sign In is off on this database."
+        }
+        if text.contains("nscurlerror")
+            || text.contains("nsurlerrordomain")
+            || text.contains("could not connect")
+            || text.contains("hostname could not be found")
+            || text.contains("not known") {
+            return "Can’t reach the staging database."
+        }
+        return "Couldn’t sign in. Try again."
     }
 
     static func isValidHandle(_ raw: String) -> Bool {

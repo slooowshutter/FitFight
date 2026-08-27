@@ -95,8 +95,10 @@ jobs:
           is_main = sys.argv[1] == "refs/heads/main"
           production_url = "https://pvqntpteehdvhqyctwum.supabase.co"
           production_key = "sb_publishable_6wP1KNFvJwIE_hX1U2aTfg_u3sk40Li"
-          develop_url = "https://jldjgftoxmluiswpebbd.supabase.co"
-          develop_key = "sb_publishable_2nugoyApCuXfOPCWYevktg_kx4nVJPp"
+          develop_url = "https://zstzbfocunthczzubggz.supabase.co"
+          # Publishable key must come from this project, via GitHub var.
+          # Production's sb_publishable_6wP1… is rejected here.
+          develop_key = ""
 
           if is_main:
               url = production_url
@@ -106,6 +108,35 @@ jobs:
               url = os.environ.get("SUPABASE_STAGING_URL", "").strip() or develop_url
               key = os.environ.get("SUPABASE_STAGING_PUBLISHABLE_KEY", "").strip() or develop_key
               api = os.environ.get("FITFIGHT_API_URL", "").strip()
+
+          if not is_main:
+              import urllib.error
+              import urllib.request
+
+              if not key:
+                  sys.exit(
+                      "Set GitHub variable SUPABASE_STAGING_PUBLISHABLE_KEY to the "
+                      "publishable key from the develop branch API Keys page "
+                      "(project zstzbfocunthczzubggz), not production."
+                  )
+              req = urllib.request.Request(
+                  url.rstrip("/") + "/auth/v1/health",
+                  headers={"apikey": key, "Authorization": "Bearer " + key},
+              )
+              try:
+                  with urllib.request.urlopen(req, timeout=20) as response:
+                      print("staging auth health:", response.status)
+              except urllib.error.HTTPError as error:
+                  body = error.read().decode()[:400]
+                  if "Invalid API key" in body or "another Supabase project" in body:
+                      sys.exit(
+                          "Staging publishable key does not belong to this URL. "
+                          "Copy sb_publishable_… from "
+                          "https://supabase.com/dashboard/project/zstzbfocunthczzubggz/settings/api-keys"
+                      )
+                  sys.exit(f"Staging auth health HTTP {error.code}")
+              except Exception as error:
+                  sys.exit(f"Staging host unreachable: {error}")
 
           path = Path("FitFight/Generated/BuildEnv.swift")
           path.write_text(

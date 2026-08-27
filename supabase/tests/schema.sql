@@ -1,5 +1,5 @@
 begin;
-select plan(31);
+select plan(34);
 
 select has_schema('private', 'private schema exists');
 select has_table('public', 'profiles', 'profiles exists');
@@ -127,6 +127,22 @@ select is(
   has_function_privilege('authenticated', 'public.delete_own_account()', 'EXECUTE'),
   true,
   'signed-in users can execute delete_own_account'
+);
+
+select has_function(
+  'public',
+  'ensure_own_profile',
+  'ensure_own_profile exists'
+);
+select is(
+  has_function_privilege('anon', 'public.ensure_own_profile()', 'EXECUTE'),
+  false,
+  'anon cannot execute ensure_own_profile'
+);
+select is(
+  has_function_privilege('authenticated', 'public.ensure_own_profile()', 'EXECUTE'),
+  true,
+  'signed-in users can execute ensure_own_profile'
 );
 
 select * from finish();

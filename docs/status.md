@@ -1,6 +1,6 @@
 # FitFight status — what works, what’s fake, what’s next
 
-Read this before building. Last updated **26 Aug 2026**. App: **0.9.0**. Git: **#32** merged `develop` → `main` (production).
+Read this before building. Last updated **27 Aug 2026**. App: **0.9.0**. Staging host `zstzbf…`.
 
 Do **not** invent screens for dead buttons. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, notifications, social, or the marketing site unless [`backlog.md`](backlog.md) says so.
 
@@ -22,6 +22,14 @@ A feature PR (like #30) is a third git branch. Merge that **into `develop`**. Th
 You do **not** need Vercel or a cron job for the first real fight. The phone writes fights and steps to Supabase. Opening the app closes a fight whose days are up. Standings are a comparison of rows already in the database.
 
 You still do **not** paste `sb_secret_...` anywhere.
+
+---
+
+## Stuck on “Loading your account”?
+
+The old staging host is gone. A leftover sign-in, or a missing `profiles` row, left the phone with no way out.
+
+**Merge this PR into `develop`.** Then TestFlight → **Update**. If it still says it couldn’t load: **Sign out** → Sign in with Apple. Do not merge to `main`.
 
 ---
 

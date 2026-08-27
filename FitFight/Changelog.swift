@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 8,
             day: 27,
+            notes: "If your account fails to load you can Try again or Sign out. The app creates the missing profile instead of leaving you stuck."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
+            day: 27,
             notes: "Staging talks to the new persistent develop database. Sign in again on this build (the old staging host is gone)."
         ),
         ReleaseNote(

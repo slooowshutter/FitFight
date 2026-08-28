@@ -38,7 +38,7 @@ struct ContentView: View {
                         .font(.ff(13))
                         .foregroundStyle(theme.red)
                 } else {
-                    Text("If this hangs, sign out and sign in again.")
+                    Text("Tap Sign out, then Sign in with Apple.")
                         .font(.ff(13))
                         .foregroundStyle(theme.muted)
                 }

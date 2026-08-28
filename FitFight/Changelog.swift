@@ -29,7 +29,7 @@ enum Changelog {
             year: 2026,
             month: 8,
             day: 28,
-            notes: "If your account fails to load you get a Sign out button. Leftover sign-ins from the old staging host are dropped so you can Sign in with Apple again."
+            notes: "If your account fails to load you get a Sign out button. Tap it, then Sign in with Apple — leftover sign-ins from the old staging host are dropped."
         ),
         ReleaseNote(
             version: "0.9.0",

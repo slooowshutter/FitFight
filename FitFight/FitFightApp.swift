@@ -30,10 +30,7 @@ struct FitFightApp: App {
                     }
                 }
                 .task(id: session.authSession?.user.id) {
-                    if session.authSession?.user.id == nil {
-                        steps.clearAccountCache()
-                        return
-                    }
+                    guard session.authSession?.user.id != nil else { return }
                     await syncHealthAndFights()
                 }
                 .onChange(of: session.authSession?.user.id) { old, new in

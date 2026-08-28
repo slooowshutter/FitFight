@@ -28,6 +28,13 @@ enum Changelog {
             version: "0.9.0",
             year: 2026,
             month: 8,
+            day: 28,
+            notes: "V1: every tap does something real. Sign in recovers if the account is stuck. You can edit your name, see Apple Health history, start a Steps fight, share it, and finished fights show in history. Dead buttons are gone."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
             day: 27,
             notes: "If your account fails to load you can Try again or Sign out. The app creates the missing profile instead of leaving you stuck."
         ),

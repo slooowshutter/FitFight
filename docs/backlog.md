@@ -27,7 +27,7 @@ If the app is closed or killed, iOS will not reliably run timers, settle a month
 
 The phone’s job is: show the UI, read HealthKit / workouts when it is open (or briefly woken), upload, receive pushes.
 
-**Last TestFlight:** 28 Aug 2026 — V1: real buttons, Apple Health history, Sign in recovery. Look for `0.9.0 · build N · staging`.
+**Last TestFlight:** 28 Aug 2026 — V1: real buttons, Apple Health history, Sign in recovery, fight history. Look for `0.9.0 · build N · staging`.
 
 ## Now
 
@@ -57,10 +57,9 @@ The phone’s job is: show the UI, read HealthKit / workouts when it is open (or
 
 From [`design/source/INVENTORY.md`](design/source/INVENTORY.md) — honest holes, no mock-up:
 
-- Notifications inbox (the bell has no destination)
-- Request compose + request thread
-- Profile edit, settings sub-screens, payouts
-- HealthKit permission prompts (we request on username continue and on Data sources tap; no extra designed screen)
+- Notifications inbox (the bell is hidden until this exists)
+- Request thread (New emails Marc; there is no public compose yet)
+- Payouts
 - Per-person goals in create (data model allows it; UI is one shared goal)
 - Settle-up / payment at the end of a fight
 
@@ -78,3 +77,4 @@ The phone writes fights and steps to staging after this PR is merged. See [`stat
 - Welcome screen when signed out. Apple Sign In is the only way in; the tabs stay hidden until then.
 - Username onboarding after sign-in. Phone-written Steps fights, HealthKit → `step_days`, standings from the database. Design tab removed.
 - Apple Health connection screen: today, last sync, 31-day history, Sync now. `data_sources` row. Fight share sheet. Invite Accept on the list.
+- V1 taps: no dead buttons. Edit name, Privacy, Requests New → Talk to the boss, fight history, computed money line.

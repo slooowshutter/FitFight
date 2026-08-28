@@ -194,6 +194,25 @@ final class SessionStore: ObservableObject {
         await loadProfile()
     }
 
+    func updateDisplayName(_ raw: String) async throws {
+        guard let userId = authSession?.user.id ?? client.auth.currentUser?.id else {
+            throw HandleError.notSignedIn
+        }
+        let name = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty, name.count <= 40 else {
+            throw HandleError.badName
+        }
+        do {
+            try await client.from("profiles")
+                .update(["display_name": name])
+                .eq("user_id", value: userId)
+                .execute()
+        } catch {
+            throw HandleError.failed
+        }
+        await loadProfile()
+    }
+
     func deleteAccount() async {
         authError = nil
         isBusy = true
@@ -351,13 +370,15 @@ enum HandleError: LocalizedError {
     case invalid
     case taken
     case failed
+    case badName
 
     var errorDescription: String? {
         switch self {
         case .notSignedIn: return "Sign in first."
         case .invalid: return "Use 2–30 letters, numbers, or underscore."
         case .taken: return "That username is taken."
-        case .failed: return "Couldn’t save that username."
+        case .failed: return "Couldn’t save."
+        case .badName: return "Name can’t be empty."
         }
     }
 }

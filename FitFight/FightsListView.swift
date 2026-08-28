@@ -77,18 +77,6 @@ struct FightsListView: View {
                 }
             }
             Spacer(minLength: 0)
-            ZStack {
-                Circle().strokeBorder(theme.line, lineWidth: 1)
-                Image(systemName: "bell")
-                    .font(.system(size: 14, weight: .regular))
-                    .foregroundStyle(theme.muted)
-                // The mock hangs the dot off the bell itself, not off the circle.
-                Circle()
-                    .fill(theme.red)
-                    .frame(width: 6, height: 6)
-                    .offset(x: 6, y: -7)
-            }
-            .frame(width: 40, height: 40)
         }
         .padding(.top, 2)
     }

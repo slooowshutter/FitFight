@@ -13,6 +13,8 @@ struct YouView: View {
     @State private var friendHandle = ""
     @State private var copied = false
     @State private var showingAppleHealth = false
+    @State private var showingEdit = false
+    @State private var showingPrivacy = false
 
     var body: some View {
         if staticRender {
@@ -42,7 +44,7 @@ struct YouView: View {
                 stats
                 sectionHeader("Friends")
                 friendsPanel
-                sectionHeader("Fight history", action: "All \(model.history.count)") { model.tab = .fights }
+                sectionHeader("Fight history", action: model.history.isEmpty ? nil : "All \(model.history.count)") { model.tab = .fights }
                 history
                 sectionHeader("Data sources")
                 sources
@@ -86,6 +88,16 @@ struct YouView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This signs you out and deletes your FitFight account.")
+        }
+        .sheet(isPresented: $showingEdit) {
+            ProfileEditSheet()
+                .fitFightTheme(theme)
+                .presentationBackground(theme.bg)
+        }
+        .sheet(isPresented: $showingPrivacy) {
+            PrivacySheet()
+                .fitFightTheme(theme)
+                .presentationBackground(theme.bg)
         }
     }
 
@@ -134,7 +146,7 @@ struct YouView: View {
             }
             .layoutPriority(1)
             Spacer(minLength: 4)
-            Button {} label: {
+            Button { showingEdit = true } label: {
                 Text("Edit")
                     .font(.ff(13, .semibold))
                     .foregroundStyle(theme.muted)
@@ -185,39 +197,50 @@ struct YouView: View {
         return (fights, wins, rate, "$\(wonMoney)")
     }
 
+    @ViewBuilder
     private var history: some View {
-        FFPanel {
-            ForEach(Array(model.history.enumerated()), id: \.element.id) { index, item in
-                if index > 0 { FFHairline() }
-                Button {
-                    model.tab = .fights
-                    model.openFightID = item.id
-                } label: {
-                    HStack(spacing: 12) {
-                        Text(item.won ? "W" : "L")
-                            .font(.ff(13, .bold))
-                            .foregroundStyle(item.won ? theme.green : theme.red)
-                            .frame(width: 36, height: 36)
-                            .background(
-                                (item.won ? theme.green : theme.red).opacity(0.12),
-                                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            )
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(item.name)
-                                .font(.ff(13, .bold))
-                                .foregroundStyle(theme.text)
-                            Text(item.detail)
-                                .font(.ff(11))
-                                .foregroundStyle(theme.muted)
-                        }
-                        Spacer(minLength: 8)
-                        FFMoney(dollars: item.net, size: 13)
-                    }
+        if model.history.isEmpty {
+            FFPanel {
+                Text("No finished fights yet. They land here when a fight ends.")
+                    .font(.ff(12))
+                    .foregroundStyle(theme.faint)
                     .padding(.horizontal, FFMetric.rowPaddingX)
-                    .frame(height: 64)
-                    .contentShape(Rectangle())
+                    .frame(minHeight: 56, alignment: .leading)
+            }
+        } else {
+            FFPanel {
+                ForEach(Array(model.history.enumerated()), id: \.element.id) { index, item in
+                    if index > 0 { FFHairline() }
+                    Button {
+                        model.tab = .fights
+                        model.openFightID = item.id
+                    } label: {
+                        HStack(spacing: 12) {
+                            Text(item.won ? "W" : "L")
+                                .font(.ff(13, .bold))
+                                .foregroundStyle(item.won ? theme.green : theme.red)
+                                .frame(width: 36, height: 36)
+                                .background(
+                                    (item.won ? theme.green : theme.red).opacity(0.12),
+                                    in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                )
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(item.name)
+                                    .font(.ff(13, .bold))
+                                    .foregroundStyle(theme.text)
+                                Text(item.detail)
+                                    .font(.ff(11))
+                                    .foregroundStyle(theme.muted)
+                            }
+                            Spacer(minLength: 8)
+                            FFMoney(dollars: item.net, size: 13)
+                        }
+                        .padding(.horizontal, FFMetric.rowPaddingX)
+                        .frame(height: 64)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
         }
     }
@@ -419,13 +442,7 @@ struct YouView: View {
 
     private var settings: some View {
         FFPanel {
-            navRow("Units & goals") {}
-            FFHairline()
-            navRow("Notifications") {}
-            FFHairline()
-            navRow("Privacy") {}
-            FFHairline()
-            navRow("Payouts") {}
+            navRow("Privacy") { showingPrivacy = true }
             if session.isSignedIn {
                 FFHairline()
                 navRow("Sign out") {
@@ -460,5 +477,132 @@ struct YouView: View {
         }
         .buttonStyle(.plain)
         .disabled(session.isBusy)
+    }
+}
+
+private struct ProfileEditSheet: View {
+    @EnvironmentObject private var session: SessionStore
+    @Environment(\.ffTheme) private var theme
+    @Environment(\.dismiss) private var dismiss
+    @State private var name = ""
+    @State private var handle = ""
+    @State private var error = ""
+    @State private var isSaving = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("Edit")
+                    .font(.ff(17, .bold))
+                    .foregroundStyle(theme.text)
+                Spacer()
+                Button("Close") { dismiss() }
+                    .font(.ff(13, .semibold))
+                    .foregroundStyle(theme.accent)
+            }
+            .padding(.bottom, 20)
+
+            Text("Name")
+                .font(.ff(11, .semibold))
+                .foregroundStyle(theme.faint)
+            TextField("Your name", text: $name)
+                .font(.ff(17, .semibold))
+                .foregroundStyle(theme.text)
+                .padding(.horizontal, 16)
+                .frame(height: 52)
+                .background(theme.surface, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
+                        .strokeBorder(theme.line, lineWidth: 1)
+                }
+                .padding(.top, 8)
+
+            Text("Username")
+                .font(.ff(11, .semibold))
+                .foregroundStyle(theme.faint)
+                .padding(.top, 16)
+            TextField("username", text: $handle)
+                .font(.ff(17, .semibold))
+                .foregroundStyle(theme.text)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .textContentType(.username)
+                .padding(.horizontal, 16)
+                .frame(height: 52)
+                .background(theme.surface, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
+                        .strokeBorder(theme.line, lineWidth: 1)
+                }
+                .padding(.top, 8)
+
+            if !error.isEmpty {
+                Text(error)
+                    .font(.ff(11))
+                    .foregroundStyle(theme.red)
+                    .padding(.top, 10)
+            }
+
+            FFButton(title: isSaving ? "Saving…" : "Save", enabled: canSave) {
+                Task { await save() }
+            }
+            .padding(.top, 20)
+            Spacer()
+        }
+        .padding(.horizontal, theme.space.screenPadding)
+        .padding(.top, 24)
+        .background(theme.bg)
+        .onAppear {
+            name = session.profile?.displayName ?? ""
+            handle = session.profile?.handle ?? ""
+        }
+    }
+
+    private var canSave: Bool {
+        !isSaving && !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private func save() async {
+        error = ""
+        isSaving = true
+        defer { isSaving = false }
+        do {
+            try await session.updateDisplayName(name)
+            let nextHandle = SessionStore.strippedHandle(handle)
+            if !nextHandle.isEmpty, nextHandle != session.profile?.handle {
+                try await session.setHandle(nextHandle)
+            }
+            dismiss()
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+}
+
+private struct PrivacySheet: View {
+    @Environment(\.ffTheme) private var theme
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("Privacy")
+                    .font(.ff(17, .bold))
+                    .foregroundStyle(theme.text)
+                Spacer()
+                Button("Close") { dismiss() }
+                    .font(.ff(13, .semibold))
+                    .foregroundStyle(theme.accent)
+            }
+            .padding(.bottom, 20)
+            Text("FitFight stores your Apple sign-in, username, display name, and the daily step totals you upload. Friends on a fight with you can see those step totals. We do not sell this. Delete account on You removes your profile.")
+                .font(.ff(15))
+                .foregroundStyle(theme.muted)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer()
+        }
+        .padding(.horizontal, theme.space.screenPadding)
+        .padding(.top, 24)
+        .background(theme.bg)
     }
 }

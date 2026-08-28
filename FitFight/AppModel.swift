@@ -191,7 +191,7 @@ final class AppModel: ObservableObject {
 
     @Published var openFightID: String?
     @Published var showingVersions = false
-    @Published var voted: Set<String> = ["r1", "r3", "r6"]
+    @Published var voted: Set<String> = []
     @Published var joined: Set<String> = []
     @Published var createError: String?
     @Published private(set) var isCreatingFight = false
@@ -225,12 +225,14 @@ final class AppModel: ObservableObject {
     init(fixtures: Bool) {
         let bundle = AppModelFixtures.load()
         you = bundle.you
-        requests = bundle.requests
         if fixtures {
+            requests = bundle.requests
+            voted = ["r1", "r3", "r6"]
             people = bundle.people
             fights = bundle.fights
             history = bundle.history
         } else {
+            requests = []
             people = []
             fights = []
             history = []
@@ -584,7 +586,9 @@ final class AppModel: ObservableObject {
         let ids = fights.flatMap { fight in
             fight.standings.compactMap { UUID(uuidString: $0.person.id) }
         }
-        guard !ids.isEmpty else { return fights }
+        guard !ids.isEmpty else {
+            return fights.map { Self.refreshPresentation($0, formatScore: formatScore) }
+        }
 
         let days: [StepDayRow]
         do {
@@ -594,7 +598,7 @@ final class AppModel: ObservableObject {
                 .execute()
                 .value
         } catch {
-            return fights
+            return fights.map { Self.refreshPresentation($0, formatScore: formatScore) }
         }
 
         let today = Self.dayStamp(Date())
@@ -618,19 +622,120 @@ final class AppModel: ObservableObject {
             }
             next.standings = people
             next.days = Self.dayCards(from: days, standings: people, window: window)
-            if let you = people.first(where: { $0.person.isYou }) {
-                next.rank = people.filter { !$0.invited }.firstIndex { $0.person.id == you.person.id }.map { $0 + 1 } ?? next.rank
-                if let fightID = UUID(uuidString: fight.id) {
-                    try? await client.from("fight_members")
-                        .update(CurrentValueUpdate(currentValue: you.score))
-                        .eq("fight_id", value: fightID)
-                        .eq("user_id", value: userId)
-                        .execute()
-                }
+            next = Self.refreshPresentation(next, formatScore: formatScore)
+            if let you = next.standings.first(where: { $0.person.isYou }),
+               let fightID = UUID(uuidString: fight.id) {
+                try? await client.from("fight_members")
+                    .update(
+                        MemberScoreUpdate(
+                            currentValue: you.score,
+                            rank: next.rank,
+                            outcomeMinor: you.projectedNet * 100,
+                            finalValue: next.status == .finished ? you.score : nil,
+                            finalizedAt: next.status == .finished ? Self.isoNow() : nil
+                        )
+                    )
+                    .eq("fight_id", value: fightID)
+                    .eq("user_id", value: userId)
+                    .execute()
             }
             updated.append(next)
         }
         return updated
+    }
+
+    /// Money, rank, and kicker from the scores already on the fight.
+    private static func refreshPresentation(
+        _ fight: Fight,
+        formatScore: (Double, MetricKind) -> String
+    ) -> Fight {
+        var next = fight
+        let joined = fight.standings.filter { !$0.invited }
+        let youRow = fight.standings.first { $0.person.isYou }
+        next.of = max(joined.count, 1)
+        next.rank = youRow.flatMap { row in
+            joined.firstIndex { $0.person.id == row.person.id }.map { $0 + 1 }
+        } ?? fight.rank
+        next.standings = applyProjectedMoney(fight.standings, fight: next)
+
+        switch fight.status {
+        case .invited:
+            break
+        case .finished:
+            next.kickerPrefix = next.rank == 1 ? "Won by" : "Finished"
+            next.kickerEmphasis = ordinal(next.rank)
+            if let ended = fight.endedLabel {
+                next.listSubtitle = "\(ended) · \(ordinal(next.rank)) of \(next.of)"
+            }
+        case .live:
+            if let youRow, let leader = joined.first, !youRow.invited {
+                if youRow.person.id == leader.person.id {
+                    next.kickerPrefix = "Holding"
+                    next.kickerEmphasis = "1st"
+                    next.kickerRest = "with \(fight.daysLeft ?? 0)d to go"
+                    next.listSubtitle = "Holding 1st with \(fight.daysLeft ?? 0)d to go"
+                } else {
+                    let gap = leader.score - youRow.score
+                    next.kickerPrefix = ""
+                    next.kickerEmphasis = formatScore(max(0, gap), .steps)
+                    next.kickerRest = "behind \(leader.person.name)"
+                    next.listSubtitle = "\(next.kickerEmphasis) behind \(leader.person.name)"
+                }
+            }
+        }
+        return next
+    }
+
+    private static func applyProjectedMoney(_ standings: [Standing], fight: Fight) -> [Standing] {
+        let joined = standings.filter { !$0.invited }
+        let buyIn = fight.buyIn
+        let pot = fight.pot
+        let elapsed = max(1, fight.lengthDays - (fight.daysLeft ?? 0))
+        let goal = fight.dailyGoal ?? 10000
+        let target = goal * Double(elapsed)
+        let top = joined.map(\.score).max() ?? 0
+        let winners = joined.filter { $0.score == top && top > 0 }
+        let prize = winners.isEmpty ? 0 : pot / max(1, winners.count)
+        let total = joined.reduce(0) { $0 + $1.score }
+        let safeIds = Set(joined.filter { $0.score >= target }.map(\.person.id))
+        let forfeits = buyIn * joined.filter { !safeIds.contains($0.person.id) }.count
+        let goalShare = safeIds.isEmpty ? 0 : forfeits / max(1, safeIds.count)
+
+        return standings.map { row in
+            var copy = row
+            if row.invited {
+                copy.projectedNet = 0
+                copy.safe = nil
+                return copy
+            }
+            switch fight.settlement {
+            case .winner:
+                copy.safe = nil
+                if pot <= 0 || winners.isEmpty {
+                    copy.projectedNet = 0
+                } else if winners.contains(where: { $0.person.id == row.person.id }) {
+                    copy.projectedNet = prize - buyIn
+                } else {
+                    copy.projectedNet = -buyIn
+                }
+            case .proportional:
+                copy.safe = nil
+                if pot <= 0 || total <= 0 {
+                    copy.projectedNet = 0
+                } else {
+                    copy.projectedNet = Int((row.score / total * Double(pot)).rounded()) - buyIn
+                }
+            case .goal:
+                let safe = safeIds.contains(row.person.id)
+                copy.safe = safe
+                if pot <= 0 {
+                    copy.projectedNet = 0
+                } else {
+                    copy.projectedNet = safe ? goalShare : -buyIn
+                }
+            }
+            return copy
+        }
     }
 
     /// Civil days in `[startOfDay(starts_at), startOfDay(ends_at))`. A 3-day fight is 3 days, not 4.
@@ -1079,11 +1184,19 @@ private struct MemberAcceptUpdate: Encodable {
     }
 }
 
-private struct CurrentValueUpdate: Encodable {
+private struct MemberScoreUpdate: Encodable {
     let currentValue: Double
+    let rank: Int
+    let outcomeMinor: Int
+    let finalValue: Double?
+    let finalizedAt: String?
 
     enum CodingKeys: String, CodingKey {
         case currentValue = "current_value"
+        case rank
+        case outcomeMinor = "outcome_minor"
+        case finalValue = "final_value"
+        case finalizedAt = "finalized_at"
     }
 }
 

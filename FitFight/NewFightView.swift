@@ -83,9 +83,15 @@ struct NewFightView: View {
             FFPanel {
                 ForEach(Array(MetricKind.allCases.enumerated()), id: \.element.id) { index, item in
                     if index > 0 { FFHairline() }
-                    optionRow(title: item.title, subtitle: item.blurb, on: metric == item) {
+                    optionRow(
+                        title: item.title,
+                        subtitle: item == .steps ? item.blurb : "Not in this version",
+                        on: metric == item,
+                        enabled: item == .steps
+                    ) {
+                        guard item == .steps else { return }
                         metric = item
-                        dailyGoal = item == .steps ? 10000 : (item == .activeMinutes ? 45 : 1)
+                        dailyGoal = 10000
                     }
                 }
             }
@@ -113,7 +119,14 @@ struct NewFightView: View {
                 }
                 .onSubmit { addFriendFromField() }
             FFPanel {
-                ForEach(Array(model.people.enumerated()), id: \.element.id) { index, person in
+                if model.people.isEmpty {
+                    Text("No friends yet. Add someone with their username, or start alone.")
+                        .font(.ff(12))
+                        .foregroundStyle(theme.faint)
+                        .padding(.horizontal, FFMetric.rowPaddingX)
+                        .frame(minHeight: 56, alignment: .leading)
+                } else {
+                    ForEach(Array(model.people.enumerated()), id: \.element.id) { index, person in
                     if index > 0 { FFHairline() }
                     let on = selected.contains(person.id)
                     Button {
@@ -137,6 +150,7 @@ struct NewFightView: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    }
                 }
             }
         }
@@ -323,6 +337,7 @@ struct NewFightView: View {
         subtitle: String,
         on: Bool,
         leadingRadio: Bool = false,
+        enabled: Bool = true,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
@@ -349,8 +364,10 @@ struct NewFightView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(on ? theme.selectedOption() : Color.clear)
             .contentShape(Rectangle())
+            .opacity(enabled ? 1 : 0.45)
         }
         .buttonStyle(.plain)
+        .disabled(!enabled)
     }
 
     private static let tickSize: CGFloat = 20

@@ -1,5 +1,9 @@
 # History
 
+## 2026-08-28 — V1: no fake buttons
+
+Live phone: every remaining tap does something or is gone. Bell / Units / Notifications / Payouts are hidden. Edit writes display name (and username). Privacy says what we store. Requests New emails Marc. Finished fights fill history with real W/L and money. Fixture request board stays for screenshots only.
+
 ## 2026-08-27 — unstick account load
 
 Signed-in with no visible `profiles` row left the phone on “Loading your account” with nothing to tap. The app now Sign-out/Try-again on that screen, drops sessions from the old staging host, and `ensure_own_profile` creates or undeletes the row.

@@ -38,15 +38,13 @@ struct ContentView: View {
                         .font(.ff(13))
                         .foregroundStyle(theme.red)
                 }
-                if session.authError != nil {
-                    Button(session.isBusy ? "Loading…" : "Try again") {
-                        Task { await session.retryLoadProfile() }
-                    }
-                    .font(.ff(13, .semibold))
-                    .foregroundStyle(theme.accent)
-                    .disabled(session.isBusy)
-                    .buttonStyle(.plain)
+                Button(session.isBusy ? "Loading…" : "Try again") {
+                    Task { await session.retryLoadProfile() }
                 }
+                .font(.ff(13, .semibold))
+                .foregroundStyle(theme.accent)
+                .disabled(session.isBusy)
+                .buttonStyle(.plain)
                 Button("Sign out") {
                     Task { await session.signOut() }
                 }

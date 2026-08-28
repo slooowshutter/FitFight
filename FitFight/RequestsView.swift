@@ -19,12 +19,16 @@ struct RequestsView: View {
                 HStack(alignment: .top, spacing: 12) {
                     VStack(alignment: .leading, spacing: 4) {
                         FFLabel(text: "Requests", role: .display)
-                        Text("Vote on what gets built next.")
+                        Text(model.requests.isEmpty
+                             ? "Want something built? Talk to the boss."
+                             : "Vote on what gets built next.")
                             .font(.ff(13))
                             .foregroundStyle(theme.faint)
                     }
                     Spacer(minLength: 0)
-                    FFButton(title: "New", kind: .small, icon: "plus") {}
+                    FFButton(title: "New", kind: .small, icon: "plus") {
+                        showingBossChat = true
+                    }
                 }
                 .padding(.top, 2)
                 .padding(.bottom, 16)
@@ -34,20 +38,27 @@ struct RequestsView: View {
                 }
                 .padding(.bottom, 16)
 
-                FFSegmented(items: Filter.allCases, selection: $filter) { $0.rawValue }
-                    .padding(.bottom, 16)
-
-                VStack(spacing: 10) {
-                    ForEach(filtered) { item in
-                        RequestCard(item: item)
-                    }
+                if !model.requests.isEmpty {
+                    FFSegmented(items: Filter.allCases, selection: $filter) { $0.rawValue }
+                        .padding(.bottom, 16)
                 }
 
-                Text("Anything you post is public to everyone using FitFight.")
-                    .font(.ff(13))
-                    .foregroundStyle(theme.faint)
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 24)
+                if filtered.isEmpty {
+                    Text("Nothing on the board yet. New opens a private line to Marc — he replies by email.")
+                        .font(.ff(13))
+                        .foregroundStyle(theme.faint)
+                } else {
+                    VStack(spacing: 10) {
+                        ForEach(filtered) { item in
+                            RequestCard(item: item)
+                        }
+                    }
+                    Text("Anything you post is public to everyone using FitFight.")
+                        .font(.ff(13))
+                        .foregroundStyle(theme.faint)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 24)
+                }
             }
             .padding(.horizontal, theme.space.screenPadding)
             .padding(.bottom, theme.space.xl)

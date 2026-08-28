@@ -583,9 +583,9 @@ final class AppModel: ObservableObject {
         client: SupabaseClient,
         userId: UUID
     ) async throws -> [Fight] {
-        let ids = fights.flatMap { fight in
+        let ids = Array(Set(fights.flatMap { fight in
             fight.standings.compactMap { UUID(uuidString: $0.person.id) }
-        }
+        }))
         guard !ids.isEmpty else {
             return fights.map { Self.refreshPresentation($0, formatScore: formatScore) }
         }

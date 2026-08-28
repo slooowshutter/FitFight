@@ -96,11 +96,14 @@ final class SessionStore: ObservableObject {
     }
 
     func signOut() async {
+        await signOut(message: nil)
+    }
+
+    func retryLoadProfile() async {
         authError = nil
-        try? await client.auth.signOut()
-        authSession = nil
-        profile = nil
-        UserDefaults.standard.removeObject(forKey: Self.handleChosenKey)
+        isBusy = true
+        defer { isBusy = false }
+        await loadProfile()
     }
 
     static func signInFailureMessage(_ error: Error) -> String {
@@ -121,6 +124,39 @@ final class SessionStore: ObservableObject {
             return "Can’t reach the staging database."
         }
         return "Couldn’t sign in. Try again."
+    }
+
+    static func profileFailureMessage(_ error: Error) -> String {
+        let text = error.localizedDescription.lowercased()
+        if text.contains("invalid jwt")
+            || text.contains("invalid api key")
+            || text.contains("another supabase project") {
+            return "This build talks to a new database. Sign in again."
+        }
+        if text.contains("nscurlerror")
+            || text.contains("nsurlerrordomain")
+            || text.contains("could not connect")
+            || text.contains("hostname could not be found")
+            || text.contains("not known") {
+            return "Can’t reach the staging database."
+        }
+        return "Couldn’t load your account. Try again."
+    }
+
+    static func isInvalidSession(_ error: Error) -> Bool {
+        let text = error.localizedDescription.lowercased()
+        return text.contains("invalid jwt")
+            || text.contains("jwt expired")
+            || text.contains("invalid api key")
+            || text.contains("another supabase project")
+            || text.contains("session_not_found")
+    }
+
+    static func isMissingRow(_ error: Error) -> Bool {
+        let text = error.localizedDescription.lowercased()
+        return text.contains("pgrst116")
+            || text.contains("0 rows")
+            || text.contains("the result contains 0 rows")
     }
 
     static func isValidHandle(_ raw: String) -> Bool {
@@ -164,13 +200,18 @@ final class SessionStore: ObservableObject {
         defer { isBusy = false }
         do {
             try await client.rpc("delete_own_account").execute()
-            try? await client.auth.signOut()
-            authSession = nil
-            profile = nil
-            UserDefaults.standard.removeObject(forKey: Self.handleChosenKey)
+            await signOut()
         } catch {
             authError = "Couldn’t delete account. Try again."
         }
+    }
+
+    private func signOut(message: String?) async {
+        try? await client.auth.signOut()
+        authSession = nil
+        profile = nil
+        UserDefaults.standard.removeObject(forKey: Self.handleChosenKey)
+        authError = message
     }
 
     private func listen() async {
@@ -189,6 +230,51 @@ final class SessionStore: ObservableObject {
             profile = nil
             return
         }
+        if let token = authSession?.accessToken,
+           let ref = Self.jwtProjectRef(token) {
+            let host = SupabaseConfig.projectURL.host ?? ""
+            if !host.contains(ref) {
+                await signOut(message: "This build talks to a new database. Sign in again.")
+                return
+            }
+        }
+
+        if let row = await fetchProfile(userId: userId) {
+            applyProfile(row, expectedUserId: userId)
+            return
+        }
+
+        do {
+            try await client.rpc("ensure_own_profile").execute()
+        } catch {
+            if Self.isInvalidSession(error) {
+                await signOut(message: Self.profileFailureMessage(error))
+                return
+            }
+        }
+
+        if let row = await fetchProfile(userId: userId) {
+            applyProfile(row, expectedUserId: userId)
+            return
+        }
+
+        guard authSession?.user.id == userId || client.auth.currentUser?.id == userId else {
+            return
+        }
+        profile = nil
+        authError = "Couldn’t load your account. Try again."
+    }
+
+    private func applyProfile(_ row: FitFightProfile, expectedUserId: UUID) {
+        guard authSession?.user.id == expectedUserId || client.auth.currentUser?.id == expectedUserId else {
+            return
+        }
+        profile = row
+        authError = nil
+    }
+
+    private func fetchProfile(userId: UUID) async -> FitFightProfile? {
+        var lastError: Error?
         for attempt in 0..<3 {
             do {
                 let row: FitFightProfile = try await client.from("profiles")
@@ -197,25 +283,56 @@ final class SessionStore: ObservableObject {
                     .single()
                     .execute()
                     .value
-                profile = row
-                return
+                return row
             } catch {
-                if attempt == 2 {
-                    if let fallback = try? await client.from("profiles")
-                        .select("user_id, handle, display_name")
-                        .eq("user_id", value: userId)
-                        .single()
-                        .execute()
-                        .value as FitFightProfile? {
-                        profile = fallback
-                        return
-                    }
-                    profile = nil
-                } else {
+                lastError = error
+                if Self.isInvalidSession(error) || Self.isMissingRow(error) {
+                    break
+                }
+                if attempt < 2 {
                     try? await Task.sleep(nanoseconds: 400_000_000)
                 }
             }
         }
+        if let fallback = try? await client.from("profiles")
+            .select("user_id, handle, display_name")
+            .eq("user_id", value: userId)
+            .single()
+            .execute()
+            .value as FitFightProfile? {
+            return fallback
+        }
+        if let lastError, Self.isInvalidSession(lastError) {
+            return nil
+        }
+        return nil
+    }
+
+    /// `ref` claim on a Supabase access token is the project id in the host.
+    static func jwtProjectRef(_ token: String) -> String? {
+        let parts = token.split(separator: ".", omittingEmptySubsequences: false)
+        guard parts.count >= 2 else { return nil }
+        var base64 = parts[1]
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        let pad = (4 - base64.count % 4) % 4
+        if pad > 0 {
+            base64 += String(repeating: "=", count: pad)
+        }
+        guard
+            let data = Data(base64Encoded: base64),
+            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else {
+            return nil
+        }
+        if let ref = json["ref"] as? String, !ref.isEmpty {
+            return ref
+        }
+        if let iss = json["iss"] as? String, let host = URL(string: iss)?.host {
+            let project = host.split(separator: ".").first.map(String.init)
+            return project
+        }
+        return nil
     }
 }
 

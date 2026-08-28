@@ -263,7 +263,7 @@ struct FinishedRow: View {
         } label: {
             FFCard(padding: 13.5, horizontal: 16) {
                 HStack(spacing: 12) {
-                    let won = fight.rank == 1
+                    let won = fight.youWon
                     Text(won ? "W" : "L")
                         .font(.ff(13, .bold))
                         .foregroundStyle(won ? theme.green : theme.red)

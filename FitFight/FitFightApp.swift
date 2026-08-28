@@ -30,7 +30,15 @@ struct FitFightApp: App {
                     }
                 }
                 .task(id: session.authSession?.user.id) {
+                    if session.authSession?.user.id == nil {
+                        steps.clearAccountCache()
+                        return
+                    }
                     await syncHealthAndFights()
+                }
+                .onChange(of: session.authSession?.user.id) { old, new in
+                    guard old != nil, old != new else { return }
+                    steps.clearAccountCache()
                 }
                 .onChange(of: scenePhase) { _, phase in
                     guard phase == .active else { return }

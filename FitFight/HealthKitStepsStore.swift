@@ -103,6 +103,23 @@ final class HealthKitStepsStore: ObservableObject {
         history.first { Calendar.current.isDateInToday($0.date) }
     }
 
+    /// Drop cached days and source id so a new account cannot upload the last user's rows.
+    func clearAccountCache() {
+        history = []
+        lastSyncedAt = nil
+        sourceId = nil
+        uploadError = nil
+        isUploading = false
+        isSyncing = false
+        status = .idle
+        let defaults = UserDefaults.standard
+        defaults.removeObject(forKey: lastSyncedAtKey)
+        defaults.removeObject(forKey: sourceIdKey)
+        defaults.removeObject(forKey: historyKey)
+        defaults.removeObject(forKey: connectedKey)
+        defaults.removeObject(forKey: lastUploadDayKey)
+    }
+
     func refresh(requestAccess: Bool) async {
         guard
             HKHealthStore.isHealthDataAvailable(),

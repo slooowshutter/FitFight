@@ -185,7 +185,7 @@ struct YouView: View {
         for fight in model.fights where fight.status == .finished {
             guard seen.insert(fight.id).inserted else { continue }
             fights += 1
-            if fight.rank == 1 {
+            if fight.youWon {
                 wins += 1
                 if let you = model.youStanding(in: fight), you.projectedNet > 0 {
                     wonMoney += you.projectedNet

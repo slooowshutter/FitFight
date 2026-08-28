@@ -107,6 +107,7 @@ struct Standing: Identifiable, Hashable {
     var projectedNet: Int
     var invited: Bool = false
     var safe: Bool? = nil
+    var isFinalized: Bool = false
 
     var id: String { person.id }
 }
@@ -154,6 +155,21 @@ struct Fight: Identifiable, Hashable {
     var days: [FightDay] = []
     var windowStart: Date = Date()
     var windowEnd: Date = Date().addingTimeInterval(86400)
+
+    /// Tied at the top counts as a win. Goal fights count as a win if you hit the target.
+    var youWon: Bool {
+        guard let you = standings.first(where: { $0.person.isYou }), !you.invited else {
+            return false
+        }
+        switch settlement {
+        case .goal:
+            return you.safe == true
+        case .winner, .proportional:
+            let joined = standings.filter { !$0.invited }
+            let top = joined.map(\.score).max() ?? 0
+            return top > 0 && you.score == top
+        }
+    }
 }
 
 struct RequestItem: Identifiable, Hashable {
@@ -339,7 +355,7 @@ final class AppModel: ObservableObject {
                         name: fight.name,
                         detail: fight.listSubtitle,
                         net: net,
-                        won: fight.rank == 1
+                        won: fight.youWon
                     )
                 }
         } catch {
@@ -624,20 +640,35 @@ final class AppModel: ObservableObject {
             next.days = Self.dayCards(from: days, standings: people, window: window)
             next = Self.refreshPresentation(next, formatScore: formatScore)
             if let you = next.standings.first(where: { $0.person.isYou }),
-               let fightID = UUID(uuidString: fight.id) {
-                try? await client.from("fight_members")
-                    .update(
-                        MemberScoreUpdate(
-                            currentValue: you.score,
-                            rank: next.rank,
-                            outcomeMinor: you.projectedNet * 100,
-                            finalValue: next.status == .finished ? you.score : nil,
-                            finalizedAt: next.status == .finished ? Self.isoNow() : nil
+               let fightID = UUID(uuidString: fight.id),
+               !you.isFinalized {
+                if next.status == .finished {
+                    try? await client.from("fight_members")
+                        .update(
+                            FinalScoreUpdate(
+                                currentValue: you.score,
+                                rank: next.rank,
+                                outcomeMinor: you.projectedNet * 100,
+                                finalValue: you.score,
+                                finalizedAt: Self.isoNow()
+                            )
                         )
-                    )
-                    .eq("fight_id", value: fightID)
-                    .eq("user_id", value: userId)
-                    .execute()
+                        .eq("fight_id", value: fightID)
+                        .eq("user_id", value: userId)
+                        .execute()
+                } else {
+                    try? await client.from("fight_members")
+                        .update(
+                            LiveScoreUpdate(
+                                currentValue: you.score,
+                                rank: next.rank,
+                                outcomeMinor: you.projectedNet * 100
+                            )
+                        )
+                        .eq("fight_id", value: fightID)
+                        .eq("user_id", value: userId)
+                        .execute()
+                }
             }
             updated.append(next)
         }
@@ -654,7 +685,7 @@ final class AppModel: ObservableObject {
         let youRow = fight.standings.first { $0.person.isYou }
         next.of = max(joined.count, 1)
         next.rank = youRow.flatMap { row in
-            joined.firstIndex { $0.person.id == row.person.id }.map { $0 + 1 }
+            joined.filter { $0.score > row.score }.count + 1
         } ?? fight.rank
         next.standings = applyProjectedMoney(fight.standings, fight: next)
 
@@ -662,14 +693,14 @@ final class AppModel: ObservableObject {
         case .invited:
             break
         case .finished:
-            next.kickerPrefix = next.rank == 1 ? "Won by" : "Finished"
+            next.kickerPrefix = next.youWon ? "Won by" : "Finished"
             next.kickerEmphasis = ordinal(next.rank)
             if let ended = fight.endedLabel {
                 next.listSubtitle = "\(ended) · \(ordinal(next.rank)) of \(next.of)"
             }
         case .live:
             if let youRow, let leader = joined.first, !youRow.invited {
-                if youRow.person.id == leader.person.id {
+                if youRow.score == leader.score {
                     next.kickerPrefix = "Holding"
                     next.kickerEmphasis = "1st"
                     next.kickerRest = "with \(fight.daysLeft ?? 0)d to go"
@@ -973,7 +1004,8 @@ final class AppModel: ObservableObject {
                 score: score,
                 today: 0,
                 projectedNet: net,
-                invited: member.state == "invited"
+                invited: member.state == "invited",
+                isFinalized: member.finalValue != nil
             )
         }
         .sorted { lhs, rhs in
@@ -984,7 +1016,9 @@ final class AppModel: ObservableObject {
 
         let joined = people.filter { !$0.invited }
         let youRow = people.first { $0.person.isYou }
-        let rank = youRow.flatMap { row in joined.firstIndex { $0.person.id == row.person.id }.map { $0 + 1 } }
+        let rank = youRow.flatMap { row in
+            joined.filter { $0.score > row.score }.count + 1
+        }
             ?? mine?.rank
             ?? 0
         let of = max(joined.count, 1)
@@ -1184,12 +1218,24 @@ private struct MemberAcceptUpdate: Encodable {
     }
 }
 
-private struct MemberScoreUpdate: Encodable {
+private struct LiveScoreUpdate: Encodable {
     let currentValue: Double
     let rank: Int
     let outcomeMinor: Int
-    let finalValue: Double?
-    let finalizedAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case currentValue = "current_value"
+        case rank
+        case outcomeMinor = "outcome_minor"
+    }
+}
+
+private struct FinalScoreUpdate: Encodable {
+    let currentValue: Double
+    let rank: Int
+    let outcomeMinor: Int
+    let finalValue: Double
+    let finalizedAt: String
 
     enum CodingKeys: String, CodingKey {
         case currentValue = "current_value"

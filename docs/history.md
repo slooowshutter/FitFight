@@ -1,5 +1,9 @@
 # History
 
+## 2026-08-28 — unstick account load
+
+Signed-in with no visible `profiles` row (or a leftover session from the dead staging host) left the phone on “Loading your account” with nothing to tap. The app now Sign-outs that screen locally, drops JWTs for a different project, and `ensure_own_profile` creates or undeletes the row after merge.
+
 ## 2026-08-27 — recreate persistent develop
 
 The old staging host `jldjgftoxmluiswpebbd` was a preview branch and died when `develop` merged to `main`. Recreate staging as a **persistent** Supabase branch named `develop` so that does not happen again. New host: `zstzbfocunthczzubggz`. GitHub `develop` was never deleted.

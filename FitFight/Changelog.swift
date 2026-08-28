@@ -28,6 +28,13 @@ enum Changelog {
             version: "0.9.0",
             year: 2026,
             month: 8,
+            day: 28,
+            notes: "If your account fails to load you get a Sign out button. Leftover sign-ins from the old staging host are dropped so you can Sign in with Apple again."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
             day: 27,
             notes: "Staging talks to the new persistent develop database. Sign in again on this build (the old staging host is gone)."
         ),

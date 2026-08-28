@@ -42,6 +42,8 @@ final class SessionStore: ObservableObject {
 
     let client: SupabaseClient
     private static let handleChosenKey = "ff.handle.chosen"
+    /// Ignore auth events while we are wiping a leftover / dead session.
+    private var ignoreIncomingSession = false
 
     var isSignedIn: Bool { authSession != nil }
 
@@ -96,15 +98,18 @@ final class SessionStore: ObservableObject {
     }
 
     func signOut() async {
+        await signOut(message: nil)
+    }
+
+    func retryLoadProfile() async {
         authError = nil
-        try? await client.auth.signOut()
-        authSession = nil
-        profile = nil
-        UserDefaults.standard.removeObject(forKey: Self.handleChosenKey)
+        isBusy = true
+        defer { isBusy = false }
+        await loadProfile()
     }
 
     static func signInFailureMessage(_ error: Error) -> String {
-        let text = error.localizedDescription.lowercased()
+        let text = errorBlob(error)
         if text.contains("invalid api key") || text.contains("another supabase project") {
             return "This build’s key doesn’t match the staging database."
         }
@@ -113,14 +118,46 @@ final class SessionStore: ObservableObject {
             || text.contains("provider not enabled") {
             return "Apple Sign In is off on this database."
         }
-        if text.contains("nscurlerror")
-            || text.contains("nsurlerrordomain")
-            || text.contains("could not connect")
-            || text.contains("hostname could not be found")
-            || text.contains("not known") {
+        if Self.isUnreachable(text) {
             return "Can’t reach the staging database."
         }
         return "Couldn’t sign in. Try again."
+    }
+
+    static func profileFailureMessage(_ error: Error) -> String {
+        let text = errorBlob(error)
+        if text.contains("invalid jwt")
+            || text.contains("invalid api key")
+            || text.contains("another supabase project") {
+            return "This build talks to a new database. Sign in again."
+        }
+        if Self.isUnreachable(text) {
+            return "Can’t reach the staging database."
+        }
+        return "Couldn’t load your account. Try again."
+    }
+
+    static func isInvalidSession(_ error: Error) -> Bool {
+        let text = errorBlob(error)
+        return text.contains("invalid jwt")
+            || text.contains("jwt expired")
+            || text.contains("invalid api key")
+            || text.contains("another supabase project")
+            || text.contains("session_not_found")
+            || text.contains("pgrst301")
+            || text.contains("unauthorized")
+    }
+
+    static func isMissingRow(_ error: Error) -> Bool {
+        let text = errorBlob(error)
+        return text.contains("pgrst116")
+            || text.contains("0 rows")
+            || text.contains("the result contains 0 rows")
+    }
+
+    static func jwtMatchesHost(token: String, host: String) -> Bool? {
+        guard let ref = jwtProjectRef(token) else { return nil }
+        return host.contains(ref)
     }
 
     static func isValidHandle(_ raw: String) -> Bool {
@@ -148,7 +185,7 @@ final class SessionStore: ObservableObject {
                 .eq("user_id", value: userId)
                 .execute()
         } catch {
-            let text = error.localizedDescription.lowercased()
+            let text = Self.errorBlob(error)
             if text.contains("23505") || text.contains("duplicate") || text.contains("unique") {
                 throw HandleError.taken
             }
@@ -164,17 +201,28 @@ final class SessionStore: ObservableObject {
         defer { isBusy = false }
         do {
             try await client.rpc("delete_own_account").execute()
-            try? await client.auth.signOut()
-            authSession = nil
-            profile = nil
-            UserDefaults.standard.removeObject(forKey: Self.handleChosenKey)
+            await signOut()
         } catch {
             authError = "Couldn’t delete account. Try again."
         }
     }
 
+    /// Drop the Keychain session first so the welcome screen appears even if
+    /// the host rejects this JWT (leftover from the dead staging project).
+    private func signOut(message: String?) async {
+        ignoreIncomingSession = true
+        isBusy = false
+        authSession = nil
+        profile = nil
+        UserDefaults.standard.removeObject(forKey: Self.handleChosenKey)
+        authError = message
+        try? await client.auth.signOut(scope: .local)
+        ignoreIncomingSession = false
+    }
+
     private func listen() async {
         for await (_, session) in client.auth.authStateChanges {
+            if ignoreIncomingSession { continue }
             authSession = session
             if session != nil {
                 await loadProfile()
@@ -189,6 +237,65 @@ final class SessionStore: ObservableObject {
             profile = nil
             return
         }
+        if let token = authSession?.accessToken {
+            let host = SupabaseConfig.projectURL.host ?? ""
+            if Self.jwtMatchesHost(token: token, host: host) == false {
+                await signOut(message: "This build talks to a new database. Sign in again.")
+                return
+            }
+        }
+
+        let first = await fetchProfile(userId: userId)
+        if let row = first.row {
+            applyProfile(row, expectedUserId: userId)
+            return
+        }
+        if let error = first.error, Self.isInvalidSession(error) {
+            await signOut(message: Self.profileFailureMessage(error))
+            return
+        }
+
+        do {
+            try await client.rpc("ensure_own_profile").execute()
+        } catch {
+            if Self.isInvalidSession(error) {
+                await signOut(message: Self.profileFailureMessage(error))
+                return
+            }
+        }
+
+        let second = await fetchProfile(userId: userId)
+        if let row = second.row {
+            applyProfile(row, expectedUserId: userId)
+            return
+        }
+        if let error = second.error, Self.isInvalidSession(error) {
+            await signOut(message: Self.profileFailureMessage(error))
+            return
+        }
+
+        guard authSession?.user.id == userId || client.auth.currentUser?.id == userId else {
+            return
+        }
+        profile = nil
+        if let error = second.error ?? first.error {
+            authError = Self.profileFailureMessage(error)
+        } else {
+            authError = "Couldn’t load your account. Try again."
+        }
+    }
+
+    private func applyProfile(_ row: FitFightProfile, expectedUserId: UUID) {
+        guard !ignoreIncomingSession else { return }
+        guard authSession?.user.id == expectedUserId || client.auth.currentUser?.id == expectedUserId else {
+            return
+        }
+        profile = row
+        authError = nil
+    }
+
+    private func fetchProfile(userId: UUID) async -> (row: FitFightProfile?, error: Error?) {
+        var lastError: Error?
         for attempt in 0..<3 {
             do {
                 let row: FitFightProfile = try await client.from("profiles")
@@ -197,25 +304,83 @@ final class SessionStore: ObservableObject {
                     .single()
                     .execute()
                     .value
-                profile = row
-                return
+                return (row, nil)
             } catch {
-                if attempt == 2 {
-                    if let fallback = try? await client.from("profiles")
-                        .select("user_id, handle, display_name")
-                        .eq("user_id", value: userId)
-                        .single()
-                        .execute()
-                        .value as FitFightProfile? {
-                        profile = fallback
-                        return
-                    }
-                    profile = nil
-                } else {
+                if Self.isInvalidSession(error) || Self.isMissingRow(error) {
+                    return (nil, error)
+                }
+                lastError = error
+                if attempt < 2 {
                     try? await Task.sleep(nanoseconds: 400_000_000)
                 }
             }
         }
+        do {
+            let fallback: FitFightProfile = try await client.from("profiles")
+                .select("user_id, handle, display_name")
+                .eq("user_id", value: userId)
+                .single()
+                .execute()
+                .value
+            return (fallback, nil)
+        } catch {
+            lastError = lastError ?? error
+            return (nil, lastError)
+        }
+    }
+
+    /// `ref` claim on a Supabase access token is the project id in the host.
+    static func jwtProjectRef(_ token: String) -> String? {
+        let parts = token.split(separator: ".", omittingEmptySubsequences: false)
+        guard parts.count >= 2 else { return nil }
+        var base64 = String(parts[1])
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        let pad = (4 - base64.count % 4) % 4
+        if pad > 0 {
+            base64 += String(repeating: "=", count: pad)
+        }
+        guard
+            let data = Data(base64Encoded: base64),
+            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else {
+            return nil
+        }
+        if let ref = json["ref"] as? String, !ref.isEmpty {
+            return ref
+        }
+        if let iss = json["iss"] as? String, let host = URL(string: iss)?.host {
+            return host.split(separator: ".").first.map(String.init)
+        }
+        return nil
+    }
+
+    static func errorBlob(_ error: Error, depth: Int = 0) -> String {
+        guard depth < 4 else { return error.localizedDescription.lowercased() }
+        var chunks = [
+            String(describing: type(of: error)),
+            String(describing: error),
+            error.localizedDescription
+        ]
+        let ns = error as NSError
+        chunks.append(ns.domain)
+        chunks.append(String(ns.code))
+        for value in ns.userInfo.values {
+            if let nested = value as? Error {
+                chunks.append(errorBlob(nested, depth: depth + 1))
+            } else {
+                chunks.append(String(describing: value))
+            }
+        }
+        return chunks.joined(separator: " ").lowercased()
+    }
+
+    private static func isUnreachable(_ text: String) -> Bool {
+        text.contains("nscurlerror")
+            || text.contains("nsurlerrordomain")
+            || text.contains("could not connect")
+            || text.contains("hostname could not be found")
+            || text.contains("not known")
     }
 }
 

@@ -29,7 +29,7 @@ struct ContentView: View {
     @ViewBuilder
     private var signedInRoot: some View {
         if session.profile == nil {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 12) {
                 Text("Loading your account…")
                     .font(.ff(17, .semibold))
                     .foregroundStyle(theme.text)
@@ -37,7 +37,25 @@ struct ContentView: View {
                     Text(authError)
                         .font(.ff(13))
                         .foregroundStyle(theme.red)
+                } else {
+                    Text("If this hangs, sign out and sign in again.")
+                        .font(.ff(13))
+                        .foregroundStyle(theme.muted)
                 }
+                if session.authError != nil {
+                    FFButton(
+                        title: session.isBusy ? "Loading…" : "Try again",
+                        kind: .quiet,
+                        enabled: !session.isBusy
+                    ) {
+                        Task { await session.retryLoadProfile() }
+                    }
+                    .padding(.top, 8)
+                }
+                FFButton(title: "Sign out") {
+                    Task { await session.signOut() }
+                }
+                .padding(.top, session.authError == nil ? 8 : 0)
             }
             .padding(.horizontal, theme.space.screenPadding)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)

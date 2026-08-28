@@ -44,6 +44,10 @@ struct OnboardingView: View {
                 Task { await save() }
             }
             .padding(.top, 20)
+            FFButton(title: "Sign out", kind: .quiet) {
+                Task { await session.signOut() }
+            }
+            .padding(.top, 10)
             Spacer(minLength: 24)
         }
         .padding(.horizontal, theme.space.screenPadding)

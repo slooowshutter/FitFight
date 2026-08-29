@@ -12,7 +12,7 @@ struct AppleSignInControl: View {
             } onCompletion: { result in
                 Task { await handle(result) }
             }
-            .signInWithAppleButtonStyle(theme.baseID == .light ? .black : .white)
+            .signInWithAppleButtonStyle(theme.mode == .day ? .black : .white)
             .frame(maxWidth: .infinity, minHeight: 44, maxHeight: 44)
             .disabled(session.isBusy)
             .accessibilityLabel("Sign in with Apple")
@@ -20,7 +20,7 @@ struct AppleSignInControl: View {
             if let authError = session.authError {
                 Text(authError)
                     .font(.ff(11))
-                    .foregroundStyle(theme.red)
+                    .foregroundStyle(theme.emberText)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }

@@ -9,38 +9,32 @@ struct OnboardingView: View {
     @State private var handle = ""
     @State private var error = ""
     @State private var isSaving = false
+    @FocusState private var focused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Spacer(minLength: 24)
             Text("Pick a username")
-                .font(theme.font(.display))
+                .ffType(.title)
                 .foregroundStyle(theme.text)
             Text("Friends add you with this. Letters, numbers, underscore. 2–30 characters.")
-                .font(.ff(15))
-                .foregroundStyle(theme.muted)
+                .ffType(.body)
+                .foregroundStyle(theme.textSecondary)
+                .lineSpacing(3)
                 .padding(.top, 10)
-            TextField("username", text: $handle)
-                .font(.ff(17, .semibold))
-                .foregroundStyle(theme.text)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .textContentType(.username)
-                .padding(.horizontal, 16)
-                .frame(height: 52)
-                .background(theme.surface, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
-                        .strokeBorder(theme.line, lineWidth: 1)
-                }
-                .padding(.top, 28)
-            if !error.isEmpty {
-                Text(error)
-                    .font(.ff(11))
-                    .foregroundStyle(theme.red)
-                    .padding(.top, 10)
+            FFField(
+                label: "Username",
+                state: fieldState,
+                help: error.isEmpty ? nil : error
+            ) {
+                TextField("username", text: $handle)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .textContentType(.username)
+                    .focused($focused)
             }
-            FFButton(title: isSaving ? "Saving…" : "Continue", enabled: canSave) {
+            .padding(.top, 28)
+            FFScreenCTA(title: isSaving ? "Saving…" : "Continue", enabled: canSave) {
                 Task { await save() }
             }
             .padding(.top, 20)
@@ -49,6 +43,11 @@ struct OnboardingView: View {
         .padding(.horizontal, theme.space.screenPadding)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .background(theme.bg)
+    }
+
+    private var fieldState: FFFieldState {
+        if !error.isEmpty { return .error }
+        return focused ? .focused : .normal
     }
 
     private var canSave: Bool {

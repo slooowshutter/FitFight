@@ -28,6 +28,20 @@ enum Changelog {
             version: "0.9.0",
             year: 2026,
             month: 8,
+            day: 29,
+            notes: "Selected rows now have properly concentric corners, and dividers disappear cleanly around the selection. Requests no longer drifts sideways when you scroll."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
+            day: 29,
+            notes: "New look, built from the approved design kit. One palette instead of ten accent colours — moss is you and winning, ember is losing and urgent, gold is progress. Nunito replaces Manrope. Every screen rebuilt: a moss hero card on Fights, a head-to-head block and leaderboard on a fight, new form controls on New fight. Look is now Night or Day. You → Settings → Design system shows every token and component in the app."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
             day: 27,
             notes: "Staging talks to the new persistent develop database. Sign in again on this build (the old staging host is gone)."
         ),

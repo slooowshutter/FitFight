@@ -58,7 +58,7 @@ No Vercel. No cron secret. No “expose schema private”.
 | Create Steps fight | Phone writes the fight to Supabase |
 | Accept / Join | Phone updates your membership |
 | Add friend / add to a fight | Username. They must have signed in and picked one. No request dance — add is enough. You can start alone. |
-| Apple Health | Reads today. Uploads last 31 days to `step_days`. |
+| Apple Health | Reads Apple's merged total for scoring. On first archive it backfills all accessible raw Steps samples, deletion tombstones, merged daily totals, per-source daily statistics, and provenance; later syncs use a HealthKit anchor. |
 | Standings | Sum of uploaded days in the fight window. Both phones read the same rows. |
 | Fight end | If `ends_at` is past, the app marks it finished when someone opens it. No cron. |
 | Design tab | Removed |
@@ -70,6 +70,7 @@ No Vercel. No cron secret. No “expose schema private”.
 ## Honest limits
 
 - Anyone can write **their own** step rows. Fine for two friends. Not anti-cheat.
+- Raw HealthKit samples and source statistics are self-only and never returned to Fight peers; peers receive merged totals only for their shared Fight dates.
 - Same Apple ID on production vs staging is **two** accounts.
 - `web/` Next.js API is still in the repo for later. Not required on the phone now.
 

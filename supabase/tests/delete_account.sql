@@ -1,5 +1,5 @@
 begin;
-select plan(6);
+select plan(10);
 
 create function pg_temp.make_user(uid uuid, email text)
 returns void
@@ -99,6 +99,33 @@ insert into public.fights (
 insert into public.fight_members (fight_id, user_id, state) values
   ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '11111111-1111-4111-8111-111111111111', 'accepted');
 
+insert into private.healthkit_step_samples (
+  user_id, sample_id, value, starts_at, ends_at, local_day, time_zone,
+  source_name, source_bundle_identifier
+) values (
+  '11111111-1111-4111-8111-111111111111',
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  100, now() - interval '5 minutes', now(), current_date, 'UTC',
+  'Apple Watch', 'com.apple.health'
+);
+insert into private.healthkit_step_sample_deletions (user_id, sample_id) values (
+  '11111111-1111-4111-8111-111111111111',
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+);
+insert into private.healthkit_step_source_days (
+  user_id, day, starts_at, ends_at, time_zone,
+  source_name, source_bundle_identifier, steps
+) values (
+  '11111111-1111-4111-8111-111111111111', current_date,
+  current_date::timestamptz, (current_date + 1)::timestamptz, 'UTC',
+  'Apple Watch', 'com.apple.health', 100
+);
+insert into private.healthkit_step_syncs (
+  user_id, time_zone, accessible_from, complete_through
+) values (
+  '11111111-1111-4111-8111-111111111111', 'UTC', now() - interval '5 minutes', now()
+);
+
 select is(
   has_function_privilege('anon', 'public.delete_own_account()', 'EXECUTE'),
   false,
@@ -144,6 +171,30 @@ select is(
     where user_id = '11111111-1111-4111-8111-111111111111'),
   true,
   'fight history keeps an anonymized profile'
+);
+select is(
+  (select count(*)::integer from private.healthkit_step_samples
+    where user_id = '11111111-1111-4111-8111-111111111111'),
+  0,
+  'account deletion removes raw HealthKit samples'
+);
+select is(
+  (select count(*)::integer from private.healthkit_step_sample_deletions
+    where user_id = '11111111-1111-4111-8111-111111111111'),
+  0,
+  'account deletion removes HealthKit deletion tombstones'
+);
+select is(
+  (select count(*)::integer from private.healthkit_step_source_days
+    where user_id = '11111111-1111-4111-8111-111111111111'),
+  0,
+  'account deletion removes HealthKit source statistics'
+);
+select is(
+  (select count(*)::integer from private.healthkit_step_syncs
+    where user_id = '11111111-1111-4111-8111-111111111111'),
+  0,
+  'account deletion removes HealthKit sync state'
 );
 
 select * from finish();

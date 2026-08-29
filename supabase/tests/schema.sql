@@ -1,5 +1,5 @@
 begin;
-select plan(31);
+select plan(43);
 
 select has_schema('private', 'private schema exists');
 select has_table('public', 'profiles', 'profiles exists');
@@ -10,6 +10,10 @@ select has_table('public', 'fight_invites', 'fight_invites exists');
 select has_table('public', 'data_sources', 'data_sources exists');
 select has_table('public', 'step_days', 'step_days exists');
 select has_table('private', 'metric_observations', 'observations stay private');
+select has_table('private', 'healthkit_step_samples', 'raw HealthKit step samples stay private');
+select has_table('private', 'healthkit_step_sample_deletions', 'HealthKit deletion tombstones stay private');
+select has_table('private', 'healthkit_step_source_days', 'source statistics stay private');
+select has_table('private', 'healthkit_step_syncs', 'HealthKit sync state stays private');
 
 select ok(
   (select relrowsecurity from pg_class c
@@ -47,6 +51,30 @@ select ok(
     where n.nspname = 'public' and c.relname = 'step_days'),
   'step_days has RLS'
 );
+select ok(
+  (select relrowsecurity from pg_class c
+     join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'private' and c.relname = 'healthkit_step_samples'),
+  'raw HealthKit samples have RLS'
+);
+select ok(
+  (select relrowsecurity from pg_class c
+     join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'private' and c.relname = 'healthkit_step_sample_deletions'),
+  'HealthKit deletion tombstones have RLS'
+);
+select ok(
+  (select relrowsecurity from pg_class c
+     join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'private' and c.relname = 'healthkit_step_source_days'),
+  'HealthKit source statistics have RLS'
+);
+select ok(
+  (select relrowsecurity from pg_class c
+     join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'private' and c.relname = 'healthkit_step_syncs'),
+  'HealthKit sync state has RLS'
+);
 
 select is(
   has_table_privilege('anon', 'public.fights', 'SELECT'),
@@ -62,6 +90,11 @@ select is(
   has_table_privilege('authenticated', 'private.metric_observations', 'SELECT'),
   false,
   'authenticated cannot read observations'
+);
+select is(
+  has_table_privilege('anon', 'private.healthkit_step_samples', 'SELECT'),
+  false,
+  'anon cannot read raw HealthKit samples'
 );
 select is(
   has_table_privilege('authenticated', 'public.fights', 'INSERT'),
@@ -127,6 +160,22 @@ select is(
   has_function_privilege('authenticated', 'public.delete_own_account()', 'EXECUTE'),
   true,
   'signed-in users can execute delete_own_account'
+);
+select is(
+  has_function_privilege('anon', 'public.ingest_healthkit_steps(jsonb)', 'EXECUTE'),
+  false,
+  'anon cannot ingest HealthKit data'
+);
+select is(
+  has_function_privilege('authenticated', 'public.ingest_healthkit_steps(jsonb)', 'EXECUTE'),
+  true,
+  'signed-in users can ingest their own HealthKit data'
+);
+select is(
+  (select prosecdef from pg_proc
+    where oid = 'public.ingest_healthkit_steps(jsonb)'::regprocedure),
+  false,
+  'HealthKit ingestion runs with caller privileges'
 );
 
 select * from finish();

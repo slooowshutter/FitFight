@@ -1,6 +1,6 @@
 # Backend
 
-Empty platform first. Feature code later. Production Metric is **Steps**. Phone vs server status: [`status.md`](status.md). The phone may write its own fights, memberships, and `step_days`. It still cannot write `private.metric_observations`.
+Empty platform first. Feature code later. Production Metric is **Steps**. Phone vs server status: [`status.md`](status.md). The phone may write its own fights and memberships. Its reviewed `ingest_healthkit_steps` RPC archives raw Steps samples, deletion tombstones, Apple per-source statistics, and sync provenance under self-only RLS, then writes only Apple's merged daily result to `step_days`. The phone still cannot write `private.metric_observations` or query the private archive directly.
 
 [`system-design.md`](system-design.md) is the golden guide. This folder is the first slice of it, not the whole thing. Do not add Active Minutes, Workout Count, WHOOP, Strava, payments, notifications, social, or a website until the backlog says so.
 

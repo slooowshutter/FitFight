@@ -26,7 +26,7 @@ These are the recommended calls that will still look sensible in a year:
 7. **Synchronize continuously after one clear Collection consent.** Import the maximum supported and contractually permitted history, continue collecting even when no Fight is live, and reuse that data for personal history, recommendations, feeds, and future Fights.
 8. **Make data sharing part of Fight acceptance.** Accepting a Fight authorizes its relevant stored Metric and selected Data source to produce a derived score visible to the other members; it does not require a second granular health-permission flow.
 9. **Use one scoring Data source per member, per Metric, per Fight.** Do not add Apple Health steps to Garmin steps or a WHOOP workout to its Strava copy. Show the chosen source so everyone understands the comparison.
-10. **Store useful canonical history, not every raw health record.** Keep supported activity summaries and provenance for the User's product experience; keep provider payloads, routes, heart rate, sleep, and credentials only when a feature needs them and terms permit them.
+10. **For each approved Metric, preserve every accessible representation.** For Steps, retain raw HealthKit samples and deletion tombstones, Apple's merged daily total, per-source daily statistics, and full available provenance. Do not collect unrelated HealthKit types, provider payloads, routes, heart rate, or sleep until a feature needs them and terms permit them.
 11. **Use durable jobs and idempotent processing.** Webhooks are hints, delivery can repeat or arrive out of order, and provider data can be edited or deleted.
 12. **Use a generic Metric model while shipping Steps first.** Numeric Metrics share canonical Observation storage; activities later share a separate generic activity model. Active Minutes and Workout Count stay out of production until their definitions receive a separate product-design pass.
 13. **Keep stakes informational in v1.** FitFight records the agreed outcome but does not hold funds, operate a wallet, or automatically pay winners until legal, payments, and App Store review are complete.
@@ -43,7 +43,7 @@ FitFight needs to answer two questions reliably:
 
 > Outside a Fight, what activity history is useful to the User for progress, a future feed, and fair Goal recommendations?
 
-FitFight still does **not** need to become a general health warehouse. It keeps canonical history for supported product Metrics and activities, with provenance, while avoiding unrelated biometrics and provider payloads that no FitFight feature uses.
+FitFight still does **not** need to become a general health warehouse. It preserves full fidelity for explicitly supported product Metrics—Steps first—while avoiding unrelated biometrics and provider payloads that no FitFight feature uses.
 
 The system has six logical areas:
 
@@ -318,6 +318,7 @@ Do not allow anonymous users into real Fights. A local demo may use fixtures, bu
 When a User connects Apple Health or a cloud provider, FitFight clearly asks for ongoing Collection consent. Once accepted, FitFight:
 
 - Imports the maximum history that the User, OS, provider API, and provider terms allow
+- For Steps, stores every accessible raw HealthKit quantity sample and deletion UUID alongside Apple's merged and source-separated daily statistics
 - Prioritizes the most recent 90 days so the product becomes useful quickly, then backfills older pages asynchronously
 - Continues synchronizing supported activity even when no Fight is live
 - Builds private personal history, Goal recommendations, and later feed/activity features
@@ -401,7 +402,7 @@ attribution()
 
 Apple Health is a hub, not a guarantee that every manufacturer's cloud is current. WHOOP can export workouts and optional steps to Apple Health, while Garmin documents that Garmin Connect must be open in the foreground to transfer data to Apple Health ([WHOOP Apple Health](https://support.whoop.com/s/article/Apple-Health-Integration?language=en_US), [Garmin Apple Health](https://support.garmin.com/en-AU/?faq=lK5FPB9iPF5PXFkIpFlFPA)). FitFight must show freshness rather than claim “automatic” without qualification.
 
-Apple Health also lets users prioritize multiple sources. FitFight uses the HealthKit aggregate as the v1 Steps total and must not naïvely sum every raw source. For provenance, request statistics with `separateBySource`, read `HKStatistics.sources` and per-source sums, and retain available `HKSourceRevision`/`HKDevice` metadata. The UI may therefore show “Apple Health aggregate · Apple Watch, iPhone, Garmin Connect,” while acknowledging that HealthKit sometimes exposes an app/source without a perfect hardware model ([Apple Health sources](https://support.apple.com/en-lamr/108779), [separateBySource](https://developer.apple.com/documentation/healthkit/hkstatisticsoptions/separatebysource), [statistics sources](https://developer.apple.com/documentation/healthkit/hkstatistics/sources), [source revisions](https://developer.apple.com/documentation/healthkit/hksourcerevision), [devices](https://developer.apple.com/documentation/healthkit/hkdevice)).
+Apple Health also lets users prioritize multiple sources. FitFight uses the default merged HealthKit statistic as the v1 Steps total and never naïvely sums raw sources. A separate raw anchored query preserves every accessible quantity sample, deletion UUID, `HKSourceRevision`, `HKDevice`, and metadata value. A second statistics query with `separateBySource` preserves Apple's per-source daily calculation for diagnostics. The UI may therefore show “Apple Health aggregate · Apple Watch, iPhone, Garmin Connect,” while acknowledging that HealthKit sometimes exposes an app/source without a perfect hardware model ([Apple Health sources](https://support.apple.com/en-lamr/108779), [separateBySource](https://developer.apple.com/documentation/healthkit/hkstatisticsoptions/separatebysource), [statistics sources](https://developer.apple.com/documentation/healthkit/hkstatistics/sources), [source revisions](https://developer.apple.com/documentation/healthkit/hksourcerevision), [devices](https://developer.apple.com/documentation/healthkit/hkdevice)).
 
 ### Direct WHOOP
 
@@ -524,7 +525,7 @@ Webhook handlers do only four things: validate signature and timestamp, persist 
 
 ### Layer 2: provider fetch and raw cache
 
-The worker refreshes tokens if necessary, fetches the authoritative object/page, records the provider checkpoint, and temporarily caches only what provider terms allow. Every record has `purge_at` derived from provider policy. Raw payloads belong in a private schema inaccessible to clients and support staff.
+The worker refreshes tokens if necessary, fetches the authoritative object/page, records the provider checkpoint, and temporarily caches only what provider terms allow. Every direct-provider record has `purge_at` derived from provider policy. For the approved HealthKit Steps Metric, raw samples and deletion tombstones are retained as product history under the User's Collection consent. Raw records belong in a private schema inaccessible through the Data API and to other Fight members.
 
 ### Layer 3: normalization
 
@@ -566,7 +567,7 @@ The UI can truthfully say “updated 8 min ago,” “waiting for Maya to sync,�
 
 ## 11. Database boundaries and initial tables
 
-Start with **two application schemas and seven product tables**:
+Start with **two application schemas and seven core product tables**, plus the HealthKit Steps archive tables approved for the first Metric:
 
 - `public`: product rows the iOS Supabase client may reach through explicit grants and RLS. “Public” means Data-API-exposed, not readable by everyone.
 - `private`: canonical fitness history, provider credentials, raw caches, webhook envelopes, and operational details. It is not exposed through the Data API; only Next.js server code can reach it.
@@ -583,6 +584,8 @@ The separate `private` schema is defense in depth. Even if a future `public` gra
 5. `public.fight_invites(id, fight_id, invited_user_id, token_hash, expires_at, revoked_at, accepted_at)`
 6. `public.data_sources(id, user_id, provider, source_label, contributing_source_labels, connection_route, capabilities, status, consent_version, connected_at, revoked_at, last_success_at, complete_through, last_error_code)`
 7. `private.metric_observations(id, user_id, source_id, external_record_id, metric, starts_at, ends_at, value, unit, revision, provenance, retracted_at, created_at)`
+
+The Steps archive adds `private.healthkit_step_samples`, `private.healthkit_step_sample_deletions`, `private.healthkit_step_source_days`, and `private.healthkit_step_syncs`. Only `public.step_days` contains the Apple-merged totals used by the current phone-written scoring path. A narrow `SECURITY INVOKER` RPC derives `user_id` from `auth.uid()` and writes the private archive under RLS; raw rows are not exposed as Data API routes.
 
 This deliberately keeps Fight rules on `fights` and current/final score fields on `fight_members` until measured complexity requires history tables or projections. A direct public view may return only the member-safe subset and use `security_invoker = true`.
 
@@ -608,9 +611,9 @@ Swift has two explicit network paths. Reviewed reads and a very small set of sel
 ### Reads and writes
 
 - **Direct reads** cover profiles, friendships, invitations, Fight lists/details, shared scores, source labels, and freshness. The app sends its publishable key and User JWT; it never receives a secret key.
-- **Direct self-service writes** are limited to fields such as the signed-in User's own display name and preferences, enforced with column grants, constraints, and RLS `WITH CHECK`. Fight lifecycle, membership, source, score, and final-result fields are never client-writable.
+- **Direct self-service writes** are limited to reviewed fields and operations such as the signed-in User's own display name and the temporary phone-written Steps path. HealthKit uses a narrow `SECURITY INVOKER` RPC that derives ownership from the JWT, archives private raw/source data, and writes only Apple's merged value to `step_days`. Fight lifecycle and membership remain temporarily client-writable as documented in current status; final results are not.
 - **Commands** go through authenticated Next.js Route Handlers: create/start/cancel a Fight, create an invite, accept with a source and target, request synchronization, disconnect a provider, and register a device.
-- **Private reads/writes** such as personal activity history and HealthKit uploads go through Next.js; Swift never queries `private`.
+- **Private reads** such as personal activity history go through Next.js; Swift never queries `private`. The current Steps-only upload is the explicit exception: Swift calls the reviewed ingestion RPC, which runs with caller privileges and RLS while the private schema remains absent from the Data API.
 - **Provider callbacks/webhooks** use separate unauthenticated endpoints that verify provider state/signatures before any privileged action.
 - **Workers** authenticate service-to-service and never accept a User ID from the body as proof of authority.
 

@@ -1,179 +1,272 @@
 import SwiftUI
 
-enum BaseID: String, CaseIterable, Identifiable {
-    case dark
-    case light
+// The design system has one palette, not a tintable accent. Moss is you and winning,
+// Ember is urgency and losing, Gold is progress only, Ink is every surface. Night is
+// the primary theme; Day is the cream counterpart of the same names.
+// Source: docs/design/source/kit/FitFight Design System.dc.html
+
+enum Mode: String, CaseIterable, Identifiable {
+    case night
+    case day
 
     var id: String { rawValue }
+    var label: String { self == .night ? "Night" : "Day" }
+    var colorScheme: ColorScheme { self == .night ? .dark : .light }
+}
 
-    var colorScheme: ColorScheme {
-        switch self {
-        case .dark: return .dark
-        case .light: return .light
+// MARK: - Palette
+
+/// Hexes are parsed once at load; every lookup after that is a dictionary hit.
+struct Palette {
+    private let resolvedColors: [String: Color]
+
+    init(_ raw: [String: String]) {
+        resolvedColors = raw.mapValues { Color(token: $0) }
+    }
+
+    /// Magenta means the token name is wrong — loud on purpose.
+    private func value(for key: String) -> Color {
+        resolvedColors[key] ?? Color(red: 1, green: 0, blue: 1)
+    }
+
+    var canvas: Color { value(for: "canvas") }
+    var bg: Color { value(for: "bg") }
+    var overlay: Color { value(for: "overlay") }
+    var card: Color { value(for: "card") }
+    var control: Color { value(for: "control") }
+    var controlAlt: Color { value(for: "controlAlt") }
+
+    var text: Color { value(for: "text") }
+    var textDim: Color { value(for: "textDim") }
+    var textSecondary: Color { value(for: "textSecondary") }
+    var textTertiary: Color { value(for: "textTertiary") }
+    var textFaint: Color { value(for: "textFaint") }
+
+    var hairline: Color { value(for: "hairline") }
+    var line: Color { value(for: "line") }
+    var dash: Color { value(for: "dash") }
+    var track: Color { value(for: "track") }
+    var chip: Color { value(for: "chip") }
+    var disabledBg: Color { value(for: "disabledBg") }
+    var disabledLine: Color { value(for: "disabledLine") }
+    var disabledText: Color { value(for: "disabledText") }
+    var scrim: Color { value(for: "scrim") }
+
+    var mossFill: Color { value(for: "mossFill") }
+    var mossEdge: Color { value(for: "mossEdge") }
+    var mossText: Color { value(for: "mossText") }
+    var mossSoft: Color { value(for: "mossSoft") }
+    var mossOn: Color { value(for: "mossOn") }
+    var mossWash: Color { value(for: "mossWash") }
+
+    var emberFill: Color { value(for: "emberFill") }
+    var emberText: Color { value(for: "emberText") }
+    var emberOn: Color { value(for: "emberOn") }
+    var emberWash: Color { value(for: "emberWash") }
+
+    var gold: Color { value(for: "gold") }
+    var goldInk: Color { value(for: "goldInk") }
+
+    var tabBar: Color { value(for: "tabBar") }
+    var chipInk: Color { value(for: "chipInk") }
+    var chipEdgeOn: Color { value(for: "chipEdgeOn") }
+    /// The kit brightens the monogram on the 54 and 68pt avatars.
+    var monogram: Color { value(for: "monogram") }
+
+    // The kit paints these as literal white over ink. Deriving them from `text`
+    // (bone) tinted them warm, so they are their own tokens.
+    var overlayLine: Color { value(for: "overlayLine") }
+    var switchOff: Color { value(for: "switchOff") }
+    var dotIdle: Color { value(for: "dotIdle") }
+    var chipEdge: Color { value(for: "chipEdge") }
+    var skeleton: Color { value(for: "skeleton") }
+    var skeletonHi: Color { value(for: "skeletonHi") }
+    var handle: Color { value(for: "handle") }
+    var heroTagFill: Color { value(for: "heroTagFill") }
+    var heroAvatarPlate: Color { value(for: "heroAvatarPlate") }
+    var heroAvatarLine: Color { value(for: "heroAvatarLine") }
+    var heroProgressTrack: Color { value(for: "heroProgressTrack") }
+
+    // TabBarDark.dc.html / TabBar.dc.html carry their own values in both bases.
+    var tabBarLine: Color { value(for: "tabBarLine") }
+    var tabPillOn: Color { value(for: "tabPillOn") }
+    var tabInkOn: Color { value(for: "tabInkOn") }
+    var tabInkOff: Color { value(for: "tabInkOff") }
+    /// The kit alternates plate fills so overlapping avatars stay legible.
+    var plateAlt: Color { value(for: "plateAlt") }
+}
+
+// MARK: - Type
+
+enum TypeRole: String {
+    case metric, title, heading, rowTitle
+    case button, buttonLarge, buttonSmall
+    case label, body, caption, micro
+    case eyebrow, sectionEyebrow, tag
+}
+
+struct TypeSpec: Decodable {
+    var size: CGFloat
+    var weight: Int
+    var tracking: CGFloat?
+    var uppercase: Bool?
+}
+
+struct TypeScale: Decodable {
+    var family: String
+    var roles: [String: TypeSpec]
+
+    func spec(_ role: TypeRole) -> TypeSpec {
+        roles[role.rawValue] ?? TypeSpec(size: 14, weight: 700, tracking: nil, uppercase: nil)
+    }
+}
+
+struct RadiusScale: Decodable {
+    var pill: CGFloat
+    var card: CGFloat
+    var field: CGFloat
+    var glyph: CGFloat
+    var shell: CGFloat
+}
+
+struct SpaceScale: Decodable {
+    var xs, sm, md, base, lg, xl: CGFloat
+    var screenPadding, cardPadding: CGFloat
+    var rowPaddingX, rowPaddingY: CGFloat
+    var sectionGap, cardGap, tabBarClearance: CGFloat
+}
+
+struct MotionSpec: Decodable {
+    var duration: Double
+    var curve: String
+
+    /// cubic-bezier(0.16, 1, 0.3, 1) is the kit's one easing curve.
+    var animation: Animation {
+        switch curve {
+        case "expo": return .timingCurve(0.16, 1, 0.3, 1, duration: duration)
+        case "easeOut": return .easeOut(duration: duration)
+        default: return .linear(duration: duration)
         }
     }
 }
 
-enum AccentID: String, CaseIterable, Identifiable {
-    case red
-    case orange
-    case yellow
-    case green
-    case teal
-    case blue
-    case indigo
-    case purple
-    case pink
-    case graphite
-
-    var id: String { rawValue }
+struct MotionScale: Decodable {
+    var instant, quick, sheet, count, celebrate, shimmer: MotionSpec
 }
 
-enum TypeRole: String {
-    case heroNumber
-    case display
-    case title
-    case headline
-    case rank
-    case bodyStrong
-    case body
-    case label
-    case caption
-    case micro
-    case eyebrow
-    case tiny
+struct Swatch: Decodable {
+    var name: String
+    var value: String
+    var use: String
 }
 
+struct SwatchGroup: Decodable {
+    var title: String
+    var items: [Swatch]
+}
+
+// MARK: - Theme
+
+@dynamicMemberLookup
 struct Theme {
-    var baseID: BaseID
-    var accentID: AccentID
+    var mode: Mode
+    var palette: Palette
+    var type: TypeScale
+    var radius: RadiusScale
+    var space: SpaceScale
+    var motion: MotionScale
 
-    var bg: Color
-    var surface: Color
-    var surface2: Color
-    var line: Color
-    var hair: Color
-    var text: Color
-    var muted: Color
-    var faint: Color
-    var chip: Color
-    var track: Color
-    var scrim: Color
+    /// theme.card instead of theme.palette.card.
+    subscript<T>(dynamicMember keyPath: KeyPath<Palette, T>) -> T {
+        palette[keyPath: keyPath]
+    }
 
-    var accent: Color
-    var accentDim: Color
-    var ink: Color
-    var onPhoto: Color
-
-    var green: Color
-    var blue: Color
-    var amber: Color
-    var red: Color
-
-    var type: TypeTokens
-    var space: SpaceTokens
-    var radius: RadiusTokens
-
-    var colorScheme: ColorScheme { baseID.colorScheme }
+    var colorScheme: ColorScheme { mode.colorScheme }
 
     func font(_ role: TypeRole) -> Font {
         let spec = type.spec(role)
         return .ff(spec.size, spec.weight)
     }
 
+    /// CSS letter-spacing is em-relative; SwiftUI tracking is in points.
     func tracking(_ role: TypeRole) -> CGFloat {
         let spec = type.spec(role)
-        return spec.size * spec.letterSpacing
+        return spec.size * (spec.tracking ?? 0)
     }
 
-    func selectedRow() -> Color { accent.opacity(0.07) }
-    func selectedOption() -> Color { accent.opacity(0.08) }
-    func badgeFill() -> Color { accent.opacity(0.12) }
-    func focusRing() -> Color { accent.opacity(0.20) }
-}
-
-struct TypeSpec {
-    var size: CGFloat
-    var weight: Font.Weight
-    var letterSpacing: CGFloat
-    var uppercase: Bool
-}
-
-struct TypeTokens {
-    var roles: [TypeRole: TypeSpec]
-
-    func spec(_ role: TypeRole) -> TypeSpec {
-        roles[role] ?? TypeSpec(size: 14, weight: .regular, letterSpacing: 0, uppercase: false)
+    func isUppercase(_ role: TypeRole) -> Bool {
+        type.spec(role).uppercase ?? false
     }
 }
 
-struct SpaceTokens {
-    var xs: CGFloat
-    var sm: CGFloat
-    var md: CGFloat
-    var base: CGFloat
-    var lg: CGFloat
-    var xl: CGFloat
-    var screenPadding: CGFloat
-    var cardPadding: CGFloat
-    var rowPaddingX: CGFloat
-    var rowPaddingY: CGFloat
-    var sectionGap: CGFloat
-    var cardGap: CGFloat
-    var tabBarClearance: CGFloat
-}
+// MARK: - Loading
 
-struct RadiusTokens {
-    var sm: CGFloat
-    var md: CGFloat
-    var lg: CGFloat
-    var xl: CGFloat
-    var full: CGFloat
+struct TokenFile: Decodable {
+    var swatches: [SwatchGroup]
+    var palettes: [String: [String: String]]
+    var type: TypeScale
+    var radius: RadiusScale
+    var space: SpaceScale
+    var motion: MotionScale
+
+    func theme(_ mode: Mode) -> Theme {
+        Theme(
+            mode: mode,
+            palette: Palette(palettes[mode.rawValue] ?? [:]),
+            type: type,
+            radius: radius,
+            space: space,
+            motion: motion
+        )
+    }
 }
 
 enum ThemeCatalog {
-    static let file: TokenFile = load()
+    static func theme(_ mode: Mode) -> Theme { file.theme(mode) }
+    static var swatches: [SwatchGroup] { file.swatches }
 
-    static func theme(base: BaseID, accent: AccentID) -> Theme {
-        file.theme(base: base, accent: accent)
-    }
-
-    private static func load() -> TokenFile {
-        let url = Bundle.main.url(forResource: "tokens", withExtension: "json")
-        let data = url.flatMap { try? Data(contentsOf: $0) }
-        if let data, let decoded = try? JSONDecoder().decode(TokenFile.self, from: data) {
-            return decoded
+    /// tokens.json ships in the Resources build phase. A missing or malformed file is a
+    /// packaging error, not a runtime condition — fail on first launch rather than
+    /// silently render a second, drifted palette.
+    private static let file: TokenFile = {
+        guard let url = Bundle.main.url(forResource: "tokens", withExtension: "json"),
+              let data = try? Data(contentsOf: url) else {
+            fatalError("tokens.json missing from the app bundle — check the Resources build phase.")
         }
-        return .fallback
-    }
+        do {
+            return try JSONDecoder().decode(TokenFile.self, from: data)
+        } catch {
+            fatalError("tokens.json failed to decode: \(error)")
+        }
+    }()
 }
 
 final class ThemeStore: ObservableObject {
-    @Published var baseID: BaseID {
-        didSet { UserDefaults.standard.set(baseID.rawValue, forKey: Self.baseKey) }
+    @Published var mode: Mode {
+        didSet { if persists { UserDefaults.standard.set(mode.rawValue, forKey: Self.key) } }
     }
 
-    @Published var accentID: AccentID {
-        didSet { UserDefaults.standard.set(accentID.rawValue, forKey: Self.accentKey) }
-    }
+    var theme: Theme { ThemeCatalog.theme(mode) }
 
-    var theme: Theme {
-        ThemeCatalog.theme(base: baseID, accent: accentID)
-    }
-
-    private static let baseKey = "ff.baseID"
-    private static let accentKey = "ff.accentID"
+    private static let key = "ff.mode"
+    private let persists: Bool
 
     init() {
-        let baseRaw = UserDefaults.standard.string(forKey: Self.baseKey) ?? BaseID.dark.rawValue
-        let accentRaw = UserDefaults.standard.string(forKey: Self.accentKey) ?? AccentID.blue.rawValue
-        baseID = BaseID(rawValue: baseRaw) ?? .dark
-        accentID = AccentID(rawValue: accentRaw) ?? .blue
+        persists = true
+        let raw = UserDefaults.standard.string(forKey: Self.key) ?? Mode.night.rawValue
+        mode = Mode(rawValue: raw) ?? .night
+    }
+
+    /// Previews and the screenshot export set a mode to render it, not to choose it —
+    /// without this they would leave the real app in whichever base they rendered last.
+    init(transient mode: Mode) {
+        persists = false
+        self.mode = mode
     }
 }
 
 private struct ThemeEnvironmentKey: EnvironmentKey {
-    static let defaultValue = ThemeCatalog.theme(base: .dark, accent: .blue)
+    static let defaultValue = ThemeCatalog.theme(.night)
 }
 
 extension EnvironmentValues {
@@ -186,199 +279,20 @@ extension EnvironmentValues {
 extension View {
     func fitFightTheme(_ theme: Theme) -> some View {
         environment(\.ffTheme, theme)
-            .tint(theme.accent)
+            .tint(theme.mossFill)
             .preferredColorScheme(theme.colorScheme)
     }
 }
 
-struct TokenFile: Decodable {
-    var colors: ColorFile
-    var type: TypeFile
-    var space: SpaceFile
-    var radius: RadiusFile
-
-    func theme(base: BaseID, accent: AccentID) -> Theme {
-        let baseColors = colors.bases[base.rawValue] ?? colors.bases["dark"]!
-        let accentColors = colors.accents[accent.rawValue] ?? colors.accents["blue"]!
-        return Theme(
-            baseID: base,
-            accentID: accent,
-            bg: Color(token: baseColors.bg),
-            surface: Color(token: baseColors.surface),
-            surface2: Color(token: baseColors.surface2),
-            line: Color(token: baseColors.line),
-            hair: Color(token: baseColors.hair),
-            text: Color(token: baseColors.text),
-            muted: Color(token: baseColors.muted),
-            faint: Color(token: baseColors.faint),
-            chip: Color(token: baseColors.chip),
-            track: Color(token: baseColors.track),
-            scrim: Color(scrim: baseColors.scrim).opacity(0.6),
-            accent: Color(token: accentColors.accent),
-            accentDim: Color(token: accentColors.accentDim),
-            ink: Color(token: accentColors.ink),
-            onPhoto: Color(token: colors.onPhoto),
-            green: Color(token: colors.data.green),
-            blue: Color(token: colors.data.blue),
-            amber: Color(token: colors.data.amber),
-            red: Color(token: colors.data.red),
-            type: type.tokens,
-            space: space.tokens,
-            radius: radius.tokens
-        )
-    }
-
-    static let fallback: TokenFile = {
-        let json = """
-        {"colors":{"bases":{"dark":{"bg":"#101114","surface":"#191b1f","surface2":"#212429","line":"rgba(255,255,255,0.10)","hair":"rgba(255,255,255,0.06)","text":"#ffffff","muted":"rgba(255,255,255,0.62)","faint":"rgba(255,255,255,0.40)","scrim":"16,17,20","chip":"rgba(255,255,255,0.055)","track":"rgba(255,255,255,0.09)"},"light":{"bg":"#f4f4f6","surface":"#ffffff","surface2":"#eaeaee","line":"rgba(0,0,0,0.10)","hair":"rgba(0,0,0,0.065)","text":"#15171a","muted":"rgba(0,0,0,0.58)","faint":"rgba(0,0,0,0.42)","scrim":"21,23,26","chip":"rgba(0,0,0,0.045)","track":"rgba(0,0,0,0.08)"}},"accents":{"blue":{"name":"Blue","accent":"#1a6ef5","accentDim":"#114db3","ink":"#ffffff"}},"data":{"green":"#16a34a","blue":"#2f86e0","amber":"#e0a010","red":"#e0483f"},"onPhoto":"#ffffff"},"type":{"roles":{"heroNumber":{"size":34,"weight":700},"display":{"size":26,"weight":700,"letterSpacing":-0.02},"title":{"size":23,"weight":700,"letterSpacing":-0.02},"headline":{"size":19,"weight":700},"rank":{"size":17,"weight":700},"bodyStrong":{"size":15,"weight":600},"body":{"size":14,"weight":400},"label":{"size":13,"weight":700},"caption":{"size":12,"weight":400},"micro":{"size":11,"weight":400},"eyebrow":{"size":10,"weight":600,"letterSpacing":0.16,"transform":"uppercase"},"tiny":{"size":9,"weight":600,"transform":"uppercase"}}},"space":{"scale":{"xs":4,"sm":8,"md":12,"base":16,"lg":20,"xl":28},"rules":{"screenPadding":16,"cardPadding":20,"rowPaddingX":16,"rowPaddingY":14,"sectionGap":28,"cardGap":14,"tabBarClearance":128}},"radius":{"sm":8,"md":12,"lg":16,"xl":24,"full":9999}}
-        """
-        return try! JSONDecoder().decode(TokenFile.self, from: Data(json.utf8))
-    }()
-}
-
-struct ColorFile: Decodable {
-    var bases: [String: BaseColors]
-    var accents: [String: AccentColors]
-    var data: DataColors
-    var onPhoto: String
-}
-
-struct BaseColors: Decodable {
-    var bg: String
-    var surface: String
-    var surface2: String
-    var line: String
-    var hair: String
-    var text: String
-    var muted: String
-    var faint: String
-    var scrim: String
-    var chip: String
-    var track: String
-}
-
-struct AccentColors: Decodable {
-    var name: String
-    var accent: String
-    var accentDim: String
-    var ink: String
-}
-
-struct DataColors: Decodable {
-    var green: String
-    var blue: String
-    var amber: String
-    var red: String
-}
-
-struct TypeFile: Decodable {
-    var roles: [String: RoleFile]
-
-    var tokens: TypeTokens {
-        var map: [TypeRole: TypeSpec] = [:]
-        for (key, role) in roles {
-            guard let typeRole = TypeRole(rawValue: key) else { continue }
-            map[typeRole] = TypeSpec(
-                size: role.size,
-                weight: Font.Weight(token: role.weight),
-                letterSpacing: role.letterSpacing ?? 0,
-                uppercase: role.transform == "uppercase"
-            )
-        }
-        return TypeTokens(roles: map)
-    }
-}
-
-struct RoleFile: Decodable {
-    var size: CGFloat
-    var weight: Int
-    var letterSpacing: CGFloat?
-    var transform: String?
-}
-
-struct SpaceFile: Decodable {
-    var scale: ScaleFile
-    var rules: RulesFile
-
-    var tokens: SpaceTokens {
-        SpaceTokens(
-            xs: scale.xs,
-            sm: scale.sm,
-            md: scale.md,
-            base: scale.base,
-            lg: scale.lg,
-            xl: scale.xl,
-            screenPadding: rules.screenPadding,
-            cardPadding: rules.cardPadding,
-            rowPaddingX: rules.rowPaddingX,
-            rowPaddingY: rules.rowPaddingY,
-            sectionGap: rules.sectionGap,
-            cardGap: rules.cardGap,
-            tabBarClearance: rules.tabBarClearance
-        )
-    }
-}
-
-struct ScaleFile: Decodable {
-    var xs: CGFloat
-    var sm: CGFloat
-    var md: CGFloat
-    var base: CGFloat
-    var lg: CGFloat
-    var xl: CGFloat
-}
-
-struct RulesFile: Decodable {
-    var screenPadding: CGFloat
-    var cardPadding: CGFloat
-    var rowPaddingX: CGFloat
-    var rowPaddingY: CGFloat
-    var sectionGap: CGFloat
-    var cardGap: CGFloat
-    var tabBarClearance: CGFloat
-}
-
-struct RadiusFile: Decodable {
-    var sm: CGFloat
-    var md: CGFloat
-    var lg: CGFloat
-    var xl: CGFloat
-    var full: CGFloat
-
-    var tokens: RadiusTokens {
-        RadiusTokens(sm: sm, md: md, lg: lg, xl: xl, full: full)
-    }
-}
-
-extension Font.Weight {
-    init(token value: Int) {
-        switch value {
-        case ...450: self = .regular
-        case ...550: self = .medium
-        case ...650: self = .semibold
-        default: self = .bold
-        }
-    }
-}
+// MARK: - Colour parsing
 
 extension Color {
     init(token raw: String) {
         let value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        if value.hasPrefix("#") {
-            self.init(hex: value)
-        } else if value.hasPrefix("rgba") {
+        if value.hasPrefix("rgba") || value.hasPrefix("rgb") {
             self.init(rgba: value)
         } else {
-            self.init(hex: "#000000")
-        }
-    }
-
-    init(scrim raw: String) {
-        let parts = raw.split(separator: ",").compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
-        if parts.count == 3 {
-            self.init(.sRGB, red: parts[0] / 255, green: parts[1] / 255, blue: parts[2] / 255, opacity: 1)
-        } else {
-            self.init(hex: "#101114")
+            self.init(hex: value)
         }
     }
 
@@ -393,7 +307,7 @@ extension Color {
         case 6:
             (r, g, b, a) = ((value >> 16) & 0xFF, (value >> 8) & 0xFF, value & 0xFF, 255)
         default:
-            (r, g, b, a) = (0, 0, 0, 255)
+            (r, g, b, a) = (255, 0, 255, 255)
         }
         self.init(
             .sRGB,
@@ -407,16 +321,16 @@ extension Color {
     init(rgba: String) {
         let inner = rgba.drop { $0 != "(" }.dropFirst().dropLast()
         let parts = inner.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
-        let r = Double(parts[safe: 0] ?? "0") ?? 0
-        let g = Double(parts[safe: 1] ?? "0") ?? 0
-        let b = Double(parts[safe: 2] ?? "0") ?? 0
-        let a = Double(parts[safe: 3] ?? "1") ?? 1
-        self.init(.sRGB, red: r / 255, green: g / 255, blue: b / 255, opacity: a)
-    }
-}
-
-private extension Array {
-    subscript(safe index: Int) -> Element? {
-        indices.contains(index) ? self[index] : nil
+        func part(_ i: Int, _ fallback: Double) -> Double {
+            guard parts.indices.contains(i), let v = Double(parts[i]) else { return fallback }
+            return v
+        }
+        self.init(
+            .sRGB,
+            red: part(0, 0) / 255,
+            green: part(1, 0) / 255,
+            blue: part(2, 0) / 255,
+            opacity: part(3, 1)
+        )
     }
 }

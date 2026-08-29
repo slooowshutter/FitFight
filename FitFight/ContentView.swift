@@ -29,14 +29,29 @@ struct ContentView: View {
     @ViewBuilder
     private var signedInRoot: some View {
         if session.profile == nil {
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Loading your account…")
-                    .font(.ff(17, .semibold))
+            VStack(alignment: .leading, spacing: 12) {
+                Text(session.profileUnavailable ? "Couldn't load your account" : "Loading your account…")
+                    .ffType(.heading)
                     .foregroundStyle(theme.text)
+                if session.profileUnavailable {
+                    Text("Your profile is missing or the account was deleted. Sign out and start again.")
+                        .ffType(.body)
+                        .foregroundStyle(theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 if let authError = session.authError {
                     Text(authError)
-                        .font(.ff(13))
-                        .foregroundStyle(theme.red)
+                        .ffType(.body)
+                        .foregroundStyle(theme.emberText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if session.profileUnavailable {
+                    // Without this the screen is a dead end — you cannot get back to
+                    // the welcome screen to sign in as anyone else.
+                    FFButton(title: "Sign out", kind: .secondary) {
+                        Task { await session.signOut() }
+                    }
+                    .padding(.top, 4)
                 }
             }
             .padding(.horizontal, theme.space.screenPadding)

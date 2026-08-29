@@ -15,6 +15,10 @@
 		A10000000000000000000006 /* VersionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000016 /* VersionsView.swift */; };
 		A10000000000000000000007 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000017 /* Theme.swift */; };
 		A10000000000000000000008 /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000018 /* Components.swift */; };
+		A100000000000000000000D5 /* AppChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000C5 /* AppChrome.swift */; };
+		A100000000000000000000D2 /* Controls.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000C2 /* Controls.swift */; };
+		A100000000000000000000D3 /* DataViz.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000C3 /* DataViz.swift */; };
+		A100000000000000000000D4 /* DesignSystemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000C4 /* DesignSystemView.swift */; };
 		A10000000000000000000009 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000019 /* AppModel.swift */; };
 		A1000000000000000000000A /* tokens.json in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001A /* tokens.json */; };
 		A1000000000000000000000B /* FightsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001B /* FightsListView.swift */; };
@@ -23,11 +27,10 @@
 		A1000000000000000000000E /* RequestsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001E /* RequestsView.swift */; };
 		A1000000000000000000000F /* YouView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001F /* YouView.swift */; };
 		A10000000000000000000021 /* ScreenshotExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000022 /* ScreenshotExport.swift */; };
-		A100000000000000000000B1 /* Manrope-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A1 /* Manrope-Regular.ttf */; };
-		A100000000000000000000B2 /* Manrope-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A2 /* Manrope-Medium.ttf */; };
-		A100000000000000000000B3 /* Manrope-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A3 /* Manrope-SemiBold.ttf */; };
-		A100000000000000000000B4 /* Manrope-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A4 /* Manrope-Bold.ttf */; };
-		A100000000000000000000B5 /* Manrope-ExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A5 /* Manrope-ExtraBold.ttf */; };
+		A100000000000000000000B2 /* Nunito-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A2 /* Nunito-Medium.ttf */; };
+		A100000000000000000000B3 /* Nunito-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A3 /* Nunito-SemiBold.ttf */; };
+		A100000000000000000000B4 /* Nunito-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A4 /* Nunito-Bold.ttf */; };
+		A100000000000000000000B5 /* Nunito-ExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A5 /* Nunito-ExtraBold.ttf */; };
 		A100000000000000000000B7 /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A7 /* Typography.swift */; };
 		A10000000000000000000101 /* BossChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000102 /* BossChatView.swift */; };
 		A10000000000000000000311 /* SupabaseConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000301 /* SupabaseConfig.swift */; };
@@ -54,6 +57,10 @@
 		A10000000000000000000016 /* VersionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VersionsView.swift; sourceTree = "<group>"; };
 		A10000000000000000000017 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		A10000000000000000000018 /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
+		A100000000000000000000C5 /* AppChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppChrome.swift; sourceTree = "<group>"; };
+		A100000000000000000000C2 /* Controls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Controls.swift; sourceTree = "<group>"; };
+		A100000000000000000000C3 /* DataViz.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataViz.swift; sourceTree = "<group>"; };
+		A100000000000000000000C4 /* DesignSystemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystemView.swift; sourceTree = "<group>"; };
 		A10000000000000000000019 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		A1000000000000000000001A /* tokens.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tokens.json; sourceTree = "<group>"; };
 		A1000000000000000000001B /* FightsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FightsListView.swift; sourceTree = "<group>"; };
@@ -62,11 +69,10 @@
 		A1000000000000000000001E /* RequestsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestsView.swift; sourceTree = "<group>"; };
 		A1000000000000000000001F /* YouView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouView.swift; sourceTree = "<group>"; };
 		A10000000000000000000022 /* ScreenshotExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotExport.swift; sourceTree = "<group>"; };
-		A100000000000000000000A1 /* Manrope-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Manrope-Regular.ttf; sourceTree = "<group>"; };
-		A100000000000000000000A2 /* Manrope-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Manrope-Medium.ttf; sourceTree = "<group>"; };
-		A100000000000000000000A3 /* Manrope-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Manrope-SemiBold.ttf; sourceTree = "<group>"; };
-		A100000000000000000000A4 /* Manrope-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Manrope-Bold.ttf; sourceTree = "<group>"; };
-		A100000000000000000000A5 /* Manrope-ExtraBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Manrope-ExtraBold.ttf; sourceTree = "<group>"; };
+		A100000000000000000000A2 /* Nunito-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Nunito-Medium.ttf; sourceTree = "<group>"; };
+		A100000000000000000000A3 /* Nunito-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Nunito-SemiBold.ttf; sourceTree = "<group>"; };
+		A100000000000000000000A4 /* Nunito-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Nunito-Bold.ttf; sourceTree = "<group>"; };
+		A100000000000000000000A5 /* Nunito-ExtraBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Nunito-ExtraBold.ttf; sourceTree = "<group>"; };
 		A100000000000000000000A7 /* Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
 		A10000000000000000000102 /* BossChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BossChatView.swift; sourceTree = "<group>"; };
 		A10000000000000000000301 /* SupabaseConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseConfig.swift; sourceTree = "<group>"; };
@@ -136,6 +142,10 @@
 				A1000000000000000000001A /* tokens.json */,
 				A10000000000000000000017 /* Theme.swift */,
 				A10000000000000000000018 /* Components.swift */,
+				A100000000000000000000C5 /* AppChrome.swift */,
+				A100000000000000000000C2 /* Controls.swift */,
+				A100000000000000000000C3 /* DataViz.swift */,
+				A100000000000000000000C4 /* DesignSystemView.swift */,
 				A100000000000000000000A7 /* Typography.swift */,
 			);
 			path = DesignSystem;
@@ -144,11 +154,10 @@
 		A100000000000000000000C0 /* Fonts */ = {
 			isa = PBXGroup;
 			children = (
-				A100000000000000000000A1 /* Manrope-Regular.ttf */,
-				A100000000000000000000A2 /* Manrope-Medium.ttf */,
-				A100000000000000000000A3 /* Manrope-SemiBold.ttf */,
-				A100000000000000000000A4 /* Manrope-Bold.ttf */,
-				A100000000000000000000A5 /* Manrope-ExtraBold.ttf */,
+				A100000000000000000000A2 /* Nunito-Medium.ttf */,
+				A100000000000000000000A3 /* Nunito-SemiBold.ttf */,
+				A100000000000000000000A4 /* Nunito-Bold.ttf */,
+				A100000000000000000000A5 /* Nunito-ExtraBold.ttf */,
 			);
 			path = Fonts;
 			sourceTree = "<group>";
@@ -235,11 +244,10 @@
 			files = (
 				A10000000000000000000004 /* Assets.xcassets in Resources */,
 				A1000000000000000000000A /* tokens.json in Resources */,
-				A100000000000000000000B1 /* Manrope-Regular.ttf in Resources */,
-				A100000000000000000000B2 /* Manrope-Medium.ttf in Resources */,
-				A100000000000000000000B3 /* Manrope-SemiBold.ttf in Resources */,
-				A100000000000000000000B4 /* Manrope-Bold.ttf in Resources */,
-				A100000000000000000000B5 /* Manrope-ExtraBold.ttf in Resources */,
+				A100000000000000000000B2 /* Nunito-Medium.ttf in Resources */,
+				A100000000000000000000B3 /* Nunito-SemiBold.ttf in Resources */,
+				A100000000000000000000B4 /* Nunito-Bold.ttf in Resources */,
+				A100000000000000000000B5 /* Nunito-ExtraBold.ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -257,6 +265,10 @@
 				A10000000000000000000006 /* VersionsView.swift in Sources */,
 				A10000000000000000000007 /* Theme.swift in Sources */,
 				A10000000000000000000008 /* Components.swift in Sources */,
+				A100000000000000000000D5 /* AppChrome.swift in Sources */,
+				A100000000000000000000D2 /* Controls.swift in Sources */,
+				A100000000000000000000D3 /* DataViz.swift in Sources */,
+				A100000000000000000000D4 /* DesignSystemView.swift in Sources */,
 				A100000000000000000000B7 /* Typography.swift in Sources */,
 				A10000000000000000000009 /* AppModel.swift in Sources */,
 				A1000000000000000000000B /* FightsListView.swift in Sources */,

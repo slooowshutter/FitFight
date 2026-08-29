@@ -11,96 +11,113 @@ struct FightDetailView: View {
 
     var body: some View {
         FFScreen(top: AnyView(nav)) {
-            VStack(alignment: .leading, spacing: 0) {
-                if pendingJoin {
-                    invitedHero
-                } else {
-                    liveHero
-                }
-
-                sectionGap
-                FFSectionHeader(title: "Money right now", action: "if nothing changes", actionMuted: true)
-                    .padding(.bottom, 10)
-                moneyCard
-
-                sectionGap
-                FFSectionHeader(title: "Standings", action: fight.standingsMeta, actionMuted: true, inset: 0)
-                    .padding(.bottom, 10)
-                standingsCard
-
-                if !fight.days.isEmpty {
-                    sectionGap
-                    FFSectionHeader(title: "Every day so far", inset: 0)
-                        .padding(.bottom, 10)
-                    daysCard
-                }
-
-                FFButton(title: "i challenge you", icon: "square.and.arrow.up") {}
-                    .padding(.top, theme.space.sectionGap)
+            if pendingJoin {
+                invitedHero
+            } else if let pair = headToHead {
+                FFVSBlock(
+                    you: pair.you,
+                    them: pair.them,
+                    delta: fight.kickerEmphasis,
+                    ahead: fight.rank == 1,
+                    footnote: "\(fight.metric.eyebrow) · \(fight.lengthDays) day fight",
+                    timeLeft: timeLeft
+                )
+                statTiles
+            } else {
+                liveHero
+                statTiles
             }
-            .padding(.horizontal, theme.space.screenPadding)
-            .padding(.bottom, theme.space.xl)
+
+            FFSectionHeader(title: "Money right now")
+                .padding(.top, theme.space.lg)
+            Text(fight.payoutLine)
+                .ffType(.caption)
+                .foregroundStyle(theme.textSecondary)
+            moneyCard
+
+            FFSectionHeader(title: "Standings")
+                .padding(.top, theme.space.lg)
+            if let meta = fight.standingsMeta {
+                Text(meta)
+                    .ffType(.caption)
+                    .foregroundStyle(theme.textSecondary)
+            }
+            ForEach(Array(fight.standings.enumerated()), id: \.element.id) { index, row in
+                standingRow(index: index, row: row)
+            }
+
+            if !fight.days.isEmpty {
+                FFSectionHeader(title: "Every day so far")
+                    .padding(.top, theme.space.lg)
+                daysCard
+            }
+
+            FFScreenCTA(title: "I challenge you") {}
+                .padding(.top, theme.space.lg)
         }
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
     }
 
-    private var sectionGap: some View {
-        Color.clear.frame(height: 30)
-    }
-
     private var you: Standing? { model.youStanding(in: fight) }
 
+    private var timeLeft: String {
+        if let days = fight.daysLeft { return "\(days) days left" }
+        return fight.endedLabel ?? "Ended"
+    }
+
     private var nav: some View {
-        HStack(spacing: 12) {
-            Button {
-                model.openFightID = nil
-            } label: {
-                HStack(spacing: 5) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 13, weight: .semibold))
-                    Text("Fights")
-                        .font(.ff(13, .semibold))
-                }
-                .foregroundStyle(theme.text)
-                .padding(.horizontal, 14)
-                .frame(height: 36)
-                .overlay { Capsule().strokeBorder(theme.line, lineWidth: 1) }
-            }
-            .buttonStyle(FFPressStyle(scale: 0.97))
-            Spacer(minLength: 0)
-            Text(fight.code)
-                .font(.ff(11, .semibold))
-                .tracking(1.2)
-                .foregroundStyle(theme.faint)
-            Spacer(minLength: 0)
-            FFIconButton(systemName: "square.and.arrow.up", size: 36) {}
-        }
+        FFNavDetail(
+            title: fight.name,
+            subtitle: timeLeft,
+            onBack: { model.openFightID = nil },
+            onMore: {}
+        )
         .padding(.horizontal, theme.space.screenPadding)
-        .padding(.bottom, 16)
+        .padding(.bottom, 12)
         .background(theme.bg)
     }
 
+    /// The kit's VS block only makes sense for two people.
+    private var headToHead: (
+        you: (monogram: String, name: String, value: String, progress: Double),
+        them: (monogram: String, name: String, value: String, progress: Double)
+    )? {
+        let joined = fight.standings.filter { !$0.invited }
+        guard joined.count == 2,
+              let mine = joined.first(where: { $0.person.isYou }),
+              let theirs = joined.first(where: { !$0.person.isYou })
+        else { return nil }
+        let peak = max(mine.score, theirs.score, 1)
+        return (
+            (mine.person.initials, "You", model.formatScore(mine.score, metric: fight.metric), mine.score / peak),
+            (theirs.person.initials, theirs.person.name, model.formatScore(theirs.score, metric: fight.metric), theirs.score / peak)
+        )
+    }
+
     private var invitedHero: some View {
-        FFCard(padding: 24, horizontal: 20) {
+        FFCard(padding: 24) {
             VStack(spacing: 0) {
-                FFLabel(text: fight.metric.eyebrow, role: .eyebrow)
-                    .padding(.top, 2)
-                    .padding(.bottom, 6.5)
-                heroTitle
+                FFTag(fight.metric.eyebrow)
+                    .padding(.bottom, 12)
+                Text(fight.name)
+                    .ffType(.title)
+                    .foregroundStyle(theme.text)
                     .multilineTextAlignment(.center)
-                    .padding(.bottom, 14)
+                    .padding(.bottom, 12)
                 if let pitch = fight.invitePitch {
                     Text(pitch)
-                        .font(.ff(14))
+                        .ffType(.body)
                         .foregroundStyle(theme.text)
+                        .multilineTextAlignment(.center)
                         .padding(.bottom, 8)
                 }
                 Text("\(fight.lengthDays) days · \(fight.payoutLine)")
-                    .font(.ff(13))
-                    .foregroundStyle(theme.muted)
+                    .ffType(.caption)
+                    .foregroundStyle(theme.textSecondary)
+                    .multilineTextAlignment(.center)
                     .padding(.bottom, 22)
-                FFButton(title: fight.inviteAction == "Accept" ? "Accept challenge" : "Join fight") {
+                FFScreenCTA(title: fight.inviteAction == "Accept" ? "Accept challenge" : "Join fight") {
                     Task {
                         await model.acceptFight(id: fight.id)
                         if (model.createError ?? "").isEmpty {
@@ -111,8 +128,8 @@ struct FightDetailView: View {
                 }
                 if let error = model.createError, !error.isEmpty {
                     Text(error)
-                        .font(.ff(11))
-                        .foregroundStyle(theme.red)
+                        .ffType(.caption)
+                        .foregroundStyle(theme.emberText)
                         .padding(.top, 10)
                 }
             }
@@ -121,218 +138,153 @@ struct FightDetailView: View {
     }
 
     private var liveHero: some View {
-        FFCard(padding: 24, horizontal: 20) {
-            VStack(spacing: 0) {
-                FFLabel(text: fight.metric.eyebrow, role: .eyebrow)
-                    .padding(.top, 2)
-                    .padding(.bottom, 6.5)
-                heroTitle
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
-                    .padding(.bottom, 27)
-                FFRing(progress: ringProgress) {
-                    VStack(spacing: 1) {
-                        Text(fight.status == .finished ? "1st" : "#\(fight.rank)")
-                            .font(.ff(34, .bold))
-                            .foregroundStyle(theme.text)
-                        Text("OF \(fight.of)")
-                            .font(.ff(10, .semibold))
-                            .tracking(0.6)
-                            .foregroundStyle(theme.muted)
-                    }
-                }
-                .padding(.bottom, 24)
-                FFKicker(
-                    prefix: fight.kickerPrefix,
-                    emphasis: fight.kickerEmphasis,
-                    rest: fight.kickerRest,
-                    size: 14
-                )
-                .padding(.bottom, 16)
-                HStack(spacing: 8) {
-                    FFStatTile(
-                        value: model.formatScore(you?.score ?? 0, metric: fight.metric),
-                        label: "Your total"
-                    )
-                    FFStatTile(
-                        value: model.formatDelta(you?.today ?? 0, metric: fight.metric),
-                        label: "Today"
-                    )
-                    FFStatTile(value: moneyTitle, label: "Standing to")
-                }
-            }
-            .frame(maxWidth: .infinity)
+        FFRingCard(
+            progress: ringProgress,
+            title: fight.status == .finished ? "Finished \(fight.rank == 1 ? "first" : "#\(fight.rank)")" : "#\(fight.rank) of \(fight.of)",
+            subtitle: "\(fight.metric.eyebrow) · \(timeLeft)",
+            metric: model.formatScore(you?.score ?? 0, metric: fight.metric),
+            delta: fight.kickerEmphasis,
+            ahead: fight.rank == 1
+        )
+    }
+
+    private var statTiles: some View {
+        HStack(spacing: 12) {
+            FFStatTile(
+                tag: "Total", tone: .moss,
+                title: fight.metric.title, metric: model.formatScore(you?.score ?? 0, metric: fight.metric),
+                caption: "\(fight.lengthDays) day total"
+            )
+            FFStatTile(
+                tag: "Today", tone: (you?.today ?? 0) >= 0 ? .moss : .ember,
+                title: fight.metric.title, metric: model.formatDelta(you?.today ?? 0, metric: fight.metric),
+                caption: "since midnight"
+            )
         }
     }
 
-    /// A shade larger than a screen title: the fight name is the hero of this screen.
-    private var heroTitle: some View {
-        Text(fight.name)
-            .font(.ff(27, .bold))
-            .tracking(-0.54)
-            .foregroundStyle(theme.text)
-    }
-
-    private var ringProgress: CGFloat {
+    private var ringProgress: Double {
         let leader = fight.standings.first?.score ?? 1
         let yours = you?.score ?? 0
         if fight.settlement == .goal, let goal = fight.dailyGoal, goal > 0 {
             let elapsed = max(1, fight.lengthDays - (fight.daysLeft ?? 0))
-            return min(1, CGFloat(yours / (goal * Double(elapsed))))
+            return min(1, yours / (goal * Double(elapsed)))
         }
-        return leader == 0 ? 0 : CGFloat(yours / leader)
-    }
-
-    private var moneyTitle: String {
-        if let you {
-            if you.projectedNet > 0 { return "+$\(you.projectedNet)" }
-            if you.projectedNet < 0 { return "−$\(abs(you.projectedNet))" }
-        }
-        return "even"
-    }
-
-    private var moneyColor: Color {
-        guard let you else { return theme.faint }
-        if you.projectedNet > 0 { return theme.green }
-        if you.projectedNet < 0 { return theme.red }
-        return theme.faint
-    }
-
-    private var moneyCard: some View {
-        FFPanel {
-            FFBand(vertical: 15) {
-                Text(fight.payoutLine)
-                    .font(.ff(12))
-                    .foregroundStyle(theme.muted)
-            }
-            ForEach(Array(joinedStandings.enumerated()), id: \.element.id) { index, row in
-                if index > 0 { FFHairline() }
-                moneyRow(row)
-            }
-        }
+        return leader == 0 ? 0 : min(yours / leader, 1)
     }
 
     private var joinedStandings: [Standing] {
         fight.standings.filter { !$0.invited }
     }
 
+    private var moneyCard: some View {
+        FFGroupedRows {
+            ForEach(Array(joinedStandings.enumerated()), id: \.element.id) { index, row in
+                if index > 0 {
+                    FFDivider(
+                        visible: !joinedStandings[index - 1].person.isYou && !row.person.isYou
+                    )
+                }
+                moneyRow(row)
+            }
+        }
+    }
+
     private func moneyRow(_ row: Standing) -> some View {
-        HStack(spacing: 10) {
-            FFAvatar(row.person, size: 26)
+        HStack(spacing: 12) {
+            FFAvatar(row.person, size: 38)
             VStack(alignment: .leading, spacing: 2) {
                 Text(row.person.name)
-                    .font(.ff(13, .semibold))
+                    .ffType(.rowTitle)
                     .foregroundStyle(theme.text)
                 Text(model.paceLine(row, in: fight))
-                    .font(.ff(11))
-                    .foregroundStyle(theme.faint)
+                    .ffType(.caption)
+                    .foregroundStyle(theme.textSecondary)
             }
             Spacer(minLength: 8)
             if let safe = row.safe {
-                FFBadge(text: safe ? "Safe" : "At risk", tone: safe ? .green : .red)
+                FFPill(safe ? "Safe" : "At risk", style: safe ? .softMoss : .softEmber)
             } else {
-                FFMoney(dollars: row.projectedNet, size: 13)
+                FFMoney(dollars: row.projectedNet)
             }
         }
-        .padding(.horizontal, FFMetric.cardPadding)
-        .frame(height: 60)
-        .background(row.person.isYou ? theme.selectedRow() : Color.clear)
-    }
-
-    private var standingsCard: some View {
-        FFPanel {
-            ForEach(Array(fight.standings.enumerated()), id: \.element.id) { index, row in
-                if index > 0 { FFHairline() }
-                standingRow(index: index, row: row)
-            }
-        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 13)
+        .ffRowSelection(
+            row.person.isYou,
+            outerRadius: theme.radius.card,
+            fill: theme.mossWash
+        )
     }
 
     private func standingRow(index: Int, row: Standing) -> some View {
-        let isLead = index == 0 && !row.invited
-        let maxScore = fight.standings.map(\.score).max() ?? 1
-        let fill: Color = isLead ? theme.accent : (row.person.isYou ? theme.text : Color.white.opacity(0.45))
-        return VStack(spacing: 8) {
-            HStack(spacing: 0) {
-                Text("\(index + 1)")
-                    .font(.ff(13, .semibold))
-                    .foregroundStyle(isLead ? theme.accent : theme.muted)
-                    .frame(width: 22, alignment: .leading)
-                FFAvatar(row.person, size: 26, pending: row.invited)
-                Text(row.person.name)
-                    .font(.ff(15, .semibold))
-                    .foregroundStyle(row.invited ? theme.muted : theme.text)
-                    .lineLimit(1)
-                    .padding(.leading, 10)
-                Spacer(minLength: 8)
-                if row.invited {
-                    FFBadge(text: "Invited", tone: .amber, style: .solid)
-                } else {
-                    if row.today != 0 {
-                        Text(model.formatDelta(row.today, metric: fight.metric))
-                            .font(.ff(12, .semibold))
-                            .foregroundStyle(row.today > 0 ? theme.green : theme.red)
-                            .padding(.trailing, 14)
-                    }
-                    Text(model.formatScore(row.score, metric: fight.metric))
-                        .font(.ff(15, .bold))
-                        .foregroundStyle(theme.text)
+        Group {
+            if row.invited {
+                HStack(spacing: 13) {
+                    Text("—")
+                        .ffType(.button)
+                        .foregroundStyle(theme.textFaint)
+                        .frame(width: 22)
+                    FFAvatar(row.person, size: 38, pending: true)
+                    Text(row.person.name)
+                        .ffType(.rowTitle)
+                        .foregroundStyle(theme.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    FFPill("Invited", style: .gold)
                 }
-            }
-            .frame(height: 26)
-            if !row.invited {
-                FFProgressBar(
-                    progress: maxScore == 0 ? 0 : CGFloat(row.score / maxScore),
-                    fill: fill
+                .padding(.horizontal, 15)
+                .padding(.vertical, 12)
+                .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
+                .ffBorder(theme.hairline, radius: theme.radius.card)
+            } else {
+                FFLeaderboardRow(
+                    rank: index + 1,
+                    monogram: row.person.initials,
+                    name: row.person.name,
+                    value: model.formatScore(row.score, metric: fight.metric),
+                    move: .same,
+                    isYou: row.person.isYou
                 )
             }
         }
-        .padding(.horizontal, FFMetric.cardPadding)
-        .padding(.vertical, FFMetric.rowPaddingY)
-        .background(row.person.isYou ? theme.selectedRow() : Color.clear)
     }
 
     private var daysCard: some View {
         FFCard {
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(fight.days.enumerated()), id: \.element.id) { index, day in
-                    if index > 0 {
-                        Color.clear.frame(height: 24)
-                    }
-                    Text(day.label)
-                        .font(.ff(11))
-                        .foregroundStyle(theme.muted)
-                        .padding(.bottom, 12.5)
-                    let maxVal = day.scores.map(\.value).max() ?? 1
+                    if index > 0 { Color.clear.frame(height: 20) }
+                    FFEyebrow(day.label)
+                        .padding(.bottom, 12)
+                    let peak = day.scores.map(\.value).max() ?? 1
                     let leaderID = fight.standings.first?.person.id
-                    VStack(spacing: 11.5) {
+                    VStack(spacing: 10) {
                         ForEach(day.scores) { row in
-                            HStack(spacing: 0) {
+                            HStack(spacing: 10) {
                                 Text(row.person.name)
-                                    .font(.ff(11))
-                                    .foregroundStyle(theme.muted)
+                                    .ffType(.micro)
+                                    .foregroundStyle(theme.textSecondary)
                                     .lineLimit(1)
                                     .frame(width: 56, alignment: .leading)
                                 FFProgressBar(
-                                    progress: maxVal == 0 ? 0 : CGFloat(row.value / maxVal),
-                                    fill: row.person.id == leaderID ? theme.accent : Color.white.opacity(0.45)
+                                    value: peak == 0 ? 0 : row.value / peak,
+                                    fill: row.person.id == leaderID ? theme.mossFill : theme.textFaint
                                 )
                                 Text(model.formatScore(row.value, metric: fight.metric))
-                                    .font(.ff(11))
-                                    .foregroundStyle(theme.muted)
+                                    .ffType(.micro)
+                                    .foregroundStyle(theme.textSecondary)
                                     .frame(width: 56, alignment: .trailing)
                             }
-                            .frame(height: 9)
                         }
                     }
                 }
                 if let note = fight.paceNote {
-                    FFHairline()
-                        .padding(.top, 26)
-                        .padding(.bottom, 16)
+                    FFDivider(inset: 0)
+                        .padding(.vertical, 18)
                     Text(note)
-                        .font(.ff(11))
-                        .foregroundStyle(theme.muted)
+                        .ffType(.caption)
+                        .foregroundStyle(theme.textSecondary)
+                        .lineSpacing(3)
                 }
             }
         }

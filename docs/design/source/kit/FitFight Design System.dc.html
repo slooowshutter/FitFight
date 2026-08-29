@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing:border-box; }
+  html, body { margin:0; padding:0; background:#0C0D08; font-family:'Nunito', -apple-system, sans-serif; font-weight:600; color:#F0EDE1; -webkit-font-smoothing:antialiased; }
+  a { color:#8FD6A6; text-decoration:none; }
+  a:hover { color:#B6E6C4; }
+  @keyframes ffShimmer { 0% { background-position:-380px 0; } 100% { background-position:380px 0; } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important; } }
+</style>
+</helmet>
+
+<div style="max-width:1180px; margin:0 auto; padding:64px 48px 120px">
+
+  <div style="max-width:720px">
+    <div style="font-size:12px; font-weight:800; letter-spacing:0.18em; text-transform:uppercase; color:#8C8A7D">FitFight</div>
+    <h1 style="margin:10px 0 0; font-size:44px; font-weight:800; letter-spacing:-0.03em; line-height:1.05">Design system</h1>
+    <p style="margin:16px 0 0; font-size:16px; font-weight:600; line-height:1.65; color:#9E9C8E; text-wrap:pretty">Every token and component the app is built from. Night is the primary theme; each colour carries its day-mode counterpart so a screen can be built either way from the same names. Interactive pieces below are live — drag the slider, open the drawer, fire a toast.</p>
+  </div>
+
+  <div style="display:flex; align-items:center; gap:14px; padding:52px 0 0">
+    <span style="font-size:12px; font-weight:800; letter-spacing:0.16em; text-transform:uppercase; color:#8FD6A6">01 · Colour</span>
+    <span style="flex:1; height:1px; background:rgba(255,255,255,0.09); display:block"></span>
+  </div>
+
+  <p style="margin:20px 0 0; font-size:14px; font-weight:700; line-height:1.6; color:#9E9C8E; max-width:640px">Four families. <strong style="color:#D9D5C6">Ink</strong> is every surface, <strong style="color:#8FD6A6">Moss</strong> is you and winning, <strong style="color:#EF9457">Ember</strong> is urgency and losing, <strong style="color:#F6C450">Gold</strong> is progress only. Nothing else gets to be a colour.</p>
+
+  <div style="padding-top:26px">
+    <div style="font-size:13px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D; padding-bottom:14px">Ink — surfaces &amp; text</div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(168px, 1fr)); gap:12px">
+      <sc-for list="{{ inkSwatches }}" as="c" hint-placeholder-count="10">
+        <div style="background:#171912; border:1px solid rgba(255,255,255,0.07); border-radius:14px; overflow:hidden">
+          <span style="height:76px; display:block; background:{{ c.hex }}; border-bottom:1px solid rgba(255,255,255,0.06)"></span>
+          <div style="padding:11px 13px 13px">
+            <div style="font-size:13px; font-weight:800; letter-spacing:-0.01em">{{ c.name }}</div>
+            <div style="font-size:11px; font-weight:700; color:#8C8A7D; padding-top:3px; font-variant-numeric:tabular-nums">{{ c.hex }}</div>
+            <div style="font-size:11px; font-weight:700; color:#6F6D62; padding-top:5px; line-height:1.45">{{ c.use }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="padding-top:28px">
+    <div style="font-size:13px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D; padding-bottom:14px">Moss — you, live, won</div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(168px, 1fr)); gap:12px">
+      <sc-for list="{{ mossSwatches }}" as="c" hint-placeholder-count="5">
+        <div style="background:#171912; border:1px solid rgba(255,255,255,0.07); border-radius:14px; overflow:hidden">
+          <span style="height:76px; display:block; background:{{ c.hex }}; border-bottom:1px solid rgba(255,255,255,0.06)"></span>
+          <div style="padding:11px 13px 13px">
+            <div style="font-size:13px; font-weight:800; letter-spacing:-0.01em">{{ c.name }}</div>
+            <div style="font-size:11px; font-weight:700; color:#8C8A7D; padding-top:3px; font-variant-numeric:tabular-nums">{{ c.hex }}</div>
+            <div style="font-size:11px; font-weight:700; color:#6F6D62; padding-top:5px; line-height:1.45">{{ c.use }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="padding-top:28px">
+    <div style="font-size:13px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D; padding-bottom:14px">Ember &amp; Gold — behind, urgent, progress</div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(168px, 1fr)); gap:12px">
+      <sc-for list="{{ emberSwatches }}" as="c" hint-placeholder-count="6">
+        <div style="background:#171912; border:1px solid rgba(255,255,255,0.07); border-radius:14px; overflow:hidden">
+          <span style="height:76px; display:block; background:{{ c.hex }}; border-bottom:1px solid rgba(255,255,255,0.06)"></span>
+          <div style="padding:11px 13px 13px">
+            <div style="font-size:13px; font-weight:800; letter-spacing:-0.01em">{{ c.name }}</div>
+            <div style="font-size:11px; font-weight:700; color:#8C8A7D; padding-top:3px; font-variant-numeric:tabular-nums">{{ c.hex }}</div>
+            <div style="font-size:11px; font-weight:700; color:#6F6D62; padding-top:5px; line-height:1.45">{{ c.use }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="padding-top:28px">
+    <div style="font-size:13px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D; padding-bottom:14px">Day mode — the cream counterparts</div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(168px, 1fr)); gap:12px">
+      <sc-for list="{{ daySwatches }}" as="c" hint-placeholder-count="8">
+        <div style="background:#171912; border:1px solid rgba(255,255,255,0.07); border-radius:14px; overflow:hidden">
+          <span style="height:76px; display:block; background:{{ c.hex }}; border-bottom:1px solid rgba(255,255,255,0.06)"></span>
+          <div style="padding:11px 13px 13px">
+            <div style="font-size:13px; font-weight:800; letter-spacing:-0.01em">{{ c.name }}</div>
+            <div style="font-size:11px; font-weight:700; color:#8C8A7D; padding-top:3px; font-variant-numeric:tabular-nums">{{ c.hex }}</div>
+            <div style="font-size:11px; font-weight:700; color:#6F6D62; padding-top:5px; line-height:1.45">{{ c.use }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="display:flex; align-items:center; gap:14px; padding:52px 0 0">
+    <span style="font-size:12px; font-weight:800; letter-spacing:0.16em; text-transform:uppercase; color:#8FD6A6">02 · Type &amp; shape</span>
+    <span style="flex:1; height:1px; background:rgba(255,255,255,0.09); display:block"></span>
+  </div>
+
+  <div style="display:grid; grid-template-columns:1.4fr 1fr; gap:20px; padding-top:24px">
+    <div style="background:#171912; border:1px solid rgba(255,255,255,0.07); border-radius:22px; padding:24px 26px 26px">
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D">Nunito · 600 / 700 / 800</div>
+      <div style="display:flex; flex-direction:column; gap:18px; padding-top:20px">
+        <div>
+          <div style="font-size:34px; font-weight:800; letter-spacing:-0.03em; line-height:1">26,410</div>
+          <div style="font-size:11px; font-weight:700; color:#6F6D62; padding-top:6px">Metric hero — 34/800/−0.03em · tabular</div>
+        </div>
+        <div>
+          <div style="font-size:26px; font-weight:800; letter-spacing:-0.025em; line-height:1.1">Screen title</div>
+          <div style="font-size:11px; font-weight:700; color:#6F6D62; padding-top:6px">Title — 26/800/−0.025em</div>
+        </div>
+        <div>
+          <div style="font-size:16px; font-weight:800; letter-spacing:-0.01em">Card heading</div>
+          <div style="font-size:11px; font-weight:700; color:#6F6D62; padding-top:6px">Heading — 16/800/−0.01em</div>
+        </div>
+        <div>
+          <div style="font-size:13px; font-weight:700; color:#9E9C8E">Supporting line under a heading</div>
+          <div style="font-size:11px; font-weight:700; color:#6F6D62; padding-top:6px">Body — 13/700 · ash</div>
+        </div>
+        <div>
+          <div style="font-size:12px; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; color:#8C8A7D">Section eyebrow</div>
+          <div style="font-size:11px; font-weight:700; color:#6F6D62; padding-top:6px">Eyebrow — 12/800/0.06em/uppercase</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:#171912; border:1px solid rgba(255,255,255,0.07); border-radius:22px; padding:24px 26px 26px">
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D">Radius</div>
+      <div style="display:flex; flex-direction:column; gap:12px; padding-top:18px">
+        <sc-for list="{{ radii }}" as="r" hint-placeholder-count="6">
+          <div style="display:flex; align-items:center; gap:14px">
+            <span style="flex:none; width:52px; height:38px; background:#2E3227; border:1px solid rgba(255,255,255,0.09); border-radius:{{ r.px }}; display:block"></span>
+            <div style="flex:1; min-width:0">
+              <div style="font-size:13px; font-weight:800">{{ r.name }}</div>
+              <div style="font-size:11px; font-weight:700; color:#6F6D62; padding-top:2px">{{ r.use }}</div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex; align-items:center; gap:14px; padding:52px 0 0">
+    <span style="font-size:12px; font-weight:800; letter-spacing:0.16em; text-transform:uppercase; color:#8FD6A6">03 · Buttons</span>
+    <span style="flex:1; height:1px; background:rgba(255,255,255,0.09); display:block"></span>
+  </div>
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; padding-top:24px">
+    <div style="background:#171912; border:1px solid rgba(255,255,255,0.07); border-radius:22px; padding:22px 24px 24px">
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D">Variants</div>
+      <div style="display:flex; flex-wrap:wrap; gap:10px; padding-top:18px">
+        <button type="button" style="border:none; border-radius:999px; padding:13px 22px; font-family:inherit; font-size:14px; font-weight:800; cursor:pointer; background:#35804F; color:#FFFFFF" style-hover="filter:brightness(1.12)">Primary</button>
+        <button type="button" style="border:none; border-radius:999px; padding:13px 22px; font-family:inherit; font-size:14px; font-weight:800; cursor:pointer; background:#C2551D; color:#FFFFFF" style-hover="filter:brightness(1.12)">Ember</button>
+        <button type="button" style="border:1px solid rgba(255,255,255,0.10); border-radius:999px; padding:13px 22px; font-family:inherit; font-size:14px; font-weight:800; cursor:pointer; background:#2E3227; color:#F0EDE1" style-hover="background:#383D2F">Secondary</button>
+        <button type="button" style="border:1px solid rgba(143,214,166,0.35); border-radius:999px; padding:13px 22px; font-family:inherit; font-size:14px; font-weight:800; cursor:pointer; background:transparent; color:#8FD6A6" style-hover="background:rgba(53,128,79,0.16)">Outline</button>
+        <button type="button" style="border:none; border-radius:999px; padding:13px 22px; font-family:inherit; font-size:14px; font-weight:800; cursor:pointer; background:transparent; color:#9E9C8E" style-hover="background:rgba(255,255,255,0.05); color:#F0EDE1">Ghost</button>
+        <button type="button" disabled style="border:1px solid rgba(255,255,255,0.06); border-radius:999px; padding:13px 22px; font-family:inherit; font-size:14px; font-weight:800; cursor:not-allowed; background:rgba(255,255,255,0.03); color:#5E5C53">Disabled</button>
+      </div>
+
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D; padding-top:26px">Sizes</div>
+      <div style="display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding-top:16px">
+        <button type="button" style="border:none; border-radius:999px; padding:8px 15px; font-family:inherit; font-size:12px; font-weight:800; cursor:pointer; background:#35804F; color:#FFFFFF" style-hover="filter:brightness(1.12)">Small</button>
+        <button type="button" style="border:none; border-radius:999px; padding:13px 22px; font-family:inherit; font-size:14px; font-weight:800; cursor:pointer; background:#35804F; color:#FFFFFF" style-hover="filter:brightness(1.12)">Medium</button>
+        <button type="button" style="border:none; border-radius:999px; padding:17px 28px; font-family:inherit; font-size:16px; font-weight:800; cursor:pointer; background:#35804F; color:#FFFFFF" style-hover="filter:brightness(1.12)">Large</button>
+        <button type="button" style="flex:none; width:44px; height:44px; border:1px solid rgba(255,255,255,0.10); border-radius:999px; background:#2E3227; padding:0; display:flex; align-items:center; justify-content:center; cursor:pointer" style-hover="background:#383D2F">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F0EDE1" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>
+        </button>
+      </div>
+    </div>
+
+    <div style="background:#171912; border:1px solid rgba(255,255,255,0.07); border-radius:22px; padding:22px 24px 24px">
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D">Screen CTA — the signature</div>
+      <p style="margin:12px 0 0; font-size:13px; font-weight:700; line-height:1.55; color:#9E9C8E">Full-width, 60px tall, label left and a filled circle chevron right. One per screen, pinned above the tab bar.</p>
+      <div style="display:flex; flex-direction:column; gap:12px; padding-top:18px">
+        <button type="button" style="height:60px; border:none; border-radius:999px; background:#35804F; padding:0 8px 0 26px; display:flex; align-items:center; justify-content:space-between; gap:12px; cursor:pointer; font-family:inherit" style-hover="filter:brightness(1.1)">
+          <span style="font-size:16px; font-weight:800; letter-spacing:0.01em; color:#FFFFFF">Challenge Marc</span>
+          <span style="flex:none; width:44px; height:44px; border-radius:999px; background:#FFFFFF; display:flex; align-items:center; justify-content:center">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#35804F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+          </span>
+        </button>
+        <button type="button" style="height:60px; border:none; border-radius:999px; background:#C2551D; padding:0 8px 0 26px; display:flex; align-items:center; justify-content:space-between; gap:12px; cursor:pointer; font-family:inherit" style-hover="filter:brightness(1.1)">
+          <span style="font-size:16px; font-weight:800; letter-spacing:0.01em; color:#FFFFFF">Send it</span>
+          <span style="flex:none; width:44px; height:44px; border-radius:999px; background:#FFFFFF; display:flex; align-items:center; justify-content:center">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#C2551D" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+          </span>
+        </button>
+        <button type="button" style="background:none; border:2px dashed rgba(255,255,255,0.13); border-radius:22px; padding:15px 16px; display:flex; align-items:center; gap:13px; cursor:pointer; text-align:left; font-family:inherit; color:inherit" style-hover="background:rgba(255,255,255,0.04)">
+          <span style="flex:none; width:38px; height:38px; border-radius:999px; background:rgba(53,128,79,0.24); display:flex; align-items:center; justify-content:center">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8FD6A6" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>
+          </span>
+          <div style="flex:1; min-width:0">
+            <div style="font-size:15px; font-weight:800; letter-spacing:-0.01em">Add — dashed affordance</div>
+            <div style="font-size:12px; font-weight:700; color:#9E9C8E; padding-top:2px">Empty slots and "start something" rows</div>
+          </div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex; align-items:center; gap:14px; padding:52px 0 0">
+    <span style="font-size:12px; font-weight:800; letter-spacing:0.16em; text-transform:uppercase; color:#8FD6A6">04 · Badges &amp; avatars</span>
+    <span style="flex:1; height:1px; background:rgba(255,255,255,0.09); display:block"></span>
+  </div>
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; padding-top:24px">
+    <div style="background:#171912; border:1px solid rgba(255,255,255,0.07); border-radius:22px; padding:22px 24px 24px">
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D">Mode tags — caps, 10px, on cards</div>
+      <div style="display:flex; flex-wrap:wrap; gap:8px; padding-top:16px">
+        <span style="display:inline-flex; align-items:center; border-radius:999px; padding:4px 9px; font-size:10px; font-weight:800; background:rgba(53,128,79,0.24); color:#8FD6A6">1V1</span>
+        <span style="display:inline-flex; align-items:center; border-radius:999px; padding:4px 9px; font-size:10px; font-weight:800; background:rgba(53,128,79,0.24); color:#8FD6A6">GROUP</span>
+        <span style="display:inline-flex; align-items:center; border-radius:999px; padding:4px 9px; font-size:10px; font-weight:800; background:rgba(194,85,29,0.22); color:#EF9457">GOAL</span>
+        <span style="display:inline-flex; align-items:center; border-radius:999px; padding:4px 9px; font-size:10px; font-weight:800; background:rgba(246,196,80,0.20); color:#F6C450">STREAK</span>
+      </div>
+
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D; padding-top:24px">Status pills — sentence case, 11–13px</div>
+      <div style="display:flex; flex-wrap:wrap; gap:8px; padding-top:16px">
+        <span style="display:inline-flex; align-items:center; border-radius:999px; padding:5px 11px; font-size:11px; font-weight:800; background:rgba(53,128,79,0.26); color:#8FD6A6">On</span>
+        <span style="display:inline-flex; align-items:center; border-radius:999px; padding:6px 13px; font-size:12px; font-weight:800; background:#35804F; color:#FFFFFF">Connect</span>
+        <span style="display:inline-flex; align-items:center; border-radius:999px; padding:5px 11px; font-size:11px; font-weight:800; background:rgba(194,85,29,0.22); color:#EF9457">2 days left</span>
+        <span style="display:inline-flex; align-items:center; border-radius:999px; padding:7px 13px; font-size:12px; font-weight:800; background:#F6C450; color:#42320A">75% win rate</span>
+        <span style="display:inline-flex; align-items:center; border-radius:999px; padding:5px 11px; font-size:11px; font-weight:800; background:rgba(255,255,255,0.07); color:#9E9C8E">Ended</span>
+      </div>
+
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D; padding-top:24px">Result glyphs — 24px square, in dense rows</div>
+      <div style="display:flex; flex-wrap:wrap; gap:8px; padding-top:16px">
+        <span style="display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:9px; background:rgba(53,128,79,0.24); font-size:11px; font-weight:800; color:#8FD6A6">W</span>
+        <span style="display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:9px; background:rgba(194,85,29,0.22); font-size:11px; font-weight:800; color:#EF9457">L</span>
+        <span style="display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:9px; background:rgba(255,255,255,0.06); font-size:11px; font-weight:800; color:#8C8A7D">–</span>
+      </div>
+    </div>
+
+    <div style="background:#171912; border:1px solid rgba(255,255,255,0.07); border-radius:22px; padding:22px 24px 24px">
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D">Avatar — monogram until a photo exists</div>
+      <p style="margin:12px 0 0; font-size:13px; font-weight:700; line-height:1.55; color:#9E9C8E">Always a circle, always <strong style="color:#D9D5C6">ink-500</strong> with a 10% hairline. Sizes are fixed so photos drop in with no layout change.</p>
+      <div style="display:flex; align-items:flex-end; gap:16px; padding-top:20px">
+        <div style="display:flex; flex-direction:column; align-items:center; gap:8px">
+          <span style="width:32px; height:32px; border-radius:999px; background:#2E3227; border:1px solid rgba(255,255,255,0.10); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; color:#D9D5C6">MB</span>
+          <span style="font-size:10px; font-weight:700; color:#6F6D62">32</span>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:center; gap:8px">
+          <span style="width:38px; height:38px; border-radius:999px; background:#2E3227; border:1px solid rgba(255,255,255,0.10); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; color:#D9D5C6">NK</span>
+          <span style="font-size:10px; font-weight:700; color:#6F6D62">38</span>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:center; gap:8px">
+          <span style="width:44px; height:44px; border-radius:999px; background:#2E3227; border:1px solid rgba(255,255,255,0.10); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; color:#D9D5C6">MR</span>
+          <span style="font-size:10px; font-weight:700; color:#6F6D62">44</span>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:center; gap:8px">
+          <span style="width:54px; height:54px; border-radius:999px; background:#2E3227; box-shadow:0 0 0 3px #4B9A65; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:800; color:#E3DFD0">TD</span>
+          <span style="font-size:10px; font-weight:700; color:#8FD6A6">54 · selected</span>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:center; gap:8px">
+          <span style="width:68px; height:68px; border-radius:999px; background:#2E3227; border:1px solid rgba(255,255,255,0.12); display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:800; color:#E3DFD0">AM</span>
+          <span style="font-size:10px; font-weight:700; color:#6F6D62">68</span>
+        </div>
+      </div>
+
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D; padding-top:26px">Stacked group</div>
+      <div style="display:flex; align-items:center; gap:10px; padding-top:16px">
+        <span style="display:flex; align-items:center">
+          <span style="width:36px; height:36px; border-radius:999px; background:#2E3227; box-shadow:0 0 0 2px #171912; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; color:#D9D5C6">MB</span>
+          <span style="width:36px; height:36px; border-radius:999px; background:#333829; box-shadow:0 0 0 2px #171912; margin-left:-12px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; color:#D9D5C6">NK</span>
+          <span style="width:36px; height:36px; border-radius:999px; background:#2E3227; box-shadow:0 0 0 2px #171912; margin-left:-12px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; color:#D9D5C6">MR</span>
+          <span style="width:36px; height:36px; border-radius:999px; background:rgba(255,255,255,0.06); box-shadow:0 0 0 2px #171912; margin-left:-12px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; color:#8C8A7D">+2</span>
+        </span>
+        <span style="font-size:13px; font-weight:700; color:#9E9C8E">5 in this fight</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex; align-items:center; gap:14px; padding:52px 0 0">
+    <span style="font-size:12px; font-weight:800; letter-spacing:0.16em; text-transform:uppercase; color:#8FD6A6">05 · Cards</span>
+    <span style="flex:1; height:1px; background:rgba(255,255,255,0.09); display:block"></span>
+  </div>
+
+  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:20px; padding-top:24px; align-items:start">
+    <div>
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D; padding-bottom:12px">Hero — moss fill, one per screen</div>
+      <div style="background:#35804F; border-radius:22px; padding:17px 19px 18px">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px">
+          <span style="font-size:12px; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:#DCF0E2">Ends in 3 days</span>
+          <span style="display:inline-flex; align-items:center; background:rgba(255,255,255,0.16); border-radius:999px; padding:5px 10px; font-size:11px; font-weight:800; color:#FFFFFF">Head to head</span>
+        </div>
+        <div style="font-size:21px; font-weight:800; letter-spacing:-0.015em; color:#FFFFFF; padding-top:9px">Step Derby vs Marc</div>
+        <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:12px; padding-top:14px">
+          <div>
+            <div style="font-size:34px; font-weight:800; letter-spacing:-0.03em; line-height:1; color:#FFFFFF">26,410</div>
+            <div style="font-size:12px; font-weight:700; color:#DCF0E2; padding-top:4px">steps · you lead by 4,310</div>
+          </div>
+          <span style="flex:none; width:52px; height:52px; border-radius:999px; background:rgba(0,0,0,0.28); box-shadow:0 0 0 3px rgba(255,255,255,0.25); display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:800; color:#FFFFFF">MB</span>
+        </div>
+        <div style="padding-top:14px">
+          <span style="height:10px; border-radius:999px; background:rgba(0,0,0,0.32); overflow:hidden; display:block"><span style="display:block; height:10px; width:54%; border-radius:999px; background:#F6C450"></span></span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D; padding-bottom:12px">Stat tile — grid of two</div>
+      <div style="background:#24271E; border:1px solid rgba(255,255,255,0.07); border-radius:22px; padding:14px 15px 15px">
+        <div style="display:flex; align-items:center; justify-content:space-between">
+          <span style="display:inline-flex; align-items:center; border-radius:999px; padding:4px 9px; font-size:10px; font-weight:800; background:rgba(194,85,29,0.22); color:#EF9457">GOAL</span>
+          <span style="font-size:11px; font-weight:800; color:#EF9457">day 5</span>
+        </div>
+        <div style="font-size:15px; font-weight:800; letter-spacing:-0.01em; padding-top:9px">10K a day</div>
+        <div style="font-size:26px; font-weight:800; letter-spacing:-0.03em; line-height:1; padding-top:8px">7,240</div>
+        <div style="font-size:11px; font-weight:700; color:#9E9C8E; padding-top:3px">of 10,000 steps</div>
+        <span style="height:7px; border-radius:999px; background:rgba(255,255,255,0.09); overflow:hidden; display:block; margin-top:10px"><span style="display:block; height:7px; width:72%; border-radius:999px; background:#C2551D"></span></span>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D; padding-bottom:12px">List row — selected state</div>
+      <div style="display:flex; flex-direction:column; gap:10px">
+        <div style="border:1px solid #4B9A65; border-radius:22px; padding:14px 16px; background:rgba(53,128,79,0.18); display:flex; align-items:center; gap:13px">
+          <span style="flex:none; width:44px; height:44px; border-radius:999px; background:#2E3227; border:1px solid rgba(255,255,255,0.10); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; color:#D9D5C6">MB</span>
+          <div style="flex:1; min-width:0">
+            <div style="font-size:16px; font-weight:800; letter-spacing:-0.01em">Step Derby</div>
+            <div style="font-size:12px; font-weight:700; color:#9E9C8E; padding-top:2px">Head to head · steps</div>
+          </div>
+          <div style="flex:none; text-align:right">
+            <div style="font-size:18px; font-weight:800; letter-spacing:-0.02em">26,410</div>
+            <div style="font-size:12px; font-weight:800; color:#8FD6A6; padding-top:2px">up 4,310</div>
+          </div>
+        </div>
+        <div style="border:1px solid rgba(255,255,255,0.07); border-radius:22px; padding:14px 16px; background:#24271E; display:flex; align-items:center; gap:13px">
+          <span style="flex:none; width:44px; height:44px; border-radius:999px; background:#2E3227; border:1px solid rgba(255,255,255,0.10); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; color:#D9D5C6">NK</span>
+          <div style="flex:1; min-width:0">
+            <div style="font-size:16px; font-weight:800; letter-spacing:-0.01em">Sunday Climb</div>
+            <div style="font-size:12px; font-weight:700; color:#9E9C8E; padding-top:2px">Head to head · elevation</div>
+          </div>
+          <div style="flex:none; text-align:right">
+            <div style="font-size:18px; font-weight:800; letter-spacing:-0.02em">840</div>
+            <div style="font-size:12px; font-weight:800; color:#EF9457; padding-top:2px">280 m back</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D; padding-bottom:12px">Notice — ember wash</div>
+      <div style="display:flex; flex-direction:column; gap:12px">
+        <div style="background:rgba(194,85,29,0.16); border:1px solid rgba(239,148,87,0.22); border-radius:22px; padding:13px 16px; display:flex; align-items:center; gap:12px">
+          <span style="flex:none; width:32px; height:32px; border-radius:999px; background:rgba(194,85,29,0.3); display:flex; align-items:center; justify-content:center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#EF9457" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 3"></path><circle cx="12" cy="12" r="9"></circle></svg>
+          </span>
+          <span style="flex:1; font-size:13px; font-weight:800; letter-spacing:-0.01em">2 invites expire in 2 days</span>
+        </div>
+        <div style="background:rgba(53,128,79,0.18); border:1px solid rgba(143,214,166,0.18); border-radius:22px; padding:13px 16px; display:flex; align-items:center; gap:12px">
+          <span style="flex:1; font-size:13px; font-weight:800; letter-spacing:-0.01em">You won Sleep Streak</span>
+          <span style="flex:none; display:inline-flex; align-items:center; border-radius:999px; padding:6px 13px; font-size:12px; font-weight:800; background:#35804F; color:#FFFFFF">See</span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D; padding-bottom:12px">Grouped rows — settings pattern</div>
+      <div style="background:#24271E; border:1px solid rgba(255,255,255,0.07); border-radius:22px; padding:4px 0">
+        <div style="display:flex; align-items:center; gap:12px; padding:13px 16px">
+          <span style="flex:none; width:36px; height:36px; border-radius:9px; background:#2E3227; display:flex; align-items:center; justify-content:center">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D9D5C6" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="7"></rect><path d="M12 6v6l3 2"></path></svg>
+          </span>
+          <div style="flex:1; min-width:0">
+            <div style="font-size:15px; font-weight:800; letter-spacing:-0.01em">Apple Watch</div>
+            <div style="font-size:12px; font-weight:700; color:#8FD6A6; padding-top:1px">Steps · active minutes</div>
+          </div>
+          <span style="flex:none; display:inline-flex; align-items:center; border-radius:999px; padding:5px 11px; font-size:11px; font-weight:800; background:rgba(53,128,79,0.26); color:#8FD6A6">On</span>
+        </div>
+        <div style="height:1px; background:rgba(255,255,255,0.06); margin:0 16px"></div>
+        <div style="display:flex; align-items:center; gap:12px; padding:13px 16px">
+          <span style="flex:none; width:36px; height:36px; border-radius:9px; background:rgba(255,255,255,0.05); display:flex; align-items:center; justify-content:center">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8C8A7D" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"></path></svg>
+          </span>
+          <div style="flex:1; min-width:0">
+            <div style="font-size:15px; font-weight:800; letter-spacing:-0.01em; color:#9E9C8E">Whoop</div>
+            <div style="font-size:12px; font-weight:700; color:#8C8A7D; padding-top:1px">Sleep · recovery</div>
+          </div>
+          <span style="flex:none; display:inline-flex; align-items:center; border-radius:999px; padding:6px 13px; font-size:12px; font-weight:800; background:#35804F; color:#FFFFFF">Connect</span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D; padding-bottom:12px">Ring card — progress as a dial</div>
+      <div style="background:#24271E; border:1px solid rgba(255,255,255,0.07); border-radius:22px; padding:16px 18px; display:flex; align-items:center; gap:16px">
+        <div style="flex:none; position:relative; width:76px; height:76px">
+          <svg width="76" height="76" viewBox="0 0 76 76" style="display:block; transform:rotate(-90deg)">
+            <circle cx="38" cy="38" r="30" fill="none" stroke="rgba(255,255,255,0.09)" stroke-width="9"></circle>
+            <circle cx="38" cy="38" r="30" fill="none" stroke="#35804F" stroke-width="9" stroke-linecap="round" stroke-dasharray="188.5" stroke-dashoffset="86.7"></circle>
+          </svg>
+          <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:800; letter-spacing:-0.02em">54%</div>
+        </div>
+        <div style="flex:1; min-width:0">
+          <div style="font-size:17px; font-weight:800; letter-spacing:-0.015em">Step Derby</div>
+          <div style="font-size:12px; font-weight:700; color:#9E9C8E; padding-top:2px">vs Marc · steps</div>
+          <div style="display:flex; align-items:baseline; gap:8px; padding-top:8px">
+            <span style="font-size:22px; font-weight:800; letter-spacing:-0.025em">26,410</span>
+            <span style="font-size:12px; font-weight:800; color:#8FD6A6">up 4,310</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex; align-items:center; gap:14px; padding:52px 0 0">
+    <span style="font-size:12px; font-weight:800; letter-spacing:0.16em; text-transform:uppercase; color:#8FD6A6">06 · Controls</span>
+    <span style="flex:1; height:1px; background:rgba(255,255,255,0.09); display:block"></span>
+  </div>
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; padding-top:24px; align-items:start">
+    <div style="min-width:0; background:#171912; border:1px solid rgba(255,255,255,0.07); border-radius:22px; padding:22px 24px 26px">
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D">Slider — drag it</div>
+      <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding-top:16px">
+        <span style="font-size:14px; font-weight:800">Daily target</span>
+        <span style="font-size:22px; font-weight:800; letter-spacing:-0.025em; font-variant-numeric:tabular-nums">{{ sliderLabel }}</span>
+      </div>
+      <div onPointerDown="{{ sliderDown }}" onPointerMove="{{ sliderMove }}" style="padding:16px 0 0; cursor:pointer; touch-action:none">
+        <span style="height:12px; border-radius:999px; background:rgba(255,255,255,0.09); display:block; position:relative">
+          <span style="position:absolute; left:0; top:0; bottom:0; width:{{ sliderPct }}; border-radius:999px; background:#35804F; display:block"></span>
+          <span style="position:absolute; top:-7px; left:{{ sliderPct }}; margin-left:-13px; width:26px; height:26px; border-radius:999px; background:#F0EDE1; box-shadow:0 3px 10px rgba(0,0,0,0.6); display:block"></span>
+        </span>
+      </div>
+      <div style="display:flex; justify-content:space-between; padding-top:14px; font-size:11px; font-weight:700; color:#6F6D62">
+        <span>2,000</span>
+        <span>25,000 steps</span>
+      </div>
+
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D; padding-top:28px">Stepper</div>
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:14px; padding-top:14px">
+        <button type="button" onClick="{{ onMinus }}" style="flex:none; width:46px; height:46px; border:1px solid rgba(255,255,255,0.09); border-radius:999px; background:#2E3227; cursor:pointer; display:flex; align-items:center; justify-content:center" style-hover="background:#383D2F">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F0EDE1" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"></path></svg>
+        </button>
+        <div style="flex:1; min-width:0; text-align:center">
+          <div style="font-size:30px; font-weight:800; letter-spacing:-0.03em; line-height:1; font-variant-numeric:tabular-nums">{{ stepperLabel }}</div>
+          <div style="font-size:12px; font-weight:700; color:#9E9C8E; padding-top:4px">steps a day</div>
+        </div>
+        <button type="button" onClick="{{ onPlus }}" style="flex:none; width:46px; height:46px; border:none; border-radius:999px; background:#35804F; cursor:pointer; display:flex; align-items:center; justify-content:center" style-hover="filter:brightness(1.12)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>
+        </button>
+      </div>
+
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D; padding-top:28px">Switch &amp; segmented</div>
+      <div style="display:flex; align-items:center; gap:12px; padding-top:16px">
+        <span style="flex:1; font-size:15px; font-weight:800; letter-spacing:-0.01em">Notifications</span>
+        <button type="button" onClick="{{ notifSw.flip }}" style="flex:none; width:50px; height:30px; border:none; border-radius:999px; background:{{ notifSw.bg }}; cursor:pointer; padding:3px; display:flex; justify-content:{{ notifSw.justify }}; align-items:center">
+          <span style="width:24px; height:24px; border-radius:999px; background:#F0EDE1; display:block"></span>
+        </button>
+      </div>
+      <div style="display:flex; align-items:center; gap:12px; padding-top:14px">
+        <span style="flex:1; font-size:15px; font-weight:800; letter-spacing:-0.01em">Units</span>
+        <span style="flex:none; display:flex; gap:3px; background:rgba(255,255,255,0.06); border-radius:999px; padding:3px">
+          <sc-for list="{{ unitSeg }}" as="u" hint-placeholder-count="2">
+            <button type="button" onClick="{{ u.pick }}" style="border:none; border-radius:999px; padding:6px 15px; font-family:inherit; font-size:12px; font-weight:800; cursor:pointer; background:{{ u.bg }}; color:{{ u.ink }}">{{ u.name }}</button>
+          </sc-for>
+        </span>
+      </div>
+
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D; padding-top:28px">Filter chips</div>
+      <div style="display:flex; gap:8px; padding-top:14px">
+        <sc-for list="{{ filterChips }}" as="c" hint-placeholder-count="3">
+          <button type="button" onClick="{{ c.pick }}" style="flex:none; border:1px solid {{ c.line }}; border-radius:999px; padding:10px 15px; font-family:inherit; font-size:13px; font-weight:800; cursor:pointer; background:{{ c.bg }}; color:{{ c.ink }}; display:flex; align-items:center; gap:7px">
+            <span>{{ c.name }}</span>
+            <span style="font-size:12px; font-weight:800; opacity:0.7">{{ c.count }}</span>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="min-width:0; background:#171912; border:1px solid rgba(255,255,255,0.07); border-radius:22px; padding:22px 24px 26px">
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D">Form field — every state</div>
+
+      <div style="padding-top:18px">
+        <label style="font-size:13px; font-weight:800; display:block; padding-bottom:7px">Challenge name</label>
+        <div style="background:#24271E; border:1px solid rgba(255,255,255,0.10); border-radius:14px; padding:13px 15px; font-size:15px; font-weight:700; color:#F0EDE1">Step Derby</div>
+        <div style="font-size:12px; font-weight:700; color:#8C8A7D; padding-top:7px">Everyone invited sees this name.</div>
+      </div>
+
+      <div style="padding-top:18px">
+        <label style="font-size:13px; font-weight:800; display:block; padding-bottom:7px">Empty &amp; focused</label>
+        <div style="background:#24271E; border:1px solid #4B9A65; box-shadow:0 0 0 3px rgba(75,154,101,0.22); border-radius:14px; padding:13px 15px; font-size:15px; font-weight:700; color:#6F6D62">Name your fight</div>
+      </div>
+
+      <div style="padding-top:18px">
+        <label style="font-size:13px; font-weight:800; display:block; padding-bottom:7px; color:#EF9457">Daily target</label>
+        <div style="background:rgba(194,85,29,0.12); border:1px solid #C2551D; border-radius:14px; padding:13px 15px; font-size:15px; font-weight:700; color:#F0EDE1">0</div>
+        <div style="display:flex; align-items:center; gap:7px; padding-top:7px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#EF9457" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>
+          <span style="font-size:12px; font-weight:800; color:#EF9457">Pick a number above zero.</span>
+        </div>
+      </div>
+
+      <div style="padding-top:18px">
+        <label style="font-size:13px; font-weight:800; display:block; padding-bottom:7px; color:#8C8A7D">Metric source</label>
+        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:14px; padding:13px 15px; font-size:15px; font-weight:700; color:#5E5C53; display:flex; align-items:center; gap:8px">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5E5C53" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          <span>Apple Watch — locked to steps</span>
+        </div>
+      </div>
+
+      <div style="padding-top:18px">
+        <label style="font-size:13px; font-weight:800; display:block; padding-bottom:7px">Trash talk</label>
+        <div style="background:#24271E; border:1px solid rgba(255,255,255,0.10); border-radius:14px; padding:13px 15px; min-height:88px; font-size:15px; font-weight:700; color:#F0EDE1; line-height:1.5">Easy week for me.</div>
+        <div style="display:flex; justify-content:flex-end; padding-top:7px; font-size:12px; font-weight:700; color:#6F6D62">17 / 140</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; padding-top:20px; align-items:start">
+    <div style="min-width:0; background:#171912; border:1px solid rgba(255,255,255,0.07); border-radius:22px; padding:22px 24px 136px">
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D">Combo box — open it</div>
+      <div style="position:relative; padding-top:16px">
+        <button type="button" onClick="{{ comboToggle }}" style="width:100%; background:#24271E; border:1px solid {{ comboLine }}; border-radius:14px; padding:13px 15px; font-family:inherit; font-size:15px; font-weight:700; color:#F0EDE1; cursor:pointer; display:flex; align-items:center; gap:10px; text-align:left" style-hover="background:#2A2E23">
+          <span style="flex:1; min-width:0">{{ comboValue }}</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9E9C8E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="m6 9 6 6 6-6"></path></svg>
+        </button>
+        <sc-if value="{{ comboOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute; left:0; right:0; top:100%; margin-top:8px; background:#1E211A; border:1px solid rgba(255,255,255,0.12); border-radius:14px; padding:6px; box-shadow:0 24px 48px -16px rgba(0,0,0,0.85); z-index:5">
+            <sc-for list="{{ comboItems }}" as="m" hint-placeholder-count="4">
+              <button type="button" onClick="{{ m.pick }}" style="width:100%; border:none; border-radius:9px; padding:11px 13px; font-family:inherit; cursor:pointer; text-align:left; background:{{ m.bg }}; color:{{ m.ink }}; display:flex; align-items:center; gap:10px" style-hover="background:rgba(255,255,255,0.06)">
+                <span style="flex:1; min-width:0; font-size:14px; font-weight:800">{{ m.name }}</span>
+                <span style="flex:none; font-size:11px; font-weight:700; color:#8C8A7D">{{ m.source }}</span>
+                <sc-if value="{{ m.on }}" hint-placeholder-val="{{ false }}">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8FD6A6" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M20 6 9 17l-5-5"></path></svg>
+                </sc-if>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D; padding-top:28px">Tabs</div>
+      <div style="display:flex; gap:4px; background:rgba(255,255,255,0.05); border-radius:14px; padding:4px; margin-top:14px">
+        <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+          <button type="button" onClick="{{ t.pick }}" style="flex:1; border:none; border-radius:9px; padding:11px 0; font-family:inherit; font-size:13px; font-weight:800; cursor:pointer; background:{{ t.bg }}; color:{{ t.ink }}">{{ t.name }}</button>
+        </sc-for>
+      </div>
+      <div style="background:#24271E; border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:16px 18px; margin-top:12px">
+        <div style="font-size:15px; font-weight:800; letter-spacing:-0.01em">{{ tabBody.title }}</div>
+        <div style="font-size:13px; font-weight:700; color:#9E9C8E; padding-top:5px; line-height:1.5">{{ tabBody.line }}</div>
+      </div>
+
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D; padding-top:28px">Popover</div>
+      <div style="position:relative; display:inline-block; margin-top:14px">
+        <button type="button" onClick="{{ popToggle }}" style="border:1px solid rgba(255,255,255,0.10); border-radius:999px; padding:11px 18px; font-family:inherit; font-size:13px; font-weight:800; cursor:pointer; background:#2E3227; color:#F0EDE1" style-hover="background:#383D2F">Why am I behind?</button>
+        <sc-if value="{{ popOpen }}" hint-placeholder-val="{{ true }}">
+          <div style="position:absolute; left:0; top:100%; margin-top:10px; width:268px; background:#1E211A; border:1px solid rgba(255,255,255,0.12); border-radius:14px; padding:14px 16px; box-shadow:0 24px 48px -16px rgba(0,0,0,0.85); z-index:4">
+            <div style="font-size:14px; font-weight:800">Nina climbed 1,120 m</div>
+            <div style="font-size:12px; font-weight:700; color:#9E9C8E; padding-top:5px; line-height:1.5">Two hill runs on Saturday. You have three days to make up 280 m.</div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <div style="min-width:0; background:#171912; border:1px solid rgba(255,255,255,0.07); border-radius:22px; padding:22px 24px 26px">
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D">Carousel — swipeable metric cards</div>
+      <div style="overflow:hidden; border-radius:22px; margin-top:16px">
+        <div style="display:flex; gap:12px; transform:translateX({{ carouselShift }}); transition:transform 320ms cubic-bezier(0.16,1,0.3,1)">
+          <sc-for list="{{ carousel }}" as="c" hint-placeholder-count="3">
+            <div style="flex:none; width:214px; background:#24271E; border:1px solid rgba(255,255,255,0.07); border-radius:22px; padding:16px 17px 17px">
+              <span style="display:inline-flex; align-items:center; border-radius:999px; padding:4px 9px; font-size:10px; font-weight:800; background:{{ c.tagBg }}; color:{{ c.tagInk }}">{{ c.tag }}</span>
+              <div style="font-size:15px; font-weight:800; letter-spacing:-0.01em; padding-top:10px">{{ c.name }}</div>
+              <div style="font-size:26px; font-weight:800; letter-spacing:-0.03em; line-height:1; padding-top:8px">{{ c.val }}</div>
+              <div style="font-size:11px; font-weight:700; color:#9E9C8E; padding-top:3px">{{ c.unit }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:12px; padding-top:16px">
+        <span style="flex:1; display:flex; gap:6px">
+          <sc-for list="{{ carouselDots }}" as="d" hint-placeholder-count="3">
+            <span style="width:{{ d.w }}; height:6px; border-radius:999px; background:{{ d.bg }}; display:block; transition:all 240ms ease"></span>
+          </sc-for>
+        </span>
+        <button type="button" onClick="{{ carouselPrev }}" style="flex:none; width:38px; height:38px; border:1px solid rgba(255,255,255,0.10); border-radius:999px; background:#2E3227; cursor:pointer; display:flex; align-items:center; justify-content:center" style-hover="background:#383D2F">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F0EDE1" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
+        </button>
+        <button type="button" onClick="{{ carouselNext }}" style="flex:none; width:38px; height:38px; border:1px solid rgba(255,255,255,0.10); border-radius:999px; background:#2E3227; cursor:pointer; display:flex; align-items:center; justify-content:center" style-hover="background:#383D2F">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F0EDE1" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+        </button>
+      </div>
+
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D; padding-top:28px">Toast — fire it</div>
+      <div style="display:flex; gap:10px; padding-top:14px">
+        <button type="button" onClick="{{ toastWin }}" style="border:none; border-radius:999px; padding:11px 18px; font-family:inherit; font-size:13px; font-weight:800; cursor:pointer; background:#35804F; color:#FFFFFF" style-hover="filter:brightness(1.12)">Win toast</button>
+        <button type="button" onClick="{{ toastLose }}" style="border:none; border-radius:999px; padding:11px 18px; font-family:inherit; font-size:13px; font-weight:800; cursor:pointer; background:#C2551D; color:#FFFFFF" style-hover="filter:brightness(1.12)">Ember toast</button>
+      </div>
+      <div style="min-height:76px; padding-top:14px">
+        <sc-if value="{{ toast.on }}" hint-placeholder-val="{{ true }}">
+          <div style="background:{{ toast.bg }}; border:1px solid {{ toast.edge }}; border-radius:22px; padding:14px 16px; display:flex; align-items:center; gap:12px; box-shadow:0 20px 40px -18px rgba(0,0,0,0.8)">
+            <span style="flex:none; width:32px; height:32px; border-radius:999px; background:{{ toast.iconBg }}; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; color:{{ toast.iconInk }}">{{ toast.glyph }}</span>
+            <div style="flex:1; min-width:0">
+              <div style="font-size:14px; font-weight:800; letter-spacing:-0.01em">{{ toast.title }}</div>
+              <div style="font-size:12px; font-weight:700; color:#9E9C8E; padding-top:2px">{{ toast.line }}</div>
+            </div>
+            <button type="button" onClick="{{ toastClose }}" style="flex:none; width:28px; height:28px; border:none; border-radius:999px; background:rgba(255,255,255,0.07); cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0" style-hover="background:rgba(255,255,255,0.14)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#D9D5C6" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+            </button>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex; align-items:center; gap:14px; padding:52px 0 0">
+    <span style="font-size:12px; font-weight:800; letter-spacing:0.16em; text-transform:uppercase; color:#8FD6A6">07 · Overlays</span>
+    <span style="flex:1; height:1px; background:rgba(255,255,255,0.09); display:block"></span>
+  </div>
+
+  <p style="margin:20px 0 0; font-size:14px; font-weight:700; line-height:1.6; color:#9E9C8E; max-width:640px">Shown in-frame because that is the only place they make sense. The drawer is the default — it reaches the thumb. Dialogs are for decisions that can destroy something.</p>
+
+  <div style="display:flex; flex-wrap:wrap; gap:24px; padding-top:24px; align-items:flex-start">
+    <div>
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D; padding-bottom:12px">Drawer</div>
+      <div style="width:320px; height:480px; position:relative; overflow:hidden; border-radius:36px; background:#171912; border:1px solid rgba(255,255,255,0.09)">
+        <div style="padding:22px 20px 0">
+          <div style="font-size:20px; font-weight:800; letter-spacing:-0.02em">Fights</div>
+          <div style="font-size:12px; font-weight:700; color:#9E9C8E; padding-top:2px">4 live</div>
+          <div style="background:#24271E; border:1px solid rgba(255,255,255,0.07); border-radius:22px; padding:13px 15px; margin-top:16px">
+            <div style="font-size:14px; font-weight:800">Step Derby</div>
+            <div style="font-size:12px; font-weight:700; color:#9E9C8E; padding-top:2px">vs Marc · steps</div>
+          </div>
+          <button type="button" onClick="{{ drawerOpen }}" style="width:100%; border:1px solid rgba(255,255,255,0.10); border-radius:999px; padding:12px 0; margin-top:14px; font-family:inherit; font-size:13px; font-weight:800; cursor:pointer; background:#2E3227; color:#F0EDE1" style-hover="background:#383D2F">Open drawer</button>
+        </div>
+
+        <sc-if value="{{ drawerOn }}" hint-placeholder-val="{{ true }}">
+          <div onClick="{{ drawerClose }}" style="position:absolute; inset:0; background:rgba(6,7,4,0.62); cursor:pointer"></div>
+        </sc-if>
+        <sc-if value="{{ drawerOn }}" hint-placeholder-val="{{ true }}">
+          <div style="position:absolute; left:0; right:0; bottom:0; background:#1E211A; border-top:1px solid rgba(255,255,255,0.12); border-radius:28px 28px 0 0; padding:10px 20px 22px">
+            <span style="width:44px; height:5px; border-radius:3px; background:rgba(255,255,255,0.22); display:block; margin:0 auto 16px"></span>
+            <div style="font-size:18px; font-weight:800; letter-spacing:-0.015em">Log a walk</div>
+            <div style="font-size:13px; font-weight:700; color:#9E9C8E; padding-top:4px">Counts toward Step Derby.</div>
+            <div style="display:flex; flex-direction:column; gap:8px; padding-top:16px">
+              <div style="background:#24271E; border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:12px 14px; display:flex; align-items:center; gap:10px">
+                <span style="flex:1; font-size:14px; font-weight:800">Distance</span>
+                <span style="font-size:14px; font-weight:800; color:#9E9C8E">3.2 km</span>
+              </div>
+              <div style="background:#24271E; border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:12px 14px; display:flex; align-items:center; gap:10px">
+                <span style="flex:1; font-size:14px; font-weight:800">Steps</span>
+                <span style="font-size:14px; font-weight:800; color:#9E9C8E">4,180</span>
+              </div>
+            </div>
+            <button type="button" onClick="{{ drawerClose }}" style="width:100%; height:54px; border:none; border-radius:999px; background:#35804F; margin-top:16px; font-family:inherit; font-size:15px; font-weight:800; color:#FFFFFF; cursor:pointer" style-hover="filter:brightness(1.1)">Add it</button>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D; padding-bottom:12px">Dialog</div>
+      <div style="width:320px; height:480px; position:relative; overflow:hidden; border-radius:36px; background:#171912; border:1px solid rgba(255,255,255,0.09)">
+        <div style="padding:22px 20px 0">
+          <div style="font-size:20px; font-weight:800; letter-spacing:-0.02em">Sunday Climb</div>
+          <div style="font-size:12px; font-weight:700; color:#9E9C8E; padding-top:2px">vs Nina · elevation</div>
+          <button type="button" onClick="{{ dialogOpen }}" style="width:100%; border:1px solid rgba(239,148,87,0.35); border-radius:999px; padding:12px 0; margin-top:18px; font-family:inherit; font-size:13px; font-weight:800; cursor:pointer; background:transparent; color:#EF9457" style-hover="background:rgba(194,85,29,0.16)">Leave this fight</button>
+        </div>
+
+        <sc-if value="{{ dialogOn }}" hint-placeholder-val="{{ true }}">
+          <div onClick="{{ dialogClose }}" style="position:absolute; inset:0; background:rgba(6,7,4,0.68); display:flex; align-items:center; justify-content:center; padding:24px; cursor:pointer">
+            <div style="width:100%; background:#1E211A; border:1px solid rgba(255,255,255,0.12); border-radius:22px; padding:22px 20px; cursor:default; box-shadow:0 30px 60px -20px rgba(0,0,0,0.9)">
+              <div style="font-size:18px; font-weight:800; letter-spacing:-0.015em">Leave Sunday Climb?</div>
+              <div style="font-size:13px; font-weight:700; color:#9E9C8E; padding-top:7px; line-height:1.5">Nina takes the win and your 12 day streak resets. This can't be undone.</div>
+              <div style="display:flex; gap:9px; padding-top:18px">
+                <button type="button" onClick="{{ dialogClose }}" style="flex:1; border:1px solid rgba(255,255,255,0.10); border-radius:999px; padding:13px 0; font-family:inherit; font-size:14px; font-weight:800; cursor:pointer; background:#2E3227; color:#F0EDE1" style-hover="background:#383D2F">Stay</button>
+                <button type="button" onClick="{{ dialogClose }}" style="flex:1; border:none; border-radius:999px; padding:13px 0; font-family:inherit; font-size:14px; font-weight:800; cursor:pointer; background:#C2551D; color:#FFFFFF" style-hover="filter:brightness(1.1)">Leave</button>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D; padding-bottom:12px">Empty state</div>
+      <div style="width:320px; height:480px; position:relative; overflow:hidden; border-radius:36px; background:#171912; border:1px solid rgba(255,255,255,0.09); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px 28px; text-align:center">
+        <span style="width:64px; height:64px; border-radius:999px; background:rgba(53,128,79,0.20); display:flex; align-items:center; justify-content:center">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8FD6A6" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>
+        </span>
+        <div style="font-size:19px; font-weight:800; letter-spacing:-0.02em; padding-top:18px">No fights yet</div>
+        <div style="font-size:13px; font-weight:700; color:#9E9C8E; padding-top:7px; line-height:1.55">Pick a friend and a metric. Steps is the easy first one.</div>
+        <button type="button" style="border:none; border-radius:999px; padding:14px 24px; margin-top:20px; font-family:inherit; font-size:14px; font-weight:800; cursor:pointer; background:#35804F; color:#FFFFFF" style-hover="filter:brightness(1.12)">Start one</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex; align-items:center; gap:14px; padding:52px 0 0">
+    <span style="font-size:12px; font-weight:800; letter-spacing:0.16em; text-transform:uppercase; color:#8FD6A6">08 · Progress</span>
+    <span style="flex:1; height:1px; background:rgba(255,255,255,0.09); display:block"></span>
+  </div>
+
+  <p style="margin:20px 0 0; font-size:14px; font-weight:700; line-height:1.6; color:#9E9C8E; max-width:640px">One component, four contexts. Gold on a moss fill, ember or moss on a card, ring when the number matters more than the trend. Track is always the same 9% white.</p>
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; padding-top:24px; align-items:start">
+    <div style="min-width:0; background:#171912; border:1px solid rgba(255,255,255,0.07); border-radius:22px; padding:22px 24px 24px">
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D">Bars</div>
+      <div style="display:flex; flex-direction:column; gap:20px; padding-top:18px">
+        <div>
+          <div style="display:flex; justify-content:space-between; padding-bottom:9px; font-size:12px; font-weight:800"><span>On a moss fill · 10px</span><span style="color:#F6C450">54%</span></div>
+          <span style="height:10px; border-radius:999px; background:rgba(0,0,0,0.32); overflow:hidden; display:block"><span style="display:block; height:10px; width:54%; border-radius:999px; background:#F6C450"></span></span>
+        </div>
+        <div>
+          <div style="display:flex; justify-content:space-between; padding-bottom:9px; font-size:12px; font-weight:800"><span>On a card, ahead · 7px</span><span style="color:#8FD6A6">72%</span></div>
+          <span style="height:7px; border-radius:999px; background:rgba(255,255,255,0.09); overflow:hidden; display:block"><span style="display:block; height:7px; width:72%; border-radius:999px; background:#35804F"></span></span>
+        </div>
+        <div>
+          <div style="display:flex; justify-content:space-between; padding-bottom:9px; font-size:12px; font-weight:800"><span>On a card, behind · 7px</span><span style="color:#EF9457">38%</span></div>
+          <span style="height:7px; border-radius:999px; background:rgba(255,255,255,0.09); overflow:hidden; display:block"><span style="display:block; height:7px; width:38%; border-radius:999px; background:#C2551D"></span></span>
+        </div>
+        <div>
+          <div style="display:flex; justify-content:space-between; padding-bottom:9px; font-size:12px; font-weight:800"><span>Complete</span><span style="color:#8FD6A6">Done</span></div>
+          <span style="height:7px; border-radius:999px; background:rgba(255,255,255,0.09); overflow:hidden; display:block"><span style="display:block; height:7px; width:100%; border-radius:999px; background:#35804F"></span></span>
+        </div>
+        <div>
+          <div style="display:flex; justify-content:space-between; padding-bottom:9px; font-size:12px; font-weight:800"><span>Two-up · you vs them</span><span style="color:#9E9C8E">26,410 / 22,100</span></div>
+          <div style="display:flex; flex-direction:column; gap:5px">
+            <span style="height:7px; border-radius:999px; background:rgba(255,255,255,0.09); overflow:hidden; display:block"><span style="display:block; height:7px; width:100%; border-radius:999px; background:#35804F"></span></span>
+            <span style="height:7px; border-radius:999px; background:rgba(255,255,255,0.09); overflow:hidden; display:block"><span style="display:block; height:7px; width:84%; border-radius:999px; background:#6F6D62"></span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="min-width:0; background:#171912; border:1px solid rgba(255,255,255,0.07); border-radius:22px; padding:22px 24px 24px">
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D">Rings — 76 / 56 / 40px</div>
+      <div style="display:flex; align-items:center; gap:22px; padding-top:20px">
+        <div style="flex:none; position:relative; width:76px; height:76px">
+          <svg width="76" height="76" viewBox="0 0 76 76" style="display:block; transform:rotate(-90deg)">
+            <circle cx="38" cy="38" r="30" fill="none" stroke="rgba(255,255,255,0.09)" stroke-width="9"></circle>
+            <circle cx="38" cy="38" r="30" fill="none" stroke="#35804F" stroke-width="9" stroke-linecap="round" stroke-dasharray="188.5" stroke-dashoffset="86.7"></circle>
+          </svg>
+          <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:800; letter-spacing:-0.02em">54%</div>
+        </div>
+        <div style="flex:none; position:relative; width:56px; height:56px">
+          <svg width="56" height="56" viewBox="0 0 56 56" style="display:block; transform:rotate(-90deg)">
+            <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,0.09)" stroke-width="7"></circle>
+            <circle cx="28" cy="28" r="22" fill="none" stroke="#C2551D" stroke-width="7" stroke-linecap="round" stroke-dasharray="138.2" stroke-dashoffset="85.7"></circle>
+          </svg>
+          <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800">38%</div>
+        </div>
+        <div style="flex:none; position:relative; width:40px; height:40px">
+          <svg width="40" height="40" viewBox="0 0 40 40" style="display:block; transform:rotate(-90deg)">
+            <circle cx="20" cy="20" r="15.5" fill="none" stroke="rgba(255,255,255,0.09)" stroke-width="5"></circle>
+            <circle cx="20" cy="20" r="15.5" fill="none" stroke="#35804F" stroke-width="5" stroke-linecap="round" stroke-dasharray="97.4" stroke-dashoffset="0"></circle>
+          </svg>
+          <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8FD6A6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D; padding-top:28px">Streak strip — 7 day</div>
+      <div style="display:flex; gap:8px; padding-top:16px">
+        <sc-for list="{{ streak }}" as="d" hint-placeholder-count="7">
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:7px">
+            <span style="width:100%; aspect-ratio:1; border-radius:14px; background:{{ d.bg }}; box-shadow:{{ d.edge }}; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; color:{{ d.ink }}">{{ d.d }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:flex; align-items:center; gap:12px; padding-top:14px">
+        <span style="flex:1; font-size:13px; font-weight:700; color:#9E9C8E">Hit · missed · today · not yet</span>
+        <span style="flex:none; display:inline-flex; align-items:center; border-radius:999px; padding:5px 11px; font-size:11px; font-weight:800; background:rgba(246,196,80,0.20); color:#F6C450">12 day streak</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex; align-items:center; gap:14px; padding:52px 0 0">
+    <span style="font-size:12px; font-weight:800; letter-spacing:0.16em; text-transform:uppercase; color:#8FD6A6">09 · Comparison &amp; ranking</span>
+    <span style="flex:1; height:1px; background:rgba(255,255,255,0.09); display:block"></span>
+  </div>
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; padding-top:24px; align-items:start">
+    <div style="min-width:0">
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D; padding-bottom:12px">VS block — the head-to-head</div>
+      <div style="background:#24271E; border:1px solid rgba(255,255,255,0.07); border-radius:22px; padding:20px 20px 22px">
+        <div style="display:flex; align-items:flex-start; gap:12px">
+          <div style="flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:9px">
+            <span style="width:64px; height:64px; border-radius:999px; background:#2E3227; box-shadow:0 0 0 3px #4B9A65; display:flex; align-items:center; justify-content:center; font-size:19px; font-weight:800; color:#E3DFD0">AM</span>
+            <span style="font-size:13px; font-weight:800">You</span>
+            <span style="font-size:26px; font-weight:800; letter-spacing:-0.03em; line-height:1; color:#8FD6A6">26,410</span>
+          </div>
+          <div style="flex:none; display:flex; flex-direction:column; align-items:center; gap:6px; padding-top:22px">
+            <span style="font-size:15px; font-weight:800; color:#6F6D62; letter-spacing:0.04em">VS</span>
+            <span style="display:inline-flex; align-items:center; border-radius:999px; padding:4px 9px; font-size:10px; font-weight:800; background:rgba(53,128,79,0.24); color:#8FD6A6">+4,310</span>
+          </div>
+          <div style="flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:9px">
+            <span style="width:64px; height:64px; border-radius:999px; background:#2E3227; border:1px solid rgba(255,255,255,0.10); display:flex; align-items:center; justify-content:center; font-size:19px; font-weight:800; color:#D9D5C6">MB</span>
+            <span style="font-size:13px; font-weight:800; color:#9E9C8E">Marc</span>
+            <span style="font-size:26px; font-weight:800; letter-spacing:-0.03em; line-height:1; color:#9E9C8E">22,100</span>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:5px; padding-top:18px">
+          <span style="height:9px; border-radius:999px; background:rgba(255,255,255,0.09); overflow:hidden; display:block"><span style="display:block; height:9px; width:100%; border-radius:999px; background:#35804F"></span></span>
+          <span style="height:9px; border-radius:999px; background:rgba(255,255,255,0.09); overflow:hidden; display:block"><span style="display:block; height:9px; width:84%; border-radius:999px; background:#6F6D62"></span></span>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:space-between; padding-top:14px; font-size:12px; font-weight:700; color:#9E9C8E">
+          <span>Steps · 7 day fight</span>
+          <span style="font-weight:800; color:#F6C450">3 days left</span>
+        </div>
+      </div>
+
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D; padding:24px 0 12px">Losing variant</div>
+      <div style="background:#24271E; border:1px solid rgba(255,255,255,0.07); border-radius:22px; padding:16px 18px 18px; display:flex; align-items:center; gap:14px">
+        <span style="flex:none; width:48px; height:48px; border-radius:999px; background:#2E3227; border:1px solid rgba(255,255,255,0.10); display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:800; color:#D9D5C6">AM</span>
+        <div style="flex:1; min-width:0">
+          <div style="font-size:15px; font-weight:800; letter-spacing:-0.01em">Sunday Climb</div>
+          <div style="font-size:12px; font-weight:700; color:#EF9457; padding-top:2px">280 m behind Nina</div>
+        </div>
+        <span style="flex:none; font-size:22px; font-weight:800; letter-spacing:-0.025em; color:#EF9457">840</span>
+      </div>
+    </div>
+
+    <div style="min-width:0">
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D; padding-bottom:12px">Leaderboard row — you always highlighted</div>
+      <div style="display:flex; flex-direction:column; gap:8px">
+        <sc-for list="{{ leaders }}" as="l" hint-placeholder-count="5">
+          <div style="background:{{ l.bg }}; border:1px solid {{ l.edge }}; border-radius:22px; padding:12px 15px; display:flex; align-items:center; gap:13px">
+            <span style="flex:none; width:22px; text-align:center; font-size:14px; font-weight:800; color:{{ l.rankInk }}; font-variant-numeric:tabular-nums">{{ l.rank }}</span>
+            <span style="flex:none; width:38px; height:38px; border-radius:999px; background:#2E3227; border:1px solid rgba(255,255,255,0.10); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; color:#D9D5C6">{{ l.mono }}</span>
+            <span style="flex:1; min-width:0; font-size:15px; font-weight:800; letter-spacing:-0.01em">{{ l.name }}</span>
+            <span style="flex:none; font-size:11px; font-weight:800; color:{{ l.moveInk }}">{{ l.moveGlyph }}</span>
+            <span style="flex:none; font-size:17px; font-weight:800; letter-spacing:-0.02em; font-variant-numeric:tabular-nums">{{ l.val }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="font-size:12px; font-weight:700; color:#6F6D62; padding-top:12px; line-height:1.5">Rank 1 takes gold ink. Movement arrows are moss up, ember down, ash-faint dash for no change. Active minutes shown — the row never names its own metric, the screen header does.</div>
+    </div>
+  </div>
+
+  <div style="display:flex; align-items:center; gap:14px; padding:52px 0 0">
+    <span style="font-size:12px; font-weight:800; letter-spacing:0.16em; text-transform:uppercase; color:#8FD6A6">10 · History</span>
+    <span style="flex:1; height:1px; background:rgba(255,255,255,0.09); display:block"></span>
+  </div>
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; padding-top:24px; align-items:start">
+    <div style="min-width:0; background:#171912; border:1px solid rgba(255,255,255,0.07); border-radius:22px; padding:22px 24px 24px">
+      <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px">
+        <div>
+          <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D">Sparkline · 12 weeks</div>
+          <div style="font-size:26px; font-weight:800; letter-spacing:-0.03em; padding-top:8px">18,420</div>
+          <div style="font-size:12px; font-weight:700; color:#8FD6A6; padding-top:3px">up 31% since May</div>
+        </div>
+        <span style="display:inline-flex; align-items:center; border-radius:999px; padding:5px 11px; font-size:11px; font-weight:800; background:rgba(53,128,79,0.24); color:#8FD6A6">Steps</span>
+      </div>
+      <svg viewBox="0 0 268 76" preserveAspectRatio="none" style="width:100%; height:88px; display:block; margin-top:18px; overflow:visible">
+        <polygon points="{{ sparkArea }}" fill="rgba(53,128,79,0.20)"></polygon>
+        <polyline points="{{ sparkLine }}" fill="none" stroke="#8FD6A6" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></polyline>
+      </svg>
+      <div style="display:flex; justify-content:space-between; padding-top:10px; font-size:11px; font-weight:700; color:#6F6D62">
+        <span>May</span><span>Jun</span><span>Jul</span><span>Aug</span>
+      </div>
+    </div>
+
+    <div style="min-width:0; background:#171912; border:1px solid rgba(255,255,255,0.07); border-radius:22px; padding:22px 24px 24px">
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D">Bar chart · this week</div>
+      <div style="display:flex; align-items:flex-end; gap:9px; height:96px; padding-top:20px">
+        <sc-for list="{{ bars }}" as="b" hint-placeholder-count="7">
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:0; height:100%">
+            <span style="width:100%; height:{{ b.h }}; border-radius:9px; background:{{ b.bg }}; display:block"></span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:flex; gap:9px; padding-top:10px">
+        <sc-for list="{{ bars }}" as="b" hint-placeholder-count="7">
+          <span style="flex:1; text-align:center; font-size:11px; font-weight:700; color:#6F6D62">{{ b.label }}</span>
+        </sc-for>
+      </div>
+      <div style="font-size:12px; font-weight:700; color:#6F6D62; padding-top:14px; line-height:1.5">Today is gold, days inside the current fight are moss, earlier days drop to 42% moss. No gridlines, no axis — the number lives above the chart.</div>
+    </div>
+  </div>
+
+  <div style="display:flex; align-items:center; gap:14px; padding:52px 0 0">
+    <span style="font-size:12px; font-weight:800; letter-spacing:0.16em; text-transform:uppercase; color:#8FD6A6">11 · Navigation, feed &amp; pickers</span>
+    <span style="flex:1; height:1px; background:rgba(255,255,255,0.09); display:block"></span>
+  </div>
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; padding-top:24px; align-items:start">
+    <div style="min-width:0; background:#171912; border:1px solid rgba(255,255,255,0.07); border-radius:22px; padding:22px 24px 24px">
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D">Nav header — three shapes</div>
+      <div style="display:flex; flex-direction:column; gap:14px; padding-top:18px">
+        <div style="background:#24271E; border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:12px 14px; display:flex; align-items:center; justify-content:space-between; gap:12px">
+          <div>
+            <div style="font-size:22px; font-weight:800; letter-spacing:-0.025em">Fights</div>
+            <div style="font-size:12px; font-weight:700; color:#9E9C8E; padding-top:1px">4 live · 2 waiting</div>
+          </div>
+          <span style="flex:none; width:38px; height:38px; border-radius:999px; background:#2E3227; border:1px solid rgba(255,255,255,0.09); display:flex; align-items:center; justify-content:center">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#F0EDE1" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>
+          </span>
+        </div>
+        <div style="background:#24271E; border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:12px 14px; display:flex; align-items:center; gap:12px">
+          <span style="flex:none; width:38px; height:38px; border-radius:999px; background:#2E3227; border:1px solid rgba(255,255,255,0.09); display:flex; align-items:center; justify-content:center">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#F0EDE1" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
+          </span>
+          <div style="flex:1; min-width:0; text-align:center">
+            <div style="font-size:15px; font-weight:800; letter-spacing:-0.01em">Step Derby</div>
+            <div style="font-size:11px; font-weight:700; color:#9E9C8E">3 days left</div>
+          </div>
+          <span style="flex:none; width:38px; height:38px; border-radius:999px; background:#2E3227; border:1px solid rgba(255,255,255,0.09); display:flex; align-items:center; justify-content:center">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#F0EDE1" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1.4"></circle><circle cx="12" cy="12" r="1.4"></circle><circle cx="12" cy="19" r="1.4"></circle></svg>
+          </span>
+        </div>
+        <div style="background:#24271E; border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:12px 14px; display:flex; align-items:center; gap:12px">
+          <span style="flex:none; width:38px; height:38px; border-radius:999px; background:#2E3227; border:1px solid rgba(255,255,255,0.09); display:flex; align-items:center; justify-content:center">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#F0EDE1" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+          </span>
+          <div style="flex:1; min-width:0">
+            <div style="font-size:15px; font-weight:800; letter-spacing:-0.01em">New challenge</div>
+            <div style="font-size:11px; font-weight:700; color:#9E9C8E">Step 1 of 3</div>
+          </div>
+          <span style="flex:none; font-size:13px; font-weight:800; color:#8FD6A6">Skip</span>
+        </div>
+      </div>
+
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D; padding-top:28px">Activity feed row</div>
+      <div style="display:flex; flex-direction:column; gap:9px; padding-top:16px">
+        <sc-for list="{{ feed }}" as="f" hint-placeholder-count="3">
+          <div style="background:#24271E; border:1px solid rgba(255,255,255,0.07); border-radius:22px; padding:13px 15px; display:flex; align-items:center; gap:12px">
+            <span style="flex:none; width:34px; height:34px; border-radius:999px; background:{{ f.iconBg }}; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; color:{{ f.iconInk }}">{{ f.glyph }}</span>
+            <div style="flex:1; min-width:0">
+              <div style="font-size:14px; font-weight:800; letter-spacing:-0.01em">{{ f.title }}</div>
+              <div style="font-size:12px; font-weight:700; color:#9E9C8E; padding-top:2px">{{ f.line }}</div>
+            </div>
+            <span style="flex:none; font-size:12px; font-weight:700; color:#6F6D62">{{ f.time }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="min-width:0; background:#171912; border:1px solid rgba(255,255,255,0.07); border-radius:22px; padding:22px 24px 24px">
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D">Duration picker</div>
+      <div style="display:flex; gap:8px; padding-top:16px">
+        <sc-for list="{{ durPick }}" as="c" hint-placeholder-count="4">
+          <button type="button" onClick="{{ c.pick }}" style="flex:1; min-width:0; border:1px solid {{ c.line }}; border-radius:14px; padding:12px 0; font-family:inherit; font-size:12px; font-weight:800; cursor:pointer; background:{{ c.bg }}; color:{{ c.ink }}">{{ c.name }}</button>
+        </sc-for>
+      </div>
+
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D; padding-top:26px">Date range — start and end are filled, middle is wash</div>
+      <div style="display:flex; gap:6px; padding-top:16px">
+        <sc-for list="{{ rangeDays }}" as="d" hint-placeholder-count="7">
+          <span style="flex:1; aspect-ratio:1; border-radius:14px; background:{{ d.bg }}; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:{{ d.weight }}; color:{{ d.ink }}">{{ d.n }}</span>
+        </sc-for>
+      </div>
+      <div style="font-size:12px; font-weight:700; color:#6F6D62; padding-top:12px">Sep 23 – 27 · 5 days</div>
+
+      <div style="font-size:12px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#8C8A7D; padding-top:28px">Skeletons — while a connector fetches</div>
+      <div style="display:flex; flex-direction:column; gap:10px; padding-top:16px">
+        <div style="background:#24271E; border:1px solid rgba(255,255,255,0.07); border-radius:22px; padding:14px 16px; display:flex; align-items:center; gap:13px">
+          <span style="flex:none; width:44px; height:44px; border-radius:999px; background:linear-gradient(90deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.11) 50%, rgba(255,255,255,0.05) 100%); background-size:380px 100%; animation:ffShimmer 1400ms linear infinite; display:block"></span>
+          <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:8px">
+            <span style="height:13px; width:58%; border-radius:999px; background:linear-gradient(90deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.11) 50%, rgba(255,255,255,0.05) 100%); background-size:380px 100%; animation:ffShimmer 1400ms linear infinite; display:block"></span>
+            <span style="height:10px; width:34%; border-radius:999px; background:linear-gradient(90deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.11) 50%, rgba(255,255,255,0.05) 100%); background-size:380px 100%; animation:ffShimmer 1400ms linear infinite; display:block"></span>
+          </div>
+          <span style="flex:none; height:22px; width:56px; border-radius:999px; background:linear-gradient(90deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.11) 50%, rgba(255,255,255,0.05) 100%); background-size:380px 100%; animation:ffShimmer 1400ms linear infinite; display:block"></span>
+        </div>
+        <div style="background:#24271E; border:1px solid rgba(255,255,255,0.07); border-radius:22px; padding:16px">
+          <span style="height:11px; width:42%; border-radius:999px; background:linear-gradient(90deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.11) 50%, rgba(255,255,255,0.05) 100%); background-size:380px 100%; animation:ffShimmer 1400ms linear infinite; display:block"></span>
+          <span style="height:30px; width:64%; border-radius:14px; background:linear-gradient(90deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.11) 50%, rgba(255,255,255,0.05) 100%); background-size:380px 100%; animation:ffShimmer 1400ms linear infinite; display:block; margin-top:12px"></span>
+          <span style="height:7px; width:100%; border-radius:999px; background:linear-gradient(90deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.11) 50%, rgba(255,255,255,0.05) 100%); background-size:380px 100%; animation:ffShimmer 1400ms linear infinite; display:block; margin-top:14px"></span>
+        </div>
+      </div>
+      <div style="font-size:12px; font-weight:700; color:#6F6D62; padding-top:12px; line-height:1.5">Skeletons mirror the real card's geometry exactly. Never a spinner on a card — a spinner only for a full-screen first load.</div>
+    </div>
+  </div>
+
+  <div style="display:flex; align-items:center; gap:14px; padding:52px 0 0">
+    <span style="font-size:12px; font-weight:800; letter-spacing:0.16em; text-transform:uppercase; color:#8FD6A6">12 · Motion</span>
+    <span style="flex:1; height:1px; background:rgba(255,255,255,0.09); display:block"></span>
+  </div>
+
+  <div style="background:#171912; border:1px solid rgba(255,255,255,0.07); border-radius:22px; padding:8px 0; margin-top:24px">
+    <sc-for list="{{ motion }}" as="m" hint-placeholder-count="6">
+      <div style="display:flex; align-items:center; gap:16px; padding:14px 24px">
+        <span style="flex:none; width:96px; font-size:14px; font-weight:800; color:#8FD6A6">{{ m.name }}</span>
+        <span style="flex:none; width:260px; font-size:12px; font-weight:700; color:#D9D5C6; font-variant-numeric:tabular-nums">{{ m.val }}</span>
+        <span style="flex:1; min-width:0; font-size:13px; font-weight:700; color:#9E9C8E">{{ m.use }}</span>
+      </div>
+    </sc-for>
+  </div>
+  <p style="margin:14px 0 0; font-size:13px; font-weight:700; line-height:1.6; color:#6F6D62; max-width:640px">Reduced motion is a global kill switch — every duration collapses to near-zero, nothing loops. Wins may celebrate; losses never animate.</p>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+const INK = [
+  { name: "ink-900", hex: "#0C0D08", use: "Canvas behind the app" },
+  { name: "ink-800", hex: "#171912", use: "Screen background" },
+  { name: "ink-700", hex: "#1E211A", use: "Overlays, drawers, popovers" },
+  { name: "ink-600", hex: "#24271E", use: "Cards, grouped rows" },
+  { name: "ink-500", hex: "#2E3227", use: "Controls, avatars, icon tiles" },
+  { name: "ink-400", hex: "#383D2F", use: "Control hover" },
+  { name: "bone", hex: "#F0EDE1", use: "Primary text, switch knob" },
+  { name: "bone-dim", hex: "#D9D5C6", use: "Text on ink-500 controls" },
+  { name: "ash", hex: "#9E9C8E", use: "Secondary text" },
+  { name: "ash-dim", hex: "#8C8A7D", use: "Eyebrows, disabled labels" },
+  { name: "ash-faint", hex: "#6F6D62", use: "Captions, chevrons" },
+  { name: "hairline", hex: "rgba(255,255,255,0.07)", use: "Card border — the depth system" }
+];
+
+const MOSS = [
+  { name: "moss-600", hex: "#2F6B44", use: "Day-mode fill" },
+  { name: "moss-500", hex: "#35804F", use: "Night fill — CTAs, hero card" },
+  { name: "moss-400", hex: "#4B9A65", use: "Selected borders, focus ring" },
+  { name: "moss-300", hex: "#8FD6A6", use: "Text and icons on dark" },
+  { name: "moss-100", hex: "#DCF0E2", use: "Text on a moss fill" },
+  { name: "moss-wash", hex: "rgba(53,128,79,0.18)", use: "Selected row, soft panel" }
+];
+
+const EMBER = [
+  { name: "ember-700", hex: "#8F5A30", use: "Day-mode text" },
+  { name: "ember-500", hex: "#C2551D", use: "Fill — send, leave, behind" },
+  { name: "ember-300", hex: "#EF9457", use: "Text and icons on dark" },
+  { name: "ember-wash", hex: "rgba(194,85,29,0.16)", use: "Notice panels" },
+  { name: "gold-400", hex: "#F6C450", use: "Progress fill only" },
+  { name: "gold-ink", hex: "#42320A", use: "Text on gold" }
+];
+
+const DAY = [
+  { name: "cream", hex: "#FDFAF4", use: "Day screen background" },
+  { name: "cream-tint", hex: "#F6F3EB", use: "Day grouped-list background" },
+  { name: "sand", hex: "#F2EDE3", use: "Day avatar plate" },
+  { name: "sand-line", hex: "#F3EDE3", use: "Day divider, track" },
+  { name: "dash", hex: "#DFD8C6", use: "Day dashed affordance" },
+  { name: "soil", hex: "#33302B", use: "Day primary text" },
+  { name: "soil-mid", hex: "#6B665C", use: "Day secondary text" },
+  { name: "moss-wash-day", hex: "#EDF3EA", use: "Day moss panel" },
+  { name: "ember-wash-day", hex: "#FAEDE2", use: "Day ember panel" }
+];
+
+const RADII = [
+  { name: "pill · 999px", px: "999px", use: "Buttons, chips, badges, avatars, switches" },
+  { name: "card · 22px", px: "22px", use: "Every card, row, panel, notice and tile" },
+  { name: "field · 14px", px: "14px", use: "Form fields, tab bodies, drawer rows" },
+  { name: "glyph · 9px", px: "9px", use: "Result glyphs, icon tiles, menu items" },
+  { name: "shell · 28 / 36px", px: "28px", use: "Drawer lip and device frame only — not a component token" }
+];
+
+const LEADERS = [
+  { rank: "1", name: "Nina", mono: "NK", val: "412", move: "up", you: false },
+  { rank: "2", name: "Marc", mono: "MB", val: "388", move: "same", you: false },
+  { rank: "3", name: "Maya", mono: "MR", val: "341", move: "up", you: false },
+  { rank: "4", name: "You", mono: "AM", val: "312", move: "down", you: true },
+  { rank: "5", name: "Theo", mono: "TD", val: "204", move: "same", you: false }
+];
+
+const STREAK = [
+  { d: "M", state: "hit" }, { d: "T", state: "hit" }, { d: "W", state: "hit" },
+  { d: "T", state: "miss" }, { d: "F", state: "hit" }, { d: "S", state: "today" },
+  { d: "S", state: "future" }
+];
+
+const FEED = [
+  { glyph: "W", tone: "moss", title: "You won Sleep Streak", line: "7 of 7 nights · Sam owes you a coffee", time: "2h" },
+  { glyph: "!", tone: "ember", title: "Nina passed you", line: "Sunday Climb · she leads by 280 m", time: "5h" },
+  { glyph: "+", tone: "ink", title: "Theo invited you", line: "Coffee Run · most km in a week", time: "1d" }
+];
+
+const MOTION = [
+  { name: "instant", val: "0ms", use: "Selection, chip and tab state — never animate a filter" },
+  { name: "quick", val: "150ms cubic-bezier(0.16, 1, 0.3, 1)", use: "Popovers, dropdowns, toggles" },
+  { name: "sheet", val: "320ms cubic-bezier(0.16, 1, 0.3, 1)", use: "Drawers, dialogs, carousel travel" },
+  { name: "count", val: "600ms ease-out", use: "A metric number ticking up after a sync" },
+  { name: "celebrate", val: "900ms ease-out, once", use: "Win state only. Never on a loss." },
+  { name: "shimmer", val: "1400ms linear, infinite", use: "Skeletons while a connector is fetching" }
+];
+
+const SPARK = [8, 11, 9, 14, 12, 17, 15, 19, 16, 21, 24, 22];
+
+const METRICS = [
+  { name: "Steps", source: "Apple Watch" },
+  { name: "Distance", source: "Strava" },
+  { name: "Active minutes", source: "Whoop" },
+  { name: "Sleep", source: "Whoop" }
+];
+
+const TABS = {
+  "Standings": { title: "You lead by 4,310", line: "Three days left. Marc has never closed a gap this big." },
+  "Activity": { title: "Marc walked 8.2 km", line: "Two hours ago · counted 11,400 steps toward the fight." },
+  "Rules": { title: "Most steps in 7 days", line: "Apple Watch and Strava both count. Manual entries are capped at 5,000 a day." }
+};
+
+const CAROUSEL = [
+  { name: "Steps", val: "26,410", unit: "this week", tag: "1V1", tagBg: "rgba(53,128,79,0.24)", tagInk: "#8FD6A6" },
+  { name: "Elevation", val: "840", unit: "metres climbed", tag: "1V1", tagBg: "rgba(194,85,29,0.22)", tagInk: "#EF9457" },
+  { name: "Sleep", val: "7h 20m", unit: "last night", tag: "GOAL", tagBg: "rgba(246,196,80,0.20)", tagInk: "#F6C450" }
+];
+
+class Component extends DCLogic {
+  state = {
+    slider: 12000,
+    stepper: 10000,
+    notif: true,
+    units: "km",
+    filter: "Live",
+    combo: "Steps",
+    comboOpen: false,
+    tab: "Standings",
+    pop: true,
+    carousel: 0,
+    toast: null,
+    drawer: true,
+    dialog: false
+  };
+
+  componentWillUnmount() {
+    clearTimeout(this.timer);
+  }
+
+  chip(on) {
+    return {
+      bg: on ? "#35804F" : "#24271E",
+      ink: on ? "#FFFFFF" : "#B7B4A6",
+      line: on ? "#3F9159" : "rgba(255,255,255,0.08)"
+    };
+  }
+
+  toggle(on) {
+    return { bg: on ? "#35804F" : "rgba(255,255,255,0.14)", justify: on ? "flex-end" : "flex-start" };
+  }
+
+  fireToast(kind) {
+    clearTimeout(this.timer);
+    this.setState({ toast: kind });
+    this.timer = setTimeout(() => this.setState({ toast: null }), 4000);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const fmt = n => n.toLocaleString("en-US");
+    const min = 2000, max = 25000;
+    const pct = (s.slider - min) / (max - min);
+
+    const onSlide = e => {
+      const r = e.currentTarget.getBoundingClientRect();
+      const p = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+      const step = 500;
+      this.setState({ slider: Math.round((min + p * (max - min)) / step) * step });
+    };
+
+    const toastKinds = {
+      win: {
+        on: true, glyph: "W", title: "You won Sleep Streak",
+        line: "7 of 7 nights. Sam owes you a coffee.",
+        bg: "rgba(53,128,79,0.20)", edge: "rgba(143,214,166,0.24)",
+        iconBg: "#35804F", iconInk: "#FFFFFF"
+      },
+      lose: {
+        on: true, glyph: "!", title: "Nina passed you",
+        line: "She climbed 280 m more. Three days left.",
+        bg: "rgba(194,85,29,0.18)", edge: "rgba(239,148,87,0.26)",
+        iconBg: "#C2551D", iconInk: "#FFFFFF"
+      }
+    };
+    const t = s.toast ? toastKinds[s.toast] : { on: false };
+
+    return {
+      inkSwatches: INK,
+      mossSwatches: MOSS,
+      emberSwatches: EMBER,
+      daySwatches: DAY,
+      radii: RADII,
+
+      sliderLabel: fmt(s.slider),
+      sliderPct: (pct * 100).toFixed(1) + "%",
+      sliderDown: e => { onSlide(e); e.currentTarget.setPointerCapture(e.pointerId); },
+      sliderMove: e => { if (e.buttons === 1) onSlide(e); },
+
+      stepperLabel: fmt(s.stepper),
+      onMinus: () => this.setState(p => ({ stepper: Math.max(1000, p.stepper - 1000) })),
+      onPlus: () => this.setState(p => ({ stepper: p.stepper + 1000 })),
+
+      notifSw: { ...this.toggle(s.notif), flip: () => this.setState(p => ({ notif: !p.notif })) },
+      unitSeg: ["km", "mi"].map(n => ({
+        name: n,
+        bg: n === s.units ? "#35804F" : "transparent",
+        ink: n === s.units ? "#FFFFFF" : "#9E9C8E",
+        pick: () => this.setState({ units: n })
+      })),
+      filterChips: [["Live", 4], ["Invites", 2], ["Done", 12]].map(([n, c]) => ({
+        name: n, count: c, ...this.chip(n === s.filter), pick: () => this.setState({ filter: n })
+      })),
+
+      comboValue: s.combo,
+      comboOpen: s.comboOpen,
+      comboLine: s.comboOpen ? "#4B9A65" : "rgba(255,255,255,0.10)",
+      comboToggle: () => this.setState(p => ({ comboOpen: !p.comboOpen })),
+      comboItems: METRICS.map(m => ({
+        name: m.name, source: m.source, on: m.name === s.combo,
+        bg: m.name === s.combo ? "rgba(53,128,79,0.18)" : "transparent",
+        ink: m.name === s.combo ? "#F0EDE1" : "#D9D5C6",
+        pick: () => this.setState({ combo: m.name, comboOpen: false })
+      })),
+
+      tabs: Object.keys(TABS).map(n => ({
+        name: n,
+        bg: n === s.tab ? "#35804F" : "transparent",
+        ink: n === s.tab ? "#FFFFFF" : "#9E9C8E",
+        pick: () => this.setState({ tab: n })
+      })),
+      tabBody: TABS[s.tab],
+
+      popOpen: s.pop,
+      popToggle: () => this.setState(p => ({ pop: !p.pop })),
+
+      carousel: CAROUSEL,
+      carouselShift: "-" + s.carousel * 226 + "px",
+      carouselDots: CAROUSEL.map((c, i) => ({
+        w: i === s.carousel ? "22px" : "6px",
+        bg: i === s.carousel ? "#8FD6A6" : "rgba(255,255,255,0.18)"
+      })),
+      carouselPrev: () => this.setState(p => ({ carousel: Math.max(0, p.carousel - 1) })),
+      carouselNext: () => this.setState(p => ({ carousel: Math.min(CAROUSEL.length - 1, p.carousel + 1) })),
+
+      toast: t,
+      toastWin: () => this.fireToast("win"),
+      toastLose: () => this.fireToast("lose"),
+      toastClose: () => { clearTimeout(this.timer); this.setState({ toast: null }); },
+
+      leaders: LEADERS.map(l => ({
+        ...l,
+        bg: l.you ? "rgba(53,128,79,0.18)" : "#24271E",
+        edge: l.you ? "#4B9A65" : "rgba(255,255,255,0.07)",
+        rankInk: l.rank === "1" ? "#F6C450" : "#8C8A7D",
+        moveInk: l.move === "up" ? "#8FD6A6" : l.move === "down" ? "#EF9457" : "#6F6D62",
+        moveGlyph: l.move === "up" ? "▲" : l.move === "down" ? "▼" : "—"
+      })),
+
+      streak: STREAK.map(d => {
+        const map = {
+          hit: { bg: "#35804F", ink: "#FFFFFF", edge: "none" },
+          miss: { bg: "rgba(255,255,255,0.05)", ink: "#6F6D62", edge: "none" },
+          today: { bg: "rgba(53,128,79,0.20)", ink: "#8FD6A6", edge: "0 0 0 2px #4B9A65" },
+          future: { bg: "transparent", ink: "#5E5C53", edge: "0 0 0 1px rgba(255,255,255,0.09)" }
+        };
+        return { d: d.d, ...map[d.state] };
+      }),
+
+      feed: FEED.map(f => {
+        const map = {
+          moss: { bg: "#35804F", ink: "#FFFFFF" },
+          ember: { bg: "#C2551D", ink: "#FFFFFF" },
+          ink: { bg: "#2E3227", ink: "#D9D5C6" }
+        };
+        return { ...f, iconBg: map[f.tone].bg, iconInk: map[f.tone].ink };
+      }),
+
+      motion: MOTION,
+
+      sparkLine: SPARK.map((v, i) => {
+        const x = (i / (SPARK.length - 1)) * 268;
+        const y = 68 - ((v - 6) / 20) * 60;
+        return x.toFixed(1) + "," + y.toFixed(1);
+      }).join(" "),
+      sparkArea: "0,68 " + SPARK.map((v, i) => {
+        const x = (i / (SPARK.length - 1)) * 268;
+        const y = 68 - ((v - 6) / 20) * 60;
+        return x.toFixed(1) + "," + y.toFixed(1);
+      }).join(" ") + " 268,68",
+      bars: SPARK.slice(5).map((v, i) => ({
+        h: Math.round(((v - 6) / 20) * 74) + "px",
+        bg: i === 6 ? "#F6C450" : i > 3 ? "#35804F" : "rgba(53,128,79,0.42)",
+        label: ["M", "T", "W", "T", "F", "S", "S"][i]
+      })),
+
+      rangeDays: [22, 23, 24, 25, 26, 27, 28].map(n => {
+        const inRange = n >= 23 && n <= 27;
+        const edge = n === 23 || n === 27;
+        return {
+          n: String(n),
+          bg: edge ? "#35804F" : inRange ? "rgba(53,128,79,0.20)" : "transparent",
+          ink: edge ? "#FFFFFF" : inRange ? "#8FD6A6" : "#8C8A7D",
+          weight: edge ? "800" : "700"
+        };
+      }),
+      durPick: ["3 days", "1 week", "1 month", "Custom"].map(n => ({
+        name: n, ...this.chip(n === (s.dur ?? "1 week")), pick: () => this.setState({ dur: n })
+      })),
+
+      drawerOn: s.drawer,
+      drawerOpen: () => this.setState({ drawer: true }),
+      drawerClose: () => this.setState({ drawer: false }),
+      dialogOn: s.dialog,
+      dialogOpen: () => this.setState({ dialog: true }),
+      dialogClose: () => this.setState({ dialog: false })
+    };
+  }
+}
+
+</script>
+</body>
+</html>

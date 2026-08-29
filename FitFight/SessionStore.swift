@@ -39,6 +39,10 @@ final class SessionStore: ObservableObject {
     @Published private(set) var profile: FitFightProfile?
     @Published var authError: String?
     @Published private(set) var isBusy = false
+    /// Set when every attempt to read the profile failed. A deleted account is
+    /// invisible to its own owner (`profiles_select_visible` hides `deleted_at`
+    /// rows), which would otherwise leave the app waiting forever.
+    @Published private(set) var profileUnavailable = false
 
     let client: SupabaseClient
     private static let handleChosenKey = "ff.handle.chosen"
@@ -95,11 +99,35 @@ final class SessionStore: ObservableObject {
         }
     }
 
+    #if DEBUG
+    /// Adopts a session the run script minted. Same flow as the Next.js middleware:
+    /// the script calls `admin/generate_link` with the secret key to mint a one-time
+    /// token, exchanges it at `/auth/v1/verify`, and passes the resulting tokens here.
+    /// The secret key never enters the app — only the finished session does.
+    func devAdoptSessionIfNeeded() async {
+        #if targetEnvironment(simulator)
+        guard !isSignedIn else { return }
+        let env = ProcessInfo.processInfo.environment
+        guard let access = env["FF_DEV_ACCESS_TOKEN"], !access.isEmpty,
+              let refresh = env["FF_DEV_REFRESH_TOKEN"], !refresh.isEmpty
+        else { return }
+        do {
+            _ = try await client.auth.setSession(accessToken: access, refreshToken: refresh)
+            await loadProfile()
+        } catch {
+            authError = "Dev session rejected: \(error.localizedDescription)"
+        }
+        #endif
+    }
+
+    #endif
+
     func signOut() async {
         authError = nil
         try? await client.auth.signOut()
         authSession = nil
         profile = nil
+        profileUnavailable = false
         UserDefaults.standard.removeObject(forKey: Self.handleChosenKey)
     }
 
@@ -189,6 +217,7 @@ final class SessionStore: ObservableObject {
             profile = nil
             return
         }
+        profileUnavailable = false
         for attempt in 0..<3 {
             do {
                 let row: FitFightProfile = try await client.from("profiles")
@@ -211,6 +240,7 @@ final class SessionStore: ObservableObject {
                         return
                     }
                     profile = nil
+                    profileUnavailable = true
                 } else {
                     try? await Task.sleep(nanoseconds: 400_000_000)
                 }

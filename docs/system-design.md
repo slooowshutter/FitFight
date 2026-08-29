@@ -1,8 +1,8 @@
 # FitFight system design
 
-Status: **approved architecture; detailed Metric and payment specifications remain future work**
+Status: **approved architecture and composable Fight-rule model; provider-specific Metric and payment specifications remain future work**
 
-Last reviewed: **2026-08-24**
+Last reviewed: **2026-08-29**
 Decision horizon: **the next 6–12 months**
 
 This is the source of truth for how the real FitFight product should be built. It covers the iOS app, website, backend, authentication, access, fitness providers, synchronization, scoring, notifications, links, privacy, operations, and repository layout.
@@ -28,7 +28,7 @@ These are the recommended calls that will still look sensible in a year:
 9. **Use one scoring Data source per member, per Metric, per Fight.** Do not add Apple Health steps to Garmin steps or a WHOOP workout to its Strava copy. Show the chosen source so everyone understands the comparison.
 10. **Store useful canonical history, not every raw health record.** Keep supported activity summaries and provenance for the User's product experience; keep provider payloads, routes, heart rate, sleep, and credentials only when a feature needs them and terms permit them.
 11. **Use durable jobs and idempotent processing.** Webhooks are hints, delivery can repeat or arrive out of order, and provider data can be edited or deleted.
-12. **Use a generic Metric model while shipping Steps first.** Numeric Metrics share canonical Observation storage; activities later share a separate generic activity model. Active Minutes and Workout Count stay out of production until their definitions receive a separate product-design pass.
+12. **Compose each Fight from Measure, Score, and Result while shipping Steps first.** Add a Measure or Score operation once instead of creating a new type for every combination. The server exposes only reviewed combinations, not arbitrary formulas. Numeric Metrics still share canonical Observation storage; Activities later share a separate generic activity model. See [`fight-rules.md`](fight-rules.md).
 13. **Keep stakes informational in v1.** FitFight records the agreed outcome but does not hold funds, operate a wallet, or automatically pay winners until legal, payments, and App Store review are complete.
 14. **Use Universal Links as the one link system.** The same HTTPS URL opens the exact native screen when installed and a useful Next.js page when it is not.
 15. **Treat data freshness as product data.** Every score carries its source, last successful sync, completeness state, and revision.
@@ -193,16 +193,15 @@ All members of one Fight use the same `starts_at` and `ends_at`, including a mem
 
 The creator may start immediately without waiting for invitees or schedule a future start. The creator is the initial accepted member. Pre-start invitations remain pending through `scheduled` and `live`, expire at `ends_at`, and do not reveal standings before acceptance. A late member accepts the original rules, selects a source and target once, and is scored over the entire Fight window from accessible historical and new data. Everyone is notified when the lineup changes.
 
-Starting before every invitee answers means every accepted member agrees that the disclosed pending invitees may still join before `ends_at`. When one does, the server atomically adds them and recomputes every lineup-dependent projection for all members, including ranks, Proportional shares, and the informational pot or obligations. The immutable per-person Stake and Outcome rule do not change; only the result of applying them to the newly accepted lineup does. No undisclosed person can be invited after the Fight starts.
+Starting before every invitee answers means every accepted member agrees that the disclosed pending invitees may still join before `ends_at`. When one does, the server atomically adds them and recomputes every lineup-dependent projection for all members, including ranks, Proportional shares, and the informational pot or obligations. The immutable per-person Stake and Result rule do not change; only the result of applying them to the newly accepted lineup does. No undisclosed person can be invited after the Fight starts.
 
 ### Rules, targets, and locking
 
 Fight-level terms become immutable when the first invite is accepted or the Fight becomes `scheduled`/`live`, whichever happens first:
 
-- Metric and its definition version
+- Measure, Score rule, Result rule, their versions, and all of their values
 - Fight start and end instants
 - Fight time zone
-- Outcome rule
 - Stake and currency/action text
 - Goal policy and shared/default target
 - Final synchronization grace period
@@ -224,19 +223,19 @@ The creator selects one Goal policy:
 
 The creator sets only the policy and any shared/default value. They never choose another person's final Personal target. A member who needs a lighter week can choose Easy or a custom lower target without disclosing an injury or medical reason. The purpose is to keep everyone moving, not to force identical physical output.
 
-The Fight also fixes one Outcome rule:
+The Fight also fixes one Result rule:
 
-- **Highest Total**: the largest raw Metric total wins.
-- **Proportional**: the outcome is divided according to each member's share of total qualifying activity.
-- **Hit Your Goal**: each member succeeds by reaching their accepted shared or Personal target; FitFight does not rank percentage-of-target by default because an artificially low target would be easy to game.
+- **Highest**: the largest Score wins.
+- **Proportional**: the outcome is divided according to each member's share of the Score when the Measure and Score combination permits proportional comparison.
+- **Reach**: each member succeeds by reaching the stated Score using their accepted shared or Personal target; FitFight does not rank percentage-of-target by default because an artificially low target would be easy to game.
 
-Personal targets affect the result only in Hit Your Goal. Highest Total and Proportional compare the shared raw Metric.
+Personal targets affect the result only in Hit Your Goal. Highest Score and Proportional require shared qualification thresholds so member Scores remain comparable.
 
 Start recommendations with a deterministic, explainable baseline rather than machine learning. Use a versioned rolling-history algorithm with enough valid days, produce three bands, and let the User override it. Store the algorithm version and lookback window so a recommendation can be reproduced, but keep the private baseline hidden from other members. Machine learning is only worth considering after FitFight has enough consented history and can show that it improves recommendations.
 
 ### Time
 
-Store timestamps as UTC instants. When the creator creates a Fight, automatically capture their current IANA time zone and store it as the immutable Fight time zone. Do not make them configure it manually in v1; show it in the summary before invitations are accepted. All Fight-day buckets use that zone, including daylight-saving transitions. Never use each participant's current device time zone to construct the same leaderboard.
+Store timestamps as UTC instants. When the creator creates a Fight, automatically capture their current IANA time zone and store it as the immutable Fight time zone. Do not make them configure it manually in v1; show it in the summary before invitations are accepted. Every Fight day uses that zone, including daylight-saving transitions. Never use each participant's current device time zone to construct the same leaderboard.
 
 Use a half-open Fight window: `[starts_at, ends_at)`. An event exactly at `ends_at` belongs to the next period, not this Fight. The server clock decides state transitions; the phone clock is never authoritative.
 
@@ -435,21 +434,33 @@ No provider adapter moves to production until it has:
 - User-facing consent and disconnect flow
 - Incident contact and kill switch
 
-## 9. Steps first; other Metrics later
+## 9. Steps first; compose Fight rules
 
 Provider payloads must be normalized before scoring. Do not calculate one Fight from WHOOP fields, another from Strava fields, and another from HealthKit UI totals with subtly different semantics. Numeric Metrics share a generic canonical Observation model; do not create one table per Metric.
 
+A Fight rule has three independent, readable parts:
+
+- **Measure**: Steps, distance, active minutes, workouts, or another supported activity value
+- **Score**: total, average per day, days reaching a value, or another reviewed calculation
+- **Result**: highest wins, reach a value, or proportional sharing
+
+This avoids a separate `daily_steps`, `daily_distance`, `average_daily_steps`, and `average_daily_distance` implementation. It also avoids an arbitrary formula language: the server owns a compatibility list of approved Measure and Score combinations.
+
+[`fight-rules.md`](fight-rules.md) is the detailed specification, with every worked example, the 8,000-plus-12,000 case, workout-gaming limits, invariants, and a draft Zod shape.
+
 ### Production scope
 
-| Metric | Status | Current direction |
-| --- | --- | --- |
-| Steps | **V1 production Metric** | Sum accepted step intervals inside the Fight window from one explicitly selected scoring Data source |
-| Active Minutes | Deferred | Requires a separate decision on workout duration, Apple Exercise Minutes, intensity, and cross-provider comparability |
-| Workout Count | Deferred | Easy to game by splitting sessions; requires duration, overlap, type, and manual-entry rules before production |
+Only **Steps × Total × Highest** is production scope now. It sums accepted Steps inside the Fight window from one explicitly selected Apple Health Data source. Other Measures, Score rules, and Result rules remain future product decisions.
 
-Do not equate Apple Exercise Minutes, WHOOP Strain, Strava Relative Effort, and workout duration. They are different products. If FitFight later offers those metrics, each becomes a separately named, provider-constrained Metric.
+Do not equate Apple Exercise Minutes, WHOOP Strain, Strava Relative Effort, and workout duration. They are different products. If FitFight later offers them, each receives a separately named, provider-constrained definition.
 
-Do not choose an arbitrary 10-minute Workout Count rule now. Hold a separate metric-definition discussion before either deferred Metric becomes selectable in a real Fight.
+### Workout rules
+
+A Workout Count type must state which workouts count. At minimum it needs the allowed Activity types, minimum active minutes, whether manual workouts count, how overlapping/duplicate workouts are handled, whether adjacent fragments are merged, and any maximum counted per day.
+
+A two-minute workout does not count when the type says `minimumMinutes: 20`. Merging adjacent fragments makes it harder to turn one workout into several. A Workout Days type with a maximum of one successful day per calendar day removes the incentive to split sessions further.
+
+These rules reduce casual gaming but cannot prove that someone exercised. A person can still deliberately create a fake 20-minute workout. Keep source and verification visible, and do not market consumer fitness data as cheat-proof.
 
 ### Steps and source precision
 
@@ -466,11 +477,15 @@ Future running, swimming, volleyball, and similar records are **Activities**, no
 ### Invariants
 
 - A Fight has exactly one Metric definition version.
+- A Fight has exactly one Measure, Score rule, and Result rule with immutable validated values and versions.
 - A Fight member has at most one active Data source for that Metric.
 - Every Observation has event time, received time, source, external identity, revision, and provenance.
 - The same provider record revision is idempotent.
 - A provider deletion retracts the corresponding Observation and triggers recomputation.
 - Scores are deterministic for the same observations, rules, and engine version.
+- A Score exposes its unit and explanation; the UI never presents successful days as if they were raw steps.
+- Daily averages divide by every scheduled Fight day, not only days with recorded activity.
+- Incomplete data is represented separately from zero activity.
 - Projection rows can change; Final result rows cannot change without an audited correction.
 - Other members never receive raw observations.
 
@@ -726,7 +741,7 @@ The default incomplete-data rule should be “score only verified data received 
 - Realtime may send a “Fight changed” invalidation, but the client refetches the authoritative read model; do not stream raw table rows into the UI.
 - If offline, show cached data and queue only safe drafts. Do not queue acceptance, provider consent, or finalization as if they succeeded.
 
-## 15. Scoring and outcomes
+## 15. Scoring and results
 
 The scoring engine is pure and versioned:
 
@@ -735,11 +750,13 @@ The scoring engine is pure and versioned:
     -> projections or final results
 ```
 
-### Outcome rules
+### Result rules
 
-- **Highest Total**: highest score receives the winning outcome; define a tie rule before launch (recommended: split evenly, with integer remainder handled deterministically).
-- **Proportional**: divide the pot by each member's share of total qualifying effort; specify zero-total behavior and integer rounding.
-- **Hit Your Goal**: determine success from each member's accepted shared or Personal target. Do not rank percentage-of-target unless a future Fight explicitly defines a constrained version of that rule.
+- **Highest**: the highest Score receives the winning outcome; define a tie rule before launch (recommended: split evenly, with integer remainder handled deterministically). The current Steps-only API value `highest_total` is the v1 name for this rule.
+- **Proportional**: divide the pot by each member's share of the Score when that Measure and Score combination permits proportional comparison; specify zero-score behavior and integer rounding.
+- **Reach**: succeed by reaching the stated Score. Depending on the Score rule, that can mean total Steps, average Steps per day, five successful days, or every Fight day. Do not compare or rank percentage-of-target unless a future rule explicitly defines and constrains that behavior.
+
+The same Score rule can therefore use Highest for a competition or Reach for a goal Fight.
 
 Do not let the UI independently calculate money copy. It renders server-returned amounts and explanation codes. Store money as integer minor units and record currency on the Fight.
 
@@ -1019,10 +1036,11 @@ Provider integrations require sandbox fixtures and a replay harness. Never make 
 - There is no granular per-Fight health grant; acceptance selects the source and agrees to derived Fight sharing.
 - Provider/source provenance is visible in standings, history, and future feed activity.
 - Steps is the only production Metric; Apple Health aggregate is the default, with available contributing-source labels. Generic Observation storage prevents one table per Metric.
+- Fight rules compose one versioned Measure, Score rule, and Result rule. A Measure or Score operation is implemented once, clients do not submit formulas, and the server allows only reviewed combinations.
 - The creator's current IANA time zone is captured automatically for the Fight.
 - A Fight may start immediately without waiting or be scheduled. Invitations created before start remain joinable during `live`; late members receive the common full window from accessible history, and their acceptance recomputes lineup-dependent ranks, Proportional shares, and informational stakes. New invitations cannot be created after start.
 - Personal targets lock when an accepted membership or Fight locks; a late member selects and locks theirs at acceptance. Another person never sets a member's final target.
-- Outcome rules are Highest Total, Proportional, and Hit Your Goal.
+- Result rules are Highest, Proportional, and Reach. The current Steps-only API represents Highest as `highest_total` and Hit Your Goal as `hit_your_goal` for backward compatibility.
 - Final-sync grace is 24 hours, with immediate/end reminders, early completion when all sources are complete, and verified-data-plus-incomplete fallback.
 - Health/activity history lives in `private`; shared Fight products live in RLS-protected `public`. Canonical history has no automatic age-based deletion.
 - The monorepo uses Apache-2.0, with FitFight identity protected separately by trademark.
@@ -1035,8 +1053,9 @@ Provider integrations require sandbox fixtures and a replay harness. Never make 
 3. Whether account deletion removes a member from historical shared Fights or preserves an anonymized result.
 4. Stakes/age/payment rules after legal review; v1 never holds funds.
 5. Direct-provider priority and approved sharing/retention terms after Apple Health v1.
+6. Product approval and exact definitions for each future Measure, Score operation, and allowed combination, especially Active Minutes and workout-based rules.
 
-The deferred Active Minutes and Workout Count definitions are intentionally not blockers for the Steps release.
+The deferred Active Minutes Measure and workout rules are intentionally not blockers for the Steps release.
 
 ## 24. Primary references
 

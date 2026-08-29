@@ -89,13 +89,13 @@ struct Person: Identifiable, Hashable {
 }
 
 extension FFAvatar {
-    init(_ person: Person?, size: CGFloat = 24, ring: Bool = false, pending: Bool = false) {
+    init(_ person: Person?, size: CGFloat = 24, selected: Bool = false, pending: Bool = false) {
         self.init(
-            initials: person?.initials ?? "?",
-            photo: person?.photo,
+            monogram: person?.initials ?? "?",
             size: size,
-            ring: ring,
-            pending: pending
+            selected: selected,
+            photo: person?.photo,
+            dimmed: pending
         )
     }
 }

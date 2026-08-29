@@ -12,11 +12,12 @@ enum ScreenshotExport {
 
     static let canvas = CGSize(width: 393, height: 852)
     static let tallHeight: CGFloat = 1800
+    static let designSystemSliceHeight: CGFloat = 2_600
+    static let designSystemSlices = 5
 
     static func exportAll() {
-        let themeStore = ThemeStore()
-        themeStore.baseID = .dark
-        themeStore.accentID = .blue
+        let themeStore = ThemeStore(transient: .night)
+
         let model = AppModel()
         let folder = URL.documentsDirectory.appendingPathComponent("shots", isDirectory: true)
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -26,15 +27,34 @@ enum ScreenshotExport {
             write(shot.view(themeStore, model), name: shot.name + "-full", height: tallHeight, to: folder)
         }
 
-        let light = ThemeStore()
-        light.baseID = .light
-        light.accentID = .blue
+        let light = ThemeStore(transient: .day)
+
         write(
             frame(FightsListView(), tab: .fights, themeStore: light, model: model),
             name: "light-fights",
             height: canvas.height,
             to: folder
         )
+        write(
+            frame(YouView(), tab: .you, themeStore: light, model: model),
+            name: "light-you",
+            height: canvas.height,
+            to: folder
+        )
+
+        // The design system page is one long scroll. ImageRenderer returns nil well
+        // before the texture limit, so it is exported as a run of slices instead of
+        // one tall canvas.
+        for store in [themeStore, light] {
+            for slice in 0..<designSystemSlices {
+                write(
+                    designSystem(store, slice: slice),
+                    name: "09-design-system-\(store.mode.rawValue)-\(slice + 1)",
+                    height: designSystemSliceHeight,
+                    to: folder
+                )
+            }
+        }
 
         try? Data("ok".utf8).write(to: folder.appendingPathComponent("done.txt"))
     }
@@ -90,6 +110,24 @@ enum ScreenshotExport {
         ]
     }
 
+    /// Lays the whole page out once, then shows one slice of it.
+    private static func designSystem(_ store: ThemeStore, slice: Int) -> AnyView {
+        let theme = store.theme
+        let full = designSystemSliceHeight * CGFloat(designSystemSlices)
+        return AnyView(
+            DesignSystemView()
+                .environmentObject(store)
+                .environment(\.ffTheme, theme)
+                .environment(\.colorScheme, theme.colorScheme)
+                .environment(\.ffStaticRender, true)
+                .frame(width: canvas.width, height: full, alignment: .top)
+                .offset(y: -CGFloat(slice) * designSystemSliceHeight)
+                .frame(width: canvas.width, height: designSystemSliceHeight, alignment: .top)
+                .clipped()
+                .background(theme.bg)
+        )
+    }
+
     @ViewBuilder
     private static func detail(_ fight: Fight?) -> some View {
         if let fight {
@@ -127,9 +165,9 @@ enum ScreenshotExport {
         )
     }
 
-    private static func write(_ view: AnyView, name: String, height: CGFloat, to folder: URL) {
+    private static func write(_ view: AnyView, name: String, height: CGFloat, to folder: URL, scale: CGFloat = 2) {
         let renderer = ImageRenderer(content: view.frame(width: canvas.width, height: height))
-        renderer.scale = 2
+        renderer.scale = scale
         guard let image = renderer.uiImage, let data = image.pngData() else { return }
         try? data.write(to: folder.appendingPathComponent("\(name).png"))
     }

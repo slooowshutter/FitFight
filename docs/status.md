@@ -1,6 +1,6 @@
 # FitFight status — what works, what’s fake, what’s next
 
-Read this before building. Last updated **26 Aug 2026**. App: **0.9.0**. Git: **#32** merged `develop` → `main` (production).
+Read this before building. Last updated **29 Aug 2026**. App: **0.9.0**. Git: SwiftUI design-system branch → `develop` (staging).
 
 Do **not** invent screens for dead buttons. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, notifications, social, or the marketing site unless [`backlog.md`](backlog.md) says so.
 
@@ -25,14 +25,14 @@ You still do **not** paste `sb_secret_...` anywhere.
 
 ---
 
-## After #32 (production — only you)
+## Try the design-system build on staging
 
-1. TestFlight → **Update**. Look for `0.9.0 · build N · prod` at the top.
-2. Sign in. Pick a **username** if you have not. That’s how friends find you.
-3. You → Apple Health (allow Steps).
-4. New → **Start fight once**. Wait until Fights shows it. Extra copies from mashing Start are leftover test rows.
-5. Confirm your steps show on the fight. Alone is fine.
-6. If sign-in fails: hosted **production** Supabase → Authentication → Providers → Apple → On, client ID `com.fitfight.mvp`.
+1. TestFlight → **Update**. Look for `0.9.0 · build N · staging · 29 Aug` at the top.
+2. Check Fights, a Fight detail, New, Requests, and You in both Night and Day.
+3. You → Settings → **Design system** shows all twelve sections from the approved HTML kit.
+4. New → **Start fight once**. The button shows Starting… and ignores extra taps while the insert runs.
+5. Confirm existing sign-in, username, Apple Health, friends, and Steps standings still work.
+6. If sign-in fails: hosted **develop** Supabase → Authentication → Providers → Apple → On, client ID `com.fitfight.mvp`.
 
 No Vercel. No cron secret. No “expose schema private”.
 
@@ -52,8 +52,10 @@ No Vercel. No cron secret. No “expose schema private”.
 | Standings | Sum of uploaded days in the fight window. Both phones read the same rows. |
 | Fight end | If `ends_at` is past, the app marks it finished when someone opens it. No cron. |
 | Design tab | Removed |
+| Design system | Works under You → Settings. Night/Day, Nunito, fixed Moss/Ember/Gold semantics; no accent picker. |
+| Versions | Works under You → Settings; the version label stays at the top of every root screen. |
 | WHOOP / Strava | Not built |
-| Dead buttons | Still dead (bell, share, Edit, Settings rows, Requests New). Leave them. |
+| Dead buttons | Still dead (bell, share, Edit, Units & goals, Notifications, Privacy, Payouts, Requests New). Leave them. |
 
 ---
 

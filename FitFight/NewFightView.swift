@@ -28,61 +28,54 @@ struct NewFightView: View {
 
     var body: some View {
         FFScreen {
-            VStack(alignment: .leading, spacing: 0) {
-                VStack(alignment: .leading, spacing: 2) {
-                    FFLabel(text: "New fight", role: .display)
-                    Text("Scores sync automatically. You settle up at the end.")
-                        .font(.ff(13))
-                        .foregroundStyle(theme.faint)
-                }
-                .padding(.bottom, 32)
+            FFScreenTitle(
+                title: "New fight",
+                subtitle: "Scores sync automatically. You settle up at the end."
+            )
+            .padding(.bottom, 6)
 
-                metricSection
-                peopleSection.padding(.top, theme.space.sectionGap)
-                lengthSection.padding(.top, theme.space.sectionGap)
-                stakeSection.padding(.top, theme.space.sectionGap)
-                if stake != .bragging {
-                    settlementSection.padding(.top, theme.space.sectionGap)
-                }
-                if settlement == .goal && stake != .bragging {
-                    goalSection.padding(.top, theme.space.sectionGap)
-                }
-                summary.padding(.top, theme.space.sectionGap)
-                FFButton(
-                    title: model.isCreatingFight ? "Starting…" : "Start fight",
-                    icon: "arrow.right",
-                    iconTrailing: true,
-                    enabled: canStartSteps && !model.isCreatingFight,
-                    busy: model.isCreatingFight
-                ) {
-                    startFight()
-                }
-                .padding(.top, 16)
-                if !canStartSteps {
-                    Text("Steps only for now")
-                        .font(.ff(11))
-                        .foregroundStyle(theme.faint)
-                        .padding(.top, 8)
-                }
-                if let error = model.createError, !error.isEmpty {
-                    Text(error)
-                        .font(.ff(11))
-                        .foregroundStyle(theme.red)
-                        .padding(.top, 8)
-                }
+            metricSection
+            peopleSection.padding(.top, theme.space.lg)
+            lengthSection.padding(.top, theme.space.lg)
+            stakeSection.padding(.top, theme.space.lg)
+            if stake != .bragging {
+                settlementSection.padding(.top, theme.space.lg)
             }
-            .padding(.horizontal, theme.space.screenPadding)
-            .padding(.top, 2)
-            .padding(.bottom, theme.space.xl)
+            if settlement == .goal && stake != .bragging {
+                goalSection.padding(.top, theme.space.lg)
+            }
+            summary.padding(.top, theme.space.lg)
+
+            FFScreenCTA(
+                title: model.isCreatingFight ? "Starting…" : "Start fight",
+                enabled: canStartSteps,
+                busy: model.isCreatingFight
+            ) {
+                startFight()
+            }
+            .padding(.top, 6)
+
+            if !canStartSteps {
+                Text("Steps only for now")
+                    .ffType(.caption)
+                    .foregroundStyle(theme.textFaint)
+                    .frame(maxWidth: .infinity)
+            }
+            if let error = model.createError, !error.isEmpty {
+                FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
+            }
         }
     }
 
     private var metricSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        let options = MetricKind.allCases
+        return VStack(alignment: .leading, spacing: 12) {
             FFSectionHeader(title: "Metric")
-            FFPanel {
-                ForEach(Array(MetricKind.allCases.enumerated()), id: \.element.id) { index, item in
-                    if index > 0 { FFHairline() }
+            FFGroupedRows {
+                ForEach(Array(options.enumerated()), id: \.element.id) { index, item in
+                    if index > 0 {
+                        FFDivider(visible: options[index - 1] != metric && item != metric)
+                    }
                     optionRow(title: item.title, subtitle: item.blurb, on: metric == item) {
                         metric = item
                         dailyGoal = item == .steps ? 10000 : (item == .activeMinutes ? 45 : 1)
@@ -94,49 +87,58 @@ struct NewFightView: View {
 
     private var peopleSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            FFSectionHeader(title: "Who's in", action: "\(playerCount) players")
+            HStack {
+                FFSectionHeader(title: "Who's in")
+                FFPill("\(playerCount) player\(playerCount == 1 ? "" : "s")", style: .softMoss)
+            }
             Text("Type their username. They must have opened the app and picked one. You can start alone.")
-                .font(.ff(12))
-                .foregroundStyle(theme.faint)
+                .ffType(.caption)
+                .foregroundStyle(theme.textSecondary)
+                .lineSpacing(2)
             TextField("@username", text: $friendHandle)
-                .font(.ff(15))
+                .font(.ff(15, 700))
                 .foregroundStyle(theme.text)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .submitLabel(.join)
-                .padding(.horizontal, 16)
-                .frame(height: 52)
-                .background(theme.surface, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
-                        .strokeBorder(theme.line, lineWidth: 1)
-                }
+                .padding(.horizontal, 15)
+                .padding(.vertical, 13)
+                .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
+                .ffBorder(theme.line, radius: theme.radius.field)
                 .onSubmit { addFriendFromField() }
-            FFPanel {
-                ForEach(Array(model.people.enumerated()), id: \.element.id) { index, person in
-                    if index > 0 { FFHairline() }
-                    let on = selected.contains(person.id)
-                    Button {
-                        if on { selected.remove(person.id) } else { selected.insert(person.id) }
-                    } label: {
-                        HStack(spacing: 13) {
-                            FFAvatar(person, size: 32)
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(person.name)
-                                    .font(.ff(13, .semibold))
-                                    .foregroundStyle(theme.text)
-                                Text(person.handle)
-                                    .font(.ff(11))
-                                    .foregroundStyle(theme.faint)
-                            }
-                            Spacer(minLength: 8)
-                            checkbox(on)
+            if model.people.isEmpty {
+                FFAddRow(title: "No friends yet", subtitle: "Add one above, or start alone") {}
+            } else {
+                FFGroupedRows {
+                    ForEach(Array(model.people.enumerated()), id: \.element.id) { index, person in
+                        let on = selected.contains(person.id)
+                        if index > 0 {
+                            let previousOn = selected.contains(model.people[index - 1].id)
+                            FFDivider(visible: !previousOn && !on)
                         }
-                        .padding(.horizontal, FFMetric.rowPaddingX)
-                        .frame(height: 56)
-                        .contentShape(Rectangle())
+                        Button {
+                            if on { selected.remove(person.id) } else { selected.insert(person.id) }
+                        } label: {
+                            HStack(spacing: 13) {
+                                FFAvatar(person, size: 36)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(person.name)
+                                        .ffType(.rowTitle)
+                                        .foregroundStyle(theme.text)
+                                    Text(person.handle)
+                                        .ffType(.caption)
+                                        .foregroundStyle(theme.textSecondary)
+                                }
+                                Spacer(minLength: 8)
+                                tick(on, square: true)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 13)
+                            .ffRowSelection(on, outerRadius: theme.radius.card, fill: theme.mossWash)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
             }
         }
@@ -144,70 +146,87 @@ struct NewFightView: View {
 
     private var lengthSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            FFSectionHeader(title: "Ends", action: "\(lengthDays) days")
-            HStack(spacing: 8) {
-                ForEach([3, 7, 14], id: \.self) { days in
-                    chip("\(days)d", on: !pickingDate && lengthDays == days) {
-                        pickingDate = false
-                        lengthDays = days
-                        endDate = Calendar.current.date(byAdding: .day, value: days, to: Date()) ?? Date()
-                    }
-                }
-                chip("Pick a date", on: pickingDate) {
-                    pickingDate = true
-                }
+            HStack {
+                FFSectionHeader(title: "Ends")
+                FFPill("\(lengthDays) days", style: .softMoss)
             }
+            FFDurationPicker(options: ["3 days", "1 week", "2 weeks", "Pick a date"], selection: durationBinding)
             if pickingDate {
                 DatePicker("End date", selection: $endDate, in: Date()..., displayedComponents: .date)
                     .datePickerStyle(.compact)
                     .labelsHidden()
-                    .tint(theme.accent)
+                    .tint(theme.mossFill)
                     .onChange(of: endDate) { _, new in
                         let days = Calendar.current.dateComponents([.day], from: Date(), to: new).day ?? 1
                         lengthDays = max(1, days)
                     }
             }
             Text("Runs from tomorrow to \(endLabel).")
-                .font(.ff(11))
-                .foregroundStyle(theme.faint)
+                .ffType(.caption)
+                .foregroundStyle(theme.textFaint)
         }
+    }
+
+    /// FFDurationPicker speaks strings; the fight speaks days.
+    private var durationBinding: Binding<String> {
+        Binding(
+            get: {
+                if pickingDate { return "Pick a date" }
+                switch lengthDays {
+                case 3: return "3 days"
+                case 7: return "1 week"
+                case 14: return "2 weeks"
+                default: return "Pick a date"
+                }
+            },
+            set: { choice in
+                let days = ["3 days": 3, "1 week": 7, "2 weeks": 14][choice]
+                if let days {
+                    pickingDate = false
+                    lengthDays = days
+                    endDate = Calendar.current.date(byAdding: .day, value: days, to: Date()) ?? Date()
+                } else {
+                    pickingDate = true
+                }
+            }
+        )
     }
 
     private var stakeSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             FFSectionHeader(title: "What’s on the line")
             HStack(spacing: 8) {
-                chip("Bragging rights", on: stake == .bragging) { stake = .bragging }
-                chip("$10", on: stake == .ten) { stake = .ten }
-                chip("Custom", on: stake == .custom) { stake = .custom }
+                FFChip(title: "Bragging rights", selected: stake == .bragging) { stake = .bragging }
+                FFChip(title: "$10", selected: stake == .ten) { stake = .ten }
+                FFChip(title: "Custom", selected: stake == .custom) { stake = .custom }
+                Spacer(minLength: 0)
             }
             if stake == .custom {
-                HStack(spacing: 10) {
-                    chip("Money", on: customKind == .money) {
-                        customKind = .money
-                    }
-                    chip("Action", on: customKind == .action) {
+                HStack(spacing: 8) {
+                    FFChip(title: "Money", selected: customKind == .money) { customKind = .money }
+                    FFChip(title: "Action", selected: customKind == .action) {
                         customKind = .action
                         if settlement == .proportional { settlement = .winner }
                     }
+                    Spacer(minLength: 0)
                 }
                 if customKind == .money {
-                    stepper("$\(customMoney)", minus: { customMoney = max(5, customMoney - 5) }, plus: { customMoney += 5 })
+                    FFCard {
+                        FFStepper(value: $customMoney, step: 5, minimum: 5, unit: "each")
+                    }
                 } else {
                     TextField("what does the loser owe?", text: $forfeit)
-                        .font(.ff(15))
+                        .font(.ff(15, 700))
                         .foregroundStyle(theme.text)
-                        .padding(.horizontal, 16)
-                        .frame(height: 52)
-                        .background(theme.surface, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
-                                .strokeBorder(theme.line, lineWidth: 1)
-                        }
-                    HStack(spacing: 10) {
+                        .padding(.horizontal, 15)
+                        .padding(.vertical, 13)
+                        .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
+                        .ffBorder(theme.line, radius: theme.radius.field)
+                    HStack(spacing: 8) {
                         ForEach(["Loser buys dinner", "Loser posts the recap"], id: \.self) { suggestion in
-                            FFChip(text: suggestion, suggestion: true) { forfeit = suggestion }
+                            FFChip(title: suggestion, selected: forfeit == suggestion) { forfeit = suggestion }
                         }
+                        Spacer(minLength: 0)
                     }
                 }
             }
@@ -217,7 +236,7 @@ struct NewFightView: View {
     private var settlementSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             FFSectionHeader(title: "How the pot settles")
-            FFPanel {
+            FFGroupedRows {
                 let options: [SettlementKind] = {
                     if stake == .custom && customKind == .action {
                         return [.winner, .goal]
@@ -225,8 +244,10 @@ struct NewFightView: View {
                     return SettlementKind.allCases
                 }()
                 ForEach(Array(options.enumerated()), id: \.element.id) { index, item in
-                    if index > 0 { FFHairline() }
-                    optionRow(title: item.title, subtitle: item.blurb, on: settlement == item, leadingRadio: true) {
+                    if index > 0 {
+                        FFDivider(visible: options[index - 1] != settlement && item != settlement)
+                    }
+                    optionRow(title: item.title, subtitle: item.blurb, on: settlement == item, leadingTick: true) {
                         settlement = item
                     }
                 }
@@ -237,8 +258,14 @@ struct NewFightView: View {
     private var goalSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             FFSectionHeader(title: "Daily goal")
-            stepper(goalLabel, minus: { dailyGoal = max(step, dailyGoal - step) }, plus: { dailyGoal += step })
+            FFCard {
+                FFStepper(value: goalBinding, step: Int(step), minimum: Int(step), unit: goalUnit)
+            }
         }
+    }
+
+    private var goalBinding: Binding<Int> {
+        Binding(get: { Int(dailyGoal) }, set: { dailyGoal = Double($0) })
     }
 
     private var step: Double {
@@ -249,11 +276,11 @@ struct NewFightView: View {
         }
     }
 
-    private var goalLabel: String {
+    private var goalUnit: String {
         switch metric {
-        case .steps: return "\(Int(dailyGoal)) steps"
-        case .activeMinutes: return "\(Int(dailyGoal)) min"
-        case .workouts: return "\(Int(dailyGoal)) workouts"
+        case .steps: return "steps a day"
+        case .activeMinutes: return "minutes a day"
+        case .workouts: return "workouts a day"
         }
     }
 
@@ -269,16 +296,18 @@ struct NewFightView: View {
     }
 
     private var summary: some View {
-        (Text("\(lengthDays)-day \(metric.eyebrow.lowercased())")
-            .font(.ff(14, .bold))
-            .foregroundStyle(theme.text)
-        + Text(" fight with \(playerCount) players, ending \(endLabel). \(stakeSummary).")
-            .font(.ff(14))
-            .foregroundStyle(theme.muted))
-            .lineSpacing(3)
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(theme.chip, in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous))
+        FFCard(fill: theme.mossWash, stroke: theme.mossText.opacity(0.18)) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("\(lengthDays)-day \(metric.eyebrow.lowercased())")
+                    .ffType(.rowTitle)
+                    .foregroundStyle(theme.text)
+                Text("Fight with \(playerCount) players, ending \(endLabel). \(stakeSummary).")
+                    .ffType(.body)
+                    .foregroundStyle(theme.textSecondary)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
     }
 
     private var stakeSummary: String {
@@ -294,47 +323,23 @@ struct NewFightView: View {
         }
     }
 
-    private func chip(_ title: String, on: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.ff(15, .semibold))
-                .foregroundStyle(on ? theme.ink : theme.text)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-                .padding(.horizontal, 6)
-                .frame(maxWidth: .infinity)
-                .frame(height: 40)
-                .background(
-                    on ? theme.accent : theme.surface,
-                    in: RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
-                )
-                .overlay {
-                    if !on {
-                        RoundedRectangle(cornerRadius: theme.radius.lg, style: .continuous)
-                            .strokeBorder(theme.line, lineWidth: 1)
-                    }
-                }
-        }
-        .buttonStyle(FFPressStyle(scale: 0.97))
-    }
-
     private func optionRow(
         title: String,
         subtitle: String,
         on: Bool,
-        leadingRadio: Bool = false,
+        leadingTick: Bool = false,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
             HStack(alignment: .top, spacing: 12) {
-                if leadingRadio { radio(on) }
-                VStack(alignment: .leading, spacing: 4) {
+                if leadingTick { tick(on) }
+                VStack(alignment: .leading, spacing: 3) {
                     Text(title)
-                        .font(.ff(13, .semibold))
+                        .ffType(.rowTitle)
                         .foregroundStyle(theme.text)
                     Text(subtitle)
-                        .font(.ff(11))
-                        .foregroundStyle(theme.faint)
+                        .ffType(.caption)
+                        .foregroundStyle(theme.textSecondary)
                         .multilineTextAlignment(.leading)
                         .lineSpacing(2)
                         .fixedSize(horizontal: false, vertical: true)
@@ -342,53 +347,32 @@ struct NewFightView: View {
                 // The text takes the whole remaining width; a Spacer here would
                 // compete with it and wrap the sentence a word early.
                 .frame(maxWidth: .infinity, alignment: .leading)
-                if !leadingRadio { radio(on) }
+                if !leadingTick { tick(on) }
             }
-            .padding(.horizontal, FFMetric.rowPaddingX)
-            .padding(.vertical, 13.5)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 13)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(on ? theme.selectedOption() : Color.clear)
+            .ffRowSelection(on, outerRadius: theme.radius.card, fill: theme.mossWash)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
 
-    private static let tickSize: CGFloat = 20
+    private static let tickSize: CGFloat = 22
 
-    private func radio(_ on: Bool) -> some View {
+    @ViewBuilder
+    private func tick(_ on: Bool, square: Bool = false) -> some View {
+        let shape = RoundedRectangle(cornerRadius: square ? 7 : Self.tickSize / 2, style: .continuous)
         ZStack {
-            Circle()
-                .fill(on ? theme.accent : Color.clear)
-                .frame(width: Self.tickSize, height: Self.tickSize)
+            shape
+                .fill(on ? theme.mossFill : Color.clear)
                 .overlay {
-                    if !on {
-                        Circle().strokeBorder(theme.faint, lineWidth: 2)
-                    }
+                    if !on { shape.strokeBorder(theme.textTertiary, lineWidth: 2) }
                 }
             if on {
                 Image(systemName: "checkmark")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(theme.ink)
-            }
-        }
-        .frame(width: Self.tickSize, height: Self.tickSize)
-    }
-
-    private func checkbox(_ on: Bool) -> some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(on ? theme.accent : Color.clear)
-                .frame(width: Self.tickSize, height: Self.tickSize)
-                .overlay {
-                    if !on {
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .strokeBorder(theme.faint, lineWidth: 2)
-                    }
-                }
-            if on {
-                Image(systemName: "checkmark")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(theme.ink)
+                    .font(.system(size: 11, weight: .heavy))
+                    .foregroundStyle(theme.mossOn)
             }
         }
         .frame(width: Self.tickSize, height: Self.tickSize)
@@ -436,35 +420,6 @@ struct NewFightView: View {
             if (model.createError ?? "").isEmpty {
                 model.tab = .fights
             }
-        }
-    }
-
-    private func stepper(_ label: String, minus: @escaping () -> Void, plus: @escaping () -> Void) -> some View {
-        HStack {
-            Button(action: minus) {
-                Image(systemName: "minus")
-                    .frame(width: 40, height: 40)
-                    .background(theme.chip, in: Circle())
-            }
-            .buttonStyle(.plain)
-            Spacer()
-            Text(label)
-                .font(.ff(19, .bold))
-                .foregroundStyle(theme.text)
-            Spacer()
-            Button(action: plus) {
-                Image(systemName: "plus")
-                    .frame(width: 40, height: 40)
-                    .background(theme.chip, in: Circle())
-            }
-            .buttonStyle(.plain)
-        }
-        .foregroundStyle(theme.text)
-        .padding(12)
-        .background(theme.surface, in: RoundedRectangle(cornerRadius: theme.radius.xl, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: theme.radius.xl, style: .continuous)
-                .strokeBorder(theme.line, lineWidth: 1)
         }
     }
 }

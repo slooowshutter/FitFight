@@ -142,21 +142,21 @@ struct BossChatView: View {
 
     private var header: some View {
         HStack(spacing: 12) {
-            FFAvatar(BossChatStore.marc, size: 36, ring: true)
+            FFAvatar(BossChatStore.marc, size: 44, selected: true)
             VStack(alignment: .leading, spacing: 2) {
-                FFLabel(text: "Marc", role: .headline)
+                Text("Marc").ffType(.heading).foregroundStyle(theme.text)
                 Text("the boss · private")
-                    .font(.ff(12))
-                    .foregroundStyle(theme.faint)
+                    .ffType(.caption)
+                    .foregroundStyle(theme.textSecondary)
             }
             Spacer(minLength: 8)
             Button("Close") { dismiss() }
-                .font(theme.font(.bodyStrong))
-                .foregroundStyle(theme.accent)
+                .ffType(.label)
+                .foregroundStyle(theme.mossText)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
-        .overlay(alignment: .bottom) { theme.line.frame(height: 1) }
+        .overlay(alignment: .bottom) { theme.hairline.frame(height: 1) }
     }
 
     @ViewBuilder
@@ -204,18 +204,18 @@ struct BossChatView: View {
                 Spacer(minLength: 48)
             }
             Text(message.text)
-                .font(.ff(15))
-                .foregroundStyle(message.fromBoss ? theme.text : theme.ink)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
+                .font(.ff(15, 700))
+                .foregroundStyle(message.fromBoss ? theme.text : theme.mossOn)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 11)
                 .background(
-                    message.fromBoss ? theme.surface : theme.accent,
-                    in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    message.fromBoss ? theme.card : theme.mossFill,
+                    in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous)
                 )
                 .overlay {
                     if message.fromBoss {
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .strokeBorder(theme.line, lineWidth: 1)
+                        RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous)
+                            .strokeBorder(theme.hairline, lineWidth: 1)
                     }
                 }
             if message.fromBoss {
@@ -227,23 +227,23 @@ struct BossChatView: View {
     private var composer: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Sends to Marc’s inbox. He replies by email.")
-                .font(.ff(11))
-                .foregroundStyle(theme.faint)
+                .ffType(.micro)
+                .foregroundStyle(theme.textFaint)
             HStack(spacing: 10) {
                 TextField("Write to Marc", text: $draft, axis: .vertical)
-                    .font(.ff(15))
+                    .font(.ff(15, 700))
                     .foregroundStyle(theme.text)
                     .lineLimit(1...5)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(theme.chip, in: Capsule())
+                    .padding(.horizontal, 15)
+                    .padding(.vertical, 12)
+                    .background(theme.card, in: Capsule())
                     .overlay { Capsule().strokeBorder(theme.line, lineWidth: 1) }
                 Button(action: send) {
                     Image(systemName: "arrow.up")
                         .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(theme.ink)
-                        .frame(width: 36, height: 36)
-                        .background(theme.accent, in: Circle())
+                        .foregroundStyle(theme.mossOn)
+                        .frame(width: 44, height: 44)
+                        .background(theme.mossFill, in: Circle())
                 }
                 .buttonStyle(FFPressStyle(scale: 0.97))
                 .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -254,7 +254,7 @@ struct BossChatView: View {
         .padding(.top, 10)
         .padding(.bottom, 16)
         .background(theme.bg)
-        .overlay(alignment: .top) { theme.line.frame(height: 1) }
+        .overlay(alignment: .top) { theme.hairline.frame(height: 1) }
     }
 
     private func send() {
@@ -337,5 +337,5 @@ private struct MailComposeView: UIViewControllerRepresentable {
 
 #Preview {
     BossChatView(store: .screenshot)
-        .fitFightTheme(ThemeCatalog.theme(base: .dark, accent: .blue))
+        .fitFightTheme(ThemeCatalog.theme(.night))
 }

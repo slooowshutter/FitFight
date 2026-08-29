@@ -27,6 +27,9 @@ struct FitFightApp: App {
                     if ScreenshotExport.isEnabled {
                         ScreenshotExport.exportAll()
                     }
+                    #if DEBUG
+                    await session.devAdoptSessionIfNeeded()
+                    #endif
                 }
                 .task(id: session.authSession?.user.id) {
                     await steps.refresh(requestAccess: false)

@@ -62,7 +62,7 @@ From [`design/source/INVENTORY.md`](design/source/INVENTORY.md) — honest holes
 - Profile edit, settings sub-screens, payouts
 - HealthKit permission prompts (we request on username continue and on Data sources tap; no extra designed screen)
 - Per-person goals in create (data model allows it; UI is one shared goal)
-- Settle-up / payment at the end of a fight
+- **Payments and settle-up by jurisdiction.** Get legal guidance before launch. Where FitFight can lawfully collect and distribute stakes, support payment inside the app. Where the monetary challenge is allowed but FitFight cannot handle the funds, show a clear notice during challenge creation: FitFight will record the stake and result but will not collect, hold, transfer, or organize payment. After the fight ends, show a settle-up ledger with who owes whom and how much, like a shared-expense app. Participants pay each other outside FitFight. Do not assume that removing payment handling makes a monetary challenge legal; availability still depends on the applicable jurisdiction.
 
 ## Done
 

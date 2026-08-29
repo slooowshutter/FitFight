@@ -25,8 +25,11 @@ struct FitFightDataSource: Codable, Equatable {
     var contributingSourceLabels: [String]?
 }
 
-struct FitFightBatchAck: Codable, Equatable {
-    var upserted: Int
+struct FitFightHealthKitArchiveAck: Codable, Equatable {
+    var samples: Int
+    var deletions: Int
+    var mergedDays: Int
+    var sourceDays: Int
     var sourceId: UUID
     var recalculatedFightIds: [UUID]?
 }
@@ -63,19 +66,6 @@ struct FitFightSyncDue: Codable, Equatable {
     var fightIds: [UUID]?
 }
 
-struct FitFightHealthKitDay: Codable, Equatable {
-    var day: String
-    var value: Double
-    var revision: Int?
-}
-
-struct FitFightHealthKitBatch: Codable, Equatable {
-    var idempotencyKey: String
-    var sourceLabel: String?
-    var contributingSourceLabels: [String]?
-    var days: [FitFightHealthKitDay]
-}
-
 struct FitFightAPI {
     var baseURL: URL?
 
@@ -102,15 +92,22 @@ struct FitFightAPI {
         )
     }
 
-    func uploadBatch(
-        _ batch: FitFightHealthKitBatch,
+    func uploadHealthKitArchive<Batch: Encodable>(
+        _ batch: Batch,
         accessToken: String
-    ) async throws -> FitFightBatchAck {
+    ) async throws -> FitFightHealthKitArchiveAck {
         try await post(
             path: "healthkit/batches",
             accessToken: accessToken,
             body: batch,
-            idempotencyKey: batch.idempotencyKey,
+            expected: [200]
+        )
+    }
+
+    func deleteAccount(accessToken: String) async throws {
+        let _: DiscardBody = try await delete(
+            path: "me",
+            accessToken: accessToken,
             expected: [200]
         )
     }
@@ -206,19 +203,54 @@ struct FitFightAPI {
         idempotencyKey: String? = nil,
         expected: Set<Int>
     ) async throws -> Response {
+        try await request(
+            path: path,
+            method: "POST",
+            accessToken: accessToken,
+            body: Self.encoder.encode(body),
+            idempotencyKey: idempotencyKey,
+            expected: expected
+        )
+    }
+
+    private func delete<Response: Decodable>(
+        path: String,
+        accessToken: String,
+        expected: Set<Int>
+    ) async throws -> Response {
+        try await request(
+            path: path,
+            method: "DELETE",
+            accessToken: accessToken,
+            body: nil,
+            idempotencyKey: nil,
+            expected: expected
+        )
+    }
+
+    private func request<Response: Decodable>(
+        path: String,
+        method: String,
+        accessToken: String,
+        body: Data?,
+        idempotencyKey: String?,
+        expected: Set<Int>
+    ) async throws -> Response {
         guard let requestURL = endpoint(path) else {
             throw FitFightAPIError.notConfigured
         }
 
         var request = URLRequest(url: requestURL)
-        request.httpMethod = "POST"
+        request.httpMethod = method
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+        if body != nil {
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        }
         if let idempotencyKey {
             request.setValue(idempotencyKey, forHTTPHeaderField: "Idempotency-Key")
         }
-        request.httpBody = try Self.encoder.encode(body)
+        request.httpBody = body
 
         let (data, response) = try await URLSession.shared.data(for: request)
         let status = (response as? HTTPURLResponse)?.statusCode ?? -1

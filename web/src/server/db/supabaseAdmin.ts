@@ -29,7 +29,3 @@ export function createAdminClient(): SupabaseClient {
   });
   return cached;
 }
-
-export function observationsTable(admin: SupabaseClient) {
-  return admin.schema("private").from("metric_observations");
-}

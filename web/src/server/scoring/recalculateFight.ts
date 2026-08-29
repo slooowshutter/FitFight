@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { createAdminClient, observationsTable } from "../db/supabaseAdmin";
+import type { Sql } from "postgres";
+import { createDatabaseClient } from "../db/postgres";
+import { createAdminClient } from "../db/supabaseAdmin";
 import {
   asNumber,
   type DataSourceRow,
@@ -25,7 +27,6 @@ function latestObservations(rows: ObservationRow[]): ObservationRow[] {
   }
   return [...latest.values()];
 }
-
 
 export async function listFightsToRecalculate(
   userId: string,
@@ -58,6 +59,7 @@ export async function recalculateFight(
   fightId: string,
   admin: SupabaseClient = createAdminClient(),
   now: Date = new Date(),
+  database: Sql = createDatabaseClient(),
 ): Promise<void> {
   const { data: fightData, error: fightError } = await admin
     .from("fights")
@@ -91,19 +93,23 @@ export async function recalculateFight(
 
   let observations: ObservationRow[] = [];
   if (userIds.length > 0) {
-    const { data: observationData, error: observationError } = await observationsTable(admin)
-      .select(
-        "id, user_id, source_id, external_record_id, metric, starts_at, ends_at, value, unit, revision, retracted_at",
-      )
-      .eq("metric", "steps")
-      .in("user_id", userIds)
-      .is("retracted_at", null)
-      .lt("starts_at", fight.ends_at)
-      .gt("ends_at", fight.starts_at);
-    if (observationError) {
-      throw new ApiError(500, ERROR_CODES.db_error, "Could not load observations");
-    }
-    observations = latestObservations((observationData ?? []) as ObservationRow[]).filter((row) =>
+    const observationData = await database<ObservationRow[]>`
+      select
+        id, user_id, source_id, external_record_id, metric,
+        starts_at::text as starts_at,
+        ends_at::text as ends_at,
+        value::text as value,
+        unit,
+        revision,
+        retracted_at::text as retracted_at
+      from private.metric_observations
+      where metric = 'steps'
+        and user_id = any(${database.array(userIds)}::uuid[])
+        and retracted_at is null
+        and starts_at < ${fight.ends_at}
+        and ends_at > ${fight.starts_at}
+    `;
+    observations = latestObservations(observationData).filter((row) =>
       observationOverlapsWindow(row.starts_at, row.ends_at, fight.starts_at, fight.ends_at),
     );
   }

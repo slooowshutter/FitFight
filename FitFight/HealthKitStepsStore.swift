@@ -1,7 +1,6 @@
 import Combine
 import Foundation
 import HealthKit
-import Supabase
 
 @MainActor
 final class HealthKitStepsStore: ObservableObject {
@@ -15,6 +14,7 @@ final class HealthKitStepsStore: ObservableObject {
     @Published private(set) var status: Status = .idle
 
     private let store = HKHealthStore()
+    private let api = FitFightAPI()
     private let askedKey = "ff.healthkit.stepsAsked"
     private var isUploading = false
 
@@ -84,8 +84,8 @@ final class HealthKitStepsStore: ObservableObject {
     }
 
     /// Archive raw changes, source statistics, and Apple's merged daily totals.
-    func syncToSupabase(client: SupabaseClient, userId: UUID) async {
-        guard hasAsked, !isUploading else { return }
+    func syncToBackend(accessToken: String, userId: UUID) async {
+        guard hasAsked, !isUploading, api.isConfigured else { return }
         guard
             HKHealthStore.isHealthDataAvailable(),
             let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount)
@@ -98,7 +98,8 @@ final class HealthKitStepsStore: ObservableObject {
             try await HealthKitStepArchive.sync(
                 store: store,
                 type: stepsType,
-                client: client,
+                api: api,
+                accessToken: accessToken,
                 userId: userId
             )
         } catch {

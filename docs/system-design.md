@@ -585,7 +585,7 @@ The separate `private` schema is defense in depth. Even if a future `public` gra
 6. `public.data_sources(id, user_id, provider, source_label, contributing_source_labels, connection_route, capabilities, status, consent_version, connected_at, revoked_at, last_success_at, complete_through, last_error_code)`
 7. `private.metric_observations(id, user_id, source_id, external_record_id, metric, starts_at, ends_at, value, unit, revision, provenance, retracted_at, created_at)`
 
-The Steps archive adds `private.healthkit_step_samples`, `private.healthkit_step_sample_deletions`, `private.healthkit_step_source_days`, and `private.healthkit_step_syncs`. Only `public.step_days` contains the Apple-merged totals used by the current phone-written scoring path. A narrow `SECURITY INVOKER` RPC derives `user_id` from `auth.uid()` and writes the private archive under RLS; raw rows are not exposed as Data API routes.
+The Steps archive adds `private.healthkit_step_samples`, `private.healthkit_step_sample_deletions`, `private.healthkit_step_source_days`, and `private.healthkit_step_syncs`. Only `public.step_days` contains the Apple-merged totals used by the current shared scoring path. The authenticated Next.js route derives the User from the bearer token and writes the complete batch through a TypeScript-owned Postgres transaction; raw rows are not exposed as Data API routes and no application RPC is exposed.
 
 This deliberately keeps Fight rules on `fights` and current/final score fields on `fight_members` until measured complexity requires history tables or projections. A direct public view may return only the member-safe subset and use `security_invoker = true`.
 
@@ -611,9 +611,9 @@ Swift has two explicit network paths. Reviewed reads and a very small set of sel
 ### Reads and writes
 
 - **Direct reads** cover profiles, friendships, invitations, Fight lists/details, shared scores, source labels, and freshness. The app sends its publishable key and User JWT; it never receives a secret key.
-- **Direct self-service writes** are limited to reviewed fields and operations such as the signed-in User's own display name and the temporary phone-written Steps path. HealthKit uses a narrow `SECURITY INVOKER` RPC that derives ownership from the JWT, archives private raw/source data, and writes only Apple's merged value to `step_days`. Fight lifecycle and membership remain temporarily client-writable as documented in current status; final results are not.
+- **Direct self-service writes** are limited to reviewed fields and operations such as the signed-in User's own display name. HealthKit batches go through the authenticated TypeScript backend, which derives ownership from the JWT and commits private archive rows, canonical observations, and Apple's merged `step_days` value together. Fight lifecycle and membership remain temporarily client-writable as documented in current status; final results are not.
 - **Commands** go through authenticated Next.js Route Handlers: create/start/cancel a Fight, create an invite, accept with a source and target, request synchronization, disconnect a provider, and register a device.
-- **Private reads** such as personal activity history go through Next.js; Swift never queries `private`. The current Steps-only upload is the explicit exception: Swift calls the reviewed ingestion RPC, which runs with caller privileges and RLS while the private schema remains absent from the Data API.
+- **Private reads and writes** go through Next.js; Swift never queries or writes `private`. Next.js reaches Postgres through the server-only transaction pooler, while the private schema remains absent from the Data API.
 - **Provider callbacks/webhooks** use separate unauthenticated endpoints that verify provider state/signatures before any privileged action.
 - **Workers** authenticate service-to-service and never accept a User ID from the body as proof of authority.
 
@@ -631,6 +631,7 @@ PATCH  /api/v1/fights/{fightID}/membership
 GET    /api/v1/me/activity
 POST   /api/v1/sources/{sourceID}/sync
 POST   /api/v1/healthkit/batches
+DELETE /api/v1/me
 POST   /api/v1/provider-connections/{provider}/authorize
 DELETE /api/v1/provider-connections/{provider}
 POST   /api/v1/device-installations

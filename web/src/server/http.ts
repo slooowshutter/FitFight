@@ -18,6 +18,7 @@ export const ERROR_CODES = {
   already_member: "already_member",
   profile_missing: "profile_missing",
   missing_idempotency_key: "missing_idempotency_key",
+  payload_too_large: "payload_too_large",
   db_error: "db_error",
   config: "config",
   internal: "internal",
@@ -54,7 +55,7 @@ export function corsHeaders(request: Request): Headers {
     headers.set("Access-Control-Allow-Origin", "*");
   }
 
-  headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  headers.set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
   headers.set(
     "Access-Control-Allow-Headers",
     "Authorization, Content-Type, Idempotency-Key",
@@ -93,8 +94,15 @@ export function corsPreflight(request: Request): NextResponse {
   return new NextResponse(null, { status: 204, headers: corsHeaders(request) });
 }
 
-export async function readJson(request: Request): Promise<unknown> {
+export async function readJson(request: Request, maxBytes = 1_000_000): Promise<unknown> {
+  const declaredLength = Number(request.headers.get("content-length") ?? 0);
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+    throw new ApiError(413, ERROR_CODES.payload_too_large, "Request body is too large");
+  }
   const text = await request.text();
+  if (new TextEncoder().encode(text).byteLength > maxBytes) {
+    throw new ApiError(413, ERROR_CODES.payload_too_large, "Request body is too large");
+  }
   if (!text.trim()) {
     return {};
   }
@@ -122,9 +130,9 @@ export function errorResponse(error: unknown): NextResponse {
 export function apiRoute<P extends Record<string, string> = Record<string, never>>(
   handler: (request: Request, context: { params: P }) => Promise<Response>,
 ) {
-  return async (request: Request, context?: { params?: Promise<P> }) => {
+  return async (request: Request, context: { params: Promise<P> }) => {
     try {
-      const params = (context?.params ? await context.params : {}) as P;
+      const params = await context.params;
       const response = await handler(request, { params });
       return applyCors(request, response);
     } catch (error) {

@@ -1,20 +1,20 @@
 import CoreFoundation
 import Foundation
 import HealthKit
-import Supabase
 
 /// Archives every accessible Steps representation while leaving Apple's merged
 /// statistic as the only authoritative value in `step_days`.
 enum HealthKitStepArchive {
     private static let healthKitPageLimit = 500
-    private static let rawUploadLimit = 250
+    private static let rawUploadLimit = 100
     private static let deletionUploadLimit = 500
     private static let dayUploadLimit = 31
 
     static func sync(
         store: HKHealthStore,
         type: HKQuantityType,
-        client: SupabaseClient,
+        api: FitFightAPI,
+        accessToken: String,
         userId: UUID
     ) async throws {
         let defaults = UserDefaults.standard
@@ -42,7 +42,8 @@ enum HealthKitStepArchive {
                 )
                 for chunk in chunks(of: uploads, limit: rawUploadLimit) {
                     try await ingest(
-                        client: client,
+                        api: api,
+                        accessToken: accessToken,
                         payload: HealthKitStepPayload(samples: chunk)
                     )
                 }
@@ -55,7 +56,8 @@ enum HealthKitStepArchive {
                 }
                 for chunk in chunks(of: uploads, limit: deletionUploadLimit) {
                     try await ingest(
-                        client: client,
+                        api: api,
+                        accessToken: accessToken,
                         payload: HealthKitStepPayload(deletions: chunk)
                     )
                 }
@@ -108,7 +110,8 @@ enum HealthKitStepArchive {
         )
         for chunk in chunks(of: bundles, limit: dayUploadLimit) {
             try await ingest(
-                client: client,
+                api: api,
+                accessToken: accessToken,
                 payload: HealthKitStepPayload(
                     mergedDays: chunk.map(\.merged),
                     sourceDays: chunk.flatMap(\.sources)
@@ -117,7 +120,8 @@ enum HealthKitStepArchive {
         }
 
         try await ingest(
-            client: client,
+            api: api,
+            accessToken: accessToken,
             payload: HealthKitStepPayload(
                 sync: HealthKitStepSyncUpload(
                     timeZone: calendar.timeZone.identifier,
@@ -242,6 +246,9 @@ enum HealthKitStepArchive {
                 DayBundle(
                     merged: HealthKitMergedStepDayUpload(
                         day: day,
+                        startsAt: iso8601(cursor),
+                        endsAt: iso8601(effectiveEnd),
+                        timeZone: calendar.timeZone.identifier,
                         steps: Int(mergedValue.rounded())
                     ),
                     sources: sourceRows
@@ -378,12 +385,11 @@ enum HealthKitStepArchive {
     // MARK: - Persistence helpers
 
     private static func ingest(
-        client: SupabaseClient,
+        api: FitFightAPI,
+        accessToken: String,
         payload: HealthKitStepPayload
     ) async throws {
-        try await client
-            .rpc("ingest_healthkit_steps", params: HealthKitStepRPCParameters(payload: payload))
-            .execute()
+        _ = try await api.uploadHealthKitArchive(payload, accessToken: accessToken)
     }
 
     private static func loadAnchor(defaults: UserDefaults, key: String) -> HKQueryAnchor? {
@@ -442,14 +448,6 @@ private struct SyncKeys {
         let suffix = userId.uuidString.lowercased()
         anchor = "ff.healthkit.stepsAnchor.\(suffix)"
         earliestSample = "ff.healthkit.stepsEarliest.\(suffix)"
-    }
-}
-
-private struct HealthKitStepRPCParameters: Encodable {
-    let payload: HealthKitStepPayload
-
-    enum CodingKeys: String, CodingKey {
-        case payload = "_payload"
     }
 }
 
@@ -541,7 +539,18 @@ private struct HealthKitStepDeletionUpload: Encodable {
 
 private struct HealthKitMergedStepDayUpload: Encodable {
     let day: String
+    let startsAt: String
+    let endsAt: String
+    let timeZone: String
     let steps: Int
+
+    enum CodingKeys: String, CodingKey {
+        case day
+        case startsAt = "starts_at"
+        case endsAt = "ends_at"
+        case timeZone = "time_zone"
+        case steps
+    }
 }
 
 private struct HealthKitStepSourceDayUpload: Encodable {

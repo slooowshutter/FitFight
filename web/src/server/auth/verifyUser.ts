@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "../db/supabaseAdmin";
 import { ApiError, ERROR_CODES } from "../http";
 
@@ -25,6 +26,21 @@ function claimSub(claims: unknown): string | null {
   return typeof sub === "string" && sub.length > 0 ? sub : null;
 }
 
+async function requireActiveProfile(admin: SupabaseClient, userId: string): Promise<void> {
+  const { data, error } = await admin
+    .from("profiles")
+    .select("user_id")
+    .eq("user_id", userId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (error) {
+    throw new ApiError(500, ERROR_CODES.db_error, "Could not verify account");
+  }
+  if (!data) {
+    throw new ApiError(401, ERROR_CODES.unauthorized, "Invalid or deleted account");
+  }
+}
+
 export async function verifyUser(request: Request): Promise<AuthedUser> {
   const jwt = bearerToken(request);
   const admin = createAdminClient();
@@ -32,12 +48,14 @@ export async function verifyUser(request: Request): Promise<AuthedUser> {
   const claimsResult = await admin.auth.getClaims(jwt);
   const fromClaims = claimSub(claimsResult.data?.claims);
   if (fromClaims) {
+    await requireActiveProfile(admin, fromClaims);
     return { userId: fromClaims };
   }
 
   const userResult = await admin.auth.getUser(jwt);
   const userId = userResult.data.user?.id;
   if (userId) {
+    await requireActiveProfile(admin, userId);
     return { userId };
   }
 

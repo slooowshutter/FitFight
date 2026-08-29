@@ -6,7 +6,8 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/server/scoring/scoreFight.test.ts src/server/scoring/civilDay.test.ts src/server/scoring/fightClock.test.ts src/server/scoring/closeDueFights.test.ts"
+    "test": "tsx --test src/server/scoring/scoreFight.test.ts src/server/scoring/civilDay.test.ts src/server/scoring/fightClock.test.ts src/server/scoring/closeDueFights.test.ts src/server/ingest/healthkit/archiveSteps.test.ts",
+    "test:db": "tsx --test src/server/ingest/healthkit/backendTransactions.integration.test.ts"
   },
   "engines": {
     "node": ">=20"
@@ -14,6 +15,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.76.1",
     "next": "^15.5.2",
+    "postgres": "3.4.7",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "zod": "^3.24.2"

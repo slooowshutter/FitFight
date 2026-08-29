@@ -1,6 +1,6 @@
 # Backend
 
-Empty platform first. Feature code later. Production Metric is **Steps**. Phone vs server status: [`status.md`](status.md). The phone may write its own fights and memberships. Its reviewed `ingest_healthkit_steps` RPC archives raw Steps samples, deletion tombstones, Apple per-source statistics, and sync provenance under self-only RLS, then writes only Apple's merged daily result to `step_days`. The phone still cannot write `private.metric_observations` or query the private archive directly.
+Empty platform first. Feature code later. Production Metric is **Steps**. Phone vs server status: [`status.md`](status.md). The phone may write its own fights and memberships. It uploads HealthKit batches to the authenticated Next.js route, which validates them and uses one TypeScript-owned Postgres transaction to archive raw samples, deletion tombstones, Apple per-source statistics, sync provenance, canonical observations, and Apple's merged `step_days` result. There are no app-facing database RPCs, and the phone cannot query or write the private archive.
 
 [`system-design.md`](system-design.md) is the golden guide. This folder is the first slice of it, not the whole thing. Do not add Active Minutes, Workout Count, WHOOP, Strava, payments, notifications, social, or a website until the backlog says so.
 
@@ -11,7 +11,7 @@ Hosted staging / git `develop` (no secrets): https://jldjgftoxmluiswpebbd.supaba
 
 A cloud agent writes SQL in `supabase/migrations` and tests in `supabase/tests`, then opens a PR **into `develop`**. Marc merges that. The persistent Supabase branch `develop` picks it up. Production only changes when Marc merges `develop` → `main`. Agents do not get the database password or `sb_secret_...` key, and they do not merge unless Marc asked.
 
-GitHub-hosted **Ubuntu** (not a Mac) runs `supabase db start`, lints the schema, runs pgTAP as `authenticated`, and rejects `DROP TABLE` / `TRUNCATE` / `DROP COLUMN` unless the **first line** of the file is exactly `-- allow-destructive`. This Linux cloud VM has no Docker, so agents do not run the stack here.
+GitHub-hosted **Ubuntu** (not a Mac) runs `supabase db start`, lints the schema, runs pgTAP as `authenticated`, exercises the TypeScript database transactions, and rejects `DROP TABLE` / `TRUNCATE` / `DROP COLUMN` unless the **first line** of the file is exactly `-- allow-destructive`. This Linux cloud VM has no Docker, so agents do not run the stack here.
 
 iOS TestFlight is unchanged and still ignores this folder. iOS simulator and screenshot jobs skip when the PR does not touch the app.
 
@@ -64,5 +64,7 @@ npx supabase@2.115.0 test db --local
 Pin the CLI to **2.115.0** until you mean to bump it (`config.toml` was generated with that version).
 
 The iOS publishable key (`sb_publishable_...`) production fallback lives in `FitFight/SupabaseConfig.swift`. The secret key is not.
+
+Vercel holds `DATABASE_URL`, using Supavisor transaction mode on port `6543`, separately for develop and production. It is a server-only database password and never belongs in GitHub, chat, or iOS. `private` stays absent from the Data API's exposed schemas.
 
 TestFlight binaries that are **not** built from `main` talk to the develop project. CI writes `FitFight/Generated/BuildEnv.swift` before archive. GitHub variables `SUPABASE_STAGING_*` override if set; otherwise the known develop URL and publishable key are compiled in. `main` uses the production URL/key plus `FITFIGHT_API_PRODUCTION_URL`. See [`shipping.md`](shipping.md). What is live on the phone: [`status.md`](status.md).

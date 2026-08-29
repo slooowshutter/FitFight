@@ -1,6 +1,7 @@
 import Foundation
 
-/// Optional command API. Empty `FFAPIBaseURL` / `BuildEnv.apiBaseURL` means commands are disabled.
+/// Authenticated backend for private uploads and domain commands.
+/// Empty `FFAPIBaseURL` / `BuildEnv.apiBaseURL` means backend features are disabled.
 enum APIConfig {
     static var baseURL: URL? {
         let raw = firstNonEmpty(BuildEnv.apiBaseURL, bundleString("FFAPIBaseURL"))

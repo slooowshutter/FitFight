@@ -30,16 +30,22 @@ struct FitFightApp: App {
                 }
                 .task(id: session.authSession?.user.id) {
                     await steps.refresh(requestAccess: false)
-                    if let userId = session.authSession?.user.id {
-                        await steps.syncToSupabase(client: session.client, userId: userId)
+                    if let auth = session.authSession {
+                        await steps.syncToBackend(
+                            accessToken: auth.accessToken,
+                            userId: auth.user.id
+                        )
                     }
                     await model.refreshFromServer(session: session)
                 }
                 .onChange(of: steps.status) { _, status in
                     guard case .steps = status else { return }
-                    guard let userId = session.authSession?.user.id else { return }
+                    guard let auth = session.authSession else { return }
                     Task {
-                        await steps.syncToSupabase(client: session.client, userId: userId)
+                        await steps.syncToBackend(
+                            accessToken: auth.accessToken,
+                            userId: auth.user.id
+                        )
                         await model.refreshFromServer(session: session)
                     }
                 }

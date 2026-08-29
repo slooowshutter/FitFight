@@ -29,7 +29,7 @@ enum Changelog {
             year: 2026,
             month: 8,
             day: 29,
-            notes: "Steps fights still use Apple's merged total, so overlapping Apple Watch, iPhone, WHOOP, Garmin, and other sources are not added together. FitFight now securely preserves every accessible raw Steps sample, deletion, source statistic, device detail, and metadata value for diagnostics and future features."
+            notes: "Steps fights still use Apple's merged total, so overlapping Apple Watch, iPhone, WHOOP, Garmin, and other sources are not added together. FitFight now sends every accessible raw Steps sample, deletion, source statistic, device detail, and metadata value through its secure backend for diagnostics and future features."
         ),
         ReleaseNote(
             version: "0.9.0",

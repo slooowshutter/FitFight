@@ -1,5 +1,5 @@
 begin;
-select plan(43);
+select plan(44);
 
 select has_schema('private', 'private schema exists');
 select has_table('public', 'profiles', 'profiles exists');
@@ -146,36 +146,38 @@ select ok(
   'observations are locked to steps'
 );
 
-select has_function(
-  'public',
-  'delete_own_account',
-  'delete_own_account exists'
+select ok(
+  to_regprocedure('public.delete_own_account()') is null,
+  'account deletion is not exposed as an RPC'
+);
+select ok(
+  to_regprocedure('public.ingest_healthkit_steps(jsonb)') is null,
+  'HealthKit ingestion is not exposed as an RPC'
 );
 select is(
-  has_function_privilege('anon', 'public.delete_own_account()', 'EXECUTE'),
+  has_function_privilege('anon', 'public.handle_new_user()', 'EXECUTE'),
   false,
-  'anon cannot execute delete_own_account'
+  'anon cannot call the signup trigger function'
 );
 select is(
-  has_function_privilege('authenticated', 'public.delete_own_account()', 'EXECUTE'),
-  true,
-  'signed-in users can execute delete_own_account'
-);
-select is(
-  has_function_privilege('anon', 'public.ingest_healthkit_steps(jsonb)', 'EXECUTE'),
+  has_function_privilege('authenticated', 'public.handle_new_user()', 'EXECUTE'),
   false,
-  'anon cannot ingest HealthKit data'
+  'authenticated users cannot call the signup trigger function'
 );
 select is(
-  has_function_privilege('authenticated', 'public.ingest_healthkit_steps(jsonb)', 'EXECUTE'),
-  true,
-  'signed-in users can ingest their own HealthKit data'
-);
-select is(
-  (select prosecdef from pg_proc
-    where oid = 'public.ingest_healthkit_steps(jsonb)'::regprocedure),
+  has_table_privilege('authenticated', 'private.healthkit_step_samples', 'SELECT'),
   false,
-  'HealthKit ingestion runs with caller privileges'
+  'authenticated clients cannot read raw HealthKit samples'
+);
+select is(
+  has_table_privilege('authenticated', 'private.healthkit_step_samples', 'INSERT'),
+  false,
+  'authenticated clients cannot insert raw HealthKit samples'
+);
+select is(
+  has_table_privilege('authenticated', 'private.healthkit_step_source_days', 'DELETE'),
+  false,
+  'authenticated clients cannot delete HealthKit source statistics'
 );
 
 select * from finish();

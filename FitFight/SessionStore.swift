@@ -41,6 +41,7 @@ final class SessionStore: ObservableObject {
     @Published private(set) var isBusy = false
 
     let client: SupabaseClient
+    private let api = FitFightAPI()
     private static let handleChosenKey = "ff.handle.chosen"
 
     var isSignedIn: Bool { authSession != nil }
@@ -143,7 +144,10 @@ final class SessionStore: ObservableObject {
         isBusy = true
         defer { isBusy = false }
         do {
-            try await client.rpc("delete_own_account").execute()
+            guard let accessToken = authSession?.accessToken else {
+                throw FitFightAPIError.notConfigured
+            }
+            try await api.deleteAccount(accessToken: accessToken)
             try? await client.auth.signOut()
             authSession = nil
             profile = nil

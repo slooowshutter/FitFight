@@ -93,7 +93,7 @@ export async function createProviderUpload(
       upload_id: upload.upload_id,
       status: upload.status,
       object_path: upload.object_path,
-      tus_url: `${parsedUrl.protocol}//${tusHost}/storage/v1/upload/resumable`,
+      tus_url: `${parsedUrl.protocol}//${tusHost}/storage/v1/upload/resumable/sign`,
       tus_headers: { "x-signature": data.token, "x-upsert": "false" },
       tus_metadata: {
         bucketName: BUCKET,

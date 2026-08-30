@@ -185,12 +185,14 @@ struct FitFightAPI {
         _ upload: FitFightProviderUploadCreate,
         accessToken: String
     ) async throws -> FitFightProviderUploadCapability {
-        try await post(
+        var capability: FitFightProviderUploadCapability = try await post(
             path: "provider-uploads",
             accessToken: accessToken,
             body: upload,
             expected: [200, 201]
         )
+        capability.tusHeaders["Authorization"] = "Bearer \(accessToken)"
+        return capability
     }
 
     func healthKitUploadContext(accessToken: String) async throws -> FitFightHealthKitContext {

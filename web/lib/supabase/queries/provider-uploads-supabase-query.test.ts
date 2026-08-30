@@ -1,7 +1,22 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Sql } from "postgres";
+import { createProviderUploadSchema } from "@/lib/types/provider-uploads/provider-upload";
 import { getProviderUploadContext } from "./provider-uploads-supabase-query";
+
+test("provider upload creation canonicalizes uppercase iOS UUIDs", () => {
+  const upload = createProviderUploadSchema.parse({
+    upload_id: "B4C1285D-0232-4D15-B8CC-1A916BA2BBF7",
+    provider: "apple_health",
+    connection_route: "healthkit",
+    metric: "steps",
+    format_version: 1,
+    byte_size: 100,
+    sha256: "a".repeat(64),
+  });
+
+  assert.equal(upload.upload_id, "b4c1285d-0232-4d15-b8cc-1a916ba2bbf7");
+});
 
 test("provider upload context returns ISO-8601 fight timestamps", async () => {
   const database = (() => Promise.resolve([{

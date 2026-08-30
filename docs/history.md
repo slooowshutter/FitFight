@@ -1,5 +1,13 @@
 # History
 
+## 2026-08-30 — TestFlight is staging only
+
+TestFlight never builds `main` and never connects to production. Every feature/develop TestFlight uses the persistent develop Supabase project and staging API. Production binaries belong only to the future App Store flow when Marc explicitly asks to ship.
+
+## 2026-08-30 — one-object HealthKit pipeline
+
+One HealthKit sync now creates one protected NDJSON archive and one private Storage object, identified everywhere by one UUID-v4 `upload_id`. TUS can resume the transfer without creating FitFight-level pieces. The server verifies size and SHA-256, commits raw events/canonical observations/frozen daily values/exact Fight aggregates, deletes the object, and only then lets the phone save its HealthKit anchor. Scheduled TestFlight explicitly builds `develop` against staging; the protected Fight closer runs once daily for Vercel Hobby.
+
 ## 2026-08-27 — recreate persistent develop
 
 The old staging host `jldjgftoxmluiswpebbd` was a preview branch and died when `develop` merged to `main`. Recreate staging as a **persistent** Supabase branch named `develop` so that does not happen again. New host: `zstzbfocunthczzubggz`. GitHub `develop` was never deleted.

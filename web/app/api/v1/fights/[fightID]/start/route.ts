@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { verifyUser } from "@/server/auth/verifyUser";
-import { startFight } from "@/server/domain/fights/startFight";
-import { apiRoute, corsPreflight, json, readJson, requireUuid } from "@/server/http";
+import { apiRoute, corsPreflight, json, readJson, requireUuid } from "@/lib/http";
+import { verifyUser } from "@/lib/supabase/queries/auth-supabase-query";
+import { startFight } from "@/lib/supabase/queries/start-fight-supabase-query";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

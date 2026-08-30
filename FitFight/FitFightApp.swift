@@ -1,7 +1,22 @@
 import SwiftUI
+import UIKit
+
+final class FitFightAppDelegate: NSObject, UIApplicationDelegate {
+    func application(
+        _ application: UIApplication,
+        handleEventsForBackgroundURLSession identifier: String,
+        completionHandler: @escaping () -> Void
+    ) {
+        HealthKitTUSUploader.registerBackgroundEvents(
+            identifier: identifier,
+            completion: completionHandler
+        )
+    }
+}
 
 @main
 struct FitFightApp: App {
+    @UIApplicationDelegateAdaptor(FitFightAppDelegate.self) private var appDelegate
     @StateObject private var themeStore = ThemeStore()
     @StateObject private var model = AppModel()
     @StateObject private var session: SessionStore
@@ -24,6 +39,7 @@ struct FitFightApp: App {
                 .environmentObject(steps)
                 .fitFightTheme(themeStore.theme)
                 .task {
+                    steps.configure(session: session)
                     if ScreenshotExport.isEnabled {
                         ScreenshotExport.exportAll()
                     }
@@ -33,16 +49,16 @@ struct FitFightApp: App {
                 }
                 .task(id: session.authSession?.user.id) {
                     await steps.refresh(requestAccess: false)
-                    if let userId = session.authSession?.user.id {
-                        await steps.syncToSupabase(client: session.client, userId: userId)
+                    if session.authSession != nil {
+                        await steps.syncToBackend(session: session)
                     }
                     await model.refreshFromServer(session: session)
                 }
                 .onChange(of: steps.status) { _, status in
                     guard case .steps = status else { return }
-                    guard let userId = session.authSession?.user.id else { return }
+                    guard session.authSession != nil else { return }
                     Task {
-                        await steps.syncToSupabase(client: session.client, userId: userId)
+                        await steps.syncToBackend(session: session)
                         await model.refreshFromServer(session: session)
                     }
                 }

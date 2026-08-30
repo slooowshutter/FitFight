@@ -1,5 +1,5 @@
-import { closeDueFights } from "@/server/scoring/closeDueFights";
-import { ApiError, ERROR_CODES, apiRoute, json } from "@/server/http";
+import { ApiError, ERROR_CODES, apiRoute, json } from "@/lib/http";
+import { closeDueFights } from "@/lib/supabase/queries/close-due-fights-supabase-query";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

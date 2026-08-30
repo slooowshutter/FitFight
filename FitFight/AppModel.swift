@@ -543,12 +543,18 @@ final class AppModel: ObservableObject {
             fight.standings.compactMap { UUID(uuidString: $0.person.id) }
         }
         guard !ids.isEmpty else { return fights }
+        let requestedDays = fights.flatMap { Self.fightDayWindow($0) }
+        guard let firstDay = requestedDays.min(), let lastDay = requestedDays.max() else {
+            return fights
+        }
 
         let days: [StepDayRow]
         do {
             days = try await client.from("step_days")
                 .select("user_id, day, steps")
                 .in("user_id", values: ids.map(\.uuidString))
+                .gte("day", value: firstDay)
+                .lte("day", value: lastDay)
                 .execute()
                 .value
         } catch {

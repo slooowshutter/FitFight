@@ -204,11 +204,18 @@ struct YouView: View {
     private var sources: some View {
         FFGroupedRows {
             Button {
-                Task { await steps.refresh(requestAccess: true) }
+                Task {
+                    await steps.refresh(requestAccess: true)
+                    if session.authSession != nil {
+                        await steps.syncToBackend(session: session)
+                    }
+                }
             } label: {
                 FFGroupedRow(
                     title: "Apple Health",
-                    subtitle: steps.detailText,
+                    subtitle: steps.metaText.isEmpty
+                        ? steps.detailText
+                        : "\(steps.detailText) · \(steps.metaText)",
                     systemImage: "heart",
                     subtitleTone: steps.isConnected ? .moss : .neutral,
                     trailing: AnyView(

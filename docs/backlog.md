@@ -22,6 +22,18 @@ Honest works / doesn’t / next: [`status.md`](status.md). Read that before the 
 
 ## Urgent
 
+### Map provider capabilities to canonical Metrics
+
+Before adding another provider or Metric, define one versioned mapping from each provider's fields, units, aggregation semantics, and connection route to FitFight's canonical Metric definitions. Users choose a FitFight Metric such as Steps; they never choose a WHOOP, Strava, or HealthKit field directly. Each provider adapter declares which canonical Metrics it can supply, how it normalizes them, and which combinations are unsupported.
+
+Discuss the capability matrix, direct-provider versus Apple Health copies, source precedence and deduplication, unit conversion, definition/version changes, and how the UI limits a Fight to Metrics supported by every selected source. Do not assume similarly named provider values mean the same thing.
+
+### Freeze historical results against aggregation-code changes
+
+Changing normalization, aggregation, or scoring code must not silently rewrite previously finalized history. Persist the calculation version, input revision, calculated value, and finalized time used for each historical day and Fight result. A new code version applies prospectively unless an explicit, audited backfill is approved.
+
+Provider corrections, deletion tombstones, and late device syncs may still update an unfinalized day during its disclosed correction window. Once finalized, that day's stored result remains immutable except through an explicit audited correction. Decide the day-finalization boundary and correction window before relying on historical totals for recommendations or completed Fights.
+
 ### Really delete a user's data when they ask
 
 Today "Delete account" is a soft delete. `delete_own_account()` sets `deleted_at`, renames the row to `Deleted User`, clears the avatar and time zone, and drops sessions, refresh tokens and identities. The row itself, the handle, and every metric observation stay in the database forever.
@@ -45,7 +57,7 @@ If the app is closed or killed, iOS will not reliably run timers, settle a month
 
 The phone’s job is: show the UI, read HealthKit / workouts when it is open (or briefly woken), upload, receive pushes.
 
-**Last TestFlight:** 29 Aug 2026 — new design system, concentric selected rows, clean selection dividers, and vertical-only screen scrolling. Still `0.9.0`. Look for `0.9.0 · build N · staging`.
+**Last TestFlight:** 30 Aug 2026 — resumable one-object HealthKit sync, frozen daily totals, and exact Fight-end scoring. Still `0.9.0`. Look for `0.9.0 · build N · staging`.
 
 ## Now
 
@@ -55,7 +67,8 @@ The phone’s job is: show the UI, read HealthKit / workouts when it is open (or
 
 ## Next
 
-- **Watch a real 3-day fight close.** Opening the app marks a due fight finished. No cron. Proof is two phones: standings match, fight ends, steps after `ends_at` do not count. Do that before App Store.
+- **Validate the one-object pipeline on staging.** Run a full-history sync, interrupt and resume the same TUS upload, confirm the private object is deleted after processing, and confirm the HealthKit anchor advances only after `completed`.
+- **Watch a real 3-day fight close.** Opening the app marks a due fight finished; the daily Vercel cron is the safety net. Proof is two phones: standings match, the Fight ends, and Steps after `ends_at` do not count. Do that before App Store.
 - App Store when Marc says ship (`develop` → `main`).
 
 ## Later

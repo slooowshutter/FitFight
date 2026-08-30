@@ -1,9 +1,9 @@
-import { verifyUser } from "@/server/auth/verifyUser";
 import {
   ensureAppleHealthSource,
   toDataSourceResponse,
-} from "@/server/domain/sources/ensureAppleHealthSource";
-import { apiRoute, corsPreflight, json } from "@/server/http";
+} from "@/lib/supabase/queries/apple-health-source-supabase-query";
+import { apiRoute, corsPreflight, json } from "@/lib/http";
+import { verifyUser } from "@/lib/supabase/queries/auth-supabase-query";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

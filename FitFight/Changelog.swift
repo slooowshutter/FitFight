@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 8,
             day: 30,
+            notes: "Apple Health sync now accepts active Fight windows correctly, explains whether a failure happened while preparing, uploading, or processing Steps, and enables best-effort background updates when iOS permits. Manual sync still works whenever FitFight is open."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
+            day: 30,
             notes: "Apple Health sync can now resume an interrupted upload without starting over. FitFight advances its HealthKit checkpoint only after the complete archive is safely processed, freezes finished days, and uses the exact Fight end time so later Steps cannot change the result."
         ),
         ReleaseNote(

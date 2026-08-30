@@ -21,12 +21,15 @@ struct FitFightApp: App {
     @StateObject private var model = AppModel()
     @StateObject private var session: SessionStore
     @StateObject private var friends: FriendshipStore
-    @StateObject private var steps = HealthKitStepsStore()
+    @StateObject private var steps: HealthKitStepsStore
 
     init() {
         let session = SessionStore()
+        let steps = HealthKitStepsStore()
+        steps.configure(session: session)
         _session = StateObject(wrappedValue: session)
         _friends = StateObject(wrappedValue: FriendshipStore(client: session.client))
+        _steps = StateObject(wrappedValue: steps)
     }
 
     var body: some Scene {
@@ -39,7 +42,6 @@ struct FitFightApp: App {
                 .environmentObject(steps)
                 .fitFightTheme(themeStore.theme)
                 .task {
-                    steps.configure(session: session)
                     if ScreenshotExport.isEnabled {
                         ScreenshotExport.exportAll()
                     }

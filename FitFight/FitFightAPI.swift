@@ -25,13 +25,102 @@ struct FitFightDataSource: Codable, Equatable {
     var contributingSourceLabels: [String]?
 }
 
-struct FitFightHealthKitArchiveAck: Codable, Equatable {
-    var samples: Int
-    var deletions: Int
-    var mergedDays: Int
-    var sourceDays: Int
-    var sourceId: UUID
-    var recalculatedFightIds: [UUID]?
+struct FitFightProviderUploadCreate: Encodable, Equatable {
+    var uploadId: UUID
+    var provider = "apple_health"
+    var connectionRoute = "healthkit"
+    var metric = "steps"
+    var formatVersion = 1
+    var byteSize: Int
+    var sha256: String
+
+    enum CodingKeys: String, CodingKey {
+        case uploadId = "upload_id"
+        case provider
+        case connectionRoute = "connection_route"
+        case metric
+        case formatVersion = "format_version"
+        case byteSize = "byte_size"
+        case sha256
+    }
+}
+
+struct FitFightProviderUploadCapability: Decodable, Equatable {
+    var uploadId: UUID
+    var status: String
+    var objectPath: String
+    var tusURL: URL
+    var tusHeaders: [String: String]
+    var tusMetadata: [String: String]
+
+    enum CodingKeys: String, CodingKey {
+        case uploadId = "upload_id"
+        case status
+        case objectPath = "object_path"
+        case tusURL = "tus_url"
+        case tusHeaders = "tus_headers"
+        case tusMetadata = "tus_metadata"
+    }
+}
+
+struct FitFightProviderUploadStatus: Decodable, Equatable {
+    struct Receipt: Decodable, Equatable {
+        var uploadId: UUID
+        var samples: Int
+        var deletions: Int
+        var mergedDays: Int
+        var sourceDays: Int
+        var fightAggregates: Int
+        var completedAt: Date
+
+        enum CodingKeys: String, CodingKey {
+            case uploadId = "upload_id"
+            case samples
+            case deletions
+            case mergedDays = "merged_days"
+            case sourceDays = "source_days"
+            case fightAggregates = "fight_aggregates"
+            case completedAt = "completed_at"
+        }
+    }
+
+    var uploadId: UUID
+    var status: String
+    var receipt: Receipt?
+    var errorCode: String?
+
+    enum CodingKeys: String, CodingKey {
+        case uploadId = "upload_id"
+        case status
+        case receipt
+        case errorCode = "error_code"
+    }
+}
+
+struct FitFightHealthKitContext: Decodable, Equatable {
+    struct FightWindow: Decodable, Equatable {
+        var fightId: UUID
+        var state: String
+        var startsAt: Date
+        var endsAt: Date
+        var cutoffAt: Date
+
+        enum CodingKeys: String, CodingKey {
+            case fightId = "fight_id"
+            case state
+            case startsAt = "starts_at"
+            case endsAt = "ends_at"
+            case cutoffAt = "cutoff_at"
+        }
+    }
+
+    var serverNow: Date
+    var fightWindows: [FightWindow]
+
+    enum CodingKeys: String, CodingKey {
+        case serverNow = "server_now"
+        case fightWindows = "fight_windows"
+    }
 }
 
 struct FitFightCreateFight: Encodable, Equatable {
@@ -92,15 +181,46 @@ struct FitFightAPI {
         )
     }
 
-    func uploadHealthKitArchive<Batch: Encodable>(
-        _ batch: Batch,
+    func createProviderUpload(
+        _ upload: FitFightProviderUploadCreate,
         accessToken: String
-    ) async throws -> FitFightHealthKitArchiveAck {
+    ) async throws -> FitFightProviderUploadCapability {
         try await post(
-            path: "healthkit/batches",
+            path: "provider-uploads",
             accessToken: accessToken,
-            body: batch,
+            body: upload,
+            expected: [200, 201]
+        )
+    }
+
+    func healthKitUploadContext(accessToken: String) async throws -> FitFightHealthKitContext {
+        try await get(
+            path: "provider-uploads/context?provider=apple_health&metric=steps",
+            accessToken: accessToken,
             expected: [200]
+        )
+    }
+
+    func providerUploadStatus(
+        uploadId: UUID,
+        accessToken: String
+    ) async throws -> FitFightProviderUploadStatus {
+        try await get(
+            path: "provider-uploads/\(uploadId.uuidString.lowercased())",
+            accessToken: accessToken,
+            expected: [200]
+        )
+    }
+
+    func processProviderUpload(
+        uploadId: UUID,
+        accessToken: String
+    ) async throws -> FitFightProviderUploadStatus {
+        try await post(
+            path: "provider-uploads/\(uploadId.uuidString.lowercased())/process",
+            accessToken: accessToken,
+            body: EmptyJSON(),
+            expected: [200, 202]
         )
     }
 
@@ -221,6 +341,21 @@ struct FitFightAPI {
         try await request(
             path: path,
             method: "DELETE",
+            accessToken: accessToken,
+            body: nil,
+            idempotencyKey: nil,
+            expected: expected
+        )
+    }
+
+    private func get<Response: Decodable>(
+        path: String,
+        accessToken: String,
+        expected: Set<Int>
+    ) async throws -> Response {
+        try await request(
+            path: path,
+            method: "GET",
             accessToken: accessToken,
             body: nil,
             idempotencyKey: nil,

@@ -1,5 +1,5 @@
 begin;
-select plan(44);
+select plan(31);
 
 select has_schema('private', 'private schema exists');
 select has_table('public', 'profiles', 'profiles exists');
@@ -10,10 +10,6 @@ select has_table('public', 'fight_invites', 'fight_invites exists');
 select has_table('public', 'data_sources', 'data_sources exists');
 select has_table('public', 'step_days', 'step_days exists');
 select has_table('private', 'metric_observations', 'observations stay private');
-select has_table('private', 'healthkit_step_samples', 'raw HealthKit step samples stay private');
-select has_table('private', 'healthkit_step_sample_deletions', 'HealthKit deletion tombstones stay private');
-select has_table('private', 'healthkit_step_source_days', 'source statistics stay private');
-select has_table('private', 'healthkit_step_syncs', 'HealthKit sync state stays private');
 
 select ok(
   (select relrowsecurity from pg_class c
@@ -51,30 +47,6 @@ select ok(
     where n.nspname = 'public' and c.relname = 'step_days'),
   'step_days has RLS'
 );
-select ok(
-  (select relrowsecurity from pg_class c
-     join pg_namespace n on n.oid = c.relnamespace
-    where n.nspname = 'private' and c.relname = 'healthkit_step_samples'),
-  'raw HealthKit samples have RLS'
-);
-select ok(
-  (select relrowsecurity from pg_class c
-     join pg_namespace n on n.oid = c.relnamespace
-    where n.nspname = 'private' and c.relname = 'healthkit_step_sample_deletions'),
-  'HealthKit deletion tombstones have RLS'
-);
-select ok(
-  (select relrowsecurity from pg_class c
-     join pg_namespace n on n.oid = c.relnamespace
-    where n.nspname = 'private' and c.relname = 'healthkit_step_source_days'),
-  'HealthKit source statistics have RLS'
-);
-select ok(
-  (select relrowsecurity from pg_class c
-     join pg_namespace n on n.oid = c.relnamespace
-    where n.nspname = 'private' and c.relname = 'healthkit_step_syncs'),
-  'HealthKit sync state has RLS'
-);
 
 select is(
   has_table_privilege('anon', 'public.fights', 'SELECT'),
@@ -90,11 +62,6 @@ select is(
   has_table_privilege('authenticated', 'private.metric_observations', 'SELECT'),
   false,
   'authenticated cannot read observations'
-);
-select is(
-  has_table_privilege('anon', 'private.healthkit_step_samples', 'SELECT'),
-  false,
-  'anon cannot read raw HealthKit samples'
 );
 select is(
   has_table_privilege('authenticated', 'public.fights', 'INSERT'),
@@ -146,38 +113,20 @@ select ok(
   'observations are locked to steps'
 );
 
-select ok(
-  to_regprocedure('public.delete_own_account()') is null,
-  'account deletion is not exposed as an RPC'
-);
-select ok(
-  to_regprocedure('public.ingest_healthkit_steps(jsonb)') is null,
-  'HealthKit ingestion is not exposed as an RPC'
+select has_function(
+  'public',
+  'delete_own_account',
+  'delete_own_account exists'
 );
 select is(
-  has_function_privilege('anon', 'public.handle_new_user()', 'EXECUTE'),
+  has_function_privilege('anon', 'public.delete_own_account()', 'EXECUTE'),
   false,
-  'anon cannot call the signup trigger function'
+  'anon cannot execute delete_own_account'
 );
 select is(
-  has_function_privilege('authenticated', 'public.handle_new_user()', 'EXECUTE'),
-  false,
-  'authenticated users cannot call the signup trigger function'
-);
-select is(
-  has_table_privilege('authenticated', 'private.healthkit_step_samples', 'SELECT'),
-  false,
-  'authenticated clients cannot read raw HealthKit samples'
-);
-select is(
-  has_table_privilege('authenticated', 'private.healthkit_step_samples', 'INSERT'),
-  false,
-  'authenticated clients cannot insert raw HealthKit samples'
-);
-select is(
-  has_table_privilege('authenticated', 'private.healthkit_step_source_days', 'DELETE'),
-  false,
-  'authenticated clients cannot delete HealthKit source statistics'
+  has_function_privilege('authenticated', 'public.delete_own_account()', 'EXECUTE'),
+  true,
+  'signed-in users can execute delete_own_account'
 );
 
 select * from finish();

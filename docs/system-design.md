@@ -62,7 +62,9 @@ flowchart LR
     Score --> API
     API --> Clients
     Clients -->|reviewed public reads| API
-    Clients -->|commands and HealthKit batches| Ingest
+    Clients -->|small coordination commands| Ingest
+    Clients -->|one signed TUS object| Storage[(Private Storage)]
+    Storage -->|server download| Ingest
 ```
 
 ### Sources of truth
@@ -90,7 +92,9 @@ FitFight/                       existing native SwiftUI app
 FitFight.xcodeproj/             existing Xcode project
 web/                            Next.js App Router website
   app/api/                      iOS API, callbacks, webhooks, workers
-  src/server/                   domain, adapter, normalizer, scoring modules
+  lib/                          shared domain, validation, and scoring modules
+    supabase/                   Supabase clients and Postgres connection
+      queries/                  all Supabase data-access queries, split by domain
 supabase/
   migrations/                   reviewed schema and RLS migrations
   tests/                        pgTAP RLS and database tests
@@ -496,7 +500,7 @@ Future running, swimming, volleyball, and similar records are **Activities**, no
 
 The diagram below is logical. It does not mean FitFight needs a fleet of microservices:
 
-- **SwiftUI is the native client.** It uses Supabase Swift directly for Auth, reviewed RLS-protected reads, and explicitly whitelisted self-only profile/preference writes. It renders screens, reads HealthKit, uploads private batches to Next.js, and sends domain commands to Next.js. It does not hold provider secrets, consume queues, normalize cloud-provider payloads, or finalize Fights.
+- **SwiftUI is the native client.** It uses Supabase Swift directly for Auth, reviewed RLS-protected reads, and explicitly whitelisted self-only profile/preference writes. It renders screens, reads HealthKit, streams one protected NDJSON archive to disk, uploads that one private object directly to Supabase Storage with TUS, and sends small coordination/domain commands to Next.js. It does not hold provider secrets, consume queues, normalize cloud-provider payloads, or finalize Fights.
 - **Next.js is the only TypeScript backend and the website.** Node.js Route Handlers expose the iOS command/private-data API, receive OAuth callbacks and webhooks, and run bounded worker batches. Marketing/legal/auth pages live in the same project; native product screens do not.
 - **Supabase Postgres is the database**, with exposed `public` read models and unexposed `private` health/integration data.
 - **Normalizer and Scoring engine are ordinary backend TypeScript modules**, imported by Next.js workers. Their names describe responsibilities, not machines.
@@ -508,6 +512,7 @@ There is no always-on application server initially. Vercel invokes Next.js Route
 ```mermaid
 sequenceDiagram
     participant P as Provider or HealthKit
+    participant O as Private Storage object
     participant I as Next.js ingestion API
     participant Q as Durable queue
     participant N as Normalizer
@@ -515,8 +520,10 @@ sequenceDiagram
     participant DB as Postgres
     participant C as Client
 
-    P->>I: webhook or device upload
-    I->>I: authenticate, validate, dedupe envelope
+    P->>O: one signed resumable device upload
+    O->>I: server-side stream after process command
+    P->>I: signed webhook or small coordination command
+    I->>I: authenticate, validate, verify object
     I->>Q: enqueue fetch/normalize job
     Q->>N: deliver job
     N->>P: fetch authoritative changes when needed
@@ -532,7 +539,7 @@ sequenceDiagram
 Inputs are either:
 
 - A signed provider webhook containing an object/event identifier
-- A client-authenticated HealthKit batch containing anchored changes
+- A client-authenticated command identifying one signed HealthKit archive object
 - A scheduled reconciliation request
 - A user-triggered refresh request
 
@@ -548,7 +555,7 @@ Adapters produce canonical Observations with units and intervals. Validation rej
 
 ### Layer 4: aggregation
 
-Incrementally compute private personal daily totals and, where a Fight window overlaps, per-member Fight-day totals. Recompute the affected day when an Observation changes rather than replaying every Fight. For interval metrics, split at Fight-day boundaries before aggregation.
+Compute private personal daily totals and exact per-member Fight-window totals from the verified archive. Today remains provisional. The first complete post-midnight checkpoint may perform one last update for the prior day and freezes it; a historical day first imported later is inserted frozen. Later raw corrections remain visible privately but cannot rewrite a frozen serving value. Finished Fights freeze at the exact `ends_at` cutoff. For interval metrics, split at Fight boundaries before aggregation.
 
 ### Layer 5: scoring
 
@@ -600,7 +607,11 @@ The separate `private` schema is defense in depth. Even if a future `public` gra
 6. `public.data_sources(id, user_id, provider, source_label, contributing_source_labels, connection_route, capabilities, status, consent_version, connected_at, revoked_at, last_success_at, complete_through, last_error_code)`
 7. `private.metric_observations(id, user_id, source_id, external_record_id, metric, starts_at, ends_at, value, unit, revision, provenance, retracted_at, created_at)`
 
-The Steps archive adds `private.healthkit_step_samples`, `private.healthkit_step_sample_deletions`, `private.healthkit_step_source_days`, and `private.healthkit_step_syncs`. Only `public.step_days` contains the Apple-merged totals used by the current shared scoring path. The authenticated Next.js route derives the User from the bearer token and writes the complete batch through a TypeScript-owned Postgres transaction; raw rows are not exposed as Data API routes and no application RPC is exposed.
+The one-object pipeline adds `private.provider_uploads`, `private.provider_events`, `public.metric_days`, and `private.fight_score_snapshots`. `private.provider_uploads` owns the UUID-v4 upload identity, exact object path, expected/actual bytes and hash, state/lease, safe error, and replayable receipt. Raw `add`, `change`, and `delete` events are append-only; canonical `private.metric_observations` revisions and serving rows retain input, normalization, and calculation versions. `public.step_days` remains a read-compatible mirror for older builds, and `fight_members` mirrors the latest current/final score. Existing HealthKit-specific private tables remain legacy schema and receive no new writes. Raw rows are not exposed through the Data API and no application RPC is exposed.
+
+Storage bucket `provider-inbox` is private and limited to 50 MB per object. One object lives at `USER_UUID/UPLOAD_UUID/archive.ndjson`, uses `application/x-ndjson`, and cannot be replaced. Authenticated clients cannot list, read, download, or delete objects. Next.js issues a short-lived TUS capability for that exact path, downloads and hashes the finished object, commits Postgres, deletes the object, and acknowledges `completed` only after deletion. `committed` means database work succeeded but cleanup remains retryable.
+
+Archive version 1 is UTF-8 with one strict JSON object followed by LF on each line. It contains `sample` (`add`/`change`), `deletion` (`delete` tombstone), `merged_day`, `source_day`, and exact `fight_aggregate` records, followed by exactly one final `checkpoint`. The public schema is [`contracts/schemas/provider-archive-v1.json`](../contracts/schemas/provider-archive-v1.json). Neither a malformed record nor an incomplete archive may publish partial serving data.
 
 This deliberately keeps Fight rules on `fights` and current/final score fields on `fight_members` until measured complexity requires history tables or projections. A direct public view may return only the member-safe subset and use `security_invoker = true`.
 
@@ -626,7 +637,7 @@ Swift has two explicit network paths. Reviewed reads and a very small set of sel
 ### Reads and writes
 
 - **Direct reads** cover profiles, friendships, invitations, Fight lists/details, shared scores, source labels, and freshness. The app sends its publishable key and User JWT; it never receives a secret key.
-- **Direct self-service writes** are limited to reviewed fields and operations such as the signed-in User's own display name. HealthKit batches go through the authenticated TypeScript backend, which derives ownership from the JWT and commits private archive rows, canonical observations, and Apple's merged `step_days` value together. Fight lifecycle and membership remain temporarily client-writable as documented in current status; final results are not.
+- **Direct self-service writes** are limited to reviewed fields and operations such as the signed-in User's own display name. HealthKit data goes directly to one signed private Storage object. The authenticated TypeScript backend derives ownership from the JWT, verifies the object, and commits private archive rows, canonical observations, frozen daily values, and exact Fight-window values together. Fight lifecycle and membership remain temporarily client-writable as documented in current status; final results are not.
 - **Commands** go through authenticated Next.js Route Handlers: create/start/cancel a Fight, create an invite, accept with a source and target, request synchronization, disconnect a provider, and register a device.
 - **Private reads and writes** go through Next.js; Swift never queries or writes `private`. Next.js reaches Postgres through the server-only transaction pooler, while the private schema remains absent from the Data API.
 - **Provider callbacks/webhooks** use separate unauthenticated endpoints that verify provider state/signatures before any privileged action.
@@ -645,7 +656,10 @@ POST   /api/v1/invites/{token}/accept
 PATCH  /api/v1/fights/{fightID}/membership
 GET    /api/v1/me/activity
 POST   /api/v1/sources/{sourceID}/sync
-POST   /api/v1/healthkit/batches
+GET    /api/v1/provider-uploads/context
+POST   /api/v1/provider-uploads
+GET    /api/v1/provider-uploads/{uploadID}
+POST   /api/v1/provider-uploads/{uploadID}/process
 DELETE /api/v1/me
 POST   /api/v1/provider-connections/{provider}/authorize
 DELETE /api/v1/provider-connections/{provider}
@@ -703,12 +717,13 @@ It depends on the source:
 ### HealthKit sync loop
 
 1. After the User enables Steps collection, register observer queries for that authorized type and enable background delivery.
-2. When notified, run anchored queries from the locally stored anchor.
-3. Normalize enough source identity locally to upload a small idempotent batch.
-4. Upload with the User session and installation ID.
-5. Server validates the batch against the User's active Collection consent and source ownership, then stores eligible observations whether or not a Fight is live.
-6. Persist the new local anchor only after server acknowledgement.
-7. On foreground activation and pull-to-refresh, repeat the anchored sync.
+2. When notified, preserve the observer changes durably before invoking Apple's completion handler, then run anchored queries from the active local anchor.
+3. Fetch server Fight context. For each live or awaiting-final-sync Fight, query exactly `starts_at...cutoff_at`, where `cutoff_at` is never later than `ends_at`.
+4. Stream every accessible sample/change/deletion, merged day, source day, Fight aggregate, and one final checkpoint into a protected, backup-excluded NDJSON file. Generate one UUID-v4 `upload_id`; fail visibly if the archive exceeds 50 MB.
+5. Ask Next.js to authorize `USER_UUID/UPLOAD_UUID/archive.ndjson`, then use TUS to upload or resume that same object. TUS byte chunks are transport details and do not create application objects or identifiers.
+6. Ask Next.js to process the object. It verifies ownership, size, SHA-256, and every NDJSON record; writes the permanent pipeline in one transaction; deletes the object; and returns a replayable receipt.
+7. Promote the candidate anchor and delete the local archive only after status `completed`. A failure or lost response keeps the active anchor and resumes/replays the same `upload_id`.
+8. On foreground activation and pull-to-refresh, repeat the anchored sync.
 
 Apple says observer queries can receive background delivery and then require another query to fetch the changes ([HealthKit observer queries](https://developer.apple.com/documentation/healthkit/executing-observer-queries)). HealthKit does not reveal whether read access was denied; an empty result can look like no data, so FitFight must say “No accessible data” and link to Health settings rather than falsely claiming “Permission denied.”
 

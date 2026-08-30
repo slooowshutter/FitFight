@@ -5,6 +5,8 @@ info:
   description: >
     Next.js Route Handlers under /api/v1. Swift sends the User JWT.
     Clients never write fights, scores, sources, or private.metric_observations.
+    Provider data travels as one signed Storage object; each NDJSON line follows
+    schemas/provider-archive-v1.json.
 servers:
   - url: /api/v1
 paths:
@@ -19,23 +21,74 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/DataSource" }
-  /healthkit/batches:
+  /provider-uploads:
     post:
-      operationId: uploadHealthKitBatch
-      summary: Validate and transactionally archive an authenticated User's HealthKit Steps batch.
+      operationId: createProviderUpload
+      summary: Authorize one exact private Storage object for an authenticated provider archive.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: "./schemas/healthkit-batch.json"
+            schema: { $ref: "#/components/schemas/CreateProviderUpload" }
       responses:
-        "200":
-          description: Archived row counts and recalculated fights
+        "201":
+          description: New upload authorization
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/BatchAck" }
+              schema: { $ref: "#/components/schemas/ProviderUploadAuthorization" }
+        "200":
+          description: Replay of the same upload authorization
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProviderUploadAuthorization" }
+  /provider-uploads/context:
+    get:
+      operationId: getProviderUploadContext
+      summary: Return server-authoritative Fight windows for the next HealthKit archive.
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Current server time and relevant Fight windows
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProviderUploadContext" }
+  /provider-uploads/{uploadID}:
+    get:
+      operationId: getProviderUpload
+      summary: Read current processing state or replay a completed receipt.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/UploadID"
+      responses:
+        "200":
+          description: Current state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProviderUploadStatus" }
+  /provider-uploads/{uploadID}/process:
+    post:
+      operationId: processProviderUpload
+      summary: Verify, process, and delete the authorized Storage object.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/UploadID"
+      responses:
+        "200":
+          description: Processing completed, or completed receipt replayed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProviderUploadStatus" }
+        "202":
+          description: Database committed; Storage cleanup remains pending
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProviderUploadStatus" }
+        "409":
+          description: This upload is already being processed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
   /me:
     delete:
       operationId: deleteAccount
@@ -181,12 +234,29 @@ paths:
         "200":
           description: Cancelled
 components:
+  parameters:
+    UploadID:
+      in: path
+      name: uploadID
+      required: true
+      schema: { $ref: "#/components/schemas/UUIDv4" }
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    ApiError:
+      type: object
+      additionalProperties: false
+      required: [error, code]
+      properties:
+        error: { type: string }
+        code: { type: string }
+    UUIDv4:
+      type: string
+      format: uuid
+      pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
     DataSource:
       type: object
       required: [id, provider, sourceLabel]
@@ -197,18 +267,82 @@ components:
         contributingSourceLabels:
           type: array
           items: { type: string }
-    BatchAck:
+    CreateProviderUpload:
       type: object
-      required: [samples, deletions, mergedDays, sourceDays, sourceId, recalculatedFightIds]
+      additionalProperties: false
+      required: [upload_id, provider, connection_route, metric, format_version, byte_size, sha256]
       properties:
-        samples: { type: integer }
-        deletions: { type: integer }
-        mergedDays: { type: integer }
-        sourceDays: { type: integer }
-        sourceId: { type: string, format: uuid }
-        recalculatedFightIds:
+        upload_id: { $ref: "#/components/schemas/UUIDv4" }
+        provider: { const: apple_health }
+        connection_route: { const: healthkit }
+        metric: { const: steps }
+        format_version: { const: 1 }
+        byte_size: { type: integer, minimum: 1, maximum: 52428800 }
+        sha256: { type: string, pattern: "^[0-9a-f]{64}$" }
+    ProviderUploadAuthorization:
+      type: object
+      required: [upload_id, status, object_path, tus_url, tus_headers, tus_metadata]
+      properties:
+        upload_id: { $ref: "#/components/schemas/UUIDv4" }
+        status: { $ref: "#/components/schemas/ProviderUploadState" }
+        object_path: { type: string }
+        tus_url: { type: string, format: uri }
+        tus_headers:
+          type: object
+          required: [x-signature, x-upsert]
+          properties:
+            x-signature: { type: string }
+            x-upsert: { const: "false" }
+        tus_metadata:
+          type: object
+          required: [bucketName, objectName, contentType, cacheControl]
+          properties:
+            bucketName: { const: provider-inbox }
+            objectName: { type: string }
+            contentType: { const: application/x-ndjson }
+            cacheControl: { const: "3600" }
+    ProviderUploadState:
+      type: string
+      enum: [issued, processing, committed, completed, rejected, retryable_failure]
+    ProviderUploadReceipt:
+      type: object
+      required: [upload_id, samples, deletions, merged_days, source_days, fight_aggregates, completed_at]
+      properties:
+        upload_id: { $ref: "#/components/schemas/UUIDv4" }
+        samples: { type: integer, minimum: 0 }
+        deletions: { type: integer, minimum: 0 }
+        merged_days: { type: integer, minimum: 0 }
+        source_days: { type: integer, minimum: 0 }
+        fight_aggregates: { type: integer, minimum: 0 }
+        completed_at: { type: string, format: date-time }
+    ProviderUploadStatus:
+      type: object
+      required: [upload_id, status]
+      properties:
+        upload_id: { $ref: "#/components/schemas/UUIDv4" }
+        status: { $ref: "#/components/schemas/ProviderUploadState" }
+        receipt: { $ref: "#/components/schemas/ProviderUploadReceipt" }
+        error_code: { type: string }
+    ProviderUploadContext:
+      type: object
+      required: [server_now, fight_windows]
+      properties:
+        server_now: { type: string, format: date-time }
+        fight_windows:
           type: array
-          items: { type: string, format: uuid }
+          items: { $ref: "#/components/schemas/FightUploadWindow" }
+    FightUploadWindow:
+      type: object
+      required: [fight_id, state, starts_at, ends_at, cutoff_at]
+      properties:
+        fight_id: { $ref: "#/components/schemas/UUIDv4" }
+        state: { type: string, enum: [live, awaiting_final_sync] }
+        starts_at: { type: string, format: date-time }
+        ends_at: { type: string, format: date-time }
+        cutoff_at:
+          type: string
+          format: date-time
+          description: The earlier of server_now and ends_at.
     CreateFight:
       type: object
       required: [name, startsAt, endsAt, timeZone, outcomeRule, stakeKind]

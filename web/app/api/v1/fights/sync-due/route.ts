@@ -1,6 +1,6 @@
-import { verifyUser } from "@/server/auth/verifyUser";
-import { apiRoute, corsPreflight, json } from "@/server/http";
-import { closeDueFightsForUser } from "@/server/scoring/closeDueFights";
+import { apiRoute, corsPreflight, json } from "@/lib/http";
+import { verifyUser } from "@/lib/supabase/queries/auth-supabase-query";
+import { closeDueFightsForUser } from "@/lib/supabase/queries/close-due-fights-supabase-query";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

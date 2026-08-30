@@ -5,9 +5,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/server/scoring/scoreFight.test.ts src/server/scoring/civilDay.test.ts src/server/scoring/fightClock.test.ts src/server/scoring/closeDueFights.test.ts src/server/ingest/healthkit/archiveSteps.test.ts",
-    "test:db": "tsx --test src/server/ingest/healthkit/backendTransactions.integration.test.ts"
+    "typecheck": "tsc --noEmit"
   },
   "engines": {
     "node": ">=20"

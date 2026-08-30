@@ -1,6 +1,9 @@
-import { verifyUser } from "@/server/auth/verifyUser";
-import { createFight, createFightSchema } from "@/server/domain/fights/createFight";
-import { ApiError, ERROR_CODES, apiRoute, corsPreflight, json, readJson } from "@/server/http";
+import { ApiError, ERROR_CODES, apiRoute, corsPreflight, json, readJson } from "@/lib/http";
+import { verifyUser } from "@/lib/supabase/queries/auth-supabase-query";
+import {
+  createFight,
+  createFightSchema,
+} from "@/lib/supabase/queries/create-fight-supabase-query";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

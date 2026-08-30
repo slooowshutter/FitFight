@@ -1,6 +1,6 @@
-import { verifyUser } from "@/server/auth/verifyUser";
-import { deleteAccount } from "@/server/domain/account/deleteAccount";
-import { apiRoute, corsPreflight, json } from "@/server/http";
+import { apiRoute, corsPreflight, json } from "@/lib/http";
+import { verifyUser } from "@/lib/supabase/queries/auth-supabase-query";
+import { deleteAccount } from "@/lib/supabase/queries/delete-account-supabase-query";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

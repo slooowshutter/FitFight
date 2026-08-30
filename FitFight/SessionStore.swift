@@ -57,6 +57,12 @@ final class SessionStore: ObservableObject {
         return profile.looksGenerated
     }
 
+    func freshAccessToken() async throws -> String {
+        let session = try await client.auth.refreshSession()
+        authSession = session
+        return session.accessToken
+    }
+
     init(listenForSession: Bool = true) {
         client = SupabaseClient(
             supabaseURL: SupabaseConfig.projectURL,

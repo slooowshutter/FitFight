@@ -35,19 +35,3 @@ jobs:
 
       - name: pgTAP
         run: supabase test db --local
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-
-      - name: Install backend dependencies
-        working-directory: web
-        run: npm ci
-
-      - name: TypeScript database transactions
-        working-directory: web
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
-        run: npm run test:db

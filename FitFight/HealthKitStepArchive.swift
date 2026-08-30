@@ -1,144 +1,142 @@
 import CoreFoundation
+import CryptoKit
 import Foundation
 import HealthKit
 
-/// Archives every accessible Steps representation while leaving Apple's merged
-/// statistic as the only authoritative value in `step_days`.
-enum HealthKitStepArchive {
-    private static let healthKitPageLimit = 500
-    private static let rawUploadLimit = 100
-    private static let deletionUploadLimit = 500
-    private static let dayUploadLimit = 31
+enum HealthKitStepArchiveError: Error {
+    case archiveTooLarge
+}
 
-    static func sync(
+struct HealthKitPreparedArchive {
+    let url: URL
+    let byteSize: Int
+    let sha256: String
+    let candidateAnchor: Data
+    let earliestSample: Date
+}
+
+enum HealthKitStepArchive {
+    static let maximumBytes = 50 * 1_024 * 1_024
+    private static let pageLimit = 500
+
+    static func prepare(
         store: HKHealthStore,
         type: HKQuantityType,
-        api: FitFightAPI,
-        accessToken: String,
-        userId: UUID
-    ) async throws {
-        let defaults = UserDefaults.standard
-        let keys = SyncKeys(userId: userId)
-        let savedAnchor = loadAnchor(defaults: defaults, key: keys.anchor)
-        let isInitialArchive = savedAnchor == nil
+        userId: UUID,
+        uploadId: UUID,
+        activeAnchorData: Data?,
+        previousEarliestSample: Date?,
+        fightWindows: [FitFightHealthKitContext.FightWindow]
+    ) async throws -> HealthKitPreparedArchive? {
+        let activeAnchor = try activeAnchorData.flatMap {
+            try NSKeyedUnarchiver.unarchivedObject(ofClass: HKQueryAnchor.self, from: $0)
+        }
+        let isInitialArchive = activeAnchor == nil
+        let directory = try HealthKitUploadState.directory(userId: userId)
+        let archiveURL = directory.appendingPathComponent("\(uploadId.uuidString.lowercased()).ndjson")
+        FileManager.default.createFile(
+            atPath: archiveURL.path,
+            contents: nil,
+            attributes: [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication]
+        )
+        try HealthKitUploadState.protectAndExcludeFromBackup(archiveURL)
 
-        var queryAnchor = savedAnchor
-        var finalAnchor = savedAnchor
+        let writer = try NDJSONWriter(url: archiveURL, maximumBytes: maximumBytes)
+        var queryAnchor = activeAnchor
+        var candidateAnchor = activeAnchor
+        var earliestSample = previousEarliestSample
+        var sawDeletion = false
         var earliestChangedSample: Date?
-        var sawSamples = false
-        var sawDeletions = false
-
-        while true {
-            let page = try await changes(store: store, type: type, anchor: queryAnchor)
-            finalAnchor = page.anchor ?? finalAnchor
-
-            if !page.samples.isEmpty {
-                sawSamples = true
-                let calendar = Calendar.current
-                let uploads = page.samples.map { sampleUpload($0, calendar: calendar) }
-                earliestChangedSample = minimum(
-                    earliestChangedSample,
-                    page.samples.map(\.startDate).min()
-                )
-                for chunk in chunks(of: uploads, limit: rawUploadLimit) {
-                    try await ingest(
-                        api: api,
-                        accessToken: accessToken,
-                        payload: HealthKitStepPayload(samples: chunk)
-                    )
-                }
-            }
-
-            if !page.deletions.isEmpty {
-                sawDeletions = true
-                let uploads = page.deletions.map {
-                    HealthKitStepDeletionUpload(sampleId: $0.uuid)
-                }
-                for chunk in chunks(of: uploads, limit: deletionUploadLimit) {
-                    try await ingest(
-                        api: api,
-                        accessToken: accessToken,
-                        payload: HealthKitStepPayload(deletions: chunk)
-                    )
-                }
-            }
-
-            let objectCount = page.samples.count + page.deletions.count
-            guard objectCount >= healthKitPageLimit, let nextAnchor = page.anchor else {
-                break
-            }
-            queryAnchor = nextAnchor
-        }
-
-        if let earliestChangedSample {
-            let previous = defaults.object(forKey: keys.earliestSample) as? Double
-            let earliest = min(previous ?? earliestChangedSample.timeIntervalSince1970,
-                               earliestChangedSample.timeIntervalSince1970)
-            defaults.set(earliest, forKey: keys.earliestSample)
-        }
-
-        guard let earliestTimestamp = defaults.object(forKey: keys.earliestSample) as? Double else {
-            // An empty initial query may mean no data or denied read access. Do
-            // not advance the anchor and accidentally skip history granted later.
-            if !isInitialArchive, let finalAnchor {
-                try saveAnchor(finalAnchor, defaults: defaults, key: keys.anchor)
-            }
-            return
-        }
-
         let calendar = Calendar.current
         let now = Date()
-        let today = calendar.startOfDay(for: now)
-        let earliestArchived = Date(timeIntervalSince1970: earliestTimestamp)
-        let statisticsStart: Date
-        if isInitialArchive || sawDeletions {
-            statisticsStart = calendar.startOfDay(for: earliestArchived)
-        } else if let earliestChangedSample {
-            statisticsStart = min(today, calendar.startOfDay(for: earliestChangedSample))
-        } else {
-            // Refresh the current Apple total on every app sync, even if the
-            // anchored query reports no newly saved raw objects.
-            statisticsStart = today
-        }
 
-        let bundles = try await dayBundles(
-            store: store,
-            type: type,
-            start: statisticsStart,
-            end: now,
-            calendar: calendar
-        )
-        for chunk in chunks(of: bundles, limit: dayUploadLimit) {
-            try await ingest(
-                api: api,
-                accessToken: accessToken,
-                payload: HealthKitStepPayload(
-                    mergedDays: chunk.map(\.merged),
-                    sourceDays: chunk.flatMap(\.sources)
-                )
+        do {
+            while true {
+                let page = try await changes(store: store, type: type, anchor: queryAnchor)
+                candidateAnchor = page.anchor ?? candidateAnchor
+                for sample in page.samples {
+                    earliestChangedSample = min(earliestChangedSample ?? sample.startDate, sample.startDate)
+                    earliestSample = min(earliestSample ?? sample.startDate, sample.startDate)
+                    try writer.append(sampleRecord(
+                        sample,
+                        operation: "add",
+                        calendar: calendar
+                    ))
+                }
+                for deletion in page.deletions {
+                    sawDeletion = true
+                    try writer.append(DeletionRecord(
+                        type: "deletion",
+                        operation: "delete",
+                        sampleId: deletion.uuid,
+                        occurredAt: iso8601(now)
+                    ))
+                }
+                guard page.samples.count + page.deletions.count >= pageLimit,
+                      let nextAnchor = page.anchor else { break }
+                queryAnchor = nextAnchor
+            }
+
+            guard let earliestSample, let candidateAnchor else {
+                try writer.cancel()
+                return nil
+            }
+
+            let today = calendar.startOfDay(for: now)
+            let statisticsStart: Date
+            if isInitialArchive || sawDeletion {
+                statisticsStart = calendar.startOfDay(for: earliestSample)
+            } else if let earliestChangedSample {
+                statisticsStart = calendar.startOfDay(for: earliestChangedSample)
+            } else {
+                statisticsStart = today
+            }
+            try await appendDays(
+                writer: writer,
+                store: store,
+                type: type,
+                start: statisticsStart,
+                end: now,
+                calendar: calendar
             )
-        }
-
-        try await ingest(
-            api: api,
-            accessToken: accessToken,
-            payload: HealthKitStepPayload(
-                sync: HealthKitStepSyncUpload(
-                    timeZone: calendar.timeZone.identifier,
-                    accessibleFrom: iso8601(earliestArchived),
-                    completeThrough: iso8601(now)
+            for window in fightWindows {
+                let steps = try await aggregate(
+                    store: store,
+                    type: type,
+                    start: window.startsAt,
+                    end: window.cutoffAt
                 )
+                try writer.append(FightAggregateRecord(
+                    type: "fight_aggregate",
+                    fightId: window.fightId,
+                    startsAt: iso8601(window.startsAt),
+                    endsAt: iso8601(window.endsAt),
+                    cutoffAt: iso8601(window.cutoffAt),
+                    steps: Int(steps.rounded())
+                ))
+            }
+            try writer.append(CheckpointRecord(
+                type: "checkpoint",
+                timeZone: calendar.timeZone.identifier,
+                accessibleFrom: iso8601(max(earliestSample, store.earliestPermittedSampleDate())),
+                completeThrough: iso8601(now)
+            ))
+            let result = try writer.finish()
+            return HealthKitPreparedArchive(
+                url: archiveURL,
+                byteSize: result.byteSize,
+                sha256: result.sha256,
+                candidateAnchor: try NSKeyedArchiver.archivedData(
+                    withRootObject: candidateAnchor,
+                    requiringSecureCoding: true
+                ),
+                earliestSample: earliestSample
             )
-        )
-
-        // Save only after every server write succeeds. A retry may resend rows,
-        // but UUID/day upserts make that safe and prevent lost HealthKit changes.
-        if let finalAnchor, sawSamples || sawDeletions || !isInitialArchive {
-            try saveAnchor(finalAnchor, defaults: defaults, key: keys.anchor)
+        } catch {
+            try? writer.cancel()
+            throw error
         }
     }
-
-    // MARK: - HealthKit changes
 
     private struct ChangePage {
         let samples: [HKQuantitySample]
@@ -152,54 +150,33 @@ enum HealthKitStepArchive {
         anchor: HKQueryAnchor?
     ) async throws -> ChangePage {
         try await withCheckedThrowingContinuation { continuation in
-            let query = HKAnchoredObjectQuery(
+            store.execute(HKAnchoredObjectQuery(
                 type: type,
                 predicate: nil,
                 anchor: anchor,
-                limit: healthKitPageLimit
-            ) { _, samples, deletions, newAnchor, error in
+                limit: pageLimit
+            ) { _, samples, deletions, anchor, error in
                 if let error {
                     continuation.resume(throwing: error)
-                    return
-                }
-                continuation.resume(
-                    returning: ChangePage(
+                } else {
+                    continuation.resume(returning: ChangePage(
                         samples: (samples ?? []).compactMap { $0 as? HKQuantitySample },
                         deletions: deletions ?? [],
-                        anchor: newAnchor
-                    )
-                )
-            }
-            store.execute(query)
+                        anchor: anchor
+                    ))
+                }
+            })
         }
     }
 
-    // MARK: - Apple-merged and per-source statistics
-
-    private struct StatisticsDay {
-        let start: Date
-        let end: Date
-        let total: Double
-        let sources: [SourceTotal]
-    }
-
-    private struct SourceTotal {
-        let source: HKSource
-        let value: Double
-    }
-
-    private struct DayBundle {
-        let merged: HealthKitMergedStepDayUpload
-        let sources: [HealthKitStepSourceDayUpload]
-    }
-
-    private static func dayBundles(
+    private static func appendDays(
+        writer: NDJSONWriter,
         store: HKHealthStore,
         type: HKQuantityType,
         start: Date,
         end: Date,
         calendar: Calendar
-    ) async throws -> [DayBundle] {
+    ) async throws {
         let merged = try await statisticsDays(
             store: store,
             type: type,
@@ -208,7 +185,7 @@ enum HealthKitStepArchive {
             calendar: calendar,
             separateBySource: false
         )
-        let separated = try await statisticsDays(
+        let bySource = try await statisticsDays(
             store: store,
             type: type,
             start: start,
@@ -216,47 +193,45 @@ enum HealthKitStepArchive {
             calendar: calendar,
             separateBySource: true
         )
-
         let mergedByDay = Dictionary(uniqueKeysWithValues: merged.map {
             (dayString($0.start, calendar: calendar), $0)
         })
-        let separatedByDay = Dictionary(uniqueKeysWithValues: separated.map {
+        let sourceByDay = Dictionary(uniqueKeysWithValues: bySource.map {
             (dayString($0.start, calendar: calendar), $0)
         })
-
-        var result: [DayBundle] = []
         var cursor = calendar.startOfDay(for: start)
-        while cursor <= end {
+        while cursor < end {
             guard let next = calendar.date(byAdding: .day, value: 1, to: cursor) else { break }
             let day = dayString(cursor, calendar: calendar)
             let effectiveEnd = min(next, end)
-            let mergedValue = mergedByDay[day]?.total ?? 0
-            let sourceRows = (separatedByDay[day]?.sources ?? []).map { total in
-                HealthKitStepSourceDayUpload(
+            try writer.append(MergedDayRecord(
+                type: "merged_day",
+                day: day,
+                startsAt: iso8601(cursor),
+                endsAt: iso8601(effectiveEnd),
+                timeZone: calendar.timeZone.identifier,
+                steps: Int((mergedByDay[day]?.total ?? 0).rounded())
+            ))
+            for source in sourceByDay[day]?.sources ?? [] {
+                try writer.append(SourceDayRecord(
+                    type: "source_day",
                     day: day,
                     startsAt: iso8601(cursor),
                     endsAt: iso8601(effectiveEnd),
                     timeZone: calendar.timeZone.identifier,
-                    sourceName: total.source.name,
-                    sourceBundleIdentifier: total.source.bundleIdentifier,
-                    steps: total.value
-                )
+                    sourceName: source.source.name,
+                    sourceBundleIdentifier: source.source.bundleIdentifier,
+                    steps: source.value
+                ))
             }
-            result.append(
-                DayBundle(
-                    merged: HealthKitMergedStepDayUpload(
-                        day: day,
-                        startsAt: iso8601(cursor),
-                        endsAt: iso8601(effectiveEnd),
-                        timeZone: calendar.timeZone.identifier,
-                        steps: Int(mergedValue.rounded())
-                    ),
-                    sources: sourceRows
-                )
-            )
             cursor = next
         }
-        return result
+    }
+
+    private struct StatisticsDay {
+        let start: Date
+        let total: Double
+        let sources: [(source: HKSource, value: Double)]
     }
 
     private static func statisticsDays(
@@ -274,9 +249,7 @@ enum HealthKitStepArchive {
                 options: .strictStartDate
             )
             var options: HKStatisticsOptions = [.cumulativeSum]
-            if separateBySource {
-                options.insert(.separateBySource)
-            }
+            if separateBySource { options.insert(.separateBySource) }
             let query = HKStatisticsCollectionQuery(
                 quantityType: type,
                 quantitySamplePredicate: predicate,
@@ -289,52 +262,54 @@ enum HealthKitStepArchive {
                     continuation.resume(throwing: error)
                     return
                 }
-                guard let collection else {
-                    continuation.resume(returning: [])
-                    return
+                var result: [StatisticsDay] = []
+                collection?.enumerateStatistics(from: start, to: end) { statistics, _ in
+                    result.append(StatisticsDay(
+                        start: statistics.startDate,
+                        total: statistics.sumQuantity()?.doubleValue(for: .count()) ?? 0,
+                        sources: separateBySource ? (statistics.sources ?? []).compactMap { source in
+                            statistics.sumQuantity(for: source).map {
+                                (source, $0.doubleValue(for: .count()))
+                            }
+                        } : []
+                    ))
                 }
-                var days: [StatisticsDay] = []
-                collection.enumerateStatistics(from: start, to: end) { statistics, _ in
-                    let sourceTotals: [SourceTotal]
-                    if separateBySource {
-                        sourceTotals = (statistics.sources ?? []).compactMap { source in
-                            guard let quantity = statistics.sumQuantity(for: source) else { return nil }
-                            return SourceTotal(
-                                source: source,
-                                value: quantity.doubleValue(for: .count())
-                            )
-                        }
-                    } else {
-                        sourceTotals = []
-                    }
-                    days.append(
-                        StatisticsDay(
-                            start: statistics.startDate,
-                            end: statistics.endDate,
-                            total: statistics.sumQuantity()?.doubleValue(for: .count()) ?? 0,
-                            sources: sourceTotals
-                        )
-                    )
-                }
-                continuation.resume(returning: days)
+                continuation.resume(returning: result)
             }
             store.execute(query)
         }
     }
 
-    // MARK: - Raw sample fidelity
+    private static func aggregate(
+        store: HKHealthStore,
+        type: HKQuantityType,
+        start: Date,
+        end: Date
+    ) async throws -> Double {
+        let predicate = HKQuery.predicateForSamples(
+            withStart: start,
+            end: end,
+            options: [.strictStartDate, .strictEndDate]
+        )
+        let descriptor = HKStatisticsQueryDescriptor(
+            predicate: .quantitySample(type: type, predicate: predicate),
+            options: [.cumulativeSum]
+        )
+        return try await descriptor.result(for: store)?
+            .sumQuantity()?.doubleValue(for: .count()) ?? 0
+    }
 
-    private static func sampleUpload(
+    private static func sampleRecord(
         _ sample: HKQuantitySample,
+        operation: String,
         calendar: Calendar
-    ) -> HealthKitStepSampleUpload {
+    ) -> SampleRecord {
         let revision = sample.sourceRevision
         let os = revision.operatingSystemVersion
         let device = sample.device
-        let metadata = (sample.metadata ?? [:]).mapValues(metadataValue)
-        let userEntered = (sample.metadata?[HKMetadataKeyWasUserEntered] as? NSNumber)?.boolValue
-
-        return HealthKitStepSampleUpload(
+        return SampleRecord(
+            type: "sample",
+            operation: operation,
             sampleId: sample.uuid,
             value: sample.quantity.doubleValue(for: .count()),
             unit: "count",
@@ -355,73 +330,31 @@ enum HealthKitStepArchive {
             deviceSoftwareVersion: device?.softwareVersion,
             deviceLocalIdentifier: device?.localIdentifier,
             deviceUDIIdentifier: device?.udiDeviceIdentifier,
-            metadata: metadata,
-            userEntered: userEntered
+            metadata: (sample.metadata ?? [:]).mapValues(metadataValue),
+            userEntered: (sample.metadata?[HKMetadataKeyWasUserEntered] as? NSNumber)?.boolValue
         )
     }
 
-    private static func metadataValue(_ raw: Any) -> HealthKitMetadataValueUpload {
+    private static func metadataValue(_ raw: Any) -> MetadataValue {
         if let date = raw as? Date {
-            return HealthKitMetadataValueUpload(kind: "date", value: iso8601(date), objcType: nil)
+            return MetadataValue(kind: "date", value: iso8601(date), objcType: nil)
         }
         if let number = raw as? NSNumber {
             let isBoolean = CFGetTypeID(number) == CFBooleanGetTypeID()
-            return HealthKitMetadataValueUpload(
+            return MetadataValue(
                 kind: isBoolean ? "boolean" : "number",
                 value: isBoolean ? String(number.boolValue) : number.stringValue,
                 objcType: String(cString: number.objCType)
             )
         }
         if let string = raw as? String {
-            return HealthKitMetadataValueUpload(kind: "string", value: string, objcType: nil)
+            return MetadataValue(kind: "string", value: string, objcType: nil)
         }
-        return HealthKitMetadataValueUpload(
+        return MetadataValue(
             kind: String(reflecting: type(of: raw)),
             value: String(describing: raw),
             objcType: nil
         )
-    }
-
-    // MARK: - Persistence helpers
-
-    private static func ingest(
-        api: FitFightAPI,
-        accessToken: String,
-        payload: HealthKitStepPayload
-    ) async throws {
-        _ = try await api.uploadHealthKitArchive(payload, accessToken: accessToken)
-    }
-
-    private static func loadAnchor(defaults: UserDefaults, key: String) -> HKQueryAnchor? {
-        guard let data = defaults.data(forKey: key) else { return nil }
-        return try? NSKeyedUnarchiver.unarchivedObject(ofClass: HKQueryAnchor.self, from: data)
-    }
-
-    private static func saveAnchor(
-        _ anchor: HKQueryAnchor,
-        defaults: UserDefaults,
-        key: String
-    ) throws {
-        let data = try NSKeyedArchiver.archivedData(
-            withRootObject: anchor,
-            requiringSecureCoding: true
-        )
-        defaults.set(data, forKey: key)
-    }
-
-    private static func chunks<Element>(of values: [Element], limit: Int) -> [[Element]] {
-        guard !values.isEmpty else { return [] }
-        return stride(from: 0, to: values.count, by: limit).map { offset in
-            Array(values[offset..<min(offset + limit, values.count)])
-        }
-    }
-
-    private static func minimum(_ lhs: Date?, _ rhs: Date?) -> Date? {
-        switch (lhs, rhs) {
-        case (.none, .none): return nil
-        case (.some(let value), .none), (.none, .some(let value)): return value
-        case (.some(let lhs), .some(let rhs)): return min(lhs, rhs)
-        }
     }
 
     private static func dayString(_ date: Date, calendar: Calendar) -> String {
@@ -440,34 +373,51 @@ enum HealthKitStepArchive {
     }
 }
 
-private struct SyncKeys {
-    let anchor: String
-    let earliestSample: String
+final class NDJSONWriter {
+    private let url: URL
+    private let handle: FileHandle
+    private let maximumBytes: Int
+    private var hasher = SHA256()
+    private(set) var byteSize = 0
 
-    init(userId: UUID) {
-        let suffix = userId.uuidString.lowercased()
-        anchor = "ff.healthkit.stepsAnchor.\(suffix)"
-        earliestSample = "ff.healthkit.stepsEarliest.\(suffix)"
+    init(url: URL, maximumBytes: Int) throws {
+        self.url = url
+        self.maximumBytes = maximumBytes
+        handle = try FileHandle(forWritingTo: url)
     }
+
+    func append<Record: Encodable>(_ record: Record) throws {
+        var data = try Self.encoder.encode(record)
+        data.append(0x0a)
+        guard byteSize + data.count <= maximumBytes else {
+            throw HealthKitStepArchiveError.archiveTooLarge
+        }
+        try handle.write(contentsOf: data)
+        hasher.update(data: data)
+        byteSize += data.count
+    }
+
+    func finish() throws -> (byteSize: Int, sha256: String) {
+        try handle.synchronize()
+        try handle.close()
+        return (byteSize, hasher.finalize().map { String(format: "%02x", $0) }.joined())
+    }
+
+    func cancel() throws {
+        try? handle.close()
+        try FileManager.default.removeItem(at: url)
+    }
+
+    private static let encoder: JSONEncoder = {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        return encoder
+    }()
 }
 
-private struct HealthKitStepPayload: Encodable {
-    var samples: [HealthKitStepSampleUpload] = []
-    var deletions: [HealthKitStepDeletionUpload] = []
-    var mergedDays: [HealthKitMergedStepDayUpload] = []
-    var sourceDays: [HealthKitStepSourceDayUpload] = []
-    var sync: HealthKitStepSyncUpload?
-
-    enum CodingKeys: String, CodingKey {
-        case samples
-        case deletions
-        case mergedDays = "merged_days"
-        case sourceDays = "source_days"
-        case sync
-    }
-}
-
-private struct HealthKitStepSampleUpload: Encodable {
+private struct SampleRecord: Encodable {
+    let type: String
+    let operation: String
     let sampleId: UUID
     let value: Double
     let unit: String
@@ -479,7 +429,7 @@ private struct HealthKitStepSampleUpload: Encodable {
     let sourceBundleIdentifier: String
     let sourceVersion: String?
     let sourceProductType: String?
-    let sourceOSVersion: String
+    let sourceOSVersion: String?
     let deviceName: String?
     let deviceManufacturer: String?
     let deviceModel: String?
@@ -488,13 +438,12 @@ private struct HealthKitStepSampleUpload: Encodable {
     let deviceSoftwareVersion: String?
     let deviceLocalIdentifier: String?
     let deviceUDIIdentifier: String?
-    let metadata: [String: HealthKitMetadataValueUpload]
+    let metadata: [String: MetadataValue]
     let userEntered: Bool?
 
     enum CodingKeys: String, CodingKey {
+        case type, operation, value, unit, metadata
         case sampleId = "sample_id"
-        case value
-        case unit
         case startsAt = "starts_at"
         case endsAt = "ends_at"
         case localDay = "local_day"
@@ -512,32 +461,72 @@ private struct HealthKitStepSampleUpload: Encodable {
         case deviceSoftwareVersion = "device_software_version"
         case deviceLocalIdentifier = "device_local_identifier"
         case deviceUDIIdentifier = "device_udi_identifier"
-        case metadata
         case userEntered = "user_entered"
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(type, forKey: .type)
+        try container.encode(operation, forKey: .operation)
+        try container.encode(sampleId, forKey: .sampleId)
+        try container.encode(value, forKey: .value)
+        try container.encode(unit, forKey: .unit)
+        try container.encode(startsAt, forKey: .startsAt)
+        try container.encode(endsAt, forKey: .endsAt)
+        try container.encode(localDay, forKey: .localDay)
+        try container.encode(timeZone, forKey: .timeZone)
+        try container.encode(sourceName, forKey: .sourceName)
+        try container.encode(sourceBundleIdentifier, forKey: .sourceBundleIdentifier)
+        try container.encode(sourceVersion, forKey: .sourceVersion)
+        try container.encode(sourceProductType, forKey: .sourceProductType)
+        try container.encode(sourceOSVersion, forKey: .sourceOSVersion)
+        try container.encode(deviceName, forKey: .deviceName)
+        try container.encode(deviceManufacturer, forKey: .deviceManufacturer)
+        try container.encode(deviceModel, forKey: .deviceModel)
+        try container.encode(deviceHardwareVersion, forKey: .deviceHardwareVersion)
+        try container.encode(deviceFirmwareVersion, forKey: .deviceFirmwareVersion)
+        try container.encode(deviceSoftwareVersion, forKey: .deviceSoftwareVersion)
+        try container.encode(deviceLocalIdentifier, forKey: .deviceLocalIdentifier)
+        try container.encode(deviceUDIIdentifier, forKey: .deviceUDIIdentifier)
+        try container.encode(metadata, forKey: .metadata)
+        try container.encode(userEntered, forKey: .userEntered)
     }
 }
 
-private struct HealthKitMetadataValueUpload: Encodable {
+private struct MetadataValue: Encodable {
     let kind: String
     let value: String
     let objcType: String?
 
     enum CodingKeys: String, CodingKey {
-        case kind
-        case value
+        case kind, value
         case objcType = "objc_type"
     }
-}
 
-private struct HealthKitStepDeletionUpload: Encodable {
-    let sampleId: UUID
 
-    enum CodingKeys: String, CodingKey {
-        case sampleId = "sample_id"
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(kind, forKey: .kind)
+        try container.encode(value, forKey: .value)
+        try container.encode(objcType, forKey: .objcType)
     }
 }
 
-private struct HealthKitMergedStepDayUpload: Encodable {
+private struct DeletionRecord: Encodable {
+    let type: String
+    let operation: String
+    let sampleId: UUID
+    let occurredAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case type, operation
+        case sampleId = "sample_id"
+        case occurredAt = "occurred_at"
+    }
+}
+
+private struct MergedDayRecord: Encodable {
+    let type: String
     let day: String
     let startsAt: String
     let endsAt: String
@@ -545,15 +534,15 @@ private struct HealthKitMergedStepDayUpload: Encodable {
     let steps: Int
 
     enum CodingKeys: String, CodingKey {
-        case day
+        case type, day, steps
         case startsAt = "starts_at"
         case endsAt = "ends_at"
         case timeZone = "time_zone"
-        case steps
     }
 }
 
-private struct HealthKitStepSourceDayUpload: Encodable {
+private struct SourceDayRecord: Encodable {
+    let type: String
     let day: String
     let startsAt: String
     let endsAt: String
@@ -563,24 +552,51 @@ private struct HealthKitStepSourceDayUpload: Encodable {
     let steps: Double
 
     enum CodingKeys: String, CodingKey {
-        case day
+        case type, day, steps
         case startsAt = "starts_at"
         case endsAt = "ends_at"
         case timeZone = "time_zone"
         case sourceName = "source_name"
         case sourceBundleIdentifier = "source_bundle_identifier"
-        case steps
     }
 }
 
-private struct HealthKitStepSyncUpload: Encodable {
+private struct FightAggregateRecord: Encodable {
+    let type: String
+    let fightId: UUID
+    let startsAt: String
+    let endsAt: String
+    let cutoffAt: String
+    let steps: Int
+
+    enum CodingKeys: String, CodingKey {
+        case type, steps
+        case fightId = "fight_id"
+        case startsAt = "starts_at"
+        case endsAt = "ends_at"
+        case cutoffAt = "cutoff_at"
+    }
+}
+
+private struct CheckpointRecord: Encodable {
+    let type: String
     let timeZone: String
-    let accessibleFrom: String
+    let accessibleFrom: String?
     let completeThrough: String
 
     enum CodingKeys: String, CodingKey {
+        case type
         case timeZone = "time_zone"
         case accessibleFrom = "accessible_from"
         case completeThrough = "complete_through"
+    }
+
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(type, forKey: .type)
+        try container.encode(timeZone, forKey: .timeZone)
+        try container.encode(accessibleFrom, forKey: .accessibleFrom)
+        try container.encode(completeThrough, forKey: .completeThrough)
     }
 }

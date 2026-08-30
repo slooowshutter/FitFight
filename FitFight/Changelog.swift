@@ -28,6 +28,13 @@ enum Changelog {
             version: "0.9.0",
             year: 2026,
             month: 8,
+            day: 30,
+            notes: "Apple Health sync can now resume an interrupted upload without starting over. FitFight advances its HealthKit checkpoint only after the complete archive is safely processed, freezes finished days, and uses the exact Fight end time so later Steps cannot change the result."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
             day: 29,
             notes: "Steps fights still use Apple's merged total, so overlapping Apple Watch, iPhone, WHOOP, Garmin, and other sources are not added together. FitFight now sends every accessible raw Steps sample, deletion, source statistic, device detail, and metadata value through its secure backend for diagnostics and future features."
         ),

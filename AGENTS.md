@@ -18,6 +18,7 @@ Read this first, then `docs/`. Marc talks from his phone, often transcribing. Be
 - Design tokens live in `docs/design/source/tokens.json` and are copied byte-for-byte into `FitFight/DesignSystem/tokens.json` for the app bundle. Don’t hardcode colours. The current system is **Night/Day with fixed semantic families**: Moss is you/winning, Ember is urgency/losing, and Gold is progress only. There is no accent picker.
 - Talk to Marc only for things only he can do: Apple login, GitHub secrets, TestFlight testers, legal, the hosted Supabase dashboard. Agents cannot `workflow_dispatch`. App pushes (PR branch, `develop`, or `main`) upload to TestFlight by themselves. Tell Marc a build is coming; he opens TestFlight → Update. Do not ask him to Run workflow.
 - Never nuke the hosted database. No `supabase db reset` / `db push` against production or `develop`, no `DROP TABLE` / `TRUNCATE` / `DROP SCHEMA` / `DROP DATABASE` unless Marc asked in that chat and the migration starts with `-- allow-destructive`. Never put `sb_secret_...`, `service_role`, or the database password in git, chat, or iOS. Never merge to `main` unless Marc asked to ship to production. Never merge to `develop` unless Marc asked. Production migrations apply only after `develop` is merged to `main`.
+- Do not create or call app-facing Postgres RPCs (`.rpc(...)`). Server-owned business logic belongs in the TypeScript backend. Small internal Postgres functions used only by RLS policies or triggers, such as signup plumbing, are allowed.
 
 ## What exists (2026-08-25)
 
@@ -66,6 +67,16 @@ These rules apply to Swift, TypeScript, SQL, scripts, and documentation. The det
 Everything in this section applies only to JavaScript, TypeScript, and TSX under `web/`. It does **not** apply to `.swift` files, SwiftUI views, native models, HealthKit code, or Xcode project structure. Do not translate these rules into Swift conventions. Zod is a TypeScript runtime validator; it is not a requirement for native code.
 
 The product scope rules above still win. The existence of this section does not authorize building the website or any deferred backend feature. Use these standards only when the task already calls for work under `web/`.
+
+### Project structure and Supabase queries
+
+- Name JavaScript, TypeScript, and TSX source files under `web/` in lowercase kebab-case: `fight-card.tsx`, not `FightCard.tsx` or `fightCard.tsx`. Keep framework-required filenames such as `page.tsx`, `layout.tsx`, and `route.ts` exactly as required.
+- Never create a `web/src/` folder. Follow the root layout used in BlendAI: routes in `web/app/`, reusable UI in `web/components/`, React hooks in `web/hooks/`, and shared or server code in `web/lib/`. Add other root folders only for a real concern such as `sql/` or `supabase/`.
+- Keep Supabase client setup in `web/lib/supabase/`.
+- Put every function that directly queries the Supabase database in `web/lib/supabase/queries/`. This includes Supabase `.from()` and `.rpc()` calls and raw SQL issued against Supabase.
+- Split queries across domain-focused files such as `fights-supabase-query.ts`, `profiles-supabase-query.ts`, and `healthkit-supabase-query.ts`. Write the queries directly in those files.
+- Route handlers, components, hooks, and non-data-access domain modules import query functions from `@/lib/supabase/queries/...`; they do not construct Supabase queries inline.
+- Database migrations remain in the repository-level `supabase/migrations/` folder. Generated Supabase database types are generated artifacts and must never be hand-edited.
 
 ### Tooling and framework
 
@@ -133,7 +144,7 @@ Do not add:
 
 Business validation is not excessive defensive code. Authentication, authorization, Fight state transitions, scoring invariants, idempotency, and source compatibility are real domain rules. Keep them.
 
-Use the established `apiRoute`, `readJson`, `ApiError`, and `errorResponse` boundary in `web/src/server/http.ts` where it fits. Let unexpected internal failures reach that boundary. Catch locally only when the code can recover meaningfully or must translate a known external failure into a stable domain/API error.
+Use the established `apiRoute`, `readJson`, `ApiError`, and `errorResponse` boundary in `web/lib/http.ts` where it fits. Let unexpected internal failures reach that boundary. Catch locally only when the code can recover meaningfully or must translate a known external failure into a stable domain/API error.
 
 ### Types and Zod schemas
 
@@ -141,7 +152,7 @@ Default to Zod when a value is persisted or parsed from a runtime boundary. Use 
 
 #### Placement
 
-- Every new named type, interface, literal-value set, and Zod schema lives in `web/src/lib/types/<domain>/` and is imported through `@/lib/types/...`.
+- Every new named type, interface, literal-value set, and Zod schema lives in `web/lib/types/<domain>/` and is imported through `@/lib/types/...`.
 - This includes API request and response contracts, database boundary schemas, provider payloads, webhooks, environment/config objects, forms, and persisted data.
 - Existing files may predate this rule. Do not copy their placement for new declarations. Move an old declaration only when the requested change materially edits or reuses it; do not perform a repo-wide migration as drive-by cleanup.
 - A component's own props may stay inline in the component signature. Do not create a standalone `FooProps` or `FooParams` for props used once.
@@ -213,6 +224,7 @@ Before finishing work under `web/`:
 
 1. Re-read the request and remove unrequested code.
 2. Check that runtime inputs are validated once at their boundary and trusted afterward.
-3. Check that new shared declarations and Zod schemas are in `web/src/lib/types/<domain>/` with schema-derived types.
-4. Check that short single-use helpers were not added without a real reason.
-5. Run the relevant typecheck and tests, then report exactly what passed or why a check could not run.
+3. Check that new shared declarations and Zod schemas are in `web/lib/types/<domain>/` with schema-derived types.
+4. Check that every Supabase database query is in `web/lib/supabase/queries/`.
+5. Check that short single-use helpers were not added without a real reason.
+6. Run the relevant typecheck and tests, then report exactly what passed or why a check could not run.

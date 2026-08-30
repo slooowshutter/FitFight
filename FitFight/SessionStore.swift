@@ -39,8 +39,13 @@ final class SessionStore: ObservableObject {
     @Published private(set) var profile: FitFightProfile?
     @Published var authError: String?
     @Published private(set) var isBusy = false
+    /// Set when every attempt to read the profile failed. A deleted account is
+    /// invisible to its own owner (`profiles_select_visible` hides `deleted_at`
+    /// rows), which would otherwise leave the app waiting forever.
+    @Published private(set) var profileUnavailable = false
 
     let client: SupabaseClient
+    private let api = FitFightAPI()
     private static let handleChosenKey = "ff.handle.chosen"
 
     var isSignedIn: Bool { authSession != nil }
@@ -50,6 +55,12 @@ final class SessionStore: ObservableObject {
         if UserDefaults.standard.bool(forKey: Self.handleChosenKey) { return false }
         if let setAt = profile.handleSetAt, !setAt.isEmpty { return false }
         return profile.looksGenerated
+    }
+
+    func freshAccessToken() async throws -> String {
+        let session = try await client.auth.refreshSession()
+        authSession = session
+        return session.accessToken
     }
 
     init(listenForSession: Bool = true) {
@@ -91,16 +102,60 @@ final class SessionStore: ObservableObject {
             }
             await loadProfile()
         } catch {
-            authError = "Couldn’t sign in. Try again."
+            authError = Self.signInFailureMessage(error)
         }
     }
+
+    #if DEBUG
+    /// Adopts a session the run script minted. Same flow as the Next.js middleware:
+    /// the script calls `admin/generate_link` with the secret key to mint a one-time
+    /// token, exchanges it at `/auth/v1/verify`, and passes the resulting tokens here.
+    /// The secret key never enters the app — only the finished session does.
+    func devAdoptSessionIfNeeded() async {
+        #if targetEnvironment(simulator)
+        guard !isSignedIn else { return }
+        let env = ProcessInfo.processInfo.environment
+        guard let access = env["FF_DEV_ACCESS_TOKEN"], !access.isEmpty,
+              let refresh = env["FF_DEV_REFRESH_TOKEN"], !refresh.isEmpty
+        else { return }
+        do {
+            _ = try await client.auth.setSession(accessToken: access, refreshToken: refresh)
+            await loadProfile()
+        } catch {
+            authError = "Dev session rejected: \(error.localizedDescription)"
+        }
+        #endif
+    }
+
+    #endif
 
     func signOut() async {
         authError = nil
         try? await client.auth.signOut()
         authSession = nil
         profile = nil
+        profileUnavailable = false
         UserDefaults.standard.removeObject(forKey: Self.handleChosenKey)
+    }
+
+    static func signInFailureMessage(_ error: Error) -> String {
+        let text = error.localizedDescription.lowercased()
+        if text.contains("invalid api key") || text.contains("another supabase project") {
+            return "This build’s key doesn’t match the staging database."
+        }
+        if text.contains("provider is not enabled")
+            || text.contains("unsupported provider")
+            || text.contains("provider not enabled") {
+            return "Apple Sign In is off on this database."
+        }
+        if text.contains("nscurlerror")
+            || text.contains("nsurlerrordomain")
+            || text.contains("could not connect")
+            || text.contains("hostname could not be found")
+            || text.contains("not known") {
+            return "Can’t reach the staging database."
+        }
+        return "Couldn’t sign in. Try again."
     }
 
     static func isValidHandle(_ raw: String) -> Bool {
@@ -143,7 +198,10 @@ final class SessionStore: ObservableObject {
         isBusy = true
         defer { isBusy = false }
         do {
-            try await client.rpc("delete_own_account").execute()
+            guard let accessToken = authSession?.accessToken else {
+                throw FitFightAPIError.notConfigured
+            }
+            try await api.deleteAccount(accessToken: accessToken)
             try? await client.auth.signOut()
             authSession = nil
             profile = nil
@@ -169,6 +227,7 @@ final class SessionStore: ObservableObject {
             profile = nil
             return
         }
+        profileUnavailable = false
         for attempt in 0..<3 {
             do {
                 let row: FitFightProfile = try await client.from("profiles")
@@ -191,6 +250,7 @@ final class SessionStore: ObservableObject {
                         return
                     }
                     profile = nil
+                    profileUnavailable = true
                 } else {
                     try? await Task.sleep(nanoseconds: 400_000_000)
                 }

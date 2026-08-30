@@ -1,0 +1,166 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fitfight.app/schemas/provider-archive-v1.json",
+  "title": "ProviderArchiveLineV1",
+  "description": "Schema for each UTF-8 JSON object in a version 1 NDJSON archive. Each object is followed by LF; exactly one checkpoint is required and must be the final line.",
+  "oneOf": [
+    { "$ref": "#/$defs/sample" },
+    { "$ref": "#/$defs/deletion" },
+    { "$ref": "#/$defs/mergedDay" },
+    { "$ref": "#/$defs/sourceDay" },
+    { "$ref": "#/$defs/fightAggregate" },
+    { "$ref": "#/$defs/checkpoint" }
+  ],
+  "$defs": {
+    "uuidV4": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+    },
+    "dateTime": { "type": "string", "format": "date-time" },
+    "civilDay": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "metadataValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "value", "objc_type"],
+      "properties": {
+        "kind": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "value": { "type": "string", "maxLength": 8000 },
+        "objc_type": {
+          "type": ["string", "null"],
+          "maxLength": 100
+        }
+      }
+    },
+    "sample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "operation",
+        "sample_id",
+        "value",
+        "unit",
+        "starts_at",
+        "ends_at",
+        "local_day",
+        "time_zone",
+        "source_name",
+        "source_bundle_identifier",
+        "source_version",
+        "source_product_type",
+        "source_os_version",
+        "device_name",
+        "device_manufacturer",
+        "device_model",
+        "device_hardware_version",
+        "device_firmware_version",
+        "device_software_version",
+        "device_local_identifier",
+        "device_udi_identifier",
+        "metadata",
+        "user_entered"
+      ],
+      "properties": {
+        "type": { "const": "sample" },
+        "operation": { "enum": ["add", "change"] },
+        "sample_id": { "$ref": "#/$defs/uuidV4" },
+        "value": { "type": "number", "minimum": 0 },
+        "unit": { "const": "count" },
+        "starts_at": { "$ref": "#/$defs/dateTime" },
+        "ends_at": { "$ref": "#/$defs/dateTime" },
+        "local_day": { "$ref": "#/$defs/civilDay" },
+        "time_zone": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "source_name": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "source_bundle_identifier": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "source_version": { "type": ["string", "null"], "maxLength": 500 },
+        "source_product_type": { "type": ["string", "null"], "maxLength": 500 },
+        "source_os_version": { "type": ["string", "null"], "maxLength": 500 },
+        "device_name": { "type": ["string", "null"], "maxLength": 500 },
+        "device_manufacturer": { "type": ["string", "null"], "maxLength": 500 },
+        "device_model": { "type": ["string", "null"], "maxLength": 500 },
+        "device_hardware_version": { "type": ["string", "null"], "maxLength": 500 },
+        "device_firmware_version": { "type": ["string", "null"], "maxLength": 500 },
+        "device_software_version": { "type": ["string", "null"], "maxLength": 500 },
+        "device_local_identifier": { "type": ["string", "null"], "maxLength": 500 },
+        "device_udi_identifier": { "type": ["string", "null"], "maxLength": 500 },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/metadataValue" }
+        },
+        "user_entered": { "type": ["boolean", "null"] }
+      }
+    },
+    "deletion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "operation", "sample_id", "occurred_at"],
+      "properties": {
+        "type": { "const": "deletion" },
+        "operation": { "const": "delete" },
+        "sample_id": { "$ref": "#/$defs/uuidV4" },
+        "occurred_at": { "$ref": "#/$defs/dateTime" }
+      }
+    },
+    "mergedDay": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "day", "starts_at", "ends_at", "time_zone", "steps"],
+      "properties": {
+        "type": { "const": "merged_day" },
+        "day": { "$ref": "#/$defs/civilDay" },
+        "starts_at": { "$ref": "#/$defs/dateTime" },
+        "ends_at": { "$ref": "#/$defs/dateTime" },
+        "time_zone": { "type": "string" },
+        "steps": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "sourceDay": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "day", "starts_at", "ends_at", "time_zone", "source_name", "source_bundle_identifier", "steps"],
+      "properties": {
+        "type": { "const": "source_day" },
+        "day": { "$ref": "#/$defs/civilDay" },
+        "starts_at": { "$ref": "#/$defs/dateTime" },
+        "ends_at": { "$ref": "#/$defs/dateTime" },
+        "time_zone": { "type": "string" },
+        "source_name": { "type": "string" },
+        "source_bundle_identifier": { "type": "string" },
+        "steps": { "type": "number", "minimum": 0 }
+      }
+    },
+    "fightAggregate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "fight_id", "starts_at", "ends_at", "cutoff_at", "steps"],
+      "properties": {
+        "type": { "const": "fight_aggregate" },
+        "fight_id": { "$ref": "#/$defs/uuidV4" },
+        "starts_at": { "$ref": "#/$defs/dateTime" },
+        "ends_at": { "$ref": "#/$defs/dateTime" },
+        "cutoff_at": { "$ref": "#/$defs/dateTime" },
+        "steps": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "checkpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "time_zone", "accessible_from", "complete_through"],
+      "properties": {
+        "type": { "const": "checkpoint" },
+        "time_zone": { "type": "string" },
+        "accessible_from": {
+          "oneOf": [
+            { "$ref": "#/$defs/dateTime" },
+            { "type": "null" }
+          ]
+        },
+        "complete_through": { "$ref": "#/$defs/dateTime" }
+      }
+    }
+  }
+}

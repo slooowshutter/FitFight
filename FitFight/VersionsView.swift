@@ -8,27 +8,31 @@ struct VersionsView: View {
         VStack(spacing: 0) {
             VersionBanner()
             HStack {
-                FFLabel(text: "Versions", role: .title)
+                Text("Versions")
+                    .ffType(.title)
+                    .foregroundStyle(theme.text)
                 Spacer()
                 Button("Close") { dismiss() }
-                    .font(theme.font(.bodyStrong))
-                    .foregroundStyle(theme.accent)
+                    .ffType(.label)
+                    .foregroundStyle(theme.mossText)
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, theme.space.screenPadding)
             .padding(.vertical, 12)
 
-            FFLabel(text: "You're on \(AppVersion.label)", role: .caption, color: theme.muted)
+            Text("You're on \(AppVersion.label)")
+                .ffType(.caption)
+                .foregroundStyle(theme.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 20)
+                .padding(.horizontal, theme.space.screenPadding)
                 .padding(.bottom, 8)
 
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 16) {
+                LazyVStack(alignment: .leading, spacing: 12) {
                     ForEach(Changelog.newestFirst) { release in
                         ReleaseNoteRow(release: release)
                     }
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal, theme.space.screenPadding)
                 .padding(.bottom, 24)
             }
         }
@@ -45,26 +49,34 @@ private struct ReleaseNoteRow: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline) {
-                FFLabel(text: release.version, role: .headline, color: isCurrent ? theme.accent : theme.text)
-                if isCurrent {
-                    FFLabel(text: "this build", role: .caption, color: theme.accent)
+        FFCard(padding: 16, stroke: isCurrent ? theme.mossEdge : nil) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(release.version)
+                        .ffType(.heading)
+                        .foregroundStyle(isCurrent ? theme.mossText : theme.text)
+                    if isCurrent {
+                        FFPill("this build")
+                    }
+                    Spacer()
+                    Text(release.date, format: .dateTime.month(.abbreviated).day().year())
+                        .ffType(.caption)
+                        .foregroundStyle(theme.textFaint)
                 }
-                Spacer()
-                Text(release.date, format: .dateTime.month(.abbreviated).day().year())
-                    .font(theme.font(.caption))
-                    .foregroundStyle(theme.muted)
+                Text(release.notes)
+                    .ffType(.body)
+                    .foregroundStyle(theme.textSecondary)
+                    .lineSpacing(3)
             }
-            FFLabel(text: release.notes, role: .body, color: theme.muted)
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(theme.surface, in: RoundedRectangle(cornerRadius: theme.radius.xl, style: .continuous))
+        .background(
+            isCurrent ? theme.mossWash : .clear,
+            in: RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous)
+        )
     }
 }
 
 #Preview {
     VersionsView()
-        .fitFightTheme(ThemeCatalog.theme(base: .dark, accent: .blue))
+        .fitFightTheme(ThemeCatalog.theme(.night))
 }

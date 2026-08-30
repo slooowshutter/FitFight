@@ -17,7 +17,7 @@ Not: agent on Marc’s laptop or home Mac → local Xcode.
 | --- | --- | --- | --- |
 | Simulator | `.github/workflows/ios-build.yml` | PR + push to `main` or `develop` | `macos-26` |
 | Screenshots | `.github/workflows/ios-screenshots.yml` | PR + push to `main` or `develop` | `macos-26` |
-| TestFlight | `.github/workflows/ios-testflight.yml` | any app `push` (PR, `develop`, or `main`), cron `0 18 * * *` UTC | `macos-26` |
+| TestFlight | `.github/workflows/ios-testflight.yml` | any app `push` (feature branch, `develop`, or `main`), plus a daily `develop` build at `0 18 * * *` UTC | `macos-26` |
 | Database | `.github/workflows/database.yml` | PR + push to `main` or `develop` | `ubuntu-latest` |
 | Delete merged branch | `.github/workflows/delete-merged-branch.yml` | PR merged | `ubuntu-latest` |
 
@@ -83,12 +83,12 @@ Names only. Never print values. Settings → Secrets and variables → Actions �
 | --- | --- | --- |
 | `SUPABASE_STAGING_URL` | any TestFlight that is not `main` | Persistent `develop` Supabase project URL |
 | `SUPABASE_STAGING_PUBLISHABLE_KEY` | any TestFlight that is not `main` | Publishable key for that project (`sb_publishable_...`) |
-| `FITFIGHT_API_URL` | any TestFlight that is not `main` | Staging API base URL (empty = commands off) |
-| `FITFIGHT_API_PRODUCTION_URL` | TestFlight from `main` | Production API base URL (empty = commands off) |
+| `FITFIGHT_API_URL` | any TestFlight that is not `main` | `https://staging.fitfight.app` |
+| `FITFIGHT_API_PRODUCTION_URL` | TestFlight from `main` | `https://fitfight.app` |
 
-`main` always ships the known production Supabase URL/key. Non-`main` TestFlight ships the known develop project (GitHub `SUPABASE_STAGING_*` variables override if set). The top version label shows `prod` or `staging`.
+`main` always ships the known production Supabase URL/key. Non-`main` TestFlight ships `https://zstzbfocunthczzubggz.supabase.co` (GitHub `SUPABASE_STAGING_*` variables override if set). The staging publishable key must be that project’s key, not production’s. Persistent `develop` must stay persistent so merging to `main` does not delete it. Scheduled workflows normally inherit GitHub's default branch, so TestFlight CI explicitly checks out `develop` and selects staging for the daily build. The top version label shows `prod` or `staging`.
 
-Vercel also needs `CRON_SECRET` (Preview + Production). Vercel Cron sends it as `Authorization: Bearer …` to `/api/internal/close-fights` every 15 minutes. Hobby Vercel may only run cron once a day — that is still enough; opening the app also closes due fights. Never put this value in git or chat.
+Vercel also needs `CRON_SECRET` (Preview + Production). Vercel Cron sends it as `Authorization: Bearer …` to `/api/internal/close-fights` once daily at **03:00 UTC**, which is compatible with Hobby. Opening the app also closes due fights, so the cron is a safety net rather than the only close path. Never put this value in git or chat.
 
 ## What Marc still does
 

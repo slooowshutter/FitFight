@@ -12,7 +12,7 @@ struct AppleSignInControl: View {
             } onCompletion: { result in
                 Task { await handle(result) }
             }
-            .signInWithAppleButtonStyle(theme.baseID == .light ? .black : .white)
+            .signInWithAppleButtonStyle(theme.mode == .day ? .black : .white)
             .frame(maxWidth: .infinity, minHeight: 44, maxHeight: 44)
             .disabled(session.isBusy)
             .accessibilityLabel("Sign in with Apple")
@@ -20,7 +20,7 @@ struct AppleSignInControl: View {
             if let authError = session.authError {
                 Text(authError)
                     .font(.ff(11))
-                    .foregroundStyle(theme.red)
+                    .foregroundStyle(theme.emberText)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -28,8 +28,11 @@ struct AppleSignInControl: View {
 
     private func handle(_ result: Result<ASAuthorization, Error>) async {
         switch result {
-        case .failure:
-            session.authError = "Couldn’t sign in. Try again."
+        case .failure(let error):
+            if (error as? ASAuthorizationError)?.code == .canceled {
+                return
+            }
+            session.authError = "Apple sign-in didn’t finish. Try again."
         case .success(let authorization):
             guard
                 let credential = authorization.credential as? ASAuthorizationAppleIDCredential,

@@ -43,23 +43,43 @@ The exact interval during which qualifying activity contributes to a Fight.
 _Avoid_: Date range, duration
 
 **Fight day**:
-A calendar bucket interpreted in the Fight's declared time zone.
+A calendar day interpreted in the Fight's declared time zone.
 _Avoid_: User day, local day
 
 **Metric**:
-The canonical quantity compared by a Fight. Steps is the first production Metric; Active Minutes and Workout Count remain future candidates.
+The canonical quantity observed by FitFight, with a defined unit and meaning. Steps is the first production Metric; a Metric is not by itself a scoring method.
 _Avoid_: Provider metric, health type
 
+**Metric definition**:
+The versioned meaning of a Metric, including its canonical unit and which observations are eligible. Two measurements that are not genuinely comparable require different Metric definitions even if a provider gives them similar names.
+_Avoid_: Provider field, scoring rule
+
+**Measure**:
+The activity data selected by a Fight, such as Steps, distance, active minutes, or workouts, together with any rules needed to decide what counts.
+_Avoid_: Score, Result rule
+
 **Fight rule**:
-An immutable definition of how observations become scores and how scores produce a result.
+A Fight's immutable combination of one Measure, one Score rule, and one Result rule.
 _Avoid_: Settings, options
 
+**Score rule**:
+The calculation that turns a Fight member's Measure into their Score, such as total, average per day, or number of days reaching a value.
+_Avoid_: Metric, Result rule
+
+**Score**:
+The number that shows a Fight member's progress: total Steps, successful days, average Steps per day, qualified workouts, or another explicitly labelled unit.
+_Avoid_: Observation, raw total, result
+
+**Target**:
+An accepted goal used by a Score rule or Result rule, such as 10,000 Steps per day or five successful days.
+_Avoid_: Unscoped goal, Score
+
 **Goal policy**:
-The Fight rule that decides whether every member has the same target or each member has a Personal target.
+The Fight rule that decides whether a Target is shared by every member or chosen personally by each member.
 _Avoid_: Difficulty, goal type
 
 **Personal target**:
-The activity target chosen by one Fight member before their membership terms lock.
+A Target value chosen by one Fight member before their membership terms lock.
 _Avoid_: Role, handicap, private goal
 
 **Goal recommendation**:
@@ -70,9 +90,9 @@ _Avoid_: Medical advice, required target
 The agreed consequence of a Fight, such as bragging rights, money, or an action. A Stake is not money held by FitFight.
 _Avoid_: Balance, wallet, payment
 
-**Outcome rule**:
-The Fight rule that maps final scores to outcomes: Highest Total, Proportional, or Hit Your Goal.
-_Avoid_: Settlement mode, payout type, scoring mode
+**Result rule**:
+The part of a Fight rule that decides what a Score means: highest wins, reaching a value succeeds, or the outcome is proportional.
+_Avoid_: Outcome rule, settlement mode, payout type
 
 **Score projection**:
 The current, reversible view of a Fight member's score and likely outcome before finalization.

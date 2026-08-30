@@ -15,47 +15,51 @@ struct RequestsView: View {
 
     var body: some View {
         FFScreen {
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(alignment: .top, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        FFLabel(text: "Requests", role: .display)
-                        Text("Vote on what gets built next.")
-                            .font(.ff(13))
-                            .foregroundStyle(theme.faint)
-                    }
-                    Spacer(minLength: 0)
-                    FFButton(title: "New", kind: .small, icon: "plus") {}
-                }
-                .padding(.top, 2)
-                .padding(.bottom, 16)
+            FFScreenTitle(
+                title: "Requests",
+                subtitle: "Vote on what gets built next.",
+                trailing: AnyView(FFIconButton(systemName: "plus", size: 38) {})
+            )
+            .padding(.bottom, 6)
 
-                FFButton(title: "Talk to the boss", kind: .secondary, icon: "bubble.left") {
-                    showingBossChat = true
-                }
-                .padding(.bottom, 16)
-
-                FFSegmented(items: Filter.allCases, selection: $filter) { $0.rawValue }
-                    .padding(.bottom, 16)
-
-                VStack(spacing: 10) {
-                    ForEach(filtered) { item in
-                        RequestCard(item: item)
-                    }
-                }
-
-                Text("Anything you post is public to everyone using FitFight.")
-                    .font(.ff(13))
-                    .foregroundStyle(theme.faint)
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 24)
+            FFAddRow(title: "Talk to the boss", subtitle: "Tell Marc what you want") {
+                showingBossChat = true
             }
-            .padding(.horizontal, theme.space.screenPadding)
-            .padding(.bottom, theme.space.xl)
+
+            HStack(spacing: 8) {
+                ForEach(Filter.allCases) { option in
+                    FFChip(
+                        title: option.rawValue,
+                        count: count(option),
+                        selected: filter == option
+                    ) { filter = option }
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.top, 6)
+
+            ForEach(filtered) { item in
+                RequestCard(item: item)
+            }
+
+            Text("Anything you post is public to everyone using FitFight.")
+                .ffType(.caption)
+                .foregroundStyle(theme.textFaint)
+                .frame(maxWidth: .infinity)
+                .padding(.top, theme.space.lg)
         }
         .sheet(isPresented: $showingBossChat) {
             BossChatView()
                 .fitFightTheme(theme)
                 .presentationBackground(theme.bg)
+        }
+    }
+
+    private func count(_ option: Filter) -> Int {
+        switch option {
+        case .top: return model.requests.count
+        case .features: return model.requests.filter { $0.kind == .feature }.count
+        case .bugs: return model.requests.filter { $0.kind == .bug }.count
         }
     }
 
@@ -83,72 +87,69 @@ struct RequestCard: View {
     var body: some View {
         let voted = model.voted.contains(item.id)
         let votes = item.votes + (voted ? 1 : 0)
-        return FFCard(padding: 14, radius: FFMetric.tightCardRadius) {
-            HStack(alignment: .top, spacing: 12) {
-                Button {
-                    if voted { model.voted.remove(item.id) } else { model.voted.insert(item.id) }
-                } label: {
-                    VStack(spacing: 3) {
-                        Image(systemName: "arrow.up")
-                            .font(.system(size: 9, weight: .semibold))
-                        Text("\(votes)")
-                            .font(.ff(14, .bold))
-                    }
-                    .foregroundStyle(voted ? theme.ink : theme.text)
-                    .padding(.top, 10)
-                    .frame(width: 44)
-                    // The mock pins the arrow and the count to the top of the pill
-                    // and lets the pill stretch to the height of the card.
-                    .frame(maxHeight: .infinity, alignment: .top)
-                    .background(
-                        voted ? theme.accent : theme.chip,
-                        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    )
-                    .overlay {
-                        if !voted {
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .strokeBorder(theme.line, lineWidth: 1)
-                        }
-                    }
+        return HStack(alignment: .top, spacing: 12) {
+            Button {
+                if voted { model.voted.remove(item.id) } else { model.voted.insert(item.id) }
+            } label: {
+                VStack(spacing: 3) {
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 10, weight: .heavy))
+                    Text("\(votes)")
+                        .ffType(.button)
                 }
-                .buttonStyle(FFPressStyle(scale: 0.97))
+                .foregroundStyle(voted ? theme.mossOn : theme.textDim)
+                .padding(.vertical, 10)
+                .frame(width: 44)
+                // The pill stretches to the height of the card, with the count pinned top.
+                .frame(maxHeight: .infinity, alignment: .top)
+                .background(
+                    voted ? theme.mossFill : theme.control,
+                    in: RoundedRectangle(cornerRadius: theme.radius.glyph, style: .continuous)
+                )
+                .ffBorder(voted ? theme.mossEdge : theme.line, radius: theme.radius.glyph)
+            }
+            .buttonStyle(FFPressStyle())
 
-                VStack(alignment: .leading, spacing: 0) {
-                    HStack(spacing: 8) {
-                        FFBadge(
-                            text: item.kind == .feature ? "Feature" : "Bug",
-                            tone: item.kind == .feature ? .blue : .red
-                        )
-                        FFBadge(text: statusText, tone: statusTone, style: .plain)
-                    }
-                    .padding(.bottom, 7.5)
-                    Text(item.title)
-                        .font(.ff(14, .bold))
-                        .foregroundStyle(theme.text)
-                        .padding(.bottom, 4)
-                    Text(item.body)
-                        .font(.ff(12))
-                        .foregroundStyle(theme.muted)
-                        .lineSpacing(1.5)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.bottom, 11)
-                    HStack(spacing: 8) {
-                        FFAvatar(item.author, size: 18)
-                        Text("\(item.author.name) · \(item.ago)")
-                            .font(.ff(11))
-                            .foregroundStyle(theme.muted)
-                        Spacer(minLength: 8)
-                        Image(systemName: "bubble.left")
-                            .font(.system(size: 11))
-                            .foregroundStyle(theme.faint)
-                        Text("\(item.comments)")
-                            .font(.ff(12))
-                            .foregroundStyle(theme.faint)
-                    }
-                    .padding(.bottom, 1)
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(spacing: 8) {
+                    FFTag(
+                        item.kind == .feature ? "Feature" : "Bug",
+                        tone: item.kind == .feature ? .moss : .ember
+                    )
+                    FFTag(statusText, tone: statusTone)
+                }
+                .padding(.bottom, 8)
+                Text(item.title)
+                    .ffType(.rowTitle)
+                    .foregroundStyle(theme.text)
+                    .padding(.bottom, 4)
+                Text(item.body)
+                    .ffType(.caption)
+                    .foregroundStyle(theme.textSecondary)
+                    .lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.bottom, 11)
+                HStack(spacing: 8) {
+                    FFAvatar(item.author, size: 22)
+                    Text("\(item.author.name) · \(item.ago)")
+                        .ffType(.micro)
+                        .foregroundStyle(theme.textSecondary)
+                    Spacer(minLength: 8)
+                    Image(systemName: "bubble.left")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(theme.textFaint)
+                    Text("\(item.comments)")
+                        .ffType(.micro)
+                        .foregroundStyle(theme.textFaint)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .layoutPriority(1)
         }
+        .padding(15)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
+        .ffBorder(theme.hairline, radius: theme.radius.card)
     }
 
     private var statusText: String {
@@ -159,11 +160,11 @@ struct RequestCard: View {
         }
     }
 
-    private var statusTone: FFBadge.Tone {
+    private var statusTone: FFTone {
         switch item.status {
-        case .open: return .muted
-        case .planned: return .amber
-        case .shipped: return .green
+        case .open: return .neutral
+        case .planned: return .gold
+        case .shipped: return .moss
         }
     }
 }

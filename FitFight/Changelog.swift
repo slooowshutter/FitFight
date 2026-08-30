@@ -28,6 +28,48 @@ enum Changelog {
             version: "0.9.0",
             year: 2026,
             month: 8,
+            day: 30,
+            notes: "Apple Health sync can now resume an interrupted upload without starting over. FitFight advances its HealthKit checkpoint only after the complete archive is safely processed, freezes finished days, and uses the exact Fight end time so later Steps cannot change the result."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
+            day: 29,
+            notes: "Steps fights still use Apple's merged total, so overlapping Apple Watch, iPhone, WHOOP, Garmin, and other sources are not added together. FitFight now sends every accessible raw Steps sample, deletion, source statistic, device detail, and metadata value through its secure backend for diagnostics and future features."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
+            day: 29,
+            notes: "Selected rows now have properly concentric corners, and dividers disappear cleanly around the selection. Requests no longer drifts sideways when you scroll."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
+            day: 29,
+            notes: "New look, built from the approved design kit. One palette instead of ten accent colours — moss is you and winning, ember is losing and urgent, gold is progress. Nunito replaces Manrope. Every screen rebuilt: a moss hero card on Fights, a head-to-head block and leaderboard on a fight, new form controls on New fight. Look is now Night or Day. You → Settings → Design system shows every token and component in the app."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
+            day: 27,
+            notes: "Staging talks to the new persistent develop database. Sign in again on this build (the old staging host is gone)."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
+            day: 26,
+            notes: "Start fight shows Starting… and ignores extra taps so one tap cannot create duplicate fights."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
             day: 25,
             notes: "Pick a username after sign-in. Start a Steps fight from the phone (no extra server). Apple Health uploads. Standings come from the database. Add friends on You with their username. Design tab is gone. Version line shows version and build number."
         ),

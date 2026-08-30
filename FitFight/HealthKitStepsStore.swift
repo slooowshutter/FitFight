@@ -1,7 +1,6 @@
 import Combine
 import Foundation
 import HealthKit
-import Supabase
 
 @MainActor
 final class HealthKitStepsStore: ObservableObject {
@@ -13,42 +12,48 @@ final class HealthKitStepsStore: ObservableObject {
     }
 
     @Published private(set) var status: Status = .idle
+    @Published private(set) var connection = HealthKitConnectionState.notConnected
 
     private let store = HKHealthStore()
+    private let api = FitFightAPI()
+    private let uploader = HealthKitTUSUploader()
     private let askedKey = "ff.healthkit.stepsAsked"
-    private let connectedKey = "ff.healthkit.appleHealthConnected"
-    private let lastUploadDayKey = "ff.healthkit.lastUploadDay"
     private var isUploading = false
+    private var observerQuery: HKObserverQuery?
+    private weak var session: SessionStore?
 
     var hasAsked: Bool {
         UserDefaults.standard.bool(forKey: askedKey)
     }
 
     var detailText: String {
-        switch status {
-        case .idle:
-            return "Tap to read Steps"
-        case .reading:
-            return "Reading…"
-        case .steps(let count, _):
-            return "\(Self.format(count)) steps today"
-        case .empty:
-            return "No accessible data"
+        switch connection {
+        case .notConnected: return "Not connected"
+        case .syncing: return "Syncing history…"
+        case .upToDate: return "Up to date"
+        case .noAccessibleSteps: return "No accessible Steps"
+        case .syncFailed: return "Sync failed — tap to retry"
+        case .archiveTooLarge: return "Archive too large"
         }
     }
 
     var metaText: String {
         switch status {
-        case .steps(_, let sources):
-            return sources.joined(separator: ", ")
+        case .steps(let count, let sources):
+            let sourceText = sources.isEmpty ? "" : " · \(sources.joined(separator: ", "))"
+            return "\(Self.format(count)) steps today\(sourceText)"
         default:
             return ""
         }
     }
 
     var isConnected: Bool {
-        if case .steps = status { return true }
-        return false
+        connection != .notConnected
+    }
+
+    func configure(session: SessionStore) {
+        self.session = session
+        registerObserverIfPossible()
     }
 
     func refresh(requestAccess: Bool) async {
@@ -56,9 +61,7 @@ final class HealthKitStepsStore: ObservableObject {
             HKHealthStore.isHealthDataAvailable(),
             let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount)
         else {
-            if requestAccess || hasAsked {
-                status = .empty
-            }
+            if requestAccess || hasAsked { status = .empty }
             return
         }
 
@@ -66,11 +69,10 @@ final class HealthKitStepsStore: ObservableObject {
             do {
                 try await store.requestAuthorization(toShare: [], read: [stepsType])
             } catch {
-                // HealthKit does not distinguish denial from an empty store.
+                status = .empty
             }
             UserDefaults.standard.set(true, forKey: askedKey)
         }
-
         guard requestAccess || hasAsked else { return }
 
         status = .reading
@@ -83,47 +85,219 @@ final class HealthKitStepsStore: ObservableObject {
         } catch {
             status = .empty
         }
+        registerObserverIfPossible()
     }
 
-    /// Upload Apple Health daily aggregates to `step_days`. Skips if Health was never asked.
-    func syncToSupabase(client: SupabaseClient, userId: UUID) async {
-        guard hasAsked, !isUploading else { return }
+    @discardableResult
+    func syncToBackend(session: SessionStore) async -> Bool {
+        guard hasAsked, !isUploading, api.isConfigured else { return false }
         guard
             HKHealthStore.isHealthDataAvailable(),
-            let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount)
-        else { return }
+            let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount),
+            let userId = session.authSession?.user.id
+        else { return false }
 
         isUploading = true
+        connection = .syncing
         defer { isUploading = false }
 
         do {
-            let calendar = Calendar.current
-            let today = calendar.startOfDay(for: Date())
-            let formatter = DateFormatter()
-            formatter.calendar = calendar
-            formatter.locale = Locale(identifier: "en_US_POSIX")
-            formatter.timeZone = calendar.timeZone
-            formatter.dateFormat = "yyyy-MM-dd"
-
-            var rows: [StepDayUpload] = []
-            rows.reserveCapacity(31)
-            for offset in 0...30 {
-                guard let start = calendar.date(byAdding: .day, value: -offset, to: today) else { continue }
-                let day = formatter.string(from: start)
-                let end = offset == 0 ? Date() : calendar.date(byAdding: .day, value: 1, to: start) ?? start
-                let value = try await Self.dayAggregate(store: store, type: stepsType, start: start, end: end)
-                rows.append(StepDayUpload(userId: userId, day: day, steps: Int(value.rounded())))
+            var state = try HealthKitUploadState.load(userId: userId)
+            if state.uploadId == nil {
+                let accessToken = try await session.freshAccessToken()
+                let context = try await api.healthKitUploadContext(accessToken: accessToken)
+                let uploadId = UUID()
+                guard let archive = try await HealthKitStepArchive.prepare(
+                    store: store,
+                    type: stepsType,
+                    userId: userId,
+                    uploadId: uploadId,
+                    activeAnchorData: state.activeAnchor,
+                    previousEarliestSample: state.earliestSample,
+                    fightWindows: context.fightWindows
+                ) else {
+                    state.connection = .noAccessibleSteps
+                    try state.save(userId: userId)
+                    connection = .noAccessibleSteps
+                    return true
+                }
+                state.connection = .syncing
+                state.candidateAnchor = archive.candidateAnchor
+                state.uploadId = uploadId
+                state.archivePath = archive.url.path
+                state.byteSize = archive.byteSize
+                state.sha256 = archive.sha256
+                state.phase = .archived
+                state.earliestSample = archive.earliestSample
+                try state.save(userId: userId)
             }
-            guard !rows.isEmpty else { return }
 
-            try await client.from("step_days")
-                .upsert(rows, onConflict: "user_id,day")
-                .execute()
-            UserDefaults.standard.set(formatter.string(from: today), forKey: lastUploadDayKey)
-            UserDefaults.standard.set(true, forKey: connectedKey)
+            try await resume(state: &state, userId: userId, session: session)
+            return true
+        } catch HealthKitStepArchiveError.archiveTooLarge {
+            connection = .archiveTooLarge
+            var state = try? HealthKitUploadState.load(userId: userId)
+            state?.connection = .archiveTooLarge
+            try? state?.save(userId: userId)
+            return false
         } catch {
-            // Local read still works if the table is not on this project yet.
+            connection = .syncFailed
+            var state = try? HealthKitUploadState.load(userId: userId)
+            state?.connection = .syncFailed
+            try? state?.save(userId: userId)
+            return state?.uploadId != nil
         }
+    }
+
+    private func resume(
+        state: inout HealthKitUploadState,
+        userId: UUID,
+        session: SessionStore
+    ) async throws {
+        guard let uploadId = state.uploadId,
+              let archivePath = state.archivePath,
+              let byteSize = state.byteSize,
+              let sha256 = state.sha256 else { return }
+
+        if state.phase != .archived {
+            let token = try await session.freshAccessToken()
+            let status = try await api.providerUploadStatus(
+                uploadId: uploadId,
+                accessToken: token
+            )
+            if status.status == "completed" {
+                try state.complete(userId: userId)
+                connection = .upToDate
+                return
+            }
+            if status.status == "rejected" {
+                uploader.discard(taskId: state.tusTaskId)
+                try state.discardPending(userId: userId)
+                throw FitFightProviderUploadError.serverRejected(status.errorCode)
+            }
+            if status.status == "processing" {
+                state.phase = .processing
+                try state.save(userId: userId)
+                connection = .syncing
+                return
+            }
+            if status.status == "committed" {
+                state.phase = .committed
+                try state.save(userId: userId)
+            } else if status.status == "retryable_failure" {
+                if status.errorCode == "archive_not_found" {
+                    uploader.discard(taskId: state.tusTaskId)
+                    state.tusTaskId = nil
+                    state.phase = .issued
+                } else {
+                    state.phase = .uploaded
+                }
+                try state.save(userId: userId)
+            }
+        }
+
+        if state.phase == .archived || state.phase == .issued || state.phase == .uploading {
+            let token = try await session.freshAccessToken()
+            let capability = try await api.createProviderUpload(
+                FitFightProviderUploadCreate(
+                    uploadId: uploadId,
+                    byteSize: byteSize,
+                    sha256: sha256
+                ),
+                accessToken: token
+            )
+            state.phase = .issued
+            try state.save(userId: userId)
+            do {
+                try await uploader.upload(
+                    fileURL: URL(fileURLWithPath: archivePath),
+                    capability: capability,
+                    userId: userId,
+                    existingTaskId: state.tusTaskId
+                ) { taskId in
+                    state.tusTaskId = taskId
+                    state.phase = .uploading
+                    try state.save(userId: userId)
+                }
+            } catch HealthKitTUSError.missingResumeState {
+                let recoveryToken = try await session.freshAccessToken()
+                var recovered = try? await api.processProviderUpload(
+                    uploadId: uploadId,
+                    accessToken: recoveryToken
+                )
+                if recovered?.status == "committed" {
+                    let cleanupToken = try await session.freshAccessToken()
+                    recovered = try? await api.processProviderUpload(
+                        uploadId: uploadId,
+                        accessToken: cleanupToken
+                    )
+                }
+                if recovered?.status == "completed", recovered?.receipt != nil {
+                    try state.complete(userId: userId)
+                    connection = .upToDate
+                    return
+                }
+                state.tusTaskId = nil
+                try state.save(userId: userId)
+                try await uploader.upload(
+                    fileURL: URL(fileURLWithPath: archivePath),
+                    capability: capability,
+                    userId: userId,
+                    existingTaskId: nil
+                ) { taskId in
+                    state.tusTaskId = taskId
+                    state.phase = .uploading
+                    try state.save(userId: userId)
+                }
+            }
+            state.phase = .uploaded
+            try state.save(userId: userId)
+        }
+
+        state.phase = .processing
+        try state.save(userId: userId)
+        var token = try await session.freshAccessToken()
+        var processed = try await api.processProviderUpload(
+            uploadId: uploadId,
+            accessToken: token
+        )
+        if processed.status == "committed" {
+            state.phase = .committed
+            try state.save(userId: userId)
+            token = try await session.freshAccessToken()
+            processed = try await api.processProviderUpload(
+                uploadId: uploadId,
+                accessToken: token
+            )
+        }
+        guard processed.status == "completed", processed.receipt != nil else {
+            throw FitFightProviderUploadError.notCompleted(processed.status, processed.errorCode)
+        }
+        state.phase = .completed
+        try state.complete(userId: userId)
+        connection = .upToDate
+    }
+
+    private func registerObserverIfPossible() {
+        guard hasAsked, observerQuery == nil,
+              let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount) else { return }
+        store.enableBackgroundDelivery(for: stepsType, frequency: .immediate) { _, _ in }
+        let query = HKObserverQuery(sampleType: stepsType, predicate: nil) { [weak self] _, completion, _ in
+            Task { @MainActor [weak self] in
+                guard let self, let session = self.session else {
+                    completion()
+                    return
+                }
+                while self.isUploading {
+                    try? await Task.sleep(for: .milliseconds(250))
+                }
+                if await self.syncToBackend(session: session) {
+                    completion()
+                }
+            }
+        }
+        observerQuery = query
+        store.execute(query)
     }
 
     private struct TodayAggregate {
@@ -131,36 +305,6 @@ final class HealthKitStepsStore: ObservableObject {
         var sources: [String]
     }
 
-    /// One civil day's Apple Health aggregate. Do not sum every raw sample/source.
-    private static func dayAggregate(
-        store: HKHealthStore,
-        type: HKQuantityType,
-        start: Date,
-        end: Date
-    ) async throws -> Double {
-        try await withCheckedThrowingContinuation { continuation in
-            let predicate = HKQuery.predicateForSamples(
-                withStart: start,
-                end: end,
-                options: .strictStartDate
-            )
-            let query = HKStatisticsQuery(
-                quantityType: type,
-                quantitySamplePredicate: predicate,
-                options: .cumulativeSum
-            ) { _, stats, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-                let value = stats?.sumQuantity()?.doubleValue(for: .count()) ?? 0
-                continuation.resume(returning: value)
-            }
-            store.execute(query)
-        }
-    }
-
-    /// HealthKit aggregate for today. Do not sum every raw sample/source.
     private static func todayAggregate(
         store: HKHealthStore,
         type: HKQuantityType
@@ -172,23 +316,25 @@ final class HealthKitStepsStore: ObservableObject {
             end: now,
             options: .strictStartDate
         )
-        let descriptor = HKStatisticsQueryDescriptor(
-            predicate: HKSamplePredicate.quantitySample(type: type, predicate: predicate),
+        let samplePredicate = HKSamplePredicate.quantitySample(type: type, predicate: predicate)
+        let mergedDescriptor = HKStatisticsQueryDescriptor(
+            predicate: samplePredicate,
+            options: [.cumulativeSum]
+        )
+        let sourceDescriptor = HKStatisticsQueryDescriptor(
+            predicate: samplePredicate,
             options: [.cumulativeSum, .separateBySource]
         )
-        guard let stats = try await descriptor.result(for: store) else {
-            return nil
-        }
-        let value = stats.sumQuantity()?.doubleValue(for: .count()) ?? 0
+        guard let mergedStats = try await mergedDescriptor.result(for: store) else { return nil }
+        let sourceStats = try await sourceDescriptor.result(for: store)
+        let value = mergedStats.sumQuantity()?.doubleValue(for: .count()) ?? 0
         var seen = Set<String>()
-        let labels = (stats.sources ?? []).compactMap { source -> String? in
+        let labels = (sourceStats?.sources ?? []).compactMap { source -> String? in
             let name = source.name.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !name.isEmpty, seen.insert(name).inserted else { return nil }
             return name
         }
-        if value <= 0 && labels.isEmpty {
-            return nil
-        }
+        if value <= 0 && labels.isEmpty { return nil }
         return TodayAggregate(count: Int(value.rounded()), sources: labels)
     }
 
@@ -197,14 +343,7 @@ final class HealthKitStepsStore: ObservableObject {
     }
 }
 
-private struct StepDayUpload: Encodable {
-    let userId: UUID
-    let day: String
-    let steps: Int
-
-    enum CodingKeys: String, CodingKey {
-        case userId = "user_id"
-        case day
-        case steps
-    }
+private enum FitFightProviderUploadError: Error {
+    case serverRejected(String?)
+    case notCompleted(String, String?)
 }

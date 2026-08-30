@@ -35,7 +35,11 @@ jobs:
       APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
     steps:
+      # Scheduled workflows run from GitHub's default branch (`main`), but the
+      # daily internal TestFlight must build `develop` and use staging.
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'schedule' && 'develop' || github.ref_name }}
 
       - name: Require App Store Connect secrets
         run: |
@@ -59,14 +63,15 @@ jobs:
       # Values go into FitFight/Generated/BuildEnv.swift (compiled in). Never print them.
       - name: Write backend environment
         env:
-          SUPABASE_STAGING_URL: ${{ vars.SUPABASE_STAGING_URL }}
-          SUPABASE_STAGING_PUBLISHABLE_KEY: ${{ vars.SUPABASE_STAGING_PUBLISHABLE_KEY }}
-          FITFIGHT_API_URL: ${{ vars.FITFIGHT_API_URL }}
-          FITFIGHT_API_PRODUCTION_URL: ${{ vars.FITFIGHT_API_PRODUCTION_URL }}
+          FITFIGHT_BUILD_BRANCH: ${{ github.event_name == 'schedule' && 'develop' || github.ref_name }}
+          SUPABASE_STAGING_URL: ${{ vars.SUPABASE_STAGING_URL || secrets.SUPABASE_STAGING_URL }}
+          SUPABASE_STAGING_PUBLISHABLE_KEY: ${{ vars.SUPABASE_STAGING_PUBLISHABLE_KEY || secrets.SUPABASE_STAGING_PUBLISHABLE_KEY }}
+          FITFIGHT_API_URL: ${{ vars.FITFIGHT_API_URL || secrets.FITFIGHT_API_URL }}
+          FITFIGHT_API_PRODUCTION_URL: ${{ vars.FITFIGHT_API_PRODUCTION_URL || secrets.FITFIGHT_API_PRODUCTION_URL }}
         run: |
           set -euo pipefail
           mkdir -p FitFight/Generated
-          if [ "${GITHUB_REF:-}" = "refs/heads/main" ]; then
+          if [ "${FITFIGHT_BUILD_BRANCH}" = "main" ]; then
             echo "TestFlight target: production"
             echo "production api url set: ${#FITFIGHT_API_PRODUCTION_URL}"
           else
@@ -78,7 +83,7 @@ jobs:
               echo "GitHub staging variables empty; using the compiled develop project fallback."
             fi
           fi
-          python3 - "${GITHUB_REF:-}" <<'PY'
+          python3 - "${FITFIGHT_BUILD_BRANCH}" <<'PY'
           import os
           import sys
           from pathlib import Path
@@ -92,11 +97,11 @@ jobs:
               )
               return f'"{escaped}"'
 
-          is_main = sys.argv[1] == "refs/heads/main"
+          is_main = sys.argv[1] == "main"
           production_url = "https://pvqntpteehdvhqyctwum.supabase.co"
           production_key = "sb_publishable_6wP1KNFvJwIE_hX1U2aTfg_u3sk40Li"
-          develop_url = "https://jldjgftoxmluiswpebbd.supabase.co"
-          develop_key = "sb_publishable_2nugoyApCuXfOPCWYevktg_kx4nVJPp"
+          develop_url = "https://zstzbfocunthczzubggz.supabase.co"
+          develop_key = "sb_publishable_7lCDQ1YbMJVUyKZ6Ezq1LA_I-0rZGig"
 
           if is_main:
               url = production_url
@@ -104,8 +109,45 @@ jobs:
               api = os.environ.get("FITFIGHT_API_PRODUCTION_URL", "").strip()
           else:
               url = os.environ.get("SUPABASE_STAGING_URL", "").strip() or develop_url
-              key = os.environ.get("SUPABASE_STAGING_PUBLISHABLE_KEY", "").strip() or develop_key
               api = os.environ.get("FITFIGHT_API_URL", "").strip()
+              import urllib.error
+              import urllib.request
+
+              def staging_key_works(candidate: str) -> bool:
+                  req = urllib.request.Request(
+                      url.rstrip("/") + "/auth/v1/health",
+                      headers={"apikey": candidate, "Authorization": "Bearer " + candidate},
+                  )
+                  try:
+                      with urllib.request.urlopen(req, timeout=20) as response:
+                          print("staging auth health:", response.status)
+                          return True
+                  except urllib.error.HTTPError as error:
+                      body = error.read().decode()[:400]
+                      if "Invalid API key" in body or "another Supabase project" in body:
+                          print("staging key rejected by host")
+                          return False
+                      sys.exit(f"Staging auth health HTTP {error.code}")
+                  except Exception as error:
+                      sys.exit(f"Staging host unreachable: {error}")
+
+              seen = []
+              key = ""
+              for candidate in (
+                  os.environ.get("SUPABASE_STAGING_PUBLISHABLE_KEY", "").strip(),
+                  develop_key,
+              ):
+                  if not candidate or candidate in seen:
+                      continue
+                  seen.append(candidate)
+                  if staging_key_works(candidate):
+                      key = candidate
+                      break
+              if not key:
+                  sys.exit(
+                      "No staging publishable key matched "
+                      "https://zstzbfocunthczzubggz.supabase.co"
+                  )
 
           path = Path("FitFight/Generated/BuildEnv.swift")
           path.write_text(

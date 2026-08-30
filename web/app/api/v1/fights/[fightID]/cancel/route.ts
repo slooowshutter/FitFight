@@ -1,6 +1,6 @@
-import { verifyUser } from "@/server/auth/verifyUser";
-import { cancelFight } from "@/server/domain/fights/cancelFight";
-import { apiRoute, corsPreflight, json, requireUuid } from "@/server/http";
+import { apiRoute, corsPreflight, json, requireUuid } from "@/lib/http";
+import { verifyUser } from "@/lib/supabase/queries/auth-supabase-query";
+import { cancelFight } from "@/lib/supabase/queries/cancel-fight-supabase-query";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

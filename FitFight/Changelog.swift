@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 8,
             day: 30,
+            notes: "Apple Health archives now reach private Storage with the complete signed resumable-upload authorization required by Supabase. Initial synchronization can continue instead of failing immediately after the server authorizes it."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
+            day: 30,
             notes: "Large Apple Health histories can now complete their first sync instead of stopping at 50 MiB. FitFight still uploads one resumable private archive and advances the HealthKit checkpoint only after the server processes it and removes the object."
         ),
         ReleaseNote(

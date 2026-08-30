@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 8,
             day: 30,
+            notes: "Apple Health synchronization now replaces an incompatible upload left by an older build while preserving the prepared HealthKit archive. Compatible interrupted uploads still resume normally."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
+            day: 30,
             notes: "Apple Health archives now reach private Storage with the complete signed resumable-upload authorization required by Supabase. Initial synchronization can continue instead of failing immediately after the server authorizes it."
         ),
         ReleaseNote(

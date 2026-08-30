@@ -18,13 +18,14 @@ final class HealthKitStepsStore: ObservableObject {
     private let store = HKHealthStore()
     private let api = FitFightAPI()
     private let uploader = HealthKitTUSUploader()
-    private let askedKey = "ff.healthkit.stepsAsked"
     private var isSyncing = false
     private var observerQuery: HKObserverQuery?
     private weak var session: SessionStore?
+    private var activeUserId: UUID?
 
     var hasAsked: Bool {
-        UserDefaults.standard.bool(forKey: askedKey)
+        guard let activeUserId else { return false }
+        return UserDefaults.standard.bool(forKey: Self.askedKey(userId: activeUserId))
     }
 
     var detailText: String {
@@ -58,6 +59,21 @@ final class HealthKitStepsStore: ObservableObject {
         registerObserverIfPossible()
     }
 
+    func activate(userId: UUID?) {
+        guard activeUserId != userId else { return }
+        activeUserId = userId
+        status = .idle
+        connection = .notConnected
+    }
+
+    func clearLocalConsent(userId: UUID) {
+        UserDefaults.standard.removeObject(forKey: Self.askedKey(userId: userId))
+        if activeUserId == userId {
+            status = .idle
+            connection = .notConnected
+        }
+    }
+
     func refresh(requestAccess: Bool) async {
         guard
             HKHealthStore.isHealthDataAvailable(),
@@ -73,7 +89,9 @@ final class HealthKitStepsStore: ObservableObject {
             } catch {
                 status = .empty
             }
-            UserDefaults.standard.set(true, forKey: askedKey)
+            if let activeUserId {
+                UserDefaults.standard.set(true, forKey: Self.askedKey(userId: activeUserId))
+            }
         }
         guard requestAccess || hasAsked else { return }
 
@@ -170,5 +188,9 @@ final class HealthKitStepsStore: ObservableObject {
 
     private static func format(_ value: Int) -> String {
         value.formatted(.number.grouping(.automatic))
+    }
+
+    private static func askedKey(userId: UUID) -> String {
+        "ff.healthkit.stepsAsked.\(userId.uuidString.lowercased())"
     }
 }

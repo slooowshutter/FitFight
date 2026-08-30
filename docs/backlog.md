@@ -20,13 +20,13 @@ Honest works / doesn’t / next: [`status.md`](status.md). Read that before the 
 
 [`system-design.md`](system-design.md) is the golden guide. Follow it. Do not implement the whole document. Production Metric is **Steps**; Active Minutes and Workout Count stay later.
 
+**Current scope lock (30 Aug 2026):** three tabs (**Fights**, **New**, **You**); direct exact-username invitations; Steps × highest total; a required typed loser action; and 3-day, 1-week, 2-week, or 1-month durations. Do not restore friends, Requests, money, other metrics, alternate scoring, or removed settings unless Marc explicitly reopens that scope.
+
 ## Urgent
 
-### Map provider capabilities to canonical Metrics
+### Make typed actions safe before App Store submission
 
-Before adding another provider or Metric, define one versioned mapping from each provider's fields, units, aggregation semantics, and connection route to FitFight's canonical Metric definitions. Users choose a FitFight Metric such as Steps; they never choose a WHOOP, Strava, or HealthKit field directly. Each provider adapter declares which canonical Metrics it can supply, how it normalizes them, and which combinations are unsupported.
-
-Discuss the capability matrix, direct-provider versus Apple Health copies, source precedence and deduplication, unit conversion, definition/version changes, and how the UI limits a Fight to Metrics supported by every selected source. Do not assume similarly named provider values mean the same thing.
+An action is private but still user-generated text sent to another account. Decline now exists; before submission add server-side length/content enforcement, reporting, blocking, invitation rate limits, and a documented moderation response. Money/prize language must remain outside the product. Do not add a social feed or chat while doing this.
 
 ### Freeze historical results against aggregation-code changes
 
@@ -34,20 +34,16 @@ Changing normalization, aggregation, or scoring code must not silently rewrite p
 
 Provider corrections, deletion tombstones, and late device syncs may still update an unfinalized day during its disclosed correction window. Once finalized, that day's stored result remains immutable except through an explicit audited correction. Decide the day-finalization boundary and correction window before relying on historical totals for recommendations or completed Fights.
 
-### Really delete a user's data when they ask
+### Verify account deletion before App Store submission
 
-Today "Delete account" is a soft delete. `delete_own_account()` sets `deleted_at`, renames the row to `Deleted User`, clears the avatar and time zone, and drops sessions, refresh tokens and identities. The row itself, the handle, and every metric observation stay in the database forever.
+`DELETE /api/v1/me` now removes private Apple Health data, public Steps totals,
+provider uploads, sessions, refresh tokens, and identities. When shared Fight or
+legacy friendship history exists, it keeps a deleted profile row, its handle, a
+disconnected data-source row, and shared Fight history.
 
-That is fine as an *account closure*. It is not a deletion, and under GDPR/CCPA a user asking to be deleted is entitled to actual erasure.
-
-Needs deciding before it can be built — do not invent the answer:
-
-- **What is erased vs kept.** Fights are shared objects. Removing a participant's rows rewrites other people's history and standings. The usual answer is erase the person (handle, display name, avatar, health data) and keep the fight with an anonymous placeholder, but that is Marc's call.
-- **Health data is the sensitive part.** `private.metric_observations` holds step counts per user per day. That is the thing a regulator cares about; it should go regardless of what happens to fight rows.
-- **Grace period?** Immediate, or 30 days then a purge job. A grace period means the soft delete stays as step one and a scheduled job does the real work.
-- **The `auth.users` row** also needs removing via the admin API, which the current function does not do.
-
-Also fix: a soft-deleted profile is invisible to its own owner, because `profiles_select_visible` is `using (deleted_at is null)`. The app now shows "Couldn't load your account" with a sign-out button instead of hanging, but the underlying state is still a user who is signed in and cannot read themselves.
+Before App Store submission, decide whether the retained handle must be randomized,
+remove obsolete friendship retention, verify Sign in with Apple token revocation and
+local cache cleanup, and make the in-app explanation match the live Privacy Policy.
 
 ## Principle: server does the work
 
@@ -55,27 +51,30 @@ Most fight logic has to live on a server, not on the phone.
 
 If the app is closed or killed, iOS will not reliably run timers, settle a month, or notice that HealthKit never uploaded. A server can: keep the fight window, send a push, settle scores once data is in.
 
-The phone’s job is: show the UI, read HealthKit / workouts when it is open (or briefly woken), upload, receive pushes.
+The phone’s job is: show the UI, read Apple Health Steps when it is open (or briefly woken), and upload the required aggregates. Push notifications are not in the current scope.
 
-**Last TestFlight:** 30 Aug 2026 — Apple Health now sends only Apple's merged Steps totals: exact Fight-window totals for standings and relevant daily buckets for charts. Raw HealthKit archives are no longer collected. Still `0.9.0`. Look for `0.9.0 · build N · staging`.
+**Last TestFlight:** 30 Aug 2026 — three tabs (Fights, New, You); direct usernames; required loser action; 3-day, 1-week, 2-week, and 1-month Steps fights; no friends, Requests, money, alternate metrics, or dead settings; Privacy and Support links added. Apple Health remains aggregate-only. Still `0.9.0`. Look for `0.9.0 · build N · staging`.
 
 ## Now
 
 - Marc: Apple → On on the **new** develop Auth ([providers](https://supabase.com/dashboard/project/zstzbfocunthczzubggz/auth/providers)), client ID `com.fitfight.mvp`.
-- Marc: one Steps fight on staging. Username, Apple Health, Start **once**.
-- Friends on TestFlight Internal Testing. Same build. Their own Apple IDs. 3-day Steps fight after they have usernames.
+- Marc: one Steps fight on staging. Exact username, required action, Apple Health, Start **once**.
+- Participants on TestFlight Internal Testing. Same build, their own Apple IDs and usernames. Start with a 3-day Steps fight.
 
 ## Next
 
 - **Validate aggregate-only Apple Health sync on staging.** Use two phones to confirm the authenticated request sends the server-issued Fight windows, the exact-window totals drive both standings, relevant merged daily buckets drive charts only, and no raw archive or Storage object is created.
 - **Watch a real 3-day fight close.** Opening the app marks a due fight finished; the daily Vercel cron is the safety net. Proof is two phones: standings match, the Fight ends, and Steps after `ends_at` do not count. Do that before App Store.
+- **Smoke-test every allowed duration.** Confirm New sends 3, 7, 14, or 30 days and the detail screen shows the typed action and correct end date.
 - App Store when Marc says ship (`develop` → `main`).
 
-## Later
+## Later — outside the current product
+
+These are parked ideas, not launch requirements. None may restore friends, Requests,
+money, another metric, or alternate scoring without Marc explicitly reopening scope.
 
 - **Restore bounded full-fidelity HealthKit ingestion only when a shipped feature needs it.** The MVP deliberately keeps only Apple's merged exact Fight-window totals and the relevant merged daily chart buckets. Before restoring raw samples, deletion anchors, per-source statistics, device/source metadata, or another archive transport, define the concrete product purpose, explicit Collection consent, bounded backfill, retention and deletion policy, edit/deletion reconciliation, provenance shown to Users, and operational size limits. Never calculate Steps by naïvely summing overlapping raw samples or source totals; Apple's merged aggregate remains the reference unless a reviewed Metric specification replaces it.
 - **Sync Apple Health now from a Fight.** Add a clear manual sync action on the Fight detail screen so a participant can upload current HealthKit changes immediately and refresh the standings without leaving the Fight. Show the real state—syncing, up to date, or failed with retry—and do not promise that iOS background delivery is instant.
-- **Basic Fight creation.** The default, simple path. Choose a Measure such as Steps and compete directly on its total: the highest value wins. Keep the Measure × Score × Result machinery hidden. This produces the simplest valid object from [`fight-rules.md`](fight-rules.md), currently Steps × Total × Highest. No screen yet; do not build until moved up.
 - **Advanced Fight-rule builder.** An explicitly advanced dynamic form for the full Measure × Score × Result model in [`fight-rules.md`](fight-rules.md). Earlier answers control which later fields appear: choosing workouts reveals workout-validity rules; choosing days reaching a value asks for the daily value; choosing Reach asks for the final goal. Show only reviewed compatible combinations, keep a plain-language summary visible, and validate the final object on the server. Do not make the Basic path feel like this form. No screen yet; do not build until moved up.
 - **Natural-language Fight creation by text or voice.** A User types or records what they want—such as “10,000 Steps at least five days this week; everyone who does it succeeds.” Speech is transcribed when needed, then an LLM converts the request into the same validated Fight-rule object from [`fight-rules.md`](fight-rules.md) and fills the Advanced form. Ask a short follow-up when meaning is ambiguous; never invent an unsupported combination. Always show the completed form and plain-language rules for explicit confirmation before creating, inviting, or starting the Fight. Decide voice/transcript consent, retention, provider, cost, and failure behavior before implementation. No screen yet; do not build until moved up.
 - **Recurring fights.** Same challenge every month (or every N days). Server rolls a new window when the last one ends. User does not recreate it by hand.
@@ -94,26 +93,22 @@ The phone’s job is: show the UI, read HealthKit / workouts when it is open (or
 
 ## Ask first
 
-From [`design/source/INVENTORY.md`](design/source/INVENTORY.md) — honest holes, no mock-up:
-
-- Notifications inbox (the bell has no destination)
-- Request compose + request thread
-- Profile edit, settings sub-screens, payouts
-- HealthKit permission prompts (we request on username continue and on Data sources tap; no extra designed screen)
-- Per-person goals in create (data model allows it; UI is one shared goal)
-- Settle-up / payment at the end of a fight
+Nothing is authorized here for the launch. Removed friends, Requests, notification
+inbox, payouts, payment, extra settings, per-person goals, and alternate Fight rules
+are not missing screens; they are out of scope.
 
 ## Done
 
-The phone writes fights and steps to staging after this PR is merged. See [`status.md`](status.md).
+The phone writes fights and Steps to staging after this PR is merged. See [`status.md`](status.md).
 
-- v0.3 design port: four tabs, dark/light, 10 accents, fixture fights.
-- Talk to the boss on Requests: private chat with Marc, emailed to him.
+- Current launch shape: Fights, New, and You; direct exact-username Steps challenges; required loser action; 3/7/14/30-day durations; Privacy and Support links; essential settings only.
+- Historical v0.3 design port: four tabs, dark/light, 10 accents, fixture fights. Requests and extra accents were later removed.
+- Historical Talk to the boss on Requests: private chat with Marc, emailed to him. Removed with Requests on 30 Aug 2026.
 - Persistent GitHub `develop` + hosted Supabase branch `develop`.
 - Sign in with Apple on You, real `profiles` handle, Apple Health Steps read on You → Data sources, Delete account under You → Settings.
-- Smallest command API: create / invite / accept a Steps Fight. New fight starts a real fight; fight detail Accept/Join accepts it.
+- Smallest command API: create / invite / accept a Steps Fight. New adds participants by exact username and starts a real fight; fight detail Accept/Join accepts it.
 - HealthKit Steps upload. Standings come from the database. Fights are no longer the fixture people.
 - Fight closer: `live → awaiting_final_sync → final` on a server clock. Tests fake `now` for 1 / 3 / 7 / 14 day windows. Opening the app closes your due fights; Vercel cron closes the rest if nobody opens. No push yet.
 - Welcome screen when signed out. Apple Sign In is the only way in; the tabs stay hidden until then.
 - Username onboarding after sign-in. Phone-written Steps fights, HealthKit → `step_days`, standings from the database. Design tab removed.
-- Approved HTML design-system port: Night/Day, Nunito, reusable SwiftUI components, all product screens rebuilt, and the complete showcase under You → Settings.
+- Approved HTML design-system port: Night/Day, Nunito, and reusable SwiftUI components. The internal showcase was removed from user settings.

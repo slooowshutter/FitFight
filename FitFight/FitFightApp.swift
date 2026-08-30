@@ -20,7 +20,6 @@ struct FitFightApp: App {
     @StateObject private var themeStore = ThemeStore()
     @StateObject private var model = AppModel()
     @StateObject private var session: SessionStore
-    @StateObject private var friends: FriendshipStore
     @StateObject private var steps: HealthKitStepsStore
 
     init() {
@@ -28,7 +27,6 @@ struct FitFightApp: App {
         let steps = HealthKitStepsStore()
         steps.configure(session: session)
         _session = StateObject(wrappedValue: session)
-        _friends = StateObject(wrappedValue: FriendshipStore(client: session.client))
         _steps = StateObject(wrappedValue: steps)
     }
 
@@ -38,7 +36,6 @@ struct FitFightApp: App {
                 .environmentObject(themeStore)
                 .environmentObject(model)
                 .environmentObject(session)
-                .environmentObject(friends)
                 .environmentObject(steps)
                 .fitFightTheme(themeStore.theme)
                 .task {
@@ -50,6 +47,7 @@ struct FitFightApp: App {
                     #endif
                 }
                 .task(id: session.authSession?.user.id) {
+                    steps.activate(userId: session.authSession?.user.id)
                     await steps.refresh(requestAccess: false)
                     if session.authSession != nil {
                         await steps.syncToBackend(session: session)

@@ -193,7 +193,8 @@ final class SessionStore: ObservableObject {
         await loadProfile()
     }
 
-    func deleteAccount() async {
+    @discardableResult
+    func deleteAccount() async -> Bool {
         authError = nil
         isBusy = true
         defer { isBusy = false }
@@ -206,8 +207,10 @@ final class SessionStore: ObservableObject {
             authSession = nil
             profile = nil
             UserDefaults.standard.removeObject(forKey: Self.handleChosenKey)
+            return true
         } catch {
             authError = "Couldn’t delete account. Try again."
+            return false
         }
     }
 

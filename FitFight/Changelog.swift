@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 8,
             day: 30,
+            notes: "FitFight is now only private Steps challenges: three tabs (Fights, New, You), exact usernames instead of friendships, a required loser action, and 3-day, 1-week, 2-week, or 1-month durations. Requests, money, other metrics, and dead settings are gone; Privacy and Support links are added."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
+            day: 30,
             notes: "FitFight now sends only Apple's merged Steps totals: one exact total for each Fight window and the relevant daily totals for charts. Raw samples, deletions, source and device details, and Apple Health archives are no longer collected."
         ),
         ReleaseNote(

@@ -117,7 +117,7 @@ struct InvitationRow: View {
 
     var body: some View {
         HStack(spacing: 13) {
-            FFAvatar(fight.standings.first?.person, size: 44)
+            FFAvatar(fight.inviter ?? fight.standings.first?.person, size: 44)
             VStack(alignment: .leading, spacing: 2) {
                 Text(fight.name)
                     .ffType(.heading)

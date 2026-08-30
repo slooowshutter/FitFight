@@ -24,7 +24,6 @@
 		A1000000000000000000000B /* FightsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001B /* FightsListView.swift */; };
 		A1000000000000000000000C /* FightDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001C /* FightDetailView.swift */; };
 		A1000000000000000000000D /* NewFightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001D /* NewFightView.swift */; };
-		A1000000000000000000000E /* RequestsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001E /* RequestsView.swift */; };
 		A1000000000000000000000F /* YouView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001F /* YouView.swift */; };
 		A10000000000000000000021 /* ScreenshotExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000022 /* ScreenshotExport.swift */; };
 		A100000000000000000000B2 /* Nunito-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A2 /* Nunito-Medium.ttf */; };
@@ -32,7 +31,6 @@
 		A100000000000000000000B4 /* Nunito-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A4 /* Nunito-Bold.ttf */; };
 		A100000000000000000000B5 /* Nunito-ExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A5 /* Nunito-ExtraBold.ttf */; };
 		A100000000000000000000B7 /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A7 /* Typography.swift */; };
-		A10000000000000000000101 /* BossChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000102 /* BossChatView.swift */; };
 		A10000000000000000000311 /* SupabaseConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000301 /* SupabaseConfig.swift */; };
 		A10000000000000000000312 /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000302 /* SessionStore.swift */; };
 		A10000000000000000000313 /* AppleSignInControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000303 /* AppleSignInControl.swift */; };
@@ -40,12 +38,12 @@
 		A10000000000000000000315 /* BuildEnv.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000305 /* BuildEnv.swift */; };
 		A10000000000000000000316 /* APIConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000306 /* APIConfig.swift */; };
 		A10000000000000000000317 /* FitFightAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000307 /* FitFightAPI.swift */; };
-		A10000000000000000000318 /* FriendshipStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000308 /* FriendshipStore.swift */; };
 		A10000000000000000000319 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000309 /* WelcomeView.swift */; };
 		A1000000000000000000031B /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000030B /* OnboardingView.swift */; };
 		A1000000000000000000031C /* HealthKitStepAggregates.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000030C /* HealthKitStepAggregates.swift */; };
 		A1000000000000000000031D /* HealthKitUploadState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000030D /* HealthKitUploadState.swift */; };
 		A1000000000000000000031E /* HealthKitTUSUploader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000030E /* HealthKitTUSUploader.swift */; };
+		A10000000000000000000322 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000321 /* PrivacyInfo.xcprivacy */; };
 		A1000000000000000000F002 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = A1000000000000000000F001 /* Supabase */; };
 /* End PBXBuildFile section */
 
@@ -71,7 +69,6 @@
 		A1000000000000000000001B /* FightsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FightsListView.swift; sourceTree = "<group>"; };
 		A1000000000000000000001C /* FightDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FightDetailView.swift; sourceTree = "<group>"; };
 		A1000000000000000000001D /* NewFightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewFightView.swift; sourceTree = "<group>"; };
-		A1000000000000000000001E /* RequestsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestsView.swift; sourceTree = "<group>"; };
 		A1000000000000000000001F /* YouView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouView.swift; sourceTree = "<group>"; };
 		A10000000000000000000022 /* ScreenshotExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotExport.swift; sourceTree = "<group>"; };
 		A100000000000000000000A2 /* Nunito-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Nunito-Medium.ttf; sourceTree = "<group>"; };
@@ -79,7 +76,6 @@
 		A100000000000000000000A4 /* Nunito-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Nunito-Bold.ttf; sourceTree = "<group>"; };
 		A100000000000000000000A5 /* Nunito-ExtraBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Nunito-ExtraBold.ttf; sourceTree = "<group>"; };
 		A100000000000000000000A7 /* Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
-		A10000000000000000000102 /* BossChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BossChatView.swift; sourceTree = "<group>"; };
 		A10000000000000000000301 /* SupabaseConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseConfig.swift; sourceTree = "<group>"; };
 		A10000000000000000000302 /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
 		A10000000000000000000303 /* AppleSignInControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignInControl.swift; sourceTree = "<group>"; };
@@ -87,13 +83,13 @@
 		A10000000000000000000305 /* BuildEnv.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Generated/BuildEnv.swift; sourceTree = "<group>"; };
 		A10000000000000000000306 /* APIConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIConfig.swift; sourceTree = "<group>"; };
 		A10000000000000000000307 /* FitFightAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FitFightAPI.swift; sourceTree = "<group>"; };
-		A10000000000000000000308 /* FriendshipStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendshipStore.swift; sourceTree = "<group>"; };
 		A10000000000000000000309 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
 		A1000000000000000000030B /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		A1000000000000000000030C /* HealthKitStepAggregates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitStepAggregates.swift; sourceTree = "<group>"; };
 		A1000000000000000000030D /* HealthKitUploadState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitUploadState.swift; sourceTree = "<group>"; };
 		A1000000000000000000030E /* HealthKitTUSUploader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitTUSUploader.swift; sourceTree = "<group>"; };
 		A10000000000000000000320 /* FitFight.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FitFight.entitlements; sourceTree = "<group>"; };
+		A10000000000000000000321 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -117,14 +113,11 @@
 				A1000000000000000000001B /* FightsListView.swift */,
 				A1000000000000000000001C /* FightDetailView.swift */,
 				A1000000000000000000001D /* NewFightView.swift */,
-				A1000000000000000000001E /* RequestsView.swift */,
-				A10000000000000000000102 /* BossChatView.swift */,
 				A1000000000000000000001F /* YouView.swift */,
 				A10000000000000000000301 /* SupabaseConfig.swift */,
 				A10000000000000000000305 /* BuildEnv.swift */,
 				A10000000000000000000306 /* APIConfig.swift */,
 				A10000000000000000000307 /* FitFightAPI.swift */,
-				A10000000000000000000308 /* FriendshipStore.swift */,
 				A10000000000000000000302 /* SessionStore.swift */,
 				A10000000000000000000303 /* AppleSignInControl.swift */,
 				A10000000000000000000309 /* WelcomeView.swift */,
@@ -138,6 +131,7 @@
 				A10000000000000000000016 /* VersionsView.swift */,
 				A10000000000000000000022 /* ScreenshotExport.swift */,
 				A10000000000000000000320 /* FitFight.entitlements */,
+				A10000000000000000000321 /* PrivacyInfo.xcprivacy */,
 				A10000000000000000000033 /* DesignSystem */,
 				A100000000000000000000C0 /* Fonts */,
 				A10000000000000000000014 /* Assets.xcassets */,
@@ -257,6 +251,7 @@
 				A100000000000000000000B3 /* Nunito-SemiBold.ttf in Resources */,
 				A100000000000000000000B4 /* Nunito-Bold.ttf in Resources */,
 				A100000000000000000000B5 /* Nunito-ExtraBold.ttf in Resources */,
+				A10000000000000000000322 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -283,15 +278,12 @@
 				A1000000000000000000000B /* FightsListView.swift in Sources */,
 				A1000000000000000000000C /* FightDetailView.swift in Sources */,
 				A1000000000000000000000D /* NewFightView.swift in Sources */,
-				A1000000000000000000000E /* RequestsView.swift in Sources */,
-				A10000000000000000000101 /* BossChatView.swift in Sources */,
 				A1000000000000000000000F /* YouView.swift in Sources */,
 				A10000000000000000000021 /* ScreenshotExport.swift in Sources */,
 				A10000000000000000000311 /* SupabaseConfig.swift in Sources */,
 				A10000000000000000000315 /* BuildEnv.swift in Sources */,
 				A10000000000000000000316 /* APIConfig.swift in Sources */,
 				A10000000000000000000317 /* FitFightAPI.swift in Sources */,
-				A10000000000000000000318 /* FriendshipStore.swift in Sources */,
 				A10000000000000000000312 /* SessionStore.swift in Sources */,
 				A10000000000000000000313 /* AppleSignInControl.swift in Sources */,
 				A10000000000000000000319 /* WelcomeView.swift in Sources */,
@@ -443,8 +435,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = FitFight;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = public.app-category.sports;
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "FitFight reads Apple’s merged Steps totals for your Fight windows and daily charts. It does not collect individual Health records.";
-				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "FitFight does not write to Apple Health. iOS requires this sentence because HealthKit is on.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "FitFight reads and uploads your Apple Health step count to score Steps fights. Accepted participants see only your fight total and rank.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -479,8 +470,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = FitFight;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = public.app-category.sports;
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "FitFight reads Apple’s merged Steps totals for your Fight windows and daily charts. It does not collect individual Health records.";
-				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "FitFight does not write to Apple Health. iOS requires this sentence because HealthKit is on.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "FitFight reads and uploads your Apple Health step count to score Steps fights. Accepted participants see only your fight total and rank.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

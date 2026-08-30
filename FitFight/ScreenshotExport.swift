@@ -79,7 +79,6 @@ enum ScreenshotExport {
                     .environmentObject(store)
                     .environmentObject(model)
                     .environmentObject(SessionStore(preview: ()))
-                    .environmentObject(FriendshipStore(client: SessionStore(preview: ()).client))
                     .environmentObject(HealthKitStepsStore())
                     .environment(\.ffTheme, theme)
                     .environment(\.colorScheme, theme.colorScheme)
@@ -98,14 +97,8 @@ enum ScreenshotExport {
             Shot(name: "04-new") { store, model in
                 frame(NewFightView(), tab: .newFight, themeStore: store, model: model)
             },
-            Shot(name: "05-requests") { store, model in
-                frame(RequestsView(), tab: .requests, themeStore: store, model: model)
-            },
-            Shot(name: "06-you") { store, model in
+            Shot(name: "05-you") { store, model in
                 frame(YouView(), tab: .you, themeStore: store, model: model)
-            },
-            Shot(name: "07-boss-chat") { store, model in
-                frame(BossChatView(store: .screenshot), tab: .requests, themeStore: store, model: model)
             }
         ]
     }
@@ -157,7 +150,6 @@ enum ScreenshotExport {
             .environmentObject(themeStore)
             .environmentObject(model)
             .environmentObject(session)
-            .environmentObject(FriendshipStore(client: session.client))
             .environmentObject(HealthKitStepsStore())
             .environment(\.ffTheme, theme)
             .environment(\.colorScheme, theme.colorScheme)

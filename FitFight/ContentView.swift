@@ -80,8 +80,6 @@ struct ContentView: View {
             fightsStack
         case .newFight:
             NewFightView()
-        case .requests:
-            RequestsView()
         case .you:
             YouView()
         }
@@ -107,7 +105,6 @@ struct ContentView: View {
         .environmentObject(themeStore)
         .environmentObject(AppModel())
         .environmentObject(session)
-        .environmentObject(FriendshipStore(client: session.client))
         .environmentObject(HealthKitStepsStore())
         .fitFightTheme(themeStore.theme)
 }

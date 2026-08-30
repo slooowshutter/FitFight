@@ -1,8 +1,8 @@
 # FitFight status — what works, what’s fake, what’s next
 
-Read this before building. Last updated **30 Aug 2026**. App: **0.9.0**. Git: `sports-health-data-apis`.
+Read this before building. Last updated **30 Aug 2026**. App: **0.9.0**.
 
-Do **not** invent screens for dead buttons. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, notifications, social, or the marketing site unless [`backlog.md`](backlog.md) says so.
+Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, notifications, social, or a broader marketing site unless [`backlog.md`](backlog.md) says so. Only the public privacy and support pages exist on the web.
 
 ---
 
@@ -31,16 +31,16 @@ Apple Health synchronization requires `FITFIGHT_API_URL=https://staging.fitfight
 
 After the backend is configured, merge the feature PR into **`develop`**, not `main`. The staging migration must land before testing the new TestFlight build.
 
-The branch also includes the design-system build already on `develop`. Verify it alongside the HealthKit changes:
+Verify the minimal product alongside Apple Health synchronization:
 
 1. TestFlight → **Update**. Look for `0.9.0 · build N · staging · 30 Aug` at the top.
-2. Check Fights, a Fight detail, New, Requests, and You in both Night and Day.
-3. You → Settings → **Design system** shows all twelve sections from the approved HTML kit.
-4. New → **Start fight once**. The button shows Starting… and ignores extra taps while the insert runs.
-5. Confirm existing sign-in, username, Apple Health, friends, and Steps standings still work.
+2. Check Fights, a Fight detail, New, and You in both Night and Day. There are only three tabs: Fights, New, You.
+3. New accepts exact usernames, requires an action, and offers 3 days / 1 week / 2 weeks / 1 month. **Start fight** shows Starting… and ignores extra taps.
+4. Confirm sign-in, username, Apple Health Steps, Fight invitations, standings, Privacy, Support, Versions, sign out, and Delete account.
+5. Confirm Requests, friend requests/lists, money, other Metrics, and dead settings are absent.
 6. If sign-in fails: hosted **develop** Supabase → Authentication → Providers → Apple → On, client ID `com.fitfight.mvp`.
 
-The design-system changes themselves need no Vercel. This branch's Apple Health synchronization currently does.
+The native Fight path uses Supabase; Apple Health synchronization and account deletion also require Vercel.
 
 ---
 
@@ -51,18 +51,19 @@ The design-system changes themselves need no Vercel. This branch's Apple Health 
 | Welcome + Apple sign-in | Works |
 | Username onboarding | Works. Required once after sign-in. |
 | Version line | TestFlight always says `0.9.0 · build N · staging`; future App Store builds say `prod` |
-| Create Steps fight | Phone writes the fight to Supabase |
+| Create Steps challenge | Add one or more exact usernames, choose 3 / 7 / 14 / 30 days, and type the required loser action. Steps × highest total is fixed. |
 | Accept / Join | Phone updates your membership |
-| Add friend / add to a fight | Username. They must have signed in and picked one. No request dance — add is enough. You can start alone. |
+| Invite participants | Exact username in New. They must have signed in and chosen one. There is no friendship or friend-request layer, and at least one invitee is required. |
 | Apple Health | Sends Apple's merged cumulative Steps total for each exact active/ending Fight window in one small authenticated request. It does not send raw samples, deletions, per-source totals, device/source metadata, anchors, or archives. |
 | Daily totals | Sends Apple's merged daily buckets only for days relevant to active Fight charts. They are display data, not the source of the Fight score. |
 | Standings | Live scoring uses exact Fight-window HealthKit aggregates, not overlapping whole-day totals. Both phones read the same serving rows. |
 | Fight end | Exact `ends_at` is the final cutoff. Opening the app closes due fights; the protected Vercel cron runs daily if nobody opens it. After finalization, later Steps cannot change the result. |
-| Design tab | Removed |
-| Design system | Works under You → Settings. Night/Day, Nunito, fixed Moss/Ember/Gold semantics; no accent picker. |
+| Tabs | Fights, New, You. Requests and Design are removed. |
+| Look | Night/Day, Nunito, fixed Moss/Ember/Gold semantics; no accent picker or public design-system showcase. |
 | Versions | Works under You → Settings; the version label stays at the top of every root screen. |
+| Privacy / Support | Pages are implemented and linked under You → Settings. Staging uses `staging.fitfight.app`; production uses `fitfight.app`. Each route must be deployed before that build is tested or submitted. |
 | WHOOP / Strava | Not built |
-| Dead buttons | Still dead (bell, share, Edit, Units & goals, Notifications, Privacy, Payouts, Requests New). Leave them. |
+| Removed scope | No persistent friends, Requests, money/payouts, bragging-rights option, other Metrics, goals, custom dates, or dead settings/actions. |
 
 ---
 
@@ -78,4 +79,4 @@ The design-system changes themselves need no Vercel. This branch's Apple Health 
 
 ## Next product work
 
-Two phones, 3-day Steps fight, standings match, fight shows finished after the days. Then App Store when Marc says.
+Two phones: invite by exact username, accept, run a 3-day Steps challenge, verify the typed action and matching standings, and confirm the Fight finishes at the cutoff. Also smoke-test creation for 7 / 14 / 30 days. Then App Store when Marc says.

@@ -16,7 +16,7 @@ struct HealthKitPreparedArchive {
 }
 
 enum HealthKitStepArchive {
-    static let maximumBytes = 50 * 1_024 * 1_024
+    static let maximumBytes = 512 * 1_024 * 1_024
     private static let pageLimit = 500
 
     static func prepare(

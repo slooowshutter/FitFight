@@ -70,7 +70,7 @@ The design-system changes themselves need no Vercel. This branch's HealthKit arc
 
 - The server accepts a signed-in User's device upload as their own activity. Fine for two friends; not anti-cheat yet.
 - Raw HealthKit samples and source statistics are self-only and never returned to Fight peers; peers receive merged totals only for their shared Fight dates.
-- A complete encoded archive must stay below 50 MB. Oversize archives are rejected without truncation or anchor advancement.
+- A complete encoded archive must stay at or below 512 MiB. Raw events are processed in bounded batches; oversize archives are rejected without truncation or anchor advancement.
 - Same Apple ID on production vs staging is **two** accounts.
 - `web/` owns HealthKit ingestion and account deletion. There are no app-facing Postgres RPCs.
 

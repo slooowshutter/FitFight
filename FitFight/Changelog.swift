@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 8,
             day: 30,
+            notes: "Large Apple Health histories can now complete their first sync instead of stopping at 50 MiB. FitFight still uploads one resumable private archive and advances the HealthKit checkpoint only after the server processes it and removes the object."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
+            day: 30,
             notes: "Apple Health sync now accepts active Fight windows correctly, explains whether a failure happened while preparing, uploading, or processing Steps, and enables best-effort background updates when iOS permits. Manual sync still works whenever FitFight is open."
         ),
         ReleaseNote(

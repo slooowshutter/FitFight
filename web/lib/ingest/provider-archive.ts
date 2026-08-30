@@ -5,9 +5,11 @@ import {
   type ProviderArchiveRecord,
 } from "@/lib/types/provider-uploads/provider-upload";
 
+export const maximumProviderArchiveBytes = 512 * 1_024 * 1_024;
+
 export function requireProviderArchiveSize(byteSize: number): void {
-  if (byteSize > 52_428_800) {
-    throw new ApiError(413, ERROR_CODES.archive_too_large, "Archive exceeds 50 MB");
+  if (byteSize > maximumProviderArchiveBytes) {
+    throw new ApiError(413, ERROR_CODES.archive_too_large, "Archive exceeds 512 MiB");
   }
 }
 
@@ -15,6 +17,10 @@ export async function readProviderArchive(
   stream: ReadableStream<Uint8Array>,
   expectedBytes: number,
   expectedSha256: string,
+  consumeEvent?: (item: {
+    record: Extract<ProviderArchiveRecord, { type: "sample" | "deletion" }>;
+    inputHash: string;
+  }) => Promise<void>,
 ) {
   const reader = stream.getReader();
   const decoder = new TextDecoder("utf-8", { fatal: true });
@@ -25,8 +31,10 @@ export async function readProviderArchive(
   let bytes = 0;
   let lineNumber = 0;
   let checkpointSeen = false;
+  let sampleCount = 0;
+  let deletionCount = 0;
 
-  const consume = (line: string) => {
+  const consume = async (line: string) => {
     lineNumber += 1;
     const text = line.endsWith("\r") ? line.slice(0, -1) : line;
     if (!text) {
@@ -53,24 +61,32 @@ export async function readProviderArchive(
       throw new ApiError(400, ERROR_CODES.archive_invalid, "Checkpoint must be the final record");
     }
     const record = parsed.data;
-    const key = record.type === "sample" || record.type === "deletion"
-      ? `${record.type}:${record.sample_id}:${record.operation}`
-      : record.type === "merged_day"
-        ? `${record.type}:${record.day}`
-        : record.type === "source_day"
-          ? `${record.type}:${record.day}:${record.source_bundle_identifier}`
-          : record.type === "fight_aggregate"
-            ? `${record.type}:${record.fight_id}`
-            : record.type;
+    const inputHash = createHash("sha256").update(text, "utf8").digest("hex");
+    if (record.type === "sample" || record.type === "deletion") {
+      if (record.type === "sample") {
+        sampleCount += 1;
+      } else {
+        deletionCount += 1;
+      }
+      if (consumeEvent) {
+        await consumeEvent({ record, inputHash });
+      }
+      return;
+    }
+
+    const key = record.type === "merged_day"
+      ? `${record.type}:${record.day}`
+      : record.type === "source_day"
+        ? `${record.type}:${record.day}:${record.source_bundle_identifier}`
+        : record.type === "fight_aggregate"
+          ? `${record.type}:${record.fight_id}`
+          : record.type;
     if (unique.has(key)) {
       throw new ApiError(400, ERROR_CODES.archive_invalid, `Duplicate archive record: ${key}`);
     }
     unique.add(key);
     checkpointSeen = record.type === "checkpoint";
-    records.push({
-      record,
-      inputHash: createHash("sha256").update(text, "utf8").digest("hex"),
-    });
+    records.push({ record, inputHash });
   };
 
   try {
@@ -80,30 +96,35 @@ export async function readProviderArchive(
         break;
       }
       bytes += value.byteLength;
-      if (bytes > 52_428_800) {
-        throw new ApiError(413, ERROR_CODES.archive_too_large, "Archive exceeds 50 MB");
+      if (bytes > maximumProviderArchiveBytes) {
+        throw new ApiError(413, ERROR_CODES.archive_too_large, "Archive exceeds 512 MiB");
       }
       hash.update(value);
-      pending += decoder.decode(value, { stream: true });
+      try {
+        pending += decoder.decode(value, { stream: true });
+      } catch {
+        throw new ApiError(400, ERROR_CODES.archive_invalid, "Archive is not valid UTF-8");
+      }
       let newline = pending.indexOf("\n");
       while (newline >= 0) {
-        consume(pending.slice(0, newline));
+        await consume(pending.slice(0, newline));
         pending = pending.slice(newline + 1);
         newline = pending.indexOf("\n");
       }
     }
-    pending += decoder.decode();
+    try {
+      pending += decoder.decode();
+    } catch {
+      throw new ApiError(400, ERROR_CODES.archive_invalid, "Archive is not valid UTF-8");
+    }
+    if (pending) {
+      await consume(pending);
+    }
   } catch (error) {
     await reader.cancel();
-    if (error instanceof ApiError) {
-      throw error;
-    }
-    throw new ApiError(400, ERROR_CODES.archive_invalid, "Archive is not valid UTF-8");
+    throw error;
   }
 
-  if (pending) {
-    consume(pending);
-  }
   if (bytes !== expectedBytes) {
     throw new ApiError(400, ERROR_CODES.archive_size_mismatch, "Archive byte size does not match");
   }
@@ -115,5 +136,11 @@ export async function readProviderArchive(
     throw new ApiError(400, ERROR_CODES.archive_invalid, "Archive checkpoint is missing");
   }
 
-  return { records, actualBytes: bytes, actualSha256 };
+  return {
+    records,
+    sampleCount,
+    deletionCount,
+    actualBytes: bytes,
+    actualSha256,
+  };
 }

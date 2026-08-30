@@ -57,7 +57,7 @@ If the app is closed or killed, iOS will not reliably run timers, settle a month
 
 The phone’s job is: show the UI, read HealthKit / workouts when it is open (or briefly woken), upload, receive pushes.
 
-**Last TestFlight:** 30 Aug 2026 — Apple Health sync timestamp fix, useful failure reasons, and best-effort background delivery. Still `0.9.0`. Look for `0.9.0 · build N · staging`.
+**Last TestFlight:** 30 Aug 2026 — large initial Apple Health archives, useful sync failure reasons, and best-effort background delivery. Still `0.9.0`. Look for `0.9.0 · build N · staging`.
 
 ## Now
 

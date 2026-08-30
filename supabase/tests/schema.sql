@@ -113,20 +113,19 @@ select ok(
   'observations are locked to steps'
 );
 
-select has_function(
-  'public',
-  'delete_own_account',
-  'delete_own_account exists'
+select ok(
+  to_regprocedure('public.delete_own_account()') is null,
+  'account deletion is not exposed as an RPC'
 );
 select is(
-  has_function_privilege('anon', 'public.delete_own_account()', 'EXECUTE'),
+  has_table_privilege('anon', 'private.provider_uploads', 'SELECT'),
   false,
-  'anon cannot execute delete_own_account'
+  'anon cannot read provider uploads'
 );
 select is(
-  has_function_privilege('authenticated', 'public.delete_own_account()', 'EXECUTE'),
-  true,
-  'signed-in users can execute delete_own_account'
+  has_table_privilege('authenticated', 'private.provider_uploads', 'SELECT'),
+  false,
+  'authenticated clients cannot read provider uploads'
 );
 
 select * from finish();

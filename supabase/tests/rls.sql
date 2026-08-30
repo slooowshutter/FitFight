@@ -193,17 +193,25 @@ select lives_ok(
   'owner can invite a friend'
 );
 
-select lives_ok(
+select throws_ok(
   $$ insert into public.step_days (user_id, day, steps)
      values (
        '11111111-1111-4111-8111-111111111111',
        current_date,
        8000
      ) $$,
-  'user can upload their own steps'
+  '42501',
+  'permission denied for table step_days',
+  'clients cannot write server-owned step totals'
 );
 
 reset role;
+insert into public.step_days (user_id, day, steps)
+values (
+  '11111111-1111-4111-8111-111111111111',
+  current_date,
+  8000
+);
 select pg_temp.as_user('22222222-2222-4222-8222-222222222222');
 set local role authenticated;
 

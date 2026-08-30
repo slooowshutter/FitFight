@@ -5,6 +5,7 @@ const uuidV4Schema = z.string().uuid().refine(
   (value) => value[14] === "4" && ["8", "9", "a", "b"].includes(value[19]?.toLowerCase()),
   "must be a UUID v4",
 );
+const canonicalUuidV4Schema = uuidV4Schema.transform((value) => value.toLowerCase());
 const dateTimeSchema = z.string().datetime({ offset: true });
 const civilDaySchema = z.string().refine(isCivilDay, "must be YYYY-MM-DD");
 const nullableTextSchema = z.string().max(500).nullable().optional().transform((value) => value ?? null);
@@ -24,7 +25,7 @@ const metadataValueSchema = z.object({
 }).strict();
 
 export const createProviderUploadSchema = z.object({
-  upload_id: uuidV4Schema,
+  upload_id: canonicalUuidV4Schema,
   provider: z.literal("apple_health"),
   connection_route: z.literal("healthkit"),
   metric: z.literal("steps"),
@@ -122,7 +123,7 @@ export const providerArchiveRecordSchema = z.discriminatedUnion("type", [
   }
 });
 
-export const providerUploadIdSchema = uuidV4Schema;
+export const providerUploadIdSchema = canonicalUuidV4Schema;
 
 export type CreateProviderUpload = z.infer<typeof createProviderUploadSchema>;
 export type ProviderArchiveRecord = z.infer<typeof providerArchiveRecordSchema>;

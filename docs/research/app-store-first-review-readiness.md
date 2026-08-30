@@ -170,7 +170,7 @@ See both build configurations in [project.pbxproj](../../FitFight.xcodeproj/proj
 
 Before submission:
 
-- Remove `NSHealthUpdateUsageDescription` while no write type is requested. Apple requires it for writing, not merely for enabling HealthKit.
+- Keep `NSHealthUpdateUsageDescription` with truthful no-write copy. Although Apple documents it as the write-purpose key and FitFight passes an empty `toShare` set, App Store Connect rejected the signed read-only archive with error 90683 when the key was absent.
 - Rewrite the read string after minimization. A suitable direction is: “FitFight reads and uploads your Apple Health step count to score Steps fights. Accepted participants see only your fight totals and rank.”
 - Avoid “securely” unless the implementation and policy substantiate the claim.
 - Use **Apple Health**, not the developer term HealthKit, in user-facing Versions entries and marketing copy.
@@ -389,7 +389,7 @@ Do not press Submit for Review until every P0 box is true:
 - [ ] Explicit Health upload/participant-sharing consent; clear withdrawal/disconnect.
 - [ ] Written Apple confirmation for participant-visible Health-derived scores, or a design changed to the confirmed permitted boundary.
 - [ ] Health upload minimized and retention documented.
-- [ ] Accurate read purpose string; unused write purpose removed.
+- [ ] Accurate read purpose string; truthful no-write update string retained because App Store Connect requires it for this signed archive.
 - [ ] Valid app privacy manifest with `CA92.1`; exact archive privacy report reconciled.
 - [ ] Accurate App Privacy label; no hidden analytics/tracking collection.
 - [ ] Complete account deletion, Apple revocation, local purge, and clean re-registration.

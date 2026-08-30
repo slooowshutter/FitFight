@@ -436,6 +436,7 @@
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = public.app-category.sports;
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "FitFight reads and uploads your Apple Health step count to score Steps fights. Accepted participants see only your fight total and rank.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "FitFight does not add to or change Apple Health. It only requests read-only access to your step count for Steps fights.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -471,6 +472,7 @@
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = public.app-category.sports;
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "FitFight reads and uploads your Apple Health step count to score Steps fights. Accepted participants see only your fight total and rank.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "FitFight does not add to or change Apple Health. It only requests read-only access to your step count for Steps fights.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

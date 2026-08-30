@@ -13,7 +13,7 @@ There are two **git** branches and two **hosted databases**. They line up.
 | | Testing | Real users / App Store |
 |---|---|---|
 | GitHub | `develop` | `main` |
-| TestFlight | any push that is **not** `main`, plus the daily scheduled `develop` build | only builds from `main` |
+| TestFlight | any push that is **not** `main`, plus the daily scheduled `develop` build | never; `main` does not upload to TestFlight |
 | Supabase | develop project (`zstzbf…`, version line says `staging`) | production (`pvqn…`, version line says `prod`) |
 | What you do | Merge PRs **into `develop`**. Try the app. | Merge `develop` → `main` only when Marc says ship |
 
@@ -50,7 +50,7 @@ The design-system changes themselves need no Vercel. This branch's HealthKit arc
 |---|---|
 | Welcome + Apple sign-in | Works |
 | Username onboarding | Works. Required once after sign-in. |
-| Version line | `0.9.0 · build N · prod` on main builds; `staging` on the rest |
+| Version line | TestFlight always says `0.9.0 · build N · staging`; future App Store builds say `prod` |
 | Create Steps fight | Phone writes the fight to Supabase |
 | Accept / Join | Phone updates your membership |
 | Add friend / add to a fight | Username. They must have signed in and picked one. No request dance — add is enough. You can start alone. |

@@ -4,9 +4,7 @@
 Marc (phone) → cloud Cursor agent → PR into develop
   → you try it on staging
   → merge develop → main when it should be production
-  → GitHub Actions (hosted macos-26 + Xcode 26)
-  → Fastlane `beta` → TestFlight
-  → Marc taps Update
+  → App Store flow only when Marc asks
 ```
 
 Not: agent on Marc’s laptop or home Mac → local Xcode.
@@ -17,7 +15,7 @@ Not: agent on Marc’s laptop or home Mac → local Xcode.
 | --- | --- | --- | --- |
 | Simulator | `.github/workflows/ios-build.yml` | PR + push to `main` or `develop` | `macos-26` |
 | Screenshots | `.github/workflows/ios-screenshots.yml` | PR + push to `main` or `develop` | `macos-26` |
-| TestFlight | `.github/workflows/ios-testflight.yml` | any app `push` (feature branch, `develop`, or `main`), plus a daily `develop` build at `0 18 * * *` UTC | `macos-26` |
+| TestFlight | `.github/workflows/ios-testflight.yml` | any non-`main` app `push`, plus a daily `develop` build at `0 18 * * *` UTC; `main` is blocked | `macos-26` |
 | Database | `.github/workflows/database.yml` | PR + push to `main` or `develop` | `ubuntu-latest` |
 | Delete merged branch | `.github/workflows/delete-merged-branch.yml` | PR merged | `ubuntu-latest` |
 
@@ -81,12 +79,11 @@ Names only. Never print values. Settings → Secrets and variables → Actions �
 
 | Variable | Used when | What it is |
 | --- | --- | --- |
-| `SUPABASE_STAGING_URL` | any TestFlight that is not `main` | Persistent `develop` Supabase project URL |
-| `SUPABASE_STAGING_PUBLISHABLE_KEY` | any TestFlight that is not `main` | Publishable key for that project (`sb_publishable_...`) |
-| `FITFIGHT_API_URL` | any TestFlight that is not `main` | `https://staging.fitfight.app` |
-| `FITFIGHT_API_PRODUCTION_URL` | TestFlight from `main` | `https://fitfight.app` |
+| `SUPABASE_STAGING_URL` | every TestFlight | Persistent `develop` Supabase project URL |
+| `SUPABASE_STAGING_PUBLISHABLE_KEY` | every TestFlight | Publishable key for that project (`sb_publishable_...`) |
+| `FITFIGHT_API_URL` | every TestFlight | `https://staging.fitfight.app` |
 
-`main` always ships the known production Supabase URL/key. Non-`main` TestFlight ships `https://zstzbfocunthczzubggz.supabase.co` (GitHub `SUPABASE_STAGING_*` variables override if set). The staging publishable key must be that project’s key, not production’s. Persistent `develop` must stay persistent so merging to `main` does not delete it. Scheduled workflows normally inherit GitHub's default branch, so TestFlight CI explicitly checks out `develop` and selects staging for the daily build. The top version label shows `prod` or `staging`.
+Every TestFlight ships `https://zstzbfocunthczzubggz.supabase.co` (GitHub `SUPABASE_STAGING_*` variables override if set). The staging publishable key must be that project’s key, not production’s. Persistent `develop` must stay persistent so merging to `main` does not delete it. Scheduled workflows normally inherit GitHub's default branch, so TestFlight CI explicitly checks out `develop`. The top version label always shows `staging`. `main` never uploads to TestFlight.
 
 Vercel also needs `CRON_SECRET` (Preview + Production). Vercel Cron sends it as `Authorization: Bearer …` to `/api/internal/close-fights` once daily at **03:00 UTC**, which is compatible with Hobby. Opening the app also closes due fights, so the cron is a safety net rather than the only close path. Never put this value in git or chat.
 
@@ -110,4 +107,4 @@ After a feature PR merges, CI deletes that branch. `main` and `develop` stay —
 
 ## After you push app changes
 
-The push starts TestFlight. Tell Marc: wait for the TestFlight notification, then **Update**. First processing of a new build is ~10–20 minutes. That is Apple, not GitHub. Do not ask him to merge first or Run workflow.
+A non-`main` push starts TestFlight. Tell Marc: wait for the TestFlight notification, then **Update**. First processing of a new build is ~10–20 minutes. That is Apple, not GitHub. Do not ask him to merge first or Run workflow.

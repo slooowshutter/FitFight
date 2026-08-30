@@ -57,7 +57,7 @@ If the app is closed or killed, iOS will not reliably run timers, settle a month
 
 The phone’s job is: show the UI, read HealthKit / workouts when it is open (or briefly woken), upload, receive pushes.
 
-**Last TestFlight:** 30 Aug 2026 — migration of older Apple Health upload tasks, signed resumable uploads, large initial archives, useful sync failure reasons, and best-effort background delivery. Still `0.9.0`. Look for `0.9.0 · build N · staging`.
+**Last TestFlight:** 30 Aug 2026 — Apple Health now sends only Apple's merged Steps totals: exact Fight-window totals for standings and relevant daily buckets for charts. Raw HealthKit archives are no longer collected. Still `0.9.0`. Look for `0.9.0 · build N · staging`.
 
 ## Now
 
@@ -67,12 +67,13 @@ The phone’s job is: show the UI, read HealthKit / workouts when it is open (or
 
 ## Next
 
-- **Validate the one-object pipeline on staging.** Run a full-history sync, interrupt and resume the same TUS upload, confirm the private object is deleted after processing, and confirm the HealthKit anchor advances only after `completed`.
+- **Validate aggregate-only Apple Health sync on staging.** Use two phones to confirm the authenticated request sends the server-issued Fight windows, the exact-window totals drive both standings, relevant merged daily buckets drive charts only, and no raw archive or Storage object is created.
 - **Watch a real 3-day fight close.** Opening the app marks a due fight finished; the daily Vercel cron is the safety net. Proof is two phones: standings match, the Fight ends, and Steps after `ends_at` do not count. Do that before App Store.
 - App Store when Marc says ship (`develop` → `main`).
 
 ## Later
 
+- **Restore bounded full-fidelity HealthKit ingestion only when a shipped feature needs it.** The MVP deliberately keeps only Apple's merged exact Fight-window totals and the relevant merged daily chart buckets. Before restoring raw samples, deletion anchors, per-source statistics, device/source metadata, or another archive transport, define the concrete product purpose, explicit Collection consent, bounded backfill, retention and deletion policy, edit/deletion reconciliation, provenance shown to Users, and operational size limits. Never calculate Steps by naïvely summing overlapping raw samples or source totals; Apple's merged aggregate remains the reference unless a reviewed Metric specification replaces it.
 - **Sync Apple Health now from a Fight.** Add a clear manual sync action on the Fight detail screen so a participant can upload current HealthKit changes immediately and refresh the standings without leaving the Fight. Show the real state—syncing, up to date, or failed with retry—and do not promise that iOS background delivery is instant.
 - **Basic Fight creation.** The default, simple path. Choose a Measure such as Steps and compete directly on its total: the highest value wins. Keep the Measure × Score × Result machinery hidden. This produces the simplest valid object from [`fight-rules.md`](fight-rules.md), currently Steps × Total × Highest. No screen yet; do not build until moved up.
 - **Advanced Fight-rule builder.** An explicitly advanced dynamic form for the full Measure × Score × Result model in [`fight-rules.md`](fight-rules.md). Earlier answers control which later fields appear: choosing workouts reveals workout-validity rules; choosing days reaching a value asks for the daily value; choosing Reach asks for the final goal. Show only reviewed compatible combinations, keep a plain-language summary visible, and validate the final object on the server. Do not make the Basic path feel like this form. No screen yet; do not build until moved up.

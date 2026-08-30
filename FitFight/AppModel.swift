@@ -324,9 +324,8 @@ final class AppModel: ObservableObject {
         }
 
         do {
-            try await closeDueFights(client: session.client, userId: userId)
             var loaded = try await loadFights(client: session.client, userId: userId)
-            loaded = try await overlayStepDays(loaded, client: session.client, userId: userId)
+            loaded = try await populateStepDays(loaded, client: session.client)
             fights = loaded
             history = loaded
                 .filter { $0.status == .finished }
@@ -503,41 +502,9 @@ final class AppModel: ObservableObject {
         try await session.client.from("fight_members").insert(members).execute()
     }
 
-    private func closeDueFights(client: SupabaseClient, userId: UUID) async throws {
-        let mine: [MemberRow] = try await client.from("fight_members")
-            .select("fight_id, user_id, state, current_value, rank, outcome_minor, personal_target, final_value")
-            .eq("user_id", value: userId)
-            .execute()
-            .value
-        var ids = Set(mine.map(\.fightId))
-        let owned: [FightIDRow] = try await client.from("fights")
-            .select("id")
-            .eq("owner_id", value: userId)
-            .execute()
-            .value
-        owned.forEach { ids.insert($0.id) }
-        guard !ids.isEmpty else { return }
-
-        let rows: [FightRow] = try await client.from("fights")
-            .select("id, owner_id, name, state, starts_at, ends_at, time_zone, metric, outcome_rule, goal_policy, default_goal_value, stake_kind, stake_minor, currency, action_text")
-            .in("id", values: ids.map(\.uuidString))
-            .execute()
-            .value
-        let due = rows.filter { row in
-            row.endsAtDate < Date() && row.state != "final" && row.state != "cancelled"
-        }
-        for row in due {
-            try? await client.from("fights")
-                .update(["state": "final"])
-                .eq("id", value: row.id)
-                .execute()
-        }
-    }
-
-    private func overlayStepDays(
+    private func populateStepDays(
         _ fights: [Fight],
-        client: SupabaseClient,
-        userId: UUID
+        client: SupabaseClient
     ) async throws -> [Fight] {
         let ids = fights.flatMap { fight in
             fight.standings.compactMap { UUID(uuidString: $0.person.id) }
@@ -571,27 +538,11 @@ final class AppModel: ObservableObject {
                 var standing = row
                 guard let personID = UUID(uuidString: row.person.id) else { return row }
                 let mine = days.filter { $0.userId == personID && window.contains($0.day) }
-                standing.score = Double(mine.reduce(0) { $0 + $1.steps })
                 standing.today = Double(mine.first { $0.day == today }?.steps ?? 0)
                 return standing
             }
-            .sorted { lhs, rhs in
-                if lhs.invited != rhs.invited { return !lhs.invited && rhs.invited }
-                if lhs.score == rhs.score { return lhs.person.name < rhs.person.name }
-                return lhs.score > rhs.score
-            }
             next.standings = people
             next.days = Self.dayCards(from: days, standings: people, window: window)
-            if let you = people.first(where: { $0.person.isYou }) {
-                next.rank = people.filter { !$0.invited }.firstIndex { $0.person.id == you.person.id }.map { $0 + 1 } ?? next.rank
-                if let fightID = UUID(uuidString: fight.id) {
-                    try? await client.from("fight_members")
-                        .update(CurrentValueUpdate(currentValue: you.score))
-                        .eq("fight_id", value: fightID)
-                        .eq("user_id", value: userId)
-                        .execute()
-                }
-            }
             updated.append(next)
         }
         return updated
@@ -1026,14 +977,6 @@ private struct MemberAcceptUpdate: Encodable {
     enum CodingKeys: String, CodingKey {
         case state
         case acceptedAt = "accepted_at"
-    }
-}
-
-private struct CurrentValueUpdate: Encodable {
-    let currentValue: Double
-
-    enum CodingKeys: String, CodingKey {
-        case currentValue = "current_value"
     }
 }
 

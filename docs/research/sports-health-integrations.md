@@ -183,8 +183,8 @@ The likely transcription was **ClassPass**. Its [developer API](https://develope
 
 ## Recommended FitFight architecture
 
-1. **Stay HealthKit-first on iPhone.** Request only the types attached to a shipped metric. Continue using Apple's merged daily step statistic for Steps fights.
-2. **Store provenance, but do not make scoring source-specific by default.** Source name/bundle ID helps support and fraud review; it is not a reliable physical-device identity.
+1. **Stay HealthKit-first on iPhone.** Request only the types attached to a shipped metric. Use Apple's merged cumulative statistic over each exact Fight window for Steps fights.
+2. **Collect provenance only for a shipped purpose.** Source name/bundle ID could help support and fraud review, but it is not a reliable physical-device identity and is deliberately not collected by the Steps MVP.
 3. **Show sync health honestly.** Display last successful import and categories requested. Never say “permission denied” based on an empty read result because HealthKit does not reveal that state.
 4. **Prevent duplicates at the metric layer.** For cumulative daily values use HealthKit statistics; for workouts retain UUID/source and reconcile updates/deletions with anchored queries. Do not sum workout totals and detail samples.
 5. **Add direct APIs only for named vendor-only value.** Best candidates are WHOOP Recovery/Strain/RMSSD, Oura Readiness, Garmin Body Battery/stress, or Polar training detail—not ordinary steps, weight, or workouts already normalized in Health.
@@ -194,7 +194,7 @@ The likely transcription was **ClassPass**. Its [developer API](https://develope
 
 ## FitFight-specific gap today
 
-The current Steps implementation reads Apple's merged total for scoring and archives all accessible raw step samples, deletion tombstones, per-source daily statistics, and provenance. Before adding any new metric, the product and backend still need to define its unit, aggregation window, source-merging rule, late-update/deletion behavior, user-facing permission state, and anti-cheat expectations. This report deliberately does not add WHOOP, Strava, Workout Count, or Active Minutes to the backlog or implement them.
+The current Steps implementation keeps only Apple's merged cumulative total for each exact Fight window and the relevant merged daily chart buckets. It does not collect raw samples, deletion tombstones, per-source statistics, or provenance. Before adding any new metric, the product and backend still need to define its unit, aggregation window, source-merging rule, late-update/deletion behavior, user-facing permission state, and anti-cheat expectations. This report deliberately does not add WHOOP, Strava, Workout Count, or Active Minutes to the backlog or implement them.
 
 ## Primary-source index
 

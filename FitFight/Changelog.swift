@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 8,
             day: 30,
+            notes: "FitFight now sends only Apple's merged Steps totals: one exact total for each Fight window and the relevant daily totals for charts. Raw samples, deletions, source and device details, and Apple Health archives are no longer collected."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
+            day: 30,
             notes: "Apple Health synchronization now replaces an incompatible upload left by an older build while preserving the prepared HealthKit archive. Compatible interrupted uploads still resume normally."
         ),
         ReleaseNote(

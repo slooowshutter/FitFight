@@ -418,14 +418,11 @@ export async function processProviderUpload(
       for (const item of fightAggregates) {
         if (item.record.type !== "fight_aggregate") continue;
         const [fight] = await sql<{
-          ends_at: string;
-          state: string;
           outcome_rule: OutcomeRule;
           stake_minor: number | null;
           default_goal_value: string | null;
         }[]>`
-          select fight.ends_at::text as ends_at, fight.state::text as state,
-            fight.outcome_rule::text as outcome_rule, fight.stake_minor,
+          select fight.outcome_rule::text as outcome_rule, fight.stake_minor,
             fight.default_goal_value::text as default_goal_value
           from public.fights as fight
           join public.fight_members as member on member.fight_id = fight.id
@@ -459,23 +456,13 @@ export async function processProviderUpload(
           ) values (
             ${item.record.fight_id}, ${userId}, ${source.id}, ${uploadId},
             ${item.record.cutoff_at}, ${item.record.steps}, ${item.inputHash}, 1,
-            ${item.record.cutoff_at === new Date(fight.ends_at).toISOString()}
+            false
           ) on conflict (fight_id, user_id, cutoff_at, input_hash) do nothing
         `;
         await sql`
           update public.fight_members
           set current_value = ${item.record.steps}, freshness = 'recent',
-            input_revision = coalesce(input_revision, 0) + 1,
-            final_value = case
-              when final_value is null and ${item.record.cutoff_at}::timestamptz = ${fight.ends_at}::timestamptz
-                then ${item.record.steps}
-              else final_value
-            end,
-            finalized_at = case
-              when final_value is null and ${item.record.cutoff_at}::timestamptz = ${fight.ends_at}::timestamptz
-                then now()
-              else finalized_at
-            end
+            input_revision = coalesce(input_revision, 0) + 1
           where fight_id = ${item.record.fight_id} and user_id = ${userId}
         `;
         const members = await sql<{
@@ -495,7 +482,7 @@ export async function processProviderUpload(
           defaultGoalValue: asNumber(fight.default_goal_value),
           members: members.map((member) => ({
             userId: member.user_id,
-            value: asNumber(member.final_value) ?? asNumber(member.current_value) ?? 0,
+            value: asNumber(member.current_value) ?? asNumber(member.final_value) ?? 0,
             personalTarget: asNumber(member.personal_target),
           })),
         });

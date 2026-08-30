@@ -2,6 +2,8 @@
 
 require "base64"
 require "fileutils"
+require "open3"
+require "tmpdir"
 
 default_platform(:ios)
 
@@ -116,6 +118,26 @@ def cloud_signing_flags(key_path, key_id, issuer_id, team_id)
   ].join(" ")
 end
 
+def verify_healthkit_background_delivery(ipa_path)
+  UI.user_error!("Signed IPA path is unavailable") if ipa_path.nil?
+  Dir.mktmpdir("fitfight-ipa") do |directory|
+    system("ditto", "-x", "-k", ipa_path, directory) ||
+      UI.user_error!("Could not inspect the signed IPA")
+    app_path = Dir[File.join(directory, "Payload", "*.app")].first
+    UI.user_error!("Signed app was not found in the IPA") if app_path.nil?
+
+    stdout, stderr, status = Open3.capture3(
+      "codesign", "-d", "--entitlements", ":-", app_path
+    )
+    UI.user_error!("Could not read signed app entitlements") unless status.success?
+    entitlements = stdout + stderr
+    unless entitlements.include?("com.apple.developer.healthkit.background-delivery")
+      UI.user_error!("Signed app is missing HealthKit background delivery")
+    end
+    UI.success("Signed app includes HealthKit background delivery")
+  end
+end
+
 platform :ios do
   desc "Bump build number, archive, and upload to TestFlight"
   lane :beta do
@@ -169,6 +191,10 @@ platform :ios do
       },
       xcargs: "#{signing_flags} CURRENT_PROJECT_VERSION=#{build_number}",
       skip_profile_detection: true
+    )
+
+    verify_healthkit_background_delivery(
+      Actions.lane_context[SharedValues::IPA_OUTPUT_PATH]
     )
 
     upload_to_testflight(

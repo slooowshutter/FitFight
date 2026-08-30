@@ -13,6 +13,7 @@ final class HealthKitStepsStore: ObservableObject {
 
     @Published private(set) var status: Status = .idle
     @Published private(set) var connection = HealthKitConnectionState.notConnected
+    @Published private(set) var backgroundDeliveryUnavailable = false
 
     private let store = HKHealthStore()
     private let api = FitFightAPI()
@@ -21,6 +22,7 @@ final class HealthKitStepsStore: ObservableObject {
     private var isUploading = false
     private var observerQuery: HKObserverQuery?
     private weak var session: SessionStore?
+    private var failureContext = "Apple Health sync failed"
 
     var hasAsked: Bool {
         UserDefaults.standard.bool(forKey: askedKey)
@@ -30,9 +32,12 @@ final class HealthKitStepsStore: ObservableObject {
         switch connection {
         case .notConnected: return "Not connected"
         case .syncing: return "Syncing history…"
-        case .upToDate: return "Up to date"
+        case .upToDate:
+            return backgroundDeliveryUnavailable
+                ? "Up to date · Background sync unavailable"
+                : "Up to date"
         case .noAccessibleSteps: return "No accessible Steps"
-        case .syncFailed: return "Sync failed — tap to retry"
+        case .syncFailed: return "\(failureContext) — tap to retry"
         case .archiveTooLarge: return "Archive too large"
         }
     }
@@ -94,19 +99,23 @@ final class HealthKitStepsStore: ObservableObject {
         guard
             HKHealthStore.isHealthDataAvailable(),
             let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount),
-            let userId = session.authSession?.user.id
+            let userId = session.authSession?.user.id ?? session.client.auth.currentUser?.id
         else { return false }
 
         isUploading = true
         connection = .syncing
+        failureContext = "Apple Health sync failed"
         defer { isUploading = false }
 
         do {
+            failureContext = "Couldn’t load saved Apple Health sync"
             var state = try HealthKitUploadState.load(userId: userId)
             if state.uploadId == nil {
+                failureContext = "Couldn’t load sync details from FitFight"
                 let accessToken = try await session.freshAccessToken()
                 let context = try await api.healthKitUploadContext(accessToken: accessToken)
                 let uploadId = UUID()
+                failureContext = "Couldn’t prepare Apple Health data"
                 guard let archive = try await HealthKitStepArchive.prepare(
                     store: store,
                     type: stepsType,
@@ -129,6 +138,7 @@ final class HealthKitStepsStore: ObservableObject {
                 state.sha256 = archive.sha256
                 state.phase = .archived
                 state.earliestSample = archive.earliestSample
+                failureContext = "Couldn’t save Apple Health sync progress"
                 try state.save(userId: userId)
             }
 
@@ -141,6 +151,22 @@ final class HealthKitStepsStore: ObservableObject {
             try? state?.save(userId: userId)
             return false
         } catch {
+            if let apiError = error as? FitFightAPIError {
+                switch apiError {
+                case .notConfigured:
+                    failureContext = "FitFight sync server isn’t configured"
+                case .http(let status, _):
+                    if status == 401 {
+                        failureContext = "Your FitFight session expired"
+                    } else {
+                        failureContext += " (server \(status))"
+                    }
+                case .decoding:
+                    failureContext += ": unreadable server response"
+                }
+            } else if error is URLError {
+                failureContext += ": network unavailable"
+            }
             connection = .syncFailed
             var state = try? HealthKitUploadState.load(userId: userId)
             state?.connection = .syncFailed
@@ -157,9 +183,13 @@ final class HealthKitStepsStore: ObservableObject {
         guard let uploadId = state.uploadId,
               let archivePath = state.archivePath,
               let byteSize = state.byteSize,
-              let sha256 = state.sha256 else { return }
+              let sha256 = state.sha256 else {
+            failureContext = "Saved Apple Health sync is incomplete"
+            throw FitFightProviderUploadError.invalidLocalState
+        }
 
         if state.phase != .archived {
+            failureContext = "Couldn’t check Apple Health upload status"
             let token = try await session.freshAccessToken()
             let status = try await api.providerUploadStatus(
                 uploadId: uploadId,
@@ -197,6 +227,7 @@ final class HealthKitStepsStore: ObservableObject {
         }
 
         if state.phase == .archived || state.phase == .issued || state.phase == .uploading {
+            failureContext = "Couldn’t authorize Apple Health upload"
             let token = try await session.freshAccessToken()
             let capability = try await api.createProviderUpload(
                 FitFightProviderUploadCreate(
@@ -209,6 +240,7 @@ final class HealthKitStepsStore: ObservableObject {
             state.phase = .issued
             try state.save(userId: userId)
             do {
+                failureContext = "Couldn’t upload Apple Health data"
                 try await uploader.upload(
                     fileURL: URL(fileURLWithPath: archivePath),
                     capability: capability,
@@ -239,6 +271,7 @@ final class HealthKitStepsStore: ObservableObject {
                 }
                 state.tusTaskId = nil
                 try state.save(userId: userId)
+                failureContext = "Couldn’t restart Apple Health upload"
                 try await uploader.upload(
                     fileURL: URL(fileURLWithPath: archivePath),
                     capability: capability,
@@ -256,6 +289,7 @@ final class HealthKitStepsStore: ObservableObject {
 
         state.phase = .processing
         try state.save(userId: userId)
+        failureContext = "Couldn’t process Apple Health data"
         var token = try await session.freshAccessToken()
         var processed = try await api.processProviderUpload(
             uploadId: uploadId,
@@ -281,7 +315,6 @@ final class HealthKitStepsStore: ObservableObject {
     private func registerObserverIfPossible() {
         guard hasAsked, observerQuery == nil,
               let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount) else { return }
-        store.enableBackgroundDelivery(for: stepsType, frequency: .immediate) { _, _ in }
         let query = HKObserverQuery(sampleType: stepsType, predicate: nil) { [weak self] _, completion, _ in
             Task { @MainActor [weak self] in
                 guard let self, let session = self.session else {
@@ -291,13 +324,17 @@ final class HealthKitStepsStore: ObservableObject {
                 while self.isUploading {
                     try? await Task.sleep(for: .milliseconds(250))
                 }
-                if await self.syncToBackend(session: session) {
-                    completion()
-                }
+                _ = await self.syncToBackend(session: session)
+                completion()
             }
         }
         observerQuery = query
         store.execute(query)
+        store.enableBackgroundDelivery(for: stepsType, frequency: .immediate) { [weak self] success, _ in
+            Task { @MainActor [weak self] in
+                self?.backgroundDeliveryUnavailable = !success
+            }
+        }
     }
 
     private struct TodayAggregate {
@@ -344,6 +381,7 @@ final class HealthKitStepsStore: ObservableObject {
 }
 
 private enum FitFightProviderUploadError: Error {
+    case invalidLocalState
     case serverRejected(String?)
     case notCompleted(String, String?)
 }

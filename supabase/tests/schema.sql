@@ -1,5 +1,5 @@
 begin;
-select plan(31);
+select plan(32);
 
 select has_schema('private', 'private schema exists');
 select has_table('public', 'profiles', 'profiles exists');
@@ -126,6 +126,11 @@ select is(
   has_table_privilege('authenticated', 'private.provider_uploads', 'SELECT'),
   false,
   'authenticated clients cannot read provider uploads'
+);
+select is(
+  (select file_size_limit from storage.buckets where id = 'provider-inbox'),
+  536870912::bigint,
+  'provider inbox accepts large HealthKit archives'
 );
 
 select * from finish();

@@ -133,28 +133,54 @@ export async function getProviderUploadContext(
   database: Sql = createDatabaseClient(),
   now = new Date(),
 ) {
-  const rows = await database<{
-    fight_id: string;
-    state: "live" | "awaiting_final_sync";
-    starts_at: string;
-    ends_at: string;
-  }[]>`
-    select fight.id as fight_id, fight.state::text as state,
-      fight.starts_at::text as starts_at, fight.ends_at::text as ends_at
-    from public.fights as fight
-    join public.fight_members as member on member.fight_id = fight.id
-    where member.user_id = ${userId}
-      and member.state = 'accepted'
-      and fight.state in ('live', 'awaiting_final_sync')
-    order by fight.starts_at, fight.id
-  `;
-  return {
-    server_now: now.toISOString(),
-    fight_windows: rows.map((row) => ({
-      ...row,
-      cutoff_at: new Date(Math.min(now.getTime(), Date.parse(row.ends_at))).toISOString(),
-    })),
-  };
+  console.info("[DEBUG-healthkit-context] database_query_started");
+  try {
+    const rows = await database<{
+      fight_id: string;
+      state: "live" | "awaiting_final_sync";
+      starts_at: string;
+      ends_at: string;
+    }[]>`
+      select fight.id as fight_id, fight.state::text as state,
+        fight.starts_at::text as starts_at, fight.ends_at::text as ends_at
+      from public.fights as fight
+      join public.fight_members as member on member.fight_id = fight.id
+      where member.user_id = ${userId}
+        and member.state = 'accepted'
+        and fight.state in ('live', 'awaiting_final_sync')
+      order by fight.starts_at, fight.id
+    `;
+    console.info("[DEBUG-healthkit-context] database_query_completed", {
+      row_count: rows.length,
+    });
+
+    console.info("[DEBUG-healthkit-context] response_mapping_started");
+    const result = {
+      server_now: now.toISOString(),
+      fight_windows: rows.map((row) => ({
+        ...row,
+        cutoff_at: new Date(Math.min(now.getTime(), Date.parse(row.ends_at))).toISOString(),
+      })),
+    };
+    console.info("[DEBUG-healthkit-context] response_mapping_completed");
+    return result;
+  } catch (error) {
+    const code = error && typeof error === "object" && "code" in error
+      && typeof error.code === "string" ? error.code : null;
+    const cause = error && typeof error === "object" && "cause" in error
+      ? error.cause : null;
+    const causeCode = cause && typeof cause === "object" && "code" in cause
+      && typeof cause.code === "string" ? cause.code : null;
+    console.error("[DEBUG-healthkit-context] database_query_failed", {
+      error_name: error instanceof Error ? error.name : "unknown",
+      error_code: code,
+      error_message: error instanceof Error ? error.message.slice(0, 500) : null,
+      cause_name: cause instanceof Error ? cause.name : null,
+      cause_code: causeCode,
+      cause_message: cause instanceof Error ? cause.message.slice(0, 500) : null,
+    });
+    throw error;
+  }
 }
 
 export async function processProviderUpload(

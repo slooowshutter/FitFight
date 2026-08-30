@@ -82,7 +82,21 @@ final class HealthKitTUSUploader: NSObject, TUSClientDelegate {
 
         try await withCheckedThrowingContinuation { continuation in
             self.continuation = continuation
-            if let existingTaskId {
+            var resumableTaskId = existingTaskId
+            if let existingTaskId,
+               let stored = try? client.getStoredUploads().first(where: { $0.id == existingTaskId }),
+               stored.uploadURL != capability.tusURL {
+                do {
+                    try client.cancelAndDelete(id: existingTaskId)
+                } catch {
+                    self.continuation = nil
+                    continuation.resume(throwing: error)
+                    return
+                }
+                resumableTaskId = nil
+            }
+
+            if let existingTaskId = resumableTaskId {
                 expectedTaskId = existingTaskId
                 if let stored = try? client.getStoredUploads().first(where: { $0.id == existingTaskId }),
                    stored.uploadedRange?.count == stored.size {

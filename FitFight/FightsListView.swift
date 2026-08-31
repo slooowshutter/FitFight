@@ -19,6 +19,13 @@ struct FightsListView: View {
                 )
             }
 
+            if !model.invitations.isEmpty {
+                FFSectionHeader(title: "Invitations")
+                ForEach(model.invitations) { fight in
+                    InvitationRow(fight: fight)
+                }
+            }
+
             // The kit allows one moss hero per screen: the fight you are closest to.
             if let lead = model.live.first {
                 Button {
@@ -39,14 +46,6 @@ struct FightsListView: View {
                     ahead: fight.rank == 1,
                     action: { model.openFightID = fight.id }
                 )
-            }
-
-            if !model.invitations.isEmpty {
-                FFSectionHeader(title: "Invitations")
-                    .padding(.top, theme.space.lg)
-                ForEach(model.invitations) { fight in
-                    InvitationRow(fight: fight)
-                }
             }
 
             if !model.finished.isEmpty {

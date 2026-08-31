@@ -49,7 +49,7 @@ If the app is closed or killed, iOS will not reliably run timers, settle a month
 
 The phone’s job is: show the UI, read Apple Health Steps when it is open (or briefly woken), and upload the required aggregates. Push notifications are not in the current scope.
 
-**Last TestFlight:** 31 Aug 2026 — complete account deletion, encrypted Sign in with Apple revocation support, matching Privacy/Support copy, and accurate disclosure of the daily Steps shared in Fight charts. The three-tab Steps-only scope is unchanged. Still `0.9.0`. Look for `0.9.0 · build N · staging`.
+**Last TestFlight:** 31 Aug 2026 — Fight invitations now appear above active challenges, with complete account deletion, encrypted Sign in with Apple revocation support, matching Privacy/Support copy, and accurate disclosure of the daily Steps shared in Fight charts. The three-tab Steps-only scope is unchanged. Still `0.9.0`. Look for `0.9.0 · build N · staging`.
 
 ## Now
 

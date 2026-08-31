@@ -15,7 +15,7 @@ One line: challenge friends to a private Steps fight; most steps wins, and the l
 
 Do not rename the bundle ID without Apple + CI updates.
 
-## Current v0.9 scope — 30 Aug 2026
+## Current v0.9 scope — 31 Aug 2026
 
 - Three tabs: **Fights**, **New**, **You**.
 - Every fight is **Steps × highest total**. There are no other metrics or scoring modes.
@@ -24,6 +24,7 @@ Do not rename the bundle ID without Apple + CI updates.
 - Choose **3 days**, **1 week**, **2 weeks**, or **1 month**.
 - Apple Health sends only merged Steps aggregates needed for active fights.
 - Settings keeps Privacy, Support, Versions, Sign out, and Delete account. Look is Night or Day.
+- Delete account removes the full account, uploaded Steps, memberships, and owned fights; a stored Sign in with Apple authorization is revoked when available.
 - Requests, money, unsupported metrics, and dead settings are removed.
 
 ## v0.3 (approved design) — historical
@@ -89,7 +90,7 @@ uploads merged Steps aggregates; standings come from the database. When the days
 are up, opening the app marks the fight finished. Signed out, the app is only a
 welcome screen plus Sign in with Apple.
 
-**Honest status (30 Aug 2026):** the phone creates the fixed Steps fight, uploads
+**Honest status (31 Aug 2026):** the phone creates the fixed Steps fight, uploads
 Apple Health Steps, and reads standings from Supabase. Username onboarding is
 required. Friends, Requests, money, and alternate metrics are not part of the app. See
 [`status.md`](status.md).

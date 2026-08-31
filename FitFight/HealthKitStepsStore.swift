@@ -22,6 +22,7 @@ final class HealthKitStepsStore: ObservableObject {
     private var observerQuery: HKObserverQuery?
     private weak var session: SessionStore?
     private var activeUserId: UUID?
+    private static let pendingLocalDeletionKey = "ff.healthkit.pendingLocalDeletion"
 
     var hasAsked: Bool {
         guard let activeUserId else { return false }
@@ -57,6 +58,10 @@ final class HealthKitStepsStore: ObservableObject {
     func configure(session: SessionStore) {
         self.session = session
         registerObserverIfPossible()
+        if let rawUserId = UserDefaults.standard.string(forKey: Self.pendingLocalDeletionKey),
+           let userId = UUID(uuidString: rawUserId) {
+            Task { _ = await deleteLocalData(userId: userId) }
+        }
     }
 
     func activate(userId: UUID?) {
@@ -66,12 +71,32 @@ final class HealthKitStepsStore: ObservableObject {
         connection = .notConnected
     }
 
-    func clearLocalConsent(userId: UUID) {
+    func deleteLocalData(userId: UUID) async -> Bool {
+        UserDefaults.standard.set(userId.uuidString, forKey: Self.pendingLocalDeletionKey)
+        await uploader.discardLegacy(userId: userId)
+        do {
+            try HealthKitUploadState.discardLegacy(userId: userId)
+        } catch {
+            return false
+        }
         UserDefaults.standard.removeObject(forKey: Self.askedKey(userId: userId))
-        if activeUserId == userId {
+        UserDefaults.standard.removeObject(forKey: Self.pendingLocalDeletionKey)
+        if let observerQuery {
+            store.stop(observerQuery)
+            self.observerQuery = nil
+        }
+        if let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount) {
+            await withCheckedContinuation { continuation in
+                store.disableBackgroundDelivery(for: stepsType) { _, _ in
+                    continuation.resume()
+                }
+            }
+        }
+        if activeUserId == userId || activeUserId == nil {
             status = .idle
             connection = .notConnected
         }
+        return true
     }
 
     func refresh(requestAccess: Bool) async {

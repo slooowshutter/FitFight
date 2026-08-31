@@ -139,6 +139,16 @@ struct FitFightSyncDue: Codable, Equatable {
     var fightIds: [UUID]?
 }
 
+struct FitFightAccountDeletion: Decodable, Equatable {
+    var appleAuthorizationRevoked: Bool
+    var deleted: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case appleAuthorizationRevoked = "apple_authorization_revoked"
+        case deleted
+    }
+}
+
 struct FitFightAPI {
     var baseURL: URL?
 
@@ -185,8 +195,20 @@ struct FitFightAPI {
         )
     }
 
-    func deleteAccount(accessToken: String) async throws {
-        let _: DiscardBody = try await delete(
+    func storeAppleAuthorizationCode(
+        _ authorizationCode: String,
+        accessToken: String
+    ) async throws {
+        let _: DiscardBody = try await post(
+            path: "auth/apple",
+            accessToken: accessToken,
+            body: AppleAuthorizationBody(authorizationCode: authorizationCode),
+            expected: [200]
+        )
+    }
+
+    func deleteAccount(accessToken: String) async throws -> FitFightAccountDeletion {
+        try await delete(
             path: "me",
             accessToken: accessToken,
             expected: [200]
@@ -402,6 +424,14 @@ private struct AcceptBody: Encodable {
 
 private struct StartBody: Encodable {
     var when: String
+}
+
+private struct AppleAuthorizationBody: Encodable {
+    var authorizationCode: String
+
+    enum CodingKeys: String, CodingKey {
+        case authorizationCode = "authorization_code"
+    }
 }
 
 private struct DiscardBody: Decodable {

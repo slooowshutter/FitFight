@@ -24,10 +24,6 @@ Honest works / doesn’t / next: [`status.md`](status.md). Read that before the 
 
 ## Urgent
 
-### Make typed actions safe before App Store submission
-
-An action is private but still user-generated text sent to another account. Decline now exists; before submission add server-side length/content enforcement, reporting, blocking, invitation rate limits, and a documented moderation response. Money/prize language must remain outside the product. Do not add a social feed or chat while doing this.
-
 ### Freeze historical results against aggregation-code changes
 
 Changing normalization, aggregation, or scoring code must not silently rewrite previously finalized history. Persist the calculation version, input revision, calculated value, and finalized time used for each historical day and Fight result. A new code version applies prospectively unless an explicit, audited backfill is approved.
@@ -36,14 +32,14 @@ Provider corrections, deletion tombstones, and late device syncs may still updat
 
 ### Verify account deletion before App Store submission
 
-`DELETE /api/v1/me` now removes private Apple Health data, public Steps totals,
-provider uploads, sessions, refresh tokens, and identities. When shared Fight or
-legacy friendship history exists, it keeps a deleted profile row, its handle, a
-disconnected data-source row, and shared Fight history.
+The backend now hard-deletes the profile, username, authentication rows, Health/Steps
+data, uploads, friendships, invitations, memberships, and Fights the User created. It
+removes the User from Fights owned by someone else. The phone clears its local Health
+sync state. New Apple sign-ins store an encrypted revocation token; legacy accounts
+without one still delete and receive the manual Apple Settings disconnect path.
 
-Before App Store submission, decide whether the retained handle must be randomized,
-remove obsolete friendship retention, verify Sign in with Apple token revocation and
-local cache cleanup, and make the in-app explanation match the live Privacy Policy.
+Before App Store submission, configure the Sign in with Apple key and token-encryption
+secret in both Vercel environments, then verify fresh sign-in and deletion on staging.
 
 ## Principle: server does the work
 
@@ -53,11 +49,12 @@ If the app is closed or killed, iOS will not reliably run timers, settle a month
 
 The phone’s job is: show the UI, read Apple Health Steps when it is open (or briefly woken), and upload the required aggregates. Push notifications are not in the current scope.
 
-**Last TestFlight:** 30 Aug 2026 — three tabs (Fights, New, You); direct usernames; required loser action; 3-day, 1-week, 2-week, and 1-month Steps fights; no friends, Requests, money, alternate metrics, or dead settings; Privacy and Support links added. Apple Health remains aggregate-only. Still `0.9.0`. Look for `0.9.0 · build N · staging`.
+**Last TestFlight:** 31 Aug 2026 — complete account deletion, encrypted Sign in with Apple revocation support, matching Privacy/Support copy, and accurate disclosure of the daily Steps shared in Fight charts. The three-tab Steps-only scope is unchanged. Still `0.9.0`. Look for `0.9.0 · build N · staging`.
 
 ## Now
 
 - Marc: Apple → On on the **new** develop Auth ([providers](https://supabase.com/dashboard/project/zstzbfocunthczzubggz/auth/providers)), client ID `com.fitfight.mvp`.
+- Marc: add the Sign in with Apple key and a stable 32-byte token-encryption key to the staging and production Vercel environments before testing fresh sign-in or submitting.
 - Marc: one Steps fight on staging. Exact username, required action, Apple Health, Start **once**.
 - Participants on TestFlight Internal Testing. Same build, their own Apple IDs and usernames. Start with a 3-day Steps fight.
 
@@ -102,6 +99,7 @@ are not missing screens; they are out of scope.
 The phone writes fights and Steps to staging after this PR is merged. See [`status.md`](status.md).
 
 - Current launch shape: Fights, New, and You; direct exact-username Steps challenges; required loser action; 3/7/14/30-day durations; Privacy and Support links; essential settings only.
+- Account deletion hard-deletes the account and owned Fights, removes participation elsewhere, clears local Health sync data, and supports encrypted Sign in with Apple token revocation.
 - Historical v0.3 design port: four tabs, dark/light, 10 accents, fixture fights. Requests and extra accents were later removed.
 - Historical Talk to the boss on Requests: private chat with Marc, emailed to him. Removed with Requests on 30 Aug 2026.
 - Persistent GitHub `develop` + hosted Supabase branch `develop`.

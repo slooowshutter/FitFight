@@ -28,6 +28,13 @@ enum Changelog {
             version: "0.9.0",
             year: 2026,
             month: 8,
+            day: 31,
+            notes: "Delete account now permanently removes your profile, username, uploaded Steps, invitations, memberships, scores, and fights you created, then clears local Health sync data and signs you out. FitFight also disconnects Sign in with Apple automatically when Apple supplied a revocable credential. Privacy and Support now explain the same behavior and the daily Steps shared inside a fight."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
             day: 30,
             notes: "FitFight is now only private Steps challenges: three tabs (Fights, New, You), exact usernames instead of friendships, a required loser action, and 3-day, 1-week, 2-week, or 1-month durations. Requests, money, other metrics, and dead settings are gone; Privacy and Support links are added."
         ),

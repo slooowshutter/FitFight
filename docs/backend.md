@@ -69,6 +69,17 @@ Vercel holds `DATABASE_URL`, using Supavisor transaction mode on port `6543`, se
 
 Vercel also holds the server-only Supabase URL and secret used to authenticate requests and perform reviewed admin operations. Neither value belongs in iOS or chat.
 
+Native Sign in with Apple sends its short-lived authorization code to authenticated
+`POST /api/v1/auth/apple`. The server exchanges it with Apple, checks the returned Apple
+subject against the User's Supabase Apple identity, encrypts the refresh token, and stores
+it in `private.apple_sign_in_tokens`. Vercel holds the Sign in with Apple Team ID, key ID,
+private `.p8`, client ID, and a separate 32-byte encryption key. `DELETE /api/v1/me`
+loads any revocation token, removes pending private Storage objects, deletes Fights owned by
+the User, removes the User from other Fights, and hard-deletes the full auth account before
+making a bounded Apple revocation request. Apple cannot block FitFight deletion. Legacy
+accounts without a stored Apple token still delete; the app gives the manual Apple Settings
+disconnect path.
+
 `GET /api/v1/provider-uploads/context` temporarily remains the context route and returns the server time plus exact live/awaiting-final-sync Fight windows. `POST /api/v1/healthkit/steps` accepts one strict JSON document with `complete_through`, the User's `time_zone`, `merged_days`, and `fight_aggregates`. `fight_aggregates` are Apple's merged cumulative totals from each server-authoritative `starts_at...cutoff_at` interval and are the only input to standings. `merged_days` are limited to relevant active Fight days and serve charts only. The request contains no raw sample, deletion, per-source statistic, device/source metadata, anchor, NDJSON, object path, or upload capability.
 
 The older one-object archive migrations, `private.provider_uploads` / `private.provider_events` tables, `provider-inbox` bucket, archive contract, and provider-upload create/status/process routes remain legacy infrastructure during the additive rollout so older builds and migration history are not rewritten. The aggregate-only sync does not create new archive rows or Storage objects and does not use TUS. Remove that legacy surface separately only after incompatible TestFlight builds no longer need it.

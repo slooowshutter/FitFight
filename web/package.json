@@ -6,7 +6,7 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test lib/ingest/*.test.ts lib/scoring/*.test.ts lib/supabase/queries/*.test.ts"
+    "test": "tsx --test lib/apple/*.test.ts lib/ingest/*.test.ts lib/scoring/*.test.ts lib/supabase/queries/*.test.ts"
   },
   "engines": {
     "node": ">=20"

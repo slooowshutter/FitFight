@@ -1,6 +1,6 @@
 # FitFight status — what works, what’s fake, what’s next
 
-Read this before building. Last updated **30 Aug 2026**. App: **0.9.0**.
+Read this before building. Last updated **31 Aug 2026**. App: **0.9.0**.
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, notifications, social, or a broader marketing site unless [`backlog.md`](backlog.md) says so. Only the public privacy and support pages exist on the web.
 
@@ -27,7 +27,7 @@ You still do **not** paste `sb_secret_...` anywhere.
 
 ## Before this branch ships
 
-Apple Health synchronization requires `FITFIGHT_API_URL=https://staging.fitfight.app` plus Vercel's server-only Supabase URL/secret and pooled `DATABASE_URL`. Configure those first; otherwise synchronization fails visibly. Do not expose schema `private`.
+Apple Health synchronization requires `FITFIGHT_API_URL=https://staging.fitfight.app` plus Vercel's server-only Supabase URL/secret and pooled `DATABASE_URL`. Fresh Apple sign-in and automatic revocation also require the Vercel Sign in with Apple Team/key/private-key/client-ID values and stable token-encryption key. Configure those first; otherwise sign-in fails visibly. Do not expose schema `private`.
 
 After the backend is configured, merge the feature PR into **`develop`**, not `main`. The staging migration must land before testing the new TestFlight build.
 
@@ -62,6 +62,7 @@ The native Fight path uses Supabase; Apple Health synchronization and account de
 | Look | Night/Day, Nunito, fixed Moss/Ember/Gold semantics; no accent picker or public design-system showcase. |
 | Versions | Works under You → Settings; the version label stays at the top of every root screen. |
 | Privacy / Support | Pages are implemented and linked under You → Settings. Staging uses `staging.fitfight.app`; production uses `fitfight.app`. Each route must be deployed before that build is tested or submitted. |
+| Account deletion | Permanently deletes the profile, username, authentication, Health/Steps data, relationships, invitations, memberships, scores, and owned Fights; removes participation from other Fights; clears local Health sync state; and revokes a stored Apple credential when available. |
 | WHOOP / Strava | Not built |
 | Removed scope | No persistent friends, Requests, money/payouts, bragging-rights option, other Metrics, goals, custom dates, or dead settings/actions. |
 

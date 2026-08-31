@@ -881,7 +881,7 @@ Therefore:
 - Avoid third-party session replay on authenticated health screens.
 - During connection, request only the supported data types FitFight actually uses. A later Fight reuses that collected Metric without another OS/provider prompt.
 - Never collect precise routes or heart-rate streams for the current Metrics.
-- Share only derived Fight totals with named Fight members.
+- Share only derived Fight totals and relevant daily chart totals with named Fight members.
 - Make export, disconnection, and User deletion available in the app.
 
 ### Retention classes
@@ -899,7 +899,7 @@ Canonical product history does **not** expire on a timer. A `purge_at` column ex
 | Audit/security event | 12 months recommended | Must exclude health values and tokens |
 | APNs device token | Until invalid/logout/device removal | Encrypt and revoke on APNs error |
 
-User-requested account deletion and stricter provider terms override the default. Disconnecting a source stops future collection and deletes credentials, but does not silently erase canonical history unless the User requests deletion or the provider contract requires it. Account deletion removes private fitness history and credentials; the product must later define whether a shared historical Fight removes the member or preserves an anonymized “Deleted User” result.
+User-requested account deletion and stricter provider terms override the default. Disconnecting a source stops future collection and deletes credentials, but does not silently erase canonical history unless the User requests deletion or the provider contract requires it. Account deletion removes the User from Fights owned by someone else and permanently deletes every Fight the User created, including its shared history for other participants. It also deletes private fitness history, credentials, profile, relationships, invitations, memberships, and scores.
 
 Before public launch, complete a real US privacy policy, state-law applicability review, subprocessor list, App Store privacy labels, User export/deletion flow, and legal review for health data and Stakes. Architecture supports compliance; it does not replace counsel.
 
@@ -1057,10 +1057,9 @@ Provider integrations require sandbox fixtures and a replay harness. Never make 
 
 1. Exact Steps interval, manual-entry, correction, and time-boundary rules.
 2. Exact Easy/Steady/Hard lookback and formulas.
-3. Whether account deletion removes a member from historical shared Fights or preserves an anonymized result.
-4. Stakes/age/payment rules after legal review; v1 never holds funds.
-5. Direct-provider priority and approved sharing/retention terms after Apple Health v1.
-6. Product approval and exact definitions for each future Measure, Score operation, and allowed combination, especially Active Minutes and workout-based rules.
+3. Stakes/age/payment rules after legal review; v1 never holds funds.
+4. Direct-provider priority and approved sharing/retention terms after Apple Health v1.
+5. Product approval and exact definitions for each future Measure, Score operation, and allowed combination, especially Active Minutes and workout-based rules.
 
 The deferred Active Minutes Measure and workout rules are intentionally not blockers for the Steps release.
 

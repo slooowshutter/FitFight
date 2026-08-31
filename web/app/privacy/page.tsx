@@ -24,7 +24,7 @@ export default function PrivacyPage() {
       <article className="legal-content">
         <p className="eyebrow">YOUR DATA, IN PLAIN LANGUAGE</p>
         <h1>Privacy Policy</h1>
-        <p className="legal-updated">Effective 30 August 2026</p>
+        <p className="legal-updated">Effective 31 August 2026</p>
         <p className="legal-intro">
           FitFight lets named participants compete on who records the most Steps during
           a private Fight. This policy explains the data used by the FitFight iPhone app
@@ -37,7 +37,9 @@ export default function PrivacyPage() {
             <li>
               <strong>Account data:</strong> your Sign in with Apple identifier, email
               address (which may be an Apple private relay address), name when Apple
-              supplies it, and the FitFight username you choose.
+              supplies it, the FitFight username you choose, and an encrypted server-only
+              Apple credential used to disconnect Sign in with Apple when you delete your
+              account.
             </li>
             <li>
               <strong>Fight data:</strong> the usernames invited to a Fight, its action
@@ -66,8 +68,9 @@ export default function PrivacyPage() {
           </p>
           <p>
             Participants in the same private Fight can see each other&apos;s username,
-            aggregate Steps total, rank, Fight action, and duration. They never receive
-            another participant&apos;s raw Apple Health samples or unrelated Health history.
+            aggregate Steps total for the Fight, relevant daily Steps totals shown in the
+            Fight chart, rank, Fight action, and duration. They never receive another
+            participant&apos;s raw Apple Health samples or unrelated Health history.
           </p>
         </section>
 
@@ -109,26 +112,29 @@ export default function PrivacyPage() {
             future reads but does not change data already used to score a Fight.
           </p>
           <p>
-            We retain account and Fight information while it is needed to operate the
-            service and preserve shared Fight results. Operational logs are retained only
-            as reasonably needed for security and reliability.
+            We keep account, Fight, and uploaded Steps data while your account exists.
+            Support emails are kept only as long as needed to answer the request. Limited
+            security and request logs follow Supabase&apos;s and Vercel&apos;s configured retention
+            periods. Deleted data may remain temporarily in routine backups until those
+            backups expire, or longer when required by law.
           </p>
         </section>
 
         <section>
           <h2>Account deletion</h2>
           <p>
-            You can request deletion in the app under <strong>You → Settings → Delete
-            account</strong>. You can also contact us if the in-app action fails. Deletion
-            removes private Health data and login access associated with the account where
-            possible.
+            You can permanently delete your account under <strong>You → Settings → Delete
+            account</strong>. You do not need to contact support. Deletion removes your
+            profile and username, uploaded Apple Health Fight and daily totals, legacy
+            friendships, invitations, Fight memberships, scores, and every Fight you
+            created. It also removes your participation from Fights created by someone else.
           </p>
           <p>
-            Because a Fight is shared with other participants, its action, dates, aggregate
-            result, and a non-identifying deleted-participant placeholder may remain in
-            their Fight history. Limited identifiers may also be retained where necessary
-            to preserve that shared history, prevent abuse, or meet legal obligations.
-            Deleting FitFight does not delete information stored in Apple Health.
+            When FitFight has a revocable Sign in with Apple credential, it asks Apple to
+            revoke that credential as part of deleting the FitFight login and signing you out.
+            If automatic revocation is unavailable, the app tells you how to disconnect
+            FitFight in Apple settings. Deletion does not remove information stored in
+            Apple Health or delete your Apple ID.
           </p>
         </section>
 

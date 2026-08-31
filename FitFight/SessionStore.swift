@@ -79,13 +79,22 @@ final class SessionStore: ObservableObject {
         self.init(listenForSession: false)
     }
 
-    func signInWithApple(idToken: String, fullName: String?) async {
+    func signInWithApple(
+        idToken: String,
+        authorizationCode: String,
+        nonce: String,
+        fullName: String?
+    ) async {
         authError = nil
         isBusy = true
         defer { isBusy = false }
         do {
-            _ = try await client.auth.signInWithIdToken(
-                credentials: .init(provider: .apple, idToken: idToken)
+            let signedIn = try await client.auth.signInWithIdToken(
+                credentials: .init(
+                    provider: .apple,
+                    idToken: idToken,
+                    nonce: nonce
+                )
             )
             if let fullName, !fullName.isEmpty {
                 try? await client.auth.update(
@@ -100,6 +109,10 @@ final class SessionStore: ObservableObject {
                         .execute()
                 }
             }
+            try? await api.storeAppleAuthorizationCode(
+                authorizationCode,
+                accessToken: signedIn.accessToken
+            )
             await loadProfile()
         } catch {
             authError = Self.signInFailureMessage(error)
@@ -199,14 +212,16 @@ final class SessionStore: ObservableObject {
         isBusy = true
         defer { isBusy = false }
         do {
-            guard let accessToken = authSession?.accessToken else {
-                throw FitFightAPIError.notConfigured
-            }
-            try await api.deleteAccount(accessToken: accessToken)
+            let accessToken = try await freshAccessToken()
+            let deletion = try await api.deleteAccount(accessToken: accessToken)
             try? await client.auth.signOut()
             authSession = nil
             profile = nil
+            profileUnavailable = false
             UserDefaults.standard.removeObject(forKey: Self.handleChosenKey)
+            if !deletion.appleAuthorizationRevoked {
+                authError = "Account deleted. To disconnect Apple too, open iPhone Settings, tap your name, then Sign in with Apple → FitFight → Stop Using Apple ID."
+            }
             return true
         } catch {
             authError = "Couldn’t delete account. Try again."

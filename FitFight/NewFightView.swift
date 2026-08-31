@@ -57,7 +57,7 @@ struct NewFightView: View {
             FFGroupedRows {
                 FFGroupedRow(
                     title: "Most steps wins",
-                    subtitle: "FitFight uploads your fight totals. Accepted players see your total and rank.",
+                    subtitle: "FitFight uploads your Fight total and relevant daily totals. Accepted players see both and your rank.",
                     systemImage: "figure.walk",
                     subtitleTone: .moss,
                     trailing: AnyView(

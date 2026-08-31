@@ -40,13 +40,20 @@ struct YouView: View {
                 Task {
                     let userId = session.authSession?.user.id
                     if await session.deleteAccount(), let userId {
-                        steps.clearLocalConsent(userId: userId)
+                        if !(await steps.deleteLocalData(userId: userId)) {
+                            let cleanupMessage = "Your account was deleted. FitFight will retry removing its local Health cache when you reopen the app."
+                            if let authError = session.authError {
+                                session.authError = "\(authError) \(cleanupMessage)"
+                            } else {
+                                session.authError = cleanupMessage
+                            }
+                        }
                     }
                 }
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This signs you out and deletes your FitFight account and uploaded Apple Health data.")
+            Text("This permanently deletes your profile, uploaded Steps, invitations, and fights you created; removes you from other fights; and signs you out. This can’t be undone.")
         }
     }
 

@@ -20,7 +20,7 @@ Honest works / doesn’t / next: [`status.md`](status.md). Read that before the 
 
 [`system-design.md`](system-design.md) is the golden guide. Follow it. Do not implement the whole document. Production Metric is **Steps**; Active Minutes and Workout Count stay later.
 
-**Current scope lock (30 Aug 2026):** three tabs (**Fights**, **New**, **You**); direct exact-username invitations; Steps × highest total; a required typed loser action; and 3-day, 1-week, 2-week, or 1-month durations. Do not restore friends, Requests, money, other metrics, alternate scoring, or removed settings unless Marc explicitly reopens that scope.
+**Current scope lock (31 Aug 2026):** three tabs (**Fights**, **New**, **You**); direct exact-username invitations; Steps × highest total; a required typed loser action; 1-hour, 6-hour, and 1-day testing durations; and 3-day, 1-week, 2-week, or 1-month durations. Do not restore friends, Requests, money, other metrics, alternate scoring, or removed settings unless Marc explicitly reopens that scope.
 
 ## Urgent
 
@@ -49,7 +49,7 @@ If the app is closed or killed, iOS will not reliably run timers, settle a month
 
 The phone’s job is: show the UI, read Apple Health Steps when it is open (or briefly woken), and upload the required aggregates. Push notifications are not in the current scope.
 
-**Last TestFlight:** 31 Aug 2026 — Fight invitations now appear above active challenges, with complete account deletion, encrypted Sign in with Apple revocation support, matching Privacy/Support copy, and accurate disclosure of the daily Steps shared in Fight charts. The three-tab Steps-only scope is unchanged. Still `0.9.0`. Look for `0.9.0 · build N · staging`.
+**Last TestFlight:** 31 Aug 2026 — New fight includes 1-hour, 6-hour, and 1-day testing durations alongside the existing longer options. Fight invitations appear above active challenges, and the three-tab Steps-only scope is unchanged. Still `0.9.0`. Look for `0.9.0 · build N · staging`.
 
 ## Now
 
@@ -62,7 +62,7 @@ The phone’s job is: show the UI, read Apple Health Steps when it is open (or b
 
 - **Validate aggregate-only Apple Health sync on staging.** Use two phones to confirm the authenticated request sends the server-issued Fight windows, the exact-window totals drive both standings, relevant merged daily buckets drive charts only, and no raw archive or Storage object is created.
 - **Watch a real 3-day fight close.** Opening the app marks a due fight finished; the daily Vercel cron is the safety net. Proof is two phones: standings match, the Fight ends, and Steps after `ends_at` do not count. Do that before App Store.
-- **Smoke-test every allowed duration.** Confirm New sends 3, 7, 14, or 30 days and the detail screen shows the typed action and correct end date.
+- **Smoke-test every allowed duration.** Confirm New sends 1 hour, 6 hours, or 1, 3, 7, 14, or 30 days and the detail screen shows the typed action and correct end date.
 - App Store when Marc says ship (`develop` → `main`).
 
 ## Later — outside the current product
@@ -98,7 +98,7 @@ are not missing screens; they are out of scope.
 
 The phone writes fights and Steps to staging after this PR is merged. See [`status.md`](status.md).
 
-- Current launch shape: Fights, New, and You; direct exact-username Steps challenges; required loser action; 3/7/14/30-day durations; Privacy and Support links; essential settings only.
+- Current launch shape: Fights, New, and You; direct exact-username Steps challenges; required loser action; 1/6-hour testing and 1/3/7/14/30-day durations; Privacy and Support links; essential settings only.
 - Account deletion hard-deletes the account and owned Fights, removes participation elsewhere, clears local Health sync data, and supports encrypted Sign in with Apple token revocation.
 - Historical v0.3 design port: four tabs, dark/light, 10 accents, fixture fights. Requests and extra accents were later removed.
 - Historical Talk to the boss on Requests: private chat with Marc, emailed to him. Removed with Requests on 30 Aug 2026.

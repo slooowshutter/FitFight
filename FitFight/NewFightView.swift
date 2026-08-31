@@ -9,7 +9,7 @@ struct NewFightView: View {
     @State private var username = ""
     @State private var inviteHandles: [String] = []
     @State private var usernameError: String?
-    @State private var lengthDays = 7
+    @State private var duration = "1 week"
     @State private var actionText = ""
 
     private var canStart: Bool {
@@ -146,33 +146,19 @@ struct NewFightView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 FFSectionHeader(title: "Duration")
-                FFPill(durationLabel, style: .softMoss)
+                FFPill(duration, style: .softMoss)
             }
             FFDurationPicker(
+                options: ["1 hour", "6 hours", "1 day"],
+                selection: $duration
+            )
+            FFDurationPicker(
                 options: ["3 days", "1 week", "2 weeks", "1 month"],
-                selection: durationBinding
+                selection: $duration
             )
             Text("The fight starts now. Steps after the end time do not count.")
                 .ffType(.caption)
                 .foregroundStyle(theme.textFaint)
-        }
-    }
-
-    private var durationBinding: Binding<String> {
-        Binding(
-            get: { durationLabel },
-            set: { choice in
-                lengthDays = ["3 days": 3, "1 week": 7, "2 weeks": 14, "1 month": 30][choice] ?? 7
-            }
-        )
-    }
-
-    private var durationLabel: String {
-        switch lengthDays {
-        case 3: return "3 days"
-        case 14: return "2 weeks"
-        case 30: return "1 month"
-        default: return "1 week"
         }
     }
 
@@ -201,7 +187,7 @@ struct NewFightView: View {
         let action = actionText.trimmingCharacters(in: .whitespacesAndNewlines)
         return FFCard(fill: theme.mossWash, stroke: theme.mossText.opacity(0.18)) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Steps · \(durationLabel)")
+                Text("Steps · \(duration)")
                     .ffType(.rowTitle)
                     .foregroundStyle(theme.text)
                 Text(inviteHandles.isEmpty ? "Add a username to start." : "You vs \(inviteHandles.map { "@\($0)" }.joined(separator: ", ")).")
@@ -241,8 +227,21 @@ struct NewFightView: View {
         guard model.beginCreateFight() else { return }
 
         let startsAt = Date()
-        let endsAt = Calendar.current.date(byAdding: .day, value: lengthDays, to: startsAt)
-            ?? startsAt.addingTimeInterval(TimeInterval(lengthDays * 86_400))
+        let durationParts: (component: Calendar.Component, value: Int, seconds: TimeInterval) = switch duration {
+        case "1 hour": (.hour, 1, 3_600)
+        case "6 hours": (.hour, 6, 21_600)
+        case "1 day": (.day, 1, 86_400)
+        case "3 days": (.day, 3, 259_200)
+        case "1 week": (.day, 7, 604_800)
+        case "2 weeks": (.day, 14, 1_209_600)
+        case "1 month": (.day, 30, 2_592_000)
+        default: (.day, 7, 604_800)
+        }
+        let endsAt = Calendar.current.date(
+            byAdding: durationParts.component,
+            value: durationParts.value,
+            to: startsAt
+        ) ?? startsAt.addingTimeInterval(durationParts.seconds)
         let action = actionText.trimmingCharacters(in: .whitespacesAndNewlines)
 
         Task {

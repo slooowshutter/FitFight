@@ -21,7 +21,7 @@ Do not rename the bundle ID without Apple + CI updates.
 - Every fight is **Steps × highest total**. There are no other metrics or scoring modes.
 - Add participants directly by exact username. There is no friends list or friend-request flow.
 - Type the action the loser must do; it is required. There is no money or bragging-rights option.
-- Choose **3 days**, **1 week**, **2 weeks**, or **1 month**.
+- Choose **1 hour**, **6 hours**, or **1 day** for testing, or **3 days**, **1 week**, **2 weeks**, or **1 month**.
 - Apple Health sends only merged Steps aggregates needed for active fights.
 - Settings keeps Privacy, Support, Versions, Sign out, and Delete account. Look is Night or Day.
 - Delete account removes the full account, uploaded Steps, memberships, and owned fights; a stored Sign in with Apple authorization is revoked when available.
@@ -85,7 +85,7 @@ uploaded to the server yet.
 ## v0.9 (live Steps Fight)
 
 Sign in, add people directly by exact username, type the loser action, choose a
-3-day, 1-week, 2-week, or 1-month duration, and start a Steps fight. Apple Health
+1-hour, 6-hour, 1-day, 3-day, 1-week, 2-week, or 1-month duration, and start a Steps fight. Apple Health
 uploads merged Steps aggregates; standings come from the database. When the days
 are up, opening the app marks the fight finished. Signed out, the app is only a
 welcome screen plus Sign in with Apple.

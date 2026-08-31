@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 8,
             day: 31,
+            notes: "New fight now includes 1-hour, 6-hour, and 1-day durations for quickly testing a complete Fight, alongside the existing longer options."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
+            day: 31,
             notes: "Fight invitations now appear at the top of Fights, before active challenges, so requests waiting for a response are immediately visible."
         ),
         ReleaseNote(

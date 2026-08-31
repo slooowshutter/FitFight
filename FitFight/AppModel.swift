@@ -92,6 +92,14 @@ struct Fight: Identifiable, Hashable {
     var days: [FightDay] = []
     var windowStart: Date = Date()
     var windowEnd: Date = Date().addingTimeInterval(86400)
+
+    var durationLabel: String {
+        let hours = max(1, Int((windowEnd.timeIntervalSince(windowStart) / 3_600).rounded()))
+        if hours <= 6 {
+            return "\(hours) \(hours == 1 ? "hour" : "hours")"
+        }
+        return "\(lengthDays) \(lengthDays == 1 ? "day" : "days")"
+    }
 }
 
 @MainActor
@@ -562,6 +570,10 @@ final class AppModel: ObservableObject {
         let starts = row.startsAtDate
         let ends = row.endsAtDate
         let lengthDays = max(1, Calendar.current.dateComponents([.day], from: starts, to: ends).day ?? 1)
+        let lengthHours = max(1, Int((ends.timeIntervalSince(starts) / 3_600).rounded()))
+        let durationLabel = lengthHours <= 6
+            ? "\(lengthHours) \(lengthHours == 1 ? "hour" : "hours")"
+            : "\(lengthDays) \(lengthDays == 1 ? "day" : "days")"
 
         let status: FightStatus
         if mine?.state == "invited" && row.state != "final" && row.state != "cancelled" {
@@ -580,6 +592,9 @@ final class AppModel: ObservableObject {
         } else {
             daysLeft = max(0, Calendar.current.dateComponents([.day], from: Date(), to: ends).day ?? 0)
         }
+        let remainingLabel = lengthHours <= 6
+            ? "\(max(1, Int(ceil(ends.timeIntervalSinceNow / 3_600))))h"
+            : "\(daysLeft ?? 0)d"
 
         let people = members.map { member -> Standing in
             let profile = profiles[member.userId]
@@ -634,7 +649,7 @@ final class AppModel: ObservableObject {
             invitePitch = "\(ownerName) challenged you"
             inviteAction = "Accept"
             kickerEmphasis = invitePitch ?? ""
-            listSubtitle = "\(ownerName) · \(lengthDays) days"
+            listSubtitle = "\(ownerName) · \(durationLabel)"
         case .finished:
             let formatter = DateFormatter()
             formatter.dateFormat = "MMM d"
@@ -650,8 +665,8 @@ final class AppModel: ObservableObject {
                 if youRow.person.id == leader.person.id {
                     kickerPrefix = "Holding"
                     kickerEmphasis = "1st"
-                    kickerRest = "with \(daysLeft ?? 0)d to go"
-                    listSubtitle = "Holding 1st with \(daysLeft ?? 0)d to go"
+                    kickerRest = "with \(remainingLabel) to go"
+                    listSubtitle = "Holding 1st with \(remainingLabel) to go"
                 } else {
                     let gap = leader.score - youRow.score
                     kickerEmphasis = formatScore(max(0, gap), .steps)
@@ -659,7 +674,7 @@ final class AppModel: ObservableObject {
                     listSubtitle = "\(kickerEmphasis) behind \(leader.person.name)"
                 }
             } else {
-                kickerEmphasis = "\(daysLeft ?? 0)d left"
+                kickerEmphasis = "\(remainingLabel) left"
                 listSubtitle = kickerEmphasis
             }
         }

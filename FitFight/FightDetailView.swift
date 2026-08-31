@@ -27,7 +27,7 @@ struct FightDetailView: View {
                     them: pair.them,
                     delta: fight.kickerEmphasis,
                     ahead: fight.rank == 1,
-                    footnote: "\(fight.metric.eyebrow) · \(fight.lengthDays) day fight",
+                    footnote: "\(fight.metric.eyebrow) · \(fight.durationLabel) fight",
                     timeLeft: timeLeft
                 )
                 statTiles
@@ -71,6 +71,10 @@ struct FightDetailView: View {
     private var you: Standing? { model.youStanding(in: fight) }
 
     private var timeLeft: String {
+        if fight.durationLabel.contains("hour"), fight.daysLeft != nil {
+            let hours = max(1, Int(ceil(fight.windowEnd.timeIntervalSinceNow / 3_600)))
+            return "\(hours) \(hours == 1 ? "hour" : "hours") left"
+        }
         if let days = fight.daysLeft { return "\(days) days left" }
         return fight.endedLabel ?? "Ended"
     }
@@ -120,7 +124,7 @@ struct FightDetailView: View {
                         .multilineTextAlignment(.center)
                         .padding(.bottom, 8)
                 }
-                Text("\(fight.lengthDays) days · Most steps wins")
+                Text("\(fight.durationLabel) · Most steps wins")
                     .ffType(.caption)
                     .foregroundStyle(theme.textSecondary)
                     .multilineTextAlignment(.center)
@@ -175,7 +179,7 @@ struct FightDetailView: View {
             FFStatTile(
                 tag: "Total", tone: .moss,
                 title: fight.metric.title, metric: model.formatScore(you?.score ?? 0, metric: fight.metric),
-                caption: "\(fight.lengthDays) day total"
+                caption: "\(fight.durationLabel) total"
             )
             FFStatTile(
                 tag: "Today", tone: (you?.today ?? 0) >= 0 ? .moss : .ember,

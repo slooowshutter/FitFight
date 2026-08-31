@@ -147,6 +147,15 @@ struct FitFightAccountDeletion: Decodable, Equatable {
         case appleAuthorizationRevoked = "apple_authorization_revoked"
         case deleted
     }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        appleAuthorizationRevoked = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .appleAuthorizationRevoked
+        ) ?? false
+        deleted = try container.decode(Bool.self, forKey: .deleted)
+    }
 }
 
 struct FitFightAPI {

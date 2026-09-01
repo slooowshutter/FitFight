@@ -7,8 +7,11 @@ export const dynamic = "force-dynamic";
 
 export const DELETE = apiRoute(async (request) => {
   const { userId } = await verifyUser(request);
-  await deleteAccount(userId);
-  return json({ deleted: true });
+  const appleAuthorizationRevoked = await deleteAccount(userId);
+  return json({
+    apple_authorization_revoked: appleAuthorizationRevoked,
+    deleted: true,
+  });
 });
 
 export function OPTIONS(request: Request) {

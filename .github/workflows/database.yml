@@ -35,3 +35,11 @@ jobs:
 
       - name: pgTAP
         run: supabase test db --local
+
+      - name: Legacy deletion migration boundary
+        run: |
+          supabase db reset --local --version 20260831113843 --no-seed --yes
+          cp supabase/migration-tests/legacy-deleted-accounts-fixture.sql \
+            supabase/migrations/20260901103642_legacy_deleted_accounts_fixture.sql
+          supabase migration up --local --yes
+          supabase test db --local supabase/migration-tests/legacy-deleted-accounts.sql

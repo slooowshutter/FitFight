@@ -2,6 +2,8 @@ import SwiftUI
 
 struct FightsListView: View {
     @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var session: SessionStore
+    @EnvironmentObject private var steps: HealthKitStepsStore
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
@@ -17,6 +19,13 @@ struct FightsListView: View {
                     actionTitle: "Start one",
                     action: { model.tab = .newFight }
                 )
+            }
+
+            if !model.invitations.isEmpty {
+                FFSectionHeader(title: "Invitations")
+                ForEach(model.invitations) { fight in
+                    InvitationRow(fight: fight)
+                }
             }
 
             // The kit allows one moss hero per screen: the fight you are closest to.
@@ -41,14 +50,6 @@ struct FightsListView: View {
                 )
             }
 
-            if !model.invitations.isEmpty {
-                FFSectionHeader(title: "Invitations")
-                    .padding(.top, theme.space.lg)
-                ForEach(model.invitations) { fight in
-                    InvitationRow(fight: fight)
-                }
-            }
-
             if !model.finished.isEmpty {
                 FFSectionHeader(title: "Finished")
                     .padding(.top, theme.space.lg)
@@ -56,6 +57,9 @@ struct FightsListView: View {
                     FinishedRow(fight: fight)
                 }
             }
+        }
+        .refreshable {
+            await model.refreshFights(session: session, steps: steps)
         }
     }
 
@@ -71,7 +75,7 @@ struct FightsListView: View {
 
     private func heroCard(_ fight: Fight) -> some View {
         FFHeroCard(
-            eyebrow: fight.daysLeft.map { "Ends in \($0) days" } ?? fight.metric.eyebrow,
+            eyebrow: fight.daysLeft.map { "Ends in \($0) \($0 == 1 ? "day" : "days")" } ?? fight.metric.eyebrow,
             tag: fight.of == 2 ? "Head to head" : "\(fight.of) in this fight",
             title: fight.name,
             metric: leadScore(fight),
@@ -117,7 +121,7 @@ struct InvitationRow: View {
 
     var body: some View {
         HStack(spacing: 13) {
-            FFAvatar(fight.standings.first?.person, size: 44)
+            FFAvatar(fight.inviter ?? fight.standings.first?.person, size: 44)
             VStack(alignment: .leading, spacing: 2) {
                 Text(fight.name)
                     .ffType(.heading)

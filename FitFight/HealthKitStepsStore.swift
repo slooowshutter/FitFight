@@ -18,13 +18,15 @@ final class HealthKitStepsStore: ObservableObject {
     private let store = HKHealthStore()
     private let api = FitFightAPI()
     private let uploader = HealthKitTUSUploader()
-    private let askedKey = "ff.healthkit.stepsAsked"
     private var isSyncing = false
     private var observerQuery: HKObserverQuery?
     private weak var session: SessionStore?
+    private var activeUserId: UUID?
+    private static let pendingLocalDeletionKey = "ff.healthkit.pendingLocalDeletion"
 
     var hasAsked: Bool {
-        UserDefaults.standard.bool(forKey: askedKey)
+        guard let activeUserId else { return false }
+        return UserDefaults.standard.bool(forKey: Self.askedKey(userId: activeUserId))
     }
 
     var detailText: String {
@@ -56,6 +58,50 @@ final class HealthKitStepsStore: ObservableObject {
     func configure(session: SessionStore) {
         self.session = session
         registerObserverIfPossible()
+        if let rawUserId = UserDefaults.standard.string(forKey: Self.pendingLocalDeletionKey),
+           let userId = UUID(uuidString: rawUserId) {
+            Task { _ = await deleteLocalData(userId: userId) }
+        }
+    }
+
+    func activate(userId: UUID?) {
+        guard activeUserId != userId else { return }
+        activeUserId = userId
+        status = .idle
+        connection = .notConnected
+    }
+
+    func deleteLocalData(userId: UUID) async -> Bool {
+        UserDefaults.standard.set(userId.uuidString, forKey: Self.pendingLocalDeletionKey)
+        await uploader.discardLegacy(userId: userId)
+        do {
+            try HealthKitUploadState.discardLegacy(userId: userId)
+        } catch {
+            return false
+        }
+        UserDefaults.standard.removeObject(forKey: Self.askedKey(userId: userId))
+        UserDefaults.standard.removeObject(forKey: Self.pendingLocalDeletionKey)
+        let cleanupActiveUserId = activeUserId
+        if cleanupActiveUserId == userId || cleanupActiveUserId == nil {
+            if let observerQuery {
+                store.stop(observerQuery)
+                self.observerQuery = nil
+            }
+            if let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount) {
+                await withCheckedContinuation { continuation in
+                    store.disableBackgroundDelivery(for: stepsType) { _, _ in
+                        continuation.resume()
+                    }
+                }
+            }
+            guard activeUserId == cleanupActiveUserId else {
+                registerObserverIfPossible()
+                return true
+            }
+            status = .idle
+            connection = .notConnected
+        }
+        return true
     }
 
     func refresh(requestAccess: Bool) async {
@@ -73,7 +119,9 @@ final class HealthKitStepsStore: ObservableObject {
             } catch {
                 status = .empty
             }
-            UserDefaults.standard.set(true, forKey: askedKey)
+            if let activeUserId {
+                UserDefaults.standard.set(true, forKey: Self.askedKey(userId: activeUserId))
+            }
         }
         guard requestAccess || hasAsked else { return }
 
@@ -124,23 +172,25 @@ final class HealthKitStepsStore: ObservableObject {
     }
 
     private func registerObserverIfPossible() {
-        guard hasAsked, observerQuery == nil,
+        guard hasAsked,
               let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount) else { return }
-        let query = HKObserverQuery(sampleType: stepsType, predicate: nil) { [weak self] _, completion, _ in
-            Task { @MainActor [weak self] in
-                guard let self, let session = self.session else {
+        if observerQuery == nil {
+            let query = HKObserverQuery(sampleType: stepsType, predicate: nil) { [weak self] _, completion, _ in
+                Task { @MainActor [weak self] in
+                    guard let self, let session = self.session else {
+                        completion()
+                        return
+                    }
+                    while self.isSyncing {
+                        try? await Task.sleep(for: .milliseconds(250))
+                    }
+                    _ = await self.syncToBackend(session: session)
                     completion()
-                    return
                 }
-                while self.isSyncing {
-                    try? await Task.sleep(for: .milliseconds(250))
-                }
-                _ = await self.syncToBackend(session: session)
-                completion()
             }
+            observerQuery = query
+            store.execute(query)
         }
-        observerQuery = query
-        store.execute(query)
         store.enableBackgroundDelivery(for: stepsType, frequency: .immediate) { [weak self] success, _ in
             Task { @MainActor [weak self] in
                 self?.backgroundDeliveryUnavailable = !success
@@ -170,5 +220,9 @@ final class HealthKitStepsStore: ObservableObject {
 
     private static func format(_ value: Int) -> String {
         value.formatted(.number.grouping(.automatic))
+    }
+
+    private static func askedKey(userId: UUID) -> String {
+        "ff.healthkit.stepsAsked.\(userId.uuidString.lowercased())"
     }
 }

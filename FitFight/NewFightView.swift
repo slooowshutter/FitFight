@@ -3,84 +3,76 @@ import SwiftUI
 struct NewFightView: View {
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var session: SessionStore
+    @EnvironmentObject private var steps: HealthKitStepsStore
     @Environment(\.ffTheme) private var theme
 
-    @State private var metric: MetricKind = .steps
-    @State private var selected: Set<String> = []
-    @State private var friendHandle = ""
-    @State private var lengthDays = 7
-    @State private var pickingDate = false
-    @State private var endDate = Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
-    @State private var stake: StakeKind = .ten
-    @State private var customKind: CustomStakeKind = .money
-    @State private var customMoney = 15
-    @State private var forfeit = ""
-    @State private var settlement: SettlementKind = .winner
-    @State private var dailyGoal = 10000.0
+    @State private var username = ""
+    @State private var inviteHandles: [String] = []
+    @State private var usernameError: String?
+    @State private var duration = "1 week"
+    @State private var actionText = ""
 
-    private var selectedPeople: [Person] {
-        model.people.filter { selected.contains($0.id) }
+    private var canStart: Bool {
+        let action = actionText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return session.isSignedIn
+            && steps.hasAsked
+            && !inviteHandles.isEmpty
+            && !action.isEmpty
+            && action.count <= 120
+            && !model.isCreatingFight
     }
-
-    private var playerCount: Int { selectedPeople.count + 1 }
-
-    private var canStartSteps: Bool { metric == .steps }
 
     var body: some View {
         FFScreen {
             FFScreenTitle(
                 title: "New fight",
-                subtitle: "Scores sync automatically. You settle up at the end."
+                subtitle: "Challenge friends. Most steps wins."
             )
             .padding(.bottom, 6)
 
-            metricSection
+            stepsSection
             peopleSection.padding(.top, theme.space.lg)
             lengthSection.padding(.top, theme.space.lg)
-            stakeSection.padding(.top, theme.space.lg)
-            if stake != .bragging {
-                settlementSection.padding(.top, theme.space.lg)
-            }
-            if settlement == .goal && stake != .bragging {
-                goalSection.padding(.top, theme.space.lg)
-            }
+            actionSection.padding(.top, theme.space.lg)
             summary.padding(.top, theme.space.lg)
 
             FFScreenCTA(
                 title: model.isCreatingFight ? "Starting…" : "Start fight",
-                enabled: canStartSteps,
+                enabled: canStart,
                 busy: model.isCreatingFight
             ) {
                 startFight()
             }
             .padding(.top, 6)
 
-            if !canStartSteps {
-                Text("Steps only for now")
-                    .ffType(.caption)
-                    .foregroundStyle(theme.textFaint)
-                    .frame(maxWidth: .infinity)
-            }
             if let error = model.createError, !error.isEmpty {
                 FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
             }
         }
     }
 
-    private var metricSection: some View {
-        let options = MetricKind.allCases
-        return VStack(alignment: .leading, spacing: 12) {
-            FFSectionHeader(title: "Metric")
+    private var stepsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            FFSectionHeader(title: "Challenge")
             FFGroupedRows {
-                ForEach(Array(options.enumerated()), id: \.element.id) { index, item in
-                    if index > 0 {
-                        FFDivider(visible: options[index - 1] != metric && item != metric)
-                    }
-                    optionRow(title: item.title, subtitle: item.blurb, on: metric == item) {
-                        metric = item
-                        dailyGoal = item == .steps ? 10000 : (item == .activeMinutes ? 45 : 1)
-                    }
-                }
+                FFGroupedRow(
+                    title: "Most steps wins",
+                    subtitle: "FitFight uploads your Fight total and relevant daily totals. Accepted players see both and your rank.",
+                    systemImage: "figure.walk",
+                    subtitleTone: .moss,
+                    trailing: AnyView(
+                        FFPill(
+                            steps.hasAsked ? "Steps on" : "Connect",
+                            style: steps.hasAsked ? .softMoss : .solidMoss
+                        )
+                    ),
+                    action: connectAppleHealth
+                )
+            }
+            if !steps.hasAsked {
+                Text("Connect Apple Health to score and start a fight.")
+                    .ffType(.caption)
+                    .foregroundStyle(theme.textSecondary)
             }
         }
     }
@@ -88,56 +80,62 @@ struct NewFightView: View {
     private var peopleSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                FFSectionHeader(title: "Who's in")
-                FFPill("\(playerCount) player\(playerCount == 1 ? "" : "s")", style: .softMoss)
+                FFSectionHeader(title: "Friends")
+                FFPill("\(inviteHandles.count + 1) players", style: .softMoss)
             }
-            Text("Type their username. They must have opened the app and picked one. You can start alone.")
+            Text("Add at least one exact username. They must have opened FitFight and chosen one.")
                 .ffType(.caption)
                 .foregroundStyle(theme.textSecondary)
                 .lineSpacing(2)
-            TextField("@username", text: $friendHandle)
-                .font(.ff(15, 700))
-                .foregroundStyle(theme.text)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .submitLabel(.join)
-                .padding(.horizontal, 15)
-                .padding(.vertical, 13)
-                .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
-                .ffBorder(theme.line, radius: theme.radius.field)
-                .onSubmit { addFriendFromField() }
-            if model.people.isEmpty {
-                FFAddRow(title: "No friends yet", subtitle: "Add one above, or start alone") {}
-            } else {
+            HStack(spacing: 8) {
+                TextField("@username", text: $username)
+                    .font(.ff(15, 700))
+                    .foregroundStyle(theme.text)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .submitLabel(.join)
+                    .padding(.horizontal, 15)
+                    .padding(.vertical, 13)
+                    .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
+                    .ffBorder(usernameError == nil ? theme.line : theme.emberText, radius: theme.radius.field)
+                    .onSubmit { addUsername() }
+                FFButton(
+                    title: "Add",
+                    size: .small,
+                    enabled: !username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ) {
+                    addUsername()
+                }
+            }
+            if let usernameError {
+                Text(usernameError)
+                    .ffType(.caption)
+                    .foregroundStyle(theme.emberText)
+            }
+            if !inviteHandles.isEmpty {
                 FFGroupedRows {
-                    ForEach(Array(model.people.enumerated()), id: \.element.id) { index, person in
-                        let on = selected.contains(person.id)
-                        if index > 0 {
-                            let previousOn = selected.contains(model.people[index - 1].id)
-                            FFDivider(visible: !previousOn && !on)
-                        }
-                        Button {
-                            if on { selected.remove(person.id) } else { selected.insert(person.id) }
-                        } label: {
-                            HStack(spacing: 13) {
-                                FFAvatar(person, size: 36)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(person.name)
-                                        .ffType(.rowTitle)
-                                        .foregroundStyle(theme.text)
-                                    Text(person.handle)
-                                        .ffType(.caption)
-                                        .foregroundStyle(theme.textSecondary)
-                                }
-                                Spacer(minLength: 8)
-                                tick(on, square: true)
+                    ForEach(Array(inviteHandles.enumerated()), id: \.element) { index, handle in
+                        if index > 0 { FFDivider() }
+                        HStack(spacing: 12) {
+                            FFAvatar(monogram: String(handle.prefix(2)).uppercased(), size: 36)
+                            Text("@\(handle)")
+                                .ffType(.rowTitle)
+                                .foregroundStyle(theme.text)
+                            Spacer(minLength: 8)
+                            Button {
+                                inviteHandles.removeAll { $0 == handle }
+                            } label: {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundStyle(theme.textSecondary)
+                                    .frame(width: 32, height: 32)
+                                    .background(theme.control, in: Circle())
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 13)
-                            .ffRowSelection(on, outerRadius: theme.radius.card, fill: theme.mossWash)
-                            .contentShape(Rectangle())
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Remove @\(handle)")
                         }
-                        .buttonStyle(.plain)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 11)
                     }
                 }
             }
@@ -147,278 +145,123 @@ struct NewFightView: View {
     private var lengthSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                FFSectionHeader(title: "Ends")
-                FFPill("\(lengthDays) days", style: .softMoss)
+                FFSectionHeader(title: "Duration")
+                FFPill(duration, style: .softMoss)
             }
-            FFDurationPicker(options: ["3 days", "1 week", "2 weeks", "Pick a date"], selection: durationBinding)
-            if pickingDate {
-                DatePicker("End date", selection: $endDate, in: Date()..., displayedComponents: .date)
-                    .datePickerStyle(.compact)
-                    .labelsHidden()
-                    .tint(theme.mossFill)
-                    .onChange(of: endDate) { _, new in
-                        let days = Calendar.current.dateComponents([.day], from: Date(), to: new).day ?? 1
-                        lengthDays = max(1, days)
-                    }
-            }
-            Text("Runs from tomorrow to \(endLabel).")
+            FFDurationPicker(
+                options: ["1 hour", "6 hours", "1 day"],
+                selection: $duration
+            )
+            FFDurationPicker(
+                options: ["3 days", "1 week", "2 weeks", "1 month"],
+                selection: $duration
+            )
+            Text("The fight starts now. Steps after the end time do not count.")
                 .ffType(.caption)
                 .foregroundStyle(theme.textFaint)
         }
     }
 
-    /// FFDurationPicker speaks strings; the fight speaks days.
-    private var durationBinding: Binding<String> {
-        Binding(
-            get: {
-                if pickingDate { return "Pick a date" }
-                switch lengthDays {
-                case 3: return "3 days"
-                case 7: return "1 week"
-                case 14: return "2 weeks"
-                default: return "Pick a date"
-                }
-            },
-            set: { choice in
-                let days = ["3 days": 3, "1 week": 7, "2 weeks": 14][choice]
-                if let days {
-                    pickingDate = false
-                    lengthDays = days
-                    endDate = Calendar.current.date(byAdding: .day, value: days, to: Date()) ?? Date()
-                } else {
-                    pickingDate = true
-                }
-            }
-        )
-    }
-
-    private var stakeSection: some View {
+    private var actionSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            FFSectionHeader(title: "What’s on the line")
-            HStack(spacing: 8) {
-                FFChip(title: "Bragging rights", selected: stake == .bragging) { stake = .bragging }
-                FFChip(title: "$10", selected: stake == .ten) { stake = .ten }
-                FFChip(title: "Custom", selected: stake == .custom) { stake = .custom }
-                Spacer(minLength: 0)
-            }
-            if stake == .custom {
-                HStack(spacing: 8) {
-                    FFChip(title: "Money", selected: customKind == .money) { customKind = .money }
-                    FFChip(title: "Action", selected: customKind == .action) {
-                        customKind = .action
-                        if settlement == .proportional { settlement = .winner }
-                    }
-                    Spacer(minLength: 0)
-                }
-                if customKind == .money {
-                    FFCard {
-                        FFStepper(value: $customMoney, step: 5, minimum: 5, unit: "each")
-                    }
-                } else {
-                    TextField("what does the loser owe?", text: $forfeit)
-                        .font(.ff(15, 700))
-                        .foregroundStyle(theme.text)
-                        .padding(.horizontal, 15)
-                        .padding(.vertical, 13)
-                        .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
-                        .ffBorder(theme.line, radius: theme.radius.field)
-                    HStack(spacing: 8) {
-                        ForEach(["Loser buys dinner", "Loser posts the recap"], id: \.self) { suggestion in
-                            FFChip(title: suggestion, selected: forfeit == suggestion) { forfeit = suggestion }
-                        }
-                        Spacer(minLength: 0)
+            FFSectionHeader(title: "Action")
+            Text("What does the loser have to do?")
+                .ffType(.caption)
+                .foregroundStyle(theme.textSecondary)
+            TextField("Loser cooks dinner", text: $actionText)
+                .font(.ff(15, 700))
+                .foregroundStyle(theme.text)
+                .padding(.horizontal, 15)
+                .padding(.vertical, 13)
+                .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
+                .ffBorder(theme.line, radius: theme.radius.field)
+                .onChange(of: actionText) { _, value in
+                    if value.count > 120 {
+                        actionText = String(value.prefix(120))
                     }
                 }
-            }
         }
-    }
-
-    private var settlementSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            FFSectionHeader(title: "How the pot settles")
-            FFGroupedRows {
-                let options: [SettlementKind] = {
-                    if stake == .custom && customKind == .action {
-                        return [.winner, .goal]
-                    }
-                    return SettlementKind.allCases
-                }()
-                ForEach(Array(options.enumerated()), id: \.element.id) { index, item in
-                    if index > 0 {
-                        FFDivider(visible: options[index - 1] != settlement && item != settlement)
-                    }
-                    optionRow(title: item.title, subtitle: item.blurb, on: settlement == item, leadingTick: true) {
-                        settlement = item
-                    }
-                }
-            }
-        }
-    }
-
-    private var goalSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            FFSectionHeader(title: "Daily goal")
-            FFCard {
-                FFStepper(value: goalBinding, step: Int(step), minimum: Int(step), unit: goalUnit)
-            }
-        }
-    }
-
-    private var goalBinding: Binding<Int> {
-        Binding(get: { Int(dailyGoal) }, set: { dailyGoal = Double($0) })
-    }
-
-    private var step: Double {
-        switch metric {
-        case .steps: return 500
-        case .activeMinutes: return 5
-        case .workouts: return 1
-        }
-    }
-
-    private var goalUnit: String {
-        switch metric {
-        case .steps: return "steps a day"
-        case .activeMinutes: return "minutes a day"
-        case .workouts: return "workouts a day"
-        }
-    }
-
-    /// The mocks write dates as "Mon 27 Jul", which no locale-driven style gives us.
-    private static let endFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "E d MMM"
-        return formatter
-    }()
-
-    private var endLabel: String {
-        Self.endFormatter.string(from: endDate)
     }
 
     private var summary: some View {
-        FFCard(fill: theme.mossWash, stroke: theme.mossText.opacity(0.18)) {
+        let action = actionText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return FFCard(fill: theme.mossWash, stroke: theme.mossText.opacity(0.18)) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("\(lengthDays)-day \(metric.eyebrow.lowercased())")
+                Text("Steps · \(duration)")
                     .ffType(.rowTitle)
                     .foregroundStyle(theme.text)
-                Text("Fight with \(playerCount) players, ending \(endLabel). \(stakeSummary).")
+                Text(inviteHandles.isEmpty ? "Add a username to start." : "You vs \(inviteHandles.map { "@\($0)" }.joined(separator: ", ")).")
                     .ffType(.body)
                     .foregroundStyle(theme.textSecondary)
-                    .lineSpacing(3)
-                    .fixedSize(horizontal: false, vertical: true)
+                Text(action.isEmpty ? "Add the action the loser will do." : action)
+                    .ffType(.body)
+                    .foregroundStyle(action.isEmpty ? theme.textFaint : theme.text)
+                    .lineLimit(3)
             }
         }
     }
 
-    private var stakeSummary: String {
-        let players = playerCount
-        switch stake {
-        case .bragging: return "Bragging rights only"
-        case .ten: return "$10 each — the winner takes all $\(10 * players)"
-        case .custom:
-            if customKind == .money {
-                return "$\(customMoney) each"
-            }
-            return forfeit.isEmpty ? "a custom forfeit" : forfeit
+    private func addUsername() {
+        let handle = SessionStore.strippedHandle(username)
+        usernameError = nil
+
+        guard SessionStore.isValidHandle(handle) else {
+            usernameError = "Use 2–30 letters, numbers, or underscores."
+            return
         }
-    }
-
-    private func optionRow(
-        title: String,
-        subtitle: String,
-        on: Bool,
-        leadingTick: Bool = false,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            HStack(alignment: .top, spacing: 12) {
-                if leadingTick { tick(on) }
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(title)
-                        .ffType(.rowTitle)
-                        .foregroundStyle(theme.text)
-                    Text(subtitle)
-                        .ffType(.caption)
-                        .foregroundStyle(theme.textSecondary)
-                        .multilineTextAlignment(.leading)
-                        .lineSpacing(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                // The text takes the whole remaining width; a Spacer here would
-                // compete with it and wrap the sentence a word early.
-                .frame(maxWidth: .infinity, alignment: .leading)
-                if !leadingTick { tick(on) }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 13)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .ffRowSelection(on, outerRadius: theme.radius.card, fill: theme.mossWash)
-            .contentShape(Rectangle())
+        if handle == session.profile?.handle {
+            usernameError = "Add someone else’s username."
+            return
         }
-        .buttonStyle(.plain)
-    }
-
-    private static let tickSize: CGFloat = 22
-
-    @ViewBuilder
-    private func tick(_ on: Bool, square: Bool = false) -> some View {
-        let shape = RoundedRectangle(cornerRadius: square ? 7 : Self.tickSize / 2, style: .continuous)
-        ZStack {
-            shape
-                .fill(on ? theme.mossFill : Color.clear)
-                .overlay {
-                    if !on { shape.strokeBorder(theme.textTertiary, lineWidth: 2) }
-                }
-            if on {
-                Image(systemName: "checkmark")
-                    .font(.system(size: 11, weight: .heavy))
-                    .foregroundStyle(theme.mossOn)
-            }
+        guard !inviteHandles.contains(handle) else {
+            usernameError = "@\(handle) is already in this fight."
+            return
         }
-        .frame(width: Self.tickSize, height: Self.tickSize)
-    }
 
-    private func bareHandle(_ handle: String) -> String {
-        handle.hasPrefix("@") ? String(handle.dropFirst()) : handle
-    }
-
-    private func addFriendFromField() {
-        let raw = friendHandle.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !raw.isEmpty else { return }
-        let handle = bareHandle(raw)
-        friendHandle = ""
-        Task {
-            await model.addFriend(handle: handle)
-            await model.refreshFromServer()
-        }
+        inviteHandles.append(handle)
+        username = ""
     }
 
     private func startFight() {
-        guard canStartSteps else { return }
-        guard session.isSignedIn else {
-            model.tab = .you
-            return
-        }
+        guard canStart else { return }
         guard model.beginCreateFight() else { return }
-        var inviteHandles = selectedPeople.map { bareHandle($0.handle) }
-        let typed = bareHandle(friendHandle.trimmingCharacters(in: .whitespacesAndNewlines))
-        if !typed.isEmpty, !inviteHandles.contains(typed) {
-            inviteHandles.append(typed)
+
+        let startsAt = Date()
+        let durationParts: (component: Calendar.Component, value: Int, seconds: TimeInterval) = switch duration {
+        case "1 hour": (.hour, 1, 3_600)
+        case "6 hours": (.hour, 6, 21_600)
+        case "1 day": (.day, 1, 86_400)
+        case "3 days": (.day, 3, 259_200)
+        case "1 week": (.day, 7, 604_800)
+        case "2 weeks": (.day, 14, 1_209_600)
+        case "1 month": (.day, 30, 2_592_000)
+        default: (.day, 7, 604_800)
         }
+        let endsAt = Calendar.current.date(
+            byAdding: durationParts.component,
+            value: durationParts.value,
+            to: startsAt
+        ) ?? startsAt.addingTimeInterval(durationParts.seconds)
+        let action = actionText.trimmingCharacters(in: .whitespacesAndNewlines)
+
         Task {
             await model.createAndStartFight(
-                startsAt: Date(),
-                endsAt: endDate,
-                outcomeRule: settlement,
-                stake: stake,
-                customKind: customKind,
-                customMoney: customMoney,
-                actionText: forfeit,
-                dailyGoal: dailyGoal,
+                startsAt: startsAt,
+                endsAt: endsAt,
+                actionText: action,
                 inviteHandles: inviteHandles
             )
             if (model.createError ?? "").isEmpty {
                 model.tab = .fights
+            }
+        }
+    }
+
+    private func connectAppleHealth() {
+        Task {
+            await steps.refresh(requestAccess: true)
+            if session.authSession != nil {
+                await steps.syncToBackend(session: session)
             }
         }
     }

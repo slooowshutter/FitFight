@@ -1,9 +1,8 @@
 import SwiftUI
 
-/// First-run handle after Apple sign-in. Friends add you with this name.
+/// First-run handle after Apple sign-in. People challenge you with this name.
 struct OnboardingView: View {
     @EnvironmentObject private var session: SessionStore
-    @EnvironmentObject private var steps: HealthKitStepsStore
     @Environment(\.ffTheme) private var theme
 
     @State private var handle = ""
@@ -17,7 +16,7 @@ struct OnboardingView: View {
             Text("Pick a username")
                 .ffType(.title)
                 .foregroundStyle(theme.text)
-            Text("Friends add you with this. Letters, numbers, underscore. 2–30 characters.")
+            Text("People challenge you with this. Letters, numbers, underscore. 2–30 characters.")
                 .ffType(.body)
                 .foregroundStyle(theme.textSecondary)
                 .lineSpacing(3)
@@ -60,7 +59,6 @@ struct OnboardingView: View {
         defer { isSaving = false }
         do {
             try await session.setHandle(handle)
-            await steps.refresh(requestAccess: true)
         } catch {
             self.error = error.localizedDescription
         }

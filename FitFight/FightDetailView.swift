@@ -1,9 +1,19 @@
 import SwiftUI
 
 struct FightDetailView: View {
-    let fight: Fight
+    private let initialFight: Fight
     @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var session: SessionStore
+    @EnvironmentObject private var steps: HealthKitStepsStore
     @Environment(\.ffTheme) private var theme
+
+    init(fight: Fight) {
+        initialFight = fight
+    }
+
+    private var fight: Fight {
+        model.fight(id: initialFight.id) ?? initialFight
+    }
 
     private var pendingJoin: Bool {
         fight.status == .invited && !model.joined.contains(fight.id)
@@ -19,7 +29,7 @@ struct FightDetailView: View {
                     them: pair.them,
                     delta: fight.kickerEmphasis,
                     ahead: fight.rank == 1,
-                    footnote: "\(fight.metric.eyebrow) · \(fight.lengthDays) day fight",
+                    footnote: "\(fight.metric.eyebrow) · \(fight.durationLabel) fight",
                     timeLeft: timeLeft
                 )
                 statTiles
@@ -28,32 +38,36 @@ struct FightDetailView: View {
                 statTiles
             }
 
-            FFSectionHeader(title: "Money right now")
-                .padding(.top, theme.space.lg)
-            Text(fight.payoutLine)
-                .ffType(.caption)
-                .foregroundStyle(theme.textSecondary)
-            moneyCard
-
-            FFSectionHeader(title: "Standings")
-                .padding(.top, theme.space.lg)
-            if let meta = fight.standingsMeta {
-                Text(meta)
-                    .ffType(.caption)
-                    .foregroundStyle(theme.textSecondary)
-            }
-            ForEach(Array(fight.standings.enumerated()), id: \.element.id) { index, row in
-                standingRow(index: index, row: row)
-            }
-
-            if !fight.days.isEmpty {
-                FFSectionHeader(title: "Every day so far")
+            if !pendingJoin {
+                FFSectionHeader(title: "Action")
                     .padding(.top, theme.space.lg)
-                daysCard
-            }
+                FFCard {
+                    Text(fight.actionText)
+                        .ffType(.rowTitle)
+                        .foregroundStyle(theme.text)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
 
-            FFScreenCTA(title: "I challenge you") {}
-                .padding(.top, theme.space.lg)
+                FFSectionHeader(title: "Standings")
+                    .padding(.top, theme.space.lg)
+                if let meta = fight.standingsMeta {
+                    Text(meta)
+                        .ffType(.caption)
+                        .foregroundStyle(theme.textSecondary)
+                }
+                ForEach(Array(fight.standings.enumerated()), id: \.element.id) { index, row in
+                    standingRow(index: index, row: row)
+                }
+
+                if !fight.days.isEmpty {
+                    FFSectionHeader(title: "Every day so far")
+                        .padding(.top, theme.space.lg)
+                    daysCard
+                }
+            }
+        }
+        .refreshable {
+            await model.refreshFights(session: session, steps: steps)
         }
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
@@ -62,7 +76,11 @@ struct FightDetailView: View {
     private var you: Standing? { model.youStanding(in: fight) }
 
     private var timeLeft: String {
-        if let days = fight.daysLeft { return "\(days) days left" }
+        if fight.durationLabel.contains("hour"), fight.daysLeft != nil {
+            let hours = max(1, Int(ceil(fight.windowEnd.timeIntervalSinceNow / 3_600)))
+            return "\(hours) \(hours == 1 ? "hour" : "hours") left"
+        }
+        if let days = fight.daysLeft { return "\(days) \(days == 1 ? "day" : "days") left" }
         return fight.endedLabel ?? "Ended"
     }
 
@@ -70,8 +88,7 @@ struct FightDetailView: View {
         FFNavDetail(
             title: fight.name,
             subtitle: timeLeft,
-            onBack: { model.openFightID = nil },
-            onMore: {}
+            onBack: { model.openFightID = nil }
         )
         .padding(.horizontal, theme.space.screenPadding)
         .padding(.bottom, 12)
@@ -112,20 +129,34 @@ struct FightDetailView: View {
                         .multilineTextAlignment(.center)
                         .padding(.bottom, 8)
                 }
-                Text("\(fight.lengthDays) days · \(fight.payoutLine)")
+                Text("\(fight.durationLabel) · Most steps wins")
                     .ffType(.caption)
                     .foregroundStyle(theme.textSecondary)
                     .multilineTextAlignment(.center)
+                    .padding(.bottom, 8)
+                Text(fight.actionText)
+                    .ffType(.body)
+                    .foregroundStyle(theme.text)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.bottom, 22)
                 FFScreenCTA(title: fight.inviteAction == "Accept" ? "Accept challenge" : "Join fight") {
                     Task {
                         await model.acceptFight(id: fight.id)
                         if (model.createError ?? "").isEmpty {
                             model.joined.insert(fight.id)
-                            await model.refreshFromServer()
                         }
                     }
                 }
+                FFButton(title: "Decline", kind: .ghost, fullWidth: true) {
+                    Task {
+                        await model.declineFight(id: fight.id)
+                        if (model.createError ?? "").isEmpty {
+                            model.openFightID = nil
+                        }
+                    }
+                }
+                .padding(.top, 8)
                 if let error = model.createError, !error.isEmpty {
                     Text(error)
                         .ffType(.caption)
@@ -153,7 +184,7 @@ struct FightDetailView: View {
             FFStatTile(
                 tag: "Total", tone: .moss,
                 title: fight.metric.title, metric: model.formatScore(you?.score ?? 0, metric: fight.metric),
-                caption: "\(fight.lengthDays) day total"
+                caption: "\(fight.durationLabel) total"
             )
             FFStatTile(
                 tag: "Today", tone: (you?.today ?? 0) >= 0 ? .moss : .ember,
@@ -166,55 +197,7 @@ struct FightDetailView: View {
     private var ringProgress: Double {
         let leader = fight.standings.first?.score ?? 1
         let yours = you?.score ?? 0
-        if fight.settlement == .goal, let goal = fight.dailyGoal, goal > 0 {
-            let elapsed = max(1, fight.lengthDays - (fight.daysLeft ?? 0))
-            return min(1, yours / (goal * Double(elapsed)))
-        }
         return leader == 0 ? 0 : min(yours / leader, 1)
-    }
-
-    private var joinedStandings: [Standing] {
-        fight.standings.filter { !$0.invited }
-    }
-
-    private var moneyCard: some View {
-        FFGroupedRows {
-            ForEach(Array(joinedStandings.enumerated()), id: \.element.id) { index, row in
-                if index > 0 {
-                    FFDivider(
-                        visible: !joinedStandings[index - 1].person.isYou && !row.person.isYou
-                    )
-                }
-                moneyRow(row)
-            }
-        }
-    }
-
-    private func moneyRow(_ row: Standing) -> some View {
-        HStack(spacing: 12) {
-            FFAvatar(row.person, size: 38)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(row.person.name)
-                    .ffType(.rowTitle)
-                    .foregroundStyle(theme.text)
-                Text(model.paceLine(row, in: fight))
-                    .ffType(.caption)
-                    .foregroundStyle(theme.textSecondary)
-            }
-            Spacer(minLength: 8)
-            if let safe = row.safe {
-                FFPill(safe ? "Safe" : "At risk", style: safe ? .softMoss : .softEmber)
-            } else {
-                FFMoney(dollars: row.projectedNet)
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 13)
-        .ffRowSelection(
-            row.person.isYou,
-            outerRadius: theme.radius.card,
-            fill: theme.mossWash
-        )
     }
 
     private func standingRow(index: Int, row: Standing) -> some View {

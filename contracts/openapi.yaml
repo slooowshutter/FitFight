@@ -105,10 +105,35 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ApiError" }
+  /auth/apple:
+    post:
+      operationId: storeAppleAuthorization
+      summary: Exchange and securely store the native Apple authorization needed for account deletion.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [authorization_code]
+              properties:
+                authorization_code: { type: string, minLength: 1, maxLength: 2048 }
+      responses:
+        "200":
+          description: Apple authorization stored
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [stored]
+                properties:
+                  stored: { const: true }
   /me:
     delete:
       operationId: deleteAccount
-      summary: Delete private data and login credentials, preserving anonymized Fight history where required.
+      summary: Permanently delete the account, its data, memberships, and Fights it owns.
       security: [{ bearerAuth: [] }]
       responses:
         "200":
@@ -117,8 +142,9 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [deleted]
+                required: [apple_authorization_revoked, deleted]
                 properties:
+                  apple_authorization_revoked: { type: boolean }
                   deleted: { const: true }
   /fights:
     post:

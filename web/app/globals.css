@@ -463,6 +463,123 @@ footer .brand-mark {
   font-size: 12px;
 }
 
+.legal-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 80% 8%, var(--moss-wash), transparent 24rem),
+    linear-gradient(135deg, var(--canvas), var(--background) 52%, var(--canvas));
+}
+
+.legal-header,
+.legal-content,
+.legal-footer {
+  width: min(760px, calc(100% - 48px));
+  margin-inline: auto;
+}
+
+.legal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-block: 28px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.legal-nav {
+  display: flex;
+  gap: 20px;
+  color: var(--secondary);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.legal-nav a[aria-current="page"],
+.legal-nav a:hover,
+.legal-content a,
+.legal-footer a {
+  color: var(--moss-text);
+}
+
+.legal-content {
+  padding-block: 72px 96px;
+}
+
+.legal-content h1 {
+  max-width: 700px;
+  margin: 0;
+  font-size: clamp(46px, 8vw, 72px);
+  line-height: 0.98;
+  letter-spacing: -0.055em;
+}
+
+.legal-updated {
+  margin: 18px 0 0;
+  color: var(--tertiary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.legal-intro {
+  max-width: 680px;
+  margin: 28px 0 0;
+  color: var(--text-dim);
+  font-size: 19px;
+  line-height: 1.65;
+}
+
+.legal-content section {
+  padding-top: 34px;
+  margin-top: 34px;
+  border-top: 1px solid var(--hairline);
+}
+
+.legal-content h2 {
+  margin: 0 0 14px;
+  font-size: 23px;
+  letter-spacing: -0.025em;
+}
+
+.legal-content section p,
+.legal-content li,
+.support-safety {
+  color: var(--secondary);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.legal-content section p {
+  margin: 12px 0 0;
+}
+
+.legal-content ul {
+  display: grid;
+  gap: 12px;
+  padding-left: 22px;
+  margin: 16px 0 0;
+}
+
+.legal-content strong {
+  color: var(--text-dim);
+}
+
+.legal-email {
+  margin-top: 30px;
+}
+
+.support-safety {
+  margin: 16px 0 0;
+  font-size: 13px;
+}
+
+.legal-footer {
+  display: flex;
+  justify-content: space-between;
+  padding-block: 28px;
+  border-top: 1px solid var(--hairline);
+  color: var(--tertiary);
+  font-size: 12px;
+}
+
 @keyframes rise {
   from { opacity: 0; transform: translateY(18px); }
   to { opacity: 1; transform: translateY(0); }
@@ -607,6 +724,24 @@ footer .brand-mark {
 
   footer p {
     display: none;
+  }
+
+  .legal-header,
+  .legal-content,
+  .legal-footer {
+    width: min(100% - 28px, 760px);
+  }
+
+  .legal-header {
+    padding-block: 18px;
+  }
+
+  .legal-nav {
+    gap: 13px;
+  }
+
+  .legal-content {
+    padding-block: 54px 72px;
   }
 }
 

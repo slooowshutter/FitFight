@@ -1,6 +1,6 @@
 # Product
 
-One line: challenge your friends, winner takes the glory.
+One line: challenge friends to a private Steps fight; most steps wins, and the loser does the agreed action.
 
 ## Names (they’re different)
 
@@ -15,7 +15,19 @@ One line: challenge your friends, winner takes the glory.
 
 Do not rename the bundle ID without Apple + CI updates.
 
-## v0.3 (approved design)
+## Current v0.9 scope — 31 Aug 2026
+
+- Three tabs: **Fights**, **New**, **You**.
+- Every fight is **Steps × highest total**. There are no other metrics or scoring modes.
+- Add participants directly by exact username. There is no friends list or friend-request flow.
+- Type the action the loser must do; it is required. There is no money or bragging-rights option.
+- Choose **1 hour**, **6 hours**, or **1 day** for testing, or **3 days**, **1 week**, **2 weeks**, or **1 month**.
+- Apple Health sends only merged Steps aggregates needed for active fights.
+- Settings keeps Privacy, Support, Versions, Sign out, and Delete account. Look is Night or Day.
+- Delete account removes the full account, uploaded Steps, memberships, and owned fights; a stored Sign in with Apple authorization is revoked when available.
+- Requests, money, unsupported metrics, and dead settings are removed.
+
+## v0.3 (approved design) — historical
 
 The web kit in [`docs/design/source/`](design/source/README.md) is the look. SwiftUI ports it:
 
@@ -24,7 +36,7 @@ The web kit in [`docs/design/source/`](design/source/README.md) is the look. Swi
 - Live fight cards carry their own leaderboard and money line
 - Version label at the top; Versions under You → Settings
 
-Marketing version: `0.8.0`. Frozen for TestFlight. CI bumps **build number** from TestFlight (`latest + 1`). Do **not** bump marketing version for a TestFlight ship — Apple re-reviews each new `0.8.x` / `0.9.0` for external testers. See [`shipping.md`](shipping.md#versions-vs-builds-why-friends-wait).
+That was the original port, not the current product. Marketing version is now `0.9.0`; CI bumps only the **build number** for TestFlight. Do **not** bump marketing version for a TestFlight ship. See [`shipping.md`](shipping.md#versions-vs-builds-why-friends-wait).
 
 ## v0.6 (design exploration) — retired 25 Aug 2026
 
@@ -55,11 +67,12 @@ the rest and the tab with them.
 Placeholder themes (Arena, Pulse, Locker, Rogue) from v0.2 are retired — the v0.6
 directions named Arena and Pulse are unrelated to them.
 
-## v0.7 (talk to the boss)
+## v0.7 (talk to the boss) — retired 30 Aug 2026
 
 Requests has a **Talk to the boss** button. It opens a private chat with Marc,
 separate from the public vote board. There is still no server, so sending a
-message opens Mail to `marc@marclamy.com`. He replies from his inbox.
+message opens Mail to `marc@marclamy.com`. He replies from his inbox. This was
+removed with the Requests tab.
 
 ## v0.8 (Apple account + HealthKit Steps)
 
@@ -71,13 +84,15 @@ uploaded to the server yet.
 
 ## v0.9 (live Steps Fight)
 
-Sign in, add friends by handle, start a real Steps fight. Apple Health uploads to the
-server. Standings come from the database. Fights are no longer the fixture people.
-When the days are up, opening the app marks the fight finished. Signed out, the
-app is only a welcome screen plus Sign in with Apple. Requests is unchanged.
+Sign in, add people directly by exact username, type the loser action, choose a
+1-hour, 6-hour, 1-day, 3-day, 1-week, 2-week, or 1-month duration, and start a Steps fight. Apple Health
+uploads merged Steps aggregates; standings come from the database. When the days
+are up, opening the app marks the fight finished. Signed out, the app is only a
+welcome screen plus Sign in with Apple.
 
-**Honest status (25 Aug 2026):** the phone creates the fight, uploads Apple Health
-Steps, and reads standings from Supabase. Username onboarding is required. See
+**Honest status (31 Aug 2026):** the phone creates the fixed Steps fight, uploads
+Apple Health Steps, and reads standings from Supabase. Username onboarding is
+required. Friends, Requests, money, and alternate metrics are not part of the app. See
 [`status.md`](status.md).
 
 ## Not this project
@@ -87,4 +102,4 @@ Steps, and reads standings from Supabase. Username onboarding is required. See
 
 ## Next product work
 
-Honest works / doesn’t / next: [`status.md`](status.md). The living list is [`backlog.md`](backlog.md). Sign-in, username, create/accept a Steps fight, HealthKit upload, and standings work on the phone against staging Supabase. The golden guide is [`system-design.md`](system-design.md) — follow it, do not implement all of it. First real Metric is **Steps**. Don’t invent the gaps listed in [`design/source/INVENTORY.md`](design/source/INVENTORY.md).
+Honest works / doesn’t / next: [`status.md`](status.md). The living list is [`backlog.md`](backlog.md). Sign-in, username, direct-username Steps fights, HealthKit upload, and standings work on the phone against staging Supabase. The golden guide is [`system-design.md`](system-design.md) — follow it, do not implement all of it. The current product is **Steps only**. Don’t restore retired surfaces or invent the gaps listed in [`design/source/INVENTORY.md`](design/source/INVENTORY.md).

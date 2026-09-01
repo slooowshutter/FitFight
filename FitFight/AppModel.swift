@@ -239,6 +239,7 @@ final class AppModel: ObservableObject {
         do {
             var loaded = try await loadFights(client: session.client, userId: userId)
             loaded = try await populateStepDays(loaded, client: session.client)
+            guard session.authSession?.user.id == userId else { return }
             fights = loaded
             cachedUserID = userId
             if let data = try? JSONEncoder().encode(loaded) {

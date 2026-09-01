@@ -2,7 +2,7 @@ import Combine
 import Foundation
 import Supabase
 
-struct FitFightProfile: Decodable, Equatable {
+struct FitFightProfile: Codable, Equatable {
     let userId: UUID
     let handle: String
     let displayName: String
@@ -47,6 +47,7 @@ final class SessionStore: ObservableObject {
     let client: SupabaseClient
     private let api = FitFightAPI()
     private static let handleChosenKey = "ff.handle.chosen"
+    private static let profileCachePrefix = "fitfight.profile."
 
     var isSignedIn: Bool { authSession != nil }
 
@@ -212,6 +213,7 @@ final class SessionStore: ObservableObject {
         isBusy = true
         defer { isBusy = false }
         do {
+            let userID = authSession?.user.id ?? client.auth.currentUser?.id
             let accessToken = try await freshAccessToken()
             let deletion = try await api.deleteAccount(accessToken: accessToken)
             try? await client.auth.signOut()
@@ -219,6 +221,9 @@ final class SessionStore: ObservableObject {
             profile = nil
             profileUnavailable = false
             UserDefaults.standard.removeObject(forKey: Self.handleChosenKey)
+            if let userID {
+                UserDefaults.standard.removeObject(forKey: Self.profileCachePrefix + userID.uuidString)
+            }
             if !deletion.appleAuthorizationRevoked {
                 authError = "Account deleted. To disconnect Apple too, open iPhone Settings, tap your name, then Sign in with Apple → FitFight → Stop Using Apple ID."
             }
@@ -231,10 +236,22 @@ final class SessionStore: ObservableObject {
 
     private func listen() async {
         for await (_, session) in client.auth.authStateChanges {
-            authSession = session
-            if session != nil {
+            if let session {
+                profileUnavailable = false
+                if let data = UserDefaults.standard.data(
+                    forKey: Self.profileCachePrefix + session.user.id.uuidString
+                ),
+                    let cached = try? JSONDecoder().decode(FitFightProfile.self, from: data),
+                    cached.userId == session.user.id
+                {
+                    profile = cached
+                } else {
+                    profile = nil
+                }
+                authSession = session
                 await loadProfile()
             } else {
+                authSession = nil
                 profile = nil
             }
         }
@@ -254,7 +271,11 @@ final class SessionStore: ObservableObject {
                     .single()
                     .execute()
                     .value
+                guard authSession?.user.id == userId else { return }
                 profile = row
+                if let data = try? JSONEncoder().encode(row) {
+                    UserDefaults.standard.set(data, forKey: Self.profileCachePrefix + userId.uuidString)
+                }
                 return
             } catch {
                 if attempt == 2 {
@@ -264,7 +285,14 @@ final class SessionStore: ObservableObject {
                         .single()
                         .execute()
                         .value as FitFightProfile? {
+                        guard authSession?.user.id == userId else { return }
                         profile = fallback
+                        if let data = try? JSONEncoder().encode(fallback) {
+                            UserDefaults.standard.set(
+                                data,
+                                forKey: Self.profileCachePrefix + userId.uuidString
+                            )
+                        }
                         return
                     }
                     profile = nil

@@ -305,7 +305,10 @@ final class SessionStore: ObservableObject {
                         return
                     } catch {
                         guard authSession?.user.id == userId else { return }
-                        if profile?.userId != userId { profile = nil }
+                        if profile?.userId != userId {
+                            profile = nil
+                            profileUnavailable = true
+                        }
                     }
                 } else {
                     try? await Task.sleep(nanoseconds: 400_000_000)

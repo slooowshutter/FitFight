@@ -265,13 +265,17 @@ final class SessionStore: ObservableObject {
         profileUnavailable = false
         for attempt in 0..<3 {
             do {
-                let row: FitFightProfile = try await client.from("profiles")
+                let row: FitFightProfile? = try await client.from("profiles")
                     .select("user_id, handle, display_name, handle_set_at")
                     .eq("user_id", value: userId)
-                    .single()
+                    .maybeSingle()
                     .execute()
                     .value
                 guard authSession?.user.id == userId else { return }
+                guard let row else {
+                    markProfileMissing(for: userId)
+                    return
+                }
                 profile = row
                 if let data = try? JSONEncoder().encode(row) {
                     UserDefaults.standard.set(data, forKey: Self.profileCachePrefix + userId.uuidString)
@@ -279,13 +283,18 @@ final class SessionStore: ObservableObject {
                 return
             } catch {
                 if attempt == 2 {
-                    if let fallback = try? await client.from("profiles")
-                        .select("user_id, handle, display_name")
-                        .eq("user_id", value: userId)
-                        .single()
-                        .execute()
-                        .value as FitFightProfile? {
+                    do {
+                        let fallback: FitFightProfile? = try await client.from("profiles")
+                            .select("user_id, handle, display_name")
+                            .eq("user_id", value: userId)
+                            .maybeSingle()
+                            .execute()
+                            .value
                         guard authSession?.user.id == userId else { return }
+                        guard let fallback else {
+                            markProfileMissing(for: userId)
+                            return
+                        }
                         profile = fallback
                         if let data = try? JSONEncoder().encode(fallback) {
                             UserDefaults.standard.set(
@@ -294,14 +303,22 @@ final class SessionStore: ObservableObject {
                             )
                         }
                         return
+                    } catch {
+                        guard authSession?.user.id == userId else { return }
+                        if profile?.userId != userId { profile = nil }
                     }
-                    profile = nil
-                    profileUnavailable = true
                 } else {
                     try? await Task.sleep(nanoseconds: 400_000_000)
                 }
             }
         }
+    }
+
+    private func markProfileMissing(for userId: UUID) {
+        guard (authSession?.user.id ?? client.auth.currentUser?.id) == userId else { return }
+        profile = nil
+        profileUnavailable = true
+        UserDefaults.standard.removeObject(forKey: Self.profileCachePrefix + userId.uuidString)
     }
 }
 

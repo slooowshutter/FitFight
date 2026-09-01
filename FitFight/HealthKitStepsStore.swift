@@ -81,18 +81,23 @@ final class HealthKitStepsStore: ObservableObject {
         }
         UserDefaults.standard.removeObject(forKey: Self.askedKey(userId: userId))
         UserDefaults.standard.removeObject(forKey: Self.pendingLocalDeletionKey)
-        if let observerQuery {
-            store.stop(observerQuery)
-            self.observerQuery = nil
-        }
-        if let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount) {
-            await withCheckedContinuation { continuation in
-                store.disableBackgroundDelivery(for: stepsType) { _, _ in
-                    continuation.resume()
+        let cleanupActiveUserId = activeUserId
+        if cleanupActiveUserId == userId || cleanupActiveUserId == nil {
+            if let observerQuery {
+                store.stop(observerQuery)
+                self.observerQuery = nil
+            }
+            if let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount) {
+                await withCheckedContinuation { continuation in
+                    store.disableBackgroundDelivery(for: stepsType) { _, _ in
+                        continuation.resume()
+                    }
                 }
             }
-        }
-        if activeUserId == userId || activeUserId == nil {
+            guard activeUserId == cleanupActiveUserId else {
+                registerObserverIfPossible()
+                return true
+            }
             status = .idle
             connection = .notConnected
         }
@@ -167,23 +172,25 @@ final class HealthKitStepsStore: ObservableObject {
     }
 
     private func registerObserverIfPossible() {
-        guard hasAsked, observerQuery == nil,
+        guard hasAsked,
               let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount) else { return }
-        let query = HKObserverQuery(sampleType: stepsType, predicate: nil) { [weak self] _, completion, _ in
-            Task { @MainActor [weak self] in
-                guard let self, let session = self.session else {
+        if observerQuery == nil {
+            let query = HKObserverQuery(sampleType: stepsType, predicate: nil) { [weak self] _, completion, _ in
+                Task { @MainActor [weak self] in
+                    guard let self, let session = self.session else {
+                        completion()
+                        return
+                    }
+                    while self.isSyncing {
+                        try? await Task.sleep(for: .milliseconds(250))
+                    }
+                    _ = await self.syncToBackend(session: session)
                     completion()
-                    return
                 }
-                while self.isSyncing {
-                    try? await Task.sleep(for: .milliseconds(250))
-                }
-                _ = await self.syncToBackend(session: session)
-                completion()
             }
+            observerQuery = query
+            store.execute(query)
         }
-        observerQuery = query
-        store.execute(query)
         store.enableBackgroundDelivery(for: stepsType, frequency: .immediate) { [weak self] success, _ in
             Task { @MainActor [weak self] in
                 self?.backgroundDeliveryUnavailable = !success

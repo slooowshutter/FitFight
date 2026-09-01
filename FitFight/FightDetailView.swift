@@ -80,7 +80,7 @@ struct FightDetailView: View {
             let hours = max(1, Int(ceil(fight.windowEnd.timeIntervalSinceNow / 3_600)))
             return "\(hours) \(hours == 1 ? "hour" : "hours") left"
         }
-        if let days = fight.daysLeft { return "\(days) days left" }
+        if let days = fight.daysLeft { return "\(days) \(days == 1 ? "day" : "days") left" }
         return fight.endedLabel ?? "Ended"
     }
 

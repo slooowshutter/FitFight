@@ -75,7 +75,7 @@ struct FightsListView: View {
 
     private func heroCard(_ fight: Fight) -> some View {
         FFHeroCard(
-            eyebrow: fight.daysLeft.map { "Ends in \($0) days" } ?? fight.metric.eyebrow,
+            eyebrow: fight.daysLeft.map { "Ends in \($0) \($0 == 1 ? "day" : "days")" } ?? fight.metric.eyebrow,
             tag: fight.of == 2 ? "Head to head" : "\(fight.of) in this fight",
             title: fight.name,
             metric: leadScore(fight),

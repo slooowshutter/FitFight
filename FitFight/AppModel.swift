@@ -637,7 +637,11 @@ final class AppModel: ObservableObject {
         } else if status == .finished {
             daysLeft = nil
         } else {
-            daysLeft = max(0, Calendar.current.dateComponents([.day], from: Date(), to: ends).day ?? 0)
+            let remaining = Calendar.current.dateComponents([.day, .hour, .minute, .second], from: Date(), to: ends)
+            let hasPartialDay = (remaining.hour ?? 0) > 0
+                || (remaining.minute ?? 0) > 0
+                || (remaining.second ?? 0) > 0
+            daysLeft = max(1, (remaining.day ?? 0) + (hasPartialDay ? 1 : 0))
         }
         let remainingLabel = lengthHours <= 6
             ? "\(max(1, Int(ceil(ends.timeIntervalSinceNow / 3_600))))h"

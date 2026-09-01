@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 1,
+            notes: "Fights and standings now identify people by their usernames, and head-to-head comparisons show the actual step difference instead of a generic position label."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 9,
+            day: 1,
             notes: "Offline refreshes keep your profile available, cleanup from a previous account no longer interrupts Apple Health for the current account, and 1-day fights show the correct time remaining."
         ),
         ReleaseNote(

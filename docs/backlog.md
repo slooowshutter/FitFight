@@ -49,7 +49,7 @@ If the app is closed or killed, iOS will not reliably run timers, settle a month
 
 The phone’s job is: show the UI, read Apple Health Steps when it is open (or briefly woken), and upload the required aggregates. Push notifications are not in the current scope.
 
-**Last TestFlight:** 1 Sep 2026 — Offline refreshes keep the profile available, cleanup from a previous account no longer interrupts Apple Health for the current account, and 1-day fights show the correct time remaining. Still `0.9.0`. Look for `0.9.0 · build N · staging`.
+**Last TestFlight:** 1 Sep 2026 — Fights and standings show usernames, and comparisons show the actual step difference instead of a generic position label. Still `0.9.0`. Look for `0.9.0 · build N · staging`.
 
 ## Now
 

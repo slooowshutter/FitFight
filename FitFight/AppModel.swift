@@ -595,7 +595,7 @@ final class AppModel: ObservableObject {
     private static func person(from profile: FitFightProfile, isYou: Bool) -> Person {
         Person(
             id: profile.userId.uuidString,
-            name: isYou ? (profile.displayName.isEmpty ? "You" : profile.displayName) : profile.displayName,
+            name: profile.atHandle,
             handle: profile.atHandle,
             initials: profile.initials,
             isYou: isYou
@@ -655,7 +655,7 @@ final class AppModel: ObservableObject {
             } else {
                 person = Person(
                     id: member.userId.uuidString,
-                    name: member.userId == userId ? "You" : "Fighter",
+                    name: member.userId == userId ? "You" : "@user",
                     handle: "@user",
                     initials: "FF",
                     isYou: member.userId == userId
@@ -713,16 +713,22 @@ final class AppModel: ObservableObject {
                 kickerEmphasis = "Syncing final steps"
                 listSubtitle = "0d left"
             } else if let youRow, let leader = joined.first, !youRow.invited {
-                if youRow.person.id == leader.person.id {
-                    kickerPrefix = "Holding"
-                    kickerEmphasis = "1st"
+                if youRow.person.id == leader.person.id, let runnerUp = joined.dropFirst().first {
+                    let gap = leader.score - runnerUp.score
+                    kickerPrefix = gap == 0 ? "" : "Leading by"
+                    kickerEmphasis = gap == 0 ? "Tied" : "\(formatScore(gap, .steps)) steps"
                     kickerRest = "with \(remainingLabel) to go"
-                    listSubtitle = "Holding 1st with \(remainingLabel) to go"
+                    listSubtitle = gap == 0
+                        ? "Tied with \(remainingLabel) to go"
+                        : "Leading by \(kickerEmphasis) with \(remainingLabel) to go"
+                } else if youRow.person.id == leader.person.id {
+                    kickerEmphasis = "\(remainingLabel) left"
+                    listSubtitle = kickerEmphasis
                 } else {
                     let gap = leader.score - youRow.score
-                    kickerEmphasis = formatScore(max(0, gap), .steps)
-                    kickerRest = "behind \(leader.person.name)"
-                    listSubtitle = "\(kickerEmphasis) behind \(leader.person.name)"
+                    kickerEmphasis = gap == 0 ? "Tied" : "\(formatScore(gap, .steps)) steps"
+                    kickerRest = gap == 0 ? "" : "behind \(leader.person.name)"
+                    listSubtitle = gap == 0 ? "Tied" : "\(kickerEmphasis) behind \(leader.person.name)"
                 }
             } else {
                 kickerEmphasis = "\(remainingLabel) left"

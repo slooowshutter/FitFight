@@ -40,6 +40,7 @@ struct YouView: View {
                 Task {
                     let userId = session.authSession?.user.id
                     if await session.deleteAccount(), let userId {
+                        model.removeCachedFights(for: userId)
                         if !(await steps.deleteLocalData(userId: userId)) {
                             let cleanupMessage = "Your account was deleted. FitFight will retry removing its local Health cache when you reopen the app."
                             if let authError = session.authError {

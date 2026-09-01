@@ -3,6 +3,8 @@ import SwiftUI
 struct FightDetailView: View {
     private let initialFight: Fight
     @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var session: SessionStore
+    @EnvironmentObject private var steps: HealthKitStepsStore
     @Environment(\.ffTheme) private var theme
 
     init(fight: Fight) {
@@ -63,6 +65,9 @@ struct FightDetailView: View {
                     daysCard
                 }
             }
+        }
+        .refreshable {
+            await model.refreshFights(session: session, steps: steps)
         }
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)

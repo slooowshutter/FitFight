@@ -2,6 +2,8 @@ import SwiftUI
 
 struct FightsListView: View {
     @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var session: SessionStore
+    @EnvironmentObject private var steps: HealthKitStepsStore
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
@@ -55,6 +57,9 @@ struct FightsListView: View {
                     FinishedRow(fight: fight)
                 }
             }
+        }
+        .refreshable {
+            await model.refreshFights(session: session, steps: steps)
         }
     }
 

@@ -27,6 +27,13 @@ enum Changelog {
         ReleaseNote(
             version: "0.9.0",
             year: 2026,
+            month: 9,
+            day: 1,
+            notes: "Fights appear immediately from the last successful update, refresh automatically when FitFight becomes active, and can be refreshed by pulling down on the Fights list or inside a Fight. A failed refresh keeps the existing Fights visible."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
             month: 8,
             day: 31,
             notes: "New fight now includes 1-hour, 6-hour, and 1-day durations for quickly testing a complete Fight, alongside the existing longer options."

@@ -2,7 +2,7 @@ import Foundation
 import Supabase
 import SwiftUI
 
-enum MetricKind: Hashable {
+enum MetricKind: String, Codable, Hashable {
     case steps
 
     var eyebrow: String {
@@ -14,13 +14,13 @@ enum MetricKind: Hashable {
     }
 }
 
-enum FightStatus: Hashable {
+enum FightStatus: String, Codable, Hashable {
     case live
     case invited
     case finished
 }
 
-struct Person: Identifiable, Hashable {
+struct Person: Codable, Identifiable, Hashable {
     var id: String
     var name: String
     var handle: String
@@ -43,7 +43,7 @@ extension FFAvatar {
     }
 }
 
-struct Standing: Identifiable, Hashable {
+struct Standing: Codable, Identifiable, Hashable {
     var person: Person
     var score: Double
     var today: Double
@@ -52,21 +52,21 @@ struct Standing: Identifiable, Hashable {
     var id: String { person.id }
 }
 
-struct DayScore: Identifiable, Hashable {
+struct DayScore: Codable, Identifiable, Hashable {
     var person: Person
     var value: Double
 
     var id: String { person.id }
 }
 
-struct FightDay: Identifiable, Hashable {
+struct FightDay: Codable, Identifiable, Hashable {
     var label: String
     var scores: [DayScore]
 
     var id: String { label }
 }
 
-struct Fight: Identifiable, Hashable {
+struct Fight: Codable, Identifiable, Hashable {
     var id: String
     var code: String
     var name: String
@@ -117,6 +117,7 @@ final class AppModel: ObservableObject {
     @Published var joined: Set<String> = []
     @Published var createError: String?
     @Published private(set) var isCreatingFight = false
+    @Published private(set) var isRefreshingFights = false
 
     @Published var you: Person
     @Published var fights: [Fight]
@@ -124,6 +125,9 @@ final class AppModel: ObservableObject {
     private var session: SessionStore?
     private let api = FitFightAPI()
     private var inviteTokens: [String: String] = [:]
+    private var cachedUserID: UUID?
+
+    private static let fightsCachePrefix = "fitfight.fights."
 
     static var preview: AppModel { AppModel(fixtures: true) }
 
@@ -181,6 +185,44 @@ final class AppModel: ObservableObject {
         await refreshFromServer(session: session)
     }
 
+    func restoreCachedFights(session: SessionStore) {
+        guard let userID = session.authSession?.user.id ?? session.client.auth.currentUser?.id else {
+            cachedUserID = nil
+            fights = []
+            return
+        }
+        guard cachedUserID != userID else { return }
+        cachedUserID = userID
+        guard
+            let data = UserDefaults.standard.data(forKey: Self.fightsCachePrefix + userID.uuidString),
+            let cached = try? JSONDecoder().decode([Fight].self, from: data)
+        else {
+            fights = []
+            return
+        }
+        fights = cached
+    }
+
+    func refreshFights(session: SessionStore, steps: HealthKitStepsStore) async {
+        guard !isRefreshingFights else { return }
+        isRefreshingFights = true
+        defer { isRefreshingFights = false }
+
+        await steps.refresh(requestAccess: false)
+        if session.authSession != nil {
+            await steps.syncToBackend(session: session)
+        }
+        await refreshFromServer(session: session)
+    }
+
+    func removeCachedFights(for userID: UUID) {
+        UserDefaults.standard.removeObject(forKey: Self.fightsCachePrefix + userID.uuidString)
+        if cachedUserID == userID {
+            cachedUserID = nil
+            fights = []
+        }
+    }
+
     func refreshFromServer(session: SessionStore) async {
         self.session = session
         guard let userId = session.authSession?.user.id ?? session.client.auth.currentUser?.id else {
@@ -198,8 +240,12 @@ final class AppModel: ObservableObject {
             var loaded = try await loadFights(client: session.client, userId: userId)
             loaded = try await populateStepDays(loaded, client: session.client)
             fights = loaded
+            cachedUserID = userId
+            if let data = try? JSONEncoder().encode(loaded) {
+                UserDefaults.standard.set(data, forKey: Self.fightsCachePrefix + userId.uuidString)
+            }
         } catch {
-            fights = []
+            // Keep the last successful result visible while the phone is offline.
         }
     }
 

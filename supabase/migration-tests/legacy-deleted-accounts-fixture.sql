@@ -1,72 +1,80 @@
-create function pg_temp.make_migration_test_user(uid uuid, email_address text)
-returns void
-language plpgsql
-as $$
+do $fixture$
+declare
+  test_user record;
 begin
-  insert into auth.users (
-    instance_id,
-    id,
-    aud,
-    role,
-    email,
-    encrypted_password,
-    email_confirmed_at,
-    raw_app_meta_data,
-    raw_user_meta_data,
-    created_at,
-    updated_at,
-    confirmation_token,
-    email_change,
-    email_change_token_new,
-    recovery_token
-  ) values (
-    '00000000-0000-0000-0000-000000000000',
-    uid,
-    'authenticated',
-    'authenticated',
-    email_address,
-    extensions.crypt('password123', extensions.gen_salt('bf')),
-    now(),
-    '{"provider":"email","providers":["email"]}'::jsonb,
-    '{}'::jsonb,
-    now(),
-    now(),
-    '',
-    '',
-    '',
-    ''
-  );
+  for test_user in
+    select *
+    from (
+      values
+        (
+          '44444444-4444-4444-8444-444444444444'::uuid,
+          'legacy-deleted@example.com'::text
+        ),
+        (
+          '55555555-5555-4555-8555-555555555555'::uuid,
+          'active-account@example.com'::text
+        )
+    ) as test_users(user_id, email_address)
+  loop
+    insert into auth.users (
+      instance_id,
+      id,
+      aud,
+      role,
+      email,
+      encrypted_password,
+      email_confirmed_at,
+      raw_app_meta_data,
+      raw_user_meta_data,
+      created_at,
+      updated_at,
+      confirmation_token,
+      email_change,
+      email_change_token_new,
+      recovery_token
+    ) values (
+      '00000000-0000-0000-0000-000000000000',
+      test_user.user_id,
+      'authenticated',
+      'authenticated',
+      test_user.email_address,
+      extensions.crypt('password123', extensions.gen_salt('bf')),
+      now(),
+      '{"provider":"email","providers":["email"]}'::jsonb,
+      '{}'::jsonb,
+      now(),
+      now(),
+      '',
+      '',
+      '',
+      ''
+    );
 
-  insert into auth.identities (
-    id,
-    user_id,
-    identity_data,
-    provider,
-    provider_id,
-    last_sign_in_at,
-    created_at,
-    updated_at
-  ) values (
-    uid,
-    uid,
-    jsonb_build_object('sub', uid::text, 'email', email_address),
-    'email',
-    uid::text,
-    now(),
-    now(),
-    now()
-  );
-end;
-$$;
-
-select pg_temp.make_migration_test_user(
-  '44444444-4444-4444-8444-444444444444',
-  'legacy-deleted@example.com'
-);
-select pg_temp.make_migration_test_user(
-  '55555555-5555-4555-8555-555555555555',
-  'active-account@example.com'
-);
+    insert into auth.identities (
+      id,
+      user_id,
+      identity_data,
+      provider,
+      provider_id,
+      last_sign_in_at,
+      created_at,
+      updated_at
+    ) values (
+      test_user.user_id,
+      test_user.user_id,
+      jsonb_build_object(
+        'sub',
+        test_user.user_id::text,
+        'email',
+        test_user.email_address
+      ),
+      'email',
+      test_user.user_id::text,
+      now(),
+      now(),
+      now()
+    );
+  end loop;
 
 update public.profiles
 set handle = 'legacy_dead',
@@ -403,3 +411,5 @@ insert into private.apple_sign_in_tokens (
   'test-iv',
   'test-tag'
 );
+end;
+$fixture$;

@@ -134,15 +134,22 @@ create or replace function private.protect_finalized_step_days()
 returns trigger
 language plpgsql
 as $$
+declare
+  frozen integer;
 begin
-  if exists (
-    select 1
-    from public.metric_days
-    where user_id = old.user_id
-      and day = old.day
-      and finalized_at is not null
-  ) and not private.allow_score_correction() then
-    new.steps := old.steps;
+  if private.allow_score_correction() then
+    return new;
+  end if;
+  select md.value::integer
+    into frozen
+  from public.metric_days as md
+  where md.user_id = old.user_id
+    and md.day = old.day
+    and md.finalized_at is not null
+  order by md.updated_at desc
+  limit 1;
+  if found then
+    new.steps := frozen;
   end if;
   return new;
 end;

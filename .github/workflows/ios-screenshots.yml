@@ -30,6 +30,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Write production screenshot environment
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          Path("FitFight/Generated/BuildEnv.swift").write_text(
+              "/// Written by screenshot CI before build.\n"
+              "enum BuildEnv {\n"
+              '    static let supabaseURL = "https://pvqntpteehdvhqyctwum.supabase.co"\n'
+              '    static let supabasePublishableKey = "sb_publishable_6wP1KNFvJwIE_hX1U2aTfg_u3sk40Li"\n'
+              '    static let apiBaseURL = "https://fitfight.app"\n'
+              "}\n"
+          )
+          PY
+
       - name: Build for the simulator
         run: |
           set -o pipefail
@@ -41,9 +56,6 @@ jobs:
             -derivedDataPath build \
             MARKETING_VERSION=1.0.0 \
             CURRENT_PROJECT_VERSION=1 \
-            INFOPLIST_KEY_FFSupabaseURL=https://pvqntpteehdvhqyctwum.supabase.co \
-            INFOPLIST_KEY_FFSupabasePublishableKey=sb_publishable_6wP1KNFvJwIE_hX1U2aTfg_u3sk40Li \
-            INFOPLIST_KEY_FFAPIBaseURL=https://fitfight.app \
             CODE_SIGNING_ALLOWED=NO \
             build
 

@@ -116,7 +116,9 @@ enum ScreenshotExport {
     }
 
     private static func appStoreShots(model: AppModel) -> [Shot] {
-        let fight = model.fights.first { $0.id == "sweat" }
+        var fight = model.fights.first { $0.id == "sweat" }
+        fight?.id = "appstore-sweat"
+        fight?.days = []
         let invited = model.fights.first { $0.id == "desk" }
         return [
             Shot(name: "appstore-01-fights") { store, model in

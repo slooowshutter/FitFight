@@ -28,7 +28,7 @@ struct VersionsView: View {
 
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 12) {
-                    ForEach(Changelog.newestFirst) { release in
+                    ForEach(Changelog.visible) { release in
                         ReleaseNoteRow(release: release)
                     }
                 }

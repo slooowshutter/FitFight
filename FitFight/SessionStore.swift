@@ -2,7 +2,7 @@ import Combine
 import Foundation
 import Supabase
 
-struct FitFightProfile: Decodable, Equatable {
+struct FitFightProfile: Codable, Equatable {
     let userId: UUID
     let handle: String
     let displayName: String
@@ -43,12 +43,14 @@ final class SessionStore: ObservableObject {
     /// invisible to its own owner (`profiles_select_visible` hides `deleted_at`
     /// rows), which would otherwise leave the app waiting forever.
     @Published private(set) var profileUnavailable = false
+    private var screenshotSignedIn = false
 
     let client: SupabaseClient
     private let api = FitFightAPI()
     private static let handleChosenKey = "ff.handle.chosen"
+    private static let profileCachePrefix = "fitfight.profile."
 
-    var isSignedIn: Bool { authSession != nil }
+    var isSignedIn: Bool { authSession != nil || screenshotSignedIn }
 
     var needsOnboarding: Bool {
         guard isSignedIn, let profile else { return false }
@@ -79,13 +81,34 @@ final class SessionStore: ObservableObject {
         self.init(listenForSession: false)
     }
 
-    func signInWithApple(idToken: String, fullName: String?) async {
+    /// App Store screenshot fixture: signed in without touching Keychain or hosted data.
+    convenience init(screenshot: Void) {
+        self.init(listenForSession: false)
+        screenshotSignedIn = true
+        profile = FitFightProfile(
+            userId: UUID(uuidString: "00CBEF0E-6851-4AAB-B47A-88B0D7946738")!,
+            handle: "maya_moves",
+            displayName: "Maya",
+            handleSetAt: "2026-09-02T00:00:00Z"
+        )
+    }
+
+    func signInWithApple(
+        idToken: String,
+        authorizationCode: String,
+        nonce: String,
+        fullName: String?
+    ) async {
         authError = nil
         isBusy = true
         defer { isBusy = false }
         do {
-            _ = try await client.auth.signInWithIdToken(
-                credentials: .init(provider: .apple, idToken: idToken)
+            let signedIn = try await client.auth.signInWithIdToken(
+                credentials: .init(
+                    provider: .apple,
+                    idToken: idToken,
+                    nonce: nonce
+                )
             )
             if let fullName, !fullName.isEmpty {
                 try? await client.auth.update(
@@ -100,6 +123,10 @@ final class SessionStore: ObservableObject {
                         .execute()
                 }
             }
+            try? await api.storeAppleAuthorizationCode(
+                authorizationCode,
+                accessToken: signedIn.accessToken
+            )
             await loadProfile()
         } catch {
             authError = Self.signInFailureMessage(error)
@@ -193,30 +220,51 @@ final class SessionStore: ObservableObject {
         await loadProfile()
     }
 
-    func deleteAccount() async {
+    @discardableResult
+    func deleteAccount() async -> Bool {
         authError = nil
         isBusy = true
         defer { isBusy = false }
         do {
-            guard let accessToken = authSession?.accessToken else {
-                throw FitFightAPIError.notConfigured
-            }
-            try await api.deleteAccount(accessToken: accessToken)
+            let userID = authSession?.user.id ?? client.auth.currentUser?.id
+            let accessToken = try await freshAccessToken()
+            let deletion = try await api.deleteAccount(accessToken: accessToken)
             try? await client.auth.signOut()
             authSession = nil
             profile = nil
+            profileUnavailable = false
             UserDefaults.standard.removeObject(forKey: Self.handleChosenKey)
+            if let userID {
+                UserDefaults.standard.removeObject(forKey: Self.profileCachePrefix + userID.uuidString)
+            }
+            if !deletion.appleAuthorizationRevoked {
+                authError = "Account deleted. To disconnect Apple too, open iPhone Settings, tap your name, then Sign in with Apple → FitFight → Stop Using Apple ID."
+            }
+            return true
         } catch {
             authError = "Couldn’t delete account. Try again."
+            return false
         }
     }
 
     private func listen() async {
         for await (_, session) in client.auth.authStateChanges {
-            authSession = session
-            if session != nil {
+            if let session {
+                profileUnavailable = false
+                if let data = UserDefaults.standard.data(
+                    forKey: Self.profileCachePrefix + session.user.id.uuidString
+                ),
+                    let cached = try? JSONDecoder().decode(FitFightProfile.self, from: data),
+                    cached.userId == session.user.id
+                {
+                    profile = cached
+                } else {
+                    profile = nil
+                }
+                authSession = session
                 await loadProfile()
             } else {
+                authSession = nil
                 profile = nil
             }
         }
@@ -230,32 +278,63 @@ final class SessionStore: ObservableObject {
         profileUnavailable = false
         for attempt in 0..<3 {
             do {
-                let row: FitFightProfile = try await client.from("profiles")
+                let row: FitFightProfile? = try await client.from("profiles")
                     .select("user_id, handle, display_name, handle_set_at")
                     .eq("user_id", value: userId)
-                    .single()
+                    .maybeSingle()
                     .execute()
                     .value
+                guard authSession?.user.id == userId else { return }
+                guard let row else {
+                    markProfileMissing(for: userId)
+                    return
+                }
                 profile = row
+                if let data = try? JSONEncoder().encode(row) {
+                    UserDefaults.standard.set(data, forKey: Self.profileCachePrefix + userId.uuidString)
+                }
                 return
             } catch {
                 if attempt == 2 {
-                    if let fallback = try? await client.from("profiles")
-                        .select("user_id, handle, display_name")
-                        .eq("user_id", value: userId)
-                        .single()
-                        .execute()
-                        .value as FitFightProfile? {
+                    do {
+                        let fallback: FitFightProfile? = try await client.from("profiles")
+                            .select("user_id, handle, display_name")
+                            .eq("user_id", value: userId)
+                            .maybeSingle()
+                            .execute()
+                            .value
+                        guard authSession?.user.id == userId else { return }
+                        guard let fallback else {
+                            markProfileMissing(for: userId)
+                            return
+                        }
                         profile = fallback
+                        if let data = try? JSONEncoder().encode(fallback) {
+                            UserDefaults.standard.set(
+                                data,
+                                forKey: Self.profileCachePrefix + userId.uuidString
+                            )
+                        }
                         return
+                    } catch {
+                        guard authSession?.user.id == userId else { return }
+                        if profile?.userId != userId {
+                            profile = nil
+                            profileUnavailable = true
+                        }
                     }
-                    profile = nil
-                    profileUnavailable = true
                 } else {
                     try? await Task.sleep(nanoseconds: 400_000_000)
                 }
             }
         }
+    }
+
+    private func markProfileMissing(for userId: UUID) {
+        guard (authSession?.user.id ?? client.auth.currentUser?.id) == userId else { return }
+        profile = nil
+        profileUnavailable = true
+        UserDefaults.standard.removeObject(forKey: Self.profileCachePrefix + userId.uuidString)
     }
 }
 

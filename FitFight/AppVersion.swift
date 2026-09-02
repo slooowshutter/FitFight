@@ -20,8 +20,8 @@ enum AppVersion {
         return formatter.string(from: note.date)
     }
 
-    /// Which hosted database this binary talks to. TestFlight that is not `main`
-    /// should say `staging` (Supabase develop). `prod` means the production fallback.
+    /// Which hosted database this binary talks to. Staging TestFlight uses Supabase
+    /// develop; an App Store candidate must show `prod`.
     static var backend: String {
         let host = SupabaseConfig.projectURL.host ?? ""
         if host.contains("pvqntpteehdvhqyctwum") {

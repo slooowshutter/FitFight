@@ -24,8 +24,7 @@ PAIRS = [
     ("02-fight-detail.png", "003-fight-winner-takes-all-top.png"),
     ("03-fight-invited.png", "012-fight-invited-not-joined.png"),
     ("04-new.png", "014-new-top.png"),
-    ("05-requests.png", "028-requests-top.png"),
-    ("06-you.png", "033-you-top.png"),
+    ("05-you.png", "033-you-top.png"),
 ]
 
 BAND = (150, 1450)  # the part of the screen both sides actually share

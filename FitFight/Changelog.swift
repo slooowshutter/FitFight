@@ -25,6 +25,97 @@ enum Changelog {
     /// Newest first. Add a row here whenever we ship a user-facing change.
     static let releases: [ReleaseNote] = [
         ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 2,
+            notes: "FitFight now focuses on private Steps challenges: invite people by exact username, choose a duration, agree on the action, and compare Apple Health Steps. Privacy, Support, Versions, and permanent account deletion are available under You."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 9,
+            day: 1,
+            notes: "Fights and standings now identify people by their usernames, and head-to-head comparisons show the actual step difference instead of a generic position label."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 9,
+            day: 1,
+            notes: "Offline refreshes keep your profile available, cleanup from a previous account no longer interrupts Apple Health for the current account, and 1-day fights show the correct time remaining."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 9,
+            day: 1,
+            notes: "Fights appear immediately from the last successful update, refresh automatically when FitFight becomes active, and can be refreshed by pulling down on the Fights list or inside a Fight. A failed refresh keeps the existing Fights visible."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
+            day: 31,
+            notes: "New fight now includes 1-hour, 6-hour, and 1-day durations for quickly testing a complete Fight, alongside the existing longer options."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
+            day: 31,
+            notes: "Fight invitations now appear at the top of Fights, before active challenges, so requests waiting for a response are immediately visible."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
+            day: 31,
+            notes: "Delete account now permanently removes your profile, username, uploaded Steps, invitations, memberships, scores, and fights you created, then clears local Health sync data and signs you out. FitFight also disconnects Sign in with Apple automatically when Apple supplied a revocable credential. Privacy and Support now explain the same behavior and the daily Steps shared inside a fight."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
+            day: 30,
+            notes: "FitFight is now only private Steps challenges: three tabs (Fights, New, You), exact usernames instead of friendships, a required loser action, and 3-day, 1-week, 2-week, or 1-month durations. Requests, money, other metrics, and dead settings are gone; Privacy and Support links are added."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
+            day: 30,
+            notes: "FitFight now sends only Apple's merged Steps totals: one exact total for each Fight window and the relevant daily totals for charts. Raw samples, deletions, source and device details, and Apple Health archives are no longer collected."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
+            day: 30,
+            notes: "Apple Health synchronization now replaces an incompatible upload left by an older build while preserving the prepared HealthKit archive. Compatible interrupted uploads still resume normally."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
+            day: 30,
+            notes: "Apple Health archives now reach private Storage with the complete signed resumable-upload authorization required by Supabase. Initial synchronization can continue instead of failing immediately after the server authorizes it."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
+            day: 30,
+            notes: "Large Apple Health histories can now complete their first sync instead of stopping at 50 MiB. FitFight still uploads one resumable private archive and advances the HealthKit checkpoint only after the server processes it and removes the object."
+        ),
+        ReleaseNote(
+            version: "0.9.0",
+            year: 2026,
+            month: 8,
+            day: 30,
+            notes: "Apple Health sync now accepts active Fight windows correctly, explains whether a failure happened while preparing, uploading, or processing Steps, and enables best-effort background updates when iOS permits. Manual sync still works whenever FitFight is open."
+        ),
+        ReleaseNote(
             version: "0.9.0",
             year: 2026,
             month: 8,
@@ -195,6 +286,12 @@ enum Changelog {
             }
             return lhs.offset < rhs.offset
         }.map(\.element)
+    }
+
+    /// TestFlight keeps the full build history. Production starts at 1.0.
+    static var visible: [ReleaseNote] {
+        guard AppVersion.backend == "prod" else { return newestFirst }
+        return newestFirst.filter { !$0.version.hasPrefix("0.") }
     }
 
     static var current: ReleaseNote? {

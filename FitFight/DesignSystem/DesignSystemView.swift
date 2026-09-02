@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Every token and component the app is built from, in the kit's own order.
-/// Reachable from You → Settings → Design system.
+/// Internal reference rendered only by the screenshot workflow.
 struct DesignSystemView: View {
     @EnvironmentObject private var themeStore: ThemeStore
     @Environment(\.ffTheme) private var theme

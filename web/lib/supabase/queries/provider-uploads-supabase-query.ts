@@ -5,7 +5,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import { scoreFight } from "@/lib/scoring/score-fight";
 import { asNumber, type OutcomeRule } from "@/lib/types/database";
-import type { CreateProviderUpload } from "@/lib/types/provider-uploads/provider-upload";
+import type {
+  CreateProviderUpload,
+  ProviderArchiveRecord,
+} from "@/lib/types/provider-uploads/provider-upload";
 
 const BUCKET = "provider-inbox";
 
@@ -90,7 +93,7 @@ export async function createProviderUpload(
       upload_id: upload.upload_id,
       status: upload.status,
       object_path: upload.object_path,
-      tus_url: `${parsedUrl.protocol}//${tusHost}/storage/v1/upload/resumable`,
+      tus_url: `${parsedUrl.protocol}//${tusHost}/storage/v1/upload/resumable/sign`,
       tus_headers: { "x-signature": data.token, "x-upsert": "false" },
       tus_metadata: {
         bucketName: BUCKET,
@@ -152,6 +155,8 @@ export async function getProviderUploadContext(
     server_now: now.toISOString(),
     fight_windows: rows.map((row) => ({
       ...row,
+      starts_at: new Date(row.starts_at).toISOString(),
+      ends_at: new Date(row.ends_at).toISOString(),
       cutoff_at: new Date(Math.min(now.getTime(), Date.parse(row.ends_at))).toISOString(),
     })),
   };
@@ -238,6 +243,14 @@ export async function processProviderUpload(
     }
 
     try {
+      const { data: eventStream, error: eventStreamError } = await admin.storage
+        .from(BUCKET)
+        .download(claimed.object_path)
+        .asStream();
+      if (eventStreamError || !eventStream) {
+        throw new ApiError(503, ERROR_CODES.storage_error, "Could not reread archive object");
+      }
+
       await database.begin("read write", async (sql) => {
       const [locked] = await sql<{ status: string }[]>`
         select status from private.provider_uploads
@@ -267,8 +280,6 @@ export async function processProviderUpload(
         throw new ApiError(500, ERROR_CODES.db_error, "Could not save Apple Health source");
       }
 
-      const samples = archive.records.filter((item) => item.record.type === "sample");
-      const deletions = archive.records.filter((item) => item.record.type === "deletion");
       const mergedDays = archive.records.filter((item) => item.record.type === "merged_day");
       const sourceDays = archive.records.filter((item) => item.record.type === "source_day");
       const fightAggregates = archive.records.filter((item) => item.record.type === "fight_aggregate");
@@ -277,32 +288,33 @@ export async function processProviderUpload(
         throw new ApiError(400, ERROR_CODES.archive_invalid, "Archive checkpoint is missing");
       }
 
-      const sampleIds = samples.flatMap((item) =>
-        item.record.type === "sample" ? [item.record.sample_id] : []
-      );
-      const previousSamples = sampleIds.length === 0 ? [] : await sql<{
-        external_record_id: string;
-        payload_hash: string;
-        event_kind: "add" | "change";
-      }[]>`
-        select external_record_id, payload_hash, event_kind
-        from private.provider_events
-        where user_id = ${userId} and source_id = ${source.id}
-          and external_record_id = any(${sql.array(sampleIds)}::text[])
-          and event_kind in ('add', 'change')
-      `;
-      const changedSampleIds = new Set(previousSamples.map((row) => row.external_record_id));
-      const replayKinds = new Map(previousSamples.map((row) => [
-        `${row.external_record_id}:${row.payload_hash}`,
-        row.event_kind,
-      ]));
-
-      for (let offset = 0; offset < samples.length + deletions.length; offset += 500) {
-        const rows = [...samples, ...deletions].slice(offset, offset + 500).map((item) => {
+      const eventBatch: Array<{
+        record: Extract<ProviderArchiveRecord, { type: "sample" | "deletion" }>;
+        inputHash: string;
+      }> = [];
+      const flushEvents = async () => {
+        if (eventBatch.length === 0) return;
+        const sampleIds = eventBatch.flatMap((item) =>
+          item.record.type === "sample" ? [item.record.sample_id] : []
+        );
+        const previousSamples = sampleIds.length === 0 ? [] : await sql<{
+          external_record_id: string;
+          payload_hash: string;
+          event_kind: "add" | "change";
+        }[]>`
+          select external_record_id, payload_hash, event_kind
+          from private.provider_events
+          where user_id = ${userId} and source_id = ${source.id}
+            and external_record_id = any(${sql.array(sampleIds)}::text[])
+            and event_kind in ('add', 'change')
+        `;
+        const changedSampleIds = new Set(previousSamples.map((row) => row.external_record_id));
+        const replayKinds = new Map(previousSamples.map((row) => [
+          `${row.external_record_id}:${row.payload_hash}`,
+          row.event_kind,
+        ]));
+        const rows = eventBatch.map((item) => {
           const record = item.record;
-          if (record.type !== "sample" && record.type !== "deletion") {
-            throw new ApiError(400, ERROR_CODES.archive_invalid, "Invalid provider event");
-          }
           return {
             upload_id: uploadId,
             user_id: userId,
@@ -317,16 +329,27 @@ export async function processProviderUpload(
             occurred_at: record.type === "deletion" ? record.occurred_at : record.ends_at,
           };
         });
-        if (rows.length > 0) {
-          await sql`
-            insert into private.provider_events ${sql(
-              rows, "upload_id", "user_id", "source_id", "event_kind",
-              "external_record_id", "payload_hash", "payload", "occurred_at",
-            )}
-            on conflict (user_id, source_id, event_kind, external_record_id, payload_hash) do nothing
-          `;
-        }
-      }
+        await sql`
+          insert into private.provider_events ${sql(
+            rows, "upload_id", "user_id", "source_id", "event_kind",
+            "external_record_id", "payload_hash", "payload", "occurred_at",
+          )}
+          on conflict (user_id, source_id, event_kind, external_record_id, payload_hash) do nothing
+        `;
+        eventBatch.length = 0;
+      };
+      await readProviderArchive(
+        eventStream,
+        Number(claimed.expected_byte_size),
+        claimed.expected_sha256,
+        async (item) => {
+          eventBatch.push(item);
+          if (eventBatch.length >= 500) {
+            await flushEvents();
+          }
+        },
+      );
+      await flushEvents();
 
       const completeLocalDay = new Intl.DateTimeFormat("en-CA", {
         timeZone: checkpoint.record.time_zone,
@@ -395,14 +418,11 @@ export async function processProviderUpload(
       for (const item of fightAggregates) {
         if (item.record.type !== "fight_aggregate") continue;
         const [fight] = await sql<{
-          ends_at: string;
-          state: string;
           outcome_rule: OutcomeRule;
           stake_minor: number | null;
           default_goal_value: string | null;
         }[]>`
-          select fight.ends_at::text as ends_at, fight.state::text as state,
-            fight.outcome_rule::text as outcome_rule, fight.stake_minor,
+          select fight.outcome_rule::text as outcome_rule, fight.stake_minor,
             fight.default_goal_value::text as default_goal_value
           from public.fights as fight
           join public.fight_members as member on member.fight_id = fight.id
@@ -436,23 +456,13 @@ export async function processProviderUpload(
           ) values (
             ${item.record.fight_id}, ${userId}, ${source.id}, ${uploadId},
             ${item.record.cutoff_at}, ${item.record.steps}, ${item.inputHash}, 1,
-            ${item.record.cutoff_at === new Date(fight.ends_at).toISOString()}
+            false
           ) on conflict (fight_id, user_id, cutoff_at, input_hash) do nothing
         `;
         await sql`
           update public.fight_members
           set current_value = ${item.record.steps}, freshness = 'recent',
-            input_revision = coalesce(input_revision, 0) + 1,
-            final_value = case
-              when final_value is null and ${item.record.cutoff_at}::timestamptz = ${fight.ends_at}::timestamptz
-                then ${item.record.steps}
-              else final_value
-            end,
-            finalized_at = case
-              when final_value is null and ${item.record.cutoff_at}::timestamptz = ${fight.ends_at}::timestamptz
-                then now()
-              else finalized_at
-            end
+            input_revision = coalesce(input_revision, 0) + 1
           where fight_id = ${item.record.fight_id} and user_id = ${userId}
         `;
         const members = await sql<{
@@ -472,7 +482,7 @@ export async function processProviderUpload(
           defaultGoalValue: asNumber(fight.default_goal_value),
           members: members.map((member) => ({
             userId: member.user_id,
-            value: asNumber(member.final_value) ?? asNumber(member.current_value) ?? 0,
+            value: asNumber(member.current_value) ?? asNumber(member.final_value) ?? 0,
             personalTarget: asNumber(member.personal_target),
           })),
         });
@@ -487,8 +497,8 @@ export async function processProviderUpload(
 
       const receipt = {
         upload_id: uploadId,
-        samples: samples.length,
-        deletions: deletions.length,
+        samples: archive.sampleCount,
+        deletions: archive.deletionCount,
         merged_days: mergedDays.length,
         source_days: sourceDays.length,
         fight_aggregates: fightAggregates.length,

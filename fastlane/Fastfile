@@ -2,6 +2,8 @@
 
 require "base64"
 require "fileutils"
+require "open3"
+require "tmpdir"
 
 default_platform(:ios)
 
@@ -116,6 +118,62 @@ def cloud_signing_flags(key_path, key_id, issuer_id, team_id)
   ].join(" ")
 end
 
+def verify_healthkit_background_delivery(ipa_path)
+  UI.user_error!("Signed IPA path is unavailable") if ipa_path.nil?
+  Dir.mktmpdir("fitfight-ipa") do |directory|
+    system("ditto", "-x", "-k", ipa_path, directory) ||
+      UI.user_error!("Could not inspect the signed IPA")
+    app_path = Dir[File.join(directory, "Payload", "*.app")].first
+    UI.user_error!("Signed app was not found in the IPA") if app_path.nil?
+
+    stdout, stderr, status = Open3.capture3(
+      "codesign", "-d", "--entitlements", ":-", app_path
+    )
+    UI.user_error!("Could not read signed app entitlements") unless status.success?
+    entitlements = stdout + stderr
+    unless entitlements.include?("com.apple.developer.healthkit.background-delivery")
+      UI.user_error!("Signed app is missing HealthKit background delivery")
+    end
+    UI.success("Signed app includes HealthKit background delivery")
+  end
+end
+
+def verify_production_configuration(ipa_path)
+  UI.user_error!("Signed IPA path is unavailable") if ipa_path.nil?
+
+  production_url = ENV.fetch("SUPABASE_PRODUCTION_URL").sub(%r{/+\z}, "")
+  production_key = ENV.fetch("SUPABASE_PRODUCTION_PUBLISHABLE_KEY")
+  production_api = ENV.fetch("FITFIGHT_PRODUCTION_API_URL").sub(%r{/+\z}, "")
+  build_env_path = File.expand_path("../FitFight/Generated/BuildEnv.swift", __dir__)
+  build_env = File.read(build_env_path)
+
+  [production_url, production_key, production_api].each do |value|
+    UI.user_error!("Generated BuildEnv is missing production configuration") unless build_env.include?(value)
+  end
+  if build_env.include?("zstzbfocunthczzubggz") || build_env.include?("staging.fitfight.app")
+    UI.user_error!("Generated BuildEnv contains staging configuration")
+  end
+
+  Dir.mktmpdir("fitfight-production-ipa") do |directory|
+    system("ditto", "-x", "-k", ipa_path, directory) ||
+      UI.user_error!("Could not inspect the signed IPA")
+    app_path = Dir[File.join(directory, "Payload", "*.app")].first
+    UI.user_error!("Signed app was not found in the IPA") if app_path.nil?
+    privacy_manifest_path = File.join(app_path, "PrivacyInfo.xcprivacy")
+    UI.user_error!("Signed app is missing PrivacyInfo.xcprivacy") unless File.file?(privacy_manifest_path)
+    system("plutil", "-lint", privacy_manifest_path) ||
+      UI.user_error!("Signed app privacy manifest is invalid")
+    executable_path = File.join(app_path, SCHEME)
+    UI.user_error!("Signed app executable was not found") unless File.file?(executable_path)
+
+    executable = File.binread(executable_path)
+    [production_url, production_key, production_api].each do |value|
+      UI.user_error!("Signed app is missing production configuration") unless executable.include?(value)
+    end
+    UI.success("Signed app includes production backend configuration")
+  end
+end
+
 platform :ios do
   desc "Bump build number, archive, and upload to TestFlight"
   lane :beta do
@@ -171,6 +229,10 @@ platform :ios do
       skip_profile_detection: true
     )
 
+    verify_healthkit_background_delivery(
+      Actions.lane_context[SharedValues::IPA_OUTPUT_PATH]
+    )
+
     upload_to_testflight(
       api_key: api_key,
       skip_waiting_for_build_processing: true,
@@ -178,6 +240,90 @@ platform :ios do
     )
 
     distribute_and_report(version, build_number)
+  ensure
+    FileUtils.rm_f(key_path) if defined?(key_path) && key_path
+  end
+
+  desc "Archive a production build and upload it to App Store Connect without submitting"
+  lane :app_store_candidate do
+    ENV["FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT"] = "120"
+    ENV["FASTLANE_XCODEBUILD_SETTINGS_RETRIES"] = "3"
+
+    unless is_ci && ENV["GITHUB_ACTIONS"] == "true" &&
+           ENV["GITHUB_REF"] == "refs/heads/main" && ENV["GITHUB_REF_NAME"] == "main"
+      UI.user_error!("App Store candidates may only run in GitHub Actions from main")
+    end
+
+    setup_ci
+
+    key_id = ENV.fetch("APP_STORE_CONNECT_KEY_ID")
+    issuer_id = ENV.fetch("APP_STORE_CONNECT_ISSUER_ID")
+    key_content = ENV.fetch("APP_STORE_CONNECT_API_KEY")
+    team_id = ENV.fetch("APPLE_TEAM_ID")
+    key_path = write_api_key_file(key_id, key_content)
+    signing_flags = cloud_signing_flags(key_path, key_id, issuer_id, team_id)
+
+    api_key = app_store_connect_api_key(
+      key_id: key_id,
+      issuer_id: issuer_id,
+      key_filepath: key_path,
+      duration: 1200,
+      in_house: false
+    )
+
+    version = get_version_number(xcodeproj: XCODEPROJ, target: SCHEME)
+    release_version = ENV.fetch("FITFIGHT_RELEASE_VERSION")
+    unless version == release_version
+      UI.user_error!(
+        "Project marketing version #{version} does not match release version #{release_version}"
+      )
+    end
+    changelog = File.read(File.expand_path("../FitFight/Changelog.swift", __dir__))
+    unless changelog.match?(/version:\s*"#{Regexp.escape(release_version)}"/)
+      UI.user_error!("Changelog is missing the #{release_version} App Store release note")
+    end
+    build_number = latest_testflight_build_number(
+      api_key: api_key,
+      app_identifier: BUNDLE_ID,
+      version: version,
+      initial_build_number: 0
+    ) + 1
+    UI.message("Uploading production candidate #{version} (#{build_number})")
+
+    build_app(
+      project: XCODEPROJ,
+      scheme: SCHEME,
+      configuration: "Release",
+      export_method: "app-store",
+      export_team_id: team_id,
+      export_options: {
+        method: "app-store",
+        signingStyle: "automatic",
+        teamID: team_id
+      },
+      xcargs: "#{signing_flags} CURRENT_PROJECT_VERSION=#{build_number}",
+      skip_profile_detection: true
+    )
+
+    ipa_path = Actions.lane_context[SharedValues::IPA_OUTPUT_PATH]
+    verify_healthkit_background_delivery(ipa_path)
+    verify_production_configuration(ipa_path)
+
+    upload_to_app_store(
+      api_key: api_key,
+      app_identifier: BUNDLE_ID,
+      app_version: version,
+      ipa: ipa_path,
+      skip_binary_upload: false,
+      skip_app_version_update: true,
+      skip_metadata: true,
+      skip_screenshots: true,
+      submit_for_review: false,
+      automatic_release: false,
+      run_precheck_before_submit: false,
+      force: true
+    )
+    UI.success("Production candidate uploaded to App Store Connect; it was not submitted for review")
   ensure
     FileUtils.rm_f(key_path) if defined?(key_path) && key_path
   end

@@ -67,7 +67,7 @@ struct FFScreen<Content: View>: View {
 }
 
 enum FFTab: Hashable {
-    case fights, newFight, requests, you
+    case fights, newFight, you
 }
 
 /// 46×32 glyph pill, 22pt icon, 11pt label. The live tab takes the moss wash.
@@ -79,7 +79,6 @@ struct FFTabBar: View {
         HStack(spacing: 0) {
             item(.fights, "trophy", "Fights")
             item(.newFight, "plus.circle", "New")
-            item(.requests, "tray", "Requests")
             item(.you, "person", "You")
         }
         // The kit uses the classic full-width iPhone geometry: about 49pt of
@@ -120,34 +119,6 @@ struct FFTabBar: View {
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(.plain)
-    }
-}
-
-/// Money is not one of the kit's four families, so it borrows them: moss when you are
-/// up, ember when you are down, ash when it is even.
-struct FFMoney: View {
-    let dollars: Int
-    var size: CGFloat = 13
-    var evenText = "even"
-
-    @Environment(\.ffTheme) private var theme
-
-    var body: some View {
-        Text(label)
-            .font(.ff(size, 800))
-            .foregroundStyle(colour)
-    }
-
-    private var colour: Color {
-        if dollars > 0 { return theme.mossText }
-        if dollars < 0 { return theme.emberText }
-        return theme.textFaint
-    }
-
-    private var label: String {
-        if dollars > 0 { return "+$\(dollars)" }
-        if dollars < 0 { return "−$\(abs(dollars))" }
-        return evenText
     }
 }
 

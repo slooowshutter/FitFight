@@ -1,0 +1,169 @@
+# Archive a production candidate on GitHub-hosted macOS and upload it to App Store Connect.
+# The build is never submitted for review by this workflow.
+name: App Store candidate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "FitFight/**"
+      - "FitFight.xcodeproj/**"
+      - "fastlane/**"
+      - "Gemfile"
+      - "Gemfile.lock"
+      - ".github/workflows/ios-app-store.yml"
+
+concurrency:
+  group: ios-distribution
+  cancel-in-progress: false
+
+jobs:
+  candidate:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    name: Upload production candidate
+    runs-on: macos-26
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    env:
+      SUPABASE_PRODUCTION_URL: ${{ vars.SUPABASE_PRODUCTION_URL || 'https://pvqntpteehdvhqyctwum.supabase.co' }}
+      SUPABASE_PRODUCTION_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PRODUCTION_PUBLISHABLE_KEY || 'sb_publishable_6wP1KNFvJwIE_hX1U2aTfg_u3sk40Li' }}
+      FITFIGHT_PRODUCTION_API_URL: https://fitfight.app
+      FITFIGHT_RELEASE_VERSION: "1.0.0"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require main and App Store Connect secrets
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_REF" != "refs/heads/main" ] || [ "$GITHUB_REF_NAME" != "main" ]; then
+            echo "::error::App Store candidates may only be built from main."
+            exit 1
+          fi
+          if [ "$(git rev-parse HEAD)" != "$GITHUB_SHA" ]; then
+            echo "::error::The checkout does not match the main push being released."
+            exit 1
+          fi
+          missing=0
+          for name in APP_STORE_CONNECT_KEY_ID APP_STORE_CONNECT_ISSUER_ID APP_STORE_CONNECT_API_KEY APPLE_TEAM_ID; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing GitHub secret: $name."
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Wait for production and write backend environment
+        run: |
+          set -euo pipefail
+          mkdir -p FitFight/Generated
+          python3 <<'PY'
+          import json
+          import os
+          import time
+          import urllib.error
+          import urllib.request
+          from pathlib import Path
+
+          expected_supabase_url = "https://pvqntpteehdvhqyctwum.supabase.co"
+          expected_api_url = "https://fitfight.app"
+          supabase_url = os.environ.get("SUPABASE_PRODUCTION_URL", "").strip().rstrip("/")
+          publishable_key = os.environ.get("SUPABASE_PRODUCTION_PUBLISHABLE_KEY", "").strip()
+          api_url = os.environ.get("FITFIGHT_PRODUCTION_API_URL", "").strip().rstrip("/")
+
+          if supabase_url != expected_supabase_url:
+              raise SystemExit("SUPABASE_PRODUCTION_URL must be the FitFight production project")
+          if api_url != expected_api_url:
+              raise SystemExit("FITFIGHT_PRODUCTION_API_URL must be https://fitfight.app")
+          if not publishable_key.startswith("sb_publishable_") or publishable_key.startswith("sb_secret_"):
+              raise SystemExit("SUPABASE_PRODUCTION_PUBLISHABLE_KEY must be a publishable key")
+
+          auth_request = urllib.request.Request(
+              supabase_url + "/auth/v1/health",
+              headers={"apikey": publishable_key, "Authorization": "Bearer " + publishable_key},
+          )
+          try:
+              with urllib.request.urlopen(auth_request, timeout=20) as response:
+                  if response.status != 200:
+                      raise SystemExit(f"Production Supabase auth health returned HTTP {response.status}")
+          except urllib.error.HTTPError as error:
+              raise SystemExit(f"Production Supabase URL/key validation failed with HTTP {error.code}") from error
+
+          settings_request = urllib.request.Request(
+              supabase_url + "/auth/v1/settings",
+              headers={"apikey": publishable_key, "Authorization": "Bearer " + publishable_key},
+          )
+          with urllib.request.urlopen(settings_request, timeout=20) as response:
+              if json.load(response).get("external", {}).get("apple") is not True:
+                  raise SystemExit("Sign in with Apple is not enabled on production Supabase")
+
+          checks = {
+              "/api/health": lambda body: (
+                  json.loads(body).get("ok") is True
+                  and json.loads(body).get("backend") == "prod"
+                  and json.loads(body).get("schema") == "ready"
+              ),
+              "/privacy": lambda body: "Privacy Policy" in body,
+              "/support": lambda body: "FitFight Support" in body or "FITFIGHT SUPPORT" in body,
+          }
+          last_errors = []
+          for attempt in range(1, 21):
+              last_errors = []
+              for path, valid in checks.items():
+                  try:
+                      request = urllib.request.Request(
+                          api_url + path,
+                          headers={"User-Agent": "FitFight-App-Store-CI"},
+                      )
+                      with urllib.request.urlopen(request, timeout=20) as response:
+                          body = response.read().decode("utf-8")
+                          if response.status != 200 or not valid(body):
+                              last_errors.append(f"{path}: unexpected response")
+                  except Exception as error:
+                      last_errors.append(f"{path}: {error}")
+              if not last_errors:
+                  break
+              if attempt == 20:
+                  raise SystemExit("Production is not ready: " + "; ".join(last_errors))
+              print(f"Production not ready (attempt {attempt}/20); retrying in 15 seconds")
+              time.sleep(15)
+
+          def swift_string(value: str) -> str:
+              escaped = (
+                  value.replace("\\", "\\\\")
+                  .replace('"', '\\"')
+                  .replace("\n", "\\n")
+                  .replace("\r", "\\r")
+              )
+              return f'"{escaped}"'
+
+          Path("FitFight/Generated/BuildEnv.swift").write_text(
+              "/// Written by App Store CI before archive.\n"
+              "enum BuildEnv {\n"
+              f"    static let supabaseURL = {swift_string(supabase_url)}\n"
+              f"    static let supabasePublishableKey = {swift_string(publishable_key)}\n"
+              f"    static let apiBaseURL = {swift_string(api_url)}\n"
+              "}\n"
+          )
+          print("Production services and generated build environment are ready")
+          PY
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+
+      - name: Install Fastlane
+        run: bundle install
+
+      - name: Upload production candidate
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: bundle exec fastlane app_store_candidate

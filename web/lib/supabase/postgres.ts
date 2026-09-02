@@ -9,10 +9,16 @@ function databaseURL(): string {
     throw new ApiError(500, ERROR_CODES.config, "Missing DATABASE_URL");
   }
   const apiURL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  let parsedDatabaseURL: URL;
+  try {
+    parsedDatabaseURL = new URL(value);
+  } catch {
+    throw new ApiError(500, ERROR_CODES.config, "DATABASE_URL is invalid");
+  }
   if (apiURL) {
     try {
       const projectRef = new URL(apiURL).hostname.split(".")[0];
-      const databaseUser = decodeURIComponent(new URL(value).username);
+      const databaseUser = decodeURIComponent(parsedDatabaseURL.username);
       if (projectRef && databaseUser.includes(".") && !databaseUser.endsWith(`.${projectRef}`)) {
         throw new ApiError(
           500,

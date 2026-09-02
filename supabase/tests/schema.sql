@@ -1,5 +1,5 @@
 begin;
-select plan(57);
+select plan(62);
 
 select has_schema('private', 'private schema exists');
 select has_table('public', 'profiles', 'profiles exists');
@@ -196,6 +196,16 @@ select is(
   has_column_privilege('authenticated', 'public.fight_members', 'current_value', 'UPDATE'),
   false,
   'clients cannot write fight scores'
+);
+select is(
+  has_column_privilege('authenticated', 'public.fight_members', 'state', 'INSERT'),
+  true,
+  'clients can insert membership rows'
+);
+select is(
+  has_column_privilege('authenticated', 'public.fight_members', 'current_value', 'INSERT'),
+  false,
+  'clients cannot insert fight scores'
 );
 select ok(
   exists (

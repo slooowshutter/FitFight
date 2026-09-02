@@ -9,6 +9,8 @@ alter table public.fight_members
 
 revoke update on table public.fight_members from authenticated;
 grant update (state, accepted_at) on table public.fight_members to authenticated;
+revoke insert on table public.fight_members from authenticated;
+grant insert (fight_id, user_id, state, accepted_at) on table public.fight_members to authenticated;
 
 create or replace function private.allow_score_correction()
 returns boolean
@@ -16,6 +18,29 @@ language sql
 stable
 as $$
   select coalesce(nullif(current_setting('fitfight.allow_score_correction', true), ''), '') = 'on';
+$$;
+
+create or replace function private.strip_member_scores_on_insert()
+returns trigger
+language plpgsql
+as $$
+begin
+  if private.allow_score_correction() then
+    return new;
+  end if;
+  new.current_value := null;
+  new.rank := null;
+  new.outcome_minor := null;
+  new.final_value := null;
+  new.finalized_at := null;
+  new.input_revision := null;
+  new.freshness := null;
+  new.selected_source_id := null;
+  new.source_label := null;
+  new.calculation_version := 1;
+  new.scoring_engine_version := 1;
+  return new;
+end;
 $$;
 
 create or replace function private.protect_final_fight()
@@ -157,6 +182,12 @@ begin
   return new;
 end;
 $$;
+
+drop trigger if exists strip_member_scores_on_insert on public.fight_members;
+create trigger strip_member_scores_on_insert
+  before insert on public.fight_members
+  for each row
+  execute function private.strip_member_scores_on_insert();
 
 drop trigger if exists protect_final_fight on public.fights;
 create trigger protect_final_fight

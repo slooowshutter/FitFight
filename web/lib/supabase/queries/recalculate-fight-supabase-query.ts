@@ -189,45 +189,38 @@ export async function recalculateFight(
   });
 
   const byUser = new Map(scored.map((row) => [row.userId, row]));
-  for (const member of members) {
-    const result = byUser.get(member.user_id);
-    if (!result) {
-      continue;
-    }
-    if (member.finalized_at) {
-      continue;
-    }
-    const patch: Record<string, unknown> = {
-      current_value: result.currentValue,
-      rank: result.rank,
-      outcome_minor: result.outcomeMinor,
-      freshness: "recent",
-      input_revision: nextRevision,
-      scoring_engine_version: scoringEngineVersion,
-    };
-    if (member.selected_source_id) {
-      const completeThrough = sourcesById.get(member.selected_source_id)?.complete_through;
-      if (completeThrough && Date.parse(completeThrough) >= Date.parse(fight.ends_at)) {
-        patch.final_steps_complete = true;
+  await database.begin("read write", async (sql) => {
+    for (const member of members) {
+      const result = byUser.get(member.user_id);
+      if (!result || member.finalized_at) {
+        continue;
       }
+      const completeThrough = member.selected_source_id
+        ? sourcesById.get(member.selected_source_id)?.complete_through
+        : null;
+      const finalStepsComplete = Boolean(
+        completeThrough && Date.parse(completeThrough) >= Date.parse(fight.ends_at),
+      );
+      await sql`
+        update public.fight_members
+        set current_value = ${result.currentValue},
+          rank = ${result.rank},
+          outcome_minor = ${result.outcomeMinor},
+          freshness = 'recent',
+          input_revision = ${nextRevision},
+          scoring_engine_version = ${scoringEngineVersion},
+          final_steps_complete = final_steps_complete or ${finalStepsComplete}
+        where fight_id = ${fightId}
+          and user_id = ${member.user_id}
+          and finalized_at is null
+      `;
     }
-    const { error: updateError } = await admin
-      .from("fight_members")
-      .update(patch)
-      .eq("fight_id", fightId)
-      .eq("user_id", member.user_id);
-    if (updateError) {
-      throw new ApiError(500, ERROR_CODES.db_error, "Could not update fight member scores");
+    if (nextState !== fight.state) {
+      await sql`
+        update public.fights
+        set state = ${nextState}
+        where id = ${fightId}
+      `;
     }
-  }
-
-  if (nextState !== fight.state) {
-    const { error: stateError } = await admin
-      .from("fights")
-      .update({ state: nextState })
-      .eq("id", fightId);
-    if (stateError) {
-      throw new ApiError(500, ERROR_CODES.db_error, "Could not update fight state");
-    }
-  }
+  });
 }

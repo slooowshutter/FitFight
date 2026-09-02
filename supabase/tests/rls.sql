@@ -390,5 +390,41 @@ select is(
   'a final fight cannot return to live'
 );
 
+select pg_temp.as_user('11111111-1111-4111-8111-111111111111');
+set local role authenticated;
+
+select throws_ok(
+  $$ insert into public.fight_members (
+       fight_id, user_id, state, current_value, finalized_at
+     ) values (
+       'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+       '33333333-3333-4333-8333-333333333333',
+       'invited',
+       999999,
+       now()
+     ) $$,
+  '42501',
+  'permission denied for table fight_members',
+  'clients cannot insert a frozen fake score'
+);
+
+reset role;
+insert into public.fight_members (
+  fight_id, user_id, state, current_value, finalized_at
+) values (
+  'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+  '33333333-3333-4333-8333-333333333333',
+  'invited',
+  42,
+  now()
+);
+
+select ok(
+  (select current_value is null and finalized_at is null from public.fight_members
+    where fight_id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+      and user_id = '33333333-3333-4333-8333-333333333333'),
+  'insert strips scores even for the database role'
+);
+
 select * from finish();
 rollback;

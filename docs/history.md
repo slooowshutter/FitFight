@@ -1,5 +1,9 @@
 # History
 
+## 2026-09-02 — Requests board under You
+
+The old Requests tab was fake (local votes, dead plus button) and was removed for App Store review. Marc asked to bring feature requests and bugs back as a real board: submit, upvote, report, and block. It lives under You → Settings, not as a fourth tab. Talk to the boss and comment threads stay out. Status (Open / Planned / Shipped) is stored; Marc can change it in the database.
+
 ## 2026-08-30 — TestFlight is staging only
 
 TestFlight never builds `main` and never connects to production. Every feature/develop TestFlight uses the persistent develop Supabase project and staging API. Production binaries belong only to the future App Store flow when Marc explicitly asks to ship.

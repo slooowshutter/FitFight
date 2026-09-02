@@ -1,5 +1,5 @@
 begin;
-select plan(32);
+select plan(39);
 
 select has_schema('private', 'private schema exists');
 select has_table('public', 'profiles', 'profiles exists');
@@ -9,6 +9,10 @@ select has_table('public', 'fight_members', 'fight_members exists');
 select has_table('public', 'fight_invites', 'fight_invites exists');
 select has_table('public', 'data_sources', 'data_sources exists');
 select has_table('public', 'step_days', 'step_days exists');
+select has_table('public', 'feature_requests', 'feature_requests exists');
+select has_table('public', 'feature_request_votes', 'feature_request_votes exists');
+select has_table('public', 'feature_request_reports', 'feature_request_reports exists');
+select has_table('public', 'feature_request_blocks', 'feature_request_blocks exists');
 select has_table('private', 'metric_observations', 'observations stay private');
 
 select ok(
@@ -126,6 +130,21 @@ select is(
   has_table_privilege('authenticated', 'private.provider_uploads', 'SELECT'),
   false,
   'authenticated clients cannot read provider uploads'
+);
+select is(
+  has_table_privilege('authenticated', 'public.feature_requests', 'SELECT'),
+  false,
+  'authenticated cannot read feature requests'
+);
+select is(
+  has_table_privilege('authenticated', 'public.feature_requests', 'INSERT'),
+  false,
+  'authenticated cannot write feature requests'
+);
+select is(
+  has_table_privilege('anon', 'public.feature_requests', 'SELECT'),
+  false,
+  'anon cannot read feature requests'
 );
 select is(
   (select file_size_limit from storage.buckets where id = 'provider-inbox'),

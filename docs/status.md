@@ -37,7 +37,7 @@ Verify the minimal product alongside Apple Health synchronization:
 2. Check Fights, a Fight detail, New, and You in both Night and Day. There are only three tabs: Fights, New, You.
 3. New accepts exact usernames, requires an action, and offers 1 hour / 6 hours / 1 day for testing plus 3 days / 1 week / 2 weeks / 1 month. **Start fight** shows Starting… and ignores extra taps.
 4. Confirm sign-in, username, Apple Health Steps, Fight invitations, standings, Privacy, Support, Versions, sign out, and Delete account.
-5. Confirm Requests, friend requests/lists, money, other Metrics, and dead settings are absent.
+5. Confirm friend requests/lists, money, other Metrics, and dead settings are absent. Requests is under You → Settings, not a fourth tab.
 6. If sign-in fails: hosted **develop** Supabase → Authentication → Providers → Apple → On, client ID `com.fitfight.mvp`.
 
 The native Fight path uses Supabase; Apple Health synchronization and account deletion also require Vercel.
@@ -58,13 +58,14 @@ The native Fight path uses Supabase; Apple Health synchronization and account de
 | Daily totals | Sends Apple's merged daily buckets only for days relevant to active Fight charts. They are display data, not the source of the Fight score. |
 | Standings | Live scoring uses exact Fight-window HealthKit aggregates, not overlapping whole-day totals. Both phones read the same serving rows. |
 | Fight end | Exact `ends_at` is the final cutoff. Opening the app closes due fights; the protected Vercel cron runs daily if nobody opens it. After finalization, later Steps cannot change the result. |
-| Tabs | Fights, New, You. Requests and Design are removed. |
+| Tabs | Fights, New, You. Design is removed. |
 | Look | Night/Day, Nunito, fixed Moss/Ember/Gold semantics; no accent picker or public design-system showcase. |
 | Versions | Works under You → Settings; the version label stays at the top of every root screen. |
+| Requests | Works under You → Settings. Signed-in users can post a feature or a bug, upvote, report, or block. Not a fourth tab. |
 | Privacy / Support | Pages are implemented and linked under You → Settings. Staging uses `staging.fitfight.app`; production uses `fitfight.app`. Each route must be deployed before that build is tested or submitted. |
-| Account deletion | Permanently deletes the profile, username, authentication, Health/Steps data, relationships, invitations, memberships, scores, and owned Fights; removes participation from other Fights; clears local Health sync state; and revokes a stored Apple credential when available. |
+| Account deletion | Permanently deletes the profile, username, authentication, Health/Steps data, posted requests, votes, reports, blocks, relationships, invitations, memberships, scores, and owned Fights; removes participation from other Fights; clears local Health sync state; and revokes a stored Apple credential when available. |
 | WHOOP / Strava | Not built |
-| Removed scope | No persistent friends, Requests, money/payouts, bragging-rights option, other Metrics, goals, custom dates, or dead settings/actions. |
+| Removed scope | No persistent friends, money/payouts, bragging-rights option, other Metrics, goals, custom dates, or dead settings/actions. |
 
 ---
 
@@ -74,7 +75,7 @@ The native Fight path uses Supabase; Apple Health synchronization and account de
 - FitFight trusts Apple's current merged aggregate from the signed-in User's device. It does not retain the underlying raw samples or source/device provenance, so this is not an anti-cheat or audit trail.
 - Apple may revise its merged total after a Watch sync, edit, or deletion. Live snapshots can change until the exact Fight-end value is finalized; chart buckets never overwrite that exact-window score.
 - Same Apple ID on production vs staging is **two** accounts.
-- `web/` owns Apple Health aggregate ingestion and account deletion. There are no app-facing Postgres RPCs.
+- `web/` owns Apple Health aggregate ingestion, the Requests board, and account deletion. There are no app-facing Postgres RPCs.
 
 ---
 

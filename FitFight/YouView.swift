@@ -10,6 +10,7 @@ struct YouView: View {
     @Environment(\.ffStaticRender) private var staticRender
     @State private var confirmDelete = false
     @State private var copied = false
+    @State private var showingRequests = false
 
     var body: some View {
         FFScreen {
@@ -30,6 +31,13 @@ struct YouView: View {
         .task {
             guard !staticRender else { return }
             await steps.refresh(requestAccess: false)
+        }
+        .sheet(isPresented: $showingRequests) {
+            RequestsView()
+                .environmentObject(session)
+                .environmentObject(themeStore)
+                .fitFightTheme(themeStore.theme)
+                .presentationBackground(theme.bg)
         }
         .confirmationDialog(
             "Delete account?",
@@ -54,7 +62,7 @@ struct YouView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This permanently deletes your profile, uploaded Steps, invitations, and fights you created; removes you from other fights; and signs you out. This can’t be undone.")
+            Text("This permanently deletes your profile, uploaded Steps, requests you posted, invitations, and fights you created; removes you from other fights; and signs you out. This can’t be undone.")
         }
     }
 
@@ -124,6 +132,8 @@ struct YouView: View {
 
     private var settings: some View {
         FFGroupedRows {
+            navRow("Requests") { showingRequests = true }
+            FFDivider()
             linkRow("Privacy", destination: siteURL.appending(path: "privacy"))
             FFDivider()
             linkRow("Support", destination: siteURL.appending(path: "support"))

@@ -20,7 +20,7 @@ Honest works / doesn’t / next: [`status.md`](status.md). Read that before the 
 
 [`system-design.md`](system-design.md) is the golden guide. Follow it. Do not implement the whole document. Production Metric is **Steps**; Active Minutes and Workout Count stay later.
 
-**Current scope lock (31 Aug 2026):** three tabs (**Fights**, **New**, **You**); direct exact-username invitations; Steps × highest total; a required typed loser action; 1-hour, 6-hour, and 1-day testing durations; and 3-day, 1-week, 2-week, or 1-month durations. Do not restore friends, Requests, money, other metrics, alternate scoring, or removed settings unless Marc explicitly reopens that scope.
+**Current scope lock (2 Sep 2026):** three tabs (**Fights**, **New**, **You**); direct exact-username invitations; Steps × highest total; a required typed loser action; 1-hour, 6-hour, and 1-day testing durations; 3-day, 1-week, 2-week, or 1-month durations; and a real Requests board under You → Settings. Do not restore friends, a fourth tab, money, other metrics, alternate scoring, or removed settings unless Marc explicitly reopens that scope.
 
 ## Urgent
 
@@ -49,7 +49,7 @@ If the app is closed or killed, iOS will not reliably run timers, settle a month
 
 The phone’s job is: show the UI, read Apple Health Steps when it is open (or briefly woken), and upload the required aggregates. Push notifications are not in the current scope.
 
-**Last TestFlight:** 2 Sep 2026 — First App Store release candidate with production-accurate privacy declarations, screenshots, and release checks. Look for `1.0.0 · build N · staging`.
+**Last TestFlight:** 2 Sep 2026 — Requests board under You → Settings. Look for `1.0.0 · build N · staging`.
 
 ## Now
 
@@ -67,7 +67,7 @@ The phone’s job is: show the UI, read Apple Health Steps when it is open (or b
 
 ## Later — outside the current product
 
-These are parked ideas, not launch requirements. None may restore friends, Requests,
+These are parked ideas, not launch requirements. None may restore friends,
 money, another metric, or alternate scoring without Marc explicitly reopening scope.
 
 - **Restore bounded full-fidelity HealthKit ingestion only when a shipped feature needs it.** The MVP deliberately keeps only Apple's merged exact Fight-window totals and the relevant merged daily chart buckets. Before restoring raw samples, deletion anchors, per-source statistics, device/source metadata, or another archive transport, define the concrete product purpose, explicit Collection consent, bounded backfill, retention and deletion policy, edit/deletion reconciliation, provenance shown to Users, and operational size limits. Never calculate Steps by naïvely summing overlapping raw samples or source totals; Apple's merged aggregate remains the reference unless a reviewed Metric specification replaces it.
@@ -94,15 +94,16 @@ money, another metric, or alternate scoring without Marc explicitly reopening sc
 
 ## Ask first
 
-Nothing is authorized here for the launch. Removed friends, Requests, notification
-inbox, payouts, payment, extra settings, per-person goals, and alternate Fight rules
-are not missing screens; they are out of scope.
+Nothing is authorized here for the launch. Removed friends, a Requests tab,
+notification inbox, payouts, payment, extra settings, per-person goals, and
+alternate Fight rules are not missing screens; they are out of scope.
 
 ## Done
 
 The phone writes fights and Steps to staging after this PR is merged. See [`status.md`](status.md).
 
 - Current launch shape: Fights, New, and You; direct exact-username Steps challenges; required loser action; 1/6-hour testing and 1/3/7/14/30-day durations; Privacy and Support links; essential settings only.
+- Requests board under You → Settings: signed-in users post a feature or a bug, upvote, report, or block. Not a fourth tab; Talk to the boss and comment threads stay out.
 - Account deletion hard-deletes the account and owned Fights, removes participation elsewhere, clears local Health sync data, and supports encrypted Sign in with Apple token revocation.
 - Historical v0.3 design port: four tabs, dark/light, 10 accents, fixture fights. Requests and extra accents were later removed.
 - Historical Talk to the boss on Requests: private chat with Marc, emailed to him. Removed with Requests on 30 Aug 2026.

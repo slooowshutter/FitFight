@@ -53,6 +53,12 @@ enum ScreenshotExport {
             height: canvas.height,
             to: folder
         )
+        write(
+            requestsSheet(RequestsView(), themeStore: light),
+            name: "light-requests",
+            height: canvas.height,
+            to: folder
+        )
 
         // The design system page is one long scroll. ImageRenderer returns nil well
         // before the texture limit, so it is exported as a run of slices instead of
@@ -111,7 +117,13 @@ enum ScreenshotExport {
             },
             Shot(name: "05-you") { store, model in
                 frame(YouView(), tab: .you, themeStore: store, model: model)
-            }
+            },
+            Shot(name: "06-requests") { store, _ in
+                requestsSheet(RequestsView(), themeStore: store)
+            },
+            Shot(name: "07-request-compose") { store, _ in
+                requestsSheet(RequestsComposeView { _ in }, themeStore: store)
+            },
         ]
     }
 
@@ -191,6 +203,22 @@ enum ScreenshotExport {
             .environment(\.ffTheme, theme)
             .environment(\.colorScheme, theme.colorScheme)
             .environment(\.ffStaticRender, true)
+        )
+    }
+
+    private static func requestsSheet<Content: View>(
+        _ content: Content,
+        themeStore: ThemeStore
+    ) -> AnyView {
+        let theme = themeStore.theme
+        return AnyView(
+            content
+                .environmentObject(themeStore)
+                .environmentObject(SessionStore(screenshot: ()))
+                .environment(\.ffTheme, theme)
+                .environment(\.colorScheme, theme.colorScheme)
+                .environment(\.ffStaticRender, true)
+                .background(theme.bg)
         )
     }
 

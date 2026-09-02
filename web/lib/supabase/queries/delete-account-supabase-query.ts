@@ -43,6 +43,13 @@ export async function deleteAccount(
       await sql`delete from private.healthkit_step_syncs where user_id = ${userId}`;
       await sql`delete from public.metric_days where user_id = ${userId}`;
       await sql`delete from public.step_days where user_id = ${userId}`;
+      await sql`delete from public.feature_request_votes where user_id = ${userId}`;
+      await sql`delete from public.feature_request_reports where reporter_id = ${userId}`;
+      await sql`
+        delete from public.feature_request_blocks
+        where blocker_id = ${userId} or blocked_id = ${userId}
+      `;
+      await sql`delete from public.feature_requests where author_id = ${userId}`;
       await sql`delete from public.fight_members where user_id = ${userId}`;
       await sql`delete from public.fight_invites where invited_user_id = ${userId}`;
       await sql`

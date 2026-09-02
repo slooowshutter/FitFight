@@ -1,5 +1,5 @@
 begin;
-select plan(14);
+select plan(16);
 
 create function pg_temp.make_user(uid uuid, email text)
 returns void
@@ -203,6 +203,30 @@ select throws_ok(
   '42501',
   'permission denied for table step_days',
   'clients cannot write server-owned step totals'
+);
+
+select throws_ok(
+  $$ insert into public.feature_requests (author_id, kind, title, body)
+     values (
+       '11111111-1111-4111-8111-111111111111',
+       'feature',
+       'Watch face',
+       'Show rank on Apple Watch.'
+     ) $$,
+  '42501',
+  'permission denied for table feature_requests',
+  'clients cannot write feature requests'
+);
+
+select throws_ok(
+  $$ insert into public.feature_request_votes (request_id, user_id)
+     values (
+       'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+       '11111111-1111-4111-8111-111111111111'
+     ) $$,
+  '42501',
+  'permission denied for table feature_request_votes',
+  'clients cannot write feature request votes'
 );
 
 reset role;

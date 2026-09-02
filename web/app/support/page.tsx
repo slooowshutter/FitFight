@@ -71,6 +71,19 @@ export default function SupportPage() {
         </section>
 
         <section>
+          <h2>Feature requests and bugs</h2>
+          <p>
+            Open <strong>You → Settings → Requests</strong> to post a feature or a bug
+            and upvote others. Posts are public to signed-in users. Use the menu on a
+            post to report it or block that person. Email{" "}
+            <a href="mailto:marc@marclamy.com?subject=FitFight%20request">
+              marc@marclamy.com
+            </a>{" "}
+            if you need a post taken down.
+          </p>
+        </section>
+
+        <section>
           <h2>Delete your account</h2>
           <p>
             Open <strong>You → Settings → Delete account</strong> and confirm. This

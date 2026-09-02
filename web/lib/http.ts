@@ -19,6 +19,7 @@ export const ERROR_CODES = {
   profile_missing: "profile_missing",
   missing_idempotency_key: "missing_idempotency_key",
   payload_too_large: "payload_too_large",
+  rate_limited: "rate_limited",
   archive_too_large: "archive_too_large",
   archive_not_found: "archive_not_found",
   archive_size_mismatch: "archive_size_mismatch",

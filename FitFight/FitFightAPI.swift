@@ -139,6 +139,43 @@ struct FitFightSyncDue: Codable, Equatable {
     var fightIds: [UUID]?
 }
 
+struct FitFightRequestAuthor: Codable, Equatable, Hashable {
+    var userId: UUID
+    var handle: String
+    var displayName: String
+}
+
+struct FitFightRequest: Codable, Equatable, Hashable, Identifiable {
+    var id: UUID
+    var kind: String
+    var status: String
+    var title: String
+    var body: String
+    var voteCount: Int
+    var voted: Bool
+    var createdAt: String
+    var author: FitFightRequestAuthor
+}
+
+struct FitFightRequestList: Decodable, Equatable {
+    var items: [FitFightRequest]
+}
+
+struct FitFightRequestReport: Decodable, Equatable {
+    var reported: Bool
+    var hidden: Bool
+}
+
+struct FitFightRequestBlock: Decodable, Equatable {
+    var blocked: Bool
+}
+
+struct FitFightCreateRequest: Encodable, Equatable {
+    var kind: String
+    var title: String
+    var body: String
+}
+
 struct FitFightAccountDeletion: Decodable, Equatable {
     var appleAuthorizationRevoked: Bool
     var deleted: Bool
@@ -212,6 +249,62 @@ struct FitFightAPI {
             path: "auth/apple",
             accessToken: accessToken,
             body: AppleAuthorizationBody(authorizationCode: authorizationCode),
+            expected: [200]
+        )
+    }
+
+    func listRequests(accessToken: String) async throws -> FitFightRequestList {
+        try await get(
+            path: "requests",
+            accessToken: accessToken,
+            expected: [200]
+        )
+    }
+
+    func createRequest(
+        _ payload: FitFightCreateRequest,
+        accessToken: String
+    ) async throws -> FitFightRequest {
+        try await post(
+            path: "requests",
+            accessToken: accessToken,
+            body: payload,
+            expected: [201]
+        )
+    }
+
+    func toggleRequestVote(
+        requestID: UUID,
+        accessToken: String
+    ) async throws -> FitFightRequest {
+        try await post(
+            path: "requests/\(requestID.uuidString.lowercased())/vote",
+            accessToken: accessToken,
+            body: EmptyJSON(),
+            expected: [200]
+        )
+    }
+
+    func reportRequest(
+        requestID: UUID,
+        accessToken: String
+    ) async throws -> FitFightRequestReport {
+        try await post(
+            path: "requests/\(requestID.uuidString.lowercased())/report",
+            accessToken: accessToken,
+            body: EmptyJSON(),
+            expected: [200]
+        )
+    }
+
+    func blockRequestAuthor(
+        requestID: UUID,
+        accessToken: String
+    ) async throws -> FitFightRequestBlock {
+        try await post(
+            path: "requests/\(requestID.uuidString.lowercased())/block",
+            accessToken: accessToken,
+            body: EmptyJSON(),
             expected: [200]
         )
     }

@@ -24,7 +24,7 @@ export default function PrivacyPage() {
       <article className="legal-content">
         <p className="eyebrow">YOUR DATA, IN PLAIN LANGUAGE</p>
         <h1>Privacy Policy</h1>
-        <p className="legal-updated">Effective 31 August 2026</p>
+        <p className="legal-updated">Effective 2 September 2026</p>
         <p className="legal-intro">
           FitFight lets named participants compete on who records the most Steps during
           a private Fight. This policy explains the data used by the FitFight iPhone app
@@ -55,6 +55,11 @@ export default function PrivacyPage() {
               limited server logs such as request time, IP address, device or browser
               information, and error details needed to keep the service secure and working.
             </li>
+            <li>
+              <strong>Requests board:</strong> feature requests and bugs you post, your
+              votes, reports, and blocks. Posts show your username and are visible to every
+              signed-in FitFight user.
+            </li>
           </ul>
         </section>
 
@@ -72,6 +77,10 @@ export default function PrivacyPage() {
             Fight chart, rank, Fight action, and duration. They never receive another
             participant&apos;s raw Apple Health samples or unrelated Health history.
           </p>
+          <p>
+            Feature requests and bugs posted under You → Settings → Requests are visible
+            to every signed-in FitFight user, including the author&apos;s username.
+          </p>
         </section>
 
         <section>
@@ -81,6 +90,7 @@ export default function PrivacyPage() {
             <li>create and secure your account;</li>
             <li>create, invite participants to, score, and finish private Fights;</li>
             <li>show standings and shared Fight history;</li>
+            <li>publish and moderate the in-app feature request and bug board;</li>
             <li>answer support requests; and</li>
             <li>detect errors, abuse, and security problems.</li>
           </ul>
@@ -126,8 +136,9 @@ export default function PrivacyPage() {
             You can permanently delete your account under <strong>You → Settings → Delete
             account</strong>. You do not need to contact support. Deletion removes your
             profile and username, uploaded Apple Health Fight and daily totals, legacy
-            friendships, invitations, Fight memberships, scores, and every Fight you
-            created. It also removes your participation from Fights created by someone else.
+            friendships, invitations, Fight memberships, scores, feature requests and
+            votes you posted, and every Fight you created. It also removes your
+            participation from Fights created by someone else.
           </p>
           <p>
             When FitFight has a revocable Sign in with Apple credential, it asks Apple to

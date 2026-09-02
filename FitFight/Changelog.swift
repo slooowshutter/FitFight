@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 2,
+            notes: "You → Settings → Requests is a real feature-and-bug board: post, upvote, report, or block. It is not a fourth tab. Posts are public to signed-in users."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 2,
             notes: "FitFight now focuses on private Steps challenges: invite people by exact username, choose a duration, agree on the action, and compare Apple Health Steps. Privacy, Support, Versions, and permanent account deletion are available under You."
         ),
         ReleaseNote(

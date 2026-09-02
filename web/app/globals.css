@@ -89,7 +89,6 @@ footer {
   box-shadow: 0 8px 28px rgba(53, 128, 79, 0.24);
 }
 
-.beta-pill,
 .status {
   display: inline-flex;
   align-items: center;
@@ -98,13 +97,6 @@ footer {
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.08em;
-}
-
-.beta-pill {
-  padding: 9px 13px;
-  border: 1px solid var(--hairline);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.03);
 }
 
 .live-dot {

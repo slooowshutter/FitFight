@@ -11,6 +11,7 @@ enum ScreenshotExport {
     }
 
     static let canvas = CGSize(width: 393, height: 852)
+    static let appStoreCanvas = CGSize(width: 440, height: 956)
     static let tallHeight: CGFloat = 1800
     static let designSystemSliceHeight: CGFloat = 2_600
     static let designSystemSlices = 5
@@ -25,6 +26,17 @@ enum ScreenshotExport {
         for shot in shots(model: model) {
             write(shot.view(themeStore, model), name: shot.name, height: canvas.height, to: folder)
             write(shot.view(themeStore, model), name: shot.name + "-full", height: tallHeight, to: folder)
+        }
+
+        for shot in appStoreShots(model: model) {
+            write(
+                shot.view(themeStore, model),
+                name: shot.name,
+                size: appStoreCanvas,
+                scale: 3,
+                jpeg: true,
+                to: folder
+            )
         }
 
         let light = ThemeStore(transient: .day)
@@ -103,6 +115,28 @@ enum ScreenshotExport {
         ]
     }
 
+    private static func appStoreShots(model: AppModel) -> [Shot] {
+        let fight = model.fights.first { $0.id == "sweat" }
+        let invited = model.fights.first { $0.id == "desk" }
+        return [
+            Shot(name: "appstore-01-fights") { store, model in
+                frame(FightsListView(), tab: .fights, themeStore: store, model: model)
+            },
+            Shot(name: "appstore-02-fight-detail") { store, model in
+                frame(detail(fight), tab: .fights, themeStore: store, model: model)
+            },
+            Shot(name: "appstore-03-new") { store, model in
+                frame(NewFightView(), tab: .newFight, themeStore: store, model: model)
+            },
+            Shot(name: "appstore-04-invitation") { store, model in
+                frame(detail(invited), tab: .fights, themeStore: store, model: model)
+            },
+            Shot(name: "appstore-05-you") { store, model in
+                frame(YouView(), tab: .you, themeStore: store, model: model)
+            }
+        ]
+    }
+
     /// Lays the whole page out once, then shows one slice of it.
     private static func designSystem(_ store: ThemeStore, slice: Int) -> AnyView {
         let theme = store.theme
@@ -137,7 +171,7 @@ enum ScreenshotExport {
         model: AppModel
     ) -> AnyView {
         let theme = themeStore.theme
-        let session = SessionStore(preview: ())
+        let session = SessionStore(screenshot: ())
         return AnyView(
             VStack(spacing: 0) {
                 VersionBanner()
@@ -157,10 +191,35 @@ enum ScreenshotExport {
         )
     }
 
-    private static func write(_ view: AnyView, name: String, height: CGFloat, to folder: URL, scale: CGFloat = 2) {
-        let renderer = ImageRenderer(content: view.frame(width: canvas.width, height: height))
+    private static func write(
+        _ view: AnyView,
+        name: String,
+        size: CGSize,
+        scale: CGFloat = 2,
+        jpeg: Bool = false,
+        to folder: URL
+    ) {
+        let renderer = ImageRenderer(content: view.frame(width: size.width, height: size.height))
         renderer.scale = scale
-        guard let image = renderer.uiImage, let data = image.pngData() else { return }
-        try? data.write(to: folder.appendingPathComponent("\(name).png"))
+        guard let image = renderer.uiImage,
+              let data = jpeg ? image.jpegData(compressionQuality: 1) : image.pngData() else { return }
+        let fileExtension = jpeg ? "jpg" : "png"
+        try? data.write(to: folder.appendingPathComponent("\(name).\(fileExtension)"))
+    }
+
+    private static func write(
+        _ view: AnyView,
+        name: String,
+        height: CGFloat,
+        to folder: URL,
+        scale: CGFloat = 2
+    ) {
+        write(
+            view,
+            name: name,
+            size: CGSize(width: canvas.width, height: height),
+            scale: scale,
+            to: folder
+        )
     }
 }

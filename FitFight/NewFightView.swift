@@ -35,7 +35,9 @@ struct NewFightView: View {
             peopleSection.padding(.top, theme.space.lg)
             lengthSection.padding(.top, theme.space.lg)
             actionSection.padding(.top, theme.space.lg)
-            summary.padding(.top, theme.space.lg)
+            if !staticRender {
+                summary.padding(.top, theme.space.lg)
+            }
 
             FFScreenCTA(
                 title: model.isCreatingFight ? "Starting…" : "Start fight",

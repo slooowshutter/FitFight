@@ -944,12 +944,12 @@ private enum AppModelFixtures {
     }
 
     static func load() -> Bundle {
-        let leo = Person(id: "leo", name: "Leo", handle: "@leo.runs", initials: "L")
-        let sam = Person(id: "sam", name: "Sam", handle: "@sam.sweats", initials: "S")
-        let ivy = Person(id: "ivy", name: "Ivy", handle: "@ivy.climbs", initials: "I")
-        let theo = Person(id: "theo", name: "Theo", handle: "@theo.rows", initials: "T")
-        let nina = Person(id: "nina", name: "Nina", handle: "@nina.lifts", initials: "N")
-        let you = Person(id: "you", name: "You", handle: "@maya.moves", initials: "MM", isYou: true)
+        let leo = Person(id: "leo", name: "@leo_runs", handle: "@leo_runs", initials: "L")
+        let sam = Person(id: "sam", name: "@sam_sweats", handle: "@sam_sweats", initials: "S")
+        let ivy = Person(id: "ivy", name: "@ivy_climbs", handle: "@ivy_climbs", initials: "I")
+        let theo = Person(id: "theo", name: "@theo_rows", handle: "@theo_rows", initials: "T")
+        let nina = Person(id: "nina", name: "@nina_lifts", handle: "@nina_lifts", initials: "N")
+        let you = Person(id: "you", name: "@maya_moves", handle: "@maya_moves", initials: "MM", isYou: true)
 
         let fights = [
             Fight(
@@ -965,8 +965,8 @@ private enum AppModelFixtures {
                 of: 3,
                 pending: 0,
                 kickerEmphasis: "12.0k",
-                kickerRest: "behind Leo",
-                listSubtitle: "12.0k behind Leo",
+                kickerRest: "behind @leo_runs",
+                listSubtitle: "12.0k behind @leo_runs",
                 standings: [
                     Standing(person: leo, score: 54_000, today: 16_000),
                     Standing(person: you, score: 42_000, today: 14_000),
@@ -1027,8 +1027,8 @@ private enum AppModelFixtures {
                 of: 4,
                 pending: 2,
                 kickerEmphasis: "3.2k steps",
-                kickerRest: "behind Sam",
-                listSubtitle: "3.2k steps behind Sam",
+                kickerRest: "behind @sam_sweats",
+                listSubtitle: "3.2k steps behind @sam_sweats",
                 standings: [
                     Standing(person: sam, score: 44800, today: 12100),
                     Standing(person: you, score: 41600, today: 8240),
@@ -1041,17 +1041,17 @@ private enum AppModelFixtures {
                 code: "FIGHT-556",
                 name: "Desk Job Revenge",
                 metric: .steps,
-                lengthDays: 5,
-                daysLeft: 5,
+                lengthDays: 3,
+                daysLeft: 3,
                 actionText: "Losers take the stairs all day",
                 status: .invited,
                 rank: 0,
                 of: 4,
                 pending: 2,
-                kickerEmphasis: "Theo challenged you",
-                listSubtitle: "Theo · 5 days",
+                kickerEmphasis: "@theo_rows challenged you",
+                listSubtitle: "@theo_rows · 3 days",
                 inviter: theo,
-                invitePitch: "Theo challenged you",
+                invitePitch: "@theo_rows challenged you",
                 inviteAction: "Accept",
                 standingsMeta: "2 in · 2 not replied",
                 standings: [
@@ -1072,10 +1072,10 @@ private enum AppModelFixtures {
                 rank: 0,
                 of: 3,
                 pending: 0,
-                kickerEmphasis: "Ivy challenged you",
-                listSubtitle: "Ivy · 7 days",
+                kickerEmphasis: "@ivy_climbs challenged you",
+                listSubtitle: "@ivy_climbs · 7 days",
                 inviter: ivy,
-                invitePitch: "Ivy challenged you",
+                invitePitch: "@ivy_climbs challenged you",
                 inviteAction: "Join",
                 standings: [
                     Standing(person: ivy, score: 0, today: 0)

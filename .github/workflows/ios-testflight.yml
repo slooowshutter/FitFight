@@ -21,7 +21,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: testflight
+  group: ios-distribution
   cancel-in-progress: false
 
 jobs:

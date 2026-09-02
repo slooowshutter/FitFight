@@ -1,4 +1,4 @@
-/// Written by TestFlight CI (`ios-testflight.yml`) before archive.
+/// Written by TestFlight or App Store CI before archive.
 /// Empty strings mean `SupabaseConfig` / `APIConfig` use their fallbacks.
 /// Do not put `sb_secret_...` here.
 enum BuildEnv {

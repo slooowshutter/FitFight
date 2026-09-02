@@ -12,9 +12,9 @@ Read this first, then `docs/`. Marc talks from his phone, often transcribing. Be
 - This Linux environment cannot compile or upload iOS. CI on GitHub-hosted `macos-26` does that.
 - Never put `.p8` / API keys / provisioning profiles in git or chat.
 - Keep the repo **public** (free GitHub macOS minutes). Don’t make it private without saying so.
-- Version label stays at the **top of the screen** (not the nav bar), e.g. `0.9.0 (48) · staging · 25 Aug`.
+- Version label stays at the **top of the screen** (not the nav bar), e.g. `1.0.0 · build N · staging · 2 Sep`.
 - Permanent **Versions** button: under You → Settings, and the version label at the top. Every user-facing ship adds a `ReleaseNote` in `FitFight/Changelog.swift` (same marketing version, new date/notes) and updates **Last TestFlight** in `docs/backlog.md`.
-- **Do not bump `MARKETING_VERSION` for TestFlight.** Phones already have **0.9.0** from the live-fight builds. Stay on `0.9.0`. Do not drop back to `0.8.0` — TestFlight will not replace `0.9.0 (42)` with `0.8.0 (47)`. CI still increments the **build number**. Changelog rows reuse `0.9.0`. Only bump marketing version for an App Store ship or if Marc asks.
+- **Do not bump `MARKETING_VERSION` for TestFlight.** The App Store release version is **1.0.0**. Stay on `1.0.0`; CI increments the **build number**. Changelog rows reuse `1.0.0`. Only bump marketing version for the next App Store version or if Marc asks.
 - Design tokens live in `docs/design/source/tokens.json` and are copied byte-for-byte into `FitFight/DesignSystem/tokens.json` for the app bundle. Don’t hardcode colours. The current system is **Night/Day with fixed semantic families**: Moss is you/winning, Ember is urgency/losing, and Gold is progress only. There is no accent picker.
 - Talk to Marc only for things only he can do: Apple login, GitHub secrets, TestFlight testers, legal, the hosted Supabase dashboard. Agents cannot `workflow_dispatch`. App pushes from non-`main` branches upload staging builds to TestFlight by themselves. `main` never uploads to TestFlight. Tell Marc a staging build is coming; he opens TestFlight → Update. Do not ask him to Run workflow.
 - Never nuke the hosted database. No `supabase db reset` / `db push` against production or `develop`, no `DROP TABLE` / `TRUNCATE` / `DROP SCHEMA` / `DROP DATABASE` unless Marc asked in that chat and the migration starts with `-- allow-destructive`. Never put `sb_secret_...`, `service_role`, or the database password in git, chat, or iOS. Never merge to `main` unless Marc asked to ship to production. Never merge to `develop` unless Marc asked. Production migrations apply only after `develop` is merged to `main`.
@@ -25,7 +25,7 @@ Read this first, then `docs/`. Marc talks from his phone, often transcribing. Be
 Current map: [`docs/status.md`](docs/status.md). Sign-in, username, direct-username Steps challenges, Apple Health aggregate sync, invitations, and standings work on staging.
 
 - Native SwiftUI iOS app, scheme `FitFight`, bundle ID `com.fitfight.mvp`.
-- First TestFlight upload **succeeded** (build `0.1.0 (1)`). Current TestFlight marketing version: **0.9.0**.
+- First TestFlight upload **succeeded** (build `0.1.0 (1)`). Current release/TestFlight marketing version: **1.0.0**.
 - Staging TestFlight on every non-`main` app push, plus daily `develop` at **18:00 UTC**. `main` never uploads to TestFlight.
 - Simulator compile on every PR.
 - Approved design source remains in `docs/design/source/`. The app uses Night/Day and one fixed semantic palette.
@@ -47,7 +47,7 @@ Product ideas go in [`docs/backlog.md`](docs/backlog.md). Marc says “put X on 
 
 1. Branch off `develop`. Open a PR **into `develop`**. Do not PR into `main` unless Marc is shipping to production.
 2. Add new `.swift` files to `FitFight.xcodeproj/project.pbxproj` (explicit file list, not a synchronized group). JSON in `DesignSystem/` must also be in the Resources build phase.
-3. If users will see it: append a `ReleaseNote` in `Changelog.swift` using the current `MARKETING_VERSION` (`0.9.0`). Do **not** change `MARKETING_VERSION` in `project.pbxproj`. CI bumps the build number. Only bump marketing version when Marc is shipping to the App Store or he asked in that chat.
+3. If users will see it: append a `ReleaseNote` in `Changelog.swift` using the current `MARKETING_VERSION` (`1.0.0`). Do **not** change `MARKETING_VERSION` in `project.pbxproj`. CI bumps the build number. Only bump marketing version for the next App Store version or when Marc asks in that chat.
 4. Don’t ask Marc to open Xcode or his Mac. After you push app code, TestFlight uploads itself. He opens TestFlight → Update. Do not ask him to merge first, or to Run workflow.
 5. Shipping to production is Marc merging `develop` → `main`. Agents do not do that unless he said so in that chat.
 6. Merged feature branches are deleted by CI. `main` and `develop` stay. Do not enable GitHub’s “Automatically delete head branches.”

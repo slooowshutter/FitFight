@@ -3,7 +3,7 @@ import Foundation
 /// Hosted project URL and the iOS publishable key.
 /// The publishable key is client configuration, not a secret. Never put `sb_secret_...` here.
 ///
-/// CI may overwrite `BuildEnv` before a TestFlight archive. Non-empty values win;
+/// CI may overwrite `BuildEnv` before a TestFlight or App Store archive. Non-empty values win;
 /// otherwise Info.plist (`FFSupabaseURL`, `FFSupabasePublishableKey`); otherwise the
 /// configuration-specific default below.
 enum SupabaseConfig {

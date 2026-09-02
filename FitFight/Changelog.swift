@@ -25,6 +25,13 @@ enum Changelog {
     /// Newest first. Add a row here whenever we ship a user-facing change.
     static let releases: [ReleaseNote] = [
         ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 2,
+            notes: "FitFight now focuses on private Steps challenges: invite people by exact username, choose a duration, agree on the action, and compare Apple Health Steps. Privacy, Support, Versions, and permanent account deletion are available under You."
+        ),
+        ReleaseNote(
             version: "0.9.0",
             year: 2026,
             month: 9,
@@ -279,6 +286,12 @@ enum Changelog {
             }
             return lhs.offset < rhs.offset
         }.map(\.element)
+    }
+
+    /// TestFlight keeps the full build history. Production starts at 1.0.
+    static var visible: [ReleaseNote] {
+        guard AppVersion.backend == "prod" else { return newestFirst }
+        return newestFirst.filter { !$0.version.hasPrefix("0.") }
     }
 
     static var current: ReleaseNote? {

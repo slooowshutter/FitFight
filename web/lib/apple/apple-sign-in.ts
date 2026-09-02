@@ -84,6 +84,10 @@ function appleClientSecret(environment: AppleSignInEnvironment): string {
   return `${unsigned}.${signature}`;
 }
 
+export function verifyAppleSignInConfiguration(): void {
+  appleClientSecret(appleSignInEnvironment());
+}
+
 export async function exchangeAppleAuthorizationCode(
   authorizationCode: string,
   request: typeof fetch = fetch,

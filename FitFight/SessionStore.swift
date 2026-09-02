@@ -43,13 +43,14 @@ final class SessionStore: ObservableObject {
     /// invisible to its own owner (`profiles_select_visible` hides `deleted_at`
     /// rows), which would otherwise leave the app waiting forever.
     @Published private(set) var profileUnavailable = false
+    private var screenshotSignedIn = false
 
     let client: SupabaseClient
     private let api = FitFightAPI()
     private static let handleChosenKey = "ff.handle.chosen"
     private static let profileCachePrefix = "fitfight.profile."
 
-    var isSignedIn: Bool { authSession != nil }
+    var isSignedIn: Bool { authSession != nil || screenshotSignedIn }
 
     var needsOnboarding: Bool {
         guard isSignedIn, let profile else { return false }
@@ -78,6 +79,18 @@ final class SessionStore: ObservableObject {
     /// Screenshot / preview: no Keychain listener.
     convenience init(preview: Void) {
         self.init(listenForSession: false)
+    }
+
+    /// App Store screenshot fixture: signed in without touching Keychain or hosted data.
+    convenience init(screenshot: Void) {
+        self.init(listenForSession: false)
+        screenshotSignedIn = true
+        profile = FitFightProfile(
+            userId: UUID(uuidString: "00CBEF0E-6851-4AAB-B47A-88B0D7946738")!,
+            handle: "maya_moves",
+            displayName: "Maya",
+            handleSetAt: "2026-09-02T00:00:00Z"
+        )
     }
 
     func signInWithApple(

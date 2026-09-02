@@ -15,7 +15,7 @@ One line: challenge friends to a private Steps fight; most steps wins, and the l
 
 Do not rename the bundle ID without Apple + CI updates.
 
-## Current v0.9 scope — 31 Aug 2026
+## Current 1.0 scope — 2 Sep 2026
 
 - Three tabs: **Fights**, **New**, **You**.
 - Every fight is **Steps × highest total**. There are no other metrics or scoring modes.
@@ -36,7 +36,7 @@ The web kit in [`docs/design/source/`](design/source/README.md) is the look. Swi
 - Live fight cards carry their own leaderboard and money line
 - Version label at the top; Versions under You → Settings
 
-That was the original port, not the current product. Marketing version is now `0.9.0`; CI bumps only the **build number** for TestFlight. Do **not** bump marketing version for a TestFlight ship. See [`shipping.md`](shipping.md#versions-vs-builds-why-friends-wait).
+That was the original port, not the current product. Marketing version is now `1.0.0`; CI bumps only the **build number** for TestFlight. Do **not** bump marketing version for a TestFlight ship. See [`shipping.md`](shipping.md#versions-vs-builds-why-friends-wait).
 
 ## v0.6 (design exploration) — retired 25 Aug 2026
 

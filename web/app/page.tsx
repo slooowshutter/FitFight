@@ -6,21 +6,18 @@ export default function HomePage() {
           <span className="brand-mark">FF</span>
           <span>FitFight</span>
         </a>
-        <span className="beta-pill">
-          <span className="live-dot" /> Private beta
-        </span>
       </header>
 
       <section className="hero" id="top">
         <div className="hero-copy">
-          <p className="eyebrow">FITNESS, WITH SOMETHING ON THE LINE</p>
+          <p className="eyebrow">PRIVATE STEPS CHALLENGES</p>
           <h1>
-            Put your steps<br />
-            where your <span>mouth is.</span>
+            See who takes<br />
+            the most <span>steps.</span>
           </h1>
           <p className="lede">
-            Challenge a friend, connect Apple Health, and let every step decide
-            who gets bragging rights.
+            Start a private challenge with friends, connect Apple Health, and
+            see who records the most steps.
           </p>
           <a className="primary-action" href="#how-it-works">
             See how it works <span aria-hidden="true">↓</span>
@@ -82,8 +79,8 @@ export default function HomePage() {
         <div className="steps">
           <article>
             <span>01</span>
-            <h3>Pick a friend</h3>
-            <p>Start a Steps fight and invite someone who talks a big game.</p>
+            <h3>Add a friend</h3>
+            <p>Start a private Steps fight with their exact username.</p>
           </article>
           <article>
             <span>02</span>
@@ -103,7 +100,7 @@ export default function HomePage() {
           <span className="brand-mark">FF</span>
           <span>FitFight</span>
         </a>
-        <p>Every step counts. Some count more.</p>
+        <p>Challenge friends. Keep moving.</p>
         <span>© 2026 FitFight</span>
       </footer>
     </main>

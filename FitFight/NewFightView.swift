@@ -5,6 +5,7 @@ struct NewFightView: View {
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var steps: HealthKitStepsStore
     @Environment(\.ffTheme) private var theme
+    @Environment(\.ffStaticRender) private var staticRender
 
     @State private var username = ""
     @State private var inviteHandles: [String] = []
@@ -34,7 +35,9 @@ struct NewFightView: View {
             peopleSection.padding(.top, theme.space.lg)
             lengthSection.padding(.top, theme.space.lg)
             actionSection.padding(.top, theme.space.lg)
-            summary.padding(.top, theme.space.lg)
+            if !staticRender {
+                summary.padding(.top, theme.space.lg)
+            }
 
             FFScreenCTA(
                 title: model.isCreatingFight ? "Starting…" : "Start fight",
@@ -81,24 +84,35 @@ struct NewFightView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 FFSectionHeader(title: "Friends")
-                FFPill("\(inviteHandles.count + 1) players", style: .softMoss)
+                FFPill(
+                    "\(inviteHandles.count + 1) \(inviteHandles.isEmpty ? "player" : "players")",
+                    style: .softMoss
+                )
             }
             Text("Add at least one exact username. They must have opened FitFight and chosen one.")
                 .ffType(.caption)
                 .foregroundStyle(theme.textSecondary)
                 .lineSpacing(2)
             HStack(spacing: 8) {
-                TextField("@username", text: $username)
-                    .font(.ff(15, 700))
-                    .foregroundStyle(theme.text)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .submitLabel(.join)
-                    .padding(.horizontal, 15)
-                    .padding(.vertical, 13)
-                    .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
-                    .ffBorder(usernameError == nil ? theme.line : theme.emberText, radius: theme.radius.field)
-                    .onSubmit { addUsername() }
+                Group {
+                    if staticRender {
+                        Text(username.isEmpty ? "@username" : username)
+                            .foregroundStyle(username.isEmpty ? theme.textFaint : theme.text)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    } else {
+                        TextField("@username", text: $username)
+                            .foregroundStyle(theme.text)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .submitLabel(.join)
+                            .onSubmit { addUsername() }
+                    }
+                }
+                .font(.ff(15, 700))
+                .padding(.horizontal, 15)
+                .padding(.vertical, 13)
+                .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
+                .ffBorder(usernameError == nil ? theme.line : theme.emberText, radius: theme.radius.field)
                 FFButton(
                     title: "Add",
                     size: .small,
@@ -168,18 +182,26 @@ struct NewFightView: View {
             Text("What does the loser have to do?")
                 .ffType(.caption)
                 .foregroundStyle(theme.textSecondary)
-            TextField("Loser cooks dinner", text: $actionText)
-                .font(.ff(15, 700))
-                .foregroundStyle(theme.text)
-                .padding(.horizontal, 15)
-                .padding(.vertical, 13)
-                .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
-                .ffBorder(theme.line, radius: theme.radius.field)
-                .onChange(of: actionText) { _, value in
-                    if value.count > 120 {
-                        actionText = String(value.prefix(120))
+            Group {
+                if staticRender {
+                    Text(actionText.isEmpty ? "Loser cooks dinner" : actionText)
+                        .foregroundStyle(actionText.isEmpty ? theme.textFaint : theme.text)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    TextField("Loser cooks dinner", text: $actionText)
+                        .foregroundStyle(theme.text)
+                        .onChange(of: actionText) { _, value in
+                            if value.count > 120 {
+                                actionText = String(value.prefix(120))
+                            }
+                        }
                     }
-                }
+            }
+            .font(.ff(15, 700))
+            .padding(.horizontal, 15)
+            .padding(.vertical, 13)
+            .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
+            .ffBorder(theme.line, radius: theme.radius.field)
         }
     }
 

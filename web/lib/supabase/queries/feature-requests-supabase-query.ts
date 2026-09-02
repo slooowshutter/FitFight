@@ -133,6 +133,7 @@ export async function toggleFeatureRequestVote(
       await sql`
         insert into public.feature_request_votes (request_id, user_id)
         values (${requestId}, ${userId})
+        on conflict do nothing
       `;
     }
     return loadVisibleFeatureRequest(userId, requestId, sql);

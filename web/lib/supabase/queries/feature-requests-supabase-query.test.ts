@@ -120,10 +120,10 @@ test("toggleFeatureRequestVote inserts when the user has not voted", async () =>
   const item = await toggleFeatureRequestVote(USER_ID, REQUEST_ID, database);
   assert.equal(item.voted, true);
   assert.equal(item.voteCount, 4);
-  assert.equal(
-    queries.some((entry) => entry.query.startsWith("insert into public.feature_request_votes")),
-    true,
+  const insert = queries.find((entry) =>
+    entry.query.startsWith("insert into public.feature_request_votes"),
   );
+  assert.match(insert?.query ?? "", /on conflict do nothing/);
 });
 
 test("toggleFeatureRequestVote deletes an existing vote", async () => {

@@ -20,6 +20,7 @@ struct RequestsView: View {
     @State private var showingCompose = false
     @State private var showingModerate = false
     @State private var moderateItem: BoardItem?
+    @State private var votingIDs: Set<UUID> = []
 
     enum Filter: String, CaseIterable, Identifiable, Hashable {
         case top = "Top"
@@ -172,20 +173,26 @@ struct RequestsView: View {
     }
 
     private func toggleVote(_ item: BoardItem) async {
-        guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
+        let id = item.id
+        guard votingIDs.insert(id).inserted else { return }
+        defer { votingIDs.remove(id) }
+        guard let index = items.firstIndex(where: { $0.id == id }) else { return }
         let current = items[index].request
         items[index].request.voted.toggle()
         items[index].request.voteCount += items[index].request.voted ? 1 : -1
         do {
             let token = try await session.freshAccessToken()
             let updated = try await FitFightAPI().toggleRequestVote(
-                requestID: current.id,
+                requestID: id,
                 accessToken: token
             )
-            items[index] = BoardItem(request: updated, ago: items[index].ago)
+            guard let latest = items.firstIndex(where: { $0.id == id }) else { return }
+            items[latest] = BoardItem(request: updated, ago: items[latest].ago)
             errorText = nil
         } catch {
-            items[index].request = current
+            if let latest = items.firstIndex(where: { $0.id == id }) {
+                items[latest].request = current
+            }
             errorText = displayError(error)
         }
     }

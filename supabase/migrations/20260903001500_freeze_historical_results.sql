@@ -36,6 +36,9 @@ begin
     new.scoring_engine_version := old.scoring_engine_version;
     new.rules_version := old.rules_version;
     new.stake_minor := old.stake_minor;
+    new.stake_kind := old.stake_kind;
+    new.time_zone := old.time_zone;
+    new.name := old.name;
     new.final_sync_grace_seconds := old.final_sync_grace_seconds;
     new.action_text := old.action_text;
     new.series_id := old.series_id;

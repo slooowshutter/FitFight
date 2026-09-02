@@ -144,8 +144,8 @@ select is(
 );
 select is(
   has_table_privilege('authenticated', 'public.fight_members', 'UPDATE'),
-  true,
-  'clients can update their own membership'
+  false,
+  'clients have no table-level fight_members update'
 );
 select is(
   has_table_privilege('authenticated', 'public.data_sources', 'INSERT'),

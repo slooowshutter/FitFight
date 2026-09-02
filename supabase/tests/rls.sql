@@ -350,6 +350,7 @@ select throws_ok(
       where fight_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
         and user_id = '33333333-3333-4333-8333-333333333333' $$,
   '42501',
+  'permission denied for table fight_members',
   'clients cannot overwrite their own score'
 );
 
@@ -371,11 +372,10 @@ set current_value = 1
 where fight_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
   and user_id = '11111111-1111-4111-8111-111111111111';
 
-select isnt(
-  (select current_value from public.fight_members
+select ok(
+  (select current_value is null from public.fight_members
     where fight_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
       and user_id = '11111111-1111-4111-8111-111111111111'),
-  1,
   'finalized member scores ignore later aggregation writes'
 );
 

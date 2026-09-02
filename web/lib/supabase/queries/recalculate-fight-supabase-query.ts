@@ -163,7 +163,6 @@ export async function recalculateFight(
 
   const nextRevision =
     Math.max(0, ...members.map((member) => member.input_revision ?? 0)) + 1;
-  const nowIso = now.toISOString();
   const endsAt = new Date(fight.ends_at);
   const graceEnds = new Date(endsAt.getTime() + fight.final_sync_grace_seconds * 1000);
 
@@ -204,18 +203,13 @@ export async function recalculateFight(
       outcome_minor: result.outcomeMinor,
       freshness: "recent",
       input_revision: nextRevision,
+      scoring_engine_version: scoringEngineVersion,
     };
     if (member.selected_source_id) {
       const completeThrough = sourcesById.get(member.selected_source_id)?.complete_through;
       if (completeThrough && Date.parse(completeThrough) >= Date.parse(fight.ends_at)) {
         patch.final_steps_complete = true;
       }
-    }
-    if (nextState === "final") {
-      patch.final_value = result.currentValue;
-      patch.finalized_at = nowIso;
-      patch.calculation_version = 1;
-      patch.scoring_engine_version = scoringEngineVersion;
     }
     const { error: updateError } = await admin
       .from("fight_members")

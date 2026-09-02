@@ -177,6 +177,7 @@ enum ScreenshotExport {
         return AnyView(
             VStack(spacing: 0) {
                 VersionBanner()
+                    .fixedSize(horizontal: false, vertical: true)
                 content
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     .clipped()

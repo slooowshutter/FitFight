@@ -2,12 +2,12 @@
 
 Status: **approved architecture and composable Fight-rule model; provider-specific Metric and payment specifications remain future work**
 
-Last reviewed: **2026-08-30**
+Last reviewed: **2026-09-02**
 Decision horizon: **the next 6–12 months**
 
 This is the source of truth for how the real FitFight product should be built. It covers the iOS app, website, backend, authentication, access, fitness providers, synchronization, scoring, notifications, links, privacy, operations, and repository layout.
 
-**How to use this document:** it is a golden guide, not a build checklist. Follow it so new work fits the same model. Do not implement the whole thing. Current work is the empty platform (`supabase/`) and then the minimum Apple Health **Steps** Fight. Do not build Active Minutes, Workout Count, direct WHOOP/Strava, payments, notifications, social, or the website until [`backlog.md`](backlog.md) says so. The mock New screen may still show three metrics because that is the approved design kit; production scoring is Steps only.
+**How to use this document:** it is a golden guide, not a build checklist. Follow it so new work fits the same model. Do not implement the whole thing. Production scoring is Apple Health **Steps**. Do not build Active Minutes, Workout Count, direct WHOOP/Strava, payments, notifications, social, or the website until [`backlog.md`](backlog.md) says that item is the current work. Source catalog and Apple bulk-ingest design: [`research/data-sources.md`](research/data-sources.md). Staging may collect more HealthKit **types** for metric R&D without changing 1.0 Fight scores. Decisions 7 and 10 still apply to **scoring** payloads.
 
 This is a reference, not a requirement to build everything at once. Sections 1–9 contain the product and architecture decisions; the later sections explain how those decisions can be implemented safely when their phase arrives.
 
@@ -351,6 +351,8 @@ The consent record belongs on `fight_members`: acceptance copy version, source, 
 Disconnecting a provider or revoking Collection consent stops future ingestion and applies that provider's deletion/retention policy. A live Fight visibly marks the source incomplete and applies the disclosed withdrawal/incomplete-data rule. Completed history can remain only where the User's consent, applicable law, and provider terms allow it.
 
 ## 8. Provider strategy: hardware, apps, and cloud APIs
+
+Living catalog (HealthKit vs API, size, adapter order): [`research/data-sources.md`](research/data-sources.md). That file is the ingest-size design for historical Apple Health (statistics first, gzip+day/type chunks + TUS only if samples are required). Do not re-ship a single uncompressed raw-steps dump.
 
 ### Provider categories
 

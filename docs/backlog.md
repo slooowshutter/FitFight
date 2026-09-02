@@ -23,11 +23,15 @@ Honest works / doesn’t / next: [`status.md`](status.md). Read that before the 
 
 **Current scope lock (3 Sep 2026):** three tabs (**Fights**, **New**, **You**); direct exact-username invitations; Steps × highest total; a required typed loser action; and 3-day, 1-week, 2-week, or 1-month durations. Do not restore friends, the old Requests tab, money, other metrics, alternate scoring, or removed settings unless Marc explicitly reopens that scope.
 
+**Data sources:** catalog and Apple ingest design live in [`research/data-sources.md`](research/data-sources.md). Production 1.0 scoring stays Apple Health Steps. Collecting extra types on staging is not the same as scoring them. Do not implement every vendor API in one PR.
+
 ## Urgent
 
 ### Freeze historical results against aggregation-code changes
 
 Changing normalization, aggregation, or scoring code must not silently rewrite previously finalized history. Persist the calculation version, input revision, calculated value, and finalized time used for each historical day and Fight result. A new code version applies prospectively unless an explicit, audited backfill is approved.
+
+This is still **Urgent**. Do it before any new scored Metric. Collecting extra HealthKit types on staging must not rewrite existing Step Fight results.
 
 Provider corrections, deletion tombstones, and late device syncs may still update an unfinalized day during its disclosed correction window. Once finalized, that day's stored result remains immutable except through an explicit audited correction. Decide the day-finalization boundary and correction window before relying on historical totals for recommendations or completed Fights.
 
@@ -62,10 +66,21 @@ The phone’s job is: show the UI, read Apple Health Steps when it is open (or b
 
 ## Now
 
-- Marc: Apple → On on the **new** develop Auth ([providers](https://supabase.com/dashboard/project/zstzbfocunthczzubggz/auth/providers)), client ID `com.fitfight.mvp`.
-- Marc: add the Sign in with Apple key and a stable 32-byte token-encryption key to the staging and production Vercel environments before testing fresh sign-in or submitting.
-- Marc: one Steps fight on staging. Exact username, required action, Apple Health, Start **once**.
-- Participants on TestFlight Internal Testing. Same build, their own Apple IDs and usernames. Start with a 3-day Steps fight.
+Work top to bottom. Catalog of sources: [`research/data-sources.md`](research/data-sources.md).
+
+1. **Catalog + Apple ingest design (docs).** Sources, HealthKit vs API, and how to pull years of Apple data without a 100MB raw dump. *This PR.*
+2. **Apple Health ingest v2 (staging).** Expand HealthKit **types** using statistics and workouts first (distance, energy, exercise time, stand, workouts, sleep, resting HR, weight). Incremental after backfill. Gzip + day/type chunks + TUS **only** if a type still needs samples. Consent, Info.plist, privacy labels, deletion. Marc + friends use TestFlight to invent metrics. **Do not change 1.0 Fight scoring.** Do not put this in the reviewed App Store binary unless Marc asks to resubmit.
+3. **Freeze historical results** (also listed under Urgent). Required before any new scored Metric.
+4. **First extra Metric from Apple data only** (example: workout count or sleep). Spec + Changelog. Still no WHOOP OAuth.
+5. **WHOOP direct API** — Recovery / Strain / RMSSD only. Marc creates the WHOOP developer app and secrets. Confirm WHOOP allows a derived score on a Fight card. HealthKit already covers WHOOP workouts/sleep/steps if the user exports them.
+6. Next vendor adapter **one at a time** for scores HealthKit cannot provide: Oura Readiness or Garmin Body Battery (Garmin needs enterprise approval), then others in the catalog. Google Health API only after a phone check that Fitbit/Pixel data is missing from HealthKit.
+
+Marc / ops (still needed for staging):
+
+- Apple → On on develop Auth ([providers](https://supabase.com/dashboard/project/zstzbfocunthczzubggz/auth/providers)), client ID `com.fitfight.mvp`.
+- Sign in with Apple key and token-encryption key in staging and production Vercel if not already set.
+- One Steps fight on staging. Exact username, required action, Apple Health, Start **once**.
+- Participants on TestFlight Internal Testing. Same build, their own Apple IDs.
 
 ## Next
 
@@ -73,12 +88,14 @@ The phone’s job is: show the UI, read Apple Health Steps when it is open (or b
 - **Watch a real 3-day fight close.** Opening the app marks a due fight finished; the daily Vercel cron is the safety net. Proof is two phones: standings match, the Fight ends, and Steps after `ends_at` do not count. Do that before App Store.
 - **Smoke-test every allowed duration.** Confirm New sends 3, 7, 14, or 30 days and the detail screen shows the typed action and correct end date.
 - App Store when Marc says ship (`develop` → `main`).
+- Extra vendor APIs (Google Health, Polar, COROS, Withings, Peloton, …) only when the catalog Now list reaches that vendor. **Strava direct API stays blocked** without written approval. Android Health Connect only if an Android app is in scope.
 
 ## Later — outside the current product
 
 These are parked ideas, not launch requirements. None may restore friends, the old
 Requests tab, money, another metric, or alternate scoring without Marc explicitly
 reopening scope.
+New data sources follow [`research/data-sources.md`](research/data-sources.md); raw HealthKit samples stay later until a metric needs them.
 
 - **LLM review for Bugs & requests.** After someone submits a bug or feature request, an LLM could check that the write-up is specific enough and reject empty or abusive language. Decide provider, API keys, prompt, cost, failure behavior, and what the person sees when a post is refused before building this. Not in v1.
 - **Report and block on Bugs & requests.** The board is user-generated text. Apple will want a way to report a post and block a person. Do not invent that screen until this moves up.
@@ -92,6 +109,11 @@ reopening scope.
 - **Dual challenge (one person vs the pool).** Not everyone racing the same metric. One person sets a personal goal — e.g. lose 10 kg in 2 months or 5 months, numbers from a connected scale at home. Other people put money into a pot. If they hit it, they take the pot. If they miss, still open: pot goes back to the backers, or the person pays them. Needs a weight/scale source, not only steps. Different shape from today’s “everyone on the card” fights. No screen yet; do not invent one.
 - **Street stickers.** Stickers with a line like “do more sport / get fit and earn money at the same time,” plus a QR code. Marc sticks them everywhere. No design yet; do not invent one.
 - **Company-sponsored credits.** Companies (example: Anthropic, OpenAI, or Blend) give credits or money to users who complete a challenge — enough sport / steps in a month, e.g. $20 of credits. Kind of philanthropy / partnership. No screen yet; do not invent one.
+- **Partner prize for most steps.** Same family as company-sponsored credits, but the prize is a month (membership / product) from a partner brand, for the people who walk the most. Not designed. Do not invent a screen.
+- **Stake to the app.** People pay and set a goal. If they don’t do it, FitFight keeps the money. Different from a friend pot. No screen yet; do not invent one.
+- **Goal-matched pairing.** Pair people who want the same kind of goal. You do not have to know them. Messaging is optional: default is no DMs. If there is a chat, it can be fully anonymous. Not a screen yet; do not invent one.
+- **Home-screen widget.** iOS widget for live fights: which challenges you are in and standings / rank. Glanceable, not a second app. No design yet; do not invent one.
+- **Easy invite + join mid-month (prorate).** Join codes already shipped. Remaining Later idea: a monthly window where someone who joins halfway prorates stake and winnings. Exact ranking not designed. Do not invent a screen.
 - **Challenge social / activity social.** The app is also a small social for friends on a fight. On a recurring bet (e.g. 45 kg dumbbell), people post progress — videos, what they did — to the challenge, both to share and to prove they made it. See what friends did, compare, encourage. Mix of Strava-style activity sharing and the bet. Fitness because people do it together.
   Also a place for accomplishments across apps and sports: one friend hikes, another bikes, they don’t share an app today so they send photos in Messages. Here they can post the activity, show the source (which provider), and share stats if they want. A friend feed even when you don’t have a fight with them. Maybe later: more than one feed (friends / fights / groups). Do not invent those tabs yet.
   Faking is fine for now. People will fake it. Figure anti-cheat later. For now: build the app, make it fun, let people share if they want. Steps Fights still come first; social is Later, not blocked on proof.

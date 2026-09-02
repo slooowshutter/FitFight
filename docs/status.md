@@ -2,7 +2,7 @@
 
 Read this before building. Last updated **4 Sep 2026**. App: **1.0.0**.
 
-Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, notifications, social, or a broader marketing site unless [`backlog.md`](backlog.md) says so. Only the public privacy and support pages exist on the web.
+Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, notifications, social, or a broader marketing site unless [`backlog.md`](backlog.md) says that item is the current work. Source catalog: [`research/data-sources.md`](research/data-sources.md). Only the public privacy and support pages exist on the web.
 
 ---
 
@@ -66,7 +66,7 @@ The native Fight path uses the API to create and join; Apple Health synchronizat
 | Bugs & requests | Works under You → Settings. Signed-in people can post a bug or a feature request, browse the board, upvote, and comment with their username. |
 | Privacy / Support | Pages are implemented and linked under You → Settings. Staging uses `staging.fitfight.app`; production uses `fitfight.app`. Each route must be deployed before that build is tested or submitted. |
 | Account deletion | Permanently deletes the profile, username, authentication, Health/Steps data, relationships, invitations, memberships, scores, owned Fights, and bugs/requests the User posted; removes participation from other Fights; clears local Health sync state; and revokes a stored Apple credential when available. |
-| WHOOP / Strava | Not built |
+| WHOOP / Strava / Fitbit / Garmin APIs | Not built. Catalog and order: [`research/data-sources.md`](research/data-sources.md). |
 | Removed scope | No persistent friends, Requests tab, money/payouts, bragging-rights option, other Metrics, goals, custom dates, or dead settings/actions. |
 
 ---
@@ -83,4 +83,6 @@ The native Fight path uses the API to create and join; Apple Health synchronizat
 
 ## Next product work
 
-Two phones: invite by exact username, accept, run a 3-day Steps challenge, verify the typed action and matching standings, and confirm the Fight finishes at the cutoff. Also smoke-test creation for 7 / 14 / 30 days. Then App Store when Marc says.
+**Data sources** (Marc, 2 Sep 2026): catalog is [`research/data-sources.md`](research/data-sources.md). Ordered work is in [`backlog.md`](backlog.md) **Now**. Next code is Apple Health ingest v2 on **staging** (more types via statistics/workouts, compress/chunk if samples, do not change 1.0 Fight scores). Do not wire every vendor API in one PR. The submitted App Store 1.0 binary stays Steps aggregates unless Marc asks to resubmit.
+
+Two-phone Steps proof (invite, matching standings, fight close) is still worth doing on staging if it has not been proven.

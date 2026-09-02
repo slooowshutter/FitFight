@@ -24,7 +24,7 @@ The iOS workflows **must** stay GitHub-hosted. Never `self-hosted`. Apple requir
 
 Fastlane: `fastlane/Fastfile` lane `beta` uploads staging TestFlight builds. Lane `app_store_candidate` is CI- and `main`-only, archives Release with production configuration, and uploads the binary to App Store Connect without selecting it or submitting it for review. Both use automatic signing + App Store Connect API key (`-allowProvisioningUpdates`) and share one non-cancelling concurrency group so signing and build-number allocation cannot race. The production lane does not revoke team certificates; it fails safely if automatic signing cannot create one. Do **not** also set `export_xcargs` to the same `-authenticationKeyPath` flags — gym passes `xcargs` into export and duplicates the flag.
 
-Build number is not committed; CI sets `CURRENT_PROJECT_VERSION` at archive time from TestFlight (`latest + 1`). Leave `MARKETING_VERSION` at `0.9.0` (already on phones). Do not drop it — TestFlight will not offer `0.8.0` over an installed `0.9.0`.
+Build number is not committed; CI sets `CURRENT_PROJECT_VERSION` at archive time from TestFlight (`latest + 1`). Ordinary TestFlight changes keep the current marketing version. The first App Store release is `1.0.0`; do not change it again until the next App Store version or Marc asks.
 
 ## Versions vs builds (why friends wait)
 
@@ -34,11 +34,11 @@ That is why we do **not** bump `MARKETING_VERSION` on ordinary ships. We used to
 
 | What | Who sets it | When it changes |
 | --- | --- | --- |
-| Marketing version (`0.9.0`) | `MARKETING_VERSION` in `project.pbxproj` | App Store ship, or Marc asked |
+| Marketing version (`1.0.0`) | `MARKETING_VERSION` in `project.pbxproj` | App Store ship, or Marc asked |
 | Build number (`105`) | CI / Fastlane at archive time | Every distribution upload |
-| Versions list | `FitFight/Changelog.swift` | Every user-facing change; reuse `0.9.0` |
+| Versions list | `FitFight/Changelog.swift` | Every user-facing change; reuse the current marketing version |
 
-On-screen label is `0.9.0 · build 105 · staging`. Testers tap Update; they do not need a new marketing version.
+The first release-candidate label is `1.0.0 · build N · staging`. Testers tap Update; ordinary follow-up builds keep `1.0.0` and only increment the build number.
 
 ## Seeing the UI without a build
 
@@ -96,7 +96,7 @@ An app change merged to `main` starts `.github/workflows/ios-app-store.yml`. It 
 
 The workflow injects the production Supabase project, its iOS publishable key, and `https://fitfight.app` into `BuildEnv.swift`. Before upload it verifies the production Supabase URL/key, confirms its Apple provider is enabled, and requires the API health check to prove the production database, latest deletion migration, server key, and Apple server credentials are ready. It then checks the signed IPA for HealthKit background delivery, a valid privacy manifest, and the production configuration, and rejects any generated staging configuration. The public defaults match the values already compiled in the app; optional repository variables `SUPABASE_PRODUCTION_URL` and `SUPABASE_PRODUCTION_PUBLISHABLE_KEY` can rotate them, but the URL must remain the documented production project and the key must validate against it.
 
-Fastlane increments only the build number. The workflow requires the project marketing version to equal `FITFIGHT_RELEASE_VERSION` (`1.0.0`) and requires a matching `1.0.0` release note; it fails before archive while the project remains on `0.9.0`. The version bump and launch note happen separately on a reviewed release-branch PR into `develop`. That branch push and the later `develop` merge both produce the required staging TestFlight build. Marc then merges `develop` into `main` when he approves the production ship. The workflow does not change `MARKETING_VERSION`, upload metadata or screenshots, submit the build for review, or release it. After it succeeds, the candidate waits in App Store Connect for the separate metadata, review-information, build-selection, and submission steps.
+Fastlane increments only the build number. The workflow requires the project marketing version to equal `FITFIGHT_RELEASE_VERSION` (`1.0.0`) and requires a matching `1.0.0` release note. The reviewed App Store release PR into `develop` carries that version and launch note; its branch push and the later `develop` merge both produce a staging TestFlight build. Marc then merges `develop` into `main` when he approves the production ship. The workflow does not change `MARKETING_VERSION`, upload metadata or screenshots, submit the build for review, or release it. After it succeeds, the candidate waits in App Store Connect for the separate metadata, review-information, build-selection, and submission steps.
 
 Vercel also needs `CRON_SECRET` (Preview + Production). Vercel Cron sends it as `Authorization: Bearer …` to `/api/internal/close-fights` once daily at **03:00 UTC**, which is compatible with Hobby. Opening the app also closes due fights, so the cron is a safety net rather than the only close path. Never put this value in git or chat.
 

@@ -1,6 +1,6 @@
 # FitFight status — what works, what’s fake, what’s next
 
-Read this before building. Last updated **31 Aug 2026**. App: **0.9.0**.
+Read this before building. Last updated **2 Sep 2026**. App: **1.0.0**.
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, notifications, social, or a broader marketing site unless [`backlog.md`](backlog.md) says so. Only the public privacy and support pages exist on the web.
 
@@ -33,7 +33,7 @@ After the backend is configured, merge the feature PR into **`develop`**, not `m
 
 Verify the minimal product alongside Apple Health synchronization:
 
-1. TestFlight → **Update**. Look for `0.9.0 · build N · staging · 30 Aug` at the top.
+1. TestFlight → **Update**. Look for `1.0.0 · build N · staging · 2 Sep` at the top.
 2. Check Fights, a Fight detail, New, and You in both Night and Day. There are only three tabs: Fights, New, You.
 3. New accepts exact usernames, requires an action, and offers 1 hour / 6 hours / 1 day for testing plus 3 days / 1 week / 2 weeks / 1 month. **Start fight** shows Starting… and ignores extra taps.
 4. Confirm sign-in, username, Apple Health Steps, Fight invitations, standings, Privacy, Support, Versions, sign out, and Delete account.
@@ -50,7 +50,7 @@ The native Fight path uses Supabase; Apple Health synchronization and account de
 |---|---|
 | Welcome + Apple sign-in | Works |
 | Username onboarding | Works. Required once after sign-in. |
-| Version line | TestFlight always says `0.9.0 · build N · staging`; future App Store builds say `prod` |
+| Version line | Release-candidate TestFlight says `1.0.0 · build N · staging`; the App Store build says `prod` |
 | Create Steps challenge | Add one or more exact usernames, choose 1 / 6 hours or 1 / 3 / 7 / 14 / 30 days, and type the required loser action. Steps × highest total is fixed. |
 | Accept / Join | Phone updates your membership |
 | Invite participants | Exact username in New. They must have signed in and chosen one. There is no friendship or friend-request layer, and at least one invitee is required. |

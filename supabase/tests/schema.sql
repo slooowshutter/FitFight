@@ -187,6 +187,25 @@ select is(
   true,
   'users can update their display name'
 );
+select is(
+  has_column_privilege('authenticated', 'public.fight_members', 'state', 'UPDATE'),
+  true,
+  'clients can accept or decline their own membership'
+);
+select is(
+  has_column_privilege('authenticated', 'public.fight_members', 'current_value', 'UPDATE'),
+  false,
+  'clients cannot write fight scores'
+);
+select ok(
+  exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'fight_members'
+      and column_name = 'scoring_engine_version'
+  ),
+  'fight members store the scoring engine version used at freeze'
+);
 
 select ok(
   exists (

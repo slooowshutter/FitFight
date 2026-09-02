@@ -65,6 +65,8 @@ export type FightMemberRow = {
   final_steps_complete: boolean;
   final_value: number | string | null;
   finalized_at: string | null;
+  calculation_version: number | null;
+  scoring_engine_version: number | null;
 };
 
 export type DataSourceRow = {

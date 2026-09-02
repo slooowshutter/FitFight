@@ -344,5 +344,51 @@ select is(
   'unrelated users cannot read a series they are not in'
 );
 
+select throws_ok(
+  $$ update public.fight_members
+        set current_value = 999999
+      where fight_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+        and user_id = '33333333-3333-4333-8333-333333333333' $$,
+  '42501',
+  'clients cannot overwrite their own score'
+);
+
+reset role;
+update public.fights
+set state = 'final'
+where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+select isnt(
+  (select finalized_at from public.fight_members
+    where fight_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+      and user_id = '11111111-1111-4111-8111-111111111111'),
+  null,
+  'moving a fight to final freezes accepted member scores'
+);
+
+update public.fight_members
+set current_value = 1
+where fight_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  and user_id = '11111111-1111-4111-8111-111111111111';
+
+select isnt(
+  (select current_value from public.fight_members
+    where fight_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+      and user_id = '11111111-1111-4111-8111-111111111111'),
+  1,
+  'finalized member scores ignore later aggregation writes'
+);
+
+update public.fights
+set state = 'live'
+where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+select is(
+  (select state::text from public.fights
+    where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),
+  'final',
+  'a final fight cannot return to live'
+);
+
 select * from finish();
 rollback;

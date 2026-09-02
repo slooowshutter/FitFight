@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Sql } from "postgres";
 import { ApiError, ERROR_CODES } from "@/lib/http";
 import { nextFightState, observationOverlapsWindow } from "@/lib/scoring/fight-clock";
-import { scoreFight } from "@/lib/scoring/score-fight";
+import { scoreFight, scoringEngineVersion } from "@/lib/scoring/score-fight";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import {
@@ -195,6 +195,9 @@ export async function recalculateFight(
     if (!result) {
       continue;
     }
+    if (member.finalized_at) {
+      continue;
+    }
     const patch: Record<string, unknown> = {
       current_value: result.currentValue,
       rank: result.rank,
@@ -211,6 +214,8 @@ export async function recalculateFight(
     if (nextState === "final") {
       patch.final_value = result.currentValue;
       patch.finalized_at = nowIso;
+      patch.calculation_version = 1;
+      patch.scoring_engine_version = scoringEngineVersion;
     }
     const { error: updateError } = await admin
       .from("fight_members")

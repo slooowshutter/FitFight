@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { competitionRank, fightPot, scoreFight } from "./score-fight";
+import { competitionRank, fightPot, scoreFight, scoringEngineVersion } from "./score-fight";
 
 test("fight pot is stake times accepted count", () => {
+  assert.equal(scoringEngineVersion, 1);
   assert.equal(fightPot(1000, 3), 3000);
   assert.equal(fightPot(null, 3), 0);
   assert.equal(fightPot(500, 0), 0);

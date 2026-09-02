@@ -59,7 +59,7 @@ The native Fight path uses the API to create and join; Apple Health synchronizat
 | Daily totals | Sends Apple's merged daily buckets only for days relevant to active Fight charts. They are display data, not the source of the Fight score. |
 | Fights list | Every row is titled by the loser action, because a Fight is created with the fixed name `Steps Fight` and New never asks for one. The right-hand number is your gap to the person you are racing, moss when ahead and ember when behind; the days left sit under the action. There is no moss hero — live Fights are all the same size. |
 | Standings | Live scoring uses exact Fight-window HealthKit aggregates, not overlapping whole-day totals. Both phones read the same serving rows. Each standing shows relative sync freshness; ended Fights distinguish exact final-window coverage from the last available Steps. |
-| Fight end | Exact `ends_at` is the final cutoff. Opening the app closes due fights; the protected Vercel cron runs daily if nobody opens it. After finalization, later Steps cannot change the result. |
+| Fight end | Exact `ends_at` is the final cutoff. Opening the app closes due fights; the protected Vercel cron runs daily if nobody opens it. After finalization, later Steps and scoring-code changes cannot change the stored result. |
 | Tabs | Fights, New, You. The old Requests tab and Design are removed. |
 | Look | Night/Day, Nunito, fixed Moss/Ember/Gold semantics; no accent picker or public design-system showcase. |
 | Versions | Works under You → Settings; the version label stays at the top of every root screen. Staging TestFlight also shows an opaque notice under that line when a newer build has been uploaded. |
@@ -75,7 +75,7 @@ The native Fight path uses the API to create and join; Apple Health synchronizat
 
 - The server accepts a signed-in User's device upload as their own activity. Fine for two friends; not anti-cheat yet.
 - FitFight trusts Apple's current merged aggregate from the signed-in User's device. It does not retain the underlying raw samples or source/device provenance, so this is not an anti-cheat or audit trail.
-- Apple may revise its merged total after a Watch sync, edit, or deletion. Live snapshots can change until the exact Fight-end value is finalized; chart buckets never overwrite that exact-window score.
+- Apple may revise its merged total after a Watch sync, edit, or deletion. Live snapshots can change until the Fight is `final` and member `finalized_at` is set; completed civil days keep their stored chart total. Chart buckets never overwrite the exact-window score.
 - Same Apple ID on production vs staging is **two** accounts.
 - `web/` owns Apple Health aggregate ingestion and account deletion. There are no app-facing Postgres RPCs.
 
@@ -83,4 +83,4 @@ The native Fight path uses the API to create and join; Apple Health synchronizat
 
 ## Next product work
 
-Two phones: invite by exact username, accept, run a 3-day Steps challenge, verify the typed action and matching standings, and confirm the Fight finishes at the cutoff. Also smoke-test creation for 7 / 14 / 30 days. Then App Store when Marc says.
+Urgent freeze is in this PR. Marc still needs to tap Delete account once on staging. Two-phone Steps proof (invite, matching standings, fight close) is still worth doing if it has not been proven.

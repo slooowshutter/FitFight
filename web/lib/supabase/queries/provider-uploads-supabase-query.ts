@@ -464,7 +464,9 @@ export async function processProviderUpload(
           set current_value = ${item.record.steps}, freshness = 'recent',
             last_synced_at = now(),
             input_revision = coalesce(input_revision, 0) + 1
-          where fight_id = ${item.record.fight_id} and user_id = ${userId}
+          where fight_id = ${item.record.fight_id}
+            and user_id = ${userId}
+            and finalized_at is null
         `;
         const members = await sql<{
           user_id: string;
@@ -491,7 +493,9 @@ export async function processProviderUpload(
           await sql`
             update public.fight_members
             set rank = ${score.rank}, outcome_minor = ${score.outcomeMinor}
-            where fight_id = ${item.record.fight_id} and user_id = ${score.userId}
+            where fight_id = ${item.record.fight_id}
+              and user_id = ${score.userId}
+              and finalized_at is null
           `;
         }
       }

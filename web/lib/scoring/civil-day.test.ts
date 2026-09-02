@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { addCalendarDay, civilDayBounds, isCivilDay, resolveTimeZone } from "./civil-day";
+import { addCalendarDay, civilDayBounds, civilDayInTimeZone, isCivilDay, resolveTimeZone } from "./civil-day";
 
 test("civil day bounds use the profile time zone", () => {
   const utc = civilDayBounds("2026-08-24", "UTC");
@@ -23,4 +23,12 @@ test("invalid days and time zones are rejected or fall back", () => {
   assert.equal(addCalendarDay("2026-08-31"), "2026-09-01");
   assert.equal(resolveTimeZone("Not/AZone"), "UTC");
   assert.equal(resolveTimeZone(null), "UTC");
+  assert.equal(
+    civilDayInTimeZone(new Date("2026-08-30T13:53:27.350Z"), "Europe/Paris"),
+    "2026-08-30",
+  );
+  assert.equal(
+    civilDayInTimeZone(new Date("2026-08-30T21:30:00.000Z"), "America/New_York"),
+    "2026-08-30",
+  );
 });

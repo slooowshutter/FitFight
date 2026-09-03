@@ -119,6 +119,39 @@ test("Apple Health collection stores private days and sessions without touching 
   assert.ok(queries.every(({ query }) => !query.includes("public.data_sources")));
 });
 
+test("Apple Health collection inserts sessions in chunks under the Postgres parameter limit", async () => {
+  const { database, queries } = createDatabaseStub((query) => {
+    if (query.includes("insert into private.health_ingest_state")) {
+      return [{
+        complete_through: validCollection.complete_through,
+        server_now: "2026-08-30T14:00:00.000Z",
+      }];
+    }
+    return [];
+  });
+  const sessions = Array.from({ length: 501 }, (_, index) => ({
+    ...validCollection.sessions[0],
+    source_uuid: `b4c1285d-0232-4d15-b8cc-${index.toString(16).padStart(12, "0")}`,
+  }));
+
+  await syncHealthKitCollection(
+    "5b2216f4-762d-4890-a516-63046a01df31",
+    healthKitCollectionSyncSchema.parse({ ...validCollection, days: [], sessions }),
+    database,
+  );
+
+  const sessionInserts = queries.filter(({ query }) =>
+    query.includes("insert into private.health_sessions")
+  );
+  assert.equal(sessionInserts.length, 2);
+  const firstChunk = sessionInserts[0]?.values[0];
+  const secondChunk = sessionInserts[1]?.values[0];
+  assert.ok(firstChunk !== null && typeof firstChunk === "object" && "first" in firstChunk);
+  assert.ok(secondChunk !== null && typeof secondChunk === "object" && "first" in secondChunk);
+  assert.ok(Array.isArray(firstChunk.first) && firstChunk.first.length === 500);
+  assert.ok(Array.isArray(secondChunk.first) && secondChunk.first.length === 1);
+});
+
 test("Apple Health collection rejects an older complete_through", async () => {
   const { database } = createDatabaseStub((query) => {
     if (query.includes("insert into private.health_ingest_state")) {

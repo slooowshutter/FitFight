@@ -8,6 +8,8 @@ import type {
   HealthKitCollectionSyncResponse,
 } from "@/lib/types/healthkit/healthkit-collection";
 
+const INSERT_CHUNK = 500;
+
 export async function syncHealthKitCollection(
   userId: string,
   input: HealthKitCollectionSync,
@@ -56,31 +58,34 @@ export async function syncHealthKitCollection(
         input_hash: createHash("sha256").update(JSON.stringify(day)).digest("hex"),
         finalized_at: day.day < completeLocalDay ? new Date(input.complete_through) : null,
       }));
-      await sql`
-        insert into private.health_metric_days ${sql(
-          dayRows,
-          "user_id",
-          "metric",
-          "day",
-          "value",
-          "unit",
-          "starts_at",
-          "ends_at",
-          "time_zone",
-          "input_hash",
-          "finalized_at",
-        )}
-        on conflict (user_id, metric, day) do update
-        set value = excluded.value,
-          unit = excluded.unit,
-          starts_at = excluded.starts_at,
-          ends_at = excluded.ends_at,
-          time_zone = excluded.time_zone,
-          input_hash = excluded.input_hash,
-          finalized_at = excluded.finalized_at,
-          updated_at = now()
-        where private.health_metric_days.finalized_at is null
-      `;
+      for (let offset = 0; offset < dayRows.length; offset += INSERT_CHUNK) {
+        const chunk = dayRows.slice(offset, offset + INSERT_CHUNK);
+        await sql`
+          insert into private.health_metric_days ${sql(
+            chunk,
+            "user_id",
+            "metric",
+            "day",
+            "value",
+            "unit",
+            "starts_at",
+            "ends_at",
+            "time_zone",
+            "input_hash",
+            "finalized_at",
+          )}
+          on conflict (user_id, metric, day) do update
+          set value = excluded.value,
+            unit = excluded.unit,
+            starts_at = excluded.starts_at,
+            ends_at = excluded.ends_at,
+            time_zone = excluded.time_zone,
+            input_hash = excluded.input_hash,
+            finalized_at = excluded.finalized_at,
+            updated_at = now()
+          where private.health_metric_days.finalized_at is null
+        `;
+      }
     }
     if (input.sessions.length > 0) {
       const sessionRows = input.sessions.map((session) => ({
@@ -99,34 +104,37 @@ export async function syncHealthKitCollection(
             ? new Date(input.complete_through)
             : null,
       }));
-      await sql`
-        insert into private.health_sessions ${sql(
-          sessionRows,
-          "user_id",
-          "source_uuid",
-          "kind",
-          "activity_type",
-          "starts_at",
-          "ends_at",
-          "duration_seconds",
-          "energy_kcal",
-          "distance_m",
-          "input_hash",
-          "finalized_at",
-        )}
-        on conflict (user_id, source_uuid) do update
-        set kind = excluded.kind,
-          activity_type = excluded.activity_type,
-          starts_at = excluded.starts_at,
-          ends_at = excluded.ends_at,
-          duration_seconds = excluded.duration_seconds,
-          energy_kcal = excluded.energy_kcal,
-          distance_m = excluded.distance_m,
-          input_hash = excluded.input_hash,
-          finalized_at = excluded.finalized_at,
-          updated_at = now()
-        where private.health_sessions.finalized_at is null
-      `;
+      for (let offset = 0; offset < sessionRows.length; offset += INSERT_CHUNK) {
+        const chunk = sessionRows.slice(offset, offset + INSERT_CHUNK);
+        await sql`
+          insert into private.health_sessions ${sql(
+            chunk,
+            "user_id",
+            "source_uuid",
+            "kind",
+            "activity_type",
+            "starts_at",
+            "ends_at",
+            "duration_seconds",
+            "energy_kcal",
+            "distance_m",
+            "input_hash",
+            "finalized_at",
+          )}
+          on conflict (user_id, source_uuid) do update
+          set kind = excluded.kind,
+            activity_type = excluded.activity_type,
+            starts_at = excluded.starts_at,
+            ends_at = excluded.ends_at,
+            duration_seconds = excluded.duration_seconds,
+            energy_kcal = excluded.energy_kcal,
+            distance_m = excluded.distance_m,
+            input_hash = excluded.input_hash,
+            finalized_at = excluded.finalized_at,
+            updated_at = now()
+          where private.health_sessions.finalized_at is null
+        `;
+      }
     }
 
     return {

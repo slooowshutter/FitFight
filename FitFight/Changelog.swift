@@ -36,6 +36,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 3,
+            notes: "Tapping Fights again while a fight is open returns you to the list. You can also swipe from the left edge to go back, like in other iOS apps."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 3,
             notes: "Fight setup now shows New fight beside the first-step progress, then replaces it with Back as you move through the remaining steps."
         ),
         ReleaseNote(

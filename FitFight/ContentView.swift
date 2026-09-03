@@ -145,7 +145,9 @@ struct ContentView: View {
 }
 
 /// Hidden nav bars disable edge-swipe back. The Fights stack owns the gesture
-/// delegate for its lifetime so leaving a fight cannot leave swipe enabled on the list.
+/// delegate so the list cannot freeze after a pop. `canPop` (not the list's
+/// window) decides whether swipe is on, because NavigationStack detaches the
+/// list view while a fight is open.
 private struct InteractivePopGestureEnabler: UIViewRepresentable {
     var canPop: Bool
     var ownsDelegate: Bool
@@ -194,27 +196,19 @@ private struct InteractivePopGestureEnabler: UIViewRepresentable {
         }
 
         func sync(from view: UIView) {
-            guard view.window != nil else {
-                if ownsDelegate {
-                    navigationController?.interactivePopGestureRecognizer?.isEnabled = false
-                }
-                return
-            }
             var responder: UIResponder? = view
-            var nav: UINavigationController?
             while let current = responder {
                 if let found = current as? UINavigationController {
-                    nav = found
+                    navigationController = found
                     break
                 }
                 if let controller = current as? UIViewController, let found = controller.navigationController {
-                    nav = found
+                    navigationController = found
                     break
                 }
                 responder = current.next
             }
-            guard let nav else { return }
-            navigationController = nav
+            guard let nav = navigationController else { return }
             if ownsDelegate {
                 nav.interactivePopGestureRecognizer?.delegate = self
                 nav.interactivePopGestureRecognizer?.isEnabled = canPop

@@ -32,10 +32,8 @@ struct FightDetailView: View {
                     footnote: "\(fight.metric.eyebrow) · \(fight.durationLabel) fight",
                     timeLeft: timeLeft
                 )
-                statTiles
             } else {
                 liveHero
-                statTiles
             }
 
             if !pendingJoin {
@@ -177,21 +175,6 @@ struct FightDetailView: View {
             delta: fight.kickerEmphasis,
             ahead: fight.rank == 1
         )
-    }
-
-    private var statTiles: some View {
-        HStack(spacing: 12) {
-            FFStatTile(
-                tag: "Total", tone: .moss,
-                title: fight.metric.title, metric: model.formatScore(you?.score ?? 0, metric: fight.metric),
-                caption: "\(fight.durationLabel) total"
-            )
-            FFStatTile(
-                tag: "Today", tone: (you?.today ?? 0) >= 0 ? .moss : .ember,
-                title: fight.metric.title, metric: model.formatDelta(you?.today ?? 0, metric: fight.metric),
-                caption: "since midnight"
-            )
-        }
     }
 
     private var ringProgress: Double {

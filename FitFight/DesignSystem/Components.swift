@@ -229,6 +229,114 @@ struct FFScreenCTA: View {
     private var fill: Color { kind == .ember ? theme.emberFill : theme.mossFill }
 }
 
+/// Track with a knob on the left. Drag the knob across to confirm.
+struct FFSlideToConfirm: View {
+    let title: String
+    var enabled: Bool = true
+    var busy: Bool = false
+    let action: () -> Bool
+
+    @Environment(\.ffTheme) private var theme
+    @State private var drag: CGFloat = 0
+    @State private var completed = false
+
+    private let knobSize: CGFloat = 44
+    private let inset: CGFloat = 8
+
+    var body: some View {
+        GeometryReader { geo in
+            let travel = max(0, geo.size.width - inset * 2 - knobSize)
+            let offset = completed ? travel : min(max(0, drag), travel)
+            let progress = travel == 0 ? 0 : offset / travel
+
+            ZStack {
+                Capsule()
+                    .fill(enabled ? theme.mossFill : theme.disabledBg)
+
+                HStack(spacing: 8) {
+                    if busy {
+                        ProgressView()
+                            .controlSize(.small)
+                            .tint(theme.mossOn)
+                    }
+                    Text(title)
+                        .ffType(.buttonLarge)
+                }
+                .foregroundStyle(enabled ? theme.mossOn : theme.disabledText)
+                .opacity(busy ? 1 : 1 - progress)
+                .allowsHitTesting(false)
+
+                HStack {
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundStyle(enabled ? theme.mossFill : theme.disabledText)
+                        .frame(width: knobSize, height: knobSize)
+                        .background(enabled ? theme.mossOn : theme.disabledBg, in: Circle())
+                        .offset(x: offset)
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, inset)
+            }
+            .frame(height: 60)
+            .contentShape(Capsule())
+            .gesture(slideGesture(travel: travel))
+            .accessibilityElement()
+            .accessibilityLabel(title)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityHint("Double tap to confirm")
+            .accessibilityAction {
+                confirm()
+            }
+        }
+        .frame(height: 60)
+        .onChange(of: busy) { _, isBusy in
+            if !isBusy {
+                reset()
+            }
+        }
+        .onChange(of: enabled) { _, isEnabled in
+            if !isEnabled {
+                reset()
+            }
+        }
+    }
+
+    private func slideGesture(travel: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 4)
+            .onChanged { value in
+                guard enabled, !busy, !completed else { return }
+                drag = min(max(0, value.translation.width), travel)
+            }
+            .onEnded { _ in
+                guard enabled, !busy, !completed else { return }
+                if travel > 0, drag >= travel * 0.85 {
+                    confirm()
+                } else {
+                    withAnimation(.timingCurve(0.16, 1, 0.3, 1, duration: 0.22)) {
+                        drag = 0
+                    }
+                }
+            }
+    }
+
+    private func confirm() {
+        guard enabled, !busy, !completed else { return }
+        completed = true
+        if action() {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        } else {
+            reset()
+        }
+    }
+
+    private func reset() {
+        completed = false
+        withAnimation(.timingCurve(0.16, 1, 0.3, 1, duration: 0.22)) {
+            drag = 0
+        }
+    }
+}
+
 /// Dashed affordance — empty slots and "start something" rows.
 struct FFAddRow: View {
     let title: String

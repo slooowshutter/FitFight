@@ -54,8 +54,8 @@ struct NewFightView: View {
     @ViewBuilder
     private var flowAction: some View {
         if step == 4 {
-            FFScreenCTA(
-                title: model.isCreatingFight ? "Starting…" : "Start fight",
+            FFSlideToConfirm(
+                title: model.isCreatingFight ? "Starting…" : "Slide to start",
                 enabled: canStart,
                 busy: model.isCreatingFight
             ) {
@@ -73,7 +73,7 @@ struct NewFightView: View {
                 FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
             }
         } else {
-            FFScreenCTA(title: "Next", enabled: canContinue) {
+            FFButton(title: "Next", size: .large, enabled: canContinue, fullWidth: true) {
                 step += 1
             }
         }
@@ -429,9 +429,9 @@ struct NewFightView: View {
         ) ?? startsAt.addingTimeInterval(durationParts.seconds)
     }
 
-    private func startFight() {
-        guard canStart else { return }
-        guard model.beginCreateFight() else { return }
+    private func startFight() -> Bool {
+        guard canStart else { return false }
+        guard model.beginCreateFight() else { return false }
 
         let startsAt = Date()
         let action = actionText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -447,6 +447,7 @@ struct NewFightView: View {
                 model.tab = .fights
             }
         }
+        return true
     }
 
     private func connectAppleHealth() {

@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 3,
+            notes: "Fight setup uses a normal Next button on the first steps, then a real slide-to-start control on review so creating a fight cannot be mistaken for a swipe."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 3,
             notes: "Fight setup now shows New fight beside the first-step progress, then replaces it with Back as you move through the remaining steps."
         ),
         ReleaseNote(

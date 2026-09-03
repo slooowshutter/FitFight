@@ -29,7 +29,7 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 3,
-            notes: "Fight setup now shows New Fight beside the first-step progress, then replaces it with Back as you move through the remaining steps."
+            notes: "Fight setup now shows New fight beside the first-step progress, then replaces it with Back as you move through the remaining steps."
         ),
         ReleaseNote(
             version: "1.0.0",

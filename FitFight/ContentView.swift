@@ -5,6 +5,8 @@ struct ContentView: View {
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
+    @Environment(\.scenePhase) private var scenePhase
+    @StateObject private var testFlightUpdate = TestFlightUpdateChecker()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -19,11 +21,41 @@ struct ContentView: View {
             }
         }
         .background(theme.bg.ignoresSafeArea())
+        .overlay(alignment: .bottom) {
+            if let build = testFlightUpdate.newerBuild {
+                FFToast(
+                    glyph: "↑",
+                    title: "New version on TestFlight",
+                    message: "Build \(build) is ready. Open TestFlight and tap Update.",
+                    tone: .moss,
+                    onClose: { testFlightUpdate.dismiss() }
+                )
+                .padding(.horizontal, theme.space.screenPadding)
+                .padding(.bottom, toastBottomPadding)
+                .onTapGesture { testFlightUpdate.openTestFlight() }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(theme.motion.sheet.animation, value: testFlightUpdate.newerBuild)
+        .task {
+            await testFlightUpdate.check()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            Task { await testFlightUpdate.check() }
+        }
         .sheet(isPresented: $model.showingVersions) {
             VersionsView()
                 .fitFightTheme(themeStore.theme)
                 .presentationBackground(themeStore.theme.bg)
         }
+    }
+
+    private var toastBottomPadding: CGFloat {
+        if session.isSignedIn, session.profile != nil, !session.needsOnboarding {
+            return 64
+        }
+        return theme.space.screenPadding
     }
 
     @ViewBuilder

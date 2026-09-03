@@ -148,6 +148,7 @@ jobs:
               f"    static let supabaseURL = {swift_string(supabase_url)}\n"
               f"    static let supabasePublishableKey = {swift_string(publishable_key)}\n"
               f"    static let apiBaseURL = {swift_string(api_url)}\n"
+              '    static let latestTestFlightURL = ""\n'
               "}\n"
           )
           print("Production services and generated build environment are ready")

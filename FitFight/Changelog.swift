@@ -36,6 +36,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 3,
+            notes: "Opening the app now shows an in-app notice when a newer TestFlight build is available, so you can open TestFlight and tap Update."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 3,
             notes: "Inside a fight, the Total and Today tiles under the main card are gone. The head-to-head card, action, standings, and daily breakdown stay."
         ),
         ReleaseNote(

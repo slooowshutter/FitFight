@@ -7,11 +7,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import {
   asNumber,
-  type DataSourceRow,
-  type FightMemberRow,
-  type FightRow,
   type FightState,
   type ObservationRow,
+  type OutcomeRule,
 } from "@/lib/types/database";
 
 const SCORABLE_STATES = ["live", "scheduled", "awaiting_final_sync"] as const;
@@ -61,143 +59,167 @@ export async function recalculateFight(
   now: Date = new Date(),
   database: Sql = createDatabaseClient(),
 ): Promise<void> {
-  const { data: fightData, error: fightError } = await admin
-    .from("fights")
-    .select("*")
-    .eq("id", fightId)
-    .maybeSingle();
-  if (fightError) {
-    throw new ApiError(500, ERROR_CODES.db_error, "Could not load fight");
-  }
-  const fight = fightData as FightRow | null;
-  if (!fight) {
-    return;
-  }
-  if (fight.state === "final" || fight.state === "cancelled" || fight.state === "draft") {
-    return;
-  }
-
-  const { data: memberData, error: memberError } = await admin
-    .from("fight_members")
-    .select("*")
-    .eq("fight_id", fightId)
-    .eq("state", "accepted");
-  if (memberError) {
-    throw new ApiError(500, ERROR_CODES.db_error, "Could not load fight members");
-  }
-  const members = (memberData ?? []) as FightMemberRow[];
-  const userIds = members.map((member) => member.user_id);
-  const sourceIds = members
-    .map((member) => member.selected_source_id)
-    .filter((id): id is string => typeof id === "string");
-
-  let observations: ObservationRow[] = [];
-  const snapshotValues = new Map<string, number>();
-  if (userIds.length > 0) {
-    const snapshots = await database<{ user_id: string; value: string }[]>`
-      select distinct on (user_id) user_id, value::text as value
-      from private.fight_score_snapshots
-      where fight_id = ${fightId}
-        and user_id = any(${database.array(userIds)}::uuid[])
-        and cutoff_at <= ${fight.ends_at}
-      order by user_id, cutoff_at desc, created_at desc
-    `;
-    for (const snapshot of snapshots) {
-      snapshotValues.set(snapshot.user_id, Number(snapshot.value));
-    }
-    const observationData = await database<ObservationRow[]>`
+  await database.begin("read write", async (sql) => {
+    const [fight] = await sql<{
+      state: FightState;
+      outcome_rule: OutcomeRule;
+      stake_minor: number | null;
+      default_goal_value: string | null;
+      starts_at: string;
+      ends_at: string;
+      final_sync_grace_seconds: number;
+    }[]>`
       select
-        id, user_id, source_id, external_record_id, metric,
+        state::text as state,
+        outcome_rule::text as outcome_rule,
+        stake_minor,
+        default_goal_value::text as default_goal_value,
         starts_at::text as starts_at,
         ends_at::text as ends_at,
-        value::text as value,
-        unit,
-        revision,
-        retracted_at::text as retracted_at
-      from private.metric_observations
-      where metric = 'steps'
-        and user_id = any(${database.array(userIds)}::uuid[])
-        and retracted_at is null
-        and starts_at < ${fight.ends_at}
-        and ends_at > ${fight.starts_at}
+        final_sync_grace_seconds
+      from public.fights
+      where id = ${fightId}
+      for update
     `;
-    observations = latestObservations(observationData).filter((row) =>
-      observationOverlapsWindow(row.starts_at, row.ends_at, fight.starts_at, fight.ends_at),
-    );
-  }
-
-  const sourcesById = new Map<string, DataSourceRow>();
-  if (sourceIds.length > 0) {
-    const { data: sourceData, error: sourceError } = await admin
-      .from("data_sources")
-      .select("id, user_id, provider, source_label, contributing_source_labels, connection_route, status, complete_through")
-      .in("id", sourceIds);
-    if (sourceError) {
-      throw new ApiError(500, ERROR_CODES.db_error, "Could not load data sources");
+    if (
+      !fight
+      || fight.state === "final"
+      || fight.state === "cancelled"
+      || fight.state === "draft"
+      || fight.state === "inviting"
+    ) {
+      return;
     }
-    for (const source of (sourceData ?? []) as DataSourceRow[]) {
-      sourcesById.set(source.id, source);
+
+    const members = await sql<{
+      user_id: string;
+      selected_source_id: string | null;
+      personal_target: string | null;
+      input_revision: number | null;
+      finalized_at: string | null;
+    }[]>`
+      select
+        user_id,
+        selected_source_id,
+        personal_target::text as personal_target,
+        input_revision,
+        finalized_at::text as finalized_at
+      from public.fight_members
+      where fight_id = ${fightId}
+        and state = 'accepted'
+      for update
+    `;
+    const userIds = members.map((member) => member.user_id);
+    const sourceIds = members
+      .map((member) => member.selected_source_id)
+      .filter((id): id is string => typeof id === "string");
+
+    const snapshotValues = new Map<string, number>();
+    let observations: ObservationRow[] = [];
+    if (userIds.length > 0) {
+      const snapshots = await sql<{ user_id: string; value: string }[]>`
+        select distinct on (user_id) user_id, value::text as value
+        from private.fight_score_snapshots
+        where fight_id = ${fightId}
+          and user_id = any(${sql.array(userIds)}::uuid[])
+          and cutoff_at <= ${fight.ends_at}
+        order by user_id, cutoff_at desc, created_at desc
+      `;
+      for (const snapshot of snapshots) {
+        snapshotValues.set(snapshot.user_id, Number(snapshot.value));
+      }
+      const observationData = await sql<ObservationRow[]>`
+        select
+          id, user_id, source_id, external_record_id, metric,
+          starts_at::text as starts_at,
+          ends_at::text as ends_at,
+          value::text as value,
+          unit,
+          revision,
+          retracted_at::text as retracted_at
+        from private.metric_observations
+        where metric = 'steps'
+          and user_id = any(${sql.array(userIds)}::uuid[])
+          and retracted_at is null
+          and starts_at < ${fight.ends_at}
+          and ends_at > ${fight.starts_at}
+      `;
+      observations = latestObservations(observationData).filter((row) =>
+        observationOverlapsWindow(row.starts_at, row.ends_at, fight.starts_at, fight.ends_at),
+      );
     }
-  }
 
-  const scored = scoreFight({
-    outcomeRule: fight.outcome_rule,
-    stakeMinor: fight.stake_minor,
-    defaultGoalValue: asNumber(fight.default_goal_value),
-    members: members.map((member) => {
-      const value = snapshotValues.get(member.user_id) ?? observations
-          .filter(
-            (row) =>
-              row.user_id === member.user_id &&
-              member.selected_source_id !== null &&
-              row.source_id === member.selected_source_id,
-          )
-          .reduce((sum, row) => sum + (asNumber(row.value) ?? 0), 0);
-      return {
-        userId: member.user_id,
-        value,
-        personalTarget: asNumber(member.personal_target),
-      };
-    }),
-  });
-
-  const nextRevision =
-    Math.max(0, ...members.map((member) => member.input_revision ?? 0)) + 1;
-  const endsAt = new Date(fight.ends_at);
-  const graceEnds = new Date(endsAt.getTime() + fight.final_sync_grace_seconds * 1000);
-
-  const allComplete =
-    members.length > 0 &&
-    members.every((member) => {
-      if (!member.selected_source_id) {
-        return false;
+    const completeThroughBySource = new Map<string, string>();
+    if (sourceIds.length > 0) {
+      const sources = await sql<{ id: string; complete_through: string | null }[]>`
+        select id, complete_through::text as complete_through
+        from public.data_sources
+        where id = any(${sql.array(sourceIds)}::uuid[])
+      `;
+      for (const source of sources) {
+        if (source.complete_through) {
+          completeThroughBySource.set(source.id, source.complete_through);
+        }
       }
-      const source = sourcesById.get(member.selected_source_id);
-      if (!source?.complete_through) {
-        return false;
-      }
-      return Date.parse(source.complete_through) >= Date.parse(fight.ends_at);
+    }
+
+    const scored = scoreFight({
+      outcomeRule: fight.outcome_rule,
+      stakeMinor: fight.stake_minor,
+      defaultGoalValue: asNumber(fight.default_goal_value),
+      members: members.map((member) => {
+        const value = snapshotValues.get(member.user_id) ?? observations
+            .filter(
+              (row) =>
+                row.user_id === member.user_id &&
+                member.selected_source_id !== null &&
+                row.source_id === member.selected_source_id,
+            )
+            .reduce((sum, row) => sum + (asNumber(row.value) ?? 0), 0);
+        return {
+          userId: member.user_id,
+          value,
+          personalTarget: asNumber(member.personal_target),
+        };
+      }),
     });
 
-  const nextState = nextFightState({
-    state: fight.state,
-    nowMs: now.getTime(),
-    startsAtMs: new Date(fight.starts_at).getTime(),
-    endsAtMs: endsAt.getTime(),
-    graceEndsMs: graceEnds.getTime(),
-    allSourcesCompleteThroughEnd: allComplete,
-  });
+    const nextRevision =
+      Math.max(0, ...members.map((member) => member.input_revision ?? 0)) + 1;
+    const endsAt = new Date(fight.ends_at);
+    const graceEnds = new Date(endsAt.getTime() + fight.final_sync_grace_seconds * 1000);
 
-  const byUser = new Map(scored.map((row) => [row.userId, row]));
-  await database.begin("read write", async (sql) => {
+    const allComplete =
+      members.length > 0 &&
+      members.every((member) => {
+        if (!member.selected_source_id) {
+          return false;
+        }
+        const completeThrough = completeThroughBySource.get(member.selected_source_id);
+        if (!completeThrough) {
+          return false;
+        }
+        return Date.parse(completeThrough) >= Date.parse(fight.ends_at);
+      });
+
+    const nextState = nextFightState({
+      state: fight.state,
+      nowMs: now.getTime(),
+      startsAtMs: new Date(fight.starts_at).getTime(),
+      endsAtMs: endsAt.getTime(),
+      graceEndsMs: graceEnds.getTime(),
+      allSourcesCompleteThroughEnd: allComplete,
+    });
+
+    const byUser = new Map(scored.map((row) => [row.userId, row]));
     for (const member of members) {
       const result = byUser.get(member.user_id);
       if (!result || member.finalized_at) {
         continue;
       }
       const completeThrough = member.selected_source_id
-        ? sourcesById.get(member.selected_source_id)?.complete_through
-        : null;
+        ? completeThroughBySource.get(member.selected_source_id)
+        : undefined;
       const finalStepsComplete = Boolean(
         completeThrough && Date.parse(completeThrough) >= Date.parse(fight.ends_at),
       );
@@ -220,6 +242,7 @@ export async function recalculateFight(
         update public.fights
         set state = ${nextState}
         where id = ${fightId}
+          and state = ${fight.state}
       `;
     }
   });

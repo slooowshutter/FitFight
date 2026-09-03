@@ -12,7 +12,7 @@ grant update (state, accepted_at) on table public.fight_members to authenticated
 revoke insert on table public.fight_members from authenticated;
 grant insert (fight_id, user_id, state, accepted_at) on table public.fight_members to authenticated;
 revoke update on table public.fights from authenticated;
-revoke update on table public.data_sources from authenticated;
+revoke insert, update on table public.data_sources from authenticated;
 
 drop policy if exists fight_members_insert_owner_or_self on public.fight_members;
 create policy fight_members_insert_owner_or_self
@@ -25,7 +25,8 @@ create policy fight_members_insert_owner_or_self
       select 1
       from public.fights as fight
       where fight.id = fight_id
-        and fight.state not in ('final', 'cancelled')
+        and fight.state in ('live', 'scheduled', 'inviting')
+        and fight.ends_at > now()
         and (
           user_id = (select auth.uid())
           or fight.owner_id = (select auth.uid())
@@ -44,7 +45,8 @@ create policy fight_members_update_own
       select 1
       from public.fights as fight
       where fight.id = fight_id
-        and fight.state not in ('final', 'cancelled')
+        and fight.state in ('live', 'scheduled', 'inviting')
+        and fight.ends_at > now()
     )
   )
   with check (
@@ -53,7 +55,8 @@ create policy fight_members_update_own
       select 1
       from public.fights as fight
       where fight.id = fight_id
-        and fight.state not in ('final', 'cancelled')
+        and fight.state in ('live', 'scheduled', 'inviting')
+        and fight.ends_at > now()
     )
   );
 

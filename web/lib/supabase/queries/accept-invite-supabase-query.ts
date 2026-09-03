@@ -41,7 +41,10 @@ export async function acceptInvite(
   }
 
   const fight = await loadFight(invite.fight_id, admin);
-  if (fight.state === "cancelled" || fight.state === "final") {
+  if (
+    !["live", "scheduled", "inviting"].includes(fight.state)
+    || Date.parse(fight.ends_at) <= Date.now()
+  ) {
     throw new ApiError(409, ERROR_CODES.conflict, "Fight is no longer joinable");
   }
 

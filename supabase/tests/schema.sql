@@ -154,8 +154,8 @@ select is(
 );
 select is(
   has_table_privilege('authenticated', 'public.data_sources', 'INSERT'),
-  true,
-  'clients can insert their own sources'
+  false,
+  'clients cannot insert data sources; ingest owns complete_through'
 );
 select is(
   has_column_privilege('authenticated', 'public.profiles', 'handle', 'UPDATE'),

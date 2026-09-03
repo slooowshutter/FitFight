@@ -13,7 +13,10 @@ export async function acceptMembership(
 ) {
   const admin = createAdminClient();
   const fight = await loadFight(fightId, admin);
-  if (fight.state === "cancelled" || fight.state === "final") {
+  if (
+    !["live", "scheduled", "inviting"].includes(fight.state)
+    || Date.parse(fight.ends_at) <= Date.now()
+  ) {
     throw new ApiError(409, ERROR_CODES.conflict, "Fight is no longer joinable");
   }
 

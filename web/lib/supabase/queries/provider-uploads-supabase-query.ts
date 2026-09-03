@@ -288,6 +288,19 @@ export async function processProviderUpload(
       if (!checkpoint || checkpoint.record.type !== "checkpoint") {
         throw new ApiError(400, ERROR_CODES.archive_invalid, "Archive checkpoint is missing");
       }
+      const [clock] = await sql<{ server_now: string }[]>`
+        select clock_timestamp()::text as server_now
+      `;
+      if (
+        !clock
+        || Date.parse(checkpoint.record.complete_through) > Date.parse(clock.server_now)
+      ) {
+        throw new ApiError(
+          400,
+          ERROR_CODES.validation,
+          "complete_through cannot be in the future",
+        );
+      }
 
       const eventBatch: Array<{
         record: Extract<ProviderArchiveRecord, { type: "sample" | "deletion" }>;

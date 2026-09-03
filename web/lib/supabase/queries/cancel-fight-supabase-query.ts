@@ -17,10 +17,14 @@ export async function cancelFight(userId: string, fightId: string) {
     .from("fights")
     .update({ state: "cancelled" })
     .eq("id", fightId)
+    .in("state", ["draft", "inviting", "scheduled", "live", "awaiting_final_sync"])
     .select("id, state")
-    .single();
-  if (error || !updated) {
+    .maybeSingle();
+  if (error) {
     throw new ApiError(500, ERROR_CODES.db_error, "Could not cancel fight");
+  }
+  if (!updated) {
+    throw new ApiError(409, ERROR_CODES.fight_not_cancellable, "Final fights cannot be cancelled");
   }
   return fightSummary(updated);
 }

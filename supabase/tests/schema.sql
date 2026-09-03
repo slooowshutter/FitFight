@@ -1,5 +1,5 @@
 begin;
-select plan(57);
+select plan(62);
 
 select has_schema('private', 'private schema exists');
 select has_table('public', 'profiles', 'profiles exists');
@@ -248,6 +248,19 @@ select is(
   has_table_privilege('authenticated', 'private.provider_uploads', 'SELECT'),
   false,
   'authenticated clients cannot read provider uploads'
+);
+select has_table('private', 'health_metric_days', 'health metric days exist');
+select has_table('private', 'health_sessions', 'health sessions exist');
+select has_table('private', 'health_ingest_state', 'health ingest state exists');
+select is(
+  has_table_privilege('authenticated', 'private.health_metric_days', 'SELECT'),
+  false,
+  'authenticated cannot read collected HealthKit days'
+);
+select is(
+  has_table_privilege('authenticated', 'private.health_sessions', 'SELECT'),
+  false,
+  'authenticated cannot read collected HealthKit sessions'
 );
 select is(
   (select file_size_limit from storage.buckets where id = 'provider-inbox'),

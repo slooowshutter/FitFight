@@ -62,6 +62,7 @@ The phone’s job is: show the UI, read Apple Health Steps when it is open (or b
 
 ## Now
 
+- **Apple Health ingest v2 (staging).** *This PR.* Statistics + workouts/sleep/mindful/weight. Does not change 1.0 Fight scoring.
 - Marc: Apple → On on the **new** develop Auth ([providers](https://supabase.com/dashboard/project/zstzbfocunthczzubggz/auth/providers)), client ID `com.fitfight.mvp`.
 - Marc: add the Sign in with Apple key and a stable 32-byte token-encryption key to the staging and production Vercel environments before testing fresh sign-in or submitting.
 - Marc: one Steps fight on staging. Exact username, required action, Apple Health, Start **once**.

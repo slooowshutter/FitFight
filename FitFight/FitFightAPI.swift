@@ -179,6 +179,72 @@ struct FitFightHealthKitDiagnosticSnapshotResult: Decodable {
     }
 }
 
+struct FitFightHealthKitCollection: Encodable, Equatable {
+    struct Day: Encodable, Equatable {
+        var day: String
+        var metric: String
+        var value: Double
+        var unit: String
+        var startsAt: String
+        var endsAt: String
+
+        enum CodingKeys: String, CodingKey {
+            case day
+            case metric
+            case value
+            case unit
+            case startsAt = "starts_at"
+            case endsAt = "ends_at"
+        }
+    }
+
+    struct Session: Encodable, Equatable {
+        var sourceUuid: String
+        var kind: String
+        var activityType: String
+        var startsAt: String
+        var endsAt: String
+        var durationSeconds: Double
+        var energyKcal: Double?
+        var distanceM: Double?
+
+        enum CodingKeys: String, CodingKey {
+            case sourceUuid = "source_uuid"
+            case kind
+            case activityType = "activity_type"
+            case startsAt = "starts_at"
+            case endsAt = "ends_at"
+            case durationSeconds = "duration_seconds"
+            case energyKcal = "energy_kcal"
+            case distanceM = "distance_m"
+        }
+    }
+
+    var completeThrough: String
+    var timeZone: String
+    var days: [Day]
+    var sessions: [Session]
+
+    enum CodingKeys: String, CodingKey {
+        case completeThrough = "complete_through"
+        case timeZone = "time_zone"
+        case days
+        case sessions
+    }
+}
+
+struct FitFightHealthKitCollectionResult: Decodable, Equatable {
+    var completeThrough: Date
+    var syncedDays: Int
+    var syncedSessions: Int
+
+    enum CodingKeys: String, CodingKey {
+        case completeThrough = "complete_through"
+        case syncedDays = "synced_days"
+        case syncedSessions = "synced_sessions"
+    }
+}
+
 struct FitFightCreateFight: Encodable, Equatable {
     var name: String
     var startsAt: Date
@@ -377,6 +443,18 @@ struct FitFightAPI {
             path: "healthkit/diagnostics",
             accessToken: accessToken,
             body: FitFightHealthKitDiagnosticSnapshot(diagnostics),
+            expected: [200]
+        )
+    }
+
+    func syncHealthKitCollection(
+        _ sync: FitFightHealthKitCollection,
+        accessToken: String
+    ) async throws -> FitFightHealthKitCollectionResult {
+        try await post(
+            path: "healthkit/collection",
+            accessToken: accessToken,
+            body: sync,
             expected: [200]
         )
     }

@@ -41,10 +41,12 @@ export default function SupportPage() {
         <section>
           <h2>Apple Health Steps</h2>
           <p>
-            In FitFight, open <strong>You → Apple Health</strong> to grant read-only Step
-            Count access or retry a sync. FitFight reads aggregate Steps for your active
-            Fight windows and the relevant daily totals shown in Fight charts; background
-            updates depend on iOS and may not be immediate.
+            In FitFight, open <strong>You → Apple Health</strong> to grant read-only Apple
+            Health access or retry a sync. FitFight reads aggregate Steps for your active
+            Fight windows and the relevant daily totals shown in Fight charts. It also
+            stores extra Health statistics and workout, sleep, and mindful summaries
+            privately; those do not change Steps fight scores. Background updates depend
+            on iOS and may not be immediate.
           </p>
           <p>
             To revoke access, remove FitFight in Apple Health or iOS Settings. Your score
@@ -83,7 +85,7 @@ export default function SupportPage() {
           <h2>Delete your account</h2>
           <p>
             Open <strong>You → Settings → Delete account</strong> and confirm. This
-            permanently removes your profile, uploaded Steps, invitations and memberships,
+            permanently removes your profile, uploaded Apple Health data, invitations and memberships,
             bugs and feature requests you posted, removes you from Fights created by someone else, and deletes Fights you created
             for every participant. FitFight also asks Apple to revoke an available Sign in
             with Apple credential and signs you out. This cannot be undone.

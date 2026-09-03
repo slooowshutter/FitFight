@@ -8,10 +8,6 @@ enum MetricKind: String, Codable, Hashable {
     var eyebrow: String {
         "Steps total"
     }
-
-    var title: String {
-        "Steps Total"
-    }
 }
 
 enum FightStatus: String, Codable, Hashable {
@@ -46,7 +42,6 @@ extension FFAvatar {
 struct Standing: Codable, Identifiable, Hashable {
     var person: Person
     var score: Double
-    var today: Double
     var invited: Bool = false
     var lastSyncedAt: Date? = nil
 
@@ -172,13 +167,6 @@ final class AppModel: ObservableObject {
             return String(format: "%.1fk", value / 1000)
         }
         return String(format: "%.0f", value)
-    }
-
-    func formatDelta(_ value: Double, metric: MetricKind) -> String {
-        let body = formatScore(value, metric: metric)
-        if value > 0 { return "+\(body)" }
-        if value < 0 { return "−\(body)" }
-        return body
     }
 
     func formatLastSync(_ date: Date?) -> String {
@@ -466,21 +454,12 @@ final class AppModel: ObservableObject {
             return fights
         }
 
-        let today = Self.dayStamp(Date())
         var updated: [Fight] = []
         updated.reserveCapacity(fights.count)
         for fight in fights {
             var next = fight
             let window = Self.fightDayWindow(fight)
-            let people = fight.standings.map { row -> Standing in
-                var standing = row
-                guard let personID = UUID(uuidString: row.person.id) else { return row }
-                let mine = days.filter { $0.userId == personID && window.contains($0.day) }
-                standing.today = Double(mine.first { $0.day == today }?.steps ?? 0)
-                return standing
-            }
-            next.standings = people
-            next.days = Self.dayCards(from: days, standings: people, window: window)
+            next.days = Self.dayCards(from: days, standings: fight.standings, window: window)
             updated.append(next)
         }
         return updated
@@ -674,7 +653,6 @@ final class AppModel: ObservableObject {
             return Standing(
                 person: person,
                 score: score,
-                today: 0,
                 invited: member.state == "invited",
                 lastSyncedAt: member.lastSyncedAt
             )
@@ -990,9 +968,9 @@ private enum AppModelFixtures {
                 kickerRest: "behind @leo_runs",
                 listSubtitle: "12.0k behind @leo_runs",
                 standings: [
-                    Standing(person: leo, score: 54_000, today: 16_000, lastSyncedAt: syncedJustNow),
-                    Standing(person: you, score: 42_000, today: 14_000, lastSyncedAt: syncedToday),
-                    Standing(person: sam, score: 37_000, today: 12_000, lastSyncedAt: syncedYesterday)
+                    Standing(person: leo, score: 54_000, lastSyncedAt: syncedJustNow),
+                    Standing(person: you, score: 42_000, lastSyncedAt: syncedToday),
+                    Standing(person: sam, score: 37_000, lastSyncedAt: syncedYesterday)
                 ],
                 days: [
                     FightDay(label: "Day 1", scores: [
@@ -1029,11 +1007,11 @@ private enum AppModelFixtures {
                 kickerRest: "with 2d to go",
                 listSubtitle: "Holding 1st with 2d to go",
                 standings: [
-                    Standing(person: you, score: 61400, today: 8200, lastSyncedAt: syncedJustNow),
-                    Standing(person: ivy, score: 59800, today: 6100, lastSyncedAt: syncedToday),
-                    Standing(person: theo, score: 55200, today: 5200, lastSyncedAt: syncedYesterday),
-                    Standing(person: leo, score: 40100, today: 4800, lastSyncedAt: syncedYesterday),
-                    Standing(person: nina, score: 22000, today: 0, invited: true)
+                    Standing(person: you, score: 61400, lastSyncedAt: syncedJustNow),
+                    Standing(person: ivy, score: 59800, lastSyncedAt: syncedToday),
+                    Standing(person: theo, score: 55200, lastSyncedAt: syncedYesterday),
+                    Standing(person: leo, score: 40100, lastSyncedAt: syncedYesterday),
+                    Standing(person: nina, score: 22000, invited: true)
                 ]
             ),
             Fight(
@@ -1052,10 +1030,10 @@ private enum AppModelFixtures {
                 kickerRest: "behind @sam_sweats",
                 listSubtitle: "3.2k steps behind @sam_sweats",
                 standings: [
-                    Standing(person: sam, score: 44800, today: 12100, lastSyncedAt: syncedToday),
-                    Standing(person: you, score: 41600, today: 8240, lastSyncedAt: syncedJustNow),
-                    Standing(person: nina, score: 31900, today: 4100, lastSyncedAt: syncedYesterday),
-                    Standing(person: ivy, score: 28100, today: 3900, lastSyncedAt: syncedYesterday)
+                    Standing(person: sam, score: 44800, lastSyncedAt: syncedToday),
+                    Standing(person: you, score: 41600, lastSyncedAt: syncedJustNow),
+                    Standing(person: nina, score: 31900, lastSyncedAt: syncedYesterday),
+                    Standing(person: ivy, score: 28100, lastSyncedAt: syncedYesterday)
                 ]
             ),
             Fight(
@@ -1077,9 +1055,9 @@ private enum AppModelFixtures {
                 inviteAction: "Accept",
                 standingsMeta: "2 in · 2 not replied",
                 standings: [
-                    Standing(person: theo, score: 0, today: 0),
-                    Standing(person: nina, score: 0, today: 0),
-                    Standing(person: ivy, score: 0, today: 0, invited: true)
+                    Standing(person: theo, score: 0),
+                    Standing(person: nina, score: 0),
+                    Standing(person: ivy, score: 0, invited: true)
                 ]
             ),
             Fight(
@@ -1100,7 +1078,7 @@ private enum AppModelFixtures {
                 invitePitch: "@ivy_climbs challenged you",
                 inviteAction: "Join",
                 standings: [
-                    Standing(person: ivy, score: 0, today: 0)
+                    Standing(person: ivy, score: 0)
                 ]
             ),
             Fight(
@@ -1120,8 +1098,8 @@ private enum AppModelFixtures {
                 listSubtitle: "Ended Jul 13 · 1st of 2",
                 standingsMeta: "2 in",
                 standings: [
-                    Standing(person: you, score: 24100, today: 0, lastSyncedAt: syncedYesterday),
-                    Standing(person: leo, score: 21900, today: 0, lastSyncedAt: syncedYesterday)
+                    Standing(person: you, score: 24100, lastSyncedAt: syncedYesterday),
+                    Standing(person: leo, score: 21900, lastSyncedAt: syncedYesterday)
                 ]
             )
         ]

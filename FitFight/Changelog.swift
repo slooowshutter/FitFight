@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.0.0",
             year: 2026,
             month: 9,
+            day: 3,
+            notes: "Standings now show each person's last Apple Health sync date and time, so you can see whether a score is current or someone has not uploaded yet."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
             day: 2,
             notes: "FitFight now focuses on private Steps challenges: invite people by exact username, choose a duration, agree on the action, and compare Apple Health Steps. Privacy, Support, Versions, and permanent account deletion are available under You."
         ),

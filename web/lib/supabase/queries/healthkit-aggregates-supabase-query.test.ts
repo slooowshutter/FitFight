@@ -374,7 +374,9 @@ test("Apple Health aggregate sync makes the newest Fight snapshot authoritative 
   assert.equal(result.synced_fights, 1);
   assert.ok(queries.some(({ query }) => query.includes("insert into private.fight_score_snapshots")));
   assert.ok(queries.some(({ query }) =>
-    query.includes("set current_value") && query.includes("selected_source_id")
+    query.includes("set current_value")
+      && query.includes("selected_source_id")
+      && query.includes("last_synced_at")
   ));
   assert.ok(queries.some(({ query }) => query.includes("set rank")));
   assert.ok(queries.every(({ query }) => !/set\s+final_value/i.test(query)));

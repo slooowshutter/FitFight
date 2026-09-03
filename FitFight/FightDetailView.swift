@@ -226,7 +226,9 @@ struct FightDetailView: View {
                     name: row.person.name,
                     value: model.formatScore(row.score, metric: fight.metric),
                     move: .same,
-                    isYou: row.person.isYou
+                    isYou: row.person.isYou,
+                    caption: model.formatLastSync(row.lastSyncedAt),
+                    captionUrgent: row.lastSyncedAt == nil
                 )
             }
         }

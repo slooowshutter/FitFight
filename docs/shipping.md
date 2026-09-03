@@ -111,7 +111,7 @@ He should **not** operate certificates day to day, open Xcode, or use a Mac for 
 
 ## Feature branches
 
-After a feature PR merges, CI deletes that branch. `main` and `develop` stay — we ship by merging `develop` into `main`, so GitHub’s “Automatically delete head branches” toggle must stay **off** (it would delete `develop`).
+After a feature PR merges, CI deletes that branch. `main`, `develop`, and `testflight-latest` stay — we ship by merging `develop` into `main`, so GitHub’s “Automatically delete head branches” toggle must stay **off** (it would delete `develop`). `testflight-latest` is a one-file pointer of the newest TestFlight build number; it is not app code.
 
 ## Agent limits on GitHub
 
@@ -122,3 +122,5 @@ After a feature PR merges, CI deletes that branch. `main` and `develop` stay —
 ## After you push app changes
 
 A non-`main` push starts TestFlight. Tell Marc: wait for the TestFlight notification, then **Update**. First processing of a new build is ~10–20 minutes. That is Apple, not GitHub. Do not ask him to merge first or Run workflow.
+
+Staging TestFlight binaries also check a public latest-build pointer on launch and show an in-app toast when a newer build has been uploaded. Apple still needs the 10–20 minutes to process it. Production App Store builds do not show this toast.

@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 3,
+            notes: "Opening the app now shows an in-app notice when a newer TestFlight build is available, so you can open TestFlight and tap Update."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 3,
             notes: "Standings now show each person's last Apple Health sync date and time, so you can see whether a score is current or someone has not uploaded yet."
         ),
         ReleaseNote(

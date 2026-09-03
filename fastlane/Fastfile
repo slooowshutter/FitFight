@@ -2,6 +2,7 @@
 
 require "base64"
 require "fileutils"
+require "json"
 require "open3"
 require "tmpdir"
 
@@ -118,6 +119,18 @@ def cloud_signing_flags(key_path, key_id, issuer_id, team_id)
   ].join(" ")
 end
 
+def write_testflight_latest_pointer(version, build_number)
+  path = "/tmp/fitfight-testflight-latest.json"
+  File.write(
+    path,
+    JSON.pretty_generate(
+      "version" => version.to_s,
+      "build" => Integer(build_number)
+    ) + "\n"
+  )
+  UI.message("Wrote TestFlight pointer #{version} (#{build_number})")
+end
+
 def verify_healthkit_background_delivery(ipa_path)
   UI.user_error!("Signed IPA path is unavailable") if ipa_path.nil?
   Dir.mktmpdir("fitfight-ipa") do |directory|
@@ -152,6 +165,9 @@ def verify_production_configuration(ipa_path)
   end
   if build_env.include?("zstzbfocunthczzubggz") || build_env.include?("staging.fitfight.app")
     UI.user_error!("Generated BuildEnv contains staging configuration")
+  end
+  unless build_env.include?('static let latestTestFlightURL = ""')
+    UI.user_error!("Production BuildEnv must not advertise a TestFlight update URL")
   end
 
   Dir.mktmpdir("fitfight-production-ipa") do |directory|
@@ -239,6 +255,7 @@ platform :ios do
       changelog: "FitFight #{version} (#{build_number})"
     )
 
+    write_testflight_latest_pointer(version, build_number)
     distribute_and_report(version, build_number)
   ensure
     FileUtils.rm_f(key_path) if defined?(key_path) && key_path

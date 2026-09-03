@@ -196,16 +196,18 @@ export async function syncHealthKitAggregates(
           selected_source_id = ${source.id},
           source_label = 'Apple Health',
           freshness = 'recent',
-          input_revision = coalesce(input_revision, 0) + 1
+          last_synced_at = now(),
+          input_revision = case
+            when current_value is distinct from ${latest.value}
+              or selected_source_id is distinct from ${source.id}
+              or source_label is distinct from 'Apple Health'
+              or freshness is distinct from 'recent'
+            then coalesce(input_revision, 0) + 1
+            else input_revision
+          end
         where fight_id = ${aggregate.fight_id}
           and user_id = ${userId}
           and state = 'accepted'
-          and (
-            current_value is distinct from ${latest.value}
-            or selected_source_id is distinct from ${source.id}
-            or source_label is distinct from 'Apple Health'
-            or freshness is distinct from 'recent'
-          )
       `;
       const members = await sql<{
         user_id: string;

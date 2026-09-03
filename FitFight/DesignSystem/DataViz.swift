@@ -250,6 +250,8 @@ struct FFLeaderboardRow: View {
     let value: String
     var move: FFMove = .same
     var isYou: Bool = false
+    var caption: String? = nil
+    var captionUrgent: Bool = false
 
     @Environment(\.ffTheme) private var theme
 
@@ -260,10 +262,19 @@ struct FFLeaderboardRow: View {
                 .foregroundStyle(rank == 1 ? theme.gold : theme.textTertiary)
                 .frame(width: 22)
             FFAvatar(monogram: monogram, size: 38)
-            Text(name)
-                .ffType(.rowTitle)
-                .foregroundStyle(theme.text)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(name)
+                    .ffType(.rowTitle)
+                    .foregroundStyle(theme.text)
+                    .lineLimit(1)
+                if let caption, !caption.isEmpty {
+                    Text(caption)
+                        .ffType(.micro)
+                        .foregroundStyle(captionUrgent ? theme.emberText : theme.textSecondary)
+                        .lineLimit(1)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
             Text(move.glyph)
                 .ffType(.micro)
                 .fontWeight(.heavy)

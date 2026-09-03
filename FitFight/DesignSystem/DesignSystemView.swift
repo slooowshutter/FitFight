@@ -636,7 +636,7 @@ struct DesignSystemView: View {
                 FFLeaderboardRow(rank: 1, monogram: "NK", name: "Nina", value: "412", move: .up)
                 FFLeaderboardRow(rank: 2, monogram: "MB", name: "Marc", value: "388", move: .same)
                 FFLeaderboardRow(rank: 3, monogram: "MR", name: "Maya", value: "341", move: .up)
-                FFLeaderboardRow(rank: 4, monogram: "AM", name: "You", value: "312", move: .down, isYou: true)
+                FFLeaderboardRow(rank: 4, monogram: "AM", name: "You", value: "312", move: .down, isYou: true, caption: "Synced 3 Sep, 12:41")
                 FFLeaderboardRow(rank: 5, monogram: "TD", name: "Theo", value: "204", move: .same)
             }
             Text("Rank 1 takes gold ink. Movement arrows are moss up, ember down, ash-faint dash for no change. The row never names its own metric — the screen header does.")

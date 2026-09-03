@@ -48,6 +48,7 @@ struct Standing: Codable, Identifiable, Hashable {
     var score: Double
     var today: Double
     var invited: Bool = false
+    var lastSyncedAt: Date? = nil
 
     var id: String { person.id }
 }
@@ -178,6 +179,14 @@ final class AppModel: ObservableObject {
         if value > 0 { return "+\(body)" }
         if value < 0 { return "−\(body)" }
         return body
+    }
+
+    func formatLastSync(_ date: Date?) -> String {
+        guard let date else { return "Not synced yet" }
+        let formatter = DateFormatter()
+        formatter.locale = .autoupdatingCurrent
+        formatter.setLocalizedDateFormatFromTemplate("MMMdjm")
+        return "Synced \(formatter.string(from: date))"
     }
 
     func refreshFromServer() async {
@@ -533,7 +542,7 @@ final class AppModel: ObservableObject {
     }
 
     private func loadFights(client: SupabaseClient, userId: UUID) async throws -> [Fight] {
-        let memberSelect = "fight_id, user_id, state, current_value, rank, final_value"
+        let memberSelect = "fight_id, user_id, state, current_value, rank, final_value, last_synced_at"
         let fightSelect = "id, owner_id, name, state, starts_at, ends_at, action_text"
 
         let myRows: [MemberRow] = try await client.from("fight_members")
@@ -666,7 +675,8 @@ final class AppModel: ObservableObject {
                 person: person,
                 score: score,
                 today: 0,
-                invited: member.state == "invited"
+                invited: member.state == "invited",
+                lastSyncedAt: member.lastSyncedAt
             )
         }
         .sorted { lhs, rhs in
@@ -893,7 +903,7 @@ private struct FightRow: Decodable {
     var startsAtDate: Date { Self.parse(startsAt) ?? Date() }
     var endsAtDate: Date { Self.parse(endsAt) ?? Date().addingTimeInterval(86400) }
 
-    private static func parse(_ raw: String) -> Date? {
+    fileprivate static func parse(_ raw: String) -> Date? {
         let iso = ISO8601DateFormatter()
         iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         if let date = iso.date(from: raw) { return date }
@@ -909,6 +919,7 @@ private struct MemberRow: Decodable {
     let currentValue: Double?
     let rank: Int?
     let finalValue: Double?
+    let lastSyncedAt: Date?
 
     enum CodingKeys: String, CodingKey {
         case fightId = "fight_id"
@@ -917,6 +928,7 @@ private struct MemberRow: Decodable {
         case currentValue = "current_value"
         case rank
         case finalValue = "final_value"
+        case lastSyncedAt = "last_synced_at"
     }
 
     init(from decoder: Decoder) throws {
@@ -927,6 +939,13 @@ private struct MemberRow: Decodable {
         rank = try container.decodeIfPresent(Int.self, forKey: .rank)
         currentValue = Self.number(container, .currentValue)
         finalValue = Self.number(container, .finalValue)
+        if let date = try? container.decode(Date.self, forKey: .lastSyncedAt) {
+            lastSyncedAt = date
+        } else if let raw = try container.decodeIfPresent(String.self, forKey: .lastSyncedAt) {
+            lastSyncedAt = FightRow.parse(raw)
+        } else {
+            lastSyncedAt = nil
+        }
     }
 
     private static func number(_ container: KeyedDecodingContainer<CodingKeys>, _ key: CodingKeys) -> Double? {
@@ -950,6 +969,9 @@ private enum AppModelFixtures {
         let theo = Person(id: "theo", name: "@theo_rows", handle: "@theo_rows", initials: "T")
         let nina = Person(id: "nina", name: "@nina_lifts", handle: "@nina_lifts", initials: "N")
         let you = Person(id: "you", name: "@maya_moves", handle: "@maya_moves", initials: "MM", isYou: true)
+        let syncedJustNow = Date().addingTimeInterval(-4 * 60)
+        let syncedToday = Date().addingTimeInterval(-2 * 3_600)
+        let syncedYesterday = Date().addingTimeInterval(-22 * 3_600)
 
         let fights = [
             Fight(
@@ -968,9 +990,9 @@ private enum AppModelFixtures {
                 kickerRest: "behind @leo_runs",
                 listSubtitle: "12.0k behind @leo_runs",
                 standings: [
-                    Standing(person: leo, score: 54_000, today: 16_000),
-                    Standing(person: you, score: 42_000, today: 14_000),
-                    Standing(person: sam, score: 37_000, today: 12_000)
+                    Standing(person: leo, score: 54_000, today: 16_000, lastSyncedAt: syncedJustNow),
+                    Standing(person: you, score: 42_000, today: 14_000, lastSyncedAt: syncedToday),
+                    Standing(person: sam, score: 37_000, today: 12_000, lastSyncedAt: syncedYesterday)
                 ],
                 days: [
                     FightDay(label: "Day 1", scores: [
@@ -1007,10 +1029,10 @@ private enum AppModelFixtures {
                 kickerRest: "with 2d to go",
                 listSubtitle: "Holding 1st with 2d to go",
                 standings: [
-                    Standing(person: you, score: 61400, today: 8200),
-                    Standing(person: ivy, score: 59800, today: 6100),
-                    Standing(person: theo, score: 55200, today: 5200),
-                    Standing(person: leo, score: 40100, today: 4800),
+                    Standing(person: you, score: 61400, today: 8200, lastSyncedAt: syncedJustNow),
+                    Standing(person: ivy, score: 59800, today: 6100, lastSyncedAt: syncedToday),
+                    Standing(person: theo, score: 55200, today: 5200, lastSyncedAt: syncedYesterday),
+                    Standing(person: leo, score: 40100, today: 4800, lastSyncedAt: syncedYesterday),
                     Standing(person: nina, score: 22000, today: 0, invited: true)
                 ]
             ),
@@ -1030,10 +1052,10 @@ private enum AppModelFixtures {
                 kickerRest: "behind @sam_sweats",
                 listSubtitle: "3.2k steps behind @sam_sweats",
                 standings: [
-                    Standing(person: sam, score: 44800, today: 12100),
-                    Standing(person: you, score: 41600, today: 8240),
-                    Standing(person: nina, score: 31900, today: 4100),
-                    Standing(person: ivy, score: 28100, today: 3900)
+                    Standing(person: sam, score: 44800, today: 12100, lastSyncedAt: syncedToday),
+                    Standing(person: you, score: 41600, today: 8240, lastSyncedAt: syncedJustNow),
+                    Standing(person: nina, score: 31900, today: 4100, lastSyncedAt: syncedYesterday),
+                    Standing(person: ivy, score: 28100, today: 3900, lastSyncedAt: syncedYesterday)
                 ]
             ),
             Fight(
@@ -1098,8 +1120,8 @@ private enum AppModelFixtures {
                 listSubtitle: "Ended Jul 13 · 1st of 2",
                 standingsMeta: "2 in",
                 standings: [
-                    Standing(person: you, score: 24100, today: 0),
-                    Standing(person: leo, score: 21900, today: 0)
+                    Standing(person: you, score: 24100, today: 0, lastSyncedAt: syncedYesterday),
+                    Standing(person: leo, score: 21900, today: 0, lastSyncedAt: syncedYesterday)
                 ]
             )
         ]

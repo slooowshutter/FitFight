@@ -1,5 +1,5 @@
 begin;
-select plan(32);
+select plan(33);
 
 select has_schema('private', 'private schema exists');
 select has_table('public', 'profiles', 'profiles exists');
@@ -102,6 +102,16 @@ select is(
   has_column_privilege('authenticated', 'public.profiles', 'display_name', 'UPDATE'),
   true,
   'users can update their display name'
+);
+
+select ok(
+  exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'fight_members'
+      and column_name = 'last_synced_at'
+  ),
+  'fight_members stores last sync time'
 );
 
 select ok(

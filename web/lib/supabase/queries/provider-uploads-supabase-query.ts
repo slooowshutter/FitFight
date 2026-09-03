@@ -462,6 +462,7 @@ export async function processProviderUpload(
         await sql`
           update public.fight_members
           set current_value = ${item.record.steps}, freshness = 'recent',
+            last_synced_at = now(),
             input_revision = coalesce(input_revision, 0) + 1
           where fight_id = ${item.record.fight_id} and user_id = ${userId}
         `;

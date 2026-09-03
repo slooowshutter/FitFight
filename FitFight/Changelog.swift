@@ -29,6 +29,34 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 3,
+            notes: "Fight setup now shows New fight beside the first-step progress, then replaces it with Back as you move through the remaining steps."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 3,
+            notes: "Fight setup now opens directly on the current step, without a repeated New Fight heading above the progress and Back controls."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 3,
+            notes: "Fight setup now starts with the Steps metric, then duration, opponents, loser action, and review. Next stays at the bottom on short steps, and Return closes every setup keyboard."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 3,
+            notes: "Creating a Fight is now a clear four-step flow: enter opponents with Return, choose the duration, agree on the loser action, then review every detail before starting."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 3,
             notes: "Opening the app now shows an in-app notice when a newer TestFlight build is available, so you can open TestFlight and tap Update."
         ),
         ReleaseNote(

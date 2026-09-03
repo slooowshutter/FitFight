@@ -35,7 +35,7 @@ Verify the minimal product alongside Apple Health synchronization:
 
 1. TestFlight → **Update**. Look for `1.0.0 · build N · staging · 3 Sep` at the top.
 2. Check Fights, a Fight detail, New, and You in both Night and Day. There are only three tabs: Fights, New, You.
-3. New accepts exact usernames, requires an action, and offers 1 hour / 6 hours / 1 day for testing plus 3 days / 1 week / 2 weeks / 1 month. **Start fight** shows Starting… and ignores extra taps.
+3. New guides people through Steps, duration, exact usernames, the required action, and review. It offers 3 days / 1 week / 2 weeks / 1 month. **Start fight** shows Starting… and ignores extra taps.
 4. Confirm sign-in, username, Apple Health Steps, Fight invitations, standings with last-sync times, Privacy, Support, Versions, sign out, and Delete account.
 5. Confirm Requests, friend requests/lists, money, other Metrics, and dead settings are absent.
 6. If sign-in fails: hosted **develop** Supabase → Authentication → Providers → Apple → On, client ID `com.fitfight.mvp`.
@@ -51,7 +51,7 @@ The native Fight path uses Supabase; Apple Health synchronization and account de
 | Welcome + Apple sign-in | Works |
 | Username onboarding | Works. Required once after sign-in. |
 | Version line | Release-candidate TestFlight says `1.0.0 · build N · staging`; the App Store build says `prod` |
-| Create Steps challenge | Add one or more exact usernames, choose 1 / 6 hours or 1 / 3 / 7 / 14 / 30 days, and type the required loser action. Steps × highest total is fixed. |
+| Create Steps challenge | Follow a guided flow for Steps × highest total, choose 3 / 7 / 14 / 30 days, add one or more exact usernames, type the required loser action, and review before starting. |
 | Accept / Join | Phone updates your membership |
 | Invite participants | Exact username in New. They must have signed in and chosen one. There is no friendship or friend-request layer, and at least one invitee is required. |
 | Apple Health | Sends Apple's merged cumulative Steps total for each exact active/ending Fight window in one small authenticated request. It does not send raw samples, deletions, per-source totals, device/source metadata, anchors, or archives. |

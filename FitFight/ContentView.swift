@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct ContentView: View {
     @EnvironmentObject private var themeStore: ThemeStore
@@ -131,10 +132,106 @@ struct ContentView: View {
             FightsListView()
                 .toolbar(.hidden, for: .navigationBar)
                 .navigationDestination(for: String.self) { id in
-                    if let fight = model.fight(id: id) {
-                        FightDetailView(fight: fight)
+                    Group {
+                        if let fight = model.fight(id: id) {
+                            FightDetailView(fight: fight)
+                        }
                     }
+                    .background(InteractivePopGestureEnabler(canPop: true, ownsDelegate: false))
                 }
+                .background(InteractivePopGestureEnabler(canPop: model.openFightID != nil, ownsDelegate: true))
+        }
+    }
+}
+
+/// Hidden nav bars disable edge-swipe back. The Fights stack owns the gesture
+/// delegate for its lifetime so leaving a fight cannot leave swipe enabled on the list.
+private struct InteractivePopGestureEnabler: UIViewRepresentable {
+    var canPop: Bool
+    var ownsDelegate: Bool
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(canPop: canPop, ownsDelegate: ownsDelegate)
+    }
+
+    func makeUIView(context: Context) -> SentinelView {
+        let view = SentinelView()
+        view.isUserInteractionEnabled = false
+        view.backgroundColor = .clear
+        view.coordinator = context.coordinator
+        return view
+    }
+
+    func updateUIView(_ uiView: SentinelView, context: Context) {
+        uiView.coordinator = context.coordinator
+        context.coordinator.canPop = canPop
+        context.coordinator.ownsDelegate = ownsDelegate
+        context.coordinator.sync(from: uiView)
+    }
+
+    final class SentinelView: UIView {
+        weak var coordinator: Coordinator?
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            coordinator?.sync(from: self)
+        }
+
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            coordinator?.sync(from: self)
+        }
+    }
+
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        var canPop: Bool
+        var ownsDelegate: Bool
+        weak var navigationController: UINavigationController?
+
+        init(canPop: Bool, ownsDelegate: Bool) {
+            self.canPop = canPop
+            self.ownsDelegate = ownsDelegate
+        }
+
+        func sync(from view: UIView) {
+            guard view.window != nil else {
+                if ownsDelegate {
+                    navigationController?.interactivePopGestureRecognizer?.isEnabled = false
+                }
+                return
+            }
+            var responder: UIResponder? = view
+            var nav: UINavigationController?
+            while let current = responder {
+                if let found = current as? UINavigationController {
+                    nav = found
+                    break
+                }
+                if let controller = current as? UIViewController, let found = controller.navigationController {
+                    nav = found
+                    break
+                }
+                responder = current.next
+            }
+            guard let nav else { return }
+            navigationController = nav
+            if ownsDelegate {
+                nav.interactivePopGestureRecognizer?.delegate = self
+                nav.interactivePopGestureRecognizer?.isEnabled = canPop
+            } else if canPop {
+                nav.interactivePopGestureRecognizer?.isEnabled = true
+            }
+        }
+
+        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            canPop && (navigationController?.viewControllers.count ?? 0) > 1
+        }
+
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer
+        ) -> Bool {
+            canPop && otherGestureRecognizer is UIPanGestureRecognizer
         }
     }
 }

@@ -69,7 +69,9 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            FFTabBar(tab: $model.tab)
+            FFTabBar(tab: $model.tab, onReselect: {
+                model.openFightID = nil
+            })
         }
     }
 
@@ -85,11 +87,18 @@ struct ContentView: View {
         }
     }
 
+    private var fightsPath: Binding<[String]> {
+        Binding(
+            get: { model.openFightID.map { [$0] } ?? [] },
+            set: { model.openFightID = $0.last }
+        )
+    }
+
     private var fightsStack: some View {
-        NavigationStack {
+        NavigationStack(path: fightsPath) {
             FightsListView()
                 .toolbar(.hidden, for: .navigationBar)
-                .navigationDestination(item: $model.openFightID) { id in
+                .navigationDestination(for: String.self) { id in
                     if let fight = model.fight(id: id) {
                         FightDetailView(fight: fight)
                     }

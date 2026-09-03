@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct FightDetailView: View {
     private let initialFight: Fight
@@ -69,6 +70,7 @@ struct FightDetailView: View {
         }
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
+        .background(InteractivePopGestureEnabler())
     }
 
     private var you: Standing? { model.youStanding(in: fight) }
@@ -255,6 +257,85 @@ struct FightDetailView: View {
                         .lineSpacing(3)
                 }
             }
+        }
+    }
+}
+
+/// Hidden nav bars disable UIKit's edge-swipe back. Re-enable it on the pushed screen.
+private struct InteractivePopGestureEnabler: UIViewRepresentable {
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    func makeUIView(context: Context) -> SentinelView {
+        let view = SentinelView()
+        view.coordinator = context.coordinator
+        view.isUserInteractionEnabled = false
+        view.backgroundColor = .clear
+        return view
+    }
+
+    func updateUIView(_ uiView: SentinelView, context: Context) {
+        uiView.coordinator = context.coordinator
+        context.coordinator.enable(from: uiView)
+    }
+
+    final class SentinelView: UIView {
+        weak var coordinator: Coordinator?
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            coordinator?.enable(from: self)
+        }
+
+        override func willMove(toWindow newWindow: UIWindow?) {
+            super.willMove(toWindow: newWindow)
+            if newWindow == nil {
+                coordinator?.disableIfAtRoot()
+            }
+        }
+    }
+
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        weak var navigationController: UINavigationController?
+
+        func enable(from view: UIView) {
+            var responder: UIResponder? = view
+            var nav: UINavigationController?
+            while let current = responder {
+                if let found = current as? UINavigationController {
+                    nav = found
+                    break
+                }
+                if let controller = current as? UIViewController, let found = controller.navigationController {
+                    nav = found
+                    break
+                }
+                responder = current.next
+            }
+            guard let nav else { return }
+            navigationController = nav
+            nav.interactivePopGestureRecognizer?.isEnabled = true
+            nav.interactivePopGestureRecognizer?.delegate = self
+        }
+
+        func disableIfAtRoot() {
+            guard let nav = navigationController else { return }
+            if nav.viewControllers.count <= 1 {
+                nav.interactivePopGestureRecognizer?.isEnabled = false
+                nav.interactivePopGestureRecognizer?.delegate = nil
+            }
+        }
+
+        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            (navigationController?.viewControllers.count ?? 0) > 1
+        }
+
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer
+        ) -> Bool {
+            otherGestureRecognizer is UIPanGestureRecognizer
         }
     }
 }

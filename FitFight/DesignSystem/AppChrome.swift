@@ -73,6 +73,8 @@ enum FFTab: Hashable {
 /// 46×32 glyph pill, 22pt icon, 11pt label. The live tab takes the moss wash.
 struct FFTabBar: View {
     @Binding var tab: FFTab
+    /// iOS convention: tapping the already-selected tab returns that tab to its root.
+    var onReselect: (() -> Void)? = nil
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
@@ -101,7 +103,11 @@ struct FFTabBar: View {
     private func item(_ value: FFTab, _ symbol: String, _ title: String) -> some View {
         let on = tab == value
         return Button {
-            tab = value
+            if tab == value {
+                onReselect?()
+            } else {
+                tab = value
+            }
         } label: {
             VStack(spacing: 3) {
                 Image(systemName: on ? "\(symbol).fill" : symbol)

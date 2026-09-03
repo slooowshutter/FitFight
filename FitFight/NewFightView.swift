@@ -38,11 +38,6 @@ struct NewFightView: View {
         GeometryReader { proxy in
             FFScreen(clearance: false) {
                 VStack(alignment: .leading, spacing: theme.space.cardGap) {
-                    FFScreenTitle(
-                        title: "New fight",
-                        subtitle: "Set it up one step at a time."
-                    )
-
                     flowProgress
                     currentStep
                     Spacer(minLength: theme.space.lg)

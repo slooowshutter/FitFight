@@ -1,6 +1,6 @@
 # Recurrent fights for workplaces (Station F)
 
-Status: **proposal — do not implement until Marc answers the five forks and moves this out of Later**
+Status: **proposal for workplace / campus extras.** Joinable codes and rolling recurring windows already shipped (4 Sep 2026). Do not add Group, admin, or HR until Marc answers the five forks.
 
 Twelve agents independently attacked object model, join codes, admin, calendar, membership, fairness, privacy, UX, architecture, abuse, competitors, and Station F GTM. This is the synthesis. It is not a screen inventory. Do not invent UI from this file.
 

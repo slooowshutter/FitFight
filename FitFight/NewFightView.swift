@@ -14,6 +14,7 @@ struct NewFightView: View {
     @State private var duration = "1 week"
     @State private var actionText = ""
     @FocusState private var usernameFocused: Bool
+    @FocusState private var actionFocused: Bool
 
     private var canStart: Bool {
         let action = actionText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -27,45 +28,58 @@ struct NewFightView: View {
 
     private var canContinue: Bool {
         switch step {
-        case 0: return !inviteHandles.isEmpty
-        case 2: return !actionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        case 2: return !inviteHandles.isEmpty
+        case 3: return !actionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         default: return true
         }
     }
 
     var body: some View {
-        FFScreen {
-            FFScreenTitle(
-                title: "New fight",
-                subtitle: "Set it up one step at a time."
-            )
+        GeometryReader { proxy in
+            FFScreen(clearance: false) {
+                VStack(alignment: .leading, spacing: theme.space.cardGap) {
+                    FFScreenTitle(
+                        title: "New fight",
+                        subtitle: "Set it up one step at a time."
+                    )
 
-            flowProgress
-            currentStep
+                    flowProgress
+                    currentStep
+                    Spacer(minLength: theme.space.lg)
+                    flowAction
+                }
+                .frame(
+                    minHeight: max(0, proxy.size.height - theme.space.base - theme.space.lg),
+                    alignment: .top
+                )
+            }
+        }
+    }
 
-            if step == 3 {
-                FFScreenCTA(
-                    title: model.isCreatingFight ? "Starting…" : "Start fight",
-                    enabled: canStart,
-                    busy: model.isCreatingFight
-                ) {
-                    startFight()
-                }
+    @ViewBuilder
+    private var flowAction: some View {
+        if step == 4 {
+            FFScreenCTA(
+                title: model.isCreatingFight ? "Starting…" : "Start fight",
+                enabled: canStart,
+                busy: model.isCreatingFight
+            ) {
+                startFight()
+            }
 
-                if !steps.hasAsked {
-                    Text("Connect Apple Health above to start this fight.")
-                        .ffType(.caption)
-                        .foregroundStyle(theme.textSecondary)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                }
+            if !steps.hasAsked {
+                Text("Connect Apple Health above to start this fight.")
+                    .ffType(.caption)
+                    .foregroundStyle(theme.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+            }
 
-                if let error = model.createError, !error.isEmpty {
-                    FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
-                }
-            } else {
-                FFScreenCTA(title: "Next", enabled: canContinue) {
-                    step += 1
-                }
+            if let error = model.createError, !error.isEmpty {
+                FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
+            }
+        } else {
+            FFScreenCTA(title: "Next", enabled: canContinue) {
+                step += 1
             }
         }
     }
@@ -87,14 +101,14 @@ struct NewFightView: View {
 
                 Spacer()
 
-                Text("Step \(step + 1) of 4")
+                Text("Step \(step + 1) of 5")
                     .ffType(.caption)
                     .foregroundStyle(theme.textSecondary)
                     .frame(minHeight: 44)
             }
 
             HStack(spacing: 6) {
-                ForEach(0..<4, id: \.self) { index in
+                ForEach(0..<5, id: \.self) { index in
                     Capsule()
                         .fill(index <= step ? theme.mossFill : theme.disabledBg)
                         .frame(maxWidth: .infinity)
@@ -102,17 +116,42 @@ struct NewFightView: View {
                 }
             }
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Step \(step + 1) of 4")
+            .accessibilityLabel("Step \(step + 1) of 5")
         }
     }
 
     @ViewBuilder
     private var currentStep: some View {
         switch step {
-        case 0: peopleStep
+        case 0: metricStep
         case 1: durationStep
-        case 2: actionStep
+        case 2: peopleStep
+        case 3: actionStep
         default: reviewStep
+        }
+    }
+
+    private var metricStep: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("What are you competing on?")
+                    .ffType(.heading)
+                    .foregroundStyle(theme.text)
+                Text("Every fight tracks one metric. Steps is the only metric available right now.")
+                    .ffType(.body)
+                    .foregroundStyle(theme.textSecondary)
+                    .lineSpacing(2)
+            }
+
+            FFGroupedRows {
+                FFGroupedRow(
+                    title: "Steps",
+                    subtitle: "Highest total wins · Apple Health",
+                    systemImage: "figure.walk",
+                    subtitleTone: .moss,
+                    trailing: AnyView(Image(systemName: "checkmark").foregroundStyle(theme.mossText))
+                )
+            }
         }
     }
 
@@ -122,12 +161,11 @@ struct NewFightView: View {
                 Text("Who are you fighting?")
                     .ffType(.heading)
                     .foregroundStyle(theme.text)
-                Text("Type an exact username and press Return. They must already have a FitFight account.")
+                Text("Add at least one exact username and press Return. They must already have a FitFight account.")
                     .ffType(.body)
                     .foregroundStyle(theme.textSecondary)
                     .lineSpacing(2)
             }
-
             VStack(alignment: .leading, spacing: 8) {
                 Text("Username")
                     .ffType(.rowTitle)
@@ -164,13 +202,7 @@ struct NewFightView: View {
                 }
             }
 
-            if inviteHandles.isEmpty {
-                FFNotice(
-                    text: "Add an opponent to continue.",
-                    tone: .moss,
-                    systemImage: "person.badge.plus"
-                )
-            } else {
+            if !inviteHandles.isEmpty {
                 FFGroupedRows {
                     ForEach(Array(inviteHandles.enumerated()), id: \.element) { index, handle in
                         if index > 0 { FFDivider() }
@@ -217,16 +249,6 @@ struct NewFightView: View {
                     .lineSpacing(2)
             }
 
-            FFGroupedRows {
-                FFGroupedRow(
-                    title: "Most steps wins",
-                    subtitle: "Apple Health · highest total",
-                    systemImage: "figure.walk",
-                    subtitleTone: .moss,
-                    trailing: AnyView(Image(systemName: "checkmark").foregroundStyle(theme.mossText))
-                )
-            }
-
             VStack(alignment: .leading, spacing: 10) {
                 Text("Duration")
                     .ffType(.rowTitle)
@@ -237,15 +259,6 @@ struct NewFightView: View {
                 )
             }
 
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Quick testing")
-                    .ffType(.caption)
-                    .foregroundStyle(theme.textSecondary)
-                FFDurationPicker(
-                    options: ["1 hour", "6 hours", "1 day"],
-                    selection: $duration
-                )
-            }
         }
     }
 
@@ -255,7 +268,7 @@ struct NewFightView: View {
                 Text("What will the loser do?")
                     .ffType(.heading)
                     .foregroundStyle(theme.text)
-                Text("Make the agreement specific so everyone knows what is at stake.")
+                Text("Enter the action to continue—for example, cook dinner.")
                     .ffType(.body)
                     .foregroundStyle(theme.textSecondary)
                     .lineSpacing(2)
@@ -271,9 +284,11 @@ struct NewFightView: View {
                             .foregroundStyle(actionText.isEmpty ? theme.textFaint : theme.text)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     } else {
-                        TextField("Cook dinner", text: $actionText, axis: .vertical)
+                        TextField("Cook dinner", text: $actionText)
+                            .focused($actionFocused)
                             .foregroundStyle(theme.text)
-                            .lineLimit(3, reservesSpace: true)
+                            .submitLabel(.done)
+                            .onSubmit { actionFocused = false }
                             .onChange(of: actionText) { _, value in
                                 if value.count > 120 {
                                     actionText = String(value.prefix(120))
@@ -291,14 +306,6 @@ struct NewFightView: View {
                     .ffType(.caption)
                     .foregroundStyle(theme.textFaint)
                     .frame(maxWidth: .infinity, alignment: .trailing)
-            }
-
-            if actionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                FFNotice(
-                    text: "Enter the loser action to continue.",
-                    tone: .moss,
-                    systemImage: "text.cursor"
-                )
             }
         }
     }
@@ -319,9 +326,9 @@ struct NewFightView: View {
 
             FFGroupedRows {
                 FFGroupedRow(
-                    title: "Opponents",
-                    subtitle: opponents,
-                    systemImage: "person.2",
+                    title: "Metric",
+                    subtitle: "Steps · highest total wins",
+                    systemImage: "figure.walk",
                     subtitleTone: .neutral,
                     trailing: AnyView(Text("Change").ffType(.caption).foregroundStyle(theme.mossText)),
                     action: { step = 0 }
@@ -337,12 +344,21 @@ struct NewFightView: View {
                 )
                 FFDivider()
                 FFGroupedRow(
+                    title: "Opponents",
+                    subtitle: opponents,
+                    systemImage: "person.2",
+                    subtitleTone: .neutral,
+                    trailing: AnyView(Text("Change").ffType(.caption).foregroundStyle(theme.mossText)),
+                    action: { step = 2 }
+                )
+                FFDivider()
+                FFGroupedRow(
                     title: "Loser action",
                     subtitle: action,
                     systemImage: "flag",
                     subtitleTone: .neutral,
                     trailing: AnyView(Text("Change").ffType(.caption).foregroundStyle(theme.mossText)),
-                    action: { step = 2 }
+                    action: { step = 3 }
                 )
                 FFDivider()
                 FFGroupedRow(
@@ -399,9 +415,6 @@ struct NewFightView: View {
 
     private func endDate(from startsAt: Date) -> Date {
         let durationParts: (component: Calendar.Component, value: Int, seconds: TimeInterval) = switch duration {
-        case "1 hour": (.hour, 1, 3_600)
-        case "6 hours": (.hour, 6, 21_600)
-        case "1 day": (.day, 1, 86_400)
         case "3 days": (.day, 3, 259_200)
         case "1 week": (.day, 7, 604_800)
         case "2 weeks": (.day, 14, 1_209_600)

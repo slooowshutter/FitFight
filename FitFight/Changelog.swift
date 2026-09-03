@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 3,
+            notes: "Fight setup now starts with the Steps metric, then duration, opponents, loser action, and review. Next stays at the bottom on short steps, and Return closes every setup keyboard."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 3,
             notes: "Creating a Fight is now a clear four-step flow: enter opponents with Return, choose the duration, agree on the loser action, then review every detail before starting."
         ),
         ReleaseNote(

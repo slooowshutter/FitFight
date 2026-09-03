@@ -26,6 +26,7 @@ Do not rename the bundle ID without Apple + CI updates.
 - Settings keeps Privacy, Support, Versions, Sign out, and Delete account. Look is Night or Day.
 - Delete account removes the full account, uploaded Steps, memberships, and owned fights; a stored Sign in with Apple authorization is revoked when available.
 - Requests, money, unsupported metrics, and dead settings are removed.
+- Staging TestFlight can switch New-fight layouts under You → Try 10 layouts (or 1–10 on New). Same fight; production stays on the current form.
 
 ## v0.3 (approved design) — historical
 

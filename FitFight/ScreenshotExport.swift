@@ -186,6 +186,8 @@ enum ScreenshotExport {
             .background(theme.bg)
             .environmentObject(themeStore)
             .environmentObject(model)
+            .environmentObject(NewFightLayoutStore(transient: .current))
+            .environmentObject(NewFightDraft())
             .environmentObject(session)
             .environmentObject(HealthKitStepsStore())
             .environment(\.ffTheme, theme)

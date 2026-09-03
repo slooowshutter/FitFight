@@ -20,6 +20,8 @@ struct FitFightApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var themeStore = ThemeStore()
     @StateObject private var model = AppModel()
+    @StateObject private var newFightLayouts = NewFightLayoutStore()
+    @StateObject private var newFightDraft = NewFightDraft()
     @StateObject private var session: SessionStore
     @StateObject private var steps: HealthKitStepsStore
 
@@ -36,6 +38,8 @@ struct FitFightApp: App {
             ContentView()
                 .environmentObject(themeStore)
                 .environmentObject(model)
+                .environmentObject(newFightLayouts)
+                .environmentObject(newFightDraft)
                 .environmentObject(session)
                 .environmentObject(steps)
                 .fitFightTheme(themeStore.theme)

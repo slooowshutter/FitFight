@@ -24,6 +24,13 @@ struct YouView: View {
             FFSectionHeader(title: "Settings").padding(.top, theme.space.lg)
             settings
 
+            if AppVersion.exploresNewFightLayouts {
+                FFSectionHeader(title: "New fight").padding(.top, theme.space.lg)
+                FFGroupedRows {
+                    navRow("Try 10 layouts") { model.showingNewFightLayouts = true }
+                }
+            }
+
             FFSectionHeader(title: "Look").padding(.top, theme.space.lg)
             appearance
         }

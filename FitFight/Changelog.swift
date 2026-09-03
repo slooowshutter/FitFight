@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.0.0",
             year: 2026,
             month: 9,
+            day: 3,
+            notes: "Staging only: ten New-fight layouts. Pick one under You → Try 10 layouts, or tap 1–10 at the top of New. Same Steps fight; different ways to fill it in. Production stays on layout 1."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
             day: 2,
             notes: "FitFight now focuses on private Steps challenges: invite people by exact username, choose a duration, agree on the action, and compare Apple Health Steps. Privacy, Support, Versions, and permanent account deletion are available under You."
         ),

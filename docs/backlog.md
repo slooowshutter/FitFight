@@ -50,7 +50,7 @@ If the app is closed or killed, iOS will not reliably run timers, settle a month
 
 The phone’s job is: show the UI, read Apple Health Steps when it is open (or briefly woken), and upload the required aggregates. Push notifications are not in the current scope.
 
-**Last TestFlight:** 2 Sep 2026 — First App Store release candidate with production-accurate privacy declarations, screenshots, and release checks. Look for `1.0.0 · build N · staging`.
+**Last TestFlight:** 3 Sep 2026 — Ten New-fight UX layouts on staging (You → Try 10 layouts, or 1–10 on New). Look for `1.0.0 · build N · staging`.
 
 ## Semi urgent
 

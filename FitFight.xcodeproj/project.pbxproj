@@ -24,6 +24,11 @@
 		A1000000000000000000000B /* FightsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001B /* FightsListView.swift */; };
 		A1000000000000000000000C /* FightDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001C /* FightDetailView.swift */; };
 		A1000000000000000000000D /* NewFightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001D /* NewFightView.swift */; };
+		A10000000000000000000411 /* NewFightDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000401 /* NewFightDraft.swift */; };
+		A10000000000000000000412 /* NewFightLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000402 /* NewFightLayout.swift */; };
+		A10000000000000000000413 /* NewFightFields.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000403 /* NewFightFields.swift */; };
+		A10000000000000000000414 /* NewFightLayouts.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000404 /* NewFightLayouts.swift */; };
+		A10000000000000000000415 /* NewFightLayoutPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000405 /* NewFightLayoutPicker.swift */; };
 		A1000000000000000000000F /* YouView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001F /* YouView.swift */; };
 		A10000000000000000000021 /* ScreenshotExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000022 /* ScreenshotExport.swift */; };
 		A100000000000000000000B2 /* Nunito-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A2 /* Nunito-Medium.ttf */; };
@@ -69,6 +74,11 @@
 		A1000000000000000000001B /* FightsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FightsListView.swift; sourceTree = "<group>"; };
 		A1000000000000000000001C /* FightDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FightDetailView.swift; sourceTree = "<group>"; };
 		A1000000000000000000001D /* NewFightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewFightView.swift; sourceTree = "<group>"; };
+		A10000000000000000000401 /* NewFightDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewFightDraft.swift; sourceTree = "<group>"; };
+		A10000000000000000000402 /* NewFightLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewFightLayout.swift; sourceTree = "<group>"; };
+		A10000000000000000000403 /* NewFightFields.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewFightFields.swift; sourceTree = "<group>"; };
+		A10000000000000000000404 /* NewFightLayouts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewFightLayouts.swift; sourceTree = "<group>"; };
+		A10000000000000000000405 /* NewFightLayoutPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewFightLayoutPicker.swift; sourceTree = "<group>"; };
 		A1000000000000000000001F /* YouView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouView.swift; sourceTree = "<group>"; };
 		A10000000000000000000022 /* ScreenshotExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotExport.swift; sourceTree = "<group>"; };
 		A100000000000000000000A2 /* Nunito-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Nunito-Medium.ttf; sourceTree = "<group>"; };
@@ -113,6 +123,11 @@
 				A1000000000000000000001B /* FightsListView.swift */,
 				A1000000000000000000001C /* FightDetailView.swift */,
 				A1000000000000000000001D /* NewFightView.swift */,
+				A10000000000000000000401 /* NewFightDraft.swift */,
+				A10000000000000000000402 /* NewFightLayout.swift */,
+				A10000000000000000000403 /* NewFightFields.swift */,
+				A10000000000000000000404 /* NewFightLayouts.swift */,
+				A10000000000000000000405 /* NewFightLayoutPicker.swift */,
 				A1000000000000000000001F /* YouView.swift */,
 				A10000000000000000000301 /* SupabaseConfig.swift */,
 				A10000000000000000000305 /* BuildEnv.swift */,
@@ -278,6 +293,11 @@
 				A1000000000000000000000B /* FightsListView.swift in Sources */,
 				A1000000000000000000000C /* FightDetailView.swift in Sources */,
 				A1000000000000000000000D /* NewFightView.swift in Sources */,
+				A10000000000000000000411 /* NewFightDraft.swift in Sources */,
+				A10000000000000000000412 /* NewFightLayout.swift in Sources */,
+				A10000000000000000000413 /* NewFightFields.swift in Sources */,
+				A10000000000000000000414 /* NewFightLayouts.swift in Sources */,
+				A10000000000000000000415 /* NewFightLayoutPicker.swift in Sources */,
 				A1000000000000000000000F /* YouView.swift in Sources */,
 				A10000000000000000000021 /* ScreenshotExport.swift in Sources */,
 				A10000000000000000000311 /* SupabaseConfig.swift in Sources */,

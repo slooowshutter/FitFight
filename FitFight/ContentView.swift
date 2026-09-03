@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject private var themeStore: ThemeStore
     @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var newFightLayouts: NewFightLayoutStore
     @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
 
@@ -21,6 +22,13 @@ struct ContentView: View {
         .background(theme.bg.ignoresSafeArea())
         .sheet(isPresented: $model.showingVersions) {
             VersionsView()
+                .fitFightTheme(themeStore.theme)
+                .presentationBackground(themeStore.theme.bg)
+        }
+        .sheet(isPresented: $model.showingNewFightLayouts) {
+            NewFightLayoutPicker()
+                .environmentObject(model)
+                .environmentObject(newFightLayouts)
                 .fitFightTheme(themeStore.theme)
                 .presentationBackground(themeStore.theme.bg)
         }
@@ -104,6 +112,8 @@ struct ContentView: View {
     return ContentView()
         .environmentObject(themeStore)
         .environmentObject(AppModel())
+        .environmentObject(NewFightLayoutStore(transient: .current))
+        .environmentObject(NewFightDraft())
         .environmentObject(session)
         .environmentObject(HealthKitStepsStore())
         .fitFightTheme(themeStore.theme)

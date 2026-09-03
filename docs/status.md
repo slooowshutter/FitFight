@@ -1,6 +1,6 @@
 # FitFight status — what works, what’s fake, what’s next
 
-Read this before building. Last updated **2 Sep 2026**. App: **1.0.0**.
+Read this before building. Last updated **3 Sep 2026**. App: **1.0.0**.
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, notifications, social, or a broader marketing site unless [`backlog.md`](backlog.md) says so. Only the public privacy and support pages exist on the web.
 
@@ -33,9 +33,9 @@ After the backend is configured, merge the feature PR into **`develop`**, not `m
 
 Verify the minimal product alongside Apple Health synchronization:
 
-1. TestFlight → **Update**. Look for `1.0.0 · build N · staging · 2 Sep` at the top.
+1. TestFlight → **Update**. Look for `1.0.0 · build N · staging · 3 Sep` at the top.
 2. Check Fights, a Fight detail, New, and You in both Night and Day. There are only three tabs: Fights, New, You.
-3. New accepts exact usernames, requires an action, and offers 1 hour / 6 hours / 1 day for testing plus 3 days / 1 week / 2 weeks / 1 month. **Start fight** shows Starting… and ignores extra taps.
+3. New accepts exact usernames, requires an action, and offers 1 hour / 6 hours / 1 day for testing plus 3 days / 1 week / 2 weeks / 1 month. **Start fight** shows Starting… and ignores extra taps. On staging, You → Try 10 layouts (or 1–10 on New) switches New-fight UX; each layout still starts the same fight.
 4. Confirm sign-in, username, Apple Health Steps, Fight invitations, standings, Privacy, Support, Versions, sign out, and Delete account.
 5. Confirm Requests, friend requests/lists, money, other Metrics, and dead settings are absent.
 6. If sign-in fails: hosted **develop** Supabase → Authentication → Providers → Apple → On, client ID `com.fitfight.mvp`.
@@ -59,6 +59,7 @@ The native Fight path uses Supabase; Apple Health synchronization and account de
 | Standings | Live scoring uses exact Fight-window HealthKit aggregates, not overlapping whole-day totals. Both phones read the same serving rows. |
 | Fight end | Exact `ends_at` is the final cutoff. Opening the app closes due fights; the protected Vercel cron runs daily if nobody opens it. After finalization, later Steps cannot change the result. |
 | Tabs | Fights, New, You. Requests and Design are removed. |
+| New fight layouts | Staging only. You → Try 10 layouts, or numbered chips on New. Ten UX versions of the same Steps form. Production stays on Current. |
 | Look | Night/Day, Nunito, fixed Moss/Ember/Gold semantics; no accent picker or public design-system showcase. |
 | Versions | Works under You → Settings; the version label stays at the top of every root screen. |
 | Privacy / Support | Pages are implemented and linked under You → Settings. Staging uses `staging.fitfight.app`; production uses `fitfight.app`. Each route must be deployed before that build is tested or submitted. |

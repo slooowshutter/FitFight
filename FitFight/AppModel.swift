@@ -114,6 +114,7 @@ final class AppModel: ObservableObject {
 
     @Published var openFightID: String?
     @Published var showingVersions = false
+    @Published var showingNewFightLayouts = false
     @Published var joined: Set<String> = []
     @Published var createError: String?
     @Published private(set) var isCreatingFight = false

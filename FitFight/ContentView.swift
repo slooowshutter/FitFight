@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct ContentView: View {
     @EnvironmentObject private var themeStore: ThemeStore
@@ -101,7 +102,9 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            FFTabBar(tab: $model.tab)
+            FFTabBar(tab: $model.tab, onReselect: {
+                model.openFightID = nil
+            })
         }
     }
 
@@ -117,15 +120,112 @@ struct ContentView: View {
         }
     }
 
+    private var fightsPath: Binding<[String]> {
+        Binding(
+            get: { model.openFightID.map { [$0] } ?? [] },
+            set: { model.openFightID = $0.last }
+        )
+    }
+
     private var fightsStack: some View {
-        NavigationStack {
+        NavigationStack(path: fightsPath) {
             FightsListView()
                 .toolbar(.hidden, for: .navigationBar)
-                .navigationDestination(item: $model.openFightID) { id in
-                    if let fight = model.fight(id: id) {
-                        FightDetailView(fight: fight)
+                .navigationDestination(for: String.self) { id in
+                    Group {
+                        if let fight = model.fight(id: id) {
+                            FightDetailView(fight: fight)
+                        }
                     }
+                    .background(InteractivePopGestureEnabler(canPop: true, ownsDelegate: false))
                 }
+                .background(InteractivePopGestureEnabler(canPop: model.openFightID != nil, ownsDelegate: true))
+        }
+    }
+}
+
+/// Hidden nav bars disable edge-swipe back. The Fights stack owns the gesture
+/// delegate so the list cannot freeze after a pop. `canPop` (not the list's
+/// window) decides whether swipe is on, because NavigationStack detaches the
+/// list view while a fight is open.
+private struct InteractivePopGestureEnabler: UIViewRepresentable {
+    var canPop: Bool
+    var ownsDelegate: Bool
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(canPop: canPop, ownsDelegate: ownsDelegate)
+    }
+
+    func makeUIView(context: Context) -> SentinelView {
+        let view = SentinelView()
+        view.isUserInteractionEnabled = false
+        view.backgroundColor = .clear
+        view.coordinator = context.coordinator
+        return view
+    }
+
+    func updateUIView(_ uiView: SentinelView, context: Context) {
+        uiView.coordinator = context.coordinator
+        context.coordinator.canPop = canPop
+        context.coordinator.ownsDelegate = ownsDelegate
+        context.coordinator.sync(from: uiView)
+    }
+
+    final class SentinelView: UIView {
+        weak var coordinator: Coordinator?
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            coordinator?.sync(from: self)
+        }
+
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            coordinator?.sync(from: self)
+        }
+    }
+
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        var canPop: Bool
+        var ownsDelegate: Bool
+        weak var navigationController: UINavigationController?
+
+        init(canPop: Bool, ownsDelegate: Bool) {
+            self.canPop = canPop
+            self.ownsDelegate = ownsDelegate
+        }
+
+        func sync(from view: UIView) {
+            var responder: UIResponder? = view
+            while let current = responder {
+                if let found = current as? UINavigationController {
+                    navigationController = found
+                    break
+                }
+                if let controller = current as? UIViewController, let found = controller.navigationController {
+                    navigationController = found
+                    break
+                }
+                responder = current.next
+            }
+            guard let nav = navigationController else { return }
+            if ownsDelegate {
+                nav.interactivePopGestureRecognizer?.delegate = self
+                nav.interactivePopGestureRecognizer?.isEnabled = canPop
+            } else if canPop {
+                nav.interactivePopGestureRecognizer?.isEnabled = true
+            }
+        }
+
+        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            canPop && (navigationController?.viewControllers.count ?? 0) > 1
+        }
+
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer
+        ) -> Bool {
+            canPop && otherGestureRecognizer is UIPanGestureRecognizer
         }
     }
 }

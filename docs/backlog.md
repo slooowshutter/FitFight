@@ -50,7 +50,7 @@ If the app is closed or killed, iOS will not reliably run timers, settle a month
 
 The phone’s job is: show the UI, read Apple Health Steps when it is open (or briefly woken), and upload the required aggregates. Push notifications are not in the current scope.
 
-**Last TestFlight:** 3 Sep 2026 — Fight setup shows New Fight beside the first-step progress, replaces it with Back on later steps, follows metric, duration, opponents, loser action, and review, and keeps its primary action at the bottom on short steps. The app also shows a notice when a newer TestFlight build is available, Fight detail drops the Total and Today tiles, and standings show each person's last Apple Health sync date and time. Look for `1.0.0 · build N · staging`.
+**Last TestFlight:** 3 Sep 2026 — Tapping Fights again (or swiping from the left edge) returns you from a fight to the list. Look for `1.0.0 · build N · staging`.
 
 ## Semi urgent
 

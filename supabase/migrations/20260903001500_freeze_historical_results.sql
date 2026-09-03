@@ -11,6 +11,51 @@ revoke update on table public.fight_members from authenticated;
 grant update (state, accepted_at) on table public.fight_members to authenticated;
 revoke insert on table public.fight_members from authenticated;
 grant insert (fight_id, user_id, state, accepted_at) on table public.fight_members to authenticated;
+revoke update on table public.fights from authenticated;
+revoke update on table public.data_sources from authenticated;
+
+drop policy if exists fight_members_insert_owner_or_self on public.fight_members;
+create policy fight_members_insert_owner_or_self
+  on public.fight_members
+  for insert
+  to authenticated
+  with check (
+    state in ('accepted', 'invited')
+    and exists (
+      select 1
+      from public.fights as fight
+      where fight.id = fight_id
+        and fight.state not in ('final', 'cancelled')
+        and (
+          user_id = (select auth.uid())
+          or fight.owner_id = (select auth.uid())
+        )
+    )
+  );
+
+drop policy if exists fight_members_update_own on public.fight_members;
+create policy fight_members_update_own
+  on public.fight_members
+  for update
+  to authenticated
+  using (
+    user_id = (select auth.uid())
+    and exists (
+      select 1
+      from public.fights as fight
+      where fight.id = fight_id
+        and fight.state not in ('final', 'cancelled')
+    )
+  )
+  with check (
+    user_id = (select auth.uid())
+    and exists (
+      select 1
+      from public.fights as fight
+      where fight.id = fight_id
+        and fight.state not in ('final', 'cancelled')
+    )
+  );
 
 create or replace function private.allow_score_correction()
 returns boolean
@@ -35,8 +80,6 @@ begin
   new.finalized_at := null;
   new.input_revision := null;
   new.freshness := null;
-  new.selected_source_id := null;
-  new.source_label := null;
   new.calculation_version := 1;
   new.scoring_engine_version := 1;
   return new;

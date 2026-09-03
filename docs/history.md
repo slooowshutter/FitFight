@@ -2,7 +2,7 @@
 
 ## 2026-09-03 — freeze historical results
 
-Finished Fights keep `final_value`, `finalized_at`, calculation version, and scoring engine version. Completed civil days (`day` before `complete_through` in the upload time zone) keep `metric_days.finalized_at`. Triggers ignore later aggregation writes unless `fitfight.allow_score_correction` is on. Clients can still accept/decline; they cannot write scores.
+Finished Fights keep `final_value`, `finalized_at`, calculation version, and scoring engine version. Completed civil days (`day` before `complete_through` in the upload time zone) keep `metric_days.finalized_at`. Triggers ignore later aggregation writes unless `fitfight.allow_score_correction` is on. The phone can accept or decline only while the Fight is not `final` or `cancelled`. It cannot write scores, fight state, or `complete_through`.
 
 ## 2026-08-30 — TestFlight is staging only
 

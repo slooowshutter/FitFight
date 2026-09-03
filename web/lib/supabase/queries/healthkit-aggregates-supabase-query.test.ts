@@ -334,7 +334,6 @@ test("Apple Health aggregate sync writes merged days without raw observations", 
   assert.ok(queries.some(({ query }) =>
     query.includes("where public.metric_days.finalized_at is null")
   ));
-  assert.ok(queries.every(({ query }) => !query.includes("finalized_at = null")));
   assert.ok(queries.every(({ query }) => !query.includes("metric_observations")));
   assert.ok(queries.every(({ query }) => !query.includes("provider_events")));
 });

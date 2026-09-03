@@ -1,5 +1,5 @@
 begin;
-select plan(20);
+select plan(27);
 
 create function pg_temp.make_user(uid uuid, email text)
 returns void
@@ -355,6 +355,38 @@ select throws_ok(
 );
 
 reset role;
+insert into public.data_sources (
+  id, user_id, provider, source_label, connection_route
+) values (
+  'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+  '11111111-1111-4111-8111-111111111111',
+  'apple_health',
+  'Apple Health',
+  'healthkit'
+);
+
+select pg_temp.as_user('11111111-1111-4111-8111-111111111111');
+set local role authenticated;
+
+select throws_ok(
+  $$ update public.fights
+        set state = 'final'
+      where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' $$,
+  '42501',
+  'permission denied for table fights',
+  'clients cannot freeze a fight'
+);
+
+select throws_ok(
+  $$ update public.data_sources
+        set complete_through = now() + interval '1 year'
+      where id = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd' $$,
+  '42501',
+  'permission denied for table data_sources',
+  'clients cannot write complete_through'
+);
+
+reset role;
 update public.fights
 set state = 'final'
 where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -390,6 +422,23 @@ select is(
   'a final fight cannot return to live'
 );
 
+select pg_temp.as_user('33333333-3333-4333-8333-333333333333');
+set local role authenticated;
+
+update public.fight_members
+set state = 'declined'
+where fight_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  and user_id = '33333333-3333-4333-8333-333333333333';
+
+reset role;
+select is(
+  (select state::text from public.fight_members
+    where fight_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+      and user_id = '33333333-3333-4333-8333-333333333333'),
+  'accepted',
+  'clients cannot decline after a fight is final'
+);
+
 select pg_temp.as_user('11111111-1111-4111-8111-111111111111');
 set local role authenticated;
 
@@ -409,21 +458,105 @@ select throws_ok(
 );
 
 reset role;
+update public.fights
+set state = 'final'
+where id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+
+select pg_temp.as_user('11111111-1111-4111-8111-111111111111');
+set local role authenticated;
+
+select throws_ok(
+  $$ insert into public.fight_members (fight_id, user_id, state)
+     values (
+       'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+       '33333333-3333-4333-8333-333333333333',
+       'invited'
+     ) $$,
+  '42501',
+  'new row violates row-level security policy for table "fight_members"',
+  'clients cannot add members to a final fight'
+);
+
+reset role;
+select pg_temp.as_user('22222222-2222-4222-8222-222222222222');
+set local role authenticated;
+
+update public.fight_members
+set state = 'accepted',
+    accepted_at = now()
+where fight_id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+  and user_id = '22222222-2222-4222-8222-222222222222';
+
+reset role;
+select is(
+  (select state::text from public.fight_members
+    where fight_id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+      and user_id = '22222222-2222-4222-8222-222222222222'),
+  'invited',
+  'clients cannot accept after a fight is final'
+);
+
 insert into public.fight_members (
-  fight_id, user_id, state, current_value, finalized_at
+  fight_id, user_id, state, current_value, finalized_at, selected_source_id
 ) values (
   'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
   '33333333-3333-4333-8333-333333333333',
   'invited',
   42,
-  now()
+  now(),
+  'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
 );
 
 select ok(
-  (select current_value is null and finalized_at is null from public.fight_members
+  (select current_value is null
+      and finalized_at is null
+      and selected_source_id = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+   from public.fight_members
     where fight_id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
       and user_id = '33333333-3333-4333-8333-333333333333'),
-  'insert strips scores even for the database role'
+  'insert strips scores even for the database role and keeps the selected source'
+);
+
+insert into public.metric_days (
+  user_id, source_id, metric, day, value, unit, input_hash,
+  normalization_version, calculation_version, finalized_at
+) values (
+  '11111111-1111-4111-8111-111111111111',
+  'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+  'steps',
+  current_date,
+  9000,
+  'steps',
+  'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+  1,
+  1,
+  now()
+);
+
+update public.metric_days
+set value = 1
+where user_id = '11111111-1111-4111-8111-111111111111'
+  and day = current_date;
+
+select is(
+  (select value::integer from public.metric_days
+    where user_id = '11111111-1111-4111-8111-111111111111'
+      and day = current_date),
+  9000,
+  'finalized metric days ignore later aggregation writes'
+);
+
+update public.step_days
+set steps = 1
+where user_id = '11111111-1111-4111-8111-111111111111'
+  and day = current_date;
+
+select is(
+  (select steps from public.step_days
+    where user_id = '11111111-1111-4111-8111-111111111111'
+      and day = current_date),
+  9000,
+  'frozen step days pin to the finalized metric day total'
 );
 
 select * from finish();

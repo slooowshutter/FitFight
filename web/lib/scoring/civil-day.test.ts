@@ -31,4 +31,12 @@ test("invalid days and time zones are rejected or fall back", () => {
     civilDayInTimeZone(new Date("2026-08-30T21:30:00.000Z"), "America/New_York"),
     "2026-08-30",
   );
+  assert.equal(
+    civilDayInTimeZone(new Date("2026-08-31T03:30:00.000Z"), "America/New_York"),
+    "2026-08-30",
+  );
+  assert.equal(
+    civilDayInTimeZone(new Date("2026-08-31T04:00:00.000Z"), "America/New_York"),
+    "2026-08-31",
+  );
 });

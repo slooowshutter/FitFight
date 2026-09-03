@@ -3,6 +3,7 @@ import { ApiError, ERROR_CODES } from "@/lib/http";
 import { readProviderArchive } from "@/lib/ingest/provider-archive";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
+import { civilDayInTimeZone } from "@/lib/scoring/civil-day";
 import { scoreFight } from "@/lib/scoring/score-fight";
 import { asNumber, type OutcomeRule } from "@/lib/types/database";
 import type {
@@ -351,12 +352,10 @@ export async function processProviderUpload(
       );
       await flushEvents();
 
-      const completeLocalDay = new Intl.DateTimeFormat("en-CA", {
-        timeZone: checkpoint.record.time_zone,
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-      }).format(new Date(checkpoint.record.complete_through));
+      const completeLocalDay = civilDayInTimeZone(
+        new Date(checkpoint.record.complete_through),
+        checkpoint.record.time_zone,
+      );
       for (const item of mergedDays) {
         if (item.record.type !== "merged_day") continue;
         const finalized = item.record.day < completeLocalDay;

@@ -1,5 +1,5 @@
 begin;
-select plan(62);
+select plan(63);
 
 select has_schema('private', 'private schema exists');
 select has_table('public', 'profiles', 'profiles exists');
@@ -139,8 +139,13 @@ select is(
 );
 select is(
   has_table_privilege('authenticated', 'public.fights', 'UPDATE'),
-  true,
-  'clients can update fights they own or that are due'
+  false,
+  'clients cannot update fights; the server closer owns state'
+);
+select is(
+  has_table_privilege('authenticated', 'public.data_sources', 'UPDATE'),
+  false,
+  'clients cannot update data sources; ingest owns complete_through'
 );
 select is(
   has_table_privilege('authenticated', 'public.fight_members', 'UPDATE'),

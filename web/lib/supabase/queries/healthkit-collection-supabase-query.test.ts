@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Sql } from "postgres";
 import { syncHealthKitCollection } from "./healthkit-collection-supabase-query";
-import { healthKitCollectionSyncSchema } from "@/lib/types/healthkit/healthkit-collection";
+import {
+  healthCollectionSessionsPerKind,
+  healthKitCollectionMaxBytes,
+  healthKitCollectionSyncSchema,
+} from "@/lib/types/healthkit/healthkit-collection";
 
 function createDatabaseStub(
   respond: (query: string, values: readonly unknown[]) => unknown[],
@@ -68,6 +72,24 @@ test("Apple Health collection rejects Steps and raw samples", () => {
     ...validCollection,
     samples: [{ sample_id: "b4c1285d-0232-4d15-b8cc-1a916ba2bbf7" }],
   }));
+});
+
+test("Apple Health collection keeps 2000 sessions per kind under a 4 MiB body", () => {
+  assert.equal(healthCollectionSessionsPerKind, 2000);
+  assert.equal(healthKitCollectionMaxBytes, 4_000_000);
+  const tooManySleep = {
+    ...validCollection,
+    sessions: Array.from({ length: healthCollectionSessionsPerKind + 1 }, (_, index) => ({
+      ...validCollection.sessions[0],
+      source_uuid: `b4c1285d-0232-4d15-b8cc-${index.toString(16).padStart(12, "0")}`,
+      kind: "sleep",
+      activity_type: "asleep",
+    })),
+  };
+  assert.throws(
+    () => healthKitCollectionSyncSchema.parse(tooManySleep),
+    /too many sessions of one kind/,
+  );
 });
 
 test("Apple Health collection stores private days and sessions without touching Fight scores", async () => {

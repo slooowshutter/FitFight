@@ -2,7 +2,8 @@ import { z } from "zod";
 import { civilDayBounds, isCivilDay } from "@/lib/scoring/civil-day";
 
 const MAX_DAY_ROWS = 4000;
-const MAX_SESSIONS = 2000;
+export const healthCollectionSessionsPerKind = 2000;
+export const healthKitCollectionMaxBytes = 4_000_000;
 const MAX_VALUE = 1_000_000_000_000;
 const MAX_DURATION_SECONDS = 2_592_000;
 
@@ -44,6 +45,7 @@ export const healthCollectionUnitByMetric = {
 
 export const healthCollectionSessionKindValues = ["workout", "sleep", "mindful"] as const;
 export const healthCollectionSessionKindSchema = z.enum(healthCollectionSessionKindValues);
+const MAX_SESSIONS = healthCollectionSessionsPerKind * healthCollectionSessionKindValues.length;
 
 const healthCollectionDaySchema = z.object({
   day: civilDaySchema,
@@ -133,6 +135,11 @@ export const healthKitCollectionSyncSchema = z.object({
     }
   });
   const sessionIds = new Set<string>();
+  const sessionsPerKind = {
+    workout: 0,
+    sleep: 0,
+    mindful: 0,
+  };
   value.sessions.forEach((session, index) => {
     if (sessionIds.has(session.source_uuid)) {
       context.addIssue({
@@ -142,11 +149,21 @@ export const healthKitCollectionSyncSchema = z.object({
       });
     }
     sessionIds.add(session.source_uuid);
+    sessionsPerKind[session.kind] += 1;
     if (Date.parse(session.ends_at) > completeThrough) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         message: "ends_at exceeds complete_through",
         path: ["sessions", index, "ends_at"],
+      });
+    }
+  });
+  healthCollectionSessionKindValues.forEach((kind) => {
+    if (sessionsPerKind[kind] > healthCollectionSessionsPerKind) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "too many sessions of one kind",
+        path: ["sessions"],
       });
     }
   });

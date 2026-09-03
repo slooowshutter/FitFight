@@ -88,10 +88,6 @@ enum HealthKitCollection {
                 activityType: { _ in "mindful" }
             ))
         }
-        sessions.sort { $0.endsAt > $1.endsAt }
-        if sessions.count > 2000 {
-            sessions = Array(sessions.prefix(2000))
-        }
 
         return FitFightHealthKitCollection(
             completeThrough: iso8601(now),
@@ -223,9 +219,9 @@ enum HealthKitCollection {
         start: Date,
         end: Date
     ) async -> [FitFightHealthKitCollection.Session] {
-        let samples: [HKSample]
+        let rows: [HKSample]
         do {
-            samples = try await samples(
+            rows = try await querySamples(
                 store: store,
                 type: HKObjectType.workoutType(),
                 start: start,
@@ -234,7 +230,7 @@ enum HealthKitCollection {
         } catch {
             return []
         }
-        return samples.compactMap { sample in
+        return rows.compactMap { sample in
             guard let workout = sample as? HKWorkout, workout.endDate > workout.startDate else {
                 return nil
             }
@@ -259,13 +255,13 @@ enum HealthKitCollection {
         end: Date,
         activityType: (Int) -> String
     ) async -> [FitFightHealthKitCollection.Session] {
-        let samples: [HKSample]
+        let rows: [HKSample]
         do {
-            samples = try await samples(store: store, type: type, start: start, end: end)
+            rows = try await querySamples(store: store, type: type, start: start, end: end)
         } catch {
             return []
         }
-        return samples.compactMap { sample in
+        return rows.compactMap { sample in
             guard let category = sample as? HKCategorySample, category.endDate > category.startDate else {
                 return nil
             }
@@ -282,7 +278,7 @@ enum HealthKitCollection {
         }
     }
 
-    private static func samples(
+    private static func querySamples(
         store: HKHealthStore,
         type: HKSampleType,
         start: Date,

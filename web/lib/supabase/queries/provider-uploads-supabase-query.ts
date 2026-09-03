@@ -291,10 +291,7 @@ export async function processProviderUpload(
       const [clock] = await sql<{ server_now: string }[]>`
         select clock_timestamp()::text as server_now
       `;
-      if (
-        !clock
-        || Date.parse(checkpoint.record.complete_through) > Date.parse(clock.server_now)
-      ) {
+      if (Date.parse(checkpoint.record.complete_through) > Date.parse(clock.server_now)) {
         throw new ApiError(
           400,
           ERROR_CODES.validation,
@@ -395,10 +392,7 @@ export async function processProviderUpload(
           set value = excluded.value, input_hash = excluded.input_hash,
             normalization_version = excluded.normalization_version,
             calculation_version = excluded.calculation_version,
-            finalized_at = case
-              when public.metric_days.finalized_at is not null then public.metric_days.finalized_at
-              else excluded.finalized_at
-            end,
+            finalized_at = excluded.finalized_at,
             updated_at = now()
           where public.metric_days.finalized_at is null
         `;

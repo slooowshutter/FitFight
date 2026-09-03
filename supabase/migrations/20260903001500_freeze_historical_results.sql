@@ -48,16 +48,6 @@ create policy fight_members_update_own
         and fight.state in ('live', 'scheduled', 'inviting')
         and fight.ends_at > now()
     )
-  )
-  with check (
-    user_id = (select auth.uid())
-    and exists (
-      select 1
-      from public.fights as fight
-      where fight.id = fight_id
-        and fight.state in ('live', 'scheduled', 'inviting')
-        and fight.ends_at > now()
-    )
   );
 
 create or replace function private.allow_score_correction()

@@ -103,7 +103,7 @@ export async function acceptInvite(
     throw new ApiError(500, ERROR_CODES.db_error, "Could not mark invite accepted");
   }
 
-  if (["live", "scheduled", "awaiting_final_sync"].includes(fight.state)) {
+  if (fight.state === "live" || fight.state === "scheduled") {
     await recalculateFight(fight.id, admin);
   }
 

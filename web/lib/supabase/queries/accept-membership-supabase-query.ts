@@ -66,7 +66,7 @@ export async function acceptMembership(
     .eq("invited_user_id", userId)
     .is("accepted_at", null);
 
-  if (["live", "scheduled", "awaiting_final_sync"].includes(fight.state)) {
+  if (fight.state === "live" || fight.state === "scheduled") {
     await recalculateFight(fight.id, admin);
   }
 

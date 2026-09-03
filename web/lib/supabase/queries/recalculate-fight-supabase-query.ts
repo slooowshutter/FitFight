@@ -86,7 +86,6 @@ export async function recalculateFight(
       || fight.state === "final"
       || fight.state === "cancelled"
       || fight.state === "draft"
-      || fight.state === "inviting"
     ) {
       return;
     }
@@ -96,14 +95,12 @@ export async function recalculateFight(
       selected_source_id: string | null;
       personal_target: string | null;
       input_revision: number | null;
-      finalized_at: string | null;
     }[]>`
       select
         user_id,
         selected_source_id,
         personal_target::text as personal_target,
-        input_revision,
-        finalized_at::text as finalized_at
+        input_revision
       from public.fight_members
       where fight_id = ${fightId}
         and state = 'accepted'
@@ -112,7 +109,7 @@ export async function recalculateFight(
     const userIds = members.map((member) => member.user_id);
     const sourceIds = members
       .map((member) => member.selected_source_id)
-      .filter((id): id is string => typeof id === "string");
+      .filter((id): id is string => id !== null);
 
     const snapshotValues = new Map<string, number>();
     let observations: ObservationRow[] = [];
@@ -214,7 +211,7 @@ export async function recalculateFight(
     const byUser = new Map(scored.map((row) => [row.userId, row]));
     for (const member of members) {
       const result = byUser.get(member.user_id);
-      if (!result || member.finalized_at) {
+      if (!result) {
         continue;
       }
       const completeThrough = member.selected_source_id

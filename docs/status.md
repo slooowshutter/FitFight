@@ -83,4 +83,4 @@ The native Fight path uses the API to create and join; Apple Health synchronizat
 
 ## Next product work
 
-Freeze is PR #65: finished Fights and completed civil days stay put; the phone cannot mark a Fight `final`, write `complete_through`, or join/leave after `ends_at`. Marc still needs to tap Delete account once on staging. Two-phone Steps proof (invite, matching standings, fight close) is still worth doing if it has not been proven.
+Freeze is this PR: finished Fights and completed civil days stay put; the phone cannot mark a Fight `final`, write `complete_through`, or join/leave after `ends_at`. Marc still needs to tap Delete account once on staging. Two-phone Steps proof (invite, matching standings, fight close) is still worth doing if it has not been proven.

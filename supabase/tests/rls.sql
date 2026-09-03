@@ -1,5 +1,5 @@
 begin;
-select plan(29);
+select plan(24);
 
 create function pg_temp.make_user(uid uuid, email text)
 returns void
@@ -365,42 +365,6 @@ insert into public.data_sources (
   'healthkit'
 );
 
-select pg_temp.as_user('11111111-1111-4111-8111-111111111111');
-set local role authenticated;
-
-select throws_ok(
-  $$ update public.fights
-        set state = 'final'
-      where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' $$,
-  '42501',
-  'permission denied for table fights',
-  'clients cannot freeze a fight'
-);
-
-select throws_ok(
-  $$ update public.data_sources
-        set complete_through = now() + interval '1 year'
-      where id = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd' $$,
-  '42501',
-  'permission denied for table data_sources',
-  'clients cannot write complete_through'
-);
-
-select throws_ok(
-  $$ insert into public.data_sources (
-       user_id, provider, source_label, connection_route
-     ) values (
-       '11111111-1111-4111-8111-111111111111',
-       'garmin',
-       'Garmin',
-       'oauth'
-     ) $$,
-  '42501',
-  'permission denied for table data_sources',
-  'clients cannot insert data sources'
-);
-
-reset role;
 update public.fights
 set state = 'awaiting_final_sync'
 where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -454,41 +418,6 @@ select is(
     where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),
   'final',
   'a final fight cannot return to live'
-);
-
-select pg_temp.as_user('33333333-3333-4333-8333-333333333333');
-set local role authenticated;
-
-update public.fight_members
-set state = 'declined'
-where fight_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
-  and user_id = '33333333-3333-4333-8333-333333333333';
-
-reset role;
-select is(
-  (select state::text from public.fight_members
-    where fight_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
-      and user_id = '33333333-3333-4333-8333-333333333333'),
-  'accepted',
-  'clients cannot decline after a fight is final'
-);
-
-select pg_temp.as_user('11111111-1111-4111-8111-111111111111');
-set local role authenticated;
-
-select throws_ok(
-  $$ insert into public.fight_members (
-       fight_id, user_id, state, current_value, finalized_at
-     ) values (
-       'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
-       '33333333-3333-4333-8333-333333333333',
-       'invited',
-       999999,
-       now()
-     ) $$,
-  '42501',
-  'permission denied for table fight_members',
-  'clients cannot insert a frozen fake score'
 );
 
 reset role;

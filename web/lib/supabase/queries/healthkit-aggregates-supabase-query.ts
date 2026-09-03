@@ -158,10 +158,7 @@ export async function syncHealthKitAggregates(
           input_hash = excluded.input_hash,
           normalization_version = excluded.normalization_version,
           calculation_version = excluded.calculation_version,
-          finalized_at = case
-            when public.metric_days.finalized_at is not null then public.metric_days.finalized_at
-            else excluded.finalized_at
-          end,
+          finalized_at = excluded.finalized_at,
           updated_at = now()
         where public.metric_days.finalized_at is null
       `;

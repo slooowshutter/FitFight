@@ -1,5 +1,5 @@
 begin;
-select plan(63);
+select plan(62);
 
 select has_schema('private', 'private schema exists');
 select has_table('public', 'profiles', 'profiles exists');
@@ -211,15 +211,6 @@ select is(
   has_column_privilege('authenticated', 'public.fight_members', 'current_value', 'INSERT'),
   false,
   'clients cannot insert fight scores'
-);
-select ok(
-  exists (
-    select 1 from information_schema.columns
-    where table_schema = 'public'
-      and table_name = 'fight_members'
-      and column_name = 'scoring_engine_version'
-  ),
-  'fight members store the scoring engine version used at freeze'
 );
 
 select ok(

@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 4,
+            notes: "Joining a fight late now counts your Apple Health Steps from the moment the fight started, not from when you accepted, and FitFight uploads them as soon as you join."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 4,
             notes: "You → Settings now has Bugs & requests: post a bug or a feature request, see what other people submitted, upvote, and comment with your username."
         ),
         ReleaseNote(

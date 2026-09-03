@@ -285,6 +285,9 @@ final class HealthKitStepsStore: ObservableObject {
             return false
         }
 
+        while isSyncing {
+            try? await Task.sleep(for: .milliseconds(250))
+        }
         isSyncing = true
         connection = .syncing
         updateDiagnostics { $0.lastSyncAttempt = Date(); $0.lastTrigger = trigger }

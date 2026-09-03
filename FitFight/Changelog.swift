@@ -29,7 +29,7 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 3,
-            notes: "Fight detail no longer shows the Total and Today step tiles under the main card. The head-to-head card, action, standings, and daily breakdown stay."
+            notes: "Inside a fight, the Total and Today tiles under the main card are gone. The head-to-head card, action, standings, and daily breakdown stay."
         ),
         ReleaseNote(
             version: "1.0.0",

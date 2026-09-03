@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 3,
+            notes: "Fight setup uses a normal Next button on the first steps, then a real slide-to-start control on review so creating a fight cannot be mistaken for a swipe."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 3,
             notes: "Tapping Fights again while a fight is open returns you to the list. You can also swipe from the left edge to go back, like in other iOS apps."
         ),
         ReleaseNote(

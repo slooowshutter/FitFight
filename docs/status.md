@@ -35,7 +35,7 @@ Verify the minimal product alongside Apple Health synchronization:
 
 1. TestFlight → **Update**. Look for `1.0.0 · build N · staging · 3 Sep` at the top.
 2. Check Fights, a Fight detail, New, and You in both Night and Day. There are only three tabs: Fights, New, You.
-3. New guides people through Steps, duration, exact usernames, the required action, and review. It offers 3 days / 1 week / 2 weeks / 1 month. **Start fight** shows Starting… and ignores extra taps.
+3. New guides people through Steps, duration, exact usernames, the required action, and review. It offers 3 days / 1 week / 2 weeks / 1 month. Earlier steps use **Next**. Review uses **Slide to start**, then shows Starting… and ignores extra slides.
 4. Confirm sign-in, username, Apple Health Steps, Fight invitations, standings with last-sync times, Privacy, Support, Versions, sign out, and Delete account.
 5. Confirm Requests, friend requests/lists, money, other Metrics, and dead settings are absent.
 6. If sign-in fails: hosted **develop** Supabase → Authentication → Providers → Apple → On, client ID `com.fitfight.mvp`.

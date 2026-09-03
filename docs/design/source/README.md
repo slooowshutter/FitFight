@@ -21,6 +21,8 @@ There is no accent picker. Nunito 500/600/700/800 is the approved typeface becau
 
 The native implementation lives in `FitFight/DesignSystem/`. Port the HTML’s look and behaviour into SwiftUI; never ship a web view, JavaScript bridge, or CSS-in-Swift layer. All colours—including literal white/black overlays from the source—must be named in `tokens.json` before Swift code uses them.
 
+New screens and UX that reshape a flow start with **Mobbin** (real-app patterns), then land in this kit’s Night/Day tokens. See the Mobbin hard rule in [`AGENTS.md`](../../../AGENTS.md). If Mobbin is not signed in, stop; do not invent the layout.
+
 ## Archived source
 
 The following files document the previous SF Pro, dark/light × 10-accent direction. They are retained for historical context only and must not guide new implementation:

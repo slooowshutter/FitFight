@@ -8,6 +8,7 @@ The agent edits this file, commits, opens a PR into `develop`.
 | Column | Meaning |
 | --- | --- |
 | **Urgent** | Do before the next feature. Legal or data-integrity, not product. |
+| **Semi urgent** | Product fixes to do soon. Not legal, not parked. |
 | **Now** | Next work. Pick from here unless Marc says otherwise. |
 | **Next** | Decided, not started. |
 | **Later** | Ideas. Do not build until Marc moves them up. |
@@ -50,6 +51,14 @@ If the app is closed or killed, iOS will not reliably run timers, settle a month
 The phone’s job is: show the UI, read Apple Health Steps when it is open (or briefly woken), and upload the required aggregates. Push notifications are not in the current scope.
 
 **Last TestFlight:** 2 Sep 2026 — First App Store release candidate with production-accurate privacy declarations, screenshots, and release checks. Look for `1.0.0 · build N · staging`.
+
+## Semi urgent
+
+- **Slider for dates.** Replace or supplement the current date picker with a slider.
+- **New fight: close keyboard on Enter.** Remove the add button so people tap Enter, which submits and closes the keyboard.
+- **Haptic feedback on button tap.** Vibration (`retour haptique`) when buttons are tapped.
+- **Nicer graph for a fight in progress.** Improve the in-progress Fight chart.
+- **Data source mismatch for Dorian.** One place shows 2.2k steps for that day; another shows 0 steps. Same person, same day — they must match.
 
 ## Now
 

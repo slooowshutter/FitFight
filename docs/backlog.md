@@ -50,12 +50,11 @@ If the app is closed or killed, iOS will not reliably run timers, settle a month
 
 The phone’s job is: show the UI, read Apple Health Steps when it is open (or briefly woken), and upload the required aggregates. Push notifications are not in the current scope.
 
-**Last TestFlight:** 3 Sep 2026 — In-app toast when a newer TestFlight build is available. Look for `1.0.0 · build N · staging`.
+**Last TestFlight:** 3 Sep 2026 — New Fight is now a guided four-step flow with progress, focused decisions, and a final editable review. The app also shows a notice when a newer TestFlight build is available, Fight detail drops the Total and Today tiles, and standings show each person's last Apple Health sync date and time. Look for `1.0.0 · build N · staging`.
 
 ## Semi urgent
 
 - **Slider for dates.** Replace or supplement the current date picker with a slider.
-- **New fight: close keyboard on Enter.** Remove the add button so people tap Enter, which submits and closes the keyboard.
 - **Haptic feedback on button tap.** Vibration (`retour haptique`) when buttons are tapped.
 - **Nicer graph for a fight in progress.** Improve the in-progress Fight chart.
 - **Data source mismatch for Dorian.** One place shows 2.2k steps for that day; another shows 0 steps. Same person, same day — they must match.

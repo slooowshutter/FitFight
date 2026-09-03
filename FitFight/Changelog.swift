@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 3,
+            notes: "Creating a Fight is now a clear four-step flow: add opponents, choose the duration, agree on the loser action, then review every detail before starting."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 3,
             notes: "Opening the app now shows an in-app notice when a newer TestFlight build is available, so you can open TestFlight and tap Update."
         ),
         ReleaseNote(

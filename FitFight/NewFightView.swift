@@ -82,7 +82,12 @@ struct NewFightView: View {
     private var flowProgress: some View {
         VStack(spacing: 10) {
             HStack {
-                if step > 0 {
+                if step == 0 {
+                    Text("New fight")
+                        .ffType(.title)
+                        .foregroundStyle(theme.text)
+                        .frame(minHeight: 44)
+                } else {
                     Button {
                         step -= 1
                     } label: {

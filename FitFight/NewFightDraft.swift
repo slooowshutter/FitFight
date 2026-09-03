@@ -46,10 +46,18 @@ final class NewFightDraft: ObservableObject {
         }
     }
 
+    var pendingHandle: String {
+        SessionStore.strippedHandle(username)
+    }
+
+    var hasInvitees: Bool {
+        !inviteHandles.isEmpty || SessionStore.isValidHandle(pendingHandle)
+    }
+
     func canStart(session: SessionStore, steps: HealthKitStepsStore, model: AppModel) -> Bool {
         session.isSignedIn
             && steps.hasAsked
-            && !inviteHandles.isEmpty
+            && hasInvitees
             && !trimmedAction.isEmpty
             && trimmedAction.count <= Self.actionLimit
             && !model.isCreatingFight
@@ -58,7 +66,7 @@ final class NewFightDraft: ObservableObject {
     func missing(session: SessionStore, steps: HealthKitStepsStore) -> [String] {
         var items: [String] = []
         if !steps.hasAsked { items.append("Connect Apple Health") }
-        if inviteHandles.isEmpty { items.append("Add a username") }
+        if !hasInvitees { items.append("Add a username") }
         if trimmedAction.isEmpty { items.append("Name the loser action") }
         return items
     }
@@ -70,7 +78,7 @@ final class NewFightDraft: ObservableObject {
     }
 
     func addUsername(session: SessionStore) {
-        let handle = SessionStore.strippedHandle(username)
+        let handle = pendingHandle
         usernameError = nil
 
         guard SessionStore.isValidHandle(handle) else {
@@ -88,6 +96,13 @@ final class NewFightDraft: ObservableObject {
 
         inviteHandles.append(handle)
         username = ""
+    }
+
+    @discardableResult
+    func commitPendingUsername(session: SessionStore) -> Bool {
+        if pendingHandle.isEmpty { return true }
+        addUsername(session: session)
+        return usernameError == nil
     }
 
     func removeHandle(_ handle: String) {
@@ -118,6 +133,7 @@ final class NewFightDraft: ObservableObject {
     }
 
     func startFight(model: AppModel, session: SessionStore, steps: HealthKitStepsStore) {
+        guard commitPendingUsername(session: session) else { return }
         guard canStart(session: session, steps: steps, model: model) else { return }
         guard model.beginCreateFight() else { return }
 

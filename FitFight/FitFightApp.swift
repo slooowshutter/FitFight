@@ -56,6 +56,9 @@ struct FitFightApp: App {
                     model.restoreCachedFights(session: session)
                     await model.refreshFights(session: session, steps: steps)
                 }
+                .onChange(of: session.authSession?.user.id) { _, _ in
+                    newFightDraft.resetAfterStart()
+                }
                 .onChange(of: steps.status) { _, status in
                     guard case .steps = status else { return }
                     guard session.authSession != nil else { return }

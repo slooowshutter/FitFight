@@ -242,7 +242,7 @@ struct NewFightWizardLayout: View {
     private var canAdvance: Bool {
         switch draft.wizardStep {
         case 0:
-            return !draft.inviteHandles.isEmpty || !draft.username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            return draft.hasInvitees
         case 2:
             return !draft.trimmedAction.isEmpty
         default:
@@ -252,10 +252,7 @@ struct NewFightWizardLayout: View {
 
     private func advance() {
         if draft.wizardStep == 0 {
-            if !draft.username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                draft.addUsername(session: session)
-                guard draft.usernameError == nil else { return }
-            }
+            guard draft.commitPendingUsername(session: session) else { return }
             guard !draft.inviteHandles.isEmpty else { return }
         }
         guard canAdvance else { return }
@@ -727,6 +724,8 @@ struct NewFightTicketLayout: View {
                     : draft.startTitle(session: session, steps: steps, model: model),
                 enabled: draft.canStart(session: session, steps: steps, model: model)
             ) {
+                guard draft.commitPendingUsername(session: session) else { return }
+                guard draft.canStart(session: session, steps: steps, model: model) else { return }
                 draft.showingTicket = true
             }
             .padding(.top, 8)

@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FitFight — Fights row, 20 variants</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --canvas: #0C0D08;
+    --bg: #171912;
+    --card: #24271E;
+    --control: #2E3227;
+    --text: #F0EDE1;
+    --text-dim: #D9D5C6;
+    --text-2: #9E9C8E;
+    --text-3: #8C8A7D;
+    --text-faint: #6F6D62;
+    --hairline: rgba(255,255,255,0.07);
+    --line: rgba(255,255,255,0.10);
+    --track: rgba(255,255,255,0.09);
+    --moss: #35804F;
+    --moss-edge: #4B9A65;
+    --moss-text: #8FD6A6;
+    --moss-wash: rgba(53,128,79,0.18);
+    --ember: #C2551D;
+    --ember-text: #EF9457;
+    --ember-wash: rgba(194,85,29,0.16);
+    --gold: #F6C450;
+    --tab-bar: rgba(23,25,18,0.94);
+    --tab-line: rgba(255,255,255,0.08);
+    --tab-pill: rgba(53,128,79,0.22);
+    --tab-on: #8FD6A6;
+    --tab-off: #6B6F66;
+    --radius: 22px;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    background: var(--canvas);
+    color: var(--text);
+    font-family: Nunito, -apple-system, sans-serif;
+    font-weight: 600;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 1240px; margin: 0 auto; padding: 36px 24px 80px; }
+  .kicker {
+    font-size: 12px; font-weight: 800; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--text-3);
+  }
+  h1 { margin: 10px 0 0; font-size: 36px; font-weight: 800; letter-spacing: -0.03em; }
+  .lede {
+    margin: 14px 0 0; max-width: 660px; font-size: 15px;
+    font-weight: 600; line-height: 1.6; color: var(--text-2);
+  }
+  .stage {
+    display: grid;
+    grid-template-columns: 300px 393px minmax(0, 1fr);
+    gap: 28px; align-items: start; margin-top: 32px;
+  }
+  .picker { display: flex; flex-direction: column; gap: 6px; max-height: 852px; overflow: auto; padding-right: 4px; }
+  .picker::-webkit-scrollbar { width: 6px; }
+  .picker::-webkit-scrollbar-thumb { background: var(--line); border-radius: 999px; }
+  .pick {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+    width: 100%; text-align: left; border: 1px solid var(--hairline);
+    border-radius: 14px; padding: 10px 12px; background: var(--bg);
+    color: var(--text); cursor: pointer;
+  }
+  .pick[aria-current="true"] { border-color: var(--moss-edge); background: var(--moss-wash); }
+  .pick b { font-size: 13px; font-weight: 800; letter-spacing: -0.01em; }
+  .pick span { font-size: 11px; font-weight: 700; color: var(--text-3); line-height: 1.35; }
+  .why {
+    background: var(--bg); border: 1px solid var(--hairline);
+    border-radius: var(--radius); padding: 18px 20px 20px; position: sticky; top: 24px;
+  }
+  .why h2 { margin: 0; font-size: 16px; font-weight: 800; letter-spacing: -0.01em; }
+  .why p { margin: 8px 0 0; font-size: 13px; font-weight: 700; line-height: 1.55; color: var(--text-2); }
+  .phone {
+    width: 393px; height: 852px; background: var(--bg); border-radius: 44px;
+    border: 1px solid var(--line); overflow: hidden; position: relative;
+    display: flex; flex-direction: column;
+  }
+  .status {
+    height: 54px; display: flex; align-items: flex-end; justify-content: space-between;
+    padding: 0 28px 8px; font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums;
+  }
+  .version {
+    text-align: center; font-size: 10px; font-weight: 800; letter-spacing: 0.04em;
+    color: var(--text-faint); padding: 4px 0 6px;
+  }
+  .scroll {
+    flex: 1; overflow: auto; padding: 16px 20px 24px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .scroll::-webkit-scrollbar { width: 0; }
+  .title { font-size: 26px; font-weight: 800; letter-spacing: -0.025em; }
+  .sub { font-size: 13px; font-weight: 700; color: var(--text-2); padding-top: 3px; }
+  .section {
+    font-size: 12px; font-weight: 800; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--text-3); padding-top: 8px;
+  }
+  .tabbar {
+    height: 83px; background: var(--tab-bar); border-top: 1px solid var(--tab-line);
+    display: flex; padding: 6px 10px 0;
+  }
+  .tab {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    color: var(--tab-off); font-size: 11px; font-weight: 700;
+  }
+  .tab.on { color: var(--tab-on); font-weight: 800; }
+  .tab i { width: 46px; height: 30px; border-radius: 9px; display: flex; align-items: center; justify-content: center; }
+  .tab.on i { background: var(--tab-pill); }
+  .home-bar {
+    position: absolute; left: 50%; bottom: 8px; width: 128px; height: 5px;
+    margin-left: -64px; border-radius: 999px; background: var(--text);
+  }
+  .card {
+    background: var(--card); border: 1px solid var(--hairline);
+    border-radius: var(--radius); padding: 14px 16px;
+  }
+  .row { display: flex; align-items: center; gap: 13px; }
+  .grow { flex: 1; min-width: 0; }
+  .right { flex: none; text-align: right; }
+  .avatar {
+    flex: none; border-radius: 999px; background: var(--control);
+    border: 1px solid var(--line); display: flex; align-items: center;
+    justify-content: center; font-weight: 800; color: var(--text-dim);
+  }
+  .act {
+    font-size: 16px; font-weight: 800; letter-spacing: -0.01em;
+    line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .act.wrap { white-space: normal; }
+  .cap { font-size: 12px; font-weight: 700; color: var(--text-2); padding-top: 2px; }
+  .metric { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .metric-md { font-size: 24px; font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+  .up { color: var(--moss-text); font-size: 12px; font-weight: 800; }
+  .down { color: var(--ember-text); font-size: 12px; font-weight: 800; }
+  .bar { display: block; height: 7px; border-radius: 999px; background: var(--track); overflow: hidden; }
+  .bar > span { display: block; height: 100%; border-radius: 999px; background: var(--gold); }
+  .chip {
+    display: inline-flex; align-items: center; border-radius: 999px; padding: 3px 8px;
+    font-size: 10px; font-weight: 800; background: rgba(255,255,255,0.05); color: var(--text-3);
+  }
+  .chip.moss { background: rgba(53,128,79,0.22); color: var(--moss-text); }
+  .chip.ember { background: rgba(194,85,29,0.22); color: var(--ember-text); }
+  .stripe { position: absolute; left: 0; top: 14px; bottom: 14px; width: 5px; border-radius: 0 5px 5px 0; }
+  .rel { position: relative; overflow: hidden; }
+  .group { background: var(--card); border: 1px solid var(--hairline); border-radius: var(--radius); overflow: hidden; }
+  .rule { height: 1px; background: rgba(255,255,255,0.06); margin: 0 16px; }
+  .stack { display: flex; }
+  .stack .avatar + .avatar { margin-left: -12px; box-shadow: 0 0 0 2px var(--card); }
+  .dots { display: flex; gap: 3px; }
+  .dots i { width: 100%; height: 5px; border-radius: 999px; background: var(--track); flex: 1; }
+  .dots i.on { background: var(--gold); }
+  .quote {
+    font-size: 12px; font-weight: 700; color: var(--text-2);
+    border-left: 2px solid var(--line); padding-left: 8px; margin-top: 8px;
+  }
+  .wash-moss { background: var(--moss-wash); border-color: rgba(143,214,166,0.18); }
+  .wash-ember { background: var(--ember-wash); border-color: rgba(239,148,87,0.22); }
+  @media (max-width: 1160px) {
+    .stage { grid-template-columns: 1fr; justify-items: center; }
+    .picker { flex-direction: row; flex-wrap: wrap; width: 100%; max-height: none; }
+    .pick { width: auto; }
+    .why { width: 393px; position: static; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="kicker">FitFight · not shipped</div>
+  <h1>Fights row — 20 variants</h1>
+  <p class="lede">Every fight is created as “Steps Fight”, so the old title said nothing. Here the title is <b>the action the loser does</b>. All twenty keep the row you picked: same height, avatar left, number right. Tap one.</p>
+
+  <div class="stage">
+    <nav class="picker" id="picker" aria-label="Variants"></nav>
+    <div><div class="phone" id="phone"></div></div>
+    <aside class="why" id="why"></aside>
+  </div>
+</div>
+
+<script>
+const fights = [
+  { act: "Loser cooks Sunday dinner", who: "Marc", initials: "MB", days: 3, mine: "26,410", theirs: "22,100", delta: "up 4,310", gap: "+4,310", ahead: true, p: 0.84, of: 2, spark: [30,42,38,55,61,70,84] },
+  { act: "Loser plans the next hike", who: "Nina", initials: "NK", days: 6, mine: "18,240", theirs: "19,080", delta: "840 back", gap: "−840", ahead: false, p: 0.38, of: 2, spark: [50,44,40,36,30,34,38] },
+  { act: "Losers take the stairs all week", who: "Tom +1", initials: "TD", days: 12, mine: "41,200", theirs: "40,080", delta: "up 1,120", gap: "+1,120", ahead: true, p: 0.62, of: 3, spark: [20,28,35,40,48,55,62] },
+];
+
+const variants = [
+  { id: "base", label: "1 · Action title", blurb: "Your pick, cleaned", why: "The row you liked, with the action as the title and “vs Marc · 3 days” underneath. Nothing else changes." },
+  { id: "bar", label: "2 · Bar under", blurb: "Gold bar below the row", why: "Same row plus a gold bar across the bottom: your share of the leader's total. One glance tells you how close it is." },
+  { id: "stripe", label: "3 · Status stripe", blurb: "Moss / ember edge", why: "A 5pt moss or ember stripe on the left edge. Winning and losing read before you read a word." },
+  { id: "ring", label: "4 · Progress ring", blurb: "Dial around the avatar", why: "The avatar sits inside a progress ring. No extra height, and the row still holds a number." },
+  { id: "pair", label: "5 · Both avatars", blurb: "You and them overlapped", why: "Your monogram overlaps theirs, so a row shows who you are actually fighting. Group fights stack more." },
+  { id: "versus", label: "6 · Score vs score", blurb: "26,410 vs 22,100", why: "The subtitle becomes the scoreline. The comparison is the point of the app, so it stops being a delta in small text." },
+  { id: "gapfirst", label: "7 · Gap is the number", blurb: "+4,310 big", why: "The big number is the gap, not your total. What matters is whether you are up or down, not the raw steps." },
+  { id: "twoline", label: "8 · Metric + days", blurb: "Right column, two lines", why: "Right column carries the number and the days left, so the subtitle only carries the opponent." },
+  { id: "spark", label: "9 · Sparkline", blurb: "Seven-day trend", why: "A tiny moss line of the last seven days. Shows momentum, not just position." },
+  { id: "chip", label: "10 · Days chip", blurb: "Countdown pill", why: "Days left becomes a pill next to the action. Under 24 hours it turns ember." },
+  { id: "wash", label: "11 · Status wash", blurb: "Tinted row", why: "The whole row takes a moss or ember wash. Loudest version. Good if you want the home screen to feel like a scoreboard." },
+  { id: "dense", label: "12 · Grouped", blurb: "One card, dividers", why: "All fights in one grouped card with hairline dividers. Densest, most Mail-like, best for many fights." },
+  { id: "twolineact", label: "13 · Full action", blurb: "Action wraps to 2 lines", why: "Long actions are the interesting ones. This lets the action wrap instead of truncating." },
+  { id: "days", label: "14 · Day dots", blurb: "Segments per day", why: "Small segments show days elapsed against the total. Reads like a progress bar for time, not steps." },
+  { id: "quote", label: "15 · Quoted stake", blurb: "Action as a quote", why: "The action sits as a quoted line under the fight, so the row keeps a neutral title and still shows the stake." },
+  { id: "leftmetric", label: "16 · Stacked", blurb: "Number under the action", why: "No right column. The number sits under the action, left-aligned. Longest actions fit best here." },
+  { id: "chevron", label: "17 · Quiet + chevron", blurb: "Settings-like", why: "Quiet metric, chevron on the right. The calmest option, closest to iOS defaults." },
+  { id: "rank", label: "18 · Rank badge", blurb: "1st / 2nd of 3", why: "Group fights need a position, not a delta. The badge shows rank; head-to-heads still show the gap." },
+  { id: "trail", label: "19 · Both bars", blurb: "You vs them bars", why: "Two thin bars: yours and theirs, same scale. The visual gap is the actual gap." },
+  { id: "urgent", label: "20 · Ends soon", blurb: "Ember on the last day", why: "Everything is calm until a fight is nearly over, then that row alone goes ember. Urgency is rationed." },
+];
+
+const av = (initials, size) =>
+  `<span class="avatar" style="width:${size}px;height:${size}px;font-size:${Math.round(size * 0.32)}px">${initials}</span>`;
+
+const sub = (f) => `${f.of > 2 ? `${f.of} in this fight` : "vs " + f.who} · ${f.days} days left`;
+
+const delta = (f) => `<div class="${f.ahead ? "up" : "down"}">${f.delta}</div>`;
+
+function sparkline(f) {
+  const pts = f.spark.map((v, i) => `${i * 9},${28 - (v / 100) * 24}`).join(" ");
+  return `<svg width="60" height="28" viewBox="0 0 54 28" style="display:block">
+    <polyline points="${pts}" fill="none" stroke="${f.ahead ? "#8FD6A6" : "#EF9457"}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+const rows = {
+  base: (f) => `<div class="card row">${av(f.initials, 44)}
+    <div class="grow"><div class="act">${f.act}</div><div class="cap">${sub(f)}</div></div>
+    <div class="right"><div class="metric">${f.mine}</div>${delta(f)}</div></div>`,
+
+  bar: (f) => `<div class="card">
+    <div class="row">${av(f.initials, 44)}
+      <div class="grow"><div class="act">${f.act}</div><div class="cap">${sub(f)}</div></div>
+      <div class="right"><div class="metric">${f.mine}</div>${delta(f)}</div></div>
+    <span class="bar" style="margin-top:12px"><span style="width:${f.p * 100}%"></span></span></div>`,
+
+  stripe: (f) => `<div class="card rel row" style="padding-left:20px">
+    <span class="stripe" style="background:${f.ahead ? "var(--moss)" : "var(--ember)"}"></span>
+    ${av(f.initials, 44)}
+    <div class="grow"><div class="act">${f.act}</div><div class="cap">${sub(f)}</div></div>
+    <div class="right"><div class="metric">${f.mine}</div>${delta(f)}</div></div>`,
+
+  ring: (f) => {
+    const c = 138.2, off = (c * (1 - f.p)).toFixed(1);
+    return `<div class="card row">
+      <div style="position:relative;width:52px;height:52px;flex:none">
+        <svg width="52" height="52" viewBox="0 0 52 52" style="transform:rotate(-90deg);display:block">
+          <circle cx="26" cy="26" r="22" fill="none" stroke="rgba(255,255,255,0.09)" stroke-width="4"></circle>
+          <circle cx="26" cy="26" r="22" fill="none" stroke="${f.ahead ? "#35804F" : "#C2551D"}" stroke-width="4" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${off}"></circle>
+        </svg>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--text-dim)">${f.initials}</div>
+      </div>
+      <div class="grow"><div class="act">${f.act}</div><div class="cap">${sub(f)}</div></div>
+      <div class="right"><div class="metric">${f.mine}</div>${delta(f)}</div></div>`;
+  },
+
+  pair: (f) => `<div class="card row">
+    <div class="stack">${av("YO", 44)}${av(f.initials, 44)}</div>
+    <div class="grow"><div class="act">${f.act}</div><div class="cap">${sub(f)}</div></div>
+    <div class="right"><div class="metric">${f.mine}</div>${delta(f)}</div></div>`,
+
+  versus: (f) => `<div class="card row">${av(f.initials, 44)}
+    <div class="grow"><div class="act">${f.act}</div>
+      <div class="cap"><b style="color:var(--moss-text)">${f.mine}</b> vs ${f.theirs} · ${f.days}d</div></div>
+    <div class="right"><span class="chip ${f.ahead ? "moss" : "ember"}">${f.gap}</span></div></div>`,
+
+  gapfirst: (f) => `<div class="card row">${av(f.initials, 44)}
+    <div class="grow"><div class="act">${f.act}</div><div class="cap">${sub(f)}</div></div>
+    <div class="right"><div class="metric-md" style="color:${f.ahead ? "var(--moss-text)" : "var(--ember-text)"}">${f.gap}</div>
+      <div class="cap" style="padding-top:0">${f.mine} total</div></div></div>`,
+
+  twoline: (f) => `<div class="card row">${av(f.initials, 44)}
+    <div class="grow"><div class="act">${f.act}</div><div class="cap">${f.of > 2 ? f.of + " in this fight" : "vs " + f.who}</div></div>
+    <div class="right"><div class="metric">${f.mine}</div><div class="cap" style="padding-top:0">${f.days} days left</div></div></div>`,
+
+  spark: (f) => `<div class="card row">${av(f.initials, 44)}
+    <div class="grow"><div class="act">${f.act}</div><div class="cap">${sub(f)}</div></div>
+    <div style="flex:none">${sparkline(f)}</div>
+    <div class="right"><div class="metric">${f.mine}</div>${delta(f)}</div></div>`,
+
+  chip: (f) => `<div class="card row">${av(f.initials, 44)}
+    <div class="grow">
+      <div class="row" style="gap:8px"><span class="act" style="flex:1">${f.act}</span>
+        <span class="chip ${f.days <= 3 ? "ember" : ""}">${f.days}d</span></div>
+      <div class="cap">${f.of > 2 ? f.of + " in this fight" : "vs " + f.who}</div></div>
+    <div class="right"><div class="metric">${f.mine}</div>${delta(f)}</div></div>`,
+
+  wash: (f) => `<div class="card row ${f.ahead ? "wash-moss" : "wash-ember"}">${av(f.initials, 44)}
+    <div class="grow"><div class="act">${f.act}</div><div class="cap">${sub(f)}</div></div>
+    <div class="right"><div class="metric">${f.mine}</div>${delta(f)}</div></div>`,
+
+  twolineact: (f) => `<div class="card row" style="align-items:flex-start">${av(f.initials, 44)}
+    <div class="grow"><div class="act wrap">${f.act}</div><div class="cap">${sub(f)}</div></div>
+    <div class="right"><div class="metric">${f.mine}</div>${delta(f)}</div></div>`,
+
+  days: (f) => {
+    const total = f.days + 4;
+    const dots = Array.from({ length: total }, (_, i) => `<i class="${i < 4 ? "on" : ""}"></i>`).join("");
+    return `<div class="card">
+      <div class="row">${av(f.initials, 44)}
+        <div class="grow"><div class="act">${f.act}</div><div class="cap">${sub(f)}</div></div>
+        <div class="right"><div class="metric">${f.mine}</div>${delta(f)}</div></div>
+      <div class="dots" style="margin-top:12px">${dots}</div></div>`;
+  },
+
+  quote: (f) => `<div class="card">
+    <div class="row">${av(f.initials, 44)}
+      <div class="grow"><div class="act">${f.of > 2 ? "Group fight" : "You vs " + f.who}</div><div class="cap">${f.days} days left · steps</div></div>
+      <div class="right"><div class="metric">${f.mine}</div>${delta(f)}</div></div>
+    <div class="quote">${f.act}</div></div>`,
+
+  leftmetric: (f) => `<div class="card">
+    <div class="row"><div class="grow"><div class="act wrap">${f.act}</div></div>${av(f.initials, 36)}</div>
+    <div class="row" style="gap:8px;align-items:baseline;padding-top:10px">
+      <div class="metric-md">${f.mine}</div>${delta(f)}
+      <div class="grow"></div><div class="cap">${f.days}d left</div></div></div>`,
+
+  chevron: (f) => `<div class="card row">${av(f.initials, 44)}
+    <div class="grow"><div class="act">${f.act}</div><div class="cap">${sub(f)}</div></div>
+    <div class="right"><div class="cap" style="padding:0">${f.mine}</div></div>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2.4" stroke-linecap="round"><path d="m9 6 6 6-6 6"/></svg></div>`,
+
+  rank: (f) => `<div class="card row">${av(f.initials, 44)}
+    <div class="grow"><div class="act">${f.act}</div><div class="cap">${sub(f)}</div></div>
+    <div class="right"><div class="metric">${f.mine}</div>
+      <span class="chip ${f.ahead ? "moss" : "ember"}">${f.ahead ? "1st" : "2nd"} of ${f.of}</span></div></div>`,
+
+  trail: (f) => `<div class="card">
+    <div class="row">${av(f.initials, 44)}
+      <div class="grow"><div class="act">${f.act}</div><div class="cap">${sub(f)}</div></div>
+      <div class="right"><div class="metric">${f.mine}</div>${delta(f)}</div></div>
+    <div style="display:flex;flex-direction:column;gap:5px;margin-top:12px">
+      <span class="bar" style="height:5px"><span style="width:${f.ahead ? 100 : f.p * 100}%;background:var(--moss)"></span></span>
+      <span class="bar" style="height:5px"><span style="width:${f.ahead ? f.p * 100 : 100}%;background:rgba(255,255,255,0.28)"></span></span>
+    </div></div>`,
+
+  urgent: (f) => {
+    const hot = f.days <= 3;
+    return `<div class="card row ${hot ? "wash-ember" : ""}">${av(f.initials, 44)}
+      <div class="grow"><div class="act">${f.act}</div>
+        <div class="cap" style="${hot ? "color:var(--ember-text)" : ""}">${hot ? "Ends tomorrow · " : ""}${sub(f)}</div></div>
+      <div class="right"><div class="metric">${f.mine}</div>${delta(f)}</div></div>`;
+  },
+};
+
+function trophy() {
+  return `<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><path d="M8 4h8v5a4 4 0 0 1-8 0V4Z"/><path d="M8 6H5a2 2 0 0 0 2 4"/><path d="M16 6h3a2 2 0 0 1-2 4"/><path d="M12 13v3"/><path d="M8 20h8"/></svg>`;
+}
+function plus() {
+  return `<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>`;
+}
+function person() {
+  return `<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 19c1.2-3.2 3.5-4.8 6.5-4.8S16.8 15.8 18 19"/></svg>`;
+}
+
+function render(id) {
+  const build = rows[id] || rows.base;
+  const body = id === "dense"
+    ? `<div class="group">${fights.map((f, i) => `${i ? '<div class="rule"></div>' : ""}
+        <div class="row" style="padding:13px 16px">${av(f.initials, 38)}
+          <div class="grow"><div class="act" style="font-size:15px">${f.act}</div><div class="cap">${sub(f)}</div></div>
+          <div class="right"><div class="metric" style="font-size:16px">${f.mine}</div>${delta(f)}</div></div>`).join("")}</div>`
+    : fights.map(build).join("");
+
+  return `
+    <div class="status"><span>9:41</span><span>●●●●</span></div>
+    <div class="version">1.0.0 · build 42 · staging · 4 Sep</div>
+    <div class="scroll">
+      <div><div class="title">Fights</div><div class="sub">3 live · 1 waiting</div></div>
+      <div class="card row" style="background:var(--moss-wash);border-color:rgba(143,214,166,0.18)">
+        ${av("NK", 44)}
+        <div class="grow"><div class="act">Loser buys the coffees</div><div class="cap">Nina invited you · 7 days</div></div>
+        <span style="flex:none;background:var(--moss);color:#fff;border-radius:999px;padding:6px 13px;font-size:12px;font-weight:800">Join</span>
+      </div>
+      ${body}
+      <div class="section">Finished</div>
+      <div class="card row">
+        <span class="avatar" style="width:28px;height:28px;font-size:14px;background:var(--moss);border:0;color:#fff">✓</span>
+        <div class="grow"><div class="act" style="font-size:15px">Loser washed the car</div><div class="cap">Ended 2 days ago · you won</div></div>
+      </div>
+      <div class="card row">
+        <span class="avatar" style="width:28px;height:28px;font-size:14px;background:var(--ember);border:0;color:#fff">–</span>
+        <div class="grow"><div class="act" style="font-size:15px">Loser ran the errands</div><div class="cap">Ended last week · you lost</div></div>
+      </div>
+    </div>
+    <div class="tabbar">
+      <div class="tab on"><i>${trophy()}</i>Fights</div>
+      <div class="tab"><i>${plus()}</i>New</div>
+      <div class="tab"><i>${person()}</i>You</div>
+    </div>
+    <div class="home-bar"></div>`;
+}
+
+function show(id) {
+  const v = variants.find((item) => item.id === id) || variants[0];
+  document.getElementById("phone").innerHTML = render(v.id);
+  document.getElementById("why").innerHTML = `<h2>${v.label.replace(/^\d+ · /, "")}</h2><p>${v.why}</p>`;
+  for (const btn of document.querySelectorAll(".pick")) {
+    btn.setAttribute("aria-current", btn.dataset.id === v.id ? "true" : "false");
+  }
+  history.replaceState(null, "", "#" + v.id);
+}
+
+document.getElementById("picker").innerHTML = variants.map((v) =>
+  `<button type="button" class="pick" data-id="${v.id}"><b>${v.label}</b><span>${v.blurb}</span></button>`
+).join("");
+
+document.getElementById("picker").addEventListener("click", (event) => {
+  const btn = event.target.closest(".pick");
+  if (btn) show(btn.dataset.id);
+});
+
+show((location.hash || "#base").slice(1));
+</script>
+</body>
+</html>

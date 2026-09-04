@@ -445,16 +445,13 @@ final class AppModel: ObservableObject {
             }
             return
         }
-        guard let session, let userId = session.authSession?.user.id, let fightID = UUID(uuidString: id) else {
+        guard let session, session.authSession != nil, let fightID = UUID(uuidString: id) else {
             createError = String(localized: "Sign in to accept this fight.")
             return
         }
         do {
-            try await session.client.from("fight_members")
-                .update(MemberAcceptUpdate(state: "accepted", acceptedAt: Self.isoNow()))
-                .eq("fight_id", value: fightID)
-                .eq("user_id", value: userId)
-                .execute()
+            let token = try await session.freshAccessToken()
+            _ = try await api.acceptFight(fightID: fightID, accessToken: token)
             joined.insert(id)
             await refreshFromServer()
         } catch {
@@ -469,16 +466,13 @@ final class AppModel: ObservableObject {
             openFightID = nil
             return
         }
-        guard let session, let userId = session.authSession?.user.id, let fightID = UUID(uuidString: id) else {
+        guard let session, session.authSession != nil, let fightID = UUID(uuidString: id) else {
             createError = String(localized: "Sign in to decline this fight.")
             return
         }
         do {
-            try await session.client.from("fight_members")
-                .update(MemberDeclineUpdate(state: "declined"))
-                .eq("fight_id", value: fightID)
-                .eq("user_id", value: userId)
-                .execute()
+            let token = try await session.freshAccessToken()
+            _ = try await api.declineFight(fightID: fightID, accessToken: token)
             await refreshFromServer()
         } catch {
             createError = String(localized: "Couldn’t decline.")
@@ -731,12 +725,6 @@ final class AppModel: ObservableObject {
         formatter.timeZone = TimeZone.current
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: date)
-    }
-
-    private static func isoNow() -> String {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return formatter.string(from: Date())
     }
 
     private func loadFights(client: SupabaseClient, userId: UUID) async throws -> [Fight] {
@@ -1086,20 +1074,6 @@ private struct SeriesRow: Decodable {
         case visibility
         case recurring
     }
-}
-
-private struct MemberAcceptUpdate: Encodable {
-    let state: String
-    let acceptedAt: String
-
-    enum CodingKeys: String, CodingKey {
-        case state
-        case acceptedAt = "accepted_at"
-    }
-}
-
-private struct MemberDeclineUpdate: Encodable {
-    let state: String
 }
 
 private struct StepDayRow: Decodable {

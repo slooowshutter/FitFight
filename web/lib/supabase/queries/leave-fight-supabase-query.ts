@@ -77,13 +77,13 @@ export async function leaveFight(
       }
       const current = await loadFight(currentId, admin);
       if (OPEN_STATES.includes(current.state)) {
-        await recalculateFight(currentId, admin);
+        await recalculateFight(currentId);
       }
     }
   }
 
   if (OPEN_STATES.includes(fight.state)) {
-    await recalculateFight(fightId, admin);
+    await recalculateFight(fightId);
   }
 
   return fightSummary(await loadFight(fightId, admin));

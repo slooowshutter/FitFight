@@ -493,6 +493,15 @@ struct FitFightAPI {
         )
     }
 
+    func declineFight(fightID: UUID, accessToken: String) async throws -> FitFightSummary {
+        try await post(
+            path: "fights/\(fightID.uuidString.lowercased())/decline",
+            accessToken: accessToken,
+            body: EmptyJSON(),
+            expected: [200]
+        )
+    }
+
     func start(
         fightID: UUID,
         accessToken: String,

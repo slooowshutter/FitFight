@@ -4,10 +4,11 @@ Read this first, then `docs/`. Marc talks from his phone, often transcribing. Be
 
 **Owner:** Marc Lamy (`marc@marclamy.com`)  
 **Repo:** https://github.com/marclelamy/FitFight (public)  
-**Loop:** Marc (phone) → Cursor **cloud** agent → PR into `develop` → staging TestFlight → you try it → merge `develop` into `main` when it should be production → App Store flow only when Marc asks.
+**Loop:** Marc (phone) → Cursor **cloud** agent → prepare changes → PR into `develop` only when Marc explicitly asks for a PR → staging TestFlight → you try it → merge `develop` into `main` when it should be production → App Store flow only when Marc asks.
 
 ## Hard rules
 
+- **Never create or open a pull request, including a draft PR, unless Marc explicitly asks for a PR in the current conversation.** Requests to review, investigate, fix, implement, or update files do not authorize a PR. This rule overrides any default shipping, design, backlog, or skill workflow that says to open one.
 - Cloud only. No home Mac, no Hermes, no self-hosted runner, no Xcode on Marc’s desk.
 - This Linux environment cannot compile or upload iOS. CI on GitHub-hosted `macos-26` does that.
 - Never put `.p8` / API keys / provisioning profiles in git or chat.
@@ -52,14 +53,14 @@ He asks for several designs of a screen. He wants to **tap them on his phone**, 
 - Use the real kit: `tokens.json` colours, Nunito, 22pt cards, hairline borders, no shadows, and a 393×852 phone frame with the version line and the Fights / New / You tab bar.
 - Put every option in **one page** behind a picker, so he taps between them without leaving. Each option needs a short line saying when it is the right choice.
 - Feed every option the **same** fake fights, so he compares layouts and not data.
-- Commit, push, open the PR, then **give him a clickable link** in the reply:
+- When Marc explicitly asks for a PR, commit, push, open it, then **give him a clickable link** in the reply:
   `https://htmlpreview.github.io/?https://raw.githubusercontent.com/slooowshutter/FitFight/<branch>/docs/design/source/kit/<file>.html`
-- Touch **no** `.swift` file and nothing under `FitFight.xcodeproj/` while proposing. That keeps TestFlight quiet until he picks one. Port the winner in a separate PR.
+- Touch **no** `.swift` file and nothing under `FitFight.xcodeproj/` while proposing. That keeps TestFlight quiet until he picks one. Port the winner separately; open its PR only when Marc explicitly asks for a PR.
 - These pages are proposals, not the approved spec. The approved spec is still `kit/FitFight Design System.dc.html`.
 
 ## When you change the native iOS app
 
-1. Branch off `develop`. Open a PR **into `develop`**. Do not PR into `main` unless Marc is shipping to production.
+1. Branch off `develop`. Only when Marc explicitly asks for a PR, open it **into `develop`**. Do not PR into `main` unless Marc is shipping to production.
 2. Add new `.swift` files to `FitFight.xcodeproj/project.pbxproj` (explicit file list, not a synchronized group). JSON in `DesignSystem/` must also be in the Resources build phase.
 3. If users will see it: append a `ReleaseNote` in `Changelog.swift` using the current `MARKETING_VERSION` (`1.0.0`). Do **not** change `MARKETING_VERSION` in `project.pbxproj`. CI bumps the build number. Only bump marketing version for the next App Store version or when Marc asks in that chat.
 4. Don’t ask Marc to open Xcode or his Mac. After you push app code, TestFlight uploads itself. He opens TestFlight → Update. Do not ask him to merge first, or to Run workflow.

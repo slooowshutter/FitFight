@@ -1,5 +1,5 @@
 begin;
-select plan(20);
+select plan(26);
 
 create function pg_temp.make_user(uid uuid, email text)
 returns void
@@ -156,7 +156,7 @@ select lives_ok(
   'requester can still insert a pending friendship'
 );
 
-select lives_ok(
+select throws_ok(
   $$ insert into public.fights (
        id, owner_id, name, state, starts_at, ends_at, time_zone,
        outcome_rule, goal_policy
@@ -171,27 +171,75 @@ select lives_ok(
        'highest_total',
        'shared'
      ) $$,
-  'owner can insert a steps fight'
+  '42501',
+  'permission denied for table fights',
+  'owner cannot create a fight outside server commands'
 );
 
-select lives_ok(
+select throws_ok(
   $$ insert into public.fight_members (fight_id, user_id, state)
      values (
        'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
        '11111111-1111-4111-8111-111111111111',
        'accepted'
      ) $$,
-  'owner can join their fight'
+  '42501',
+  'permission denied for table fight_members',
+  'owner cannot self-accept outside server commands'
 );
 
-select lives_ok(
+select throws_ok(
   $$ insert into public.fight_members (fight_id, user_id, state)
      values (
        'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
        '22222222-2222-4222-8222-222222222222',
        'invited'
      ) $$,
-  'owner can invite a friend'
+  '42501',
+  'permission denied for table fight_members',
+  'owner cannot write another membership'
+);
+
+select throws_ok(
+  $$ insert into public.fight_members (fight_id, user_id, state) values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '44444444-4444-4444-8444-444444444444', 'accepted') $$,
+  '42501',
+  'permission denied for table fight_members',
+  'owner cannot forge another person consent to health sharing'
+);
+
+select throws_ok(
+  $$ update public.fight_members set current_value = 999999, final_value = 999999, rank = 1, final_steps_complete = true where user_id = '11111111-1111-4111-8111-111111111111' $$,
+  '42501',
+  'permission denied for table fight_members',
+  'a member cannot forge their scores, rank, or completeness'
+);
+
+select throws_ok(
+  $$ update public.fight_members set fight_id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' where user_id = '11111111-1111-4111-8111-111111111111' $$,
+  '42501',
+  'permission denied for table fight_members',
+  'a member cannot move their consent to another fight'
+);
+
+select throws_ok(
+  $$ update public.fights set starts_at = now() - interval '1 year', ends_at = now() + interval '1 year' where owner_id = '11111111-1111-4111-8111-111111111111' $$,
+  '42501',
+  'permission denied for table fights',
+  'owner cannot widen a fight to expose historical health days'
+);
+
+select throws_ok(
+  $$ update public.fights set state = 'final' where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' $$,
+  '42501',
+  'permission denied for table fights',
+  'owner cannot bypass server finalization'
+);
+
+select throws_ok(
+  $$ update public.data_sources set complete_through = now() + interval '1 year' where user_id = '11111111-1111-4111-8111-111111111111' $$,
+  '42501',
+  'permission denied for table data_sources',
+  'a user cannot forge source completeness'
 );
 
 select throws_ok(
@@ -232,7 +280,7 @@ select throws_ok(
        'shared'
      ) $$,
   '42501',
-  'new row violates row-level security policy for table "fights"',
+  'permission denied for table fights',
   'cannot create a fight as someone else'
 );
 
@@ -254,13 +302,15 @@ select is(
   'invitee who has not accepted cannot read peer steps'
 );
 
-select lives_ok(
+select throws_ok(
   $$ update public.fight_members
         set state = 'accepted',
             accepted_at = now()
       where fight_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
         and user_id = '33333333-3333-4333-8333-333333333333' $$,
-  'invitee can accept their own membership'
+  '42501',
+  'permission denied for table fight_members',
+  'invitee cannot bypass the acceptance command'
 );
 
 reset role;
@@ -330,7 +380,7 @@ select throws_ok(
        'accepted'
      ) $$,
   '42501',
-  'new row violates row-level security policy for table "fight_members"',
+  'permission denied for table fight_members',
   'strangers cannot client-insert themselves onto a fight'
 );
 

@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.0.0",
             year: 2026,
             month: 9,
+            day: 5,
+            notes: "Invitation responses are secured, and unavailable Apple Health data no longer replaces saved Steps with zero."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
             day: 4,
             notes: "Share on a fight uses the same space under the section title as Action and Standings."
         ),

@@ -168,7 +168,10 @@ export async function syncHealthKitAggregates(
     }
 
     for (const { aggregate, fight } of aggregateFights) {
-      const inputHash = createHash("sha256").update(JSON.stringify(aggregate)).digest("hex");
+      // A later read can return to an earlier value at the same Fight-end cutoff.
+      const inputHash = createHash("sha256").update(JSON.stringify({
+        ...aggregate, complete_through: input.complete_through,
+      })).digest("hex");
       await sql`
         insert into private.fight_score_snapshots (
           fight_id, user_id, source_id, cutoff_at, value,
@@ -184,6 +187,7 @@ export async function syncHealthKitAggregates(
         from private.fight_score_snapshots
         where fight_id = ${aggregate.fight_id}
           and user_id = ${userId}
+          and source_id = ${source.id}
         order by cutoff_at desc, created_at desc, id desc
         limit 1
       `;

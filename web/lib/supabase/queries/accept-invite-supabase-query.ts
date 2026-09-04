@@ -101,7 +101,7 @@ export async function acceptInvite(
   }
 
   if (["live", "scheduled", "awaiting_final_sync"].includes(fight.state)) {
-    await recalculateFight(fight.id, admin);
+    await recalculateFight(fight.id);
   }
 
   if (fight.series_id) {

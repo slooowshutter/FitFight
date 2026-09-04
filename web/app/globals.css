@@ -515,39 +515,15 @@ footer .brand-mark {
   line-height: 1.1;
 }
 
-.testflight-dialog > p,
-.testflight-dialog li {
+.testflight-dialog > p {
+  margin: 14px 0 22px;
   color: var(--secondary);
   font-size: 15px;
   line-height: 1.6;
 }
 
-.testflight-dialog > p {
-  margin: 14px 0 0;
-}
-
-.testflight-dialog ol {
-  display: grid;
-  gap: 8px;
-  margin: 18px 0 22px;
-  padding-left: 20px;
-}
-
 .testflight-dialog .primary-action {
   width: 100%;
-}
-
-.testflight-link-line {
-  margin: 14px 0 0;
-  color: var(--tertiary);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.testflight-link-line a {
-  color: var(--moss-text);
-  font-weight: 800;
-  overflow-wrap: anywhere;
 }
 
 .dialog-dismiss {

@@ -43,14 +43,9 @@ export function TestflightInvite({
         <p className="eyebrow">BETA ON TESTFLIGHT</p>
         <h2 id={titleId}>Get FitFight on your iPhone</h2>
         <p>
-          FitFight isn&apos;t on the App Store yet. Apple uses TestFlight for beta
-          apps — that&apos;s the official way to try an iPhone app before it&apos;s public.
+          FitFight isn&apos;t on the App Store yet. Apple uses TestFlight to
+          install beta iPhone apps. Open this on your iPhone.
         </p>
-        <ol>
-          <li>Open this on your iPhone and tap Open TestFlight.</li>
-          <li>Install Apple&apos;s TestFlight app if you don&apos;t have it yet.</li>
-          <li>Accept the invite, install FitFight, then open it.</li>
-        </ol>
         <a
           className="primary-action"
           href={TESTFLIGHT_URL}
@@ -59,12 +54,6 @@ export function TestflightInvite({
         >
           Open TestFlight
         </a>
-        <p className="testflight-link-line">
-          Or copy this link on your phone:{" "}
-          <a href={TESTFLIGHT_URL} target="_blank" rel="noopener noreferrer">
-            testflight.apple.com/join/wcZKdwVZ
-          </a>
-        </p>
         <button
           type="button"
           className="dialog-dismiss"

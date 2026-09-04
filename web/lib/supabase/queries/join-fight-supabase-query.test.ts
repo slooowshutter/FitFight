@@ -6,6 +6,7 @@ import {
 import {
   joinableFightSummarySchema,
   joinFightRequestSchema,
+  leaveFightRequestSchema,
 } from "@/lib/types/fights/joinable-fight";
 
 test("join requires a code or fight id", () => {
@@ -35,4 +36,12 @@ test("joinable summaries never carry scores", () => {
   assert.equal("standings" in summary, false);
   assert.equal(summary.memberCount, 3);
   assert.equal(JOINABLE_MEMBER_CAP, 50);
+});
+
+test("leave requires a fight id", () => {
+  assert.equal(leaveFightRequestSchema.safeParse({}).success, false);
+  assert.equal(
+    leaveFightRequestSchema.parse({ fightId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" }).fightId,
+    "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  );
 });

@@ -19,7 +19,7 @@ There are two **git** branches and two **hosted databases**. They line up.
 
 A feature PR is a third git branch. Merge it **into `develop`**. That updates the **staging** database (new SQL) and is the home for later chats.
 
-Once configured, Vercel accepts small authenticated Apple Health aggregate requests and receives account-deletion commands. The phone sends Apple's merged Steps total for each exact Fight window, plus merged daily buckets only for the relevant Fight chart days. The phone still writes the temporary Fight/membership path directly to Supabase. Opening the app closes a fight whose days are up. Standings are a comparison of rows already in the database.
+Once configured, Vercel accepts small authenticated Apple Health aggregate requests and receives account-deletion commands. The phone sends Apple's merged Steps total for each exact Fight window, plus merged daily buckets only for the relevant Fight chart days. Create, join, and leave go through the API. Opening the app closes a fight whose days are up. Standings are a comparison of rows already in the database.
 
 You still do **not** paste `sb_secret_...` anywhere.
 
@@ -33,7 +33,7 @@ After the backend is configured, merge the feature PR into **`develop`**, not `m
 
 Verify the minimal product alongside Apple Health synchronization:
 
-1. TestFlight → **Update**. Look for `1.0.0 · build N · staging · 3 Sep` at the top.
+1. TestFlight → **Update**. Look for `1.0.0 · build N · staging · 4 Sep` at the top.
 2. Check Fights, a Fight detail, New, and You in both Night and Day. There are only three tabs: Fights, New, You.
 3. New starts on Create or Join. Create still guides Steps, duration, invite-only or joinable, optional usernames, optional repeat, the required action, and review. Join is a 4-character code plus a live joinable list with no scores. Earlier create steps use **Next**. Review uses **Slide to start**.
 4. Confirm sign-in, username, Apple Health Steps, Fight invitations, standings with last-sync times, Privacy, Support, Versions, sign out, and Delete account.
@@ -53,7 +53,7 @@ The native Fight path uses the API to create and join; Apple Health synchronizat
 | Username onboarding | Works. Required once after sign-in. |
 | Version line | Release-candidate TestFlight says `1.0.0 · build N · staging`; the App Store build says `prod` |
 | Create Steps challenge | Follow a guided flow: Create or Join, then Steps × highest total, 3 / 7 / 14 / 30 days, invite-only usernames or a joinable code, optional recurring, required loser action, and review. Joinable fights may start with the owner alone. |
-| Accept / Join | Invites still accept in the fight. Joinable fights open the same Accept/Join screen from a code, the live list, or a shared link. Joins go through the server. |
+| Accept / Join | Invites still accept in the fight. Joinable fights open the same Accept/Join screen from a code, the live list, or a shared link. Joins go through the server. Leave a joinable or repeating fight from the fight itself so the next window does not copy you in. |
 | Invite participants | Exact username in New for invite-only fights. Joinable fights use a 4-character code and a live list instead. They must have signed in and chosen a username. There is no friendship or friend-request layer. |
 | Apple Health | Installs background delivery at launch, keeps one interrupted opportunity for foreground reconciliation, and shows private capability/sync status under You. It sends Apple's merged cumulative Steps total for each exact active/ending Fight window in one small authenticated request. It does not send raw samples, deletions, per-source totals, device/source metadata, anchors, or archives. |
 | Daily totals | Sends Apple's merged daily buckets only for days relevant to active Fight charts. They are display data, not the source of the Fight score. |

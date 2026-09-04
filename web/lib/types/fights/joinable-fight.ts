@@ -31,6 +31,11 @@ export const joinFightRequestSchema = z
     }
   });
 
+export const leaveFightRequestSchema = z.object({
+  fightId: z.string().uuid(),
+});
+
 export type FightVisibility = z.infer<typeof fightVisibilitySchema>;
 export type JoinableFightSummary = z.infer<typeof joinableFightSummarySchema>;
 export type JoinFightRequest = z.infer<typeof joinFightRequestSchema>;
+export type LeaveFightRequest = z.infer<typeof leaveFightRequestSchema>;

@@ -40,3 +40,14 @@ test("visibility defaults to invite-only", () => {
   assert.equal(parsed.visibility, "invite_only");
   assert.equal(parsed.recurring, false);
 });
+
+test("create requires a loser action", () => {
+  assert.equal(
+    createFightSchema.safeParse({ ...base, visibility: "joinable", actionText: undefined }).success,
+    false,
+  );
+  assert.equal(
+    createFightSchema.safeParse({ ...base, visibility: "joinable", actionText: "   " }).success,
+    false,
+  );
+});

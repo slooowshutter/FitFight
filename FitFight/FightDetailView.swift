@@ -23,6 +23,13 @@ struct FightDetailView: View {
         (fight.status == .invited || fight.pendingJoin) && !model.joined.contains(fight.id)
     }
 
+    private var canLeave: Bool {
+        !pendingJoin
+            && fight.status == .live
+            && fight.inviter?.isYou != true
+            && (fight.recurring || fight.joinCode != nil)
+    }
+
     var body: some View {
         FFScreen(top: AnyView(nav)) {
             if pendingJoin {
@@ -70,6 +77,25 @@ struct FightDetailView: View {
                     FFSectionHeader(title: String(localized: "Every day so far"))
                         .padding(.top, theme.space.lg)
                     daysCard
+                }
+
+                if canLeave {
+                    FFButton(
+                        title: String(localized: "Leave fight"),
+                        kind: .ghost,
+                        fullWidth: true
+                    ) {
+                        Task {
+                            await model.leaveFight(id: fight.id)
+                        }
+                    }
+                    .padding(.top, theme.space.lg)
+                    if let error = model.createError, !error.isEmpty {
+                        Text(error)
+                            .ffType(.caption)
+                            .foregroundStyle(theme.emberText)
+                            .padding(.top, 10)
+                    }
                 }
             }
         }

@@ -363,12 +363,14 @@ final class AppModel: ObservableObject {
         )
 
         do {
-            _ = try await api.createFight(
+            let created = try await api.createFight(
                 payload,
                 accessToken: access,
                 idempotencyKey: UUID().uuidString
             )
             await refreshFromServer()
+            tab = .fights
+            openFightID = created.id.uuidString
         } catch {
             createError = (error as? LiveFightError)?.errorDescription
                 ?? (error as? FitFightAPIError)?.errorDescription
@@ -523,6 +525,27 @@ final class AppModel: ObservableObject {
         } catch {
             createError = (error as? FitFightAPIError)?.errorDescription
                 ?? String(localized: "Couldn’t join.")
+        }
+    }
+
+    func leaveFight(id: String) async {
+        createError = nil
+        guard let access = session?.authSession?.accessToken, api.isConfigured else {
+            createError = String(localized: "Sign in to leave this fight.")
+            return
+        }
+        guard let fightID = UUID(uuidString: id) else {
+            createError = String(localized: "Couldn’t leave.")
+            return
+        }
+        do {
+            _ = try await api.leaveFight(fightID: fightID, accessToken: access)
+            openFightID = nil
+            joined.remove(id)
+            await refreshFromServer()
+        } catch {
+            createError = (error as? FitFightAPIError)?.errorDescription
+                ?? String(localized: "Couldn’t leave.")
         }
     }
 
@@ -764,7 +787,7 @@ final class AppModel: ObservableObject {
         userId: UUID,
         formatScore: (Double, MetricKind) -> String
     ) -> Fight? {
-        if row.state == "draft" || mine?.state == "declined" { return nil }
+        if row.state == "draft" || mine?.state == "declined" || mine?.state == "withdrawn" { return nil }
 
         let pendingMembers = members.filter { $0.state == "invited" }
 

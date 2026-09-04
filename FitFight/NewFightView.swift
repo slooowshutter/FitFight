@@ -729,6 +729,8 @@ struct NewFightView: View {
                 recurring: recurring
             )
             if (model.createError ?? "").isEmpty {
+                opening = .choose
+                step = 0
                 model.tab = .fights
             }
         }

@@ -23,7 +23,7 @@ export const createFightSchema = z
     stakeKind: z.enum(["bragging", "money", "action"]),
     stakeMinor: z.number().int().min(0).optional(),
     currency: z.string().default("USD"),
-    actionText: z.string().optional(),
+    actionText: z.string().trim().min(1).max(120),
     inviteHandles: z.array(z.string()).optional(),
     start: z.enum(["now", "scheduled"]).default("now"),
     metric: z.literal("steps").optional(),
@@ -147,7 +147,7 @@ export async function createFight(userId: string, input: CreateFightInput) {
         recurring: input.recurring,
         duration_seconds: durationSeconds,
         name: input.name,
-        action_text: input.actionText ?? null,
+        action_text: input.actionText,
         time_zone: input.timeZone,
       })
       .select("id")
@@ -174,7 +174,7 @@ export async function createFight(userId: string, input: CreateFightInput) {
       stake_kind: input.stakeKind,
       stake_minor: input.stakeMinor ?? null,
       currency: input.stakeKind === "money" ? input.currency : input.currency ?? null,
-      action_text: input.actionText ?? null,
+      action_text: input.actionText,
       series_id: seriesId,
     })
     .select("id, state")

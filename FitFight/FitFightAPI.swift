@@ -368,6 +368,15 @@ struct FitFightAPI {
         )
     }
 
+    func leaveFight(fightID: UUID, accessToken: String) async throws -> FitFightSummary {
+        try await post(
+            path: "fights/leave",
+            accessToken: accessToken,
+            body: LeaveFightBody(fightId: fightID),
+            expected: [200]
+        )
+    }
+
     func invite(
         fightID: UUID,
         handle: String,
@@ -559,6 +568,10 @@ private struct APIErrorResponse: Decodable {
 private struct JoinFightBody: Encodable {
     var code: String?
     var fightId: UUID?
+}
+
+private struct LeaveFightBody: Encodable {
+    var fightId: UUID
 }
 
 private struct HandleBody: Encodable {

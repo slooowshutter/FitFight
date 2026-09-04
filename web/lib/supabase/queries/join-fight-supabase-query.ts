@@ -56,9 +56,9 @@ async function currentJoinableFight(
   series: FightSeriesRow,
   admin = createAdminClient(),
   now: Date = new Date(),
-): Promise<FightRow> {
+): Promise<FightRow | null> {
   if (!series.current_fight_id) {
-    throw new ApiError(404, ERROR_CODES.not_found, "Fight not found");
+    return null;
   }
   const { data, error } = await admin
     .from("fights")
@@ -70,7 +70,7 @@ async function currentJoinableFight(
   }
   let fight = data as FightRow | null;
   if (!fight) {
-    throw new ApiError(404, ERROR_CODES.not_found, "Fight not found");
+    return null;
   }
   if (series.recurring && !series.paused_at && Date.parse(fight.ends_at) <= now.getTime()) {
     const nextId = await mintNextRecurringFight(fight.id, admin, now);
@@ -85,9 +85,6 @@ async function currentJoinableFight(
       }
       fight = nextData as FightRow | null;
     }
-  }
-  if (!fight) {
-    throw new ApiError(404, ERROR_CODES.not_found, "Fight not found");
   }
   return fight;
 }
@@ -182,6 +179,9 @@ export async function listJoinableFights(
   const summaries: JoinableFightSummary[] = [];
   for (const row of (data ?? []) as FightSeriesRow[]) {
     const fight = await currentJoinableFight(row, admin, now);
+    if (!fight) {
+      continue;
+    }
     if (fight.state === "final" || fight.state === "cancelled" || fight.state === "awaiting_final_sync") {
       continue;
     }
@@ -216,7 +216,10 @@ export async function getJoinableFightByCode(
     throw new ApiError(404, ERROR_CODES.not_found, "Fight not found");
   }
   const fight = await currentJoinableFight(series, admin, now);
-  if (fight.state === "final" || fight.state === "cancelled") {
+  if (!fight) {
+    throw new ApiError(404, ERROR_CODES.not_found, "Fight not found");
+  }
+  if (fight.state === "final" || fight.state === "cancelled" || fight.state === "awaiting_final_sync") {
     throw new ApiError(409, ERROR_CODES.conflict, "Fight is no longer joinable");
   }
   return toSummary(series, fight, userId, admin);
@@ -271,6 +274,9 @@ export async function joinFight(
   }
 
   const fight = await currentJoinableFight(series, admin, now);
+  if (!fight) {
+    throw new ApiError(404, ERROR_CODES.not_found, "Fight not found");
+  }
   if (["final", "cancelled", "awaiting_final_sync"].includes(fight.state)) {
     throw new ApiError(409, ERROR_CODES.conflict, "Fight is no longer joinable");
   }

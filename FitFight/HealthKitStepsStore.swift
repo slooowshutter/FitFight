@@ -246,8 +246,13 @@ final class HealthKitStepsStore: ObservableObject {
             return
         }
         if requestAccess {
-            do { try await store.requestAuthorization(toShare: [], read: [stepsType]) }
-            catch { status = .empty }
+            do {
+                var readTypes: Set<HKObjectType> = [stepsType]
+                readTypes.formUnion(HealthKitCollection.readTypes)
+                try await store.requestAuthorization(toShare: [], read: readTypes)
+            } catch {
+                status = .empty
+            }
             if let activeUserId {
                 UserDefaults.standard.set(true, forKey: Self.askedKey(userId: activeUserId))
             }
@@ -299,6 +304,12 @@ final class HealthKitStepsStore: ObservableObject {
             let syncToken = try await session.freshAccessToken()
             _ = try await api.syncHealthKitSteps(sync, accessToken: syncToken)
             try Task.checkCancellation()
+            let collection = await HealthKitCollection.read(store: store, now: context.serverNow)
+            do {
+                _ = try await api.syncHealthKitCollection(collection, accessToken: syncToken)
+            } catch {
+                // Collection is not Fight scoring; the next Steps sync retries it.
+            }
             connection = .upToDate
             UserDefaults.standard.removeObject(forKey: Self.pendingSyncKey)
             updateDiagnostics {

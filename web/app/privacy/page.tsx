@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Privacy Policy | FitFight",
-  description: "How FitFight collects, uses, shares, and deletes account, Fight, and Apple Health Steps data.",
+  description: "How FitFight collects, uses, shares, and deletes account, Fight, and Apple Health data.",
   robots: { index: true, follow: true },
 };
 
@@ -46,9 +46,12 @@ export default function PrivacyPage() {
               and duration, membership status, aggregate scores, rank, and timestamps.
             </li>
             <li>
-              <strong>Apple Health Steps:</strong> with your permission, FitFight reads
-              Step Count and sends the merged total for each exact Fight window plus the
-              relevant merged daily totals used by Fight charts.
+              <strong>Apple Health:</strong> with your permission, FitFight reads Step
+              Count to score private Fights, and also stores daily Apple statistics for
+              distance, flights climbed, active and basal energy, exercise time, stand
+              time, resting heart rate, walking heart-rate average, and body mass, plus
+              workout, sleep, and mindful-session summaries. Fight opponents only see Steps
+              totals for Fights you share with them.
             </li>
             <li>
               <strong>Bugs and feature requests:</strong> the title, details, votes, and
@@ -66,16 +69,23 @@ export default function PrivacyPage() {
         <section>
           <h2>Apple Health</h2>
           <p>
-            Apple Health access is read-only and limited to Step Count. FitFight does not
-            write to Apple Health. The current app does not send raw Health samples,
-            individual workouts, routes, heart rate, or device and source metadata to
-            FitFight servers.
+            Apple Health access is read-only. FitFight does not write to Apple Health.
+            Steps fights use Apple&apos;s merged Step Count for each exact Fight window
+            plus the relevant merged daily totals used by Fight charts. The app does not
+            send raw step samples, GPS routes, continuous heart-rate streams, ECG, or
+            device and source metadata.
+          </p>
+          <p>
+            With the same Health permission, FitFight also stores the extra types listed
+            above as private collection data so we can design later challenge types. That
+            collection is not shared with Fight opponents and does not change the Steps
+            score of a Fight.
           </p>
           <p>
             Participants in the same private Fight can see each other&apos;s username,
             aggregate Steps total for the Fight, relevant daily Steps totals shown in the
             Fight chart, rank, Fight action, and duration. They never receive another
-            participant&apos;s raw Apple Health samples or unrelated Health history.
+            participant&apos;s extra Health collection or raw Apple Health samples.
           </p>
         </section>
 
@@ -118,8 +128,8 @@ export default function PrivacyPage() {
             future reads but does not change data already used to score a Fight.
           </p>
           <p>
-            We keep account, Fight, bugs and feature-request, and uploaded Steps data while
-            your account exists.
+            We keep account, Fight, bugs and feature-request, uploaded Steps, and private
+            Apple Health collection data while your account exists.
             Support emails are kept only as long as needed to answer the request. Limited
             security and request logs follow Supabase&apos;s and Vercel&apos;s configured retention
             periods. Deleted data may remain temporarily in routine backups until those
@@ -132,10 +142,10 @@ export default function PrivacyPage() {
           <p>
             You can permanently delete your account under <strong>You → Settings → Delete
             account</strong>. You do not need to contact support. Deletion removes your
-            profile and username, uploaded Apple Health Fight and daily totals, legacy
-            friendships, invitations, Fight memberships, scores, bugs and feature requests
-            you posted, and every Fight you
-            created. It also removes your participation from Fights created by someone else.
+            profile and username, uploaded Apple Health Fight and daily totals, private
+            Health collection, legacy friendships, invitations, Fight memberships, scores,
+            bugs and feature requests you posted, and every Fight you created. It also
+            removes your participation from Fights created by someone else.
           </p>
           <p>
             When FitFight has a revocable Sign in with Apple credential, it asks Apple to

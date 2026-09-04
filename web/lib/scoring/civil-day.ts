@@ -26,6 +26,15 @@ export function resolveTimeZone(timeZone: string | null | undefined): string {
   }
 }
 
+export function civilDayInTimeZone(instant: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: resolveTimeZone(timeZone),
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(instant);
+}
+
 export function addCalendarDay(day: string): string {
   const match = CIVIL_DAY.exec(day);
   if (!match) {

@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 4,
+            notes: "Apple Health on staging also stores your distance, energy, exercise and stand time, workouts, sleep, heart-rate averages, and weight privately so we can try more challenge types. Steps fights still use Apple's merged step total; opponents do not see the extra types."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 4,
             notes: "You → Settings now has Bugs & requests: post a bug or a feature request, see what other people submitted, upvote, and comment with your username."
         ),
         ReleaseNote(

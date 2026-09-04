@@ -2,6 +2,8 @@
 
 These answers describe the current Steps-only product. Reconcile them against the exact production archive, Supabase and Vercel retention settings, and the published policy immediately before submission.
 
+**Submitted App Store 1.0 (`main`) is Steps-only.** Staging TestFlight from Apple ingest v2 asks for additional HealthKit types listed on the staging privacy page. Do not copy those staging types into the already-submitted App Privacy form unless Marc asks to resubmit.
+
 ## App Privacy
 
 Select **No** for tracking. No data type is used for third-party advertising, developer advertising, data brokerage, or tracking across other companies' apps or websites.

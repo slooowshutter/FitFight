@@ -1,7 +1,10 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { randomJoinCode } from "@/lib/domain/fights/join-code";
 import { ApiError, ERROR_CODES } from "@/lib/http";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { FightRow, ProfileRow } from "@/lib/types/database";
+import { fightVisibilitySchema } from "@/lib/types/fights/joinable-fight";
 import { ensureAppleHealthSource } from "./apple-health-source-supabase-query";
 import { createInvite, lookupProfileByHandle } from "./create-invite-supabase-query";
 import { fightSummary } from "./fight-access-supabase-query";
@@ -24,6 +27,8 @@ export const createFightSchema = z
     inviteHandles: z.array(z.string()).optional(),
     start: z.enum(["now", "scheduled"]).default("now"),
     metric: z.literal("steps").optional(),
+    visibility: fightVisibilitySchema.default("invite_only"),
+    recurring: z.boolean().default(false),
   })
   .superRefine((value, ctx) => {
     const starts = Date.parse(value.startsAt);
@@ -35,11 +40,22 @@ export const createFightSchema = z
     if (ends <= starts) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "endsAt must be after startsAt" });
     }
+    const handles = (value.inviteHandles ?? [])
+      .map((handle) => handle.trim())
+      .filter((handle) => handle.length > 0);
+    if (value.visibility === "invite_only" && handles.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["inviteHandles"],
+        message: "Invite-only fights need at least one username",
+      });
+    }
   });
 
 export type CreateFightInput = z.infer<typeof createFightSchema>;
 
 const IDEMPOTENCY_WINDOW_MS = 2 * 60 * 1000;
+const JOIN_CODE_ATTEMPTS = 8;
 
 function initialState(input: CreateFightInput): "live" | "scheduled" | "inviting" {
   if (input.start === "now") {
@@ -49,6 +65,20 @@ function initialState(input: CreateFightInput): "live" | "scheduled" | "inviting
     return "inviting";
   }
   return "scheduled";
+}
+
+async function allocateJoinCode(admin: SupabaseClient): Promise<string> {
+  for (let attempt = 0; attempt < JOIN_CODE_ATTEMPTS; attempt += 1) {
+    const code = randomJoinCode();
+    const { data, error } = await admin.from("fight_series").select("id").eq("join_code", code).maybeSingle();
+    if (error) {
+      throw new ApiError(500, ERROR_CODES.db_error, "Could not allocate join code");
+    }
+    if (!data) {
+      return code;
+    }
+  }
+  throw new ApiError(500, ERROR_CODES.db_error, "Could not allocate join code");
 }
 
 export async function createFight(userId: string, input: CreateFightInput) {
@@ -103,6 +133,30 @@ export async function createFight(userId: string, input: CreateFightInput) {
   }
   const state = initialState({ ...input, inviteHandles: handles });
   const source = await ensureAppleHealthSource(userId, { admin });
+  const needsSeries = input.visibility === "joinable" || input.recurring;
+  let seriesId: string | null = null;
+  if (needsSeries) {
+    const durationSeconds = Math.round((Date.parse(endsAt) - Date.parse(startsAt)) / 1000);
+    const joinCode = input.visibility === "joinable" ? await allocateJoinCode(admin) : null;
+    const { data: series, error: seriesError } = await admin
+      .from("fight_series")
+      .insert({
+        owner_id: userId,
+        join_code: joinCode,
+        visibility: input.visibility,
+        recurring: input.recurring,
+        duration_seconds: durationSeconds,
+        name: input.name,
+        action_text: input.actionText ?? null,
+        time_zone: input.timeZone,
+      })
+      .select("id")
+      .single();
+    if (seriesError || !series) {
+      throw new ApiError(500, ERROR_CODES.db_error, "Could not create fight series");
+    }
+    seriesId = series.id as string;
+  }
 
   const { data: inserted, error: insertError } = await admin
     .from("fights")
@@ -121,11 +175,22 @@ export async function createFight(userId: string, input: CreateFightInput) {
       stake_minor: input.stakeMinor ?? null,
       currency: input.stakeKind === "money" ? input.currency : input.currency ?? null,
       action_text: input.actionText ?? null,
+      series_id: seriesId,
     })
     .select("id, state")
     .single();
   if (insertError || !inserted) {
     throw new ApiError(500, ERROR_CODES.db_error, "Could not create fight");
+  }
+
+  if (seriesId) {
+    const { error: currentError } = await admin
+      .from("fight_series")
+      .update({ current_fight_id: inserted.id })
+      .eq("id", seriesId);
+    if (currentError) {
+      throw new ApiError(500, ERROR_CODES.db_error, "Could not attach series to fight");
+    }
   }
 
   const nowIso = new Date().toISOString();
@@ -139,6 +204,18 @@ export async function createFight(userId: string, input: CreateFightInput) {
   });
   if (memberError) {
     throw new ApiError(500, ERROR_CODES.db_error, "Could not add owner as member");
+  }
+
+  if (seriesId) {
+    const { error: seriesMemberError } = await admin.from("fight_series_members").insert({
+      series_id: seriesId,
+      user_id: userId,
+      state: "accepted",
+      joined_at: nowIso,
+    });
+    if (seriesMemberError) {
+      throw new ApiError(500, ERROR_CODES.db_error, "Could not add owner to series");
+    }
   }
 
   for (const handle of handles) {

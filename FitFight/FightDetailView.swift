@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct FightDetailView: View {
     private let initialFight: Fight
@@ -6,6 +7,9 @@ struct FightDetailView: View {
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var steps: HealthKitStepsStore
     @Environment(\.ffTheme) private var theme
+
+    @State private var copiedCode = false
+    @State private var copiedLink = false
 
     init(fight: Fight) {
         initialFight = fight
@@ -16,7 +20,7 @@ struct FightDetailView: View {
     }
 
     private var pendingJoin: Bool {
-        fight.status == .invited && !model.joined.contains(fight.id)
+        (fight.status == .invited || fight.pendingJoin) && !model.joined.contains(fight.id)
     }
 
     var body: some View {
@@ -37,6 +41,9 @@ struct FightDetailView: View {
             }
 
             if !pendingJoin {
+                if fight.joinCode != nil {
+                    shareCard
+                }
                 FFSectionHeader(title: String(localized: "Action"))
                     .padding(.top, theme.space.lg)
                 FFCard {
@@ -154,7 +161,7 @@ struct FightDetailView: View {
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.bottom, 22)
-                FFScreenCTA(title: String(localized: "Accept challenge")) {
+                FFScreenCTA(title: fight.pendingJoin ? String(localized: "Join fight") : String(localized: "Accept challenge")) {
                     Task {
                         await model.acceptFight(id: fight.id)
                         if (model.createError ?? "").isEmpty {
@@ -162,7 +169,11 @@ struct FightDetailView: View {
                         }
                     }
                 }
-                FFButton(title: String(localized: "Decline"), kind: .ghost, fullWidth: true) {
+                FFButton(
+                    title: fight.pendingJoin ? String(localized: "Not now") : String(localized: "Decline"),
+                    kind: .ghost,
+                    fullWidth: true
+                ) {
                     Task {
                         await model.declineFight(id: fight.id)
                         if (model.createError ?? "").isEmpty {
@@ -179,6 +190,62 @@ struct FightDetailView: View {
                 }
             }
             .frame(maxWidth: .infinity)
+        }
+    }
+
+    private var shareCard: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            FFSectionHeader(title: String(localized: "Share"))
+                .padding(.top, theme.space.lg)
+            FFCard {
+                VStack(alignment: .leading, spacing: 12) {
+                    if let code = fight.joinCode {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Code")
+                                    .ffType(.caption)
+                                    .foregroundStyle(theme.textSecondary)
+                                Text(code)
+                                    .ffType(.heading)
+                                    .foregroundStyle(theme.text)
+                            }
+                            Spacer()
+                            Button {
+                                UIPasteboard.general.string = code
+                                copiedCode = true
+                            } label: {
+                                Text(copiedCode ? String(localized: "Copied") : String(localized: "Copy code"))
+                                    .ffType(.caption)
+                                    .foregroundStyle(theme.mossText)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    if let url = fight.shareURL {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Link")
+                                    .ffType(.caption)
+                                    .foregroundStyle(theme.textSecondary)
+                                Text(url.absoluteString)
+                                    .ffType(.caption)
+                                    .foregroundStyle(theme.textSecondary)
+                                    .lineLimit(1)
+                            }
+                            Spacer()
+                            Button {
+                                UIPasteboard.general.string = url.absoluteString
+                                copiedLink = true
+                            } label: {
+                                Text(copiedLink ? String(localized: "Copied") : String(localized: "Copy link"))
+                                    .ffType(.caption)
+                                    .foregroundStyle(theme.mossText)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
         }
     }
 

@@ -3,6 +3,7 @@ import { ApiError, ERROR_CODES } from "@/lib/http";
 import { fightNeedsCloserTick } from "@/lib/scoring/fight-clock";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { FightState } from "@/lib/types/database";
+import { mintDueRecurringFights } from "./mint-recurring-fight-supabase-query";
 import {
   listFightsToRecalculate,
   recalculateFight,
@@ -66,6 +67,7 @@ export async function closeDueFights(
   }
   const rows = (data ?? []) as CloseCandidate[];
   const fightIds = await recalculateIds(dueIds(rows, now.getTime()), admin, now);
+  await mintDueRecurringFights(admin, now);
   return { checked: rows.length, closed: fightIds.length, fightIds };
 }
 
@@ -77,6 +79,7 @@ export async function closeDueFightsForUser(
 ): Promise<CloseDueResult> {
   const ids = await listFightsToRecalculate(userId, admin);
   if (ids.length === 0) {
+    await mintDueRecurringFights(admin, now);
     return { checked: 0, closed: 0, fightIds: [] };
   }
   const { data, error } = await admin
@@ -88,5 +91,6 @@ export async function closeDueFightsForUser(
   }
   const rows = (data ?? []) as CloseCandidate[];
   const fightIds = await recalculateIds(dueIds(rows, now.getTime()), admin, now);
+  await mintDueRecurringFights(admin, now);
   return { checked: rows.length, closed: fightIds.length, fightIds };
 }

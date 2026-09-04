@@ -18,4 +18,17 @@ enum APIConfig {
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .first { !$0.isEmpty }
     }
+
+    static var publicOrigin: URL {
+        guard let baseURL else { return URL(string: "https://fitfight.app")! }
+        var root = baseURL.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        if let range = root.range(of: "/api/v1", options: .caseInsensitive) {
+            root = String(root[..<range.lowerBound])
+        }
+        return URL(string: root) ?? URL(string: "https://fitfight.app")!
+    }
+
+    static func joinShareURL(code: String) -> URL {
+        publicOrigin.appendingPathComponent("j").appendingPathComponent(code)
+    }
 }

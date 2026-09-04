@@ -6,16 +6,25 @@ import { deleteAccount } from "./delete-account-supabase-query";
 process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
 process.env.SUPABASE_SECRET_KEY = "test-secret-key";
 
-function createDatabaseStub(profileExists: boolean) {
+function createDatabaseStub(options: {
+  profileExists: boolean;
+  keptFightIds?: string[];
+}) {
   const queries: string[] = [];
   const query = ((first: TemplateStringsArray, ..._values: unknown[]) => {
     const sql = first.join("?").replace(/\s+/g, " ").trim();
     queries.push(sql);
     if (sql.includes("select user_id from public.profiles")) {
-      return Promise.resolve(profileExists ? [{ user_id: "user-id" }] : []);
+      return Promise.resolve(options.profileExists ? [{ user_id: "user-id" }] : []);
+    }
+    if (sql.includes("select fight.id from public.fights")) {
+      return Promise.resolve((options.keptFightIds ?? []).map((id) => ({ id })));
     }
     return Promise.resolve([]);
   }) as unknown as Sql;
+  Object.assign(query, {
+    array: (values: readonly unknown[]) => values,
+  });
   const database = Object.assign(query, {
     begin: async (_options: string, callback: (sql: Sql) => Promise<unknown>) => callback(query),
   });
@@ -23,13 +32,15 @@ function createDatabaseStub(profileExists: boolean) {
 }
 
 test("account deletion removes owned Fights and every user-owned row before the auth user", async () => {
-  const { database, queries } = createDatabaseStub(true);
+  const { database, queries } = createDatabaseStub({ profileExists: true });
 
   const appleAuthorizationRevoked = await deleteAccount("user-id", database);
 
   assert.equal(appleAuthorizationRevoked, false);
   for (const table of [
     "public.fights",
+    "public.fight_series",
+    "public.fight_series_members",
     "private.fight_score_snapshots",
     "private.metric_observations",
     "private.provider_events",
@@ -51,6 +62,7 @@ test("account deletion removes owned Fights and every user-owned row before the 
   ]) {
     assert.ok(queries.some((query) => query.includes(`delete from ${table}`)), table);
   }
+  assert.ok(queries.some((query) => query.includes("update public.fight_series")));
   assert.ok(queries.some((query) => query.includes("public.fights where owner_id = ?")));
   assert.ok(queries.some((query) => query.includes("public.fight_members where user_id = ?")));
   assert.equal(queries.some((query) => query.includes("update public.profiles")), false);
@@ -58,8 +70,24 @@ test("account deletion removes owned Fights and every user-owned row before the 
   assert.equal(queries.at(-1), "delete from auth.users where id = ?");
 });
 
+test("account deletion keeps live Fights that still have other members and stubs the profile", async () => {
+  const { database, queries } = createDatabaseStub({
+    profileExists: true,
+    keptFightIds: ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"],
+  });
+
+  await deleteAccount("user-id", database);
+
+  assert.ok(queries.some((query) => query.includes("update public.fight_series")));
+  assert.ok(queries.some((query) => query.includes("id <> all(?::uuid[])")));
+  assert.ok(queries.some((query) => query.includes("update public.profiles")));
+  assert.ok(queries.some((query) => query.includes("handle = ?")));
+  assert.equal(queries.some((query) => query.includes("delete from auth.users")), false);
+  assert.ok(queries.some((query) => query.includes("delete from public.fight_members where user_id = ?")));
+});
+
 test("account deletion stops before destructive SQL when the profile is missing", async () => {
-  const { database, queries } = createDatabaseStub(false);
+  const { database, queries } = createDatabaseStub({ profileExists: false });
 
   await assert.rejects(deleteAccount("user-id", database), /Account not found/);
 

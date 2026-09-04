@@ -35,12 +35,12 @@ Verify the minimal product alongside Apple Health synchronization:
 
 1. TestFlight → **Update**. Look for `1.0.0 · build N · staging · 3 Sep` at the top.
 2. Check Fights, a Fight detail, New, and You in both Night and Day. There are only three tabs: Fights, New, You.
-3. New guides people through Steps, duration, exact usernames, the required action, and review. It offers 3 days / 1 week / 2 weeks / 1 month. Earlier steps use **Next**. Review uses **Slide to start**, then shows Starting… and ignores extra slides.
+3. New starts on Create or Join. Create still guides Steps, duration, invite-only or joinable, optional usernames, optional repeat, the required action, and review. Join is a 4-character code plus a live joinable list with no scores. Earlier create steps use **Next**. Review uses **Slide to start**.
 4. Confirm sign-in, username, Apple Health Steps, Fight invitations, standings with last-sync times, Privacy, Support, Versions, sign out, and Delete account.
 5. Confirm Requests, friend requests/lists, money, other Metrics, and dead settings are absent.
 6. If sign-in fails: hosted **develop** Supabase → Authentication → Providers → Apple → On, client ID `com.fitfight.mvp`.
 
-The native Fight path uses Supabase; Apple Health synchronization and account deletion also require Vercel.
+The native Fight path uses the API to create and join; Apple Health synchronization and account deletion also require Vercel.
 
 ---
 
@@ -52,9 +52,9 @@ The native Fight path uses Supabase; Apple Health synchronization and account de
 | Languages | English and French follow the iPhone's per-app language. Usernames, Fight names, and loser actions remain exactly as entered. |
 | Username onboarding | Works. Required once after sign-in. |
 | Version line | Release-candidate TestFlight says `1.0.0 · build N · staging`; the App Store build says `prod` |
-| Create Steps challenge | Follow a guided flow for Steps × highest total, choose 3 / 7 / 14 / 30 days, add one or more exact usernames, type the required loser action, and review before starting. |
-| Accept / Join | Phone updates your membership |
-| Invite participants | Exact username in New. They must have signed in and chosen one. There is no friendship or friend-request layer, and at least one invitee is required. |
+| Create Steps challenge | Follow a guided flow: Create or Join, then Steps × highest total, 3 / 7 / 14 / 30 days, invite-only usernames or a joinable code, optional recurring, required loser action, and review. Joinable fights may start with the owner alone. |
+| Accept / Join | Invites still accept in the fight. Joinable fights open the same Accept/Join screen from a code, the live list, or a shared link. Joins go through the server. |
+| Invite participants | Exact username in New for invite-only fights. Joinable fights use a 4-character code and a live list instead. They must have signed in and chosen a username. There is no friendship or friend-request layer. |
 | Apple Health | Installs background delivery at launch, keeps one interrupted opportunity for foreground reconciliation, and shows private capability/sync status under You. It sends Apple's merged cumulative Steps total for each exact active/ending Fight window in one small authenticated request. It does not send raw samples, deletions, per-source totals, device/source metadata, anchors, or archives. |
 | Daily totals | Sends Apple's merged daily buckets only for days relevant to active Fight charts. They are display data, not the source of the Fight score. |
 | Standings | Live scoring uses exact Fight-window HealthKit aggregates, not overlapping whole-day totals. Both phones read the same serving rows. Each standing shows relative sync freshness; ended Fights distinguish exact final-window coverage from the last available Steps. |

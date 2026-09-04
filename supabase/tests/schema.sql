@@ -1,5 +1,5 @@
 begin;
-select plan(38);
+select plan(44);
 
 select has_schema('private', 'private schema exists');
 select has_table('public', 'profiles', 'profiles exists');
@@ -7,6 +7,9 @@ select has_table('public', 'friendships', 'friendships exists');
 select has_table('public', 'fights', 'fights exists');
 select has_table('public', 'fight_members', 'fight_members exists');
 select has_table('public', 'fight_invites', 'fight_invites exists');
+select has_table('public', 'fight_series', 'fight_series exists');
+select has_table('public', 'fight_series_members', 'fight_series_members exists');
+select has_table('private', 'fight_join_attempts', 'join attempts stay private');
 select has_table('public', 'data_sources', 'data_sources exists');
 select has_table('public', 'step_days', 'step_days exists');
 select has_table('private', 'metric_observations', 'observations stay private');
@@ -114,6 +117,21 @@ select is(
   'clients cannot read invite token hashes'
 );
 select is(
+  has_table_privilege('authenticated', 'public.fight_series', 'INSERT'),
+  false,
+  'clients cannot insert fight series'
+);
+select is(
+  has_table_privilege('authenticated', 'private.fight_join_attempts', 'SELECT'),
+  false,
+  'authenticated cannot read join attempts'
+);
+select is(
+  has_table_privilege('anon', 'public.fight_series', 'SELECT'),
+  false,
+  'anon cannot read fight series'
+);
+select is(
   has_column_privilege('authenticated', 'public.profiles', 'display_name', 'UPDATE'),
   true,
   'users can update their display name'
@@ -152,6 +170,14 @@ select is(
 select ok(
   exists (select 1 from pg_constraint where conname = 'fights_metric_steps_only'),
   'fights are locked to steps'
+);
+select ok(
+  exists (
+    select 1 from pg_indexes
+    where schemaname = 'public'
+      and indexname = 'fights_series_starts_at_idx'
+  ),
+  'recurring fights are unique per series window'
 );
 select ok(
   exists (select 1 from pg_constraint where conname = 'metric_observations_metric_steps_only'),

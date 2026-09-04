@@ -67,5 +67,17 @@ export async function acceptMembership(
     await recalculateFight(fight.id, admin);
   }
 
+  if (fight.series_id) {
+    const { error: seriesMemberError } = await admin.from("fight_series_members").upsert({
+      series_id: fight.series_id,
+      user_id: userId,
+      state: "accepted",
+      joined_at: nowIso,
+    });
+    if (seriesMemberError) {
+      throw new ApiError(500, ERROR_CODES.db_error, "Could not join series");
+    }
+  }
+
   return fightSummary(await loadFight(fight.id, admin));
 }

@@ -90,6 +90,14 @@ struct Fight: Codable, Identifiable, Hashable {
     var windowStart: Date = Date()
     var windowEnd: Date = Date().addingTimeInterval(86400)
     var serverState: String? = nil
+    var joinCode: String? = nil
+    var recurring: Bool = false
+    var pendingJoin: Bool = false
+
+    var shareURL: URL? {
+        guard let joinCode, !joinCode.isEmpty else { return nil }
+        return APIConfig.joinShareURL(code: joinCode)
+    }
 
     var durationLabel: String {
         let hours = max(1, Int((windowEnd.timeIntervalSince(windowStart) / 3_600).rounded()))
@@ -131,6 +139,7 @@ final class AppModel: ObservableObject {
     @Published var showingRequests = false
     @Published var joined: Set<String> = []
     @Published var createError: String?
+    @Published var pendingJoinable: Fight?
     @Published private(set) var isCreatingFight = false
     @Published private(set) var isRefreshingFights = false
 
@@ -141,6 +150,7 @@ final class AppModel: ObservableObject {
     private let api = FitFightAPI()
     private var inviteTokens: [String: String] = [:]
     private var cachedUserID: UUID?
+    private static let pendingJoinCodeKey = "fitfight.pendingJoinCode"
 
     private static var fightsCachePrefix: String {
         "fitfight.fights.\(Bundle.main.preferredLocalizations.first ?? "en")."
@@ -172,7 +182,7 @@ final class AppModel: ObservableObject {
     }
 
     func fight(id: String) -> Fight? {
-        fights.first { $0.id == id }
+        fights.first { $0.id == id } ?? pendingJoinable.flatMap { $0.id == id ? $0 : nil }
     }
 
     var live: [Fight] { fights.filter { $0.status == .live } }
@@ -320,14 +330,16 @@ final class AppModel: ObservableObject {
         startsAt: Date,
         endsAt: Date,
         actionText: String,
-        inviteHandles: [String]
+        inviteHandles: [String],
+        visibility: String = "invite_only",
+        recurring: Bool = false
     ) async {
         if !isCreatingFight {
             isCreatingFight = true
         }
         defer { isCreatingFight = false }
         createError = nil
-        guard session?.authSession?.accessToken != nil else {
+        guard let access = session?.authSession?.accessToken, api.isConfigured else {
             createError = String(localized: "Sign in to start a fight.")
             return
         }
@@ -338,6 +350,17 @@ final class AppModel: ObservableObject {
         }
         guard action.count <= 120 else {
             createError = String(localized: "Keep the action to 120 characters.")
+            return
+        }
+
+        let handles = inviteHandles.reduce(into: [String]()) { result, raw in
+            let handle = SessionStore.strippedHandle(raw)
+            if SessionStore.isValidHandle(handle), !result.contains(handle) {
+                result.append(handle)
+            }
+        }
+        if visibility != "joinable", handles.isEmpty {
+            createError = String(localized: "Add at least one other username.")
             return
         }
 
@@ -353,16 +376,21 @@ final class AppModel: ObservableObject {
             stakeMinor: nil,
             currency: nil,
             actionText: action,
-            inviteHandles: inviteHandles,
-            start: "now"
+            inviteHandles: handles.isEmpty ? nil : handles,
+            start: "now",
+            visibility: visibility,
+            recurring: recurring
         )
 
         do {
-            try await createFightOnClient(
+            let created = try await api.createFight(
                 payload,
-                inviteHandles: inviteHandles
+                accessToken: access,
+                idempotencyKey: UUID().uuidString
             )
             await refreshFromServer()
+            tab = .fights
+            openFightID = created.id.uuidString
         } catch {
             createError = (error as? LiveFightError)?.errorDescription
                 ?? (error as? FitFightAPIError)?.errorDescription
@@ -382,6 +410,10 @@ final class AppModel: ObservableObject {
 
     func acceptFight(id: String) async {
         createError = nil
+        if let pending = pendingJoinable, pending.id == id, pending.pendingJoin {
+            await joinPendingFight(pending)
+            return
+        }
         if let token = inviteTokens[id], api.isConfigured {
             do {
                 try await acceptInvite(token: token)
@@ -410,6 +442,11 @@ final class AppModel: ObservableObject {
 
     func declineFight(id: String) async {
         createError = nil
+        if pendingJoinable?.id == id {
+            pendingJoinable = nil
+            openFightID = nil
+            return
+        }
         guard let session, let userId = session.authSession?.user.id, let fightID = UUID(uuidString: id) else {
             createError = String(localized: "Sign in to decline this fight.")
             return
@@ -426,69 +463,171 @@ final class AppModel: ObservableObject {
         }
     }
 
-    private func createFightOnClient(
-        _ payload: FitFightCreateFight,
-        inviteHandles: [String]
-    ) async throws {
-        guard let session, let userId = session.authSession?.user.id else {
-            throw LiveFightError.notSignedIn
+    func listJoinableFights(session: SessionStore) async -> [FitFightJoinableFight] {
+        self.session = session
+        guard let access = session.authSession?.accessToken, api.isConfigured else {
+            return []
         }
-
-        let handles = inviteHandles.reduce(into: [String]()) { result, raw in
-            let handle = SessionStore.strippedHandle(raw)
-            if SessionStore.isValidHandle(handle), !result.contains(handle) {
-                result.append(handle)
-            }
+        do {
+            return try await api.listJoinableFights(accessToken: access)
+        } catch {
+            createError = (error as? FitFightAPIError)?.errorDescription
+                ?? String(localized: "Couldn’t load joinable fights.")
+            return []
         }
-        guard !handles.isEmpty else { throw LiveFightError.noOpponents }
+    }
 
-        let found: [FitFightProfile] = try await session.client.from("profiles")
-            .select("user_id, handle, display_name")
-            .in("handle", values: handles)
-            .execute()
-            .value
-        if let missing = handles.first(where: { want in !found.contains { $0.handle == want } }) {
-            throw LiveFightError.unknownHandle(missing)
+    func openJoinable(_ summary: FitFightJoinableFight, session: SessionStore) async {
+        self.session = session
+        createError = nil
+        if summary.alreadyMember {
+            pendingJoinable = nil
+            tab = .fights
+            openFightID = summary.fightId.uuidString
+            await refreshFromServer()
+            return
         }
-        let inviteIds = found.map(\.userId).filter { $0 != userId }
-        guard !inviteIds.isEmpty else { throw LiveFightError.noOpponents }
+        pendingJoinable = Self.fight(from: summary, you: you)
+        tab = .fights
+        openFightID = summary.fightId.uuidString
+    }
 
-        let inserted: FightIDRow = try await session.client.from("fights")
-            .insert(
-                FightInsert(
-                    ownerId: userId,
-                    name: payload.name,
-                    state: "live",
-                    startsAt: Self.isoString(payload.startsAt),
-                    endsAt: Self.isoString(payload.endsAt),
-                    timeZone: payload.timeZone,
-                    metric: "steps",
-                    outcomeRule: payload.outcomeRule,
-                    goalPolicy: payload.goalPolicy ?? "shared",
-                    defaultGoalValue: payload.defaultGoalValue,
-                    stakeKind: payload.stakeKind,
-                    stakeMinor: payload.stakeMinor,
-                    currency: payload.currency,
-                    actionText: payload.actionText
-                )
-            )
-            .select("id")
-            .single()
-            .execute()
-            .value
-
-        var members = [
-            MemberInsert(
-                fightId: inserted.id,
-                userId: userId,
-                state: "accepted",
-                acceptedAt: Self.isoNow()
-            )
-        ]
-        members += inviteIds.map {
-            MemberInsert(fightId: inserted.id, userId: $0, state: "invited", acceptedAt: nil)
+    func openJoinCode(_ raw: String, session: SessionStore) async {
+        self.session = session
+        createError = nil
+        let code = raw.replacingOccurrences(of: "[\\s-]", with: "", options: .regularExpression).uppercased()
+        guard code.count == 4 else {
+            createError = String(localized: "Enter the 4-character code.")
+            return
         }
-        try await session.client.from("fight_members").insert(members).execute()
+        if let stored = UserDefaults.standard.string(forKey: Self.pendingJoinCodeKey), stored == code {
+            UserDefaults.standard.removeObject(forKey: Self.pendingJoinCodeKey)
+        }
+        guard let access = session.authSession?.accessToken, api.isConfigured else {
+            UserDefaults.standard.set(code, forKey: Self.pendingJoinCodeKey)
+            createError = String(localized: "Sign in to join this fight.")
+            return
+        }
+        do {
+            let summary = try await api.joinableFight(code: code, accessToken: access)
+            await openJoinable(summary, session: session)
+        } catch {
+            createError = (error as? FitFightAPIError)?.errorDescription
+                ?? String(localized: "Couldn’t find that fight.")
+        }
+    }
+
+    func handleOpenURL(_ url: URL, session: SessionStore) async {
+        guard let code = Self.joinCode(from: url) else { return }
+        await openJoinCode(code, session: session)
+    }
+
+    func consumePendingJoinCode(session: SessionStore) async {
+        guard !session.needsOnboarding, session.profile != nil else { return }
+        guard let code = UserDefaults.standard.string(forKey: Self.pendingJoinCodeKey) else { return }
+        await openJoinCode(code, session: session)
+    }
+
+    private func joinPendingFight(_ fight: Fight) async {
+        guard let access = session?.authSession?.accessToken, api.isConfigured else {
+            createError = String(localized: "Sign in to join this fight.")
+            return
+        }
+        guard let fightID = UUID(uuidString: fight.id) else {
+            createError = String(localized: "Couldn’t join.")
+            return
+        }
+        do {
+            _ = try await api.joinFight(code: fight.joinCode, fightID: fightID, accessToken: access)
+            pendingJoinable = nil
+            joined.insert(fight.id)
+            await refreshFromServer()
+        } catch {
+            createError = (error as? FitFightAPIError)?.errorDescription
+                ?? String(localized: "Couldn’t join.")
+        }
+    }
+
+    func leaveFight(id: String) async {
+        createError = nil
+        guard let access = session?.authSession?.accessToken, api.isConfigured else {
+            createError = String(localized: "Sign in to leave this fight.")
+            return
+        }
+        guard let fightID = UUID(uuidString: id) else {
+            createError = String(localized: "Couldn’t leave.")
+            return
+        }
+        do {
+            _ = try await api.leaveFight(fightID: fightID, accessToken: access)
+            openFightID = nil
+            joined.remove(id)
+            await refreshFromServer()
+        } catch {
+            createError = (error as? FitFightAPIError)?.errorDescription
+                ?? String(localized: "Couldn’t leave.")
+        }
+    }
+
+    static func joinCode(from url: URL) -> String? {
+        let parts = url.path.split(separator: "/").map(String.init)
+        guard let index = parts.firstIndex(of: "j"), parts.indices.contains(index + 1) else {
+            return nil
+        }
+        let code = parts[index + 1]
+            .replacingOccurrences(of: "-", with: "")
+            .uppercased()
+        let alphabet = CharacterSet(charactersIn: "23456789ABCDEFGHJKMNPQRSTVWXYZ")
+        guard code.count == 4, code.unicodeScalars.allSatisfy({ alphabet.contains($0) }) else {
+            return nil
+        }
+        return code
+    }
+
+    private static func fight(from summary: FitFightJoinableFight, you: Person) -> Fight {
+        let starts = FightRow.parse(summary.startsAt) ?? Date()
+        let ends = FightRow.parse(summary.endsAt) ?? starts.addingTimeInterval(86400)
+        let lengthDays = max(1, Calendar.current.dateComponents([.day], from: starts, to: ends).day ?? 1)
+        let owner = Person(
+            id: summary.ownerHandle,
+            name: "@\(summary.ownerHandle)",
+            handle: "@\(summary.ownerHandle)",
+            initials: String(summary.ownerHandle.prefix(2)).uppercased()
+        )
+        let action = summary.actionText?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return Fight(
+            id: summary.fightId.uuidString,
+            code: summary.joinCode,
+            name: summary.name,
+            metric: .steps,
+            lengthDays: lengthDays,
+            daysLeft: max(1, Calendar.current.dateComponents([.day], from: Date(), to: ends).day ?? 1),
+            actionText: (action?.isEmpty == false ? action : nil) ?? String(localized: "No action was set for this older fight."),
+            status: .invited,
+            rank: 0,
+            of: max(summary.memberCount, 1),
+            pending: 0,
+            kickerEmphasis: String(
+                localized: "fight.challenged-you",
+                defaultValue: "@\(summary.ownerHandle) challenged you"
+            ),
+            listSubtitle: "@\(summary.ownerHandle) · \(summary.memberCount)",
+            inviter: owner,
+            invitePitch: String(
+                localized: "fight.challenged-you",
+                defaultValue: "@\(summary.ownerHandle) challenged you"
+            ),
+            inviteAction: String(localized: "Join fight"),
+            standings: [
+                Standing(person: you, score: 0),
+                Standing(person: owner, score: 0),
+            ],
+            windowStart: starts,
+            windowEnd: ends,
+            joinCode: summary.joinCode,
+            recurring: summary.recurring,
+            pendingJoin: true
+        )
     }
 
     private func populateStepDays(
@@ -540,12 +679,6 @@ final class AppModel: ObservableObject {
         return Set(days)
     }
 
-    private static func isoString(_ date: Date) -> String {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return formatter.string(from: date)
-    }
-
     private static func dayCards(
         from days: [StepDayRow],
         standings: [Standing],
@@ -586,7 +719,7 @@ final class AppModel: ObservableObject {
 
     private func loadFights(client: SupabaseClient, userId: UUID) async throws -> [Fight] {
         let memberSelect = "fight_id, user_id, state, current_value, rank, final_value, last_synced_at, final_steps_complete"
-        let fightSelect = "id, owner_id, name, state, starts_at, ends_at, action_text"
+        let fightSelect = "id, owner_id, name, state, starts_at, ends_at, action_text, series_id"
 
         let myRows: [MemberRow] = try await client.from("fight_members")
             .select(memberSelect)
@@ -622,6 +755,16 @@ final class AppModel: ObservableObject {
         let byProfile = Dictionary(uniqueKeysWithValues: profiles.map { ($0.userId, $0) })
         let membersByFight = Dictionary(grouping: memberRows, by: \.fightId)
         let myByFight = Dictionary(uniqueKeysWithValues: myRows.map { ($0.fightId, $0) })
+        let seriesIDs = fightRows.compactMap(\.seriesId)
+        var seriesByID: [UUID: SeriesRow] = [:]
+        if !seriesIDs.isEmpty {
+            let seriesRows: [SeriesRow] = try await client.from("fight_series")
+                .select("id, join_code, visibility, recurring")
+                .in("id", values: seriesIDs.map(\.uuidString))
+                .execute()
+                .value
+            seriesByID = Dictionary(uniqueKeysWithValues: seriesRows.map { ($0.id, $0) })
+        }
 
         return fightRows.compactMap { row in
             Self.mapFight(
@@ -629,6 +772,7 @@ final class AppModel: ObservableObject {
                 members: membersByFight[row.id] ?? [],
                 mine: myByFight[row.id],
                 profiles: byProfile,
+                series: row.seriesId.flatMap { seriesByID[$0] },
                 userId: userId,
                 formatScore: formatScore
             )
@@ -659,10 +803,11 @@ final class AppModel: ObservableObject {
         members: [MemberRow],
         mine: MemberRow?,
         profiles: [UUID: FitFightProfile],
+        series: SeriesRow?,
         userId: UUID,
         formatScore: (Double, MetricKind) -> String
     ) -> Fight? {
-        if row.state == "draft" || mine?.state == "declined" { return nil }
+        if row.state == "draft" || mine?.state == "declined" || mine?.state == "withdrawn" { return nil }
 
         let pendingMembers = members.filter { $0.state == "invited" }
 
@@ -836,7 +981,7 @@ final class AppModel: ObservableObject {
         }
 
         let short = row.id.uuidString.replacingOccurrences(of: "-", with: "")
-        let code = "FIGHT-" + String(short.prefix(3)).uppercased()
+        let code = series?.joinCode ?? ("FIGHT-" + String(short.prefix(3)).uppercased())
 
         return Fight(
             id: row.id.uuidString,
@@ -862,7 +1007,9 @@ final class AppModel: ObservableObject {
             standings: people,
             windowStart: starts,
             windowEnd: ends,
-            serverState: row.state
+            serverState: row.state,
+            joinCode: series?.joinCode,
+            recurring: series?.recurring ?? false
         )
     }
 
@@ -907,55 +1054,17 @@ private func localizedDuration(hours: Int, days: Int) -> String {
     )
 }
 
-private struct FightIDRow: Decodable {
+private struct SeriesRow: Decodable {
     let id: UUID
-}
-
-private struct FightInsert: Encodable {
-    let ownerId: UUID
-    let name: String
-    let state: String
-    let startsAt: String
-    let endsAt: String
-    let timeZone: String
-    let metric: String
-    let outcomeRule: String
-    let goalPolicy: String
-    let defaultGoalValue: Double?
-    let stakeKind: String
-    let stakeMinor: Int?
-    let currency: String?
-    let actionText: String?
+    let joinCode: String?
+    let visibility: String
+    let recurring: Bool
 
     enum CodingKeys: String, CodingKey {
-        case ownerId = "owner_id"
-        case name
-        case state
-        case startsAt = "starts_at"
-        case endsAt = "ends_at"
-        case timeZone = "time_zone"
-        case metric
-        case outcomeRule = "outcome_rule"
-        case goalPolicy = "goal_policy"
-        case defaultGoalValue = "default_goal_value"
-        case stakeKind = "stake_kind"
-        case stakeMinor = "stake_minor"
-        case currency
-        case actionText = "action_text"
-    }
-}
-
-private struct MemberInsert: Encodable {
-    let fightId: UUID
-    let userId: UUID
-    let state: String
-    let acceptedAt: String?
-
-    enum CodingKeys: String, CodingKey {
-        case fightId = "fight_id"
-        case userId = "user_id"
-        case state
-        case acceptedAt = "accepted_at"
+        case id
+        case joinCode = "join_code"
+        case visibility
+        case recurring
     }
 }
 
@@ -993,6 +1102,7 @@ private struct FightRow: Decodable {
     let startsAt: String
     let endsAt: String
     let actionText: String?
+    let seriesId: UUID?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -1002,6 +1112,7 @@ private struct FightRow: Decodable {
         case startsAt = "starts_at"
         case endsAt = "ends_at"
         case actionText = "action_text"
+        case seriesId = "series_id"
     }
 
     var startsAtDate: Date { Self.parse(startsAt) ?? Date() }

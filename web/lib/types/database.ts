@@ -42,6 +42,7 @@ export type FightRow = {
   scoring_engine_version: number;
   final_sync_grace_seconds: number;
   created_at: string;
+  series_id: string | null;
 };
 
 export type FightMemberRow = {
@@ -106,6 +107,21 @@ export type ProfileRow = {
   handle: string;
   display_name: string;
   time_zone: string | null;
+};
+
+export type FightSeriesRow = {
+  id: string;
+  owner_id: string;
+  join_code: string | null;
+  visibility: "invite_only" | "joinable";
+  recurring: boolean;
+  duration_seconds: number;
+  name: string;
+  action_text: string | null;
+  time_zone: string;
+  paused_at: string | null;
+  current_fight_id: string | null;
+  created_at: string;
 };
 
 export function asNumber(value: number | string | null | undefined): number | null {

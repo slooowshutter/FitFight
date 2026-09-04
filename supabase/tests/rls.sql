@@ -1,5 +1,5 @@
 begin;
-select plan(18);
+select plan(20);
 
 create function pg_temp.make_user(uid uuid, email text)
 returns void
@@ -65,6 +65,7 @@ $$;
 select pg_temp.make_user('11111111-1111-4111-8111-111111111111', 'maya@example.com');
 select pg_temp.make_user('22222222-2222-4222-8222-222222222222', 'leo@example.com');
 select pg_temp.make_user('33333333-3333-4333-8333-333333333333', 'ivy@example.com');
+select pg_temp.make_user('44444444-4444-4444-8444-444444444444', 'sam@example.com');
 
 insert into public.fights (
   id, owner_id, name, state, starts_at, ends_at, time_zone,
@@ -315,6 +316,32 @@ select throws_ok(
   '42501',
   'permission denied for table feedback_votes',
   'clients cannot insert feedback votes'
+);
+
+reset role;
+select pg_temp.as_user('44444444-4444-4444-8444-444444444444');
+set local role authenticated;
+
+select throws_ok(
+  $$ insert into public.fight_members (fight_id, user_id, state)
+     values (
+       'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+       '44444444-4444-4444-8444-444444444444',
+       'accepted'
+     ) $$,
+  '42501',
+  'new row violates row-level security policy for table "fight_members"',
+  'strangers cannot client-insert themselves onto a fight'
+);
+
+reset role;
+select pg_temp.as_user('33333333-3333-4333-8333-333333333333');
+set local role authenticated;
+
+select is(
+  (select count(*)::integer from public.fight_series),
+  0,
+  'unrelated users cannot read a series they are not in'
 );
 
 select * from finish();

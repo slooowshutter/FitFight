@@ -43,6 +43,20 @@ Right now the product is the minimum private Steps challenge. Do not restore old
 
 Product ideas go in [`docs/backlog.md`](docs/backlog.md). Marc says “put X on the backlog”; do not open GitHub Issues or a Notion board unless he asks.
 
+## When Marc asks for design options
+
+He asks for several designs of a screen. He wants to **tap them on his phone**, not read a description and not look at pictures.
+
+- **Never** answer with AI-generated images. A generated picture is not the product and cannot be tapped.
+- Build **one self-contained HTML page** under `docs/design/source/kit/`, named for the screen (`fights-home-proposals.html`). Plain HTML, CSS and vanilla JS in that one file. No build step, no framework, no npm.
+- Use the real kit: `tokens.json` colours, Nunito, 22pt cards, hairline borders, no shadows, and a 393×852 phone frame with the version line and the Fights / New / You tab bar.
+- Put every option in **one page** behind a picker, so he taps between them without leaving. Each option needs a short line saying when it is the right choice.
+- Feed every option the **same** fake fights, so he compares layouts and not data.
+- Commit, push, open the PR, then **give him a clickable link** in the reply:
+  `https://htmlpreview.github.io/?https://raw.githubusercontent.com/slooowshutter/FitFight/<branch>/docs/design/source/kit/<file>.html`
+- Touch **no** `.swift` file and nothing under `FitFight.xcodeproj/` while proposing. That keeps TestFlight quiet until he picks one. Port the winner in a separate PR.
+- These pages are proposals, not the approved spec. The approved spec is still `kit/FitFight Design System.dc.html`.
+
 ## When you change the native iOS app
 
 1. Branch off `develop`. Open a PR **into `develop`**. Do not PR into `main` unless Marc is shipping to production.

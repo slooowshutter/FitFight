@@ -745,32 +745,13 @@ final class AppModel: ObservableObject {
             let scores = standings.map { row in
                 let personID = UUID(uuidString: row.person.id)
                 let value = days.first {
-                    $0.userId == personID && Self.civilDayKey($0.day) == day
+                    $0.userId == personID && civilDayKey($0.day) == day
                 }?.steps ?? 0
                 return DayScore(person: row.person, value: Double(value))
             }
             let date = formatter.date(from: day) ?? Date()
             return FightDay(label: label.string(from: date), scores: scores)
         }
-    }
-
-    fileprivate static func civilDayKey(_ raw: String) -> String {
-        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.count >= 10 else { return trimmed }
-        let key = String(trimmed.prefix(10))
-        let ok = key.range(of: #"^\d{4}-\d{2}-\d{2}$"#, options: .regularExpression) != nil
-        return ok ? key : trimmed
-    }
-
-    fileprivate static func utcDayStamp(_ date: Date) -> String {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
-        let formatter = DateFormatter()
-        formatter.calendar = calendar
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = calendar.timeZone
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: date)
     }
 
     private static func dayStamp(_ date: Date) -> String {
@@ -1151,6 +1132,25 @@ private struct MemberDeclineUpdate: Encodable {
     let state: String
 }
 
+private func civilDayKey(_ raw: String) -> String {
+    let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard trimmed.count >= 10 else { return trimmed }
+    let key = String(trimmed.prefix(10))
+    let ok = key.range(of: #"^\d{4}-\d{2}-\d{2}$"#, options: .regularExpression) != nil
+    return ok ? key : trimmed
+}
+
+private func utcDayStamp(_ date: Date) -> String {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+    let formatter = DateFormatter()
+    formatter.calendar = calendar
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.timeZone = calendar.timeZone
+    formatter.dateFormat = "yyyy-MM-dd"
+    return formatter.string(from: date)
+}
+
 private struct StepDayRow: Decodable {
     let userId: UUID
     let day: String
@@ -1166,10 +1166,10 @@ private struct StepDayRow: Decodable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         userId = try container.decode(UUID.self, forKey: .userId)
         if let raw = try? container.decode(String.self, forKey: .day) {
-            day = AppModel.civilDayKey(raw)
+            day = civilDayKey(raw)
         } else {
             let date = try container.decode(Date.self, forKey: .day)
-            day = AppModel.civilDayKey(AppModel.utcDayStamp(date))
+            day = civilDayKey(utcDayStamp(date))
         }
         if let value = try? container.decode(Int.self, forKey: .steps) {
             steps = value

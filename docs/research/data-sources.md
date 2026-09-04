@@ -18,7 +18,7 @@ Apple Watch and the iPhone have **no cloud API**. HealthKit is the only legal wa
 | **Polar** | AccessLink / API v4 OAuth | Exercises, daily activity, HR, sleep, cardio load | Register an AccessLink app |
 | **COROS** | Partner OAuth API | Workouts, HR, sleep, distance | Marc: apply at [COROS API](https://support.coros.com/hc/en-us/articles/17085887816340-Submit-an-API-Application) / `api@coros.com` |
 | **Garmin** | Garmin Connect Health + Activity APIs | Steps, workouts, Body Battery, stress, FIT detail | Marc: apply to the [Garmin Connect Developer Program](https://developer.garmin.com/gc-developer-program/) |
-| **Strava** | Public OAuth 2 API + webhooks | Activities the athlete recorded in Strava | Collect for that person. **Do not put Strava numbers on someone else’s Fight** until Strava gives written approval. 2026 policy: display only to the authenticated athlete; 7-day cache |
+| **Strava** | Public OAuth 2 API + webhooks. **We connect it.** | Activities the athlete recorded in Strava | Marc: create the API app. Email `developers@strava.com` with the exact private-Fight UX (named friends, they all opted in, derived total only). Until they write yes, show Strava only to that person. Their 2026 policy also limits cache to 7 days, so a finished Fight cannot keep a permanent Strava-API copy unless they approve it |
 | **Amazfit / Zepp** | **No public developer API.** Zepp OS OAuth is for watch apps, not pulling a user’s cloud history. | — | Apple Health export if they enable it. Do not reverse-engineer Huami. Ask Zepp for a partner API or drop this source |
 | **Nike Run Club** | **No public consumer API.** Internal Nike endpoints are not a FitFight integration. | — | Apple Health workout if they enable NRC → Health. Do not scrape |
 | **Peloton** | **No public API.** Community scrapers exist; we will not use them. | — | Apple Health workout if they enable Peloton → Health |
@@ -33,7 +33,7 @@ Still **private**. Still **not** a Fight score. One Data source per member later
 2. Add Connect on You for **WHOOP** and **Oura** first (public APIs, workouts plus Recovery/Readiness on the same connection).
 3. Expand Apple Health to private `HKWorkout` + duration / distance / energy so Watch/iPhone sports exist in the same store.
 4. Polar next (public AccessLink). Then Garmin and COROS once Marc has credentials.
-5. Strava OAuth for the signed-in athlete’s own history. Fight standings stay blocked until written approval.
+5. **Strava:** connect it. That person sees their own activities. Email Strava for Fight standings. Many people record on Watch/Garmin and only *share* to Strava — those Fights can use Watch/Garmin without waiting.
 6. Amazfit, Nike Run Club, Peloton: HealthKit fallback only unless a partner API appears.
 
 Normalize into one activity/observation shape at ingest. Vendor sport strings map into Apple’s `HKWorkoutActivityType` (running, cycling, swimming, strength, yoga, hiking, … ~80 types) plus `other`. Do not invent a second sport list.
@@ -45,7 +45,7 @@ Normalize into one activity/observation shape at ingest. Vendor sport strings ma
 - Polar: AccessLink client.
 - Garmin: Connect Developer Program.
 - COROS: API application.
-- Strava: API app now; written social-display approval before any shared Fight uses Strava data.
+- Strava: create the API app now. Email `developers@strava.com` with the private-Fight UX. We still build the connection.
 - Amazfit / Nike / Peloton: there is nothing to apply to today.
 
 Secrets stay in Vercel/GitHub, never in git or iOS.

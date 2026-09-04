@@ -18,14 +18,17 @@ struct YouView: View {
                 FFNotice(text: authError, tone: .ember, systemImage: "exclamationmark.triangle")
             }
 
-            FFSectionHeader(title: String(localized: "Apple Health")).padding(.top, theme.space.lg)
-            health
+            FFSection(title: String(localized: "Apple Health")) {
+                health
+            }
 
-            FFSectionHeader(title: String(localized: "Settings")).padding(.top, theme.space.lg)
-            settings
+            FFSection(title: String(localized: "Settings")) {
+                settings
+            }
 
-            FFSectionHeader(title: String(localized: "Look")).padding(.top, theme.space.lg)
-            appearance
+            FFSection(title: String(localized: "Look")) {
+                appearance
+            }
         }
         .task {
             guard !staticRender else { return }

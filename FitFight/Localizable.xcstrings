@@ -178,6 +178,7 @@
     "People you add by username" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Les personnes que vous ajoutez par nom d’utilisateur"}}}},
     "Repeat when it ends" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Recommencer à la fin"}}}},
     "Share" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Partager"}}}},
+    "Share on a fight uses the same space under the section title as Action and Standings." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Dans un défi, Partager laisse le même espace sous le titre de section que Gage et Classement."}}}},
     "Short code plus the live join list" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Un code court plus la liste des défis ouverts"}}}},
     "Sign in to join this fight." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Connectez-vous pour rejoindre ce défi."}}}},
     "Sign in to leave this fight." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Connectez-vous pour quitter ce défi."}}}},

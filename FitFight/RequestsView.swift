@@ -105,16 +105,90 @@ final class FeedbackStore: ObservableObject {
             return false
         }
     }
+
+    static func previewBoard() -> FeedbackStore {
+        let store = FeedbackStore()
+        store.posts = previewPosts
+        return store
+    }
+
+    static func previewDetail() -> FeedbackStore {
+        let store = previewBoard()
+        store.detail = previewPosts[0]
+        store.comments = previewComments
+        return store
+    }
+
+    fileprivate static let previewChartBugID = UUID(uuidString: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1")!
+
+    private static let previewPosts: [FitFightFeedbackPost] = [
+        FitFightFeedbackPost(
+            id: previewChartBugID,
+            kind: "bug",
+            title: "Steps chart is blank",
+            body: "The daily Steps chart on a live fight stays empty after a successful sync.",
+            voteCount: 8,
+            commentCount: 2,
+            voted: true,
+            authorHandle: "maya_moves",
+            createdAt: Date(timeIntervalSince1970: 1_756_900_800)
+        ),
+        FitFightFeedbackPost(
+            id: UUID(uuidString: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2")!,
+            kind: "feature",
+            title: "Show weekly totals",
+            body: "A weekly Steps total on You would make it easier to plan a fight.",
+            voteCount: 5,
+            commentCount: 1,
+            voted: false,
+            authorHandle: "dorian",
+            createdAt: Date(timeIntervalSince1970: 1_756_814_400)
+        ),
+    ]
+
+    private static let previewComments: [FitFightFeedbackComment] = [
+        FitFightFeedbackComment(
+            id: UUID(uuidString: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3")!,
+            body: "Same here after the Watch catches up.",
+            authorHandle: "dorian",
+            createdAt: Date(timeIntervalSince1970: 1_756_904_400)
+        ),
+        FitFightFeedbackComment(
+            id: UUID(uuidString: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa4")!,
+            body: "Pulling to refresh did not fill the bars.",
+            authorHandle: "maya_moves",
+            createdAt: Date(timeIntervalSince1970: 1_756_908_000)
+        ),
+    ]
+}
+
+enum RequestsScreenshot {
+    static func board() -> RequestsView {
+        RequestsView(store: .previewBoard())
+    }
+
+    static func detail() -> some View {
+        RequestDetailView(postID: FeedbackStore.previewChartBugID, store: .previewDetail())
+    }
+
+    static func compose() -> some View {
+        ComposeRequestView(store: FeedbackStore())
+    }
 }
 
 struct RequestsView: View {
     @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
+    @Environment(\.ffStaticRender) private var staticRender
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var store = FeedbackStore()
+    @StateObject private var store: FeedbackStore
     @State private var filter: RequestFilter = .top
     @State private var composing = false
     @State private var openPostID: UUID?
+
+    init(store: FeedbackStore = FeedbackStore()) {
+        _store = StateObject(wrappedValue: store)
+    }
 
     private enum RequestFilter: Hashable, CaseIterable {
         case top, features, bugs
@@ -146,11 +220,16 @@ struct RequestsView: View {
         }
         .toolbar(.hidden, for: .navigationBar)
         .background(theme.bg.ignoresSafeArea())
-        .task { await store.load(session: session, kind: filter.kind) }
+        .task {
+            guard !staticRender else { return }
+            await store.load(session: session, kind: filter.kind)
+        }
         .onChange(of: filter) { _, value in
+            guard !staticRender else { return }
             Task { await store.load(session: session, kind: value.kind) }
         }
         .sheet(isPresented: $composing, onDismiss: {
+            guard !staticRender else { return }
             Task { await store.load(session: session, kind: filter.kind) }
         }) {
             ComposeRequestView(store: store)
@@ -295,6 +374,7 @@ private struct RequestDetailView: View {
     @ObservedObject var store: FeedbackStore
     @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
+    @Environment(\.ffStaticRender) private var staticRender
     @Environment(\.dismiss) private var dismiss
     @State private var comment = ""
     @FocusState private var commentFocused: Bool
@@ -418,7 +498,10 @@ private struct RequestDetailView: View {
             .padding(.vertical, 12)
         }
         .background(theme.bg.ignoresSafeArea())
-        .task { await store.loadDetail(session: session, postID: postID) }
+        .task {
+            guard !staticRender else { return }
+            await store.loadDetail(session: session, postID: postID)
+        }
     }
 
     private var canComment: Bool {

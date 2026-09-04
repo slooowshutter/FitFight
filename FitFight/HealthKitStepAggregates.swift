@@ -2,6 +2,10 @@ import Foundation
 import HealthKit
 
 enum HealthKitStepAggregates {
+    enum ReadError: Error {
+        case noAccessibleSteps
+    }
+
     static func read(
         store: HKHealthStore,
         type: HKQuantityType,
@@ -32,12 +36,12 @@ enum HealthKitStepAggregates {
                 let endsAt = min(nextDay, context.serverNow)
                 if context.fightWindows.contains(where: {
                     cursor < $0.cutoffAt && endsAt > $0.startsAt
-                }) {
+                }), let steps = totalsByDay[day] {
                     mergedDays.append(FitFightHealthKitStepSync.MergedDay(
                         day: day,
                         startsAt: iso8601(cursor),
                         endsAt: iso8601(endsAt),
-                        steps: totalsByDay[day] ?? 0
+                        steps: steps
                     ))
                 }
                 cursor = nextDay
@@ -97,7 +101,7 @@ enum HealthKitStepAggregates {
                 }
                 var totals: [String: Int] = [:]
                 collection?.enumerateStatistics(from: start, to: end) { statistics, _ in
-                    let steps = statistics.sumQuantity()?.doubleValue(for: .count()) ?? 0
+                    guard let steps = statistics.sumQuantity()?.doubleValue(for: .count()) else { return }
                     totals[dayStamp(statistics.startDate, calendar: calendar)] = Int(steps.rounded())
                 }
                 continuation.resume(returning: totals)
@@ -121,8 +125,11 @@ enum HealthKitStepAggregates {
             predicate: .quantitySample(type: type, predicate: predicate),
             options: [.cumulativeSum]
         )
-        let steps = try await descriptor.result(for: store)?
-            .sumQuantity()?.doubleValue(for: .count()) ?? 0
+        // HealthKit hides denied read access; an absent quantity does not establish a zero total.
+        guard let steps = try await descriptor.result(for: store)?
+            .sumQuantity()?.doubleValue(for: .count()) else {
+            throw ReadError.noAccessibleSteps
+        }
         return Int(steps.rounded())
     }
 

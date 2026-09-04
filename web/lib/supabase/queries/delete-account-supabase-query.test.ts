@@ -8,7 +8,6 @@ process.env.SUPABASE_SECRET_KEY = "test-secret-key";
 
 function createDatabaseStub(options: {
   profileExists: boolean;
-  keptFightIds?: string[];
 }) {
   const queries: string[] = [];
   const query = ((first: TemplateStringsArray, ..._values: unknown[]) => {
@@ -16,9 +15,6 @@ function createDatabaseStub(options: {
     queries.push(sql);
     if (sql.includes("select user_id from public.profiles")) {
       return Promise.resolve(options.profileExists ? [{ user_id: "user-id" }] : []);
-    }
-    if (sql.includes("select fight.id from public.fights")) {
-      return Promise.resolve((options.keptFightIds ?? []).map((id) => ({ id })));
     }
     return Promise.resolve([]);
   }) as unknown as Sql;
@@ -58,6 +54,7 @@ test("account deletion removes owned Fights and every user-owned row before the 
     "public.fight_invites",
     "public.friendships",
     "public.data_sources",
+    "private.fight_join_attempts",
     "auth.sessions",
     "auth.refresh_tokens",
     "auth.identities",
@@ -71,22 +68,6 @@ test("account deletion removes owned Fights and every user-owned row before the 
   assert.equal(queries.some((query) => query.includes("update public.profiles")), false);
   assert.equal(queries.some((query) => query.includes("update auth.users")), false);
   assert.equal(queries.at(-1), "delete from auth.users where id = ?");
-});
-
-test("account deletion keeps live Fights that still have other members and stubs the profile", async () => {
-  const { database, queries } = createDatabaseStub({
-    profileExists: true,
-    keptFightIds: ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"],
-  });
-
-  await deleteAccount("user-id", database);
-
-  assert.ok(queries.some((query) => query.includes("update public.fight_series")));
-  assert.ok(queries.some((query) => query.includes("id <> all(?::uuid[])")));
-  assert.ok(queries.some((query) => query.includes("update public.profiles")));
-  assert.ok(queries.some((query) => query.includes("handle = ?")));
-  assert.equal(queries.some((query) => query.includes("delete from auth.users")), false);
-  assert.ok(queries.some((query) => query.includes("delete from public.fight_members where user_id = ?")));
 });
 
 test("account deletion stops before destructive SQL when the profile is missing", async () => {

@@ -36,6 +36,21 @@ jobs:
       - name: pgTAP
         run: supabase test db --local
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci
+        working-directory: web
+
+      - name: Database transaction tests
+        run: |
+          export DATABASE_URL="$(supabase status --output json | jq -er .DB_URL)"
+          cd web
+          npm run test:database
+
       - name: Legacy deletion migration boundary
         run: |
           supabase db reset --local --version 20260831113843 --no-seed --yes

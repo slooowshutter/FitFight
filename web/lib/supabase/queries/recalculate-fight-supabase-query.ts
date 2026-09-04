@@ -1,32 +1,17 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Sql } from "postgres";
 import { ApiError, ERROR_CODES } from "@/lib/http";
-import { nextFightState, observationOverlapsWindow } from "@/lib/scoring/fight-clock";
+import { nextFightState } from "@/lib/scoring/fight-clock";
 import { scoreFight } from "@/lib/scoring/score-fight";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import {
-  asNumber,
-  type DataSourceRow,
-  type FightMemberRow,
-  type FightRow,
-  type FightState,
-  type ObservationRow,
-} from "@/lib/types/database";
+  fightCalculationRowSchema,
+  fightCalculationMemberSchema,
+  fightCalculationSnapshotSchema,
+} from "@/lib/types/fights/fight-calculation";
 
 const SCORABLE_STATES = ["live", "scheduled", "awaiting_final_sync"] as const;
-
-function latestObservations(rows: ObservationRow[]): ObservationRow[] {
-  const latest = new Map<string, ObservationRow>();
-  for (const row of rows) {
-    const key = `${row.source_id}:${row.external_record_id}`;
-    const prev = latest.get(key);
-    if (!prev || row.revision > prev.revision) {
-      latest.set(key, row);
-    }
-  }
-  return [...latest.values()];
-}
 
 export async function listFightsToRecalculate(
   userId: string,
@@ -55,180 +40,84 @@ export async function listFightsToRecalculate(
   return (fights ?? []).map((row) => row.id as string);
 }
 
+/** Serialize score reads and finalization with the aggregate upload transaction. */
 export async function recalculateFight(
   fightId: string,
-  admin: SupabaseClient = createAdminClient(),
   now: Date = new Date(),
   database: Sql = createDatabaseClient(),
 ): Promise<void> {
-  const { data: fightData, error: fightError } = await admin
-    .from("fights")
-    .select("*")
-    .eq("id", fightId)
-    .maybeSingle();
-  if (fightError) {
-    throw new ApiError(500, ERROR_CODES.db_error, "Could not load fight");
-  }
-  const fight = fightData as FightRow | null;
-  if (!fight) {
-    return;
-  }
-  if (fight.state === "final" || fight.state === "cancelled" || fight.state === "draft") {
-    return;
-  }
-
-  const { data: memberData, error: memberError } = await admin
-    .from("fight_members")
-    .select("*")
-    .eq("fight_id", fightId)
-    .eq("state", "accepted");
-  if (memberError) {
-    throw new ApiError(500, ERROR_CODES.db_error, "Could not load fight members");
-  }
-  const members = (memberData ?? []) as FightMemberRow[];
-  const userIds = members.map((member) => member.user_id);
-  const sourceIds = members
-    .map((member) => member.selected_source_id)
-    .filter((id): id is string => typeof id === "string");
-
-  let observations: ObservationRow[] = [];
-  const snapshotValues = new Map<string, number>();
-  if (userIds.length > 0) {
-    const snapshots = await database<{ user_id: string; value: string }[]>`
-      select distinct on (user_id) user_id, value::text as value
-      from private.fight_score_snapshots
-      where fight_id = ${fightId}
-        and user_id = any(${database.array(userIds)}::uuid[])
-        and cutoff_at <= ${fight.ends_at}
-      order by user_id, cutoff_at desc, created_at desc
+  await database.begin("read write", async (sql) => {
+    const fights = await sql`
+      select state::text, starts_at::text, ends_at::text,
+        final_sync_grace_seconds, outcome_rule::text, stake_minor, default_goal_value::text
+      from public.fights where id = ${fightId}
+      for update
     `;
-    for (const snapshot of snapshots) {
-      snapshotValues.set(snapshot.user_id, Number(snapshot.value));
-    }
-    const observationData = await database<ObservationRow[]>`
-      select
-        id, user_id, source_id, external_record_id, metric,
-        starts_at::text as starts_at,
-        ends_at::text as ends_at,
-        value::text as value,
-        unit,
-        revision,
-        retracted_at::text as retracted_at
-      from private.metric_observations
-      where metric = 'steps'
-        and user_id = any(${database.array(userIds)}::uuid[])
-        and retracted_at is null
-        and starts_at < ${fight.ends_at}
-        and ends_at > ${fight.starts_at}
-    `;
-    observations = latestObservations(observationData).filter((row) =>
-      observationOverlapsWindow(row.starts_at, row.ends_at, fight.starts_at, fight.ends_at),
-    );
-  }
+    if (!fights[0]) return;
+    const fight = fightCalculationRowSchema.parse(fights[0]);
+    if (["final", "cancelled", "draft", "inviting"].includes(fight.state)) return;
 
-  const sourcesById = new Map<string, DataSourceRow>();
-  if (sourceIds.length > 0) {
-    const { data: sourceData, error: sourceError } = await admin
-      .from("data_sources")
-      .select("id, user_id, provider, source_label, contributing_source_labels, connection_route, status, complete_through")
-      .in("id", sourceIds);
-    if (sourceError) {
-      throw new ApiError(500, ERROR_CODES.db_error, "Could not load data sources");
-    }
-    for (const source of (sourceData ?? []) as DataSourceRow[]) {
-      sourcesById.set(source.id, source);
-    }
-  }
-
-  const scored = scoreFight({
-    outcomeRule: fight.outcome_rule,
-    stakeMinor: fight.stake_minor,
-    defaultGoalValue: asNumber(fight.default_goal_value),
-    members: members.map((member) => {
-      const value = snapshotValues.get(member.user_id) ?? observations
-          .filter(
-            (row) =>
-              row.user_id === member.user_id &&
-              member.selected_source_id !== null &&
-              row.source_id === member.selected_source_id,
-          )
-          .reduce((sum, row) => sum + (asNumber(row.value) ?? 0), 0);
-      return {
-        userId: member.user_id,
-        value,
-        personalTarget: asNumber(member.personal_target),
-      };
-    }),
-  });
-
-  const nextRevision =
-    Math.max(0, ...members.map((member) => member.input_revision ?? 0)) + 1;
-  const nowIso = now.toISOString();
-  const endsAt = new Date(fight.ends_at);
-  const graceEnds = new Date(endsAt.getTime() + fight.final_sync_grace_seconds * 1000);
-
-  const allComplete =
-    members.length > 0 &&
-    members.every((member) => {
-      if (!member.selected_source_id) {
-        return false;
-      }
-      const source = sourcesById.get(member.selected_source_id);
-      if (!source?.complete_through) {
-        return false;
-      }
-      return Date.parse(source.complete_through) >= Date.parse(fight.ends_at);
+    const members = fightCalculationMemberSchema.array().parse(await sql`
+      select user_id, personal_target::text, input_revision
+      from public.fight_members
+      where fight_id = ${fightId} and state = 'accepted'
+      order by user_id
+      for update
+    `);
+    const snapshots = fightCalculationSnapshotSchema.array().parse(await sql`
+      select distinct on (snapshot.user_id)
+        snapshot.id, snapshot.user_id, snapshot.value::text, snapshot.cutoff_at::text
+      from private.fight_score_snapshots as snapshot
+      join public.fight_members as member
+        on member.fight_id = snapshot.fight_id and member.user_id = snapshot.user_id
+        and member.selected_source_id = snapshot.source_id and member.state = 'accepted'
+      where snapshot.fight_id = ${fightId} and snapshot.cutoff_at <= ${fight.ends_at}
+      order by snapshot.user_id, snapshot.cutoff_at desc, snapshot.created_at desc, snapshot.id desc
+    `);
+    const byUser = new Map(snapshots.map((snapshot) => [snapshot.user_id, snapshot]));
+    const endsAtMs = Date.parse(fight.ends_at);
+    const allComplete = members.length > 0 && members.every((member) => {
+      const snapshot = byUser.get(member.user_id);
+      return snapshot !== undefined && Date.parse(snapshot.cutoff_at) === endsAtMs;
     });
-
-  const nextState = nextFightState({
-    state: fight.state,
-    nowMs: now.getTime(),
-    startsAtMs: new Date(fight.starts_at).getTime(),
-    endsAtMs: endsAt.getTime(),
-    graceEndsMs: graceEnds.getTime(),
-    allSourcesCompleteThroughEnd: allComplete,
-  });
-
-  const byUser = new Map(scored.map((row) => [row.userId, row]));
-  for (const member of members) {
-    const result = byUser.get(member.user_id);
-    if (!result) {
-      continue;
-    }
-    const patch: Record<string, unknown> = {
-      current_value: result.currentValue,
-      rank: result.rank,
-      outcome_minor: result.outcomeMinor,
-      freshness: "recent",
-      input_revision: nextRevision,
-    };
-    if (member.selected_source_id) {
-      const completeThrough = sourcesById.get(member.selected_source_id)?.complete_through;
-      if (completeThrough && Date.parse(completeThrough) >= Date.parse(fight.ends_at)) {
-        patch.final_steps_complete = true;
+    const nextState = nextFightState({
+      state: fight.state,
+      nowMs: now.getTime(),
+      startsAtMs: Date.parse(fight.starts_at),
+      endsAtMs,
+      graceEndsMs: endsAtMs + fight.final_sync_grace_seconds * 1000,
+      allSourcesCompleteThroughEnd: allComplete,
+    });
+    const scores = scoreFight({
+      outcomeRule: fight.outcome_rule,
+      stakeMinor: fight.stake_minor,
+      defaultGoalValue: fight.default_goal_value,
+      members: members.map((member) => ({
+        userId: member.user_id,
+        value: byUser.get(member.user_id)?.value ?? 0,
+        personalTarget: member.personal_target,
+      })),
+    });
+    const revision = Math.max(0, ...members.map((member) => member.input_revision ?? 0)) + 1;
+    const final = nextState === "final";
+    for (const score of scores) {
+      const snapshot = byUser.get(score.userId);
+      const complete = snapshot !== undefined && Date.parse(snapshot.cutoff_at) === endsAtMs;
+      await sql`
+        update public.fight_members
+        set current_value = ${score.currentValue}, rank = ${score.rank},
+          outcome_minor = ${score.outcomeMinor}, input_revision = ${revision},
+          final_steps_complete = ${complete},
+          final_value = case when ${final} then ${score.currentValue} else final_value end,
+          finalized_at = case when ${final} then ${now.toISOString()}::timestamptz else finalized_at end
+        where fight_id = ${fightId} and user_id = ${score.userId}
+      `;
+      if (final && snapshot) {
+        await sql`update private.fight_score_snapshots set is_final = true where id = ${snapshot.id}`;
       }
     }
-    if (nextState === "final") {
-      patch.final_value = result.currentValue;
-      patch.finalized_at = nowIso;
+    if (nextState !== fight.state) {
+      await sql`update public.fights set state = ${nextState} where id = ${fightId}`;
     }
-    const { error: updateError } = await admin
-      .from("fight_members")
-      .update(patch)
-      .eq("fight_id", fightId)
-      .eq("user_id", member.user_id);
-    if (updateError) {
-      throw new ApiError(500, ERROR_CODES.db_error, "Could not update fight member scores");
-    }
-  }
-
-  if (nextState !== fight.state) {
-    const { error: stateError } = await admin
-      .from("fights")
-      .update({ state: nextState })
-      .eq("id", fightId);
-    if (stateError) {
-      throw new ApiError(500, ERROR_CODES.db_error, "Could not update fight state");
-    }
-  }
+  });
 }

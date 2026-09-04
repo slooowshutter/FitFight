@@ -134,23 +134,23 @@ select is(
 );
 select is(
   has_table_privilege('authenticated', 'public.fights', 'INSERT'),
-  true,
-  'clients can insert their own fights'
+  false,
+  'clients cannot insert fights directly'
 );
 select is(
   has_table_privilege('authenticated', 'public.fights', 'UPDATE'),
-  true,
-  'clients can update fights they own or that are due'
+  false,
+  'clients cannot update server-owned fights'
 );
 select is(
   has_table_privilege('authenticated', 'public.fight_members', 'UPDATE'),
-  true,
-  'clients can update their own membership'
+  false,
+  'clients cannot update membership or scores directly'
 );
 select is(
   has_table_privilege('authenticated', 'public.data_sources', 'INSERT'),
-  true,
-  'clients can insert their own sources'
+  false,
+  'clients cannot insert data sources directly'
 );
 select is(
   has_column_privilege('authenticated', 'public.profiles', 'handle', 'UPDATE'),

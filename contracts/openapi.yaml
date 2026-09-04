@@ -255,6 +255,26 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/FightSummary" }
+  /fights/{fightID}/decline:
+    post:
+      operationId: declineFight
+      summary: Decline an in-app invitation belonging to the caller.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: fightID
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Declined, including an already declined invitation
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FightSummary" }
+        "403":
+          description: Caller has no membership in this fight
+        "409":
+          description: Membership or fight no longer permits declining
   /fights/{fightID}/start:
     post:
       operationId: startFight

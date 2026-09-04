@@ -309,7 +309,7 @@ final class HealthKitStepsStore: ObservableObject {
             Task { await reportDiagnostics(session: session) }
             return true
         } catch {
-            connection = .syncFailed
+            connection = error is HealthKitStepAggregates.ReadError ? .noAccessibleSteps : .syncFailed
             UserDefaults.standard.set(true, forKey: Self.pendingSyncKey)
             updateDiagnostics { $0.errorCode = Self.errorCode(for: error) }
             Task { await reportDiagnostics(session: session) }

@@ -341,7 +341,7 @@ export async function joinFight(
     throw new ApiError(500, ERROR_CODES.db_error, "Could not join series");
   }
 
-  await recalculateFight(fight.id, admin, now);
+  await recalculateFight(fight.id, now);
   return fightSummary(await (async () => {
     const { data } = await admin.from("fights").select("id, state").eq("id", fight.id).maybeSingle();
     return (data as Pick<FightRow, "id" | "state"> | null) ?? fight;

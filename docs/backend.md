@@ -1,6 +1,6 @@
 # Backend
 
-Production Metric is **Steps**. Phone vs server status: [`status.md`](status.md). The phone may temporarily write its own fights and memberships. For Apple Health, it asks HealthKit for Apple's merged cumulative total over each exact Fight window and sends those totals to one authenticated Next.js endpoint. It may also send Apple's merged daily buckets for the active Fight days needed by charts; those buckets never determine the Fight score. The backend validates the User, Fight membership, server-issued windows and cutoffs, then stores the exact-window snapshots and updates standings in a TypeScript-owned Postgres transaction. There are no app-facing database RPCs.
+Production Metric is **Steps**. Phone vs server status: [`status.md`](status.md). Fights, memberships, scores, and data sources are writable only by the backend. Native Accept and Decline use authenticated commands; database grants deny direct client mutations. For Apple Health, it asks HealthKit for Apple's merged cumulative total over each exact Fight window and sends those totals to one authenticated Next.js endpoint. It may also send Apple's merged daily buckets for the active Fight days needed by charts; those buckets never determine the Fight score. The backend validates the User, Fight membership, server-issued windows and cutoffs, then stores the exact-window snapshots and updates standings in a TypeScript-owned Postgres transaction. There are no app-facing database RPCs.
 
 [`system-design.md`](system-design.md) is the golden guide. This folder is the first slice of it, not the whole thing. Do not add Active Minutes, Workout Count, WHOOP, Strava, payments, notifications, social, or a website until the backlog says so.
 
@@ -82,8 +82,33 @@ disconnect path.
 
 `GET /api/v1/provider-uploads/context` temporarily remains the context route and returns the server time plus exact live/awaiting-final-sync Fight windows. `POST /api/v1/healthkit/steps` accepts one strict JSON document with `complete_through`, the User's `time_zone`, `merged_days`, and `fight_aggregates`. `fight_aggregates` are Apple's merged cumulative totals from each server-authoritative `starts_at...cutoff_at` interval and are the only input to standings. `merged_days` are limited to relevant active Fight days and serve charts only. The request contains no raw sample, deletion, per-source statistic, device/source metadata, anchor, NDJSON, object path, or upload capability.
 
-`POST /api/v1/healthkit/diagnostics` overwrites one latest private operational snapshot for the authenticated User. It stores only stable capability, trigger, error, app-version, and synchronization timestamps; it stores no device identifier, free-form error, raw HealthKit data, or event history. Fight peers can read only `fight_members.final_steps_complete`, which becomes true monotonically when the selected source's `complete_through` reaches the exact Fight end.
+`POST /api/v1/healthkit/diagnostics` overwrites one latest private operational snapshot for the authenticated User. It stores only stable capability, trigger, error, app-version, and synchronization timestamps; it stores no device identifier, free-form error, raw HealthKit data, or event history. Fight peers can read only `fight_members.final_steps_complete`, which indicates an available snapshot from that member's selected source at the exact Fight end. A source-wide watermark alone cannot establish this. It describes query coverage, not a guarantee that Apple has received all delayed device data.
 
 The older one-object archive migrations, `private.provider_uploads` / `private.provider_events` tables, `provider-inbox` bucket, archive contract, and provider-upload create/status/process routes remain legacy infrastructure during the additive rollout so older builds and migration history are not rewritten. The aggregate-only sync does not create new archive rows or Storage objects and does not use TUS. Remove that legacy surface separately only after incompatible TestFlight builds no longer need it.
 
 Every TestFlight binary talks to the develop project. The workflow rejects `main`, and the daily scheduled build explicitly checks out `develop`. CI writes `FitFight/Generated/BuildEnv.swift` before archive. GitHub variables `SUPABASE_STAGING_*` override if set; otherwise the known develop URL and publishable key are compiled in. Production configuration belongs only to the future App Store flow. See [`shipping.md`](shipping.md). What is live on the phone: [`status.md`](status.md).
+
+## Security and finalization boundary (5 Sep 2026)
+
+`POST /api/v1/fights/{fightID}/decline` requires an invited membership belonging to
+the signed-in User. It locks the Fight and membership, declines it, and revokes its
+invitations in one transaction. Repeating a successful decline is harmless.
+
+Recalculation locks the Fight, then accepted memberships, before reading the latest
+selected-source exact-window snapshots. It freezes scores, completeness, selected
+snapshots (`is_final`), and Fight state in the same transaction. It never substitutes
+raw observations or daily chart totals. The existing policy remains: finalize when
+every accepted participant has an end-cutoff snapshot, or after the 24-hour grace
+period with missing data marked incomplete. The choice of a full 24-hour provisional
+period remains a product decision; Apple provides no historical immutability deadline.
+
+An absent HealthKit sum is unavailable, not a measured zero. The current native batch
+stops without overwriting saved data if any Fight window has no accessible sum. Daily
+buckets without a quantity are omitted. A future per-Fight availability contract can
+allow unaffected windows to progress without manufacturing complete zero results.
+
+Deploy the API (including Decline) before the server-owned-write migration, and use
+the new TestFlight build. Older builds that directly accept or decline through
+Supabase will receive a permission error after the migration. Feature-branch pushes
+alone do not apply the hosted migration. No existing finalized scores or hosted
+previously-deleted accounts are rewritten by this change.

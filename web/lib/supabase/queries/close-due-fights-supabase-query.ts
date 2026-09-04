@@ -40,12 +40,11 @@ function dueIds(rows: CloseCandidate[], nowMs: number): string[] {
 
 async function recalculateIds(
   fightIds: string[],
-  admin: SupabaseClient,
   now: Date,
 ): Promise<string[]> {
   const closed: string[] = [];
   for (const fightId of fightIds.slice(0, BATCH)) {
-    await recalculateFight(fightId, admin, now);
+    await recalculateFight(fightId, now);
     closed.push(fightId);
   }
   return closed;
@@ -66,7 +65,7 @@ export async function closeDueFights(
     throw new ApiError(500, ERROR_CODES.db_error, "Could not load fights to close");
   }
   const rows = (data ?? []) as CloseCandidate[];
-  const fightIds = await recalculateIds(dueIds(rows, now.getTime()), admin, now);
+  const fightIds = await recalculateIds(dueIds(rows, now.getTime()), now);
   await mintDueRecurringFights(admin, now);
   return { checked: rows.length, closed: fightIds.length, fightIds };
 }
@@ -90,7 +89,7 @@ export async function closeDueFightsForUser(
     throw new ApiError(500, ERROR_CODES.db_error, "Could not load fights to close");
   }
   const rows = (data ?? []) as CloseCandidate[];
-  const fightIds = await recalculateIds(dueIds(rows, now.getTime()), admin, now);
+  const fightIds = await recalculateIds(dueIds(rows, now.getTime()), now);
   await mintDueRecurringFights(admin, now);
   return { checked: rows.length, closed: fightIds.length, fightIds };
 }

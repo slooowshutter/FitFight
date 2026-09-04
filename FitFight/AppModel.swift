@@ -95,6 +95,25 @@ struct Fight: Codable, Identifiable, Hashable {
         let hours = max(1, Int((windowEnd.timeIntervalSince(windowStart) / 3_600).rounded()))
         return localizedDuration(hours: hours, days: lengthDays)
     }
+
+    /// Short test fights count in hours; a day count would round them away.
+    var timeLeftLabel: String {
+        let durationHours = windowEnd.timeIntervalSince(windowStart) / 3_600
+        if durationHours <= 6, daysLeft != nil {
+            let hours = max(1, Int(ceil(windowEnd.timeIntervalSinceNow / 3_600)))
+            return String(
+                localized: "fight.hours-left",
+                defaultValue: "\(hours) hours left"
+            )
+        }
+        if let daysLeft {
+            return String(
+                localized: "fight.days-left",
+                defaultValue: "\(daysLeft) days left"
+            )
+        }
+        return endedLabel ?? String(localized: "Ended")
+    }
 }
 
 @MainActor

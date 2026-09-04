@@ -28,24 +28,15 @@ struct FightsListView: View {
                 }
             }
 
-            // The kit allows one moss hero per screen: the fight you are closest to.
-            if let lead = model.live.first {
-                Button {
-                    model.openFightID = lead.id
-                } label: {
-                    heroCard(lead)
-                }
-                .buttonStyle(FFPressStyle(scale: 0.985))
-            }
-
-            ForEach(model.live.dropFirst()) { fight in
+            ForEach(model.live) { fight in
+                let standing = difference(in: fight)
                 FFListRow(
                     monogram: initials(fight),
-                    title: fight.name,
-                    subtitle: fight.listSubtitle,
-                    metric: leadScore(fight),
-                    delta: fight.kickerEmphasis,
-                    ahead: fight.rank == 1,
+                    title: fight.actionText,
+                    subtitle: fight.timeLeftLabel,
+                    metric: standing.text,
+                    ahead: standing.ahead,
+                    metricIsGap: standing.isGap,
                     action: { model.openFightID = fight.id }
                 )
             }
@@ -85,51 +76,27 @@ struct FightsListView: View {
         return parts.joined(separator: " · ")
     }
 
-    private func heroCard(_ fight: Fight) -> some View {
-        FFHeroCard(
-            eyebrow: fight.daysLeft.map {
-                String(
-                    localized: "fight.ends-in-days",
-                    defaultValue: "Ends in \($0) days"
-                )
-            } ?? fight.metric.eyebrow,
-            tag: fight.of == 2
-                ? String(localized: "Head to head")
-                : String(
-                    localized: "fight.participant-count",
-                    defaultValue: "\(fight.of) in this fight"
-                ),
-            title: fight.name,
-            metric: leadScore(fight),
-            caption: caption(fight),
-            monogram: initials(fight),
-            progress: progress(fight)
-        )
+    /// The number on the right is your distance from whoever you are actually
+    /// racing: the leader when you are behind, the runner-up when you are ahead.
+    /// Nobody else has a score yet in a fresh fight, so that row shows your total.
+    private func difference(in fight: Fight) -> (text: String, ahead: Bool, isGap: Bool) {
+        let rivals = fight.standings.filter { !$0.person.isYou && !$0.invited }.map(\.score)
+        guard let mine = model.youStanding(in: fight)?.score else {
+            guard let leader = rivals.max() else { return ("—", true, false) }
+            return (stepCount(leader), true, false)
+        }
+        guard let best = rivals.max() else { return (stepCount(mine), true, false) }
+        let gap = mine - best
+        guard gap != 0 else { return (String(localized: "Tied"), true, false) }
+        return ("\(gap < 0 ? "−" : "+")\(stepCount(abs(gap)))", gap > 0, true)
     }
 
-    private func caption(_ fight: Fight) -> String {
-        let unit = fight.metric.eyebrow.lowercased()
-        let kicker = [fight.kickerPrefix, fight.kickerEmphasis, fight.kickerRest]
-            .filter { !$0.isEmpty }
-            .joined(separator: " ")
-        return kicker.isEmpty ? unit : "\(unit) · \(kicker)"
+    /// Whole steps with the locale's grouping. A gap of 840 must not read "0.8k".
+    private func stepCount(_ value: Double) -> String {
+        value.formatted(.number.precision(.fractionLength(0)))
     }
 
-    /// The hero's number is your own score, or the leader's if you are not in it.
-    private func leadScore(_ fight: Fight) -> String {
-        let standing = model.youStanding(in: fight) ?? fight.standings.first
-        guard let standing else { return "—" }
-        return model.formatScore(standing.score, metric: fight.metric)
-    }
-
-    private func progress(_ fight: Fight) -> Double {
-        let scores = fight.standings.filter { !$0.invited }.map(\.score)
-        guard let peak = scores.max(), peak > 0 else { return 0 }
-        let mine = model.youStanding(in: fight)?.score ?? scores.first ?? 0
-        return min(mine / peak, 1)
-    }
-
-    /// The other side of a head-to-head, so the hero avatar is who you are up against.
+    /// The other side of a head-to-head, so the avatar is who you are up against.
     private func initials(_ fight: Fight) -> String {
         let other = fight.standings.first { !$0.person.isYou && !$0.invited }
         return other?.person.initials ?? fight.standings.first?.person.initials ?? "?"
@@ -145,7 +112,7 @@ struct InvitationRow: View {
         HStack(spacing: 13) {
             FFAvatar(fight.inviter ?? fight.standings.first?.person, size: 44)
             VStack(alignment: .leading, spacing: 2) {
-                Text(fight.name)
+                Text(fight.actionText)
                     .ffType(.heading)
                     .foregroundStyle(theme.text)
                 Text(fight.listSubtitle)
@@ -181,7 +148,7 @@ struct FinishedRow: View {
             HStack(spacing: 13) {
                 FFResultGlyph(fight.rank == 1 ? .win : .loss)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(fight.name)
+                    Text(fight.actionText)
                         .ffType(.rowTitle)
                         .foregroundStyle(theme.text)
                     Text(fight.endedLabel ?? fight.listSubtitle)

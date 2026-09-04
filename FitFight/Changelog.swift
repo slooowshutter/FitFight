@@ -36,6 +36,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 4,
+            notes: "Every fight in the list is now titled by the action the loser owes, because that is the only name a fight has. The number on the right is how far ahead or behind you are, the days left sit underneath, and every live fight is the same size instead of one large card on top."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 4,
             notes: "The TestFlight update notice sits under the version line at the top of the screen and uses a solid card instead of a see-through toast over the tab bar."
         ),
         ReleaseNote(

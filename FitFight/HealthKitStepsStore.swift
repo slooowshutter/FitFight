@@ -67,44 +67,54 @@ final class HealthKitStepsStore: ObservableObject {
 
     var detailText: String {
         switch connection {
-        case .notConnected: return "Not connected"
-        case .syncing: return "Syncing Steps…"
+        case .notConnected: return String(localized: "Not connected")
+        case .syncing: return String(localized: "Syncing Steps…")
         case .upToDate:
             return diagnostics.deliveryRegistrationStatus == .unavailable
-                ? "Up to date · Background sync unavailable" : "Up to date"
-        case .noAccessibleSteps: return "No accessible Steps"
-        case .syncFailed: return "Sync failed — tap to retry"
+                ? String(localized: "Up to date · Background sync unavailable")
+                : String(localized: "Up to date")
+        case .noAccessibleSteps: return String(localized: "No accessible Steps")
+        case .syncFailed: return String(localized: "Sync failed — tap to retry")
         }
     }
 
     var metaText: String {
-        if case .steps(let count) = status { return "\(Self.format(count)) steps today" }
-        return ""
+        switch status {
+        case .steps(let count):
+            return String(
+                localized: "health.steps-today",
+                defaultValue: "\(count, format: .number) steps today"
+            )
+        default:
+            return ""
+        }
     }
 
     var isConnected: Bool { connection != .notConnected }
 
     var backgroundRefreshText: String {
         switch diagnostics.backgroundRefreshStatus {
-        case .available: return "Available"
-        case .denied: return "Denied"
-        case .restricted: return "Restricted by this device"
+        case .available: return String(localized: "Available")
+        case .denied: return String(localized: "Denied")
+        case .restricted: return String(localized: "Restricted by this device")
         }
     }
 
     var backgroundDeliveryText: String {
-        diagnostics.deliveryRegistrationStatus == .enabled ? "Enabled" : "Unavailable"
+        diagnostics.deliveryRegistrationStatus == .enabled
+            ? String(localized: "Enabled")
+            : String(localized: "Unavailable")
     }
 
     var currentFailureText: String? {
         switch diagnostics.errorCode {
-        case .authenticationUnavailable: return "Sign in, then open FitFight to sync."
-        case .networkUnavailable: return "Connect to the internet, then open FitFight."
-        case .protectedDataUnavailable: return "Unlock your iPhone, then open FitFight."
-        case .attemptExpired: return "Open FitFight to finish syncing."
-        case .healthKitUnavailable: return "Apple Health isn’t available on this device."
-        case .backgroundDeliveryUnavailable: return "Open FitFight to sync your Steps."
-        case .syncFailed: return "Open FitFight and try the Apple Health sync again."
+        case .authenticationUnavailable: return String(localized: "Sign in, then open FitFight to sync.")
+        case .networkUnavailable: return String(localized: "Connect to the internet, then open FitFight.")
+        case .protectedDataUnavailable: return String(localized: "Unlock your iPhone, then open FitFight.")
+        case .attemptExpired: return String(localized: "Open FitFight to finish syncing.")
+        case .healthKitUnavailable: return String(localized: "Apple Health isn’t available on this device.")
+        case .backgroundDeliveryUnavailable: return String(localized: "Open FitFight to sync your Steps.")
+        case .syncFailed: return String(localized: "Open FitFight and try the Apple Health sync again.")
         case nil: return nil
         }
     }
@@ -358,10 +368,6 @@ final class HealthKitStepsStore: ObservableObject {
         guard let statistics = try await descriptor.result(for: store) else { return nil }
         let steps = statistics.sumQuantity()?.doubleValue(for: .count()) ?? 0
         return steps > 0 ? Int(steps.rounded()) : nil
-    }
-
-    private static func format(_ value: Int) -> String {
-        value.formatted(.number.grouping(.automatic))
     }
 
     private static func askedKey(userId: UUID) -> String {

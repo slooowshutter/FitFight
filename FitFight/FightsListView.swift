@@ -8,21 +8,21 @@ struct FightsListView: View {
 
     var body: some View {
         FFScreen {
-            FFScreenTitle(title: "Fights", subtitle: subtitle)
+            FFScreenTitle(title: String(localized: "Fights"), subtitle: subtitle)
                 .padding(.bottom, 6)
 
             if isEmpty {
                 FFEmptyState(
                     systemImage: "trophy",
-                    title: "No fights yet",
-                    message: "Start one under New. Add people with their username — they must have signed in once.",
-                    actionTitle: "Start one",
+                    title: String(localized: "No fights yet"),
+                    message: String(localized: "Start one under New. Add people with their username — they must have signed in once."),
+                    actionTitle: String(localized: "Start one"),
                     action: { model.tab = .newFight }
                 )
             }
 
             if !model.invitations.isEmpty {
-                FFSectionHeader(title: "Invitations")
+                FFSectionHeader(title: String(localized: "Invitations"))
                 ForEach(model.invitations) { fight in
                     InvitationRow(fight: fight)
                 }
@@ -51,7 +51,7 @@ struct FightsListView: View {
             }
 
             if !model.finished.isEmpty {
-                FFSectionHeader(title: "Finished")
+                FFSectionHeader(title: String(localized: "Finished"))
                     .padding(.top, theme.space.lg)
                 ForEach(model.finished) { fight in
                     FinishedRow(fight: fight)
@@ -68,15 +68,37 @@ struct FightsListView: View {
     }
 
     private var subtitle: String {
-        var parts: [String] = ["\(model.live.count) live"]
-        if !model.invitations.isEmpty { parts.append("\(model.invitations.count) waiting") }
+        var parts: [String] = [
+            String(
+                localized: "fights.live-count",
+                defaultValue: "\(model.live.count) live"
+            ),
+        ]
+        if !model.invitations.isEmpty {
+            parts.append(
+                String(
+                    localized: "fights.waiting-count",
+                    defaultValue: "\(model.invitations.count) waiting"
+                )
+            )
+        }
         return parts.joined(separator: " · ")
     }
 
     private func heroCard(_ fight: Fight) -> some View {
         FFHeroCard(
-            eyebrow: fight.daysLeft.map { "Ends in \($0) \($0 == 1 ? "day" : "days")" } ?? fight.metric.eyebrow,
-            tag: fight.of == 2 ? "Head to head" : "\(fight.of) in this fight",
+            eyebrow: fight.daysLeft.map {
+                String(
+                    localized: "fight.ends-in-days",
+                    defaultValue: "Ends in \($0) days"
+                )
+            } ?? fight.metric.eyebrow,
+            tag: fight.of == 2
+                ? String(localized: "Head to head")
+                : String(
+                    localized: "fight.participant-count",
+                    defaultValue: "\(fight.of) in this fight"
+                ),
             title: fight.name,
             metric: leadScore(fight),
             caption: caption(fight),
@@ -134,7 +156,7 @@ struct InvitationRow: View {
             Button {
                 model.openFightID = fight.id
             } label: {
-                FFPill(fight.inviteAction ?? "Join", style: .solidMoss)
+                FFPill(String(localized: "Join"), style: .solidMoss)
             }
             .buttonStyle(FFPressStyle())
         }

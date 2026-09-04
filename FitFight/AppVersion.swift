@@ -4,9 +4,15 @@ enum AppVersion {
     static var label: String {
         let date = shippedOn
         if date.isEmpty {
-            return "\(marketing) · build \(build) · \(backend)"
+            return String(
+                localized: "version.label",
+                defaultValue: "\(marketing) · build \(build) · \(backend)"
+            )
         }
-        return "\(marketing) · build \(build) · \(backend) · \(date)"
+        return String(
+            localized: "version.label.with-date",
+            defaultValue: "\(marketing) · build \(build) · \(backend) · \(date)"
+        )
     }
 
     /// Date of the newest Changelog row for this marketing version.
@@ -14,9 +20,9 @@ enum AppVersion {
         guard let note = Changelog.current else { return "" }
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.locale = .autoupdatingCurrent
         formatter.timeZone = TimeZone(secondsFromGMT: 0)
-        formatter.dateFormat = "d MMM"
+        formatter.setLocalizedDateFormatFromTemplate("dMMM")
         return formatter.string(from: note.date)
     }
 

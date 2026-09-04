@@ -68,7 +68,8 @@ enum ScreenshotExport {
             }
         }
 
-        try? Data("ok".utf8).write(to: folder.appendingPathComponent("done.txt"))
+        let localization = Bundle.main.preferredLocalizations.first ?? "unknown"
+        try? Data(localization.utf8).write(to: folder.appendingPathComponent("done.txt"))
     }
 
     private struct Shot {

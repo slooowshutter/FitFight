@@ -1,14 +1,14 @@
 import Foundation
 
-struct ReleaseNote: Identifiable, Hashable {
+struct ReleaseNote: Identifiable {
     let version: String
     let year: Int
     let month: Int
     let day: Int
-    let notes: String
+    let notes: LocalizedStringResource
 
     /// Several notes may share one marketing version (TestFlight does not bump it).
-    var id: String { "\(version)-\(year)-\(month)-\(day)-\(notes)" }
+    var id: String { "\(version)-\(year)-\(month)-\(day)-\(notes.key)" }
 
     var date: Date {
         var components = DateComponents()
@@ -24,6 +24,13 @@ struct ReleaseNote: Identifiable, Hashable {
 enum Changelog {
     /// Newest first. Add a row here whenever we ship a user-facing change.
     static let releases: [ReleaseNote] = [
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 4,
+            notes: "FitFight now follows your iPhone language in English or French, including fights, Apple Health access, settings, errors, accessibility labels, and the Versions history."
+        ),
         ReleaseNote(
             version: "1.0.0",
             year: 2026,

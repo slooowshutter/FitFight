@@ -10,7 +10,9 @@ enum Mode: String, CaseIterable, Identifiable {
     case day
 
     var id: String { rawValue }
-    var label: String { self == .night ? "Night" : "Day" }
+    var label: String {
+        self == .night ? String(localized: "Night") : String(localized: "Day")
+    }
     var colorScheme: ColorScheme { self == .night ? .dark : .light }
 }
 

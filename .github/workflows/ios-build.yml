@@ -7,6 +7,7 @@ on:
       - "FitFight/**"
       - "FitFight.xcodeproj/**"
       - "docs/design/source/tokens.json"
+      - "scripts/check_localizations.py"
       - ".github/workflows/ios-build.yml"
   push:
     branches: [main, develop]
@@ -14,6 +15,7 @@ on:
       - "FitFight/**"
       - "FitFight.xcodeproj/**"
       - "docs/design/source/tokens.json"
+      - "scripts/check_localizations.py"
       - ".github/workflows/ios-build.yml"
 
 concurrency:
@@ -49,6 +51,9 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+
+      - name: Validate English and French localizations
+        run: python3 scripts/check_localizations.py
 
       - name: Build for iOS Simulator
         run: |

@@ -22,7 +22,7 @@ struct OnboardingView: View {
                 .lineSpacing(3)
                 .padding(.top, 10)
             FFField(
-                label: "Username",
+                label: String(localized: "Username"),
                 state: fieldState,
                 help: error.isEmpty ? nil : error
             ) {
@@ -33,7 +33,10 @@ struct OnboardingView: View {
                     .focused($focused)
             }
             .padding(.top, 28)
-            FFScreenCTA(title: isSaving ? "Saving…" : "Continue", enabled: canSave) {
+            FFScreenCTA(
+                title: isSaving ? String(localized: "Saving…") : String(localized: "Continue"),
+                enabled: canSave
+            ) {
                 Task { await save() }
             }
             .padding(.top, 20)

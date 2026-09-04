@@ -37,7 +37,7 @@ struct FightDetailView: View {
             }
 
             if !pendingJoin {
-                FFSectionHeader(title: "Action")
+                FFSectionHeader(title: String(localized: "Action"))
                     .padding(.top, theme.space.lg)
                 FFCard {
                     Text(fight.actionText)
@@ -46,7 +46,7 @@ struct FightDetailView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                FFSectionHeader(title: "Standings")
+                FFSectionHeader(title: String(localized: "Standings"))
                     .padding(.top, theme.space.lg)
                 if let meta = fight.standingsMeta {
                     Text(meta)
@@ -60,7 +60,7 @@ struct FightDetailView: View {
                 }
 
                 if !fight.days.isEmpty {
-                    FFSectionHeader(title: "Every day so far")
+                    FFSectionHeader(title: String(localized: "Every day so far"))
                         .padding(.top, theme.space.lg)
                     daysCard
                 }
@@ -76,12 +76,21 @@ struct FightDetailView: View {
     private var you: Standing? { model.youStanding(in: fight) }
 
     private var timeLeft: String {
-        if fight.durationLabel.contains("hour"), fight.daysLeft != nil {
+        let durationHours = fight.windowEnd.timeIntervalSince(fight.windowStart) / 3_600
+        if durationHours <= 6, fight.daysLeft != nil {
             let hours = max(1, Int(ceil(fight.windowEnd.timeIntervalSinceNow / 3_600)))
-            return "\(hours) \(hours == 1 ? "hour" : "hours") left"
+            return String(
+                localized: "fight.hours-left",
+                defaultValue: "\(hours) hours left"
+            )
         }
-        if let days = fight.daysLeft { return "\(days) \(days == 1 ? "day" : "days") left" }
-        return fight.endedLabel ?? "Ended"
+        if let days = fight.daysLeft {
+            return String(
+                localized: "fight.days-left",
+                defaultValue: "\(days) days left"
+            )
+        }
+        return fight.endedLabel ?? String(localized: "Ended")
     }
 
     private var nav: some View {
@@ -107,7 +116,7 @@ struct FightDetailView: View {
         else { return nil }
         let peak = max(mine.score, theirs.score, 1)
         return (
-            (mine.person.initials, "You", model.formatScore(mine.score, metric: fight.metric), mine.score / peak),
+            (mine.person.initials, String(localized: "You"), model.formatScore(mine.score, metric: fight.metric), mine.score / peak),
             (theirs.person.initials, theirs.person.name, model.formatScore(theirs.score, metric: fight.metric), theirs.score / peak)
         )
     }
@@ -129,7 +138,12 @@ struct FightDetailView: View {
                         .multilineTextAlignment(.center)
                         .padding(.bottom, 8)
                 }
-                Text("\(fight.durationLabel) · Most steps wins")
+                Text(
+                    String(
+                        localized: "fight.duration-rule",
+                        defaultValue: "\(fight.durationLabel) · Most steps wins"
+                    )
+                )
                     .ffType(.caption)
                     .foregroundStyle(theme.textSecondary)
                     .multilineTextAlignment(.center)
@@ -140,7 +154,7 @@ struct FightDetailView: View {
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.bottom, 22)
-                FFScreenCTA(title: fight.inviteAction == "Accept" ? "Accept challenge" : "Join fight") {
+                FFScreenCTA(title: String(localized: "Accept challenge")) {
                     Task {
                         await model.acceptFight(id: fight.id)
                         if (model.createError ?? "").isEmpty {
@@ -148,7 +162,7 @@ struct FightDetailView: View {
                         }
                     }
                 }
-                FFButton(title: "Decline", kind: .ghost, fullWidth: true) {
+                FFButton(title: String(localized: "Decline"), kind: .ghost, fullWidth: true) {
                     Task {
                         await model.declineFight(id: fight.id)
                         if (model.createError ?? "").isEmpty {
@@ -171,8 +185,19 @@ struct FightDetailView: View {
     private var liveHero: some View {
         FFRingCard(
             progress: ringProgress,
-            title: fight.status == .finished ? "Finished \(fight.rank == 1 ? "first" : "#\(fight.rank)")" : "#\(fight.rank) of \(fight.of)",
-            subtitle: "\(fight.metric.eyebrow) · \(timeLeft)",
+            title: fight.status == .finished
+                ? String(
+                    localized: "fight.finished-rank",
+                    defaultValue: "Finished #\(fight.rank)"
+                )
+                : String(
+                    localized: "fight.rank-of-count",
+                    defaultValue: "#\(fight.rank) of \(fight.of)"
+                ),
+            subtitle: String(
+                localized: "fight.metric-time-left",
+                defaultValue: "\(fight.metric.eyebrow) · \(timeLeft)"
+            ),
             metric: model.formatScore(you?.score ?? 0, metric: fight.metric),
             delta: fight.kickerEmphasis,
             ahead: fight.rank == 1
@@ -198,7 +223,7 @@ struct FightDetailView: View {
                         .ffType(.rowTitle)
                         .foregroundStyle(theme.textSecondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    FFPill("Invited", style: .gold)
+                    FFPill(String(localized: "Invited"), style: .gold)
                 }
                 .padding(.horizontal, 15)
                 .padding(.vertical, 12)

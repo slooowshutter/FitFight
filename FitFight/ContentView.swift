@@ -26,8 +26,11 @@ struct ContentView: View {
             if let build = testFlightUpdate.newerBuild {
                 FFToast(
                     glyph: "↑",
-                    title: "New version on TestFlight",
-                    message: "Build \(build) is ready. Open TestFlight and tap Update.",
+                    title: String(localized: "New version on TestFlight"),
+                    message: String(
+                        localized: "testflight.update-ready",
+                        defaultValue: "Build \(build) is ready. Open TestFlight and tap Update."
+                    ),
                     tone: .moss,
                     onClose: { testFlightUpdate.dismiss() }
                 )
@@ -63,7 +66,11 @@ struct ContentView: View {
     private var signedInRoot: some View {
         if session.profile == nil {
             VStack(alignment: .leading, spacing: 12) {
-                Text(session.profileUnavailable ? "Couldn't load your account" : "Loading your account…")
+                Text(
+                    session.profileUnavailable
+                        ? String(localized: "Couldn't load your account")
+                        : String(localized: "Loading your account…")
+                )
                     .ffType(.heading)
                     .foregroundStyle(theme.text)
                 if session.profileUnavailable {
@@ -81,7 +88,7 @@ struct ContentView: View {
                 if session.profileUnavailable {
                     // Without this the screen is a dead end — you cannot get back to
                     // the welcome screen to sign in as anyone else.
-                    FFButton(title: "Sign out", kind: .secondary) {
+                    FFButton(title: String(localized: "Sign out"), kind: .secondary) {
                         Task { await session.signOut() }
                     }
                     .padding(.top, 4)

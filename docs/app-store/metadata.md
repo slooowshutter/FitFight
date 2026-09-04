@@ -72,3 +72,49 @@ Do not submit old design-source screenshots: they contain removed Requests, mone
 - Supply the required international App Review phone number.
 - Confirm first-launch territories and DSA trader status.
 - Confirm the seller name used for copyright if it is not `Marc Lamy`.
+
+## French (France) localization
+
+Keep English (U.S.) as the primary App Store language and add French (France) as a localization.
+
+| Field | Value |
+| --- | --- |
+| App Store name | `FitFight : Défis de pas` |
+| Subtitle | `Défiez vos amis à pied` |
+| Privacy Policy URL | `https://fitfight.app/fr/privacy` |
+| Support URL | `https://fitfight.app/fr/support` |
+| Marketing URL | `https://fitfight.app` |
+
+### Promotional text
+
+> Lancez des défis de pas privés à vos amis, comparez vos totaux Santé d’Apple et découvrez qui termine en tête. Gratuit, sans publicité, achat ni suivi.
+
+### Description
+
+> Transformez vos pas quotidiens en défi privé entre amis.
+>
+> Créez un défi, ajoutez des personnes avec leur nom d’utilisateur FitFight exact, choisissez une durée et convenez du gage que fera le perdant. FitFight lit le nombre de pas dans Santé d’Apple et rassemble le classement au même endroit.
+>
+> DÉFIS DE PAS PRIVÉS
+>
+> • Défiez une ou plusieurs personnes que vous connaissez
+> • Choisissez une durée d’une heure à un mois
+> • Comparez les pas enregistrés par Santé d’Apple
+> • Consultez les totaux, la progression quotidienne, le classement et le résultat final
+> • Acceptez ou refusez les invitations dans l’app
+>
+> CONÇU POUR LA CONFIDENTIALITÉ
+>
+> Les défis sont privés et réservés à leurs participants. L’accès à Santé d’Apple est en lecture seule et limité au nombre de pas. FitFight ne vend pas vos données, n’affiche aucune publicité et ne vous suit pas entre les apps et les sites. Vous pouvez supprimer définitivement votre compte et les données FitFight associées depuis les Réglages.
+>
+> FitFight est gratuit. Il ne propose aucun achat, frais d’inscription, pari, paiement ni prix. FitFight est destiné aux défis sportifs amicaux et n’est pas un service médical.
+
+### Keywords
+
+`défi de pas,marche,fitness,amis,compétition,podomètre,santé`
+
+### First-version release text
+
+> Première version App Store de FitFight : défis de pas privés avec invitations par nom d’utilisateur exact, scores Santé d’Apple, classements en direct et suppression définitive du compte.
+
+Use the same five screenshot subjects as English, rendered with the app language set to French and fictional usernames and Health data.

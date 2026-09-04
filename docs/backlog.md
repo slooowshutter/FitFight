@@ -50,7 +50,7 @@ If the app is closed or killed, iOS will not reliably run timers, settle a month
 
 The phone’s job is: show the UI, read Apple Health Steps when it is open (or briefly woken), and upload the required aggregates. Push notifications are not in the current scope.
 
-**Last TestFlight:** 4 Sep 2026 — FitFight follows the iPhone’s English or French app language across the native UI, Health permissions, errors, accessibility labels, and Versions. The TestFlight update notice sits under the version line as a solid card. Apple Health background sync installs at launch, preserves one interrupted opportunity, and shows private status under You; standings show relative freshness and exact final-window completeness. Look for `1.0.0 · build N · staging`.
+**Last TestFlight:** 4 Sep 2026 — the Fights list titles every row with the loser action, puts the gap to the person you are racing on the right and the days left underneath, and drops the moss hero so live fights are all one size. FitFight follows the iPhone’s English or French app language across the native UI, Health permissions, errors, accessibility labels, and Versions. The TestFlight update notice sits under the version line as a solid card. Apple Health background sync installs at launch, preserves one interrupted opportunity, and shows private status under You; standings show relative freshness and exact final-window completeness. Look for `1.0.0 · build N · staging`.
 
 ## Semi urgent
 

@@ -41,7 +41,10 @@ export async function acceptInvite(
   }
 
   const fight = await loadFight(invite.fight_id, admin);
-  if (fight.state === "cancelled" || fight.state === "final") {
+  if (
+    !["live", "scheduled", "inviting"].includes(fight.state)
+    || Date.parse(fight.ends_at) <= Date.now()
+  ) {
     throw new ApiError(409, ERROR_CODES.conflict, "Fight is no longer joinable");
   }
 
@@ -100,7 +103,7 @@ export async function acceptInvite(
     throw new ApiError(500, ERROR_CODES.db_error, "Could not mark invite accepted");
   }
 
-  if (["live", "scheduled", "awaiting_final_sync"].includes(fight.state)) {
+  if (fight.state === "live" || fight.state === "scheduled") {
     await recalculateFight(fight.id, admin);
   }
 

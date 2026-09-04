@@ -1,5 +1,5 @@
 begin;
-select plan(57);
+select plan(62);
 
 select has_schema('private', 'private schema exists');
 select has_table('public', 'profiles', 'profiles exists');
@@ -139,18 +139,23 @@ select is(
 );
 select is(
   has_table_privilege('authenticated', 'public.fights', 'UPDATE'),
-  true,
-  'clients can update fights they own or that are due'
+  false,
+  'clients cannot update fights; the server closer owns state'
+);
+select is(
+  has_table_privilege('authenticated', 'public.data_sources', 'UPDATE'),
+  false,
+  'clients cannot update data sources; ingest owns complete_through'
 );
 select is(
   has_table_privilege('authenticated', 'public.fight_members', 'UPDATE'),
-  true,
-  'clients can update their own membership'
+  false,
+  'clients have no table-level fight_members update'
 );
 select is(
   has_table_privilege('authenticated', 'public.data_sources', 'INSERT'),
-  true,
-  'clients can insert their own sources'
+  false,
+  'clients cannot insert data sources; ingest owns complete_through'
 );
 select is(
   has_column_privilege('authenticated', 'public.profiles', 'handle', 'UPDATE'),
@@ -186,6 +191,26 @@ select is(
   has_column_privilege('authenticated', 'public.profiles', 'display_name', 'UPDATE'),
   true,
   'users can update their display name'
+);
+select is(
+  has_column_privilege('authenticated', 'public.fight_members', 'state', 'UPDATE'),
+  true,
+  'clients can accept or decline their own membership'
+);
+select is(
+  has_column_privilege('authenticated', 'public.fight_members', 'current_value', 'UPDATE'),
+  false,
+  'clients cannot write fight scores'
+);
+select is(
+  has_column_privilege('authenticated', 'public.fight_members', 'state', 'INSERT'),
+  true,
+  'clients can insert membership rows'
+);
+select is(
+  has_column_privilege('authenticated', 'public.fight_members', 'current_value', 'INSERT'),
+  false,
+  'clients cannot insert fight scores'
 );
 
 select ok(

@@ -6,9 +6,6 @@ export async function cancelFight(userId: string, fightId: string) {
   const admin = createAdminClient();
   const fight = await loadOwnedFight(fightId, userId, admin);
 
-  if (fight.state === "final") {
-    throw new ApiError(409, ERROR_CODES.fight_not_cancellable, "Final fights cannot be cancelled");
-  }
   if (fight.state === "cancelled") {
     return fightSummary(fight);
   }
@@ -17,10 +14,14 @@ export async function cancelFight(userId: string, fightId: string) {
     .from("fights")
     .update({ state: "cancelled" })
     .eq("id", fightId)
+    .in("state", ["draft", "inviting", "scheduled", "live", "awaiting_final_sync"])
     .select("id, state")
-    .single();
-  if (error || !updated) {
+    .maybeSingle();
+  if (error) {
     throw new ApiError(500, ERROR_CODES.db_error, "Could not cancel fight");
+  }
+  if (!updated) {
+    throw new ApiError(409, ERROR_CODES.fight_not_cancellable, "Final fights cannot be cancelled");
   }
   return fightSummary(updated);
 }

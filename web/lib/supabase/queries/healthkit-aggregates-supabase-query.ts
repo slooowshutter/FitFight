@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type { Sql } from "postgres";
 import { ApiError, ERROR_CODES } from "@/lib/http";
+import { civilDayInTimeZone } from "@/lib/scoring/civil-day";
 import { scoreFight } from "@/lib/scoring/score-fight";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import { asNumber, type OutcomeRule } from "@/lib/types/database";
@@ -119,6 +120,10 @@ export async function syncHealthKitAggregates(
     }
 
     if (input.merged_days.length > 0) {
+      const completeLocalDay = civilDayInTimeZone(
+        new Date(input.complete_through),
+        input.time_zone,
+      );
       const dayRows = input.merged_days.map((day) => ({
         user_id: userId,
         source_id: source.id,
@@ -132,6 +137,7 @@ export async function syncHealthKitAggregates(
         })).digest("hex"),
         normalization_version: 1,
         calculation_version: 1,
+        finalized_at: day.day < completeLocalDay ? new Date(input.complete_through) : null,
       }));
       await sql`
         insert into public.metric_days ${sql(
@@ -145,14 +151,16 @@ export async function syncHealthKitAggregates(
           "input_hash",
           "normalization_version",
           "calculation_version",
+          "finalized_at",
         )}
         on conflict (user_id, source_id, metric, day) do update
         set value = excluded.value,
           input_hash = excluded.input_hash,
           normalization_version = excluded.normalization_version,
           calculation_version = excluded.calculation_version,
-          finalized_at = null,
+          finalized_at = excluded.finalized_at,
           updated_at = now()
+        where public.metric_days.finalized_at is null
       `;
       await sql`
         insert into public.step_days (user_id, day, steps, updated_at)
@@ -210,6 +218,7 @@ export async function syncHealthKitAggregates(
         where fight_id = ${aggregate.fight_id}
           and user_id = ${userId}
           and state = 'accepted'
+          and finalized_at is null
       `;
       const members = await sql<{
         user_id: string;
@@ -237,7 +246,9 @@ export async function syncHealthKitAggregates(
         await sql`
           update public.fight_members
           set rank = ${score.rank}, outcome_minor = ${score.outcomeMinor}
-          where fight_id = ${aggregate.fight_id} and user_id = ${score.userId}
+          where fight_id = ${aggregate.fight_id}
+            and user_id = ${score.userId}
+            and finalized_at is null
         `;
       }
     }

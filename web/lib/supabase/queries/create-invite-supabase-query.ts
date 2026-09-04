@@ -35,7 +35,10 @@ export async function createInvite(ownerId: string, fightId: string, rawHandle: 
   const admin = createAdminClient();
   const fight = await loadOwnedFight(fightId, ownerId, admin);
 
-  if (["awaiting_final_sync", "final", "cancelled"].includes(fight.state)) {
+  if (
+    ["awaiting_final_sync", "final", "cancelled"].includes(fight.state)
+    || Date.parse(fight.ends_at) <= Date.now()
+  ) {
     throw new ApiError(409, ERROR_CODES.conflict, "Cannot invite after the fight has closed");
   }
 

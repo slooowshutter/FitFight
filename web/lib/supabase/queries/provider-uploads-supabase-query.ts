@@ -3,6 +3,7 @@ import { ApiError, ERROR_CODES } from "@/lib/http";
 import { readProviderArchive } from "@/lib/ingest/provider-archive";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
+import { civilDayInTimeZone } from "@/lib/scoring/civil-day";
 import { scoreFight } from "@/lib/scoring/score-fight";
 import { asNumber, type OutcomeRule } from "@/lib/types/database";
 import type {
@@ -287,6 +288,16 @@ export async function processProviderUpload(
       if (!checkpoint || checkpoint.record.type !== "checkpoint") {
         throw new ApiError(400, ERROR_CODES.archive_invalid, "Archive checkpoint is missing");
       }
+      const [clock] = await sql<{ server_now: string }[]>`
+        select clock_timestamp()::text as server_now
+      `;
+      if (Date.parse(checkpoint.record.complete_through) > Date.parse(clock.server_now)) {
+        throw new ApiError(
+          400,
+          ERROR_CODES.validation,
+          "complete_through cannot be in the future",
+        );
+      }
 
       const eventBatch: Array<{
         record: Extract<ProviderArchiveRecord, { type: "sample" | "deletion" }>;
@@ -351,12 +362,10 @@ export async function processProviderUpload(
       );
       await flushEvents();
 
-      const completeLocalDay = new Intl.DateTimeFormat("en-CA", {
-        timeZone: checkpoint.record.time_zone,
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-      }).format(new Date(checkpoint.record.complete_through));
+      const completeLocalDay = civilDayInTimeZone(
+        new Date(checkpoint.record.complete_through),
+        checkpoint.record.time_zone,
+      );
       for (const item of mergedDays) {
         if (item.record.type !== "merged_day") continue;
         const finalized = item.record.day < completeLocalDay;
@@ -383,10 +392,7 @@ export async function processProviderUpload(
           set value = excluded.value, input_hash = excluded.input_hash,
             normalization_version = excluded.normalization_version,
             calculation_version = excluded.calculation_version,
-            finalized_at = case
-              when public.metric_days.finalized_at is not null then public.metric_days.finalized_at
-              else excluded.finalized_at
-            end,
+            finalized_at = excluded.finalized_at,
             updated_at = now()
           where public.metric_days.finalized_at is null
         `;
@@ -464,7 +470,9 @@ export async function processProviderUpload(
           set current_value = ${item.record.steps}, freshness = 'recent',
             last_synced_at = now(),
             input_revision = coalesce(input_revision, 0) + 1
-          where fight_id = ${item.record.fight_id} and user_id = ${userId}
+          where fight_id = ${item.record.fight_id}
+            and user_id = ${userId}
+            and finalized_at is null
         `;
         const members = await sql<{
           user_id: string;
@@ -491,7 +499,9 @@ export async function processProviderUpload(
           await sql`
             update public.fight_members
             set rank = ${score.rank}, outcome_minor = ${score.outcomeMinor}
-            where fight_id = ${item.record.fight_id} and user_id = ${score.userId}
+            where fight_id = ${item.record.fight_id}
+              and user_id = ${score.userId}
+              and finalized_at is null
           `;
         }
       }

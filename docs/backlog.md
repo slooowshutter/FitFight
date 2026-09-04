@@ -25,12 +25,6 @@ Honest works / doesn’t / next: [`status.md`](status.md). Read that before the 
 
 ## Urgent
 
-### Freeze historical results against aggregation-code changes
-
-Changing normalization, aggregation, or scoring code must not silently rewrite previously finalized history. Persist the calculation version, input revision, calculated value, and finalized time used for each historical day and Fight result. A new code version applies prospectively unless an explicit, audited backfill is approved.
-
-Provider corrections, deletion tombstones, and late device syncs may still update an unfinalized day during its disclosed correction window. Once finalized, that day's stored result remains immutable except through an explicit audited correction. Decide the day-finalization boundary and correction window before relying on historical totals for recommendations or completed Fights.
-
 ### Verify account deletion before App Store submission
 
 The backend now hard-deletes the profile, username, authentication rows, Health/Steps
@@ -123,6 +117,7 @@ The phone writes fights and Steps to staging after this PR is merged. See [`stat
 - Smallest command API: create / invite / accept a Steps Fight. New adds participants by exact username and starts a real fight; fight detail Accept/Join accepts it.
 - HealthKit Steps upload. Standings come from the database. Fights are no longer the fixture people.
 - Fight closer: `live → awaiting_final_sync → final` on a server clock. Tests fake `now` for 1 / 3 / 7 / 14 day windows. Opening the app closes your due fights; Vercel cron closes the rest if nobody opens. No push yet.
+- **Freeze historical results.** Finished Fights and completed civil days keep the stored value, input hash, calculation version, and scoring engine version. New scoring code applies only to unfinalized rows. Set `fitfight.allow_score_correction = on` only for an audited backfill. A civil day freezes when it is before `complete_through`'s local date. The phone cannot write score columns, fight state, or `complete_through`, and cannot join or leave after `ends_at`.
 - Welcome screen when signed out. Apple Sign In is the only way in; the tabs stay hidden until then.
 - Username onboarding after sign-in. Phone-written Steps fights, HealthKit → `step_days`, standings from the database. Design tab removed.
 - Approved HTML design-system port: Night/Day, Nunito, and reusable SwiftUI components. The internal showcase was removed from user settings.

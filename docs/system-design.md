@@ -548,7 +548,7 @@ Future direct-provider adapters produce canonical Observations with units and in
 
 ### Layer 4: aggregation
 
-Apple computes the v1 Steps aggregate. The exact `starts_at...cutoff_at` cumulative statistic becomes the per-member Fight snapshot and is authoritative for scoring. Relevant Apple-merged daily buckets serve charts only and cannot overwrite that score. Live values remain provisional because Apple may incorporate a late device sync, edit, or deletion; finished Fights freeze the exact-window snapshot at `ends_at`. Future interval Metrics must still split at Fight boundaries before aggregation.
+Apple computes the v1 Steps aggregate. The exact `starts_at...cutoff_at` cumulative statistic becomes the per-member Fight snapshot and is authoritative for scoring. Relevant Apple-merged daily buckets serve charts only and cannot overwrite that score. Live values remain provisional because Apple may incorporate a late device sync, edit, or deletion. A civil day is complete when it is strictly before `complete_through` in the upload time zone; `metric_days.finalized_at` then stays put. Finished Fights freeze member `final_value`, `finalized_at`, calculation version, and scoring engine version; later aggregation or scoring-code changes do not rewrite them unless `fitfight.allow_score_correction` is on for an audited backfill.
 
 ### Layer 5: scoring
 

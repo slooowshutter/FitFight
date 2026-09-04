@@ -1,6 +1,6 @@
 # Join-code league: abuse, capacity, and trust
 
-**4 Sep 2026.** Not a build. Policy for a shareable join-code Steps league on top of today’s private username Fights, device-trusted HealthKit uploads, and a public GitHub repo.
+**4 Sep 2026.** Not a build. Product decision: [`proposals/themed-recurring-fights.md`](../proposals/themed-recurring-fights.md). This page is caps, hashing, and failure modes for a shareable join-code Steps league on top of today’s private username Fights, device-trusted HealthKit uploads, and a public GitHub repo.
 
 Anyone with the code can join. The generator will be visible. Security is entropy, hashing, caps, and rate limits, not obscurity.
 

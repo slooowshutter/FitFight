@@ -1,8 +1,10 @@
-# Recurrence — design only
+# Recurrence — clocks only
 
 Status: Later. Do not build. No screens.
 
-A Fight stays a Fight. Recurrence is a **series** that **mints new Fights**. It never edits a child’s window, timezone, rules, or final result.
+Product decision (three products, Station F vs wife, must / don’t): [`proposals/themed-recurring-fights.md`](proposals/themed-recurring-fights.md).
+
+This page is only the clock: a Fight stays a Fight. Recurrence is a **series** that **mints new Fights**. It never edits a child’s window, timezone, rules, or final result.
 
 Today’s “1 week” is **rolling** (create-time plus 7 days). League “weekly” is a calendar week. They are not the same duration.
 

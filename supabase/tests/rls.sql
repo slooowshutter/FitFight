@@ -1,5 +1,5 @@
 begin;
-select plan(14);
+select plan(18);
 
 create function pg_temp.make_user(uid uuid, email text)
 returns void
@@ -260,6 +260,61 @@ select lives_ok(
       where fight_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
         and user_id = '33333333-3333-4333-8333-333333333333' $$,
   'invitee can accept their own membership'
+);
+
+reset role;
+insert into public.feedback_posts (id, author_id, kind, title, body)
+values (
+  'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+  '11111111-1111-4111-8111-111111111111',
+  'bug',
+  'Steps chart is blank',
+  'The daily Steps chart on a live fight stays empty after a successful sync.'
+);
+
+select pg_temp.as_user('22222222-2222-4222-8222-222222222222');
+set local role authenticated;
+
+select is(
+  (select count(*)::integer from public.feedback_posts),
+  1,
+  'signed-in users can read the public request board'
+);
+
+select throws_ok(
+  $$ insert into public.feedback_posts (author_id, kind, title, body)
+     values (
+       '22222222-2222-4222-8222-222222222222',
+       'feature',
+       'Show weekly totals',
+       'A weekly Steps total on You would make it easier to plan a fight.'
+     ) $$,
+  '42501',
+  'permission denied for table feedback_posts',
+  'clients cannot insert feedback posts'
+);
+
+select throws_ok(
+  $$ insert into public.feedback_comments (post_id, author_id, body)
+     values (
+       'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+       '22222222-2222-4222-8222-222222222222',
+       'I see this too'
+     ) $$,
+  '42501',
+  'permission denied for table feedback_comments',
+  'clients cannot insert feedback comments'
+);
+
+select throws_ok(
+  $$ insert into public.feedback_votes (post_id, user_id)
+     values (
+       'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+       '22222222-2222-4222-8222-222222222222'
+     ) $$,
+  '42501',
+  'permission denied for table feedback_votes',
+  'clients cannot insert feedback votes'
 );
 
 select * from finish();

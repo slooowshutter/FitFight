@@ -62,7 +62,7 @@ Use screenshots generated from the final release commit, showing `prod` in the v
 2. Accepted Fight with totals, daily progress, and standings.
 3. New Fight setup with Steps, duration, username, and action fields.
 4. Incoming invitation with Accept and Decline.
-5. You with Apple Health Steps and the Privacy, Support, and Delete account settings.
+5. You with Apple Health Steps and Bugs & requests, Privacy, Support, and Delete account.
 
 Do not submit old design-source screenshots: they contain removed Requests, money, unsupported metrics, and mock data. Do not use real names or real Health data in marketing assets.
 

@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 4,
+            notes: "You → Settings now has Bugs & requests: post a bug or a feature request, see what other people submitted, upvote, and comment with your username."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 4,
             notes: "The TestFlight update notice sits under the version line at the top of the screen and uses a solid card instead of a see-through toast over the tab bar."
         ),
         ReleaseNote(

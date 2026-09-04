@@ -21,7 +21,7 @@ Honest works / doesn’t / next: [`status.md`](status.md). Read that before the 
 
 [`system-design.md`](system-design.md) is the golden guide. Follow it. Do not implement the whole document. Production Metric is **Steps**; Active Minutes and Workout Count stay later.
 
-**Current scope lock (3 Sep 2026):** three tabs (**Fights**, **New**, **You**); direct exact-username invitations; Steps × highest total; a required typed loser action; and 3-day, 1-week, 2-week, or 1-month durations. Do not restore friends, Requests, money, other metrics, alternate scoring, or removed settings unless Marc explicitly reopens that scope.
+**Current scope lock (3 Sep 2026):** three tabs (**Fights**, **New**, **You**); direct exact-username invitations; Steps × highest total; a required typed loser action; and 3-day, 1-week, 2-week, or 1-month durations. Do not restore friends, the old Requests tab, money, other metrics, alternate scoring, or removed settings unless Marc explicitly reopens that scope.
 
 ## Urgent
 
@@ -34,7 +34,8 @@ Provider corrections, deletion tombstones, and late device syncs may still updat
 ### Verify account deletion before App Store submission
 
 The backend now hard-deletes the profile, username, authentication rows, Health/Steps
-data, uploads, friendships, invitations, memberships, and Fights the User created. It
+data, uploads, friendships, invitations, memberships, Fights the User created, and
+bugs or feature requests they posted. It
 removes the User from Fights owned by someone else. The phone clears its local Health
 sync state. New Apple sign-ins store an encrypted revocation token; legacy accounts
 without one still delete and receive the manual Apple Settings disconnect path.
@@ -50,7 +51,7 @@ If the app is closed or killed, iOS will not reliably run timers, settle a month
 
 The phone’s job is: show the UI, read Apple Health Steps when it is open (or briefly woken), and upload the required aggregates. Push notifications are not in the current scope.
 
-**Last TestFlight:** 4 Sep 2026 — FitFight follows the iPhone’s English or French app language across the native UI, Health permissions, errors, accessibility labels, and Versions. The TestFlight update notice sits under the version line as a solid card. Apple Health background sync installs at launch, preserves one interrupted opportunity, and shows private status under You; standings show relative freshness and exact final-window completeness. Look for `1.0.0 · build N · staging`.
+**Last TestFlight:** 4 Sep 2026 — You → Settings has Bugs & requests: post a bug or a feature request, browse the board, upvote, and comment with your username. Look for `1.0.0 · build N · staging`.
 
 ## Semi urgent
 
@@ -75,9 +76,12 @@ The phone’s job is: show the UI, read Apple Health Steps when it is open (or b
 
 ## Later — outside the current product
 
-These are parked ideas, not launch requirements. None may restore friends, Requests,
-money, another metric, or alternate scoring without Marc explicitly reopening scope.
+These are parked ideas, not launch requirements. None may restore friends, the old
+Requests tab, money, another metric, or alternate scoring without Marc explicitly
+reopening scope.
 
+- **LLM review for Bugs & requests.** After someone submits a bug or feature request, an LLM could check that the write-up is specific enough and reject empty or abusive language. Decide provider, API keys, prompt, cost, failure behavior, and what the person sees when a post is refused before building this. Not in v1.
+- **Report and block on Bugs & requests.** The board is user-generated text. Apple will want a way to report a post and block a person. Do not invent that screen until this moves up.
 - **Restore bounded full-fidelity HealthKit ingestion only when a shipped feature needs it.** The MVP deliberately keeps only Apple's merged exact Fight-window totals and the relevant merged daily chart buckets. Before restoring raw samples, deletion anchors, per-source statistics, device/source metadata, or another archive transport, define the concrete product purpose, explicit Collection consent, bounded backfill, retention and deletion policy, edit/deletion reconciliation, provenance shown to Users, and operational size limits. Never calculate Steps by naïvely summing overlapping raw samples or source totals; Apple's merged aggregate remains the reference unless a reviewed Metric specification replaces it.
 - **Show the result of a Fight refresh.** Pull-to-refresh now uploads current Apple Health aggregates and reloads standings from the server, but after the native spinner ends the Fight still needs a visible up-to-date or failed state with a retry path. In participant standings, show sync freshness as relative elapsed time—minutes ago, hours ago, then days ago—instead of an absolute date and time. Do not promise that iOS background delivery is instant.
 - **Advanced Fight-rule builder.** An explicitly advanced dynamic form for the full Measure × Score × Result model in [`fight-rules.md`](fight-rules.md). Earlier answers control which later fields appear: choosing workouts reveals workout-validity rules; choosing days reaching a value asks for the daily value; choosing Reach asks for the final goal. Show only reviewed compatible combinations, keep a plain-language summary visible, and validate the final object on the server. Do not make the Basic path feel like this form. No screen yet; do not build until moved up.

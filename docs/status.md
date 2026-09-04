@@ -33,11 +33,11 @@ After the backend is configured, merge the feature PR into **`develop`**, not `m
 
 Verify the minimal product alongside Apple Health synchronization:
 
-1. TestFlight → **Update**. Look for `1.0.0 · build N · staging · 3 Sep` at the top.
+1. TestFlight → **Update**. Look for `1.0.0 · build N · staging · 4 Sep` at the top.
 2. Check Fights, a Fight detail, New, and You in both Night and Day. There are only three tabs: Fights, New, You.
 3. New guides people through Steps, duration, exact usernames, the required action, and review. It offers 3 days / 1 week / 2 weeks / 1 month. Earlier steps use **Next**. Review uses **Slide to start**, then shows Starting… and ignores extra slides.
-4. Confirm sign-in, username, Apple Health Steps, Fight invitations, standings with last-sync times, Privacy, Support, Versions, sign out, and Delete account.
-5. Confirm Requests, friend requests/lists, money, other Metrics, and dead settings are absent.
+4. Confirm sign-in, username, Apple Health Steps, Fight invitations, standings with last-sync times, Privacy, Support, Bugs & requests, Versions, sign out, and Delete account.
+5. Confirm the old Requests tab, friend requests/lists, money, other Metrics, and dead settings are absent.
 6. If sign-in fails: hosted **develop** Supabase → Authentication → Providers → Apple → On, client ID `com.fitfight.mvp`.
 
 The native Fight path uses Supabase; Apple Health synchronization and account deletion also require Vercel.
@@ -59,13 +59,14 @@ The native Fight path uses Supabase; Apple Health synchronization and account de
 | Daily totals | Sends Apple's merged daily buckets only for days relevant to active Fight charts. They are display data, not the source of the Fight score. |
 | Standings | Live scoring uses exact Fight-window HealthKit aggregates, not overlapping whole-day totals. Both phones read the same serving rows. Each standing shows relative sync freshness; ended Fights distinguish exact final-window coverage from the last available Steps. |
 | Fight end | Exact `ends_at` is the final cutoff. Opening the app closes due fights; the protected Vercel cron runs daily if nobody opens it. After finalization, later Steps cannot change the result. |
-| Tabs | Fights, New, You. Requests and Design are removed. |
+| Tabs | Fights, New, You. The old Requests tab and Design are removed. |
 | Look | Night/Day, Nunito, fixed Moss/Ember/Gold semantics; no accent picker or public design-system showcase. |
 | Versions | Works under You → Settings; the version label stays at the top of every root screen. Staging TestFlight also shows an opaque notice under that line when a newer build has been uploaded. |
+| Bugs & requests | Works under You → Settings. Signed-in people can post a bug or a feature request, browse the board, upvote, and comment with their username. |
 | Privacy / Support | Pages are implemented and linked under You → Settings. Staging uses `staging.fitfight.app`; production uses `fitfight.app`. Each route must be deployed before that build is tested or submitted. |
-| Account deletion | Permanently deletes the profile, username, authentication, Health/Steps data, relationships, invitations, memberships, scores, and owned Fights; removes participation from other Fights; clears local Health sync state; and revokes a stored Apple credential when available. |
+| Account deletion | Permanently deletes the profile, username, authentication, Health/Steps data, relationships, invitations, memberships, scores, owned Fights, and bugs/requests the User posted; removes participation from other Fights; clears local Health sync state; and revokes a stored Apple credential when available. |
 | WHOOP / Strava | Not built |
-| Removed scope | No persistent friends, Requests, money/payouts, bragging-rights option, other Metrics, goals, custom dates, or dead settings/actions. |
+| Removed scope | No persistent friends, Requests tab, money/payouts, bragging-rights option, other Metrics, goals, custom dates, or dead settings/actions. |
 
 ---
 

@@ -32,6 +32,9 @@ export async function deleteAccount(
         throw new ApiError(404, ERROR_CODES.not_found, "Account not found");
       }
 
+      await sql`delete from public.feedback_votes where user_id = ${userId}`;
+      await sql`delete from public.feedback_comments where author_id = ${userId}`;
+      await sql`delete from public.feedback_posts where author_id = ${userId}`;
       await sql`delete from public.fights where owner_id = ${userId}`;
       await sql`delete from private.fight_score_snapshots where user_id = ${userId}`;
       await sql`delete from private.metric_observations where user_id = ${userId}`;

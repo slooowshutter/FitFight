@@ -25,7 +25,7 @@ export default function PrivacyPage() {
       <article className="legal-content">
         <p className="eyebrow">VOS DONNÉES, EN TOUTE CLARTÉ</p>
         <h1>Politique de confidentialité</h1>
-        <p className="legal-updated">En vigueur le 31 août 2026</p>
+        <p className="legal-updated">En vigueur le 4 septembre 2026</p>
         <p className="legal-intro">
           FitFight permet à des participants identifiés de comparer le nombre de pas
           enregistrés pendant un défi privé. Cette politique décrit les données utilisées
@@ -51,6 +51,11 @@ export default function PrivacyPage() {
               <strong>Pas de Santé d’Apple :</strong> avec votre autorisation, FitFight lit
               le nombre de pas et envoie le total fusionné pour la période exacte de chaque
               défi, ainsi que les totaux quotidiens nécessaires aux graphiques.
+            </li>
+            <li>
+              <strong>Bugs et demandes :</strong> le titre, le détail, les votes et les
+              commentaires que vous publiez sur le tableau dans l’app, visibles des autres
+              utilisateurs FitFight connectés avec votre nom d’utilisateur.
             </li>
             <li>
               <strong>Assistance et fonctionnement :</strong> les messages envoyés à
@@ -84,6 +89,7 @@ export default function PrivacyPage() {
             <li>créer et sécuriser votre compte ;</li>
             <li>créer, gérer, comptabiliser et terminer les défis privés ;</li>
             <li>afficher les classements et l’historique partagé des défis ;</li>
+            <li>faire fonctionner le tableau de bugs et de demandes dans l’app ;</li>
             <li>répondre aux demandes d’assistance ;</li>
             <li>détecter les erreurs, abus et problèmes de sécurité.</li>
           </ul>
@@ -118,7 +124,8 @@ export default function PrivacyPage() {
             utilisées pour comptabiliser un défi.
           </p>
           <p>
-            Nous conservons les données du compte, des défis et des pas envoyés tant que
+            Nous conservons les données du compte, des défis, des bugs et demandes, et des pas
+            envoyés tant que
             votre compte existe. Les e-mails d’assistance sont conservés le temps nécessaire
             au traitement de la demande. Les journaux limités de sécurité et de requêtes
             suivent les durées de conservation configurées chez Supabase et Vercel. Des
@@ -133,7 +140,8 @@ export default function PrivacyPage() {
             Vous pouvez supprimer définitivement votre compte sous <strong>Vous → Réglages
             → Supprimer le compte</strong>, sans contacter l’assistance. La suppression efface
             votre profil et votre nom d’utilisateur, les totaux de pas envoyés, les anciennes
-            relations d’amitié, les invitations, participations et scores, ainsi que tous les
+            relations d’amitié, les invitations, participations et scores, les bugs et
+            demandes que vous avez publiés, ainsi que tous les
             défis que vous avez créés. Elle vous retire également des défis créés par une
             autre personne.
           </p>

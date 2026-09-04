@@ -1,0 +1,291 @@
+import type { Sql } from "postgres";
+import { ApiError, ERROR_CODES } from "@/lib/http";
+import { createDatabaseClient } from "@/lib/supabase/postgres";
+import type {
+  CreateFeedbackCommentRequest,
+  CreateFeedbackPostRequest,
+  FeedbackComment,
+  FeedbackCommentResponse,
+  FeedbackDetailResponse,
+  FeedbackKind,
+  FeedbackListResponse,
+  FeedbackPostResponse,
+  FeedbackPostSummary,
+  FeedbackVoteResponse,
+  ListFeedbackQuery,
+} from "@/lib/types/feedback/feedback";
+
+const POST_LIMIT_PER_DAY = 8;
+const COMMENT_LIMIT_PER_DAY = 30;
+
+type FeedbackPostRow = {
+  id: string;
+  kind: FeedbackKind;
+  title: string;
+  body: string;
+  vote_count: number;
+  comment_count: number;
+  voted: boolean;
+  author_handle: string;
+  created_at: Date | string;
+};
+
+type FeedbackCommentRow = {
+  id: string;
+  body: string;
+  author_handle: string;
+  created_at: Date | string;
+};
+
+function isoUtc(value: Date | string): string {
+  return new Date(value).toISOString().replace(/\.\d{3}Z$/, "Z");
+}
+
+function mapPost(row: FeedbackPostRow): FeedbackPostSummary {
+  return {
+    id: row.id,
+    kind: row.kind,
+    title: row.title,
+    body: row.body,
+    vote_count: row.vote_count,
+    comment_count: row.comment_count,
+    voted: row.voted,
+    author_handle: row.author_handle,
+    created_at: isoUtc(row.created_at),
+  };
+}
+
+function mapComment(row: FeedbackCommentRow): FeedbackComment {
+  return {
+    id: row.id,
+    body: row.body,
+    author_handle: row.author_handle,
+    created_at: isoUtc(row.created_at),
+  };
+}
+
+export async function listFeedbackPosts(
+  userId: string,
+  query: ListFeedbackQuery,
+  database: Sql = createDatabaseClient(),
+): Promise<FeedbackListResponse> {
+  const kind = query.kind ?? null;
+  const rows = await database<FeedbackPostRow[]>`
+    select
+      post.id,
+      post.kind::text as kind,
+      post.title,
+      post.body,
+      (
+        select count(*)::int
+        from public.feedback_votes as vote
+        where vote.post_id = post.id
+      ) as vote_count,
+      (
+        select count(*)::int
+        from public.feedback_comments as comment
+        where comment.post_id = post.id
+      ) as comment_count,
+      exists(
+        select 1
+        from public.feedback_votes as vote
+        where vote.post_id = post.id
+          and vote.user_id = ${userId}
+      ) as voted,
+      profile.handle as author_handle,
+      post.created_at
+    from public.feedback_posts as post
+    join public.profiles as profile
+      on profile.user_id = post.author_id
+     and profile.deleted_at is null
+    where ${kind}::text is null
+       or post.kind::text = ${kind}
+    order by vote_count desc, post.created_at desc
+    limit 100
+  `;
+  return { posts: rows.map(mapPost) };
+}
+
+export async function getFeedbackPost(
+  userId: string,
+  postId: string,
+  database: Sql = createDatabaseClient(),
+): Promise<FeedbackDetailResponse> {
+  const [row] = await database<FeedbackPostRow[]>`
+    select
+      post.id,
+      post.kind::text as kind,
+      post.title,
+      post.body,
+      (
+        select count(*)::int
+        from public.feedback_votes as vote
+        where vote.post_id = post.id
+      ) as vote_count,
+      (
+        select count(*)::int
+        from public.feedback_comments as comment
+        where comment.post_id = post.id
+      ) as comment_count,
+      exists(
+        select 1
+        from public.feedback_votes as vote
+        where vote.post_id = post.id
+          and vote.user_id = ${userId}
+      ) as voted,
+      profile.handle as author_handle,
+      post.created_at
+    from public.feedback_posts as post
+    join public.profiles as profile
+      on profile.user_id = post.author_id
+     and profile.deleted_at is null
+    where post.id = ${postId}
+  `;
+  if (!row) {
+    throw new ApiError(404, ERROR_CODES.not_found, "Request not found");
+  }
+  const comments = await database<FeedbackCommentRow[]>`
+    select
+      comment.id,
+      comment.body,
+      profile.handle as author_handle,
+      comment.created_at
+    from public.feedback_comments as comment
+    join public.profiles as profile
+      on profile.user_id = comment.author_id
+     and profile.deleted_at is null
+    where comment.post_id = ${postId}
+    order by comment.created_at
+  `;
+  return { post: mapPost(row), comments: comments.map(mapComment) };
+}
+
+export async function createFeedbackPost(
+  userId: string,
+  input: CreateFeedbackPostRequest,
+  database: Sql = createDatabaseClient(),
+): Promise<FeedbackPostResponse> {
+  const [rate] = await database<{ n: number }[]>`
+    select count(*)::int as n
+    from public.feedback_posts
+    where author_id = ${userId}
+      and created_at > now() - interval '24 hours'
+  `;
+  if ((rate?.n ?? 0) >= POST_LIMIT_PER_DAY) {
+    throw new ApiError(
+      429,
+      ERROR_CODES.rate_limited,
+      "You’ve posted a few times recently. Try again later.",
+    );
+  }
+
+  const [row] = await database<FeedbackPostRow[]>`
+    insert into public.feedback_posts (author_id, kind, title, body)
+    values (
+      ${userId},
+      ${input.kind}::public.feedback_kind,
+      ${input.title},
+      ${input.body}
+    )
+    returning
+      id,
+      kind::text as kind,
+      title,
+      body,
+      0 as vote_count,
+      0 as comment_count,
+      false as voted,
+      (
+        select handle
+        from public.profiles
+        where user_id = ${userId}
+          and deleted_at is null
+      ) as author_handle,
+      created_at
+  `;
+  if (!row?.author_handle) {
+    throw new ApiError(400, ERROR_CODES.profile_missing, "Profile is missing");
+  }
+  return { post: mapPost(row) };
+}
+
+export async function toggleFeedbackVote(
+  userId: string,
+  postId: string,
+  database: Sql = createDatabaseClient(),
+): Promise<FeedbackVoteResponse> {
+  return database.begin("read write", async (sql) => {
+    const [post] = await sql<{ id: string }[]>`
+      select id from public.feedback_posts where id = ${postId}
+    `;
+    if (!post) {
+      throw new ApiError(404, ERROR_CODES.not_found, "Request not found");
+    }
+
+    const deleted = await sql<{ post_id: string }[]>`
+      delete from public.feedback_votes
+      where post_id = ${postId} and user_id = ${userId}
+      returning post_id
+    `;
+    let voted = false;
+    if (deleted.length === 0) {
+      await sql`
+        insert into public.feedback_votes (post_id, user_id)
+        values (${postId}, ${userId})
+      `;
+      voted = true;
+    }
+    const [counts] = await sql<{ vote_count: number }[]>`
+      select count(*)::int as vote_count
+      from public.feedback_votes
+      where post_id = ${postId}
+    `;
+    return { voted, vote_count: counts?.vote_count ?? 0 };
+  });
+}
+
+export async function createFeedbackComment(
+  userId: string,
+  postId: string,
+  input: CreateFeedbackCommentRequest,
+  database: Sql = createDatabaseClient(),
+): Promise<FeedbackCommentResponse> {
+  const [rate] = await database<{ n: number }[]>`
+    select count(*)::int as n
+    from public.feedback_comments
+    where author_id = ${userId}
+      and created_at > now() - interval '24 hours'
+  `;
+  if ((rate?.n ?? 0) >= COMMENT_LIMIT_PER_DAY) {
+    throw new ApiError(
+      429,
+      ERROR_CODES.rate_limited,
+      "You’ve commented a few times recently. Try again later.",
+    );
+  }
+
+  const [comment] = await database<FeedbackCommentRow[]>`
+    insert into public.feedback_comments (post_id, author_id, body)
+    select ${postId}, ${userId}, ${input.body}
+    where exists (
+      select 1 from public.feedback_posts where id = ${postId}
+    )
+    returning
+      id,
+      body,
+      (
+        select handle
+        from public.profiles
+        where user_id = ${userId}
+          and deleted_at is null
+      ) as author_handle,
+      created_at
+  `;
+  if (!comment) {
+    throw new ApiError(404, ERROR_CODES.not_found, "Request not found");
+  }
+  if (!comment.author_handle) {
+    throw new ApiError(400, ERROR_CODES.profile_missing, "Profile is missing");
+  }
+  return { comment: mapComment(comment) };
+}

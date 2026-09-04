@@ -53,6 +53,15 @@ export default function SupportPage() {
         </section>
 
         <section>
+          <h2>Bugs and feature requests</h2>
+          <p>
+            Open <strong>You → Settings → Bugs &amp; requests</strong> to post a bug or a
+            feature request, see what other signed-in people submitted, upvote, and comment
+            with your username. You can still email support for account or Health issues.
+          </p>
+        </section>
+
+        <section>
           <h2>Inviting someone</h2>
           <p>
             Enter their exact FitFight username when creating a Fight. They must first
@@ -75,7 +84,7 @@ export default function SupportPage() {
           <p>
             Open <strong>You → Settings → Delete account</strong> and confirm. This
             permanently removes your profile, uploaded Steps, invitations and memberships,
-            removes you from Fights created by someone else, and deletes Fights you created
+            bugs and feature requests you posted, removes you from Fights created by someone else, and deletes Fights you created
             for every participant. FitFight also asks Apple to revoke an available Sign in
             with Apple credential and signs you out. This cannot be undone.
           </p>

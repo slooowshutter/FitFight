@@ -53,8 +53,10 @@ struct FightDetailView: View {
                         .ffType(.caption)
                         .foregroundStyle(theme.textSecondary)
                 }
-                ForEach(Array(fight.standings.enumerated()), id: \.element.id) { index, row in
-                    standingRow(index: index, row: row)
+                TimelineView(.periodic(from: .now, by: 30)) { context in
+                    ForEach(Array(fight.standings.enumerated()), id: \.element.id) { index, row in
+                        standingRow(index: index, row: row, now: context.date)
+                    }
                 }
 
                 if !fight.days.isEmpty {
@@ -183,7 +185,7 @@ struct FightDetailView: View {
         return leader == 0 ? 0 : min(yours / leader, 1)
     }
 
-    private func standingRow(index: Int, row: Standing) -> some View {
+    private func standingRow(index: Int, row: Standing, now: Date) -> some View {
         Group {
             if row.invited {
                 HStack(spacing: 13) {
@@ -210,8 +212,8 @@ struct FightDetailView: View {
                     value: model.formatScore(row.score, metric: fight.metric),
                     move: .same,
                     isYou: row.person.isYou,
-                    caption: model.formatLastSync(row.lastSyncedAt),
-                    captionUrgent: row.lastSyncedAt == nil
+                    caption: model.formatStandingFreshness(row, fight: fight, now: now),
+                    captionUrgent: false
                 )
             }
         }

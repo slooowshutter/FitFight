@@ -1,5 +1,5 @@
 begin;
-select plan(33);
+select plan(38);
 
 select has_schema('private', 'private schema exists');
 select has_table('public', 'profiles', 'profiles exists');
@@ -10,6 +10,11 @@ select has_table('public', 'fight_invites', 'fight_invites exists');
 select has_table('public', 'data_sources', 'data_sources exists');
 select has_table('public', 'step_days', 'step_days exists');
 select has_table('private', 'metric_observations', 'observations stay private');
+select has_table(
+  'private',
+  'healthkit_sync_diagnostics',
+  'latest HealthKit diagnostics stay private'
+);
 
 select ok(
   (select relrowsecurity from pg_class c
@@ -64,6 +69,16 @@ select is(
   'authenticated cannot read observations'
 );
 select is(
+  has_table_privilege('anon', 'private.healthkit_sync_diagnostics', 'SELECT'),
+  false,
+  'anon cannot read HealthKit diagnostics'
+);
+select is(
+  has_table_privilege('authenticated', 'private.healthkit_sync_diagnostics', 'SELECT'),
+  false,
+  'authenticated clients cannot read HealthKit diagnostics'
+);
+select is(
   has_table_privilege('authenticated', 'public.fights', 'INSERT'),
   true,
   'clients can insert their own fights'
@@ -112,6 +127,26 @@ select ok(
       and column_name = 'last_synced_at'
   ),
   'fight_members stores last sync time'
+);
+select ok(
+  exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'fight_members'
+      and column_name = 'final_steps_complete'
+  ),
+  'fight_members exposes Fight-scoped final Steps completeness'
+);
+select is(
+  (
+    select column_default
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'fight_members'
+      and column_name = 'final_steps_complete'
+  ),
+  'false',
+  'final Steps completeness defaults to false'
 );
 
 select ok(

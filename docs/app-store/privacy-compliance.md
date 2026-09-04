@@ -15,7 +15,7 @@ Declare these collected data types:
 | Email Address | Apple email or private-relay email | Yes | App Functionality |
 | User ID | Apple subject, Supabase account ID, and FitFight username | Yes | App Functionality |
 | Gameplay Content | Fights, invitations, membership state, standings, scores, and results | Yes | App Functionality |
-| Other User Content | The action entered for a Fight | Yes | App Functionality |
+| Other User Content | Fight titles and the action entered for a Fight | Yes | App Functionality |
 | Customer Support | Email and message content sent to support | Yes | App Functionality |
 | Other Data Types | Time zone and limited request metadata such as IP address | Yes | App Functionality |
 | Other Diagnostic Data | Limited server error details used to keep the service working and secure | Yes | App Functionality |
@@ -30,7 +30,7 @@ Use these questionnaire answers:
 
 | Question | Answer |
 | --- | --- |
-| User-Generated Content | Yes — usernames and Fight actions |
+| User-Generated Content | Yes — usernames, Fight titles, and Fight actions |
 | Contests | Frequent — recurring fitness rankings and winners |
 | Gambling | No |
 | Simulated Gambling | No |

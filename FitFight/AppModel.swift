@@ -94,6 +94,24 @@ struct Fight: Codable, Identifiable, Hashable {
     var recurring: Bool = false
     var pendingJoin: Bool = false
 
+    var hasAction: Bool {
+        !actionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// Title shown on Fights. A typed name wins; otherwise the action; otherwise the stored name.
+    var listTitle: String {
+        Self.displayTitle(name: name, actionText: actionText)
+    }
+
+    static func displayTitle(name: String, actionText: String?) -> String {
+        let stored = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let action = actionText?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if stored.isEmpty || stored == "Steps Fight" || stored == "Défi de pas" {
+            return action.isEmpty ? (stored.isEmpty ? String(localized: "Steps Fight") : stored) : action
+        }
+        return stored
+    }
+
     var shareURL: URL? {
         guard let joinCode, !joinCode.isEmpty else { return nil }
         return APIConfig.joinShareURL(code: joinCode)
@@ -326,7 +344,7 @@ final class AppModel: ObservableObject {
     }
 
     func createAndStartFight(
-        name: String = String(localized: "Steps Fight"),
+        name: String = "",
         startsAt: Date,
         endsAt: Date,
         actionText: String,
@@ -343,15 +361,19 @@ final class AppModel: ObservableObject {
             createError = String(localized: "Sign in to start a fight.")
             return
         }
+        let title = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let action = actionText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !action.isEmpty else {
-            createError = String(localized: "Add the action the loser will do.")
+        guard title.count <= 120 else {
+            createError = String(localized: "Keep the title to 120 characters.")
             return
         }
         guard action.count <= 120 else {
             createError = String(localized: "Keep the action to 120 characters.")
             return
         }
+        let storedName = title.isEmpty
+            ? (action.isEmpty ? String(localized: "Steps Fight") : action)
+            : title
 
         let handles = inviteHandles.reduce(into: [String]()) { result, raw in
             let handle = SessionStore.strippedHandle(raw)
@@ -365,7 +387,7 @@ final class AppModel: ObservableObject {
         }
 
         let payload = FitFightCreateFight(
-            name: name,
+            name: storedName,
             startsAt: startsAt,
             endsAt: max(endsAt, startsAt.addingTimeInterval(60)),
             timeZone: TimeZone.current.identifier,
@@ -375,7 +397,7 @@ final class AppModel: ObservableObject {
             stakeKind: "action",
             stakeMinor: nil,
             currency: nil,
-            actionText: action,
+            actionText: action.isEmpty ? nil : action,
             inviteHandles: handles.isEmpty ? nil : handles,
             start: "now",
             visibility: visibility,
@@ -602,7 +624,7 @@ final class AppModel: ObservableObject {
             metric: .steps,
             lengthDays: lengthDays,
             daysLeft: max(1, Calendar.current.dateComponents([.day], from: Date(), to: ends).day ?? 1),
-            actionText: (action?.isEmpty == false ? action : nil) ?? String(localized: "No action was set for this older fight."),
+            actionText: (action?.isEmpty == false ? action : nil) ?? "",
             status: .invited,
             rank: 0,
             of: max(summary.memberCount, 1),
@@ -882,9 +904,7 @@ final class AppModel: ObservableObject {
         let ownerName = owner?.name ?? String(localized: "Someone")
 
         let actionText = row.actionText?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let action = actionText?.isEmpty == false
-            ? (actionText ?? "")
-            : String(localized: "No action was set for this older fight.")
+        let action = actionText?.isEmpty == false ? (actionText ?? "") : ""
 
         var kickerPrefix = ""
         var kickerEmphasis = ""

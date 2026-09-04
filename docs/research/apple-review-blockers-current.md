@@ -25,7 +25,7 @@ The remaining likely rejection risks are below. “Required” means Apple state
 
 ## 1. Free-text action and usernames are UGC
 
-The required loser action is arbitrary text sent to other users. Usernames are user-authored and visible too. Apple Guideline 1.2 requires UGC/social services to provide:
+The optional loser action and fight title are arbitrary text sent to other users. Usernames are user-authored and visible too. Apple Guideline 1.2 requires UGC/social services to provide:
 
 - filtering before objectionable material is posted;
 - a way to report offensive content and an operationally timely response;

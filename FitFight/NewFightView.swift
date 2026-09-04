@@ -19,6 +19,7 @@ struct NewFightView: View {
     @State private var inviteHandles: [String] = []
     @State private var usernameError: String?
     @State private var durationDays = 7
+    @State private var fightTitle = ""
     @State private var actionText = ""
     @State private var visibilityJoinable = false
     @State private var recurring = false
@@ -26,6 +27,7 @@ struct NewFightView: View {
     @State private var joinable: [FitFightJoinableFight] = []
     @State private var lookingUp = false
     @FocusState private var usernameFocused: Bool
+    @FocusState private var titleFocused: Bool
     @FocusState private var actionFocused: Bool
     @FocusState private var joinCodeFocused: Bool
 
@@ -43,12 +45,13 @@ struct NewFightView: View {
     }
 
     private var canStart: Bool {
+        let title = fightTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         let action = actionText.trimmingCharacters(in: .whitespacesAndNewlines)
         let peopleReady = visibilityJoinable || !inviteHandles.isEmpty
         return session.isSignedIn
             && steps.hasAsked
             && peopleReady
-            && !action.isEmpty
+            && title.count <= 120
             && action.count <= 120
             && !model.isCreatingFight
     }
@@ -56,7 +59,6 @@ struct NewFightView: View {
     private var canContinue: Bool {
         switch step {
         case 2: return visibilityJoinable || !inviteHandles.isEmpty
-        case 3: return !actionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         default: return true
         }
     }
@@ -283,7 +285,7 @@ struct NewFightView: View {
                     ForEach(Array(rows.enumerated()), id: \.element.id) { index, item in
                         if index > 0 { FFDivider() }
                         FFGroupedRow(
-                            title: item.name,
+                            title: Fight.displayTitle(name: item.name, actionText: item.actionText),
                             subtitle: item.recurring
                                 ? String(
                                     localized: "fight.joinable-row-repeats",
@@ -511,52 +513,79 @@ struct NewFightView: View {
     private var actionStep: some View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("What will the loser do?")
+                Text("Title and action")
                     .ffType(.heading)
                     .foregroundStyle(theme.text)
-                Text("Enter the action to continue—for example, cook dinner.")
+                Text("Both are optional. If you skip a title, the action is the name of the fight.")
                     .ffType(.body)
                     .foregroundStyle(theme.textSecondary)
                     .lineSpacing(2)
             }
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Loser action")
-                    .ffType(.rowTitle)
-                    .foregroundStyle(theme.text)
-                Group {
-                    if staticRender {
-                        Text(verbatim: actionText.isEmpty ? String(localized: "Cook dinner") : actionText)
-                            .foregroundStyle(actionText.isEmpty ? theme.textFaint : theme.text)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    } else {
-                        TextField("Cook dinner", text: $actionText)
-                            .focused($actionFocused)
-                            .foregroundStyle(theme.text)
-                            .submitLabel(.done)
-                            .onSubmit { actionFocused = false }
-                            .onChange(of: actionText) { _, value in
-                                if value.count > 120 {
-                                    actionText = String(value.prefix(120))
-                                }
-                            }
-                    }
-                }
-                .font(.ff(15, 700))
-                .padding(.horizontal, 15)
-                .padding(.vertical, 13)
-                .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
-                .ffBorder(theme.line, radius: theme.radius.field)
+            limitedField(
+                label: String(localized: "Title"),
+                placeholder: String(localized: "Weekend walk-off"),
+                text: $fightTitle,
+                focus: $titleFocused,
+                submitLabel: .next,
+                onSubmit: { actionFocused = true }
+            )
+            limitedField(
+                label: String(localized: "Loser action"),
+                placeholder: String(localized: "Cook dinner"),
+                text: $actionText,
+                focus: $actionFocused,
+                submitLabel: .done,
+                onSubmit: { actionFocused = false }
+            )
+        }
+    }
 
-                Text(verbatim: "\(actionText.count)/120")
-                    .ffType(.caption)
-                    .foregroundStyle(theme.textFaint)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+    private func limitedField(
+        label: String,
+        placeholder: String,
+        text: Binding<String>,
+        focus: FocusState<Bool>.Binding,
+        submitLabel: SubmitLabel,
+        onSubmit: @escaping () -> Void
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(label)
+                .ffType(.rowTitle)
+                .foregroundStyle(theme.text)
+            Group {
+                if staticRender {
+                    Text(verbatim: text.wrappedValue.isEmpty ? placeholder : text.wrappedValue)
+                        .foregroundStyle(text.wrappedValue.isEmpty ? theme.textFaint : theme.text)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    TextField(placeholder, text: text)
+                        .focused(focus)
+                        .foregroundStyle(theme.text)
+                        .submitLabel(submitLabel)
+                        .onSubmit(onSubmit)
+                        .onChange(of: text.wrappedValue) { _, value in
+                            if value.count > 120 {
+                                text.wrappedValue = String(value.prefix(120))
+                            }
+                        }
+                }
             }
+            .font(.ff(15, 700))
+            .padding(.horizontal, 15)
+            .padding(.vertical, 13)
+            .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
+            .ffBorder(theme.line, radius: theme.radius.field)
+
+            Text(verbatim: "\(text.wrappedValue.count)/120")
+                .ffType(.caption)
+                .foregroundStyle(theme.textFaint)
+                .frame(maxWidth: .infinity, alignment: .trailing)
         }
     }
 
     private var reviewStep: some View {
+        let title = fightTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         let action = actionText.trimmingCharacters(in: .whitespacesAndNewlines)
         let opponents = inviteHandles.isEmpty
             ? String(localized: "Anyone with the code")
@@ -604,8 +633,19 @@ struct NewFightView: View {
                 )
                 FFDivider()
                 FFGroupedRow(
+                    title: String(localized: "Title"),
+                    subtitle: title.isEmpty
+                        ? (action.isEmpty ? String(localized: "None") : String(localized: "Uses the action"))
+                        : title,
+                    systemImage: "textformat",
+                    subtitleTone: .neutral,
+                    trailing: AnyView(Text("Change").ffType(.caption).foregroundStyle(theme.mossText)),
+                    action: { step = 3 }
+                )
+                FFDivider()
+                FFGroupedRow(
                     title: String(localized: "Loser action"),
-                    subtitle: action,
+                    subtitle: action.isEmpty ? String(localized: "None") : action,
                     systemImage: "flag",
                     subtitleTone: .neutral,
                     trailing: AnyView(Text("Change").ffType(.caption).foregroundStyle(theme.mossText)),
@@ -652,14 +692,16 @@ struct NewFightView: View {
                             .ffType(.body)
                             .foregroundStyle(theme.textSecondary)
                     }
-                    Text(
-                        String(
-                            localized: "fight.loser-will",
-                            defaultValue: "The loser will \(action)."
+                    if !action.isEmpty {
+                        Text(
+                            String(
+                                localized: "fight.loser-will",
+                                defaultValue: "The loser will \(action)."
+                            )
                         )
-                    )
-                        .ffType(.body)
-                        .foregroundStyle(theme.text)
+                            .ffType(.body)
+                            .foregroundStyle(theme.text)
+                    }
                 }
             }
         }
@@ -722,10 +764,12 @@ struct NewFightView: View {
         guard model.beginCreateFight() else { return false }
 
         let startsAt = Date()
+        let title = fightTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         let action = actionText.trimmingCharacters(in: .whitespacesAndNewlines)
 
         Task {
             await model.createAndStartFight(
+                name: title,
                 startsAt: startsAt,
                 endsAt: endDate(from: startsAt),
                 actionText: action,

@@ -14,15 +14,6 @@ struct ContentView: View {
             VersionBanner {
                 model.showingVersions = true
             }
-            if session.isSignedIn {
-                signedInRoot
-            } else {
-                WelcomeView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-        }
-        .background(theme.bg.ignoresSafeArea())
-        .overlay(alignment: .bottom) {
             if let build = testFlightUpdate.newerBuild {
                 FFToast(
                     glyph: "↑",
@@ -32,14 +23,22 @@ struct ContentView: View {
                         defaultValue: "Build \(build) is ready. Open TestFlight and tap Update."
                     ),
                     tone: .moss,
-                    onClose: { testFlightUpdate.dismiss() }
+                    onClose: { testFlightUpdate.dismiss() },
+                    raised: false
                 )
                 .padding(.horizontal, theme.space.screenPadding)
-                .padding(.bottom, toastBottomPadding)
+                .padding(.bottom, theme.space.base)
                 .onTapGesture { testFlightUpdate.openTestFlight() }
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
+            if session.isSignedIn {
+                signedInRoot
+            } else {
+                WelcomeView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
+        .background(theme.bg.ignoresSafeArea())
         .animation(theme.motion.sheet.animation, value: testFlightUpdate.newerBuild)
         .task {
             await testFlightUpdate.check()
@@ -53,13 +52,6 @@ struct ContentView: View {
                 .fitFightTheme(themeStore.theme)
                 .presentationBackground(themeStore.theme.bg)
         }
-    }
-
-    private var toastBottomPadding: CGFloat {
-        if session.isSignedIn, session.profile != nil, !session.needsOnboarding {
-            return 64
-        }
-        return theme.space.screenPadding
     }
 
     @ViewBuilder

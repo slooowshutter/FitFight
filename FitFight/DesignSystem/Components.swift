@@ -68,6 +68,24 @@ struct FFSectionHeader: View {
     }
 }
 
+/// Header plus the views that belong to it. Uses the same gap `FFScreen` uses
+/// between cards, so a screen cannot invent a tighter header-to-body stack.
+struct FFSection<Content: View>: View {
+    let title: String
+    var extraTop: Bool = true
+    @ViewBuilder var content: Content
+
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: theme.space.cardGap) {
+            FFSectionHeader(title: title)
+            content
+        }
+        .padding(.top, extraTop ? theme.space.lg : 0)
+    }
+}
+
 /// The uppercase label that sits above a group inside a card.
 struct FFEyebrow: View {
     let text: String

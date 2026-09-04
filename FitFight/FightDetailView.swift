@@ -49,34 +49,38 @@ struct FightDetailView: View {
 
             if !pendingJoin {
                 if fight.joinCode != nil {
-                    shareCard
+                    FFSection(title: String(localized: "Share")) {
+                        shareCard
+                    }
                 }
-                FFSectionHeader(title: String(localized: "Action"))
-                    .padding(.top, theme.space.lg)
-                FFCard {
-                    Text(fight.actionText)
-                        .ffType(.rowTitle)
-                        .foregroundStyle(theme.text)
-                        .fixedSize(horizontal: false, vertical: true)
+                FFSection(title: String(localized: "Action")) {
+                    FFCard {
+                        Text(fight.actionText)
+                            .ffType(.rowTitle)
+                            .foregroundStyle(theme.text)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
 
-                FFSectionHeader(title: String(localized: "Standings"))
-                    .padding(.top, theme.space.lg)
-                if let meta = fight.standingsMeta {
-                    Text(meta)
-                        .ffType(.caption)
-                        .foregroundStyle(theme.textSecondary)
-                }
-                TimelineView(.periodic(from: .now, by: 30)) { context in
-                    ForEach(Array(fight.standings.enumerated()), id: \.element.id) { index, row in
-                        standingRow(index: index, row: row, now: context.date)
+                FFSection(title: String(localized: "Standings")) {
+                    VStack(alignment: .leading, spacing: theme.space.cardGap) {
+                        if let meta = fight.standingsMeta {
+                            Text(meta)
+                                .ffType(.caption)
+                                .foregroundStyle(theme.textSecondary)
+                        }
+                        TimelineView(.periodic(from: .now, by: 30)) { context in
+                            ForEach(Array(fight.standings.enumerated()), id: \.element.id) { index, row in
+                                standingRow(index: index, row: row, now: context.date)
+                            }
+                        }
                     }
                 }
 
                 if !fight.days.isEmpty {
-                    FFSectionHeader(title: String(localized: "Every day so far"))
-                        .padding(.top, theme.space.lg)
-                    daysCard
+                    FFSection(title: String(localized: "Every day so far")) {
+                        daysCard
+                    }
                 }
 
                 if canLeave {
@@ -202,55 +206,51 @@ struct FightDetailView: View {
     }
 
     private var shareCard: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            FFSectionHeader(title: String(localized: "Share"))
-                .padding(.top, theme.space.lg)
-            FFCard {
-                VStack(alignment: .leading, spacing: 12) {
-                    if let code = fight.joinCode {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Code")
-                                    .ffType(.caption)
-                                    .foregroundStyle(theme.textSecondary)
-                                Text(code)
-                                    .ffType(.heading)
-                                    .foregroundStyle(theme.text)
-                            }
-                            Spacer()
-                            Button {
-                                UIPasteboard.general.string = code
-                                copiedCode = true
-                            } label: {
-                                Text(copiedCode ? String(localized: "Copied") : String(localized: "Copy code"))
-                                    .ffType(.caption)
-                                    .foregroundStyle(theme.mossText)
-                            }
-                            .buttonStyle(.plain)
+        FFCard {
+            VStack(alignment: .leading, spacing: 12) {
+                if let code = fight.joinCode {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Code")
+                                .ffType(.caption)
+                                .foregroundStyle(theme.textSecondary)
+                            Text(code)
+                                .ffType(.heading)
+                                .foregroundStyle(theme.text)
                         }
+                        Spacer()
+                        Button {
+                            UIPasteboard.general.string = code
+                            copiedCode = true
+                        } label: {
+                            Text(copiedCode ? String(localized: "Copied") : String(localized: "Copy code"))
+                                .ffType(.caption)
+                                .foregroundStyle(theme.mossText)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    if let url = fight.shareURL {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Link")
-                                    .ffType(.caption)
-                                    .foregroundStyle(theme.textSecondary)
-                                Text(url.absoluteString)
-                                    .ffType(.caption)
-                                    .foregroundStyle(theme.textSecondary)
-                                    .lineLimit(1)
-                            }
-                            Spacer()
-                            Button {
-                                UIPasteboard.general.string = url.absoluteString
-                                copiedLink = true
-                            } label: {
-                                Text(copiedLink ? String(localized: "Copied") : String(localized: "Copy link"))
-                                    .ffType(.caption)
-                                    .foregroundStyle(theme.mossText)
-                            }
-                            .buttonStyle(.plain)
+                }
+                if let url = fight.shareURL {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Link")
+                                .ffType(.caption)
+                                .foregroundStyle(theme.textSecondary)
+                            Text(url.absoluteString)
+                                .ffType(.caption)
+                                .foregroundStyle(theme.textSecondary)
+                                .lineLimit(1)
                         }
+                        Spacer()
+                        Button {
+                            UIPasteboard.general.string = url.absoluteString
+                            copiedLink = true
+                        } label: {
+                            Text(copiedLink ? String(localized: "Copied") : String(localized: "Copy link"))
+                                .ffType(.caption)
+                                .foregroundStyle(theme.mossText)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }

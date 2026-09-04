@@ -1,5 +1,9 @@
 # History
 
+## 2026-09-02 — data-source catalog
+
+Marc asked to collect more so he and friends can invent metrics: every wearable/API on the backlog, a markdown catalog, and a better Apple Health pull (historical raw steps were often >100MB). Catalog + ingest design: [`research/data-sources.md`](research/data-sources.md). Ordered as **Now** in [`backlog.md`](backlog.md). Production 1.0 scoring stays Steps aggregates. Next code is staging HealthKit expansion, not every OAuth at once. Google Health iOS 5.05 can write Fitbit/Pixel data to Apple Health (HRV still excluded); the 29 Aug research file was corrected.
+
 ## 2026-08-30 — TestFlight is staging only
 
 TestFlight never builds `main` and never connects to production. Every feature/develop TestFlight uses the persistent develop Supabase project and staging API. Production binaries belong only to the future App Store flow when Marc explicitly asks to ship.

@@ -35,11 +35,11 @@ Current map: [`docs/status.md`](docs/status.md). Sign-in, username, direct-usern
 
 **What works vs fake vs next:** [`docs/status.md`](docs/status.md). Read that before building.
 
-Details: [docs/status.md](docs/status.md) · [docs/product.md](docs/product.md) · [docs/backlog.md](docs/backlog.md) · [docs/system-design.md](docs/system-design.md) · [docs/backend.md](docs/backend.md) · [docs/shipping.md](docs/shipping.md) · [docs/history.md](docs/history.md) · [docs/design/source/README.md](docs/design/source/README.md)
+Details: [docs/status.md](docs/status.md) · [docs/product.md](docs/product.md) · [docs/backlog.md](docs/backlog.md) · [docs/system-design.md](docs/system-design.md) · [docs/backend.md](docs/backend.md) · [docs/shipping.md](docs/shipping.md) · [docs/history.md](docs/history.md) · [docs/research/data-sources.md](docs/research/data-sources.md) · [docs/design/source/README.md](docs/design/source/README.md)
 
-[`docs/system-design.md`](docs/system-design.md) is the golden guide for production. Follow it so new work fits. Do **not** implement that document. Do **not** build Active Minutes, Workout Count, WHOOP, Strava, payments, notifications, social, or a broader website until the backlog says so. The privacy and support pages are the only approved public web surfaces.
+[`docs/system-design.md`](docs/system-design.md) is the golden guide for production. Follow it so new work fits. Do **not** implement that document. Do **not** build Active Minutes, Workout Count, WHOOP, Strava, payments, notifications, social, or a broader website until [`docs/backlog.md`](docs/backlog.md) says that item is the current work. Data-source catalog and Apple ingest design: [`docs/research/data-sources.md`](docs/research/data-sources.md). Collection on staging is not permission to change 1.0 Fight scoring or to ship every connector at once. The privacy and support pages are the only approved public web surfaces.
 
-Right now the product is the minimum private Steps challenge. Do not restore old mock or experimental surfaces merely because historical design files or database columns still contain them.
+Right now production scoring is the minimum private Steps challenge. Do not restore old mock or experimental surfaces merely because historical design files or database columns still contain them.
 
 Product ideas go in [`docs/backlog.md`](docs/backlog.md). Marc says “put X on the backlog”; do not open GitHub Issues or a Notion board unless he asks.
 

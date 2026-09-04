@@ -30,7 +30,7 @@ enum FitFightAPIError: LocalizedError {
             case "rate_limited":
                 return message ?? String(localized: "You’ve posted a few times recently. Try again later.")
             case "not_found":
-                return String(localized: "That request is gone.")
+                return message ?? String(localized: "That isn’t available anymore.")
             default:
                 return String(
                     localized: "api.request-failed",

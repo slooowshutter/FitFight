@@ -335,7 +335,7 @@
     "Posting…" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Publication…"}}}},
     "Request" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Demande"}}}},
     "Short and specific" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Court et précis"}}}},
-    "That request is gone." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Cette demande n’existe plus."}}}},
+    "That isn’t available anymore." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Ce n’est plus disponible."}}}},
     "This permanently deletes your profile, uploaded Steps, invitations, fights you created, and bugs or requests you posted; removes you from other fights; and signs you out. This can’t be undone." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Cette action supprime définitivement votre profil, les pas envoyés, les invitations, les défis que vous avez créés et les bugs ou demandes que vous avez publiés ; elle vous retire des autres défis et vous déconnecte. Cette action est irréversible."}}}},
     "Title" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Titre"}}}},
     "Top" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Top"}}}},

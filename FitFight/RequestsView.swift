@@ -15,12 +15,15 @@ final class FeedbackStore: ObservableObject {
     private var voting: Set<UUID> = []
     private var voteClock = 0
     private var votes: [UUID: (clock: Int, voted: Bool, voteCount: Int)] = [:]
+    private var commentClock = 0
+    private var postedComments: [UUID: [(clock: Int, comment: FitFightFeedbackComment)]] = [:]
     private var commentsFor: UUID?
 
     func load(session: SessionStore, kind: String?) async {
         listLoad += 1
         let load = listLoad
-        let startedAt = voteClock
+        let voteStartedAt = voteClock
+        let commentStartedAt = commentClock
         isLoading = true
         defer {
             if load == listLoad { isLoading = false }
@@ -29,7 +32,9 @@ final class FeedbackStore: ObservableObject {
             let token = try await session.freshAccessToken()
             let posts = try await api.listFeedback(kind: kind, accessToken: token).posts
             guard load == listLoad else { return }
-            self.posts = posts.map { keepingNewerVote($0, startedAt: startedAt) }
+            self.posts = posts.map {
+                keepingPostedCommentCount(keepingNewerVote($0, startedAt: voteStartedAt), startedAt: commentStartedAt)
+            }
             error = nil
         } catch {
             if Task.isCancelled || error is CancellationError { return }
@@ -41,9 +46,12 @@ final class FeedbackStore: ObservableObject {
     func loadDetail(session: SessionStore, postID: UUID) async {
         detailLoad += 1
         let load = detailLoad
-        let startedAt = voteClock
-        comments = []
-        commentsFor = postID
+        let voteStartedAt = voteClock
+        let commentStartedAt = commentClock
+        if commentsFor != postID {
+            comments = []
+            commentsFor = postID
+        }
         isLoading = true
         defer {
             if load == detailLoad { isLoading = false }
@@ -52,9 +60,15 @@ final class FeedbackStore: ObservableObject {
             let token = try await session.freshAccessToken()
             let result = try await api.feedbackDetail(postID: postID, accessToken: token)
             guard load == detailLoad else { return }
-            let post = keepingNewerVote(result.post, startedAt: startedAt)
+            let extras = postedAfter(postID: result.post.id, startedAt: commentStartedAt)
+            var comments = result.comments
+            for extra in extras where !comments.contains(where: { $0.id == extra.id }) {
+                comments.append(extra)
+            }
+            var post = keepingNewerVote(result.post, startedAt: voteStartedAt)
+            post.commentCount += comments.count - result.comments.count
             detail = post
-            comments = result.comments
+            self.comments = comments
             commentsFor = post.id
             if let index = posts.firstIndex(where: { $0.id == post.id }) {
                 posts[index] = post
@@ -121,7 +135,9 @@ final class FeedbackStore: ObservableObject {
                 body: body,
                 accessToken: token
             )
-            if commentsFor == postID {
+            commentClock += 1
+            postedComments[postID, default: []].append((commentClock, created.comment))
+            if commentsFor == postID, !comments.contains(where: { $0.id == created.comment.id }) {
                 comments.append(created.comment)
             }
             if let index = posts.firstIndex(where: { $0.id == postID }) {
@@ -143,6 +159,20 @@ final class FeedbackStore: ObservableObject {
         var post = post
         post.voted = vote.voted
         post.voteCount = vote.voteCount
+        return post
+    }
+
+    private func postedAfter(postID: UUID, startedAt: Int) -> [FitFightFeedbackComment] {
+        (postedComments[postID] ?? []).compactMap { item in
+            item.clock > startedAt ? item.comment : nil
+        }
+    }
+
+    private func keepingPostedCommentCount(_ post: FitFightFeedbackPost, startedAt: Int) -> FitFightFeedbackPost {
+        let extra = postedAfter(postID: post.id, startedAt: startedAt).count
+        guard extra > 0 else { return post }
+        var post = post
+        post.commentCount += extra
         return post
     }
 
@@ -567,7 +597,9 @@ private struct RequestDetailView: View {
                 FFSectionHeader(title: String(localized: "Comments"))
                     .padding(.top, 8)
 
-                if store.comments.isEmpty {
+                if store.isLoading && store.comments.isEmpty {
+                    ProgressView()
+                } else if store.comments.isEmpty {
                     Text("No comments yet.")
                         .ffType(.caption)
                         .foregroundStyle(theme.textSecondary)

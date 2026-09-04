@@ -11,6 +11,7 @@ For Cursor cloud agents and anyone picking up this repo cold.
 | [design/](design/README.md) | Where the look lives (`source/` is the approved kit) |
 | [shipping.md](shipping.md) | CI, secrets **names**, how a build reaches TestFlight |
 | [history.md](history.md) | What already shipped and the traps we hit |
+| [research/join-code-league-abuse-capacity-trust.md](research/join-code-league-abuse-capacity-trust.md) | Abuse, capacity, and trust for a join-code league (not a build) |
 | [recurrence.md](recurrence.md) | Later design only: Replay vs series mint; Station F calendar weeks vs wife Redo. Do not build |
 
 Start with [`AGENTS.md`](../AGENTS.md) in the repo root.

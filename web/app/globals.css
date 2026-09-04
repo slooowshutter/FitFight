@@ -151,23 +151,60 @@ footer {
   line-height: 1.55;
 }
 
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 22px;
+}
+
+.text-action {
+  color: var(--moss-text);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.header-action,
 .primary-action {
   display: inline-flex;
   align-items: center;
-  gap: 28px;
-  padding: 15px 20px;
-  border-radius: 14px;
+  justify-content: center;
+  border: 0;
   background: var(--moss);
   color: white;
-  font-size: 15px;
+  font-family: inherit;
   font-weight: 800;
-  box-shadow: 0 14px 38px rgba(53, 128, 79, 0.22);
+  cursor: pointer;
   transition: transform 180ms ease, background 180ms ease;
 }
 
+.header-action {
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.primary-action {
+  gap: 28px;
+  padding: 15px 20px;
+  border-radius: 14px;
+  font-size: 15px;
+  box-shadow: 0 14px 38px rgba(53, 128, 79, 0.22);
+}
+
+.header-action:hover,
 .primary-action:hover {
   transform: translateY(-2px);
   background: var(--moss-edge);
+}
+
+.header-action:focus-visible,
+.primary-action:focus-visible,
+.text-action:focus-visible,
+.dialog-dismiss:focus-visible {
+  outline: 2px solid var(--moss-text);
+  outline-offset: 3px;
 }
 
 .platform-note {
@@ -455,6 +492,78 @@ footer .brand-mark {
   font-size: 12px;
 }
 
+.testflight-dialog {
+  width: min(28rem, calc(100vw - 32px));
+  max-height: min(90vh, 640px);
+  overflow: auto;
+  padding: 28px 24px 22px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: var(--overlay);
+  color: var(--text);
+  box-shadow: 0 36px 90px rgba(0, 0, 0, 0.5);
+}
+
+.testflight-dialog::backdrop {
+  background: rgba(12, 13, 8, 0.72);
+}
+
+.testflight-dialog h2 {
+  margin: 0;
+  font-size: 28px;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+}
+
+.testflight-dialog > p,
+.testflight-dialog li {
+  color: var(--secondary);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.testflight-dialog > p {
+  margin: 14px 0 0;
+}
+
+.testflight-dialog ol {
+  display: grid;
+  gap: 8px;
+  margin: 18px 0 22px;
+  padding-left: 20px;
+}
+
+.testflight-dialog .primary-action {
+  width: 100%;
+}
+
+.testflight-link-line {
+  margin: 14px 0 0;
+  color: var(--tertiary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.testflight-link-line a {
+  color: var(--moss-text);
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.dialog-dismiss {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 12px;
+  border: 0;
+  background: transparent;
+  color: var(--tertiary);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
 .legal-page {
   min-height: 100vh;
   background:
@@ -595,6 +704,10 @@ footer .brand-mark {
 
   .lede {
     margin-inline: auto;
+  }
+
+  .hero-actions {
+    justify-content: center;
   }
 
   .fight-stage {

@@ -1,3 +1,5 @@
+import { TestflightInvite } from "@/components/testflight-invite";
+
 export default function HomePage() {
   return (
     <main>
@@ -6,6 +8,7 @@ export default function HomePage() {
           <span className="brand-mark">FF</span>
           <span>FitFight</span>
         </a>
+        <TestflightInvite label="Get the app" kind="header" />
       </header>
 
       <section className="hero" id="top">
@@ -19,10 +22,13 @@ export default function HomePage() {
             Start a private challenge with friends, connect Apple Health, and
             see who records the most steps.
           </p>
-          <a className="primary-action" href="#how-it-works">
-            See how it works <span aria-hidden="true">↓</span>
-          </a>
-          <p className="platform-note">Built for iPhone · Powered by Apple Health</p>
+          <div className="hero-actions">
+            <TestflightInvite label="Get the app" kind="hero" />
+            <a className="text-action" href="#how-it-works">
+              See how it works <span aria-hidden="true">↓</span>
+            </a>
+          </div>
+          <p className="platform-note">iPhone · Install with TestFlight · Apple Health</p>
         </div>
 
         <div className="fight-stage" aria-label="Example FitFight leaderboard">

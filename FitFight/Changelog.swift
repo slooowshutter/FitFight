@@ -36,6 +36,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 4,
+            notes: "The TestFlight update notice sits under the version line at the top of the screen and uses a solid card instead of a see-through toast over the tab bar."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 4,
             notes: "FitFight now follows your iPhone language in English or French, including fights, Apple Health access, settings, errors, accessibility labels, and the Versions history."
         ),
         ReleaseNote(

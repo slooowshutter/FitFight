@@ -1,0 +1,27 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "CFBundleDisplayName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {"stringUnit":{"state":"translated","value":"FitFight"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"FitFight"}}
+      }
+    },
+    "NSHealthShareUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {"stringUnit":{"state":"translated","value":"FitFight reads and uploads your Apple Health step count to score Steps fights. Accepted participants see your Fight total, relevant daily totals, and rank."}},
+        "fr" : {"stringUnit":{"state":"translated","value":"FitFight lit et envoie votre nombre de pas depuis Santé d’Apple pour comptabiliser les défis de pas. Les participants acceptés voient votre total du défi, les totaux quotidiens utiles et votre classement."}}
+      }
+    },
+    "NSHealthUpdateUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {"stringUnit":{"state":"translated","value":"FitFight does not add to or change Apple Health. It only requests read-only access to your step count for Steps fights."}},
+        "fr" : {"stringUnit":{"state":"translated","value":"FitFight n’ajoute ni ne modifie aucune donnée dans Santé d’Apple. L’app demande uniquement un accès en lecture à votre nombre de pas pour les défis de pas."}}
+      }
+    }
+  },
+  "version" : "1.0"
+}

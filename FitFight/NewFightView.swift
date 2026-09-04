@@ -11,10 +11,19 @@ struct NewFightView: View {
     @State private var username = ""
     @State private var inviteHandles: [String] = []
     @State private var usernameError: String?
-    @State private var duration = "1 week"
+    @State private var durationDays = 7
     @State private var actionText = ""
     @FocusState private var usernameFocused: Bool
     @FocusState private var actionFocused: Bool
+
+    private var duration: String {
+        switch durationDays {
+        case 3: return String(localized: "3 days")
+        case 14: return String(localized: "2 weeks")
+        case 30: return String(localized: "1 month")
+        default: return String(localized: "1 week")
+        }
+    }
 
     private var canStart: Bool {
         let action = actionText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -55,7 +64,9 @@ struct NewFightView: View {
     private var flowAction: some View {
         if step == 4 {
             FFSlideToConfirm(
-                title: model.isCreatingFight ? "Starting…" : "Slide to start",
+                title: model.isCreatingFight
+                    ? String(localized: "Starting…")
+                    : String(localized: "Slide to start"),
                 enabled: canStart,
                 busy: model.isCreatingFight
             ) {
@@ -73,7 +84,7 @@ struct NewFightView: View {
                 FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
             }
         } else {
-            FFButton(title: "Next", size: .large, enabled: canContinue, fullWidth: true) {
+            FFButton(title: String(localized: "Next"), size: .large, enabled: canContinue, fullWidth: true) {
                 step += 1
             }
         }
@@ -101,7 +112,12 @@ struct NewFightView: View {
 
                 Spacer()
 
-                Text("Step \(step + 1) of 5")
+                Text(
+                    String(
+                        localized: "fight.step-progress",
+                        defaultValue: "Step \(step + 1) of 5"
+                    )
+                )
                     .ffType(.caption)
                     .foregroundStyle(theme.textSecondary)
                     .frame(minHeight: 44)
@@ -116,7 +132,12 @@ struct NewFightView: View {
                 }
             }
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Step \(step + 1) of 5")
+            .accessibilityLabel(
+                String(
+                    localized: "fight.step-progress",
+                    defaultValue: "Step \(step + 1) of 5"
+                )
+            )
         }
     }
 
@@ -145,8 +166,8 @@ struct NewFightView: View {
 
             FFGroupedRows {
                 FFGroupedRow(
-                    title: "Steps",
-                    subtitle: "Highest total wins · Apple Health",
+                    title: String(localized: "Steps"),
+                    subtitle: String(localized: "Highest total wins · Apple Health"),
                     systemImage: "figure.walk",
                     subtitleTone: .moss,
                     trailing: AnyView(Image(systemName: "checkmark").foregroundStyle(theme.mossText))
@@ -173,7 +194,7 @@ struct NewFightView: View {
 
                 Group {
                     if staticRender {
-                        Text(username.isEmpty ? "@username" : username)
+                        Text(verbatim: username.isEmpty ? String(localized: "@username") : username)
                             .foregroundStyle(username.isEmpty ? theme.textFaint : theme.text)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     } else {
@@ -209,7 +230,7 @@ struct NewFightView: View {
                         HStack(spacing: 12) {
                             FFAvatar(monogram: String(handle.prefix(2)).uppercased(), size: 36)
                             VStack(alignment: .leading, spacing: 1) {
-                                Text("@\(handle)")
+                                Text(verbatim: "@\(handle)")
                                     .ffType(.rowTitle)
                                     .foregroundStyle(theme.text)
                                 Text("Added to this fight")
@@ -227,7 +248,12 @@ struct NewFightView: View {
                                     .background(theme.control, in: Circle())
                             }
                             .buttonStyle(.plain)
-                            .accessibilityLabel("Remove @\(handle)")
+                            .accessibilityLabel(
+                                String(
+                                    localized: "fight.remove-handle",
+                                    defaultValue: "Remove @\(handle)"
+                                )
+                            )
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 7)
@@ -254,8 +280,21 @@ struct NewFightView: View {
                     .ffType(.rowTitle)
                     .foregroundStyle(theme.text)
                 FFDurationPicker(
-                    options: ["3 days", "1 week", "2 weeks", "1 month"],
-                    selection: $duration
+                    options: [
+                        String(localized: "3 days"),
+                        String(localized: "1 week"),
+                        String(localized: "2 weeks"),
+                        String(localized: "1 month"),
+                    ],
+                    selection: Binding(
+                        get: { duration },
+                        set: { selection in
+                            if selection == String(localized: "3 days") { durationDays = 3 }
+                            else if selection == String(localized: "2 weeks") { durationDays = 14 }
+                            else if selection == String(localized: "1 month") { durationDays = 30 }
+                            else { durationDays = 7 }
+                        }
+                    )
                 )
             }
 
@@ -280,7 +319,7 @@ struct NewFightView: View {
                     .foregroundStyle(theme.text)
                 Group {
                     if staticRender {
-                        Text(actionText.isEmpty ? "Cook dinner" : actionText)
+                        Text(verbatim: actionText.isEmpty ? String(localized: "Cook dinner") : actionText)
                             .foregroundStyle(actionText.isEmpty ? theme.textFaint : theme.text)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     } else {
@@ -302,7 +341,7 @@ struct NewFightView: View {
                 .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
                 .ffBorder(theme.line, radius: theme.radius.field)
 
-                Text("\(actionText.count)/120")
+                Text(verbatim: "\(actionText.count)/120")
                     .ffType(.caption)
                     .foregroundStyle(theme.textFaint)
                     .frame(maxWidth: .infinity, alignment: .trailing)
@@ -312,7 +351,7 @@ struct NewFightView: View {
 
     private var reviewStep: some View {
         let action = actionText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let opponents = inviteHandles.map { "@\($0)" }.joined(separator: ", ")
+        let opponents = inviteHandles.map { "@\($0)" }.formatted(.list(type: .and))
 
         return VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
@@ -326,8 +365,8 @@ struct NewFightView: View {
 
             FFGroupedRows {
                 FFGroupedRow(
-                    title: "Metric",
-                    subtitle: "Steps · highest total wins",
+                    title: String(localized: "Metric"),
+                    subtitle: String(localized: "Steps · highest total wins"),
                     systemImage: "figure.walk",
                     subtitleTone: .neutral,
                     trailing: AnyView(Text("Change").ffType(.caption).foregroundStyle(theme.mossText)),
@@ -335,8 +374,11 @@ struct NewFightView: View {
                 )
                 FFDivider()
                 FFGroupedRow(
-                    title: "Duration",
-                    subtitle: "\(duration) · ends \(endDate(from: Date()).formatted(date: .abbreviated, time: .shortened))",
+                    title: String(localized: "Duration"),
+                    subtitle: String(
+                        localized: "fight.duration-end",
+                        defaultValue: "\(duration) · ends \(endDate(from: Date()).formatted(date: .abbreviated, time: .shortened))"
+                    ),
                     systemImage: "calendar",
                     subtitleTone: .neutral,
                     trailing: AnyView(Text("Change").ffType(.caption).foregroundStyle(theme.mossText)),
@@ -344,7 +386,7 @@ struct NewFightView: View {
                 )
                 FFDivider()
                 FFGroupedRow(
-                    title: "Opponents",
+                    title: String(localized: "Opponents"),
                     subtitle: opponents,
                     systemImage: "person.2",
                     subtitleTone: .neutral,
@@ -353,7 +395,7 @@ struct NewFightView: View {
                 )
                 FFDivider()
                 FFGroupedRow(
-                    title: "Loser action",
+                    title: String(localized: "Loser action"),
                     subtitle: action,
                     systemImage: "flag",
                     subtitleTone: .neutral,
@@ -362,13 +404,15 @@ struct NewFightView: View {
                 )
                 FFDivider()
                 FFGroupedRow(
-                    title: "Apple Health Steps",
-                    subtitle: steps.hasAsked ? "Ready to score this fight" : "Connect to score this fight",
+                    title: String(localized: "Apple Health Steps"),
+                    subtitle: steps.hasAsked
+                        ? String(localized: "Ready to score this fight")
+                        : String(localized: "Connect to score this fight"),
                     systemImage: "heart",
                     subtitleTone: steps.hasAsked ? .moss : .ember,
                     trailing: AnyView(
                         FFPill(
-                            steps.hasAsked ? "Connected" : "Connect",
+                            steps.hasAsked ? String(localized: "Connected") : String(localized: "Connect"),
                             style: steps.hasAsked ? .softMoss : .solidMoss
                         )
                     ),
@@ -378,13 +422,28 @@ struct NewFightView: View {
 
             FFCard(fill: theme.mossWash, stroke: theme.mossText.opacity(0.18)) {
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("You vs \(opponents)")
+                    Text(
+                        String(
+                            localized: "fight.you-versus",
+                            defaultValue: "You vs \(opponents)"
+                        )
+                    )
                         .ffType(.rowTitle)
                         .foregroundStyle(theme.text)
-                    Text("Most Steps wins after \(duration.lowercased()).")
+                    Text(
+                        String(
+                            localized: "fight.winner-after-duration",
+                            defaultValue: "Most Steps wins after \(duration.lowercased())."
+                        )
+                    )
                         .ffType(.body)
                         .foregroundStyle(theme.textSecondary)
-                    Text("The loser will \(action.prefix(1).lowercased())\(action.dropFirst()).")
+                    Text(
+                        String(
+                            localized: "fight.loser-will",
+                            defaultValue: "The loser will \(action)."
+                        )
+                    )
                         .ffType(.body)
                         .foregroundStyle(theme.text)
                 }
@@ -397,15 +456,18 @@ struct NewFightView: View {
         usernameError = nil
 
         guard SessionStore.isValidHandle(handle) else {
-            usernameError = "Use 2–30 letters, numbers, or underscores."
+            usernameError = String(localized: "Use 2–30 letters, numbers, or underscores.")
             return
         }
         if handle == session.profile?.handle {
-            usernameError = "Add someone else’s username."
+            usernameError = String(localized: "Add someone else’s username.")
             return
         }
         guard !inviteHandles.contains(handle) else {
-            usernameError = "@\(handle) is already in this fight."
+            usernameError = String(
+                localized: "fight.handle-already-added",
+                defaultValue: "@\(handle) is already in this fight."
+            )
             return
         }
 
@@ -414,19 +476,11 @@ struct NewFightView: View {
     }
 
     private func endDate(from startsAt: Date) -> Date {
-        let durationParts: (component: Calendar.Component, value: Int, seconds: TimeInterval) = switch duration {
-        case "3 days": (.day, 3, 259_200)
-        case "1 week": (.day, 7, 604_800)
-        case "2 weeks": (.day, 14, 1_209_600)
-        case "1 month": (.day, 30, 2_592_000)
-        default: (.day, 7, 604_800)
-        }
-
         return Calendar.current.date(
-            byAdding: durationParts.component,
-            value: durationParts.value,
+            byAdding: .day,
+            value: durationDays,
             to: startsAt
-        ) ?? startsAt.addingTimeInterval(durationParts.seconds)
+        ) ?? startsAt.addingTimeInterval(TimeInterval(durationDays * 86_400))
     }
 
     private func startFight() -> Bool {

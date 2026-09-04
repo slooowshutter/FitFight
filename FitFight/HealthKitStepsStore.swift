@@ -31,21 +31,24 @@ final class HealthKitStepsStore: ObservableObject {
 
     var detailText: String {
         switch connection {
-        case .notConnected: return "Not connected"
-        case .syncing: return "Syncing Steps…"
+        case .notConnected: return String(localized: "Not connected")
+        case .syncing: return String(localized: "Syncing Steps…")
         case .upToDate:
             return backgroundDeliveryUnavailable
-                ? "Up to date · Background sync unavailable"
-                : "Up to date"
-        case .noAccessibleSteps: return "No accessible Steps"
-        case .syncFailed: return "Sync failed — tap to retry"
+                ? String(localized: "Up to date · Background sync unavailable")
+                : String(localized: "Up to date")
+        case .noAccessibleSteps: return String(localized: "No accessible Steps")
+        case .syncFailed: return String(localized: "Sync failed — tap to retry")
         }
     }
 
     var metaText: String {
         switch status {
         case .steps(let count):
-            return "\(Self.format(count)) steps today"
+            return String(
+                localized: "health.steps-today",
+                defaultValue: "\(count, format: .number) steps today"
+            )
         default:
             return ""
         }
@@ -216,10 +219,6 @@ final class HealthKitStepsStore: ObservableObject {
         let steps = statistics.sumQuantity()?.doubleValue(for: .count()) ?? 0
         guard steps > 0 else { return nil }
         return Int(steps.rounded())
-    }
-
-    private static func format(_ value: Int) -> String {
-        value.formatted(.number.grouping(.automatic))
     }
 
     private static func askedKey(userId: UUID) -> String {

@@ -2,18 +2,31 @@ import Foundation
 
 enum FitFightAPIError: LocalizedError {
     case notConfigured
-    case http(status: Int, body: String)
+    case http(status: Int, code: String?)
     case decoding(Error)
 
     var errorDescription: String? {
         switch self {
         case .notConfigured:
-            return "FitFight API is not configured. Set FFAPIBaseURL."
-        case .http(let status, let body):
-            if body.isEmpty { return "Request failed (\(status))." }
-            return body
+            return String(localized: "FitFight API is not configured. Set FFAPIBaseURL.")
+        case .http(let status, let code):
+            switch code {
+            case "handle_not_found":
+                return String(localized: "That username does not have a FitFight account yet.")
+            case "already_member":
+                return String(localized: "That person is already in this fight.")
+            case "unauthorized":
+                return String(localized: "Your session expired. Sign in again.")
+            case "fight_not_startable", "fight_not_cancellable", "conflict":
+                return String(localized: "This fight changed. Refresh and try again.")
+            default:
+                return String(
+                    localized: "api.request-failed",
+                    defaultValue: "Request failed (\(status))."
+                )
+            }
         case .decoding:
-            return "Couldn’t read the server response."
+            return String(localized: "Couldn’t read the server response.")
         }
     }
 }
@@ -382,9 +395,8 @@ struct FitFightAPI {
         let (data, response) = try await URLSession.shared.data(for: request)
         let status = (response as? HTTPURLResponse)?.statusCode ?? -1
         guard expected.contains(status) else {
-            let text = String(data: data, encoding: .utf8)?
-                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            throw FitFightAPIError.http(status: status, body: text)
+            let code = (try? Self.decoder.decode(APIErrorResponse.self, from: data))?.code
+            throw FitFightAPIError.http(status: status, code: code)
         }
         if Response.self == DiscardBody.self {
             return DiscardBody() as! Response
@@ -422,6 +434,10 @@ struct FitFightAPI {
 }
 
 private struct EmptyJSON: Codable {}
+
+private struct APIErrorResponse: Decodable {
+    var code: String
+}
 
 private struct HandleBody: Encodable {
     var handle: String

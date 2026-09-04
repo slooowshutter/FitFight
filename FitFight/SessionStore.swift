@@ -149,7 +149,10 @@ final class SessionStore: ObservableObject {
             _ = try await client.auth.setSession(accessToken: access, refreshToken: refresh)
             await loadProfile()
         } catch {
-            authError = "Dev session rejected: \(error.localizedDescription)"
+            authError = String(
+                localized: "session.dev-rejected",
+                defaultValue: "Dev session rejected: \(error.localizedDescription)"
+            )
         }
         #endif
     }
@@ -168,21 +171,21 @@ final class SessionStore: ObservableObject {
     static func signInFailureMessage(_ error: Error) -> String {
         let text = error.localizedDescription.lowercased()
         if text.contains("invalid api key") || text.contains("another supabase project") {
-            return "This build’s key doesn’t match the staging database."
+            return String(localized: "This build’s key doesn’t match the staging database.")
         }
         if text.contains("provider is not enabled")
             || text.contains("unsupported provider")
             || text.contains("provider not enabled") {
-            return "Apple Sign In is off on this database."
+            return String(localized: "Apple Sign In is off on this database.")
         }
         if text.contains("nscurlerror")
             || text.contains("nsurlerrordomain")
             || text.contains("could not connect")
             || text.contains("hostname could not be found")
             || text.contains("not known") {
-            return "Can’t reach the staging database."
+            return String(localized: "Can’t reach the staging database.")
         }
-        return "Couldn’t sign in. Try again."
+        return String(localized: "Couldn’t sign in. Try again.")
     }
 
     static func isValidHandle(_ raw: String) -> Bool {
@@ -238,11 +241,11 @@ final class SessionStore: ObservableObject {
                 UserDefaults.standard.removeObject(forKey: Self.profileCachePrefix + userID.uuidString)
             }
             if !deletion.appleAuthorizationRevoked {
-                authError = "Account deleted. To disconnect Apple too, open iPhone Settings, tap your name, then Sign in with Apple → FitFight → Stop Using Apple ID."
+                authError = String(localized: "Account deleted. To disconnect Apple too, open iPhone Settings, tap your name, then Sign in with Apple → FitFight → Stop Using Apple ID.")
             }
             return true
         } catch {
-            authError = "Couldn’t delete account. Try again."
+            authError = String(localized: "Couldn’t delete account. Try again.")
             return false
         }
     }
@@ -356,10 +359,10 @@ enum HandleError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .notSignedIn: return "Sign in first."
-        case .invalid: return "Use 2–30 letters, numbers, or underscore."
-        case .taken: return "That username is taken."
-        case .failed: return "Couldn’t save that username."
+        case .notSignedIn: return String(localized: "Sign in first.")
+        case .invalid: return String(localized: "Use 2–30 letters, numbers, or underscore.")
+        case .taken: return String(localized: "That username is taken.")
+        case .failed: return String(localized: "Couldn’t save that username.")
         }
     }
 }

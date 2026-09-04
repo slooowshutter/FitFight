@@ -18,13 +18,13 @@ struct YouView: View {
                 FFNotice(text: authError, tone: .ember, systemImage: "exclamationmark.triangle")
             }
 
-            FFSectionHeader(title: "Apple Health").padding(.top, theme.space.lg)
+            FFSectionHeader(title: String(localized: "Apple Health")).padding(.top, theme.space.lg)
             health
 
-            FFSectionHeader(title: "Settings").padding(.top, theme.space.lg)
+            FFSectionHeader(title: String(localized: "Settings")).padding(.top, theme.space.lg)
             settings
 
-            FFSectionHeader(title: "Look").padding(.top, theme.space.lg)
+            FFSectionHeader(title: String(localized: "Look")).padding(.top, theme.space.lg)
             appearance
         }
         .task {
@@ -42,7 +42,7 @@ struct YouView: View {
                     if await session.deleteAccount(), let userId {
                         model.removeCachedFights(for: userId)
                         if !(await steps.deleteLocalData(userId: userId)) {
-                            let cleanupMessage = "Your account was deleted. FitFight will retry removing its local Health cache when you reopen the app."
+                            let cleanupMessage = String(localized: "Your account was deleted. FitFight will retry removing its local Health cache when you reopen the app.")
                             if let authError = session.authError {
                                 session.authError = "\(authError) \(cleanupMessage)"
                             } else {
@@ -64,10 +64,10 @@ struct YouView: View {
             HStack(spacing: 14) {
                 FFAvatar(monogram: session.profile?.initials ?? "FF", size: 68, selected: true)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(session.profile?.displayName ?? "Signed in")
+                    Text(verbatim: session.profile?.displayName ?? String(localized: "Signed in"))
                         .ffType(.heading)
                         .foregroundStyle(theme.text)
-                    Text(session.profile?.atHandle ?? "Profile isn’t ready yet")
+                    Text(verbatim: session.profile?.atHandle ?? String(localized: "Profile isn’t ready yet"))
                         .ffType(.caption)
                         .foregroundStyle(theme.textSecondary)
                         .lineLimit(1)
@@ -76,7 +76,7 @@ struct YouView: View {
                             UIPasteboard.general.string = session.profile?.atHandle ?? ""
                             copied = true
                         } label: {
-                            Text(copied ? "Copied" : "Copy username")
+                            Text(copied ? String(localized: "Copied") : String(localized: "Copy username"))
                                 .ffType(.micro)
                                 .fontWeight(.heavy)
                                 .foregroundStyle(theme.mossText)
@@ -103,7 +103,7 @@ struct YouView: View {
                 }
             } label: {
                 FFGroupedRow(
-                    title: "Apple Health Steps",
+                    title: String(localized: "Apple Health Steps"),
                     subtitle: steps.metaText.isEmpty
                         ? steps.detailText
                         : "\(steps.detailText) · \(steps.metaText)",
@@ -111,7 +111,7 @@ struct YouView: View {
                     subtitleTone: steps.isConnected ? .moss : .neutral,
                     trailing: AnyView(
                         FFPill(
-                            steps.isConnected ? "On" : "Connect",
+                            steps.isConnected ? String(localized: "On") : String(localized: "Connect"),
                             style: steps.isConnected ? .softMoss : .solidMoss
                         )
                     )
@@ -124,18 +124,18 @@ struct YouView: View {
 
     private var settings: some View {
         FFGroupedRows {
-            linkRow("Privacy", destination: siteURL.appending(path: "privacy"))
+            linkRow(String(localized: "Privacy"), destination: sitePage("privacy"))
             FFDivider()
-            linkRow("Support", destination: siteURL.appending(path: "support"))
+            linkRow(String(localized: "Support"), destination: sitePage("support"))
             FFDivider()
-            navRow("Versions") { model.showingVersions = true }
+            navRow(String(localized: "Versions")) { model.showingVersions = true }
             if session.isSignedIn {
                 FFDivider()
-                navRow("Sign out") {
+                navRow(String(localized: "Sign out")) {
                     Task { await session.signOut() }
                 }
                 FFDivider()
-                navRow("Delete account", destructive: true) {
+                navRow(String(localized: "Delete account"), destructive: true) {
                     confirmDelete = true
                 }
             }
@@ -167,6 +167,13 @@ struct YouView: View {
 
     private var siteURL: URL {
         URL(string: AppVersion.backend == "prod" ? "https://fitfight.app" : "https://staging.fitfight.app")!
+    }
+
+    private func sitePage(_ path: String) -> URL {
+        let root = Bundle.main.preferredLocalizations.first?.hasPrefix("fr") == true
+            ? siteURL.appending(path: "fr")
+            : siteURL
+        return root.appending(path: path)
     }
 
     private func linkRow(_ title: String, destination: URL) -> some View {

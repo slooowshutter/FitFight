@@ -1,6 +1,6 @@
 # FitFight status — what works, what’s fake, what’s next
 
-Read this before building. Last updated **3 Sep 2026**. App: **1.0.0**.
+Read this before building. Last updated **4 Sep 2026**. App: **1.0.0**.
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, notifications, social, or a broader marketing site unless [`backlog.md`](backlog.md) says so. Only the public privacy and support pages exist on the web.
 
@@ -49,6 +49,7 @@ The native Fight path uses Supabase; Apple Health synchronization and account de
 | Surface | Status |
 |---|---|
 | Welcome + Apple sign-in | Works |
+| Languages | English and French follow the iPhone's per-app language. Usernames, Fight names, and loser actions remain exactly as entered. |
 | Username onboarding | Works. Required once after sign-in. |
 | Version line | Release-candidate TestFlight says `1.0.0 · build N · staging`; the App Store build says `prod` |
 | Create Steps challenge | Follow a guided flow for Steps × highest total, choose 3 / 7 / 14 / 30 days, add one or more exact usernames, type the required loser action, and review before starting. |

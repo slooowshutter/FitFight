@@ -6,7 +6,7 @@ enum MetricKind: String, Codable, Hashable {
     case steps
 
     var eyebrow: String {
-        "Steps total"
+        String(localized: "Steps total")
     }
 }
 
@@ -91,10 +91,7 @@ struct Fight: Codable, Identifiable, Hashable {
 
     var durationLabel: String {
         let hours = max(1, Int((windowEnd.timeIntervalSince(windowStart) / 3_600).rounded()))
-        if hours <= 6 {
-            return "\(hours) \(hours == 1 ? "hour" : "hours")"
-        }
-        return "\(lengthDays) \(lengthDays == 1 ? "day" : "days")"
+        return localizedDuration(hours: hours, days: lengthDays)
     }
 }
 
@@ -123,7 +120,9 @@ final class AppModel: ObservableObject {
     private var inviteTokens: [String: String] = [:]
     private var cachedUserID: UUID?
 
-    private static let fightsCachePrefix = "fitfight.fights."
+    private static var fightsCachePrefix: String {
+        "fitfight.fights.\(Bundle.main.preferredLocalizations.first ?? "en")."
+    }
 
     static var preview: AppModel { AppModel(fixtures: true) }
 
@@ -163,18 +162,22 @@ final class AppModel: ObservableObject {
     }
 
     func formatScore(_ value: Double, metric _: MetricKind) -> String {
-        if value >= 1000 {
-            return String(format: "%.1fk", value / 1000)
-        }
-        return String(format: "%.0f", value)
+        value.formatted(
+            .number
+                .notation(.compactName)
+                .precision(.fractionLength(value >= 1_000 ? 0...1 : 0...0))
+        )
     }
 
     func formatLastSync(_ date: Date?) -> String {
-        guard let date else { return "Not synced yet" }
+        guard let date else { return String(localized: "Not synced yet") }
         let formatter = DateFormatter()
         formatter.locale = .autoupdatingCurrent
         formatter.setLocalizedDateFormatFromTemplate("MMMdjm")
-        return "Synced \(formatter.string(from: date))"
+        return String(
+            localized: "fight.synced-at",
+            defaultValue: "Synced \(formatter.string(from: date))"
+        )
     }
 
     func refreshFromServer() async {
@@ -256,7 +259,7 @@ final class AppModel: ObservableObject {
     }
 
     func createAndStartFight(
-        name: String = "Steps Fight",
+        name: String = String(localized: "Steps Fight"),
         startsAt: Date,
         endsAt: Date,
         actionText: String,
@@ -268,16 +271,16 @@ final class AppModel: ObservableObject {
         defer { isCreatingFight = false }
         createError = nil
         guard session?.authSession?.accessToken != nil else {
-            createError = "Sign in to start a fight."
+            createError = String(localized: "Sign in to start a fight.")
             return
         }
         let action = actionText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !action.isEmpty else {
-            createError = "Add the action the loser will do."
+            createError = String(localized: "Add the action the loser will do.")
             return
         }
         guard action.count <= 120 else {
-            createError = "Keep the action to 120 characters."
+            createError = String(localized: "Keep the action to 120 characters.")
             return
         }
 
@@ -304,7 +307,9 @@ final class AppModel: ObservableObject {
             )
             await refreshFromServer()
         } catch {
-            createError = (error as? LocalizedError)?.errorDescription ?? "Couldn’t start the fight."
+            createError = (error as? LiveFightError)?.errorDescription
+                ?? (error as? FitFightAPIError)?.errorDescription
+                ?? String(localized: "Couldn’t start the fight.")
         }
     }
 
@@ -324,12 +329,13 @@ final class AppModel: ObservableObject {
             do {
                 try await acceptInvite(token: token)
             } catch {
-                createError = (error as? LocalizedError)?.errorDescription ?? "Couldn’t accept."
+                createError = (error as? FitFightAPIError)?.errorDescription
+                    ?? String(localized: "Couldn’t accept.")
             }
             return
         }
         guard let session, let userId = session.authSession?.user.id, let fightID = UUID(uuidString: id) else {
-            createError = "Sign in to accept this fight."
+            createError = String(localized: "Sign in to accept this fight.")
             return
         }
         do {
@@ -341,14 +347,14 @@ final class AppModel: ObservableObject {
             joined.insert(id)
             await refreshFromServer()
         } catch {
-            createError = (error as? LocalizedError)?.errorDescription ?? "Couldn’t accept."
+            createError = String(localized: "Couldn’t accept.")
         }
     }
 
     func declineFight(id: String) async {
         createError = nil
         guard let session, let userId = session.authSession?.user.id, let fightID = UUID(uuidString: id) else {
-            createError = "Sign in to decline this fight."
+            createError = String(localized: "Sign in to decline this fight.")
             return
         }
         do {
@@ -359,7 +365,7 @@ final class AppModel: ObservableObject {
                 .execute()
             await refreshFromServer()
         } catch {
-            createError = (error as? LocalizedError)?.errorDescription ?? "Couldn’t decline."
+            createError = String(localized: "Couldn’t decline.")
         }
     }
 
@@ -493,7 +499,8 @@ final class AppModel: ObservableObject {
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "yyyy-MM-dd"
         let label = DateFormatter()
-        label.dateFormat = "EEE d MMM"
+        label.locale = .autoupdatingCurrent
+        label.setLocalizedDateFormatFromTemplate("EEEdMMM")
         return window.sorted().map { day in
             let scores = standings.map { row in
                 let personID = UUID(uuidString: row.person.id)
@@ -606,9 +613,7 @@ final class AppModel: ObservableObject {
         let ends = row.endsAtDate
         let lengthDays = max(1, Calendar.current.dateComponents([.day], from: starts, to: ends).day ?? 1)
         let lengthHours = max(1, Int((ends.timeIntervalSince(starts) / 3_600).rounded()))
-        let durationLabel = lengthHours <= 6
-            ? "\(lengthHours) \(lengthHours == 1 ? "hour" : "hours")"
-            : "\(lengthDays) \(lengthDays == 1 ? "day" : "days")"
+        let durationLabel = localizedDuration(hours: lengthHours, days: lengthDays)
 
         let status: FightStatus
         if mine?.state == "invited" && row.state != "final" && row.state != "cancelled" {
@@ -631,9 +636,10 @@ final class AppModel: ObservableObject {
                 || (remaining.second ?? 0) > 0
             daysLeft = max(1, (remaining.day ?? 0) + (hasPartialDay ? 1 : 0))
         }
-        let remainingLabel = lengthHours <= 6
-            ? "\(max(1, Int(ceil(ends.timeIntervalSinceNow / 3_600))))h"
-            : "\(daysLeft ?? 0)d"
+        let remainingLabel = localizedDuration(
+            hours: max(1, Int(ceil(ends.timeIntervalSinceNow / 3_600))),
+            days: daysLeft ?? 0
+        )
 
         let people = members.map { member -> Standing in
             let profile = profiles[member.userId]
@@ -643,7 +649,7 @@ final class AppModel: ObservableObject {
             } else {
                 person = Person(
                     id: member.userId.uuidString,
-                    name: member.userId == userId ? "You" : "@user",
+                    name: member.userId == userId ? String(localized: "You") : "@user",
                     handle: "@user",
                     initials: "FF",
                     isYou: member.userId == userId
@@ -670,10 +676,12 @@ final class AppModel: ObservableObject {
             ?? 0
         let of = max(joined.count, 1)
         let owner = profiles[row.ownerId].map { Self.person(from: $0, isYou: $0.userId == userId) }
-        let ownerName = owner?.name ?? "Someone"
+        let ownerName = owner?.name ?? String(localized: "Someone")
 
         let actionText = row.actionText?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let action = actionText?.isEmpty == false ? (actionText ?? "") : "No action was set for this older fight."
+        let action = actionText?.isEmpty == false
+            ? (actionText ?? "")
+            : String(localized: "No action was set for this older fight.")
 
         var kickerPrefix = ""
         var kickerEmphasis = ""
@@ -685,41 +693,86 @@ final class AppModel: ObservableObject {
 
         switch status {
         case .invited:
-            invitePitch = "\(ownerName) challenged you"
-            inviteAction = "Accept"
+            invitePitch = String(
+                localized: "fight.challenged-you",
+                defaultValue: "\(ownerName) challenged you"
+            )
+            inviteAction = String(localized: "Accept")
             kickerEmphasis = invitePitch ?? ""
             listSubtitle = "\(ownerName) · \(durationLabel)"
         case .finished:
             let formatter = DateFormatter()
-            formatter.dateFormat = "MMM d"
-            endedLabel = "Ended \(formatter.string(from: ends))"
-            listSubtitle = "\(endedLabel ?? "Ended") · \(Self.ordinal(rank)) of \(of)"
-            kickerPrefix = rank == 1 ? "Won by" : "Finished"
+            formatter.locale = .autoupdatingCurrent
+            formatter.setLocalizedDateFormatFromTemplate("MMMd")
+            endedLabel = String(
+                localized: "fight.ended-on",
+                defaultValue: "Ended \(formatter.string(from: ends))"
+            )
+            listSubtitle = String(
+                localized: "fight.finished-position",
+                defaultValue: "\(endedLabel ?? String(localized: "Ended")) · \(Self.ordinal(rank)) of \(of)"
+            )
+            kickerPrefix = rank == 1 ? String(localized: "Won by") : String(localized: "Finished")
             kickerEmphasis = Self.ordinal(rank)
         case .live:
             if row.state == "awaiting_final_sync" {
-                kickerEmphasis = "Syncing final steps"
-                listSubtitle = "0d left"
+                kickerEmphasis = String(localized: "Syncing final steps")
+                listSubtitle = kickerEmphasis
             } else if let youRow, let leader = joined.first, !youRow.invited {
                 if youRow.person.id == leader.person.id, let runnerUp = joined.dropFirst().first {
                     let gap = leader.score - runnerUp.score
-                    kickerPrefix = gap == 0 ? "" : "Leading by"
-                    kickerEmphasis = gap == 0 ? "Tied" : "\(formatScore(gap, .steps)) steps"
-                    kickerRest = "with \(remainingLabel) to go"
+                    kickerPrefix = gap == 0 ? "" : String(localized: "Leading by")
+                    kickerEmphasis = gap == 0
+                        ? String(localized: "Tied")
+                        : String(
+                            localized: "fight.steps-value",
+                            defaultValue: "\(formatScore(gap, .steps)) steps"
+                        )
+                    kickerRest = String(
+                        localized: "fight.time-to-go",
+                        defaultValue: "with \(remainingLabel) to go"
+                    )
                     listSubtitle = gap == 0
-                        ? "Tied with \(remainingLabel) to go"
-                        : "Leading by \(kickerEmphasis) with \(remainingLabel) to go"
+                        ? String(
+                            localized: "fight.tied-time-to-go",
+                            defaultValue: "Tied with \(remainingLabel) to go"
+                        )
+                        : String(
+                            localized: "fight.leading-time-to-go",
+                            defaultValue: "Leading by \(kickerEmphasis) with \(remainingLabel) to go"
+                        )
                 } else if youRow.person.id == leader.person.id {
-                    kickerEmphasis = "\(remainingLabel) left"
+                    kickerEmphasis = String(
+                        localized: "fight.time-left",
+                        defaultValue: "\(remainingLabel) left"
+                    )
                     listSubtitle = kickerEmphasis
                 } else {
                     let gap = leader.score - youRow.score
-                    kickerEmphasis = gap == 0 ? "Tied" : "\(formatScore(gap, .steps)) steps"
-                    kickerRest = gap == 0 ? "" : "behind \(leader.person.name)"
-                    listSubtitle = gap == 0 ? "Tied" : "\(kickerEmphasis) behind \(leader.person.name)"
+                    kickerEmphasis = gap == 0
+                        ? String(localized: "Tied")
+                        : String(
+                            localized: "fight.steps-value",
+                            defaultValue: "\(formatScore(gap, .steps)) steps"
+                        )
+                    kickerRest = gap == 0
+                        ? ""
+                        : String(
+                            localized: "fight.behind-person",
+                            defaultValue: "behind \(leader.person.name)"
+                        )
+                    listSubtitle = gap == 0
+                        ? String(localized: "Tied")
+                        : String(
+                            localized: "fight.steps-behind-person",
+                            defaultValue: "\(kickerEmphasis) behind \(leader.person.name)"
+                        )
                 }
             } else {
-                kickerEmphasis = "\(remainingLabel) left"
+                kickerEmphasis = String(
+                    localized: "fight.time-left",
+                    defaultValue: "\(remainingLabel) left"
+                )
                 listSubtitle = kickerEmphasis
             }
         }
@@ -755,12 +808,10 @@ final class AppModel: ObservableObject {
     }
 
     private static func ordinal(_ value: Int) -> String {
-        switch value {
-        case 1: return "1st"
-        case 2: return "2nd"
-        case 3: return "3rd"
-        default: return "\(value)th"
-        }
+        let formatter = NumberFormatter()
+        formatter.locale = .autoupdatingCurrent
+        formatter.numberStyle = .ordinal
+        return formatter.string(from: NSNumber(value: value)) ?? value.formatted()
     }
 }
 
@@ -772,13 +823,29 @@ enum LiveFightError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .notSignedIn:
-            return "Sign in to start a fight."
+            return String(localized: "Sign in to start a fight.")
         case .noOpponents:
-            return "Add at least one other username."
+            return String(localized: "Add at least one other username.")
         case .unknownHandle(let handle):
-            return "No one with @\(handle). They need to open the app and pick a username first."
+            return String(
+                localized: "fight.unknown-handle",
+                defaultValue: "No one with @\(handle). They need to open the app and pick a username first."
+            )
         }
     }
+}
+
+private func localizedDuration(hours: Int, days: Int) -> String {
+    if hours <= 6 {
+        return String(
+            localized: "duration.hours",
+            defaultValue: "\(hours) hours"
+        )
+    }
+    return String(
+        localized: "duration.days",
+        defaultValue: "\(days) days"
+    )
 }
 
 private struct FightIDRow: Decodable {
@@ -941,6 +1008,7 @@ private enum AppModelFixtures {
     }
 
     static func load() -> Bundle {
+        let isFrench = Foundation.Bundle.main.preferredLocalizations.first?.hasPrefix("fr") == true
         let leo = Person(id: "leo", name: "@leo_runs", handle: "@leo_runs", initials: "L")
         let sam = Person(id: "sam", name: "@sam_sweats", handle: "@sam_sweats", initials: "S")
         let ivy = Person(id: "ivy", name: "@ivy_climbs", handle: "@ivy_climbs", initials: "I")
@@ -955,35 +1023,35 @@ private enum AppModelFixtures {
             Fight(
                 id: "sweat",
                 code: "FIGHT-742",
-                name: "7-Day Sweat Ladder",
+                name: isFrench ? "Défi transpiration 7 jours" : "7-Day Sweat Ladder",
                 metric: .steps,
                 lengthDays: 7,
                 daysLeft: 4,
-                actionText: "Loser plans the next walk",
+                actionText: isFrench ? "Le perdant organise la prochaine balade" : "Loser plans the next walk",
                 status: .live,
                 rank: 2,
                 of: 3,
                 pending: 0,
                 kickerEmphasis: "12.0k",
-                kickerRest: "behind @leo_runs",
-                listSubtitle: "12.0k behind @leo_runs",
+                kickerRest: String(localized: "behind @leo_runs"),
+                listSubtitle: String(localized: "12.0k behind @leo_runs"),
                 standings: [
                     Standing(person: leo, score: 54_000, lastSyncedAt: syncedJustNow),
                     Standing(person: you, score: 42_000, lastSyncedAt: syncedToday),
                     Standing(person: sam, score: 37_000, lastSyncedAt: syncedYesterday)
                 ],
                 days: [
-                    FightDay(label: "Day 1", scores: [
+                    FightDay(label: String(localized: "Day 1"), scores: [
                         DayScore(person: leo, value: 20_000),
                         DayScore(person: you, value: 12_000),
                         DayScore(person: sam, value: 15_000)
                     ]),
-                    FightDay(label: "Day 2", scores: [
+                    FightDay(label: String(localized: "Day 2"), scores: [
                         DayScore(person: leo, value: 18_000),
                         DayScore(person: you, value: 16_000),
                         DayScore(person: sam, value: 10_000)
                     ]),
-                    FightDay(label: "Day 3", scores: [
+                    FightDay(label: String(localized: "Day 3"), scores: [
                         DayScore(person: leo, value: 16_000),
                         DayScore(person: you, value: 14_000),
                         DayScore(person: sam, value: 12_000)
@@ -993,19 +1061,19 @@ private enum AppModelFixtures {
             Fight(
                 id: "derby",
                 code: "FIGHT-118",
-                name: "Step Derby",
+                name: isFrench ? "Derby des pas" : "Step Derby",
                 metric: .steps,
                 lengthDays: 7,
                 daysLeft: 2,
-                actionText: "Losers cook Sunday dinner",
+                actionText: isFrench ? "Les perdants préparent le dîner dimanche" : "Losers cook Sunday dinner",
                 status: .live,
                 rank: 1,
                 of: 5,
                 pending: 1,
-                kickerPrefix: "Holding",
-                kickerEmphasis: "1st",
-                kickerRest: "with 2d to go",
-                listSubtitle: "Holding 1st with 2d to go",
+                kickerPrefix: String(localized: "Holding"),
+                kickerEmphasis: String(localized: "1st"),
+                kickerRest: String(localized: "with 2d to go"),
+                listSubtitle: String(localized: "Holding 1st with 2d to go"),
                 standings: [
                     Standing(person: you, score: 61400, lastSyncedAt: syncedJustNow),
                     Standing(person: ivy, score: 59800, lastSyncedAt: syncedToday),
@@ -1017,18 +1085,18 @@ private enum AppModelFixtures {
             Fight(
                 id: "club",
                 code: "FIGHT-655",
-                name: "10K Club",
+                name: isFrench ? "Club des 10 000" : "10K Club",
                 metric: .steps,
                 lengthDays: 7,
                 daysLeft: 3,
-                actionText: "Losers organize the next hike",
+                actionText: isFrench ? "Les perdants organisent la prochaine randonnée" : "Losers organize the next hike",
                 status: .live,
                 rank: 2,
                 of: 4,
                 pending: 2,
-                kickerEmphasis: "3.2k steps",
-                kickerRest: "behind @sam_sweats",
-                listSubtitle: "3.2k steps behind @sam_sweats",
+                kickerEmphasis: String(localized: "3.2k steps"),
+                kickerRest: String(localized: "behind @sam_sweats"),
+                listSubtitle: String(localized: "3.2k steps behind @sam_sweats"),
                 standings: [
                     Standing(person: sam, score: 44800, lastSyncedAt: syncedToday),
                     Standing(person: you, score: 41600, lastSyncedAt: syncedJustNow),
@@ -1039,21 +1107,21 @@ private enum AppModelFixtures {
             Fight(
                 id: "desk",
                 code: "FIGHT-556",
-                name: "Desk Job Revenge",
+                name: isFrench ? "Revanche du bureau" : "Desk Job Revenge",
                 metric: .steps,
                 lengthDays: 3,
                 daysLeft: 3,
-                actionText: "Losers take the stairs all day",
+                actionText: isFrench ? "Les perdants prennent les escaliers toute la journée" : "Losers take the stairs all day",
                 status: .invited,
                 rank: 0,
                 of: 4,
                 pending: 2,
-                kickerEmphasis: "@theo_rows challenged you",
-                listSubtitle: "@theo_rows · 3 days",
+                kickerEmphasis: String(localized: "@theo_rows challenged you"),
+                listSubtitle: String(localized: "@theo_rows · 3 days"),
                 inviter: theo,
-                invitePitch: "@theo_rows challenged you",
-                inviteAction: "Accept",
-                standingsMeta: "2 in · 2 not replied",
+                invitePitch: String(localized: "@theo_rows challenged you"),
+                inviteAction: String(localized: "Accept"),
+                standingsMeta: String(localized: "2 in · 2 not replied"),
                 standings: [
                     Standing(person: theo, score: 0),
                     Standing(person: nina, score: 0),
@@ -1063,20 +1131,20 @@ private enum AppModelFixtures {
             Fight(
                 id: "sprint",
                 code: "FIGHT-221",
-                name: "City Sprint",
+                name: isFrench ? "Sprint en ville" : "City Sprint",
                 metric: .steps,
                 lengthDays: 7,
                 daysLeft: 7,
-                actionText: "Losers plan a park walk",
+                actionText: isFrench ? "Les perdants organisent une balade au parc" : "Losers plan a park walk",
                 status: .invited,
                 rank: 0,
                 of: 3,
                 pending: 0,
-                kickerEmphasis: "@ivy_climbs challenged you",
-                listSubtitle: "@ivy_climbs · 7 days",
+                kickerEmphasis: String(localized: "@ivy_climbs challenged you"),
+                listSubtitle: String(localized: "@ivy_climbs · 7 days"),
                 inviter: ivy,
-                invitePitch: "@ivy_climbs challenged you",
-                inviteAction: "Join",
+                invitePitch: String(localized: "@ivy_climbs challenged you"),
+                inviteAction: String(localized: "Join"),
                 standings: [
                     Standing(person: ivy, score: 0)
                 ]
@@ -1084,19 +1152,19 @@ private enum AppModelFixtures {
             Fight(
                 id: "weekend",
                 code: "FIGHT-088",
-                name: "Weekend Step Duel",
+                name: isFrench ? "Duel de pas du week-end" : "Weekend Step Duel",
                 metric: .steps,
                 lengthDays: 2,
-                endedLabel: "Ended Jul 13",
-                actionText: "Loser plans the next route",
+                endedLabel: String(localized: "Ended Jul 13"),
+                actionText: isFrench ? "Le perdant choisit le prochain parcours" : "Loser plans the next route",
                 status: .finished,
                 rank: 1,
                 of: 2,
                 pending: 0,
-                kickerPrefix: "Leading by",
-                kickerEmphasis: "2.2k steps",
-                listSubtitle: "Ended Jul 13 · 1st of 2",
-                standingsMeta: "2 in",
+                kickerPrefix: String(localized: "Leading by"),
+                kickerEmphasis: String(localized: "2.2k steps"),
+                listSubtitle: String(localized: "Ended Jul 13 · 1st of 2"),
+                standingsMeta: String(localized: "2 in"),
                 standings: [
                     Standing(person: you, score: 24100, lastSyncedAt: syncedYesterday),
                     Standing(person: leo, score: 21900, lastSyncedAt: syncedYesterday)

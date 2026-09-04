@@ -79,9 +79,9 @@ struct FFTabBar: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            item(.fights, "trophy", "Fights")
-            item(.newFight, "plus.circle", "New")
-            item(.you, "person", "You")
+            item(.fights, "trophy", String(localized: "Fights"))
+            item(.newFight, "plus.circle", String(localized: "New"))
+            item(.you, "person", String(localized: "You"))
         }
         // The kit uses the classic full-width iPhone geometry: about 49pt of
         // controls plus the device's bottom safe area. Extra top/bottom padding

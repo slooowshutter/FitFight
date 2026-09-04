@@ -377,9 +377,59 @@ test("Apple Health aggregate sync makes the newest Fight snapshot authoritative 
     query.includes("set current_value")
       && query.includes("selected_source_id")
       && query.includes("last_synced_at")
+      && query.includes("final_steps_complete")
   ));
+  const memberUpdate = queries.find(({ query }) => query.includes("set current_value"));
+  assert.ok(memberUpdate?.values.includes(false));
   assert.ok(queries.some(({ query }) => query.includes("set rank")));
   assert.ok(queries.every(({ query }) => !/set\s+final_value/i.test(query)));
+});
+
+test("Apple Health aggregate sync marks exact Fight-end coverage complete", async () => {
+  const completeThrough = "2026-09-03T16:06:35.093Z";
+  const { database, queries } = createDatabaseStub((query) => {
+    if (query.includes("returning id, complete_through")) {
+      return [{ ...sourceRow, complete_through: completeThrough, server_now: "2026-09-03T17:00:00.000Z" }];
+    }
+    if (query.includes("from public.fights as fight")) {
+      return [{
+        fight_id: "b4c1285d-0232-4d15-b8cc-1a916ba2bbf7",
+        starts_at: "2026-08-27 16:06:36.729+00",
+        ends_at: "2026-09-03 16:06:35.093+00",
+        outcome_rule: "highest_total",
+        stake_minor: null,
+        default_goal_value: null,
+      }];
+    }
+    if (query.includes("from private.fight_score_snapshots")) return [{ value: "50000" }];
+    if (query.includes("from public.fight_members") && query.includes("state = 'accepted'")) {
+      return [{
+        user_id: "5b2216f4-762d-4890-a516-63046a01df31",
+        current_value: "50000",
+        final_value: null,
+        personal_target: null,
+      }];
+    }
+    return [];
+  });
+
+  await syncHealthKitAggregates(
+    "5b2216f4-762d-4890-a516-63046a01df31",
+    healthKitAggregateSyncSchema.parse({
+      ...validAggregate,
+      complete_through: completeThrough,
+      merged_days: [],
+      fight_aggregates: [{
+        ...validAggregate.fight_aggregates[0],
+        cutoff_at: completeThrough,
+        steps: 50_000,
+      }],
+    }),
+    database,
+  );
+
+  const memberUpdate = queries.find(({ query }) => query.includes("set current_value"));
+  assert.ok(memberUpdate?.values.includes(true));
 });
 
 test("Apple Health Steps endpoint exposes the authenticated sync route", async () => {
@@ -388,4 +438,19 @@ test("Apple Health Steps endpoint exposes the authenticated sync route", async (
   assert.equal(route.runtime, "nodejs");
   assert.equal(typeof route.POST, "function");
   assert.equal(typeof route.OPTIONS, "function");
+});
+
+test("HealthKit diagnostics endpoint exposes the authenticated snapshot route", async () => {
+  const route = await import("@/app/api/v1/healthkit/diagnostics/route");
+
+  assert.equal(route.runtime, "nodejs");
+  assert.equal(typeof route.POST, "function");
+  assert.equal(typeof route.OPTIONS, "function");
+
+  const response = await route.POST(
+    new Request("https://fitfight.app/api/v1/healthkit/diagnostics", { method: "POST" }),
+    { params: Promise.resolve({}) },
+  );
+  assert.equal(response.status, 401);
+  assert.equal((await response.json()).code, "unauthorized");
 });

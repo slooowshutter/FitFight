@@ -454,7 +454,7 @@ struct NewFightView: View {
         Task {
             await steps.refresh(requestAccess: true)
             if session.authSession != nil {
-                await steps.syncToBackend(session: session)
+                await steps.syncToBackend(session: session, trigger: .manual)
             }
         }
     }

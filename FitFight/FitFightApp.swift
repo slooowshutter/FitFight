@@ -1,7 +1,16 @@
 import SwiftUI
 import UIKit
 
+@MainActor
 final class FitFightAppDelegate: NSObject, UIApplicationDelegate {
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
+    ) -> Bool {
+        HealthKitStepsStore.shared.installObserverAtLaunch()
+        return true
+    }
+
     func application(
         _ application: UIApplication,
         handleEventsForBackgroundURLSession identifier: String,
@@ -25,7 +34,7 @@ struct FitFightApp: App {
 
     init() {
         let session = SessionStore()
-        let steps = HealthKitStepsStore()
+        let steps = HealthKitStepsStore.shared
         steps.configure(session: session)
         _session = StateObject(wrappedValue: session)
         _steps = StateObject(wrappedValue: steps)
@@ -57,7 +66,7 @@ struct FitFightApp: App {
                     guard session.authSession != nil else { return }
                     guard !model.isRefreshingFights else { return }
                     Task {
-                        await steps.syncToBackend(session: session)
+                        await steps.syncToBackend(session: session, trigger: .foreground)
                         await model.refreshFromServer(session: session)
                     }
                 }

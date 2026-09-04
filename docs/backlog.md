@@ -50,7 +50,7 @@ If the app is closed or killed, iOS will not reliably run timers, settle a month
 
 The phone’s job is: show the UI, read Apple Health Steps when it is open (or briefly woken), and upload the required aggregates. Push notifications are not in the current scope.
 
-**Last TestFlight:** 3 Sep 2026 — Fight setup uses a normal Next button until review, where Start is a real slide-to-start control. Tapping Fights again (or swiping from the left edge) returns you from a fight to the list. Look for `1.0.0 · build N · staging`.
+**Last TestFlight:** 4 Sep 2026 — Apple Health background sync installs at launch, preserves one interrupted opportunity, and shows private status under You. Standings show relative freshness and exact final-window completeness. Look for `1.0.0 · build N · staging`.
 
 ## Semi urgent
 

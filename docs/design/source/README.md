@@ -8,6 +8,7 @@ This folder contains the current approved design and the archived design dump it
 | --- | --- |
 | [`kit/FitFight Design System.dc.html`](./kit/FitFight%20Design%20System.dc.html) | Approved visual specification and interactive component catalogue. |
 | [`kit/support.js`](./kit/support.js) | Runtime used by the HTML source. Documentation only; it is not bundled in the iOS app. |
+| [`kit/fights-home-proposals.html`](./kit/fights-home-proposals.html) | Unshipped Fights home layout options. Kit tokens and components only. Not the approved spec. Not TestFlight. |
 | [`tokens.json`](./tokens.json) | Machine-readable SwiftUI tokens. This must remain byte-for-byte identical to `FitFight/DesignSystem/tokens.json`. |
 
 The approved system has two bases, Night and Day, and fixed semantic colour families:

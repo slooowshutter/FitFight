@@ -284,10 +284,15 @@ struct NewFightView: View {
                         if index > 0 { FFDivider() }
                         FFGroupedRow(
                             title: item.name,
-                            subtitle: String(
-                                localized: "fight.joinable-row",
-                                defaultValue: "@\(item.ownerHandle) · \(item.memberCount) in\(item.recurring ? " · repeats" : "")"
-                            ),
+                            subtitle: item.recurring
+                                ? String(
+                                    localized: "fight.joinable-row-repeats",
+                                    defaultValue: "@\(item.ownerHandle) · \(item.memberCount) in · repeats"
+                                )
+                                : String(
+                                    localized: "fight.joinable-row",
+                                    defaultValue: "@\(item.ownerHandle) · \(item.memberCount) in"
+                                ),
                             systemImage: "figure.walk",
                             subtitleTone: .neutral,
                             trailing: AnyView(Text(item.joinCode).ffType(.caption).foregroundStyle(theme.textSecondary)),

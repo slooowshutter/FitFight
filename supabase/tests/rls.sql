@@ -1,5 +1,5 @@
 begin;
-select plan(24);
+select plan(30);
 
 create function pg_temp.make_user(uid uuid, email text)
 returns void

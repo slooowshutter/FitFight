@@ -14,26 +14,6 @@ grant insert (fight_id, user_id, state, accepted_at) on table public.fight_membe
 revoke update on table public.fights from authenticated;
 revoke insert, update on table public.data_sources from authenticated;
 
-drop policy if exists fight_members_insert_owner_or_self on public.fight_members;
-create policy fight_members_insert_owner_or_self
-  on public.fight_members
-  for insert
-  to authenticated
-  with check (
-    state in ('accepted', 'invited')
-    and exists (
-      select 1
-      from public.fights as fight
-      where fight.id = fight_id
-        and fight.state in ('live', 'scheduled', 'inviting')
-        and fight.ends_at > now()
-        and (
-          user_id = (select auth.uid())
-          or fight.owner_id = (select auth.uid())
-        )
-    )
-  );
-
 drop policy if exists fight_members_update_own on public.fight_members;
 create policy fight_members_update_own
   on public.fight_members

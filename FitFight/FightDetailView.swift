@@ -163,6 +163,11 @@ struct FightDetailView: View {
                     .foregroundStyle(theme.textSecondary)
                     .multilineTextAlignment(.center)
                     .padding(.bottom, 8)
+                Text(String(localized: "Your steps count from when this fight started, even if you join later."))
+                    .ffType(.caption)
+                    .foregroundStyle(theme.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.bottom, 8)
                 Text(fight.actionText)
                     .ffType(.body)
                     .foregroundStyle(theme.text)
@@ -171,10 +176,7 @@ struct FightDetailView: View {
                     .padding(.bottom, 22)
                 FFScreenCTA(title: fight.pendingJoin ? String(localized: "Join fight") : String(localized: "Accept challenge")) {
                     Task {
-                        await model.acceptFight(id: fight.id)
-                        if (model.createError ?? "").isEmpty {
-                            model.joined.insert(fight.id)
-                        }
+                        await model.acceptFight(id: fight.id, steps: steps)
                     }
                 }
                 FFButton(

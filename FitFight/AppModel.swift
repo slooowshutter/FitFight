@@ -408,10 +408,10 @@ final class AppModel: ObservableObject {
         await refreshFromServer()
     }
 
-    func acceptFight(id: String) async {
+    func acceptFight(id: String, steps: HealthKitStepsStore) async {
         createError = nil
         if let pending = pendingJoinable, pending.id == id, pending.pendingJoin {
-            await joinPendingFight(pending)
+            await joinPendingFight(pending, steps: steps)
             return
         }
         if let token = inviteTokens[id], api.isConfigured {
@@ -420,8 +420,8 @@ final class AppModel: ObservableObject {
             } catch {
                 createError = (error as? FitFightAPIError)?.errorDescription
                     ?? String(localized: "Couldn’t accept.")
+                return
             }
-            return
         }
         guard let session, let userId = session.authSession?.user.id, let fightID = UUID(uuidString: id) else {
             createError = String(localized: "Sign in to accept this fight.")
@@ -434,7 +434,8 @@ final class AppModel: ObservableObject {
                 .eq("user_id", value: userId)
                 .execute()
             joined.insert(id)
-            await refreshFromServer()
+            _ = await steps.syncToBackend(session: session, trigger: .manual)
+            await refreshFromServer(session: session)
         } catch {
             createError = String(localized: "Couldn’t accept.")
         }
@@ -528,8 +529,8 @@ final class AppModel: ObservableObject {
         await openJoinCode(code, session: session)
     }
 
-    private func joinPendingFight(_ fight: Fight) async {
-        guard let access = session?.authSession?.accessToken, api.isConfigured else {
+    private func joinPendingFight(_ fight: Fight, steps: HealthKitStepsStore) async {
+        guard let session, let access = session.authSession?.accessToken, api.isConfigured else {
             createError = String(localized: "Sign in to join this fight.")
             return
         }
@@ -541,7 +542,8 @@ final class AppModel: ObservableObject {
             _ = try await api.joinFight(code: fight.joinCode, fightID: fightID, accessToken: access)
             pendingJoinable = nil
             joined.insert(fight.id)
-            await refreshFromServer()
+            _ = await steps.syncToBackend(session: session, trigger: .manual)
+            await refreshFromServer(session: session)
         } catch {
             createError = (error as? FitFightAPIError)?.errorDescription
                 ?? String(localized: "Couldn’t join.")

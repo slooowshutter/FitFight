@@ -112,11 +112,11 @@ enum HealthKitStepAggregates {
         start: Date,
         end: Date
     ) async throws -> Int {
-        let predicate = HKQuery.predicateForSamples(
-            withStart: start,
-            end: end,
-            options: [.strictStartDate, .strictEndDate]
-        )
+        // NOTE: Do not use strictStartDate/strictEndDate. Apple often stores Steps in
+        // samples that begin before the fight or are still open past "now". Strict
+        // options drop those samples and a late join can show 0. Overlapping samples
+        // let HealthKit interpolate the exact fight window.
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: end)
         let descriptor = HKStatisticsQueryDescriptor(
             predicate: .quantitySample(type: type, predicate: predicate),
             options: [.cumulativeSum]

@@ -506,6 +506,8 @@ struct FFToast: View {
     let message: String
     var tone: FFTone = .moss
     var onClose: (() -> Void)?
+    /// Floating overlays keep the kit drop shadow; in-flow banners do not.
+    var raised: Bool = true
 
     @Environment(\.ffTheme) private var theme
 
@@ -539,8 +541,9 @@ struct FFToast: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
         .background(wash, in: RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
+        .background(theme.overlay, in: RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
         .ffBorder(edge, radius: theme.radius.card)
-        .shadow(color: .black.opacity(0.8), radius: 20, y: 14)
+        .shadow(color: .black.opacity(raised ? 0.8 : 0), radius: raised ? 20 : 0, y: raised ? 14 : 0)
     }
 
     private var wash: Color {

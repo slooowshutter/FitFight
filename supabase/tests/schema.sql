@@ -1,5 +1,5 @@
 begin;
-select plan(44);
+select plan(45);
 
 select has_schema('private', 'private schema exists');
 select has_table('public', 'profiles', 'profiles exists');

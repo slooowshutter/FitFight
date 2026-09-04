@@ -483,7 +483,7 @@ final class AppModel: ObservableObject {
         if let stored = UserDefaults.standard.string(forKey: Self.pendingJoinCodeKey), stored == code {
             UserDefaults.standard.removeObject(forKey: Self.pendingJoinCodeKey)
         }
-        guard let access = session?.authSession?.accessToken, api.isConfigured else {
+        guard let access = session.authSession?.accessToken, api.isConfigured else {
             UserDefaults.standard.set(code, forKey: Self.pendingJoinCodeKey)
             createError = String(localized: "Sign in to join this fight.")
             return

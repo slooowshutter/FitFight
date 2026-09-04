@@ -183,7 +183,12 @@ enum ScreenshotExport {
     ) -> AnyView {
         let theme = themeStore.theme
         return AnyView(
-            content
+            Color.clear
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .overlay(alignment: .top) {
+                    content
+                }
+                .background(theme.bg)
                 .environmentObject(themeStore)
                 .environmentObject(model)
                 .environmentObject(SessionStore(screenshot: ()))

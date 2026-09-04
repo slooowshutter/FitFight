@@ -216,14 +216,20 @@ struct RequestsView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            list
-                .navigationDestination(item: $openPostID) { postID in
-                    RequestDetailView(postID: postID, store: store)
-                        .toolbar(.hidden, for: .navigationBar)
+        Group {
+            if staticRender {
+                list
+            } else {
+                NavigationStack {
+                    list
+                        .navigationDestination(item: $openPostID) { postID in
+                            RequestDetailView(postID: postID, store: store)
+                                .toolbar(.hidden, for: .navigationBar)
+                        }
                 }
+                .toolbar(.hidden, for: .navigationBar)
+            }
         }
-        .toolbar(.hidden, for: .navigationBar)
         .background(theme.bg.ignoresSafeArea())
         .task {
             guard !staticRender else { return }
@@ -269,35 +275,17 @@ struct RequestsView: View {
                     .padding(.bottom, 8)
             }
 
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 10) {
-                    if store.isLoading && store.posts.isEmpty {
-                        ProgressView()
-                            .frame(maxWidth: .infinity)
-                            .padding(.top, 40)
+            Group {
+                if staticRender {
+                    postsStack
+                } else {
+                    ScrollView {
+                        postsStack
                     }
-                    if store.posts.isEmpty && !store.isLoading {
-                        FFEmptyState(
-                            systemImage: "bubble.left.and.bubble.right",
-                            title: String(localized: "No requests yet"),
-                            message: String(localized: "Post a bug or a feature request. Other people can upvote and comment with their username.")
-                        )
-                    }
-                    ForEach(store.posts) { post in
-                        RequestRow(
-                            post: post,
-                            onOpen: { openPostID = post.id },
-                            onVote: {
-                                Task { await store.vote(session: session, postID: post.id) }
-                            }
-                        )
+                    .refreshable {
+                        await store.load(session: session, kind: filter.kind)
                     }
                 }
-                .padding(.horizontal, theme.space.screenPadding)
-                .padding(.bottom, 24)
-            }
-            .refreshable {
-                await store.load(session: session, kind: filter.kind)
             }
 
             FFScreenCTA(title: String(localized: "New request")) {
@@ -308,6 +296,48 @@ struct RequestsView: View {
             .padding(.bottom, 16)
         }
         .background(theme.bg)
+    }
+
+    private var postsStack: some View {
+        let rows = ForEach(store.posts) { post in
+            RequestRow(
+                post: post,
+                onOpen: { openPostID = post.id },
+                onVote: {
+                    Task { await store.vote(session: session, postID: post.id) }
+                }
+            )
+        }
+        let extras = Group {
+            if store.isLoading && store.posts.isEmpty {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 40)
+            }
+            if store.posts.isEmpty && !store.isLoading {
+                FFEmptyState(
+                    systemImage: "bubble.left.and.bubble.right",
+                    title: String(localized: "No requests yet"),
+                    message: String(localized: "Post a bug or a feature request. Other people can upvote and comment with their username.")
+                )
+            }
+        }
+        return Group {
+            if staticRender {
+                VStack(alignment: .leading, spacing: 10) {
+                    extras
+                    rows
+                }
+            } else {
+                LazyVStack(alignment: .leading, spacing: 10) {
+                    extras
+                    rows
+                }
+            }
+        }
+        .padding(.horizontal, theme.space.screenPadding)
+        .padding(.bottom, 24)
+        .fixedSize(horizontal: false, vertical: staticRender)
     }
 }
 
@@ -405,92 +435,44 @@ private struct RequestDetailView: View {
                     .padding(.top, 8)
             }
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
-                    if let post {
-                        HStack(spacing: 8) {
-                            FFTag(
-                                post.kind == "bug" ? String(localized: "Bug") : String(localized: "Feature"),
-                                tone: post.kind == "bug" ? .ember : .moss
-                            )
-                            Button(action: {
-                                Task { await store.vote(session: session, postID: post.id) }
-                            }) {
-                                HStack(spacing: 6) {
-                                    Image(systemName: post.voted ? "arrow.up.circle.fill" : "arrow.up.circle")
-                                    Text(
-                                        String(
-                                            localized: "feedback.votes",
-                                            defaultValue: "\(post.voteCount) upvotes"
-                                        )
-                                    )
-                                }
-                                .ffType(.label)
-                                .foregroundStyle(post.voted ? theme.mossText : theme.textSecondary)
-                            }
-                            .buttonStyle(.plain)
-                            Spacer()
-                        }
-
-                        Text(post.body)
-                            .ffType(.body)
-                            .foregroundStyle(theme.text)
-                            .lineSpacing(3)
-                            .fixedSize(horizontal: false, vertical: true)
-
-                        FFSectionHeader(title: String(localized: "Comments"))
-                            .padding(.top, 8)
-
-                        if store.comments.isEmpty {
-                            Text("No comments yet.")
-                                .ffType(.caption)
-                                .foregroundStyle(theme.textSecondary)
-                        }
-
-                        ForEach(store.comments) { item in
-                            VStack(alignment: .leading, spacing: 4) {
-                                HStack {
-                                    Text(verbatim: "@\(item.authorHandle)")
-                                        .ffType(.label)
-                                        .foregroundStyle(theme.mossText)
-                                    Spacer()
-                                    Text(item.createdAt, format: .relative(presentation: .named))
-                                        .ffType(.caption)
-                                        .foregroundStyle(theme.textFaint)
-                                }
-                                Text(item.body)
-                                    .ffType(.body)
-                                    .foregroundStyle(theme.text)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                            .padding(14)
-                            .background(
-                                theme.card,
-                                in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous)
-                            )
-                            .ffBorder(theme.hairline, radius: theme.radius.field)
-                        }
+            Group {
+                if staticRender {
+                    detailStack
+                } else {
+                    ScrollView {
+                        detailStack
                     }
+                    .scrollDismissesKeyboard(.interactively)
                 }
-                .padding(.horizontal, theme.space.screenPadding)
-                .padding(.top, 16)
-                .padding(.bottom, 24)
             }
-            .scrollDismissesKeyboard(.interactively)
 
             HStack(spacing: 10) {
-                TextField(String(localized: "Add a comment"), text: $comment, axis: .vertical)
-                    .ffType(.body)
-                    .foregroundStyle(theme.text)
-                    .lineLimit(1...4)
-                    .focused($commentFocused)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
-                    .background(
-                        theme.card,
-                        in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous)
-                    )
-                    .ffBorder(commentFocused ? theme.mossEdge : theme.line, radius: theme.radius.field)
+                if staticRender {
+                    Text("Add a comment")
+                        .ffType(.body)
+                        .foregroundStyle(theme.textFaint)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            theme.card,
+                            in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous)
+                        )
+                        .ffBorder(theme.line, radius: theme.radius.field)
+                } else {
+                    TextField(String(localized: "Add a comment"), text: $comment, axis: .vertical)
+                        .ffType(.body)
+                        .foregroundStyle(theme.text)
+                        .lineLimit(1...4)
+                        .focused($commentFocused)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .background(
+                            theme.card,
+                            in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous)
+                        )
+                        .ffBorder(commentFocused ? theme.mossEdge : theme.line, radius: theme.radius.field)
+                }
                 FFButton(
                     title: String(localized: "Post"),
                     enabled: canComment,
@@ -507,6 +489,79 @@ private struct RequestDetailView: View {
             guard !staticRender else { return }
             await store.loadDetail(session: session, postID: postID)
         }
+    }
+
+    private var detailStack: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            if let post {
+                HStack(spacing: 8) {
+                    FFTag(
+                        post.kind == "bug" ? String(localized: "Bug") : String(localized: "Feature"),
+                        tone: post.kind == "bug" ? .ember : .moss
+                    )
+                    Button(action: {
+                        Task { await store.vote(session: session, postID: post.id) }
+                    }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: post.voted ? "arrow.up.circle.fill" : "arrow.up.circle")
+                            Text(
+                                String(
+                                    localized: "feedback.votes",
+                                    defaultValue: "\(post.voteCount) upvotes"
+                                )
+                            )
+                        }
+                        .ffType(.label)
+                        .foregroundStyle(post.voted ? theme.mossText : theme.textSecondary)
+                    }
+                    .buttonStyle(.plain)
+                    Spacer()
+                }
+
+                Text(post.body)
+                    .ffType(.body)
+                    .foregroundStyle(theme.text)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                FFSectionHeader(title: String(localized: "Comments"))
+                    .padding(.top, 8)
+
+                if store.comments.isEmpty {
+                    Text("No comments yet.")
+                        .ffType(.caption)
+                        .foregroundStyle(theme.textSecondary)
+                }
+
+                ForEach(store.comments) { item in
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text(verbatim: "@\(item.authorHandle)")
+                                .ffType(.label)
+                                .foregroundStyle(theme.mossText)
+                            Spacer()
+                            Text(item.createdAt, format: .relative(presentation: .named))
+                                .ffType(.caption)
+                                .foregroundStyle(theme.textFaint)
+                        }
+                        Text(item.body)
+                            .ffType(.body)
+                            .foregroundStyle(theme.text)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(14)
+                    .background(
+                        theme.card,
+                        in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous)
+                    )
+                    .ffBorder(theme.hairline, radius: theme.radius.field)
+                }
+            }
+        }
+        .padding(.horizontal, theme.space.screenPadding)
+        .padding(.top, 16)
+        .padding(.bottom, 24)
+        .fixedSize(horizontal: false, vertical: staticRender)
     }
 
     private var canComment: Bool {
@@ -526,6 +581,7 @@ private struct ComposeRequestView: View {
     @ObservedObject var store: FeedbackStore
     @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
+    @Environment(\.ffStaticRender) private var staticRender
     @Environment(\.dismiss) private var dismiss
     @State private var kind: ComposeKind = .bug
     @State private var title = ""
@@ -566,50 +622,16 @@ private struct ComposeRequestView: View {
             .padding(.horizontal, theme.space.screenPadding)
             .padding(.vertical, 12)
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    if let error = store.error {
-                        FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
+            Group {
+                if staticRender {
+                    composeStack
+                } else {
+                    ScrollView {
+                        composeStack
                     }
-
-                    Text("Posted with your username. Signed-in people can see it, upvote, and comment.")
-                        .ffType(.body)
-                        .foregroundStyle(theme.textSecondary)
-                        .lineSpacing(3)
-
-                    FFSegmented(items: ComposeKind.allCases, selection: $kind) { $0.title }
-
-                    FFField(
-                        label: String(localized: "Title"),
-                        state: titleFocused ? .focused : .normal,
-                        counter: "\(title.count)/80"
-                    ) {
-                        TextField(String(localized: "Short and specific"), text: $title)
-                            .focused($titleFocused)
-                            .onChange(of: title) { _, value in
-                                if value.count > 80 { title = String(value.prefix(80)) }
-                            }
-                    }
-
-                    FFField(
-                        label: String(localized: "Details"),
-                        state: detailsFocused ? .focused : .normal,
-                        help: String(localized: "What happened, or what you want. Be specific."),
-                        counter: "\(details.count)/2000",
-                        minHeight: 120
-                    ) {
-                        TextField(String(localized: "Describe it"), text: $details, axis: .vertical)
-                            .focused($detailsFocused)
-                            .lineLimit(6...12)
-                            .onChange(of: details) { _, value in
-                                if value.count > 2000 { details = String(value.prefix(2000)) }
-                            }
-                    }
+                    .scrollDismissesKeyboard(.interactively)
                 }
-                .padding(.horizontal, theme.space.screenPadding)
-                .padding(.bottom, 24)
             }
-            .scrollDismissesKeyboard(.interactively)
 
             FFScreenCTA(
                 title: store.isSaving ? String(localized: "Posting…") : String(localized: "Post"),
@@ -622,6 +644,62 @@ private struct ComposeRequestView: View {
             .padding(.bottom, 16)
         }
         .background(theme.bg.ignoresSafeArea())
+    }
+
+    private var composeStack: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            if let error = store.error {
+                FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
+            }
+
+            Text("Posted with your username. Signed-in people can see it, upvote, and comment.")
+                .ffType(.body)
+                .foregroundStyle(theme.textSecondary)
+                .lineSpacing(3)
+
+            FFSegmented(items: ComposeKind.allCases, selection: $kind) { $0.title }
+
+            FFField(
+                label: String(localized: "Title"),
+                state: titleFocused ? .focused : .normal,
+                counter: "\(title.count)/80"
+            ) {
+                if staticRender {
+                    Text("Short and specific")
+                        .foregroundStyle(theme.textFaint)
+                } else {
+                    TextField(String(localized: "Short and specific"), text: $title)
+                        .focused($titleFocused)
+                        .onChange(of: title) { _, value in
+                            if value.count > 80 { title = String(value.prefix(80)) }
+                        }
+                }
+            }
+
+            FFField(
+                label: String(localized: "Details"),
+                state: detailsFocused ? .focused : .normal,
+                help: String(localized: "What happened, or what you want. Be specific."),
+                counter: "\(details.count)/2000",
+                minHeight: 120
+            ) {
+                if staticRender {
+                    Text("Describe it")
+                        .foregroundStyle(theme.textFaint)
+                        .frame(maxWidth: .infinity, minHeight: 80, alignment: .topLeading)
+                } else {
+                    TextField(String(localized: "Describe it"), text: $details, axis: .vertical)
+                        .focused($detailsFocused)
+                        .lineLimit(6...12)
+                        .onChange(of: details) { _, value in
+                            if value.count > 2000 { details = String(value.prefix(2000)) }
+                        }
+                }
+            }
+        }
+        .padding(.horizontal, theme.space.screenPadding)
+        .padding(.bottom, 24)
+        .fixedSize(horizontal: false, vertical: staticRender)
     }
 
     private var canPost: Bool {

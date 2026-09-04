@@ -13,10 +13,14 @@ final class FeedbackStore: ObservableObject {
     private var listLoad = 0
     private var detailLoad = 0
     private var voting: Set<UUID> = []
+    private var voteClock = 0
+    private var votes: [UUID: (clock: Int, voted: Bool, voteCount: Int)] = [:]
+    private var commentsFor: UUID?
 
     func load(session: SessionStore, kind: String?) async {
         listLoad += 1
         let load = listLoad
+        let startedAt = voteClock
         isLoading = true
         defer {
             if load == listLoad { isLoading = false }
@@ -25,7 +29,7 @@ final class FeedbackStore: ObservableObject {
             let token = try await session.freshAccessToken()
             let posts = try await api.listFeedback(kind: kind, accessToken: token).posts
             guard load == listLoad else { return }
-            self.posts = posts
+            self.posts = posts.map { keepingNewerVote($0, startedAt: startedAt) }
             error = nil
         } catch {
             if Task.isCancelled || error is CancellationError { return }
@@ -37,7 +41,9 @@ final class FeedbackStore: ObservableObject {
     func loadDetail(session: SessionStore, postID: UUID) async {
         detailLoad += 1
         let load = detailLoad
+        let startedAt = voteClock
         comments = []
+        commentsFor = postID
         isLoading = true
         defer {
             if load == detailLoad { isLoading = false }
@@ -46,10 +52,12 @@ final class FeedbackStore: ObservableObject {
             let token = try await session.freshAccessToken()
             let result = try await api.feedbackDetail(postID: postID, accessToken: token)
             guard load == detailLoad else { return }
-            detail = result.post
+            let post = keepingNewerVote(result.post, startedAt: startedAt)
+            detail = post
             comments = result.comments
-            if let index = posts.firstIndex(where: { $0.id == result.post.id }) {
-                posts[index] = result.post
+            commentsFor = post.id
+            if let index = posts.firstIndex(where: { $0.id == post.id }) {
+                posts[index] = post
             }
             error = nil
         } catch {
@@ -65,6 +73,8 @@ final class FeedbackStore: ObservableObject {
         do {
             let token = try await session.freshAccessToken()
             let result = try await api.toggleFeedbackVote(postID: postID, accessToken: token)
+            voteClock += 1
+            votes[postID] = (voteClock, result.voted, result.voteCount)
             if let index = posts.firstIndex(where: { $0.id == postID }) {
                 posts[index].voted = result.voted
                 posts[index].voteCount = result.voteCount
@@ -111,7 +121,9 @@ final class FeedbackStore: ObservableObject {
                 body: body,
                 accessToken: token
             )
-            comments.append(created.comment)
+            if commentsFor == postID {
+                comments.append(created.comment)
+            }
             if let index = posts.firstIndex(where: { $0.id == postID }) {
                 posts[index].commentCount += 1
             }
@@ -124,6 +136,14 @@ final class FeedbackStore: ObservableObject {
             self.error = error.localizedDescription
             return false
         }
+    }
+
+    private func keepingNewerVote(_ post: FitFightFeedbackPost, startedAt: Int) -> FitFightFeedbackPost {
+        guard let vote = votes[post.id], vote.clock > startedAt else { return post }
+        var post = post
+        post.voted = vote.voted
+        post.voteCount = vote.voteCount
+        return post
     }
 
     static func previewBoard() -> FeedbackStore {

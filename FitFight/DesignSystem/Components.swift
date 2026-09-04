@@ -769,6 +769,9 @@ struct FFListRow: View {
     let metric: String
     var delta: String?
     var ahead: Bool = true
+    /// When the metric is itself the gap, it carries the moss or ember of `ahead`
+    /// instead of the neutral ink the kit gives a plain total.
+    var metricIsGap: Bool = false
     var selected: Bool = false
     var action: (() -> Void)?
 
@@ -790,7 +793,7 @@ struct FFListRow: View {
                 Text(metric)
                     .font(.ff(18, 800))
                     .tracking(18 * -0.02)
-                    .foregroundStyle(theme.text)
+                    .foregroundStyle(metricIsGap ? (ahead ? theme.mossText : theme.emberText) : theme.text)
                 if let delta {
                     Text(delta)
                         .ffType(.caption)

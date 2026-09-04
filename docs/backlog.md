@@ -50,7 +50,7 @@ If the app is closed or killed, iOS will not reliably run timers, settle a month
 
 The phone’s job is: show the UI, read Apple Health Steps when it is open (or briefly woken), and upload the required aggregates. Push notifications are not in the current scope.
 
-**Last TestFlight:** 4 Sep 2026 — New starts with Create or Join. Joinable fights use a 4-character code and a live list (no scores on that list); share the code or link from the fight itself. Recurring fights roll into the next window when the current one ends. Leave from the fight if you do not want the next window. The TestFlight update notice sits under the version line as a solid card. Look for `1.0.0 · build N · staging`.
+**Last TestFlight:** 4 Sep 2026 — New starts with Create or Join. Joinable fights use a 4-character code and a live list (no scores on that list); share the code or link from the fight itself. Recurring fights roll into the next window when the current one ends. Leave from the fight if you do not want the next window. The Fights list titles every row with the loser action, puts the gap on the right and the days left underneath, and keeps live fights one size. The TestFlight update notice sits under the version line as a solid card. Look for `1.0.0 · build N · staging`.
 
 ## Semi urgent
 

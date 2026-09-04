@@ -41,7 +41,7 @@ struct FightDetailView: View {
                     delta: fight.kickerEmphasis,
                     ahead: fight.rank == 1,
                     footnote: "\(fight.metric.eyebrow) · \(fight.durationLabel) fight",
-                    timeLeft: timeLeft
+                    timeLeft: fight.timeLeftLabel
                 )
             } else {
                 liveHero
@@ -108,28 +108,10 @@ struct FightDetailView: View {
 
     private var you: Standing? { model.youStanding(in: fight) }
 
-    private var timeLeft: String {
-        let durationHours = fight.windowEnd.timeIntervalSince(fight.windowStart) / 3_600
-        if durationHours <= 6, fight.daysLeft != nil {
-            let hours = max(1, Int(ceil(fight.windowEnd.timeIntervalSinceNow / 3_600)))
-            return String(
-                localized: "fight.hours-left",
-                defaultValue: "\(hours) hours left"
-            )
-        }
-        if let days = fight.daysLeft {
-            return String(
-                localized: "fight.days-left",
-                defaultValue: "\(days) days left"
-            )
-        }
-        return fight.endedLabel ?? String(localized: "Ended")
-    }
-
     private var nav: some View {
         FFNavDetail(
             title: fight.name,
-            subtitle: timeLeft,
+            subtitle: fight.timeLeftLabel,
             onBack: { model.openFightID = nil }
         )
         .padding(.horizontal, theme.space.screenPadding)
@@ -289,7 +271,7 @@ struct FightDetailView: View {
                 ),
             subtitle: String(
                 localized: "fight.metric-time-left",
-                defaultValue: "\(fight.metric.eyebrow) · \(timeLeft)"
+                defaultValue: "\(fight.metric.eyebrow) · \(fight.timeLeftLabel)"
             ),
             metric: model.formatScore(you?.score ?? 0, metric: fight.metric),
             delta: fight.kickerEmphasis,

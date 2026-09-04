@@ -87,9 +87,10 @@ test("a source watermark cannot finalize a fight without exact end snapshots", a
 
 test("latest selected-source exact snapshots freeze together and reject later uploads", async (t) => {
   const f = await fixture(t);
-  for (const [userId, steps] of [[f.owner, 10], [f.owner, 20], [f.peer, 30]] as const) {
+  const readings = [[f.owner, 10], [f.owner, 20], [f.owner, 10], [f.peer, 30]] as const;
+  for (const [index, [userId, steps]] of readings.entries()) {
     await syncHealthKitAggregates(userId, {
-      complete_through: f.now.toISOString(), time_zone: "UTC", merged_days: [],
+      complete_through: new Date(f.now.getTime() - 1000 + index).toISOString(), time_zone: "UTC", merged_days: [],
       fight_aggregates: [{ fight_id: f.fightId, starts_at: f.startsAt,
         ends_at: f.endsAt, cutoff_at: f.endsAt, steps }],
     }, database);
@@ -108,14 +109,14 @@ test("latest selected-source exact snapshots freeze together and reject later up
   const before = await database`
     select * from public.fight_members where fight_id = ${f.fightId} order by user_id
   `;
-  assert.deepEqual(before.map((row) => row.final_value), ["20", "30"]);
+  assert.deepEqual(before.map((row) => row.final_value), ["10", "30"]);
   assert.deepEqual(before.map((row) => row.rank), [2, 1]);
   assert.ok(before.every((row) => row.final_steps_complete && row.finalized_at !== null));
   const frozen = await database`
     select value::text from private.fight_score_snapshots
     where fight_id = ${f.fightId} and is_final order by user_id
   `;
-  assert.deepEqual(frozen.map((row) => row.value), ["20", "30"]);
+  assert.deepEqual(frozen.map((row) => row.value), ["10", "30"]);
   await assert.rejects(syncHealthKitAggregates(f.owner, {
     complete_through: f.now.toISOString(), time_zone: "UTC", merged_days: [],
     fight_aggregates: [{ fight_id: f.fightId, starts_at: f.startsAt,

@@ -102,6 +102,10 @@ every accepted participant has an end-cutoff snapshot, or after the 24-hour grac
 period with missing data marked incomplete. The choice of a full 24-hour provisional
 period remains a product decision; Apple provides no historical immutability deadline.
 
+The snapshot fingerprint includes the read's `complete_through` timestamp. Replaying
+the same reading is idempotent, but a later reading that returns to an earlier total
+creates a new snapshot and can become the latest correction at the same Fight end.
+
 An absent HealthKit sum is unavailable, not a measured zero. The current native batch
 stops without overwriting saved data if any Fight window has no accessible sum. Daily
 buckets without a quantity are omitted. A future per-Fight availability contract can

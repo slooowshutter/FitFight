@@ -32,7 +32,7 @@ struct FightsListView: View {
                 let standing = difference(in: fight)
                 FFListRow(
                     monogram: initials(fight),
-                    title: fight.actionText,
+                    title: fight.listTitle,
                     subtitle: fight.timeLeftLabel,
                     metric: standing.text,
                     ahead: standing.ahead,
@@ -112,7 +112,7 @@ struct InvitationRow: View {
         HStack(spacing: 13) {
             FFAvatar(fight.inviter ?? fight.standings.first?.person, size: 44)
             VStack(alignment: .leading, spacing: 2) {
-                Text(fight.actionText)
+                Text(fight.listTitle)
                     .ffType(.heading)
                     .foregroundStyle(theme.text)
                 Text(fight.listSubtitle)
@@ -148,7 +148,7 @@ struct FinishedRow: View {
             HStack(spacing: 13) {
                 FFResultGlyph(fight.rank == 1 ? .win : .loss)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(fight.actionText)
+                    Text(fight.listTitle)
                         .ffType(.rowTitle)
                         .foregroundStyle(theme.text)
                     Text(fight.endedLabel ?? fight.listSubtitle)

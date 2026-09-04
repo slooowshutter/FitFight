@@ -51,13 +51,15 @@ struct FightDetailView: View {
                 if fight.joinCode != nil {
                     shareCard
                 }
-                FFSectionHeader(title: String(localized: "Action"))
-                    .padding(.top, theme.space.lg)
-                FFCard {
-                    Text(fight.actionText)
-                        .ffType(.rowTitle)
-                        .foregroundStyle(theme.text)
-                        .fixedSize(horizontal: false, vertical: true)
+                if fight.hasAction {
+                    FFSectionHeader(title: String(localized: "Action"))
+                        .padding(.top, theme.space.lg)
+                    FFCard {
+                        Text(fight.actionText)
+                            .ffType(.rowTitle)
+                            .foregroundStyle(theme.text)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
 
                 FFSectionHeader(title: String(localized: "Standings"))
@@ -110,7 +112,7 @@ struct FightDetailView: View {
 
     private var nav: some View {
         FFNavDetail(
-            title: fight.name,
+            title: fight.listTitle,
             subtitle: fight.timeLeftLabel,
             onBack: { model.openFightID = nil }
         )
@@ -141,7 +143,7 @@ struct FightDetailView: View {
             VStack(spacing: 0) {
                 FFTag(fight.metric.eyebrow)
                     .padding(.bottom, 12)
-                Text(fight.name)
+                Text(fight.listTitle)
                     .ffType(.title)
                     .foregroundStyle(theme.text)
                     .multilineTextAlignment(.center)
@@ -162,13 +164,15 @@ struct FightDetailView: View {
                     .ffType(.caption)
                     .foregroundStyle(theme.textSecondary)
                     .multilineTextAlignment(.center)
-                    .padding(.bottom, 8)
-                Text(fight.actionText)
-                    .ffType(.body)
-                    .foregroundStyle(theme.text)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.bottom, 22)
+                    .padding(.bottom, fight.hasAction && fight.actionText != fight.listTitle ? 8 : 22)
+                if fight.hasAction, fight.actionText != fight.listTitle {
+                    Text(fight.actionText)
+                        .ffType(.body)
+                        .foregroundStyle(theme.text)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.bottom, 22)
+                }
                 FFScreenCTA(title: fight.pendingJoin ? String(localized: "Join fight") : String(localized: "Accept challenge")) {
                     Task {
                         await model.acceptFight(id: fight.id)

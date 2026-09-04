@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createFightSchema } from "./create-fight-supabase-query";
+import { createFightSchema, storedFightIdentity } from "./create-fight-supabase-query";
 
 const base = {
   name: "Steps Fight",
@@ -41,13 +41,29 @@ test("visibility defaults to invite-only", () => {
   assert.equal(parsed.recurring, false);
 });
 
-test("create requires a loser action", () => {
+test("create allows an optional title and action", () => {
   assert.equal(
     createFightSchema.safeParse({ ...base, visibility: "joinable", actionText: undefined }).success,
-    false,
+    true,
   );
   assert.equal(
-    createFightSchema.safeParse({ ...base, visibility: "joinable", actionText: "   " }).success,
-    false,
+    createFightSchema.safeParse({ ...base, visibility: "joinable", actionText: "   ", name: "" }).success,
+    true,
   );
+  assert.deepEqual(storedFightIdentity("Office steps", "Cook dinner"), {
+    name: "Office steps",
+    actionText: "Cook dinner",
+  });
+  assert.deepEqual(storedFightIdentity("", "Cook dinner"), {
+    name: "Cook dinner",
+    actionText: "Cook dinner",
+  });
+  assert.deepEqual(storedFightIdentity("Office steps", "  "), {
+    name: "Office steps",
+    actionText: null,
+  });
+  assert.deepEqual(storedFightIdentity("  ", undefined), {
+    name: "Steps Fight",
+    actionText: null,
+  });
 });

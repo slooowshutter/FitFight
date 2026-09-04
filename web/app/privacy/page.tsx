@@ -42,8 +42,8 @@ export default function PrivacyPage() {
               account.
             </li>
             <li>
-              <strong>Fight data:</strong> the usernames invited to a Fight, its action
-              and duration, membership status, aggregate scores, rank, and timestamps.
+              <strong>Fight data:</strong> the usernames invited to a Fight, its title,
+              action and duration, membership status, aggregate scores, rank, and timestamps.
             </li>
             <li>
               <strong>Apple Health Steps:</strong> with your permission, FitFight reads
@@ -74,7 +74,7 @@ export default function PrivacyPage() {
           <p>
             Participants in the same private Fight can see each other&apos;s username,
             aggregate Steps total for the Fight, relevant daily Steps totals shown in the
-            Fight chart, rank, Fight action, and duration. They never receive another
+            Fight chart, rank, Fight title, Fight action, and duration. They never receive another
             participant&apos;s raw Apple Health samples or unrelated Health history.
           </p>
         </section>

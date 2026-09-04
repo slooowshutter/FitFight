@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 4,
+            notes: "You can name a fight. Title and action are both optional; if you skip a title, the action is the name on Fights."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 4,
             notes: "You → Settings now has Bugs & requests: post a bug or a feature request, see what other people submitted, upvote, and comment with your username."
         ),
         ReleaseNote(

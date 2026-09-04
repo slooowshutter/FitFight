@@ -61,7 +61,7 @@ The native Fight path uses Supabase; Apple Health synchronization and account de
 | Fight end | Exact `ends_at` is the final cutoff. Opening the app closes due fights; the protected Vercel cron runs daily if nobody opens it. After finalization, later Steps cannot change the result. |
 | Tabs | Fights, New, You. Requests and Design are removed. |
 | Look | Night/Day, Nunito, fixed Moss/Ember/Gold semantics; no accent picker or public design-system showcase. |
-| Versions | Works under You → Settings; the version label stays at the top of every root screen. Staging TestFlight also shows an in-app toast when a newer build has been uploaded. |
+| Versions | Works under You → Settings; the version label stays at the top of every root screen. Staging TestFlight also shows an opaque notice under that line when a newer build has been uploaded. |
 | Privacy / Support | Pages are implemented and linked under You → Settings. Staging uses `staging.fitfight.app`; production uses `fitfight.app`. Each route must be deployed before that build is tested or submitted. |
 | Account deletion | Permanently deletes the profile, username, authentication, Health/Steps data, relationships, invitations, memberships, scores, and owned Fights; removes participation from other Fights; clears local Health sync state; and revokes a stored Apple credential when available. |
 | WHOOP / Strava | Not built |

@@ -123,4 +123,4 @@ After a feature PR merges, CI deletes that branch. `main`, `develop`, and `testf
 
 A non-`main` push starts TestFlight. Tell Marc: wait for the TestFlight notification, then **Update**. First processing of a new build is ~10–20 minutes. That is Apple, not GitHub. Do not ask him to merge first or Run workflow.
 
-Staging TestFlight binaries also check a public latest-build pointer on launch and show an in-app toast when a newer build has been uploaded. Apple still needs the 10–20 minutes to process it. Production App Store builds do not show this toast.
+Staging TestFlight binaries also check a public latest-build pointer on launch and show an opaque notice under the version line when a newer build has been uploaded. Apple still needs the 10–20 minutes to process it. Production App Store builds do not show this notice.

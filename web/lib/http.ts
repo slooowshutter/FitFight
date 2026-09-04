@@ -21,6 +21,7 @@ export const ERROR_CODES = {
   join_rate_limited: "join_rate_limited",
   profile_missing: "profile_missing",
   missing_idempotency_key: "missing_idempotency_key",
+  rate_limited: "rate_limited",
   payload_too_large: "payload_too_large",
   archive_too_large: "archive_too_large",
   archive_not_found: "archive_not_found",

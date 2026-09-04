@@ -54,7 +54,7 @@ struct YouView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This permanently deletes your profile, uploaded Steps, invitations, and fights you created; removes you from other fights; and signs you out. This can’t be undone.")
+            Text("This permanently deletes your profile, uploaded Steps, invitations, fights you created, and bugs or requests you posted; removes you from other fights; and signs you out. This can’t be undone.")
         }
     }
 
@@ -169,6 +169,10 @@ struct YouView: View {
 
     private var settings: some View {
         FFGroupedRows {
+            navRow(String(localized: "Bugs & requests")) {
+                model.showingRequests = true
+            }
+            FFDivider()
             linkRow(String(localized: "Privacy"), destination: sitePage("privacy"))
             FFDivider()
             linkRow(String(localized: "Support"), destination: sitePage("support"))

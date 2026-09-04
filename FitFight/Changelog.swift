@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 4,
+            notes: "You → Settings now has Bugs & requests: post a bug or a feature request, see what other people submitted, upvote, and comment with your username."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 4,
             notes: "New now starts with Create or Join. Joinable fights use a 4-character code and a live list; share the code or link from the fight. Recurring fights roll into the next window when the current one ends. Leave from the fight if you do not want the next one."
         ),
         ReleaseNote(

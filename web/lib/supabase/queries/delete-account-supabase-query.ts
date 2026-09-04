@@ -32,6 +32,10 @@ export async function deleteAccount(
         throw new ApiError(404, ERROR_CODES.not_found, "Account not found");
       }
 
+      await sql`delete from public.feedback_votes where user_id = ${userId}`;
+      await sql`delete from public.feedback_comments where author_id = ${userId}`;
+      await sql`delete from public.feedback_posts where author_id = ${userId}`;
+
       await sql`
         update public.fight_series
         set paused_at = coalesce(paused_at, now())

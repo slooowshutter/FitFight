@@ -351,7 +351,7 @@ final class HealthKitStepsStore: ObservableObject {
         if let urlError = error as? URLError,
            [.notConnectedToInternet, .networkConnectionLost, .cannotConnectToHost,
             .cannotFindHost, .timedOut].contains(urlError.code) { return .networkUnavailable }
-        if case FitFightAPIError.http(let status, _) = error, status == 401 {
+        if case FitFightAPIError.http(let status, _, _) = error, status == 401 {
             return .authenticationUnavailable
         }
         return .syncFailed

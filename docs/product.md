@@ -23,9 +23,9 @@ Do not rename the bundle ID without Apple + CI updates.
 - Type the action the loser must do; it is required. There is no money or bragging-rights option.
 - Choose **1 hour**, **6 hours**, or **1 day** for testing, or **3 days**, **1 week**, **2 weeks**, or **1 month**.
 - Apple Health sends only merged Steps aggregates needed for active fights.
-- Settings keeps Privacy, Support, Versions, Sign out, and Delete account. Look is Night or Day.
-- Delete account removes the full account, uploaded Steps, memberships, and owned fights; a stored Sign in with Apple authorization is revoked when available.
-- Requests, money, unsupported metrics, and dead settings are removed.
+- Settings keeps Privacy, Support, Bugs & requests, Versions, Sign out, and Delete account. Look is Night or Day.
+- Delete account removes the full account, uploaded Steps, memberships, owned fights, and bugs or requests the User posted; a stored Sign in with Apple authorization is revoked when available.
+- The old Requests tab, money, unsupported metrics, and dead settings are removed.
 
 ## v0.3 (approved design) — historical
 

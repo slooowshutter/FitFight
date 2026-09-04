@@ -52,6 +52,12 @@ struct ContentView: View {
                 .fitFightTheme(themeStore.theme)
                 .presentationBackground(themeStore.theme.bg)
         }
+        .sheet(isPresented: $model.showingRequests) {
+            RequestsView()
+                .environmentObject(session)
+                .fitFightTheme(themeStore.theme)
+                .presentationBackground(themeStore.theme.bg)
+        }
     }
 
     @ViewBuilder

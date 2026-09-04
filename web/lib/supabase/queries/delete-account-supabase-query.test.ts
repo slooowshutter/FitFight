@@ -38,6 +38,9 @@ test("account deletion removes owned Fights and every user-owned row before the 
 
   assert.equal(appleAuthorizationRevoked, false);
   for (const table of [
+    "public.feedback_votes",
+    "public.feedback_comments",
+    "public.feedback_posts",
     "public.fights",
     "public.fight_series",
     "public.fight_series_members",

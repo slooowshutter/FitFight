@@ -2,14 +2,14 @@ import Foundation
 
 enum FitFightAPIError: LocalizedError {
     case notConfigured
-    case http(status: Int, code: String?)
+    case http(status: Int, code: String?, message: String?)
     case decoding(Error)
 
     var errorDescription: String? {
         switch self {
         case .notConfigured:
             return String(localized: "FitFight API is not configured. Set FFAPIBaseURL.")
-        case .http(let status, let code):
+        case .http(let status, let code, let message):
             switch code {
             case "handle_not_found":
                 return String(localized: "That username does not have a FitFight account yet.")
@@ -25,6 +25,12 @@ enum FitFightAPIError: LocalizedError {
                 return String(localized: "Your session expired. Sign in again.")
             case "fight_not_startable", "fight_not_cancellable", "conflict":
                 return String(localized: "This fight changed. Refresh and try again.")
+            case "validation":
+                return message ?? String(localized: "Check the title and details, then try again.")
+            case "rate_limited":
+                return message ?? String(localized: "You’ve posted a few times recently. Try again later.")
+            case "not_found":
+                return message ?? String(localized: "That isn’t available anymore.")
             default:
                 return String(
                     localized: "api.request-failed",
@@ -246,6 +252,77 @@ struct FitFightAccountDeletion: Decodable, Equatable {
     }
 }
 
+struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
+    var id: UUID
+    var kind: String
+    var title: String
+    var body: String
+    var voteCount: Int
+    var commentCount: Int
+    var voted: Bool
+    var authorHandle: String
+    var createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case kind
+        case title
+        case body
+        case voteCount = "vote_count"
+        case commentCount = "comment_count"
+        case voted
+        case authorHandle = "author_handle"
+        case createdAt = "created_at"
+    }
+}
+
+struct FitFightFeedbackComment: Codable, Identifiable, Equatable, Hashable {
+    var id: UUID
+    var body: String
+    var authorHandle: String
+    var createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case body
+        case authorHandle = "author_handle"
+        case createdAt = "created_at"
+    }
+}
+
+struct FitFightFeedbackList: Decodable, Equatable {
+    var posts: [FitFightFeedbackPost]
+}
+
+struct FitFightFeedbackDetail: Decodable, Equatable {
+    var post: FitFightFeedbackPost
+    var comments: [FitFightFeedbackComment]
+}
+
+struct FitFightFeedbackPostResponse: Decodable, Equatable {
+    var post: FitFightFeedbackPost
+}
+
+struct FitFightFeedbackCommentResponse: Decodable, Equatable {
+    var comment: FitFightFeedbackComment
+}
+
+struct FitFightFeedbackVote: Decodable, Equatable {
+    var voted: Bool
+    var voteCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case voted
+        case voteCount = "vote_count"
+    }
+}
+
+struct FitFightCreateFeedback: Encodable, Equatable {
+    var kind: String
+    var title: String
+    var body: String
+}
+
 struct FitFightAPI {
     var baseURL: URL?
 
@@ -447,6 +524,59 @@ struct FitFightAPI {
         )
     }
 
+    func listFeedback(kind: String?, accessToken: String) async throws -> FitFightFeedbackList {
+        var path = "feedback"
+        if let kind {
+            path += "?kind=\(kind)"
+        }
+        return try await get(path: path, accessToken: accessToken, expected: [200])
+    }
+
+    func feedbackDetail(postID: UUID, accessToken: String) async throws -> FitFightFeedbackDetail {
+        try await get(
+            path: "feedback/\(postID.uuidString.lowercased())",
+            accessToken: accessToken,
+            expected: [200]
+        )
+    }
+
+    func createFeedback(
+        _ payload: FitFightCreateFeedback,
+        accessToken: String
+    ) async throws -> FitFightFeedbackPostResponse {
+        try await post(
+            path: "feedback",
+            accessToken: accessToken,
+            body: payload,
+            expected: [201]
+        )
+    }
+
+    func toggleFeedbackVote(
+        postID: UUID,
+        accessToken: String
+    ) async throws -> FitFightFeedbackVote {
+        try await post(
+            path: "feedback/\(postID.uuidString.lowercased())/vote",
+            accessToken: accessToken,
+            body: EmptyJSON(),
+            expected: [200]
+        )
+    }
+
+    func createFeedbackComment(
+        postID: UUID,
+        body: String,
+        accessToken: String
+    ) async throws -> FitFightFeedbackCommentResponse {
+        try await post(
+            path: "feedback/\(postID.uuidString.lowercased())/comments",
+            accessToken: accessToken,
+            body: FeedbackCommentBody(body: body),
+            expected: [201]
+        )
+    }
+
     private func post<Body: Encodable, Response: Decodable>(
         path: String,
         accessToken: String,
@@ -521,8 +651,12 @@ struct FitFightAPI {
         let (data, response) = try await URLSession.shared.data(for: request)
         let status = (response as? HTTPURLResponse)?.statusCode ?? -1
         guard expected.contains(status) else {
-            let code = (try? Self.decoder.decode(APIErrorResponse.self, from: data))?.code
-            throw FitFightAPIError.http(status: status, code: code)
+            let payload = try? Self.decoder.decode(APIErrorResponse.self, from: data)
+            throw FitFightAPIError.http(
+                status: status,
+                code: payload?.code,
+                message: payload?.error
+            )
         }
         if Response.self == DiscardBody.self {
             return DiscardBody() as! Response
@@ -563,6 +697,7 @@ private struct EmptyJSON: Codable {}
 
 private struct APIErrorResponse: Decodable {
     var code: String
+    var error: String?
 }
 
 private struct JoinFightBody: Encodable {
@@ -592,6 +727,10 @@ private struct AppleAuthorizationBody: Encodable {
     enum CodingKeys: String, CodingKey {
         case authorizationCode = "authorization_code"
     }
+}
+
+private struct FeedbackCommentBody: Encodable {
+    var body: String
 }
 
 private struct DiscardBody: Decodable {

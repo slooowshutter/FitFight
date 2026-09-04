@@ -56,6 +56,16 @@ export default function SupportPage() {
         </section>
 
         <section>
+          <h2>Bugs et demandes</h2>
+          <p>
+            Ouvrez <strong>Vous → Réglages → Bugs et demandes</strong> pour signaler un bug
+            ou proposer une fonctionnalité, voir les demandes des autres personnes connectées,
+            voter et commenter avec votre nom d’utilisateur. Vous pouvez toujours écrire à
+            l’assistance pour un compte ou un problème Santé.
+          </p>
+        </section>
+
+        <section>
           <h2>Inviter une personne</h2>
           <p>
             Saisissez son nom d’utilisateur FitFight exact lors de la création d’un défi.
@@ -78,7 +88,8 @@ export default function SupportPage() {
           <p>
             Ouvrez <strong>Vous → Réglages → Supprimer le compte</strong> et confirmez. Cette
             action supprime définitivement votre profil, les pas envoyés, les invitations et
-            participations, vous retire des défis créés par d’autres personnes et supprime
+            participations, les bugs et demandes que vous avez publiés, vous retire des défis
+            créés par d’autres personnes et supprime
             pour tous les participants les défis que vous avez créés. FitFight demande aussi
             à Apple de révoquer tout identifiant Connexion avec Apple disponible, puis vous
             déconnecte. Cette action est irréversible.

@@ -1,5 +1,5 @@
 begin;
-select plan(45);
+select plan(57);
 
 select has_schema('private', 'private schema exists');
 select has_table('public', 'profiles', 'profiles exists');
@@ -18,6 +18,9 @@ select has_table(
   'healthkit_sync_diagnostics',
   'latest HealthKit diagnostics stay private'
 );
+select has_table('public', 'feedback_posts', 'feedback posts exist');
+select has_table('public', 'feedback_votes', 'feedback votes exist');
+select has_table('public', 'feedback_comments', 'feedback comments exist');
 
 select ok(
   (select relrowsecurity from pg_class c
@@ -80,6 +83,54 @@ select is(
   has_table_privilege('authenticated', 'private.healthkit_sync_diagnostics', 'SELECT'),
   false,
   'authenticated clients cannot read HealthKit diagnostics'
+);
+select ok(
+  (select relrowsecurity from pg_class c
+     join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relname = 'feedback_posts'),
+  'feedback_posts has RLS'
+);
+select ok(
+  (select relrowsecurity from pg_class c
+     join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relname = 'feedback_votes'),
+  'feedback_votes has RLS'
+);
+select ok(
+  (select relrowsecurity from pg_class c
+     join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relname = 'feedback_comments'),
+  'feedback_comments has RLS'
+);
+select is(
+  has_table_privilege('authenticated', 'public.feedback_posts', 'SELECT'),
+  true,
+  'signed-in users can read feedback posts'
+);
+select is(
+  has_table_privilege('authenticated', 'public.feedback_posts', 'INSERT'),
+  false,
+  'clients cannot insert feedback posts'
+);
+select is(
+  has_table_privilege('authenticated', 'public.feedback_comments', 'SELECT'),
+  true,
+  'signed-in users can read feedback comments'
+);
+select is(
+  has_table_privilege('authenticated', 'public.feedback_comments', 'INSERT'),
+  false,
+  'clients cannot insert feedback comments'
+);
+select is(
+  has_table_privilege('authenticated', 'public.feedback_votes', 'SELECT'),
+  false,
+  'clients cannot read feedback votes'
+);
+select is(
+  has_table_privilege('anon', 'public.feedback_posts', 'SELECT'),
+  false,
+  'anonymous clients cannot read feedback posts'
 );
 select is(
   has_table_privilege('authenticated', 'public.fights', 'INSERT'),

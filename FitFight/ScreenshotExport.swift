@@ -115,7 +115,16 @@ enum ScreenshotExport {
             },
             Shot(name: "05-you") { store, model in
                 frame(YouView(), tab: .you, themeStore: store, model: model)
-            }
+            },
+            Shot(name: "06-requests") { store, model in
+                sheet(RequestsScreenshot.board(), themeStore: store, model: model)
+            },
+            Shot(name: "07-request-detail") { store, model in
+                sheet(RequestsScreenshot.detail(), themeStore: store, model: model)
+            },
+            Shot(name: "08-request-compose") { store, model in
+                sheet(RequestsScreenshot.compose(), themeStore: store, model: model)
+            },
         ]
     }
 
@@ -168,6 +177,29 @@ enum ScreenshotExport {
         } else {
             Color.clear
         }
+    }
+
+    private static func sheet<Content: View>(
+        _ content: Content,
+        themeStore: ThemeStore,
+        model: AppModel
+    ) -> AnyView {
+        let theme = themeStore.theme
+        return AnyView(
+            Color.clear
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .overlay(alignment: .top) {
+                    content
+                }
+                .background(theme.bg)
+                .environmentObject(themeStore)
+                .environmentObject(model)
+                .environmentObject(SessionStore(screenshot: ()))
+                .environmentObject(HealthKitStepsStore())
+                .environment(\.ffTheme, theme)
+                .environment(\.colorScheme, theme.colorScheme)
+                .environment(\.ffStaticRender, true)
+        )
     }
 
     private static func frame<Content: View>(

@@ -25,23 +25,7 @@ Honest works / doesn’t / next: [`status.md`](status.md). Read that before the 
 
 ## Urgent
 
-### Freeze historical results against aggregation-code changes
-
-Changing normalization, aggregation, or scoring code must not silently rewrite previously finalized history. Persist the calculation version, input revision, calculated value, and finalized time used for each historical day and Fight result. A new code version applies prospectively unless an explicit, audited backfill is approved.
-
-Provider corrections, deletion tombstones, and late device syncs may still update an unfinalized day during its disclosed correction window. Once finalized, that day's stored result remains immutable except through an explicit audited correction. Decide the day-finalization boundary and correction window before relying on historical totals for recommendations or completed Fights.
-
-### Verify account deletion before App Store submission
-
-The backend now hard-deletes the profile, username, authentication rows, Health/Steps
-data, uploads, friendships, invitations, memberships, Fights the User created, and
-bugs or feature requests they posted. It
-removes the User from Fights owned by someone else. The phone clears its local Health
-sync state. New Apple sign-ins store an encrypted revocation token; legacy accounts
-without one still delete and receive the manual Apple Settings disconnect path.
-
-Before App Store submission, configure the Sign in with Apple key and token-encryption
-secret in both Vercel environments, then verify fresh sign-in and deletion on staging.
+Nothing.
 
 ## Principle: server does the work
 
@@ -51,26 +35,21 @@ If the app is closed or killed, iOS will not reliably run timers, settle a month
 
 The phone’s job is: show the UI, read Apple Health Steps when it is open (or briefly woken), and upload the required aggregates. Push notifications are not in the current scope.
 
-**Last TestFlight:** 4 Sep 2026 — Share on a fight uses the same space under the section title as Action and Standings. New fights can have a title. Title and action are both optional; if you skip a title, the action is the name on Fights. You → Settings has Bugs & requests: post a bug or a feature request, browse the board, upvote, and comment with your username. New starts with Create or Join. Joinable fights use a 4-character code and a live list (no scores on that list); share the code or link from the fight itself. Recurring fights roll into the next window when the current one ends. Leave from the fight if you do not want the next window. The Fights list titles every row with the fight name (or the action when there is no title), puts the gap on the right and the days left underneath, and keeps live fights one size. FitFight follows the iPhone’s English or French app language across the native UI, Health permissions, errors, accessibility labels, and Versions. The TestFlight update notice sits under the version line as a solid card. Apple Health background sync installs at launch, preserves one interrupted opportunity, and shows private status under You; standings show relative freshness and exact final-window completeness. Look for `1.0.0 · build N · staging`.
+**Last TestFlight:** 4 Sep 2026 — A day's Steps match on You and on the fight chart. Pull-to-refresh says whether standings updated or failed, with retry. Finished fights and completed days keep their saved totals if scoring code changes. Look for `1.0.0 · build N · staging`.
 
 ## Semi urgent
 
 - **Slider for dates.** Replace or supplement the current date picker with a slider.
 - **Haptic feedback on button tap.** Vibration (`retour haptique`) when buttons are tapped.
 - **Nicer graph for a fight in progress.** Improve the in-progress Fight chart.
-- **Data source mismatch for Dorian.** One place shows 2.2k steps for that day; another shows 0 steps. Same person, same day — they must match.
 
 ## Now
 
 - Marc: Apple → On on the **new** develop Auth ([providers](https://supabase.com/dashboard/project/zstzbfocunthczzubggz/auth/providers)), client ID `com.fitfight.mvp`.
 - Marc: add the Sign in with Apple key and a stable 32-byte token-encryption key to the staging and production Vercel environments before testing fresh sign-in or submitting.
-- Marc: one Steps fight on staging. Exact username, optional title and action, Apple Health, Start **once**.
-- Participants on TestFlight Internal Testing. Same build, their own Apple IDs and usernames. Start with a 3-day Steps fight.
 
 ## Next
 
-- **Validate aggregate-only Apple Health sync on staging.** Use two phones to confirm the authenticated request sends the server-issued Fight windows, the exact-window totals drive both standings, relevant merged daily buckets drive charts only, and no raw archive or Storage object is created.
-- **Watch a real 3-day fight close.** Opening the app marks a due fight finished; the daily Vercel cron is the safety net. Proof is two phones: standings match, the Fight ends, and Steps after `ends_at` do not count. Do that before App Store.
 - **Smoke-test every allowed duration.** Confirm New sends 3, 7, 14, or 30 days and the detail screen shows the title or action and the correct end date.
 - App Store when Marc says ship (`develop` → `main`).
 
@@ -83,7 +62,6 @@ reopening scope.
 - **LLM review for Bugs & requests.** After someone submits a bug or feature request, an LLM could check that the write-up is specific enough and reject empty or abusive language. Decide provider, API keys, prompt, cost, failure behavior, and what the person sees when a post is refused before building this. Not in v1.
 - **Report and block on Bugs & requests.** The board is user-generated text. Apple will want a way to report a post and block a person. Do not invent that screen until this moves up.
 - **Restore bounded full-fidelity HealthKit ingestion only when a shipped feature needs it.** The MVP deliberately keeps only Apple's merged exact Fight-window totals and the relevant merged daily chart buckets. Before restoring raw samples, deletion anchors, per-source statistics, device/source metadata, or another archive transport, define the concrete product purpose, explicit Collection consent, bounded backfill, retention and deletion policy, edit/deletion reconciliation, provenance shown to Users, and operational size limits. Never calculate Steps by naïvely summing overlapping raw samples or source totals; Apple's merged aggregate remains the reference unless a reviewed Metric specification replaces it.
-- **Show the result of a Fight refresh.** Pull-to-refresh now uploads current Apple Health aggregates and reloads standings from the server, but after the native spinner ends the Fight still needs a visible up-to-date or failed state with a retry path. In participant standings, show sync freshness as relative elapsed time—minutes ago, hours ago, then days ago—instead of an absolute date and time. Do not promise that iOS background delivery is instant.
 - **Advanced Fight-rule builder.** An explicitly advanced dynamic form for the full Measure × Score × Result model in [`fight-rules.md`](fight-rules.md). Earlier answers control which later fields appear: choosing workouts reveals workout-validity rules; choosing days reaching a value asks for the daily value; choosing Reach asks for the final goal. Show only reviewed compatible combinations, keep a plain-language summary visible, and validate the final object on the server. Do not make the Basic path feel like this form. No screen yet; do not build until moved up.
 - **Natural-language Fight creation by text or voice.** A User types or records what they want—such as “10,000 Steps at least five days this week; everyone who does it succeeds.” Speech is transcribed when needed, then an LLM converts the request into the same validated Fight-rule object from [`fight-rules.md`](fight-rules.md) and fills the Advanced form. Ask a short follow-up when meaning is ambiguous; never invent an unsupported combination. Always show the completed form and plain-language rules for explicit confirmation before creating, inviting, or starting the Fight. Decide voice/transcript consent, retention, provider, cost, and failure behavior before implementation. No screen yet; do not build until moved up.
 - **Replay and recurring fights.** When a fight ends, a Redo / Replay button starts the same challenge again; people accept the new window. Recurring is the always-on version: same fight every week (or every N days), server recreates it when the last one ends, so you do not rebuild a weekly steps fight with your wife by hand. Recurring series also get a tiny history: how many times each person has won or lost across previous windows, a ranking of this challenge over time. No extra screens yet; do not invent one.
@@ -114,6 +92,8 @@ are not missing screens; they are out of scope.
 
 The phone writes fights and Steps to staging after this PR is merged. See [`status.md`](status.md).
 
+- Daily chart Steps use the same HealthKit range query as You / fight totals, so the same person and day cannot show 2.2k in one place and 0 in another. Pull-to-refresh shows updated or failed, with retry. Completed civil days and finalized Fight members keep their stored totals, calculation version, and finalize time; later scoring code applies only to open days and live fights.
+- Two-phone 3-day Steps fight on staging closed with matching standings. Account deletion was verified on staging.
 - Current launch shape: Fights, New, and You; direct exact-username Steps challenges; optional fight title and optional loser action; 3/7/14/30-day durations; Privacy and Support links; essential settings only.
 - Account deletion hard-deletes the account and owned Fights, removes participation elsewhere, clears local Health sync data, and supports encrypted Sign in with Apple token revocation.
 - Historical v0.3 design port: four tabs, dark/light, 10 accents, fixture fights. Requests and extra accents were later removed.

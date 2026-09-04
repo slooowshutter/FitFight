@@ -11,6 +11,10 @@ struct FightsListView: View {
             FFScreenTitle(title: String(localized: "Fights"), subtitle: subtitle)
                 .padding(.bottom, 6)
 
+            if model.fightRefresh.showsStatus {
+                FightRefreshStatusView()
+            }
+
             if isEmpty {
                 FFEmptyState(
                     systemImage: "trophy",
@@ -170,5 +174,51 @@ struct FinishedRow: View {
             .ffBorder(theme.hairline, radius: theme.radius.card)
         }
         .buttonStyle(FFPressStyle())
+    }
+}
+
+struct FightRefreshStatusView: View {
+    @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var session: SessionStore
+    @EnvironmentObject private var steps: HealthKitStepsStore
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        switch model.fightRefresh {
+        case .idle:
+            EmptyView()
+        case .updated(let date):
+            TimelineView(.periodic(from: .now, by: 30)) { context in
+                let freshness = model.formatLastSync(date, now: context.date)
+                Text(
+                    String(
+                        localized: "fight.synced-at",
+                        defaultValue: "Synced \(freshness)"
+                    )
+                )
+                .ffType(.caption)
+                .foregroundStyle(theme.textSecondary)
+            }
+        case .syncFailed:
+            FFNotice(
+                text: String(localized: "Couldn’t sync Steps — tap to retry"),
+                tone: .ember,
+                systemImage: "exclamationmark.triangle",
+                actionTitle: String(localized: "Try again"),
+                action: retry
+            )
+        case .loadFailed:
+            FFNotice(
+                text: String(localized: "Couldn’t refresh standings — tap to retry"),
+                tone: .ember,
+                systemImage: "exclamationmark.triangle",
+                actionTitle: String(localized: "Try again"),
+                action: retry
+            )
+        }
+    }
+
+    private func retry() {
+        Task { await model.refreshFights(session: session, steps: steps) }
     }
 }

@@ -77,45 +77,36 @@ enum HealthKitStepAggregates {
         end: Date,
         calendar: Calendar
     ) async throws -> [String: Int] {
-        try await withCheckedThrowingContinuation { continuation in
-            let predicate = HKQuery.predicateForSamples(
-                withStart: start,
-                end: end,
-                options: .strictStartDate
+        var totals: [String: Int] = [:]
+        var cursor = calendar.startOfDay(for: start)
+        while cursor < end {
+            guard let nextDay = calendar.date(byAdding: .day, value: 1, to: cursor) else { break }
+            let dayEnd = min(nextDay, end)
+            guard dayEnd > cursor else { break }
+            let steps = try await total(
+                store: store,
+                type: type,
+                start: cursor,
+                end: dayEnd,
+                sampleOptions: .strictStartDate
             )
-            let query = HKStatisticsCollectionQuery(
-                quantityType: type,
-                quantitySamplePredicate: predicate,
-                options: [.cumulativeSum],
-                anchorDate: calendar.startOfDay(for: start),
-                intervalComponents: DateComponents(day: 1)
-            )
-            query.initialResultsHandler = { _, collection, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-                var totals: [String: Int] = [:]
-                collection?.enumerateStatistics(from: start, to: end) { statistics, _ in
-                    let steps = statistics.sumQuantity()?.doubleValue(for: .count()) ?? 0
-                    totals[dayStamp(statistics.startDate, calendar: calendar)] = Int(steps.rounded())
-                }
-                continuation.resume(returning: totals)
-            }
-            store.execute(query)
+            totals[dayStamp(cursor, calendar: calendar)] = steps
+            cursor = nextDay
         }
+        return totals
     }
 
     private static func total(
         store: HKHealthStore,
         type: HKQuantityType,
         start: Date,
-        end: Date
+        end: Date,
+        sampleOptions: HKQueryOptions = [.strictStartDate, .strictEndDate]
     ) async throws -> Int {
         let predicate = HKQuery.predicateForSamples(
             withStart: start,
             end: end,
-            options: [.strictStartDate, .strictEndDate]
+            options: sampleOptions
         )
         let descriptor = HKStatisticsQueryDescriptor(
             predicate: .quantitySample(type: type, predicate: predicate),

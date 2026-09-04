@@ -63,6 +63,7 @@ export type FightMemberRow = {
   input_revision: number | null;
   last_synced_at: string | null;
   final_steps_complete: boolean;
+  calculation_version: number;
   final_value: number | string | null;
   finalized_at: string | null;
 };

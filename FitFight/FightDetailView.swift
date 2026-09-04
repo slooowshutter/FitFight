@@ -48,6 +48,9 @@ struct FightDetailView: View {
             }
 
             if !pendingJoin {
+                if model.fightRefresh.showsStatus {
+                    FightRefreshStatusView()
+                }
                 if fight.joinCode != nil {
                     FFSection(title: String(localized: "Share")) {
                         shareCard

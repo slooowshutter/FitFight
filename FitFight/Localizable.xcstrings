@@ -1,6 +1,7 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "A day's Steps now match on You and on the fight chart. Pull-to-refresh says whether standings updated or failed, with a way to retry." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Le total d’un jour est le même dans Vous et dans le défi. Glisser pour actualiser indique si le classement a été mis à jour ou a échoué, et vous pouvez réessayer."}}}},
     "1 month" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"1 mois"}}}},
     "1 week" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"1 semaine"}}}},
     "1st" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"1er"}}}},
@@ -50,9 +51,11 @@
     "Couldn’t decline." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Impossible de refuser."}}}},
     "Couldn’t delete account. Try again." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Impossible de supprimer le compte. Réessayez."}}}},
     "Couldn’t read the server response." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Impossible de lire la réponse du serveur."}}}},
+    "Couldn’t refresh standings — tap to retry" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Impossible d’actualiser le classement — touchez pour réessayer"}}}},
     "Couldn’t save that username." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Impossible d’enregistrer ce nom d’utilisateur."}}}},
     "Couldn’t sign in. Try again." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Impossible de se connecter. Réessayez."}}}},
     "Couldn’t start the fight." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Impossible de lancer le défi."}}}},
+    "Couldn’t sync Steps — tap to retry" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Impossible de synchroniser les pas — touchez pour réessayer"}}}},
     "Day" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Jour"}}}},
     "Day 1" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Jour 1"}}}},
     "Day 2" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Jour 2"}}}},
@@ -136,6 +139,7 @@
     "This fight changed. Refresh and try again." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Ce défi a changé. Actualisez puis réessayez."}}}},
     "This permanently deletes your profile, uploaded Steps, invitations, and fights you created; removes you from other fights; and signs you out. This can’t be undone." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Cette action supprime définitivement votre profil, les pas envoyés, les invitations et les défis que vous avez créés ; elle vous retire des autres défis et vous déconnecte. Cette action est irréversible."}}}},
     "Tied" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Égalité"}}}},
+    "Try again" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Réessayer"}}}},
     "Up to date" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"À jour"}}}},
     "Up to date · Background sync unavailable" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"À jour · synchronisation en arrière-plan indisponible"}}}},
     "Use 2–30 letters, numbers, or underscore." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Utilisez 2 à 30 lettres, chiffres ou tirets bas."}}}},

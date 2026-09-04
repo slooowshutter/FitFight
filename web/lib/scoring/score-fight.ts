@@ -1,5 +1,7 @@
 import type { OutcomeRule } from "../types/database";
 
+export const STEPS_CALCULATION_VERSION = 1;
+
 export type ScoreMemberInput = {
   userId: string;
   value: number;

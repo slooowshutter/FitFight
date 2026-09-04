@@ -16,6 +16,20 @@ enum FightStatus: String, Codable, Hashable {
     case finished
 }
 
+enum FightRefreshState: Equatable {
+    case idle
+    case updated(Date)
+    case syncFailed
+    case loadFailed
+
+    var showsStatus: Bool {
+        switch self {
+        case .idle: return false
+        case .updated, .syncFailed, .loadFailed: return true
+        }
+    }
+}
+
 struct Person: Codable, Identifiable, Hashable {
     var id: String
     var name: String
@@ -160,6 +174,7 @@ final class AppModel: ObservableObject {
     @Published var pendingJoinable: Fight?
     @Published private(set) var isCreatingFight = false
     @Published private(set) var isRefreshingFights = false
+    @Published private(set) var fightRefresh: FightRefreshState = .idle
 
     @Published var you: Person
     @Published var fights: [Fight]
@@ -294,10 +309,21 @@ final class AppModel: ObservableObject {
         defer { isRefreshingFights = false }
 
         await steps.refresh(requestAccess: false)
+        var synced = true
         if session.authSession != nil {
-            await steps.syncToBackend(session: session, trigger: .foreground)
+            let result = await steps.syncToBackend(session: session, trigger: .foreground)
+            if steps.hasAsked {
+                synced = result
+            }
         }
-        await refreshFromServer(session: session)
+        let loaded = await refreshFromServer(session: session)
+        if synced && loaded {
+            fightRefresh = .updated(Date())
+        } else if !synced {
+            fightRefresh = .syncFailed
+        } else {
+            fightRefresh = .loadFailed
+        }
     }
 
     func removeCachedFights(for userID: UUID) {
@@ -308,10 +334,11 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func refreshFromServer(session: SessionStore) async {
+    @discardableResult
+    func refreshFromServer(session: SessionStore) async -> Bool {
         self.session = session
         guard let userId = session.authSession?.user.id ?? session.client.auth.currentUser?.id else {
-            return
+            return false
         }
         if let profile = session.profile {
             you = Self.person(from: profile, isYou: true)
@@ -324,14 +351,15 @@ final class AppModel: ObservableObject {
         do {
             var loaded = try await loadFights(client: session.client, userId: userId)
             loaded = try await populateStepDays(loaded, client: session.client)
-            guard session.authSession?.user.id == userId else { return }
+            guard session.authSession?.user.id == userId else { return false }
             fights = loaded
             cachedUserID = userId
             if let data = try? JSONEncoder().encode(loaded) {
                 UserDefaults.standard.set(data, forKey: Self.fightsCachePrefix + userId.uuidString)
             }
+            return true
         } catch {
-            // Keep the last successful result visible while the phone is offline.
+            return false
         }
     }
 
@@ -716,7 +744,9 @@ final class AppModel: ObservableObject {
         return window.sorted().map { day in
             let scores = standings.map { row in
                 let personID = UUID(uuidString: row.person.id)
-                let value = days.first { $0.userId == personID && $0.day == day }?.steps ?? 0
+                let value = days.first {
+                    $0.userId == personID && civilDayKey($0.day) == day
+                }?.steps ?? 0
                 return DayScore(person: row.person, value: Double(value))
             }
             let date = formatter.date(from: day) ?? Date()
@@ -1102,6 +1132,25 @@ private struct MemberDeclineUpdate: Encodable {
     let state: String
 }
 
+private func civilDayKey(_ raw: String) -> String {
+    let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard trimmed.count >= 10 else { return trimmed }
+    let key = String(trimmed.prefix(10))
+    let ok = key.range(of: #"^\d{4}-\d{2}-\d{2}$"#, options: .regularExpression) != nil
+    return ok ? key : trimmed
+}
+
+private func utcDayStamp(_ date: Date) -> String {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+    let formatter = DateFormatter()
+    formatter.calendar = calendar
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.timeZone = calendar.timeZone
+    formatter.dateFormat = "yyyy-MM-dd"
+    return formatter.string(from: date)
+}
+
 private struct StepDayRow: Decodable {
     let userId: UUID
     let day: String
@@ -1111,6 +1160,26 @@ private struct StepDayRow: Decodable {
         case userId = "user_id"
         case day
         case steps
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        userId = try container.decode(UUID.self, forKey: .userId)
+        if let raw = try? container.decode(String.self, forKey: .day) {
+            day = civilDayKey(raw)
+        } else {
+            let date = try container.decode(Date.self, forKey: .day)
+            day = civilDayKey(utcDayStamp(date))
+        }
+        if let value = try? container.decode(Int.self, forKey: .steps) {
+            steps = value
+        } else if let value = try? container.decode(Double.self, forKey: .steps) {
+            steps = Int(value.rounded())
+        } else if let raw = try? container.decode(String.self, forKey: .steps), let value = Int(raw) {
+            steps = value
+        } else {
+            steps = 0
+        }
     }
 }
 

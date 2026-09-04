@@ -394,7 +394,7 @@ attribution()
 | Garmin app/watch → Apple Health | Steps and workouts among other types | Garmin states its app must be foregrounded to send to Apple Health | **Supported with freshness warning** |
 | Strava app → Apple Health | Recorded activity type, time, distance, calories | Depends on Strava's sync to HealthKit | **Use HealthKit copy where valid** |
 | Direct WHOOP API | Workouts, cycles/strain, recovery, sleep; current API does not provide a general step feed | Yes, via refresh tokens, webhooks, and reconciliation | **Second-wave candidate after approval** |
-| Direct Strava API | Recorded activities, not general daily step totals | Yes, via refresh tokens and webhooks | **Blocked pending written social-display approval** |
+| Direct Strava API | Recorded activities, not general daily step totals | Yes, via refresh tokens and webhooks | **Connect it.** Fight standings from Strava wait on written approval |
 | Health Connect | Android steps, exercise, intensity and other approved records | Background read can be requested where supported | **Adapter seam now; build with Android** |
 | Direct Bluetooth hardware | Device-specific | Only while supported device/app execution allows | **Do not build in v1** |
 

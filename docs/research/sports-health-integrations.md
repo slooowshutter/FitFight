@@ -189,7 +189,7 @@ Build order and which sources are in: [`data-sources.md`](data-sources.md). Tech
 2. **Vendor clouds are first-class connections**, not a HealthKit fallback. People will not enable WHOOP/Oura/Garmin export.
 3. **One selected Data source per member per Metric per Fight.** Do not add a WHOOP workout to its Strava copy.
 4. **Show sync health honestly.** Never say “permission denied” from an empty HealthKit read.
-5. **Strava API data may be collected for that athlete.** Shared Fight display still needs written Strava approval under the 2026 policy.
+5. **Strava is in.** Connect it. Fight standings from Strava wait on an email to `developers@strava.com`.
 6. **Do not scrape** Nike, Peloton, or Amazfit. No public API.
 7. **Android / Health Connect / Pixel** are out until there is an Android app.
 

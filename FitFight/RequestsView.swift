@@ -69,11 +69,10 @@ final class FeedbackStore: ObservableObject {
         defer { isSaving = false }
         do {
             let token = try await session.freshAccessToken()
-            let created = try await api.createFeedback(
+            _ = try await api.createFeedback(
                 FitFightCreateFeedback(kind: kind, title: title, body: body),
                 accessToken: token
             )
-            posts.insert(created.post, at: 0)
             error = nil
             return true
         } catch {
@@ -151,7 +150,9 @@ struct RequestsView: View {
         .onChange(of: filter) { _, value in
             Task { await store.load(session: session, kind: value.kind) }
         }
-        .sheet(isPresented: $composing) {
+        .sheet(isPresented: $composing, onDismiss: {
+            Task { await store.load(session: session, kind: filter.kind) }
+        }) {
             ComposeRequestView(store: store)
                 .environmentObject(session)
                 .fitFightTheme(theme)

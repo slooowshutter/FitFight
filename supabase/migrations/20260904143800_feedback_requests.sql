@@ -39,9 +39,11 @@ create index feedback_votes_user_idx
 create index feedback_comments_post_idx
   on public.feedback_comments (post_id, created_at);
 
+revoke all on table public.feedback_posts from anon, authenticated, public;
+revoke all on table public.feedback_comments from anon, authenticated, public;
+revoke all on table public.feedback_votes from anon, authenticated, public;
 grant select on public.feedback_posts to authenticated;
 grant select on public.feedback_comments to authenticated;
-revoke all on table public.feedback_votes from anon, authenticated, public;
 grant all on table public.feedback_posts to postgres, service_role;
 grant all on table public.feedback_votes to postgres, service_role;
 grant all on table public.feedback_comments to postgres, service_role;

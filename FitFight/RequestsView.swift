@@ -162,6 +162,7 @@ final class FeedbackStore: ObservableObject {
     ]
 }
 
+@MainActor
 enum RequestsScreenshot {
     static func board() -> RequestsView {
         RequestsView(store: .previewBoard())
@@ -186,7 +187,11 @@ struct RequestsView: View {
     @State private var composing = false
     @State private var openPostID: UUID?
 
-    init(store: FeedbackStore = FeedbackStore()) {
+    init() {
+        _store = StateObject(wrappedValue: FeedbackStore())
+    }
+
+    init(store: FeedbackStore) {
         _store = StateObject(wrappedValue: store)
     }
 

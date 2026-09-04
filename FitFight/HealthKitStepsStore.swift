@@ -29,7 +29,7 @@ final class HealthKitStepsStore: ObservableObject {
         var lastTrigger: SyncTrigger?
         var errorCode: SyncErrorCode?
 
-        static var current: Diagnostics {
+        @MainActor static var current: Diagnostics {
             Diagnostics(
                 backgroundRefreshStatus: HealthKitStepsStore.backgroundRefreshStatus,
                 deliveryRegistrationStatus: .unavailable,

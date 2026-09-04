@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FitFight iOS API
-  version: 0.9.0
+  version: 1.0.0
   description: >
     Next.js Route Handlers under /api/v1. Swift sends the User JWT.
     Clients never write fights, scores, sources, or private.metric_observations.
@@ -69,6 +69,22 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/HealthKitStepSyncResult" }
+  /healthkit/diagnostics:
+    post:
+      operationId: saveHealthKitDiagnosticSnapshot
+      summary: Overwrite the authenticated User's latest private HealthKit diagnostic snapshot.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/HealthKitDiagnosticSnapshot" }
+      responses:
+        "200":
+          description: Latest snapshot stored
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HealthKitDiagnosticSnapshotResult" }
   /provider-uploads/{uploadID}:
     get:
       operationId: getProviderUpload
@@ -428,6 +444,47 @@ components:
         complete_through: { type: string, format: date-time }
         synced_days: { type: integer, minimum: 0 }
         synced_fights: { type: integer, minimum: 0 }
+    HealthKitDiagnosticSnapshot:
+      type: object
+      additionalProperties: false
+      required:
+        - background_refresh_status
+        - delivery_registration_status
+        - last_observer_wake
+        - last_sync_attempt
+        - last_automatic_sync
+        - last_manual_sync
+        - last_trigger_context
+        - error_code
+        - app_version
+        - app_build
+      properties:
+        background_refresh_status: { type: string, enum: [available, denied, restricted] }
+        delivery_registration_status: { type: string, enum: [enabled, unavailable] }
+        last_observer_wake: { type: [string, "null"], format: date-time }
+        last_sync_attempt: { type: [string, "null"], format: date-time }
+        last_automatic_sync: { type: [string, "null"], format: date-time }
+        last_manual_sync: { type: [string, "null"], format: date-time }
+        last_trigger_context: { type: [string, "null"], enum: [observer, foreground, manual, null] }
+        error_code:
+          type: [string, "null"]
+          enum:
+            - authentication_unavailable
+            - network_unavailable
+            - protected_data_unavailable
+            - attempt_expired
+            - healthkit_unavailable
+            - background_delivery_unavailable
+            - sync_failed
+            - null
+        app_version: { type: string, minLength: 1, maxLength: 40 }
+        app_build: { type: string, minLength: 1, maxLength: 40 }
+    HealthKitDiagnosticSnapshotResult:
+      type: object
+      additionalProperties: false
+      required: [updated_at]
+      properties:
+        updated_at: { type: string, format: date-time }
     CreateFight:
       type: object
       required: [name, startsAt, endsAt, timeZone, outcomeRule, stakeKind]

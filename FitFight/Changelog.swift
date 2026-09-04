@@ -35,6 +35,13 @@ enum Changelog {
             version: "1.0.0",
             year: 2026,
             month: 9,
+            day: 4,
+            notes: "Apple Health background sync now starts at launch, preserves interrupted work for the next foreground refresh, and shows private sync status under You. Fight standings show relative freshness and whether ended fights include complete final Steps."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
             day: 3,
             notes: "Fight setup uses a normal Next button on the first steps, then a real slide-to-start control on review so creating a fight cannot be mistaken for a swipe."
         ),

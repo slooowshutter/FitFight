@@ -197,6 +197,8 @@ export async function syncHealthKitAggregates(
           source_label = 'Apple Health',
           freshness = 'recent',
           last_synced_at = now(),
+          final_steps_complete = final_steps_complete
+            or ${Date.parse(input.complete_through) >= Date.parse(fight.ends_at)},
           input_revision = case
             when current_value is distinct from ${latest.value}
               or selected_source_id is distinct from ${source.id}

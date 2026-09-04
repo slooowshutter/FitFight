@@ -120,6 +120,53 @@ struct FitFightHealthKitStepSyncResult: Decodable, Equatable {
     }
 }
 
+struct FitFightHealthKitDiagnosticSnapshot: Encodable {
+    var backgroundRefreshStatus: String
+    var deliveryRegistrationStatus: String
+    var lastObserverWake: Date?
+    var lastSyncAttempt: Date?
+    var lastAutomaticSync: Date?
+    var lastManualSync: Date?
+    var lastTriggerContext: String?
+    var errorCode: String?
+    var appVersion: String
+    var appBuild: String
+
+    init(_ diagnostics: HealthKitStepsStore.Diagnostics) {
+        backgroundRefreshStatus = diagnostics.backgroundRefreshStatus.rawValue
+        deliveryRegistrationStatus = diagnostics.deliveryRegistrationStatus.rawValue
+        lastObserverWake = diagnostics.lastObserverWake
+        lastSyncAttempt = diagnostics.lastSyncAttempt
+        lastAutomaticSync = diagnostics.lastAutomaticSync
+        lastManualSync = diagnostics.lastManualSync
+        lastTriggerContext = diagnostics.lastTrigger?.rawValue
+        errorCode = diagnostics.errorCode?.rawValue
+        appVersion = AppVersion.marketing
+        appBuild = AppVersion.build
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case backgroundRefreshStatus = "background_refresh_status"
+        case deliveryRegistrationStatus = "delivery_registration_status"
+        case lastObserverWake = "last_observer_wake"
+        case lastSyncAttempt = "last_sync_attempt"
+        case lastAutomaticSync = "last_automatic_sync"
+        case lastManualSync = "last_manual_sync"
+        case lastTriggerContext = "last_trigger_context"
+        case errorCode = "error_code"
+        case appVersion = "app_version"
+        case appBuild = "app_build"
+    }
+}
+
+struct FitFightHealthKitDiagnosticSnapshotResult: Decodable {
+    var updatedAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case updatedAt = "updated_at"
+    }
+}
+
 struct FitFightCreateFight: Encodable, Equatable {
     var name: String
     var startsAt: Date
@@ -213,6 +260,18 @@ struct FitFightAPI {
             path: "healthkit/steps",
             accessToken: accessToken,
             body: sync,
+            expected: [200]
+        )
+    }
+
+    func saveHealthKitDiagnostics(
+        _ diagnostics: HealthKitStepsStore.Diagnostics,
+        accessToken: String
+    ) async throws -> FitFightHealthKitDiagnosticSnapshotResult {
+        try await post(
+            path: "healthkit/diagnostics",
+            accessToken: accessToken,
+            body: FitFightHealthKitDiagnosticSnapshot(diagnostics),
             expected: [200]
         )
     }

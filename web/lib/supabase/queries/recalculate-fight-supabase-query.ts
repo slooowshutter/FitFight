@@ -177,7 +177,7 @@ export async function recalculateFight(
       if (!source?.complete_through) {
         return false;
       }
-      return source.complete_through >= fight.ends_at;
+      return Date.parse(source.complete_through) >= Date.parse(fight.ends_at);
     });
 
   const nextState = nextFightState({
@@ -202,6 +202,12 @@ export async function recalculateFight(
       freshness: "recent",
       input_revision: nextRevision,
     };
+    if (member.selected_source_id) {
+      const completeThrough = sourcesById.get(member.selected_source_id)?.complete_through;
+      if (completeThrough && Date.parse(completeThrough) >= Date.parse(fight.ends_at)) {
+        patch.final_steps_complete = true;
+      }
+    }
     if (nextState === "final") {
       patch.final_value = result.currentValue;
       patch.finalized_at = nowIso;

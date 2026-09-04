@@ -98,7 +98,7 @@ struct YouView: View {
                 Task {
                     await steps.refresh(requestAccess: true)
                     if session.authSession != nil {
-                        await steps.syncToBackend(session: session)
+                        await steps.syncToBackend(session: session, trigger: .manual)
                     }
                 }
             } label: {
@@ -119,7 +119,52 @@ struct YouView: View {
             }
             .buttonStyle(.plain)
             .disabled(steps.status == .reading)
+            FFDivider()
+            FFGroupedRow(
+                title: String(localized: "Background App Refresh"),
+                subtitle: steps.backgroundRefreshText,
+                systemImage: "arrow.clockwise",
+                subtitleTone: steps.diagnostics.backgroundRefreshStatus == .available ? .moss : .neutral,
+                trailing: steps.diagnostics.backgroundRefreshStatus == .denied
+                    ? AnyView(FFPill(String(localized: "Open Settings"), style: .softMoss)) : nil,
+                action: steps.diagnostics.backgroundRefreshStatus == .denied
+                    ? { UIApplication.shared.open(URL(string: UIApplication.openSettingsURLString)!) }
+                    : nil
+            )
+            FFDivider()
+            FFGroupedRow(
+                title: String(localized: "HealthKit background delivery"),
+                subtitle: steps.backgroundDeliveryText,
+                systemImage: "heart.text.square",
+                subtitleTone: steps.diagnostics.deliveryRegistrationStatus == .enabled ? .moss : .neutral
+            )
+            FFDivider()
+            FFGroupedRow(
+                title: String(localized: "Last automatic sync"),
+                subtitle: diagnosticDate(steps.diagnostics.lastAutomaticSync),
+                systemImage: "bolt"
+            )
+            FFDivider()
+            FFGroupedRow(
+                title: String(localized: "Last manual or foreground sync"),
+                subtitle: diagnosticDate(steps.diagnostics.lastManualSync),
+                systemImage: "hand.tap"
+            )
+            if let failure = steps.currentFailureText {
+                FFDivider()
+                FFGroupedRow(
+                    title: String(localized: "Current sync issue"),
+                    subtitle: failure,
+                    systemImage: "exclamationmark.triangle",
+                    subtitleTone: .ember
+                )
+            }
         }
+    }
+
+    private func diagnosticDate(_ date: Date?) -> String {
+        guard let date else { return String(localized: "Not yet") }
+        return date.formatted(.relative(presentation: .named))
     }
 
     private var settings: some View {

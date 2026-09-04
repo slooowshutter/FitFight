@@ -44,6 +44,7 @@ struct Standing: Codable, Identifiable, Hashable {
     var score: Double
     var invited: Bool = false
     var lastSyncedAt: Date? = nil
+    var finalStepsComplete: Bool? = nil
 
     var id: String { person.id }
 }
@@ -88,6 +89,7 @@ struct Fight: Codable, Identifiable, Hashable {
     var days: [FightDay] = []
     var windowStart: Date = Date()
     var windowEnd: Date = Date().addingTimeInterval(86400)
+    var serverState: String? = nil
 
     var durationLabel: String {
         let hours = max(1, Int((windowEnd.timeIntervalSince(windowStart) / 3_600).rounded()))
@@ -169,15 +171,50 @@ final class AppModel: ObservableObject {
         )
     }
 
-    func formatLastSync(_ date: Date?) -> String {
+    func formatLastSync(_ date: Date?, now: Date = Date()) -> String {
         guard let date else { return String(localized: "Not synced yet") }
-        let formatter = DateFormatter()
-        formatter.locale = .autoupdatingCurrent
-        formatter.setLocalizedDateFormatFromTemplate("MMMdjm")
-        return String(
-            localized: "fight.synced-at",
-            defaultValue: "Synced \(formatter.string(from: date))"
-        )
+        let elapsed = max(0, now.timeIntervalSince(date))
+        if elapsed < 60 { return String(localized: "Just now") }
+        if elapsed < 3_600 {
+            let minutes = Int(elapsed / 60)
+            return String(localized: "health.minutes-ago", defaultValue: "\(minutes) minutes ago")
+        }
+        if elapsed < 86_400 {
+            let hours = Int(elapsed / 3_600)
+            return String(localized: "health.hours-ago", defaultValue: "\(hours) hours ago")
+        }
+        let days = Int(elapsed / 86_400)
+        return String(localized: "health.days-ago", defaultValue: "\(days) days ago")
+    }
+
+    func formatStandingFreshness(_ standing: Standing, fight: Fight, now: Date) -> String {
+        guard fight.windowEnd <= now else { return formatLastSync(standing.lastSyncedAt, now: now) }
+        if standing.finalStepsComplete == true {
+            guard let lastSyncedAt = standing.lastSyncedAt else {
+                return String(localized: "Final steps synced")
+            }
+            let freshness = formatLastSync(lastSyncedAt, now: now)
+            return String(
+                localized: "health.final-steps-synced-at",
+                defaultValue: "Final steps synced · \(freshness)"
+            )
+        }
+        let finalized = fight.serverState == "final" || fight.serverState == "cancelled"
+        if let lastSyncedAt = standing.lastSyncedAt {
+            let freshness = formatLastSync(lastSyncedAt, now: now)
+            return finalized
+                ? String(
+                    localized: "health.finalized-last-steps-at",
+                    defaultValue: "Finalized from last available steps · \(freshness)"
+                )
+                : String(
+                    localized: "health.waiting-final-steps-at",
+                    defaultValue: "Waiting for final steps · \(freshness)"
+                )
+        }
+        return finalized
+            ? String(localized: "Finalized without synced steps")
+            : String(localized: "Waiting for first sync")
     }
 
     func refreshFromServer() async {
@@ -210,7 +247,7 @@ final class AppModel: ObservableObject {
 
         await steps.refresh(requestAccess: false)
         if session.authSession != nil {
-            await steps.syncToBackend(session: session)
+            await steps.syncToBackend(session: session, trigger: .foreground)
         }
         await refreshFromServer(session: session)
     }
@@ -528,7 +565,7 @@ final class AppModel: ObservableObject {
     }
 
     private func loadFights(client: SupabaseClient, userId: UUID) async throws -> [Fight] {
-        let memberSelect = "fight_id, user_id, state, current_value, rank, final_value, last_synced_at"
+        let memberSelect = "fight_id, user_id, state, current_value, rank, final_value, last_synced_at, final_steps_complete"
         let fightSelect = "id, owner_id, name, state, starts_at, ends_at, action_text"
 
         let myRows: [MemberRow] = try await client.from("fight_members")
@@ -660,7 +697,8 @@ final class AppModel: ObservableObject {
                 person: person,
                 score: score,
                 invited: member.state == "invited",
-                lastSyncedAt: member.lastSyncedAt
+                lastSyncedAt: member.lastSyncedAt,
+                finalStepsComplete: member.finalStepsComplete
             )
         }
         .sorted { lhs, rhs in
@@ -803,7 +841,8 @@ final class AppModel: ObservableObject {
             standingsMeta: nil,
             standings: people,
             windowStart: starts,
-            windowEnd: ends
+            windowEnd: ends,
+            serverState: row.state
         )
     }
 
@@ -965,6 +1004,7 @@ private struct MemberRow: Decodable {
     let rank: Int?
     let finalValue: Double?
     let lastSyncedAt: Date?
+    let finalStepsComplete: Bool?
 
     enum CodingKeys: String, CodingKey {
         case fightId = "fight_id"
@@ -974,6 +1014,7 @@ private struct MemberRow: Decodable {
         case rank
         case finalValue = "final_value"
         case lastSyncedAt = "last_synced_at"
+        case finalStepsComplete = "final_steps_complete"
     }
 
     init(from decoder: Decoder) throws {
@@ -984,6 +1025,7 @@ private struct MemberRow: Decodable {
         rank = try container.decodeIfPresent(Int.self, forKey: .rank)
         currentValue = Self.number(container, .currentValue)
         finalValue = Self.number(container, .finalValue)
+        finalStepsComplete = try container.decodeIfPresent(Bool.self, forKey: .finalStepsComplete)
         if let date = try? container.decode(Date.self, forKey: .lastSyncedAt) {
             lastSyncedAt = date
         } else if let raw = try container.decodeIfPresent(String.self, forKey: .lastSyncedAt) {

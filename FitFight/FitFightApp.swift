@@ -60,6 +60,14 @@ struct FitFightApp: App {
                     steps.activate(userId: session.authSession?.user.id)
                     model.restoreCachedFights(session: session)
                     await model.refreshFights(session: session, steps: steps)
+                    await model.consumePendingJoinCode(session: session)
+                }
+                .onOpenURL { url in
+                    Task { await model.handleOpenURL(url, session: session) }
+                }
+                .onChange(of: session.needsOnboarding) { _, needsOnboarding in
+                    guard !needsOnboarding, session.profile != nil else { return }
+                    Task { await model.consumePendingJoinCode(session: session) }
                 }
                 .onChange(of: steps.status) { _, status in
                     guard case .steps = status else { return }

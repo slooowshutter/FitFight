@@ -15,6 +15,12 @@ enum FitFightAPIError: LocalizedError {
                 return String(localized: "That username does not have a FitFight account yet.")
             case "already_member":
                 return String(localized: "That person is already in this fight.")
+            case "fight_not_joinable":
+                return String(localized: "This fight is invite-only.")
+            case "fight_full":
+                return String(localized: "This fight is full.")
+            case "join_rate_limited":
+                return String(localized: "Too many join attempts. Try again later.")
             case "unauthorized":
                 return String(localized: "Your session expired. Sign in again.")
             case "fight_not_startable", "fight_not_cancellable", "conflict":
@@ -181,6 +187,28 @@ struct FitFightCreateFight: Encodable, Equatable {
     var actionText: String?
     var inviteHandles: [String]?
     var start: String?
+    var visibility: String?
+    var recurring: Bool?
+}
+
+struct FitFightJoinableFight: Decodable, Equatable, Identifiable {
+    var fightId: UUID
+    var seriesId: UUID
+    var name: String
+    var joinCode: String
+    var ownerHandle: String
+    var actionText: String?
+    var startsAt: String
+    var endsAt: String
+    var memberCount: Int
+    var recurring: Bool
+    var alreadyMember: Bool
+
+    var id: UUID { fightId }
+}
+
+private struct FitFightJoinableList: Decodable {
+    var fights: [FitFightJoinableFight]
 }
 
 struct FitFightSummary: Codable, Equatable {
@@ -307,6 +335,45 @@ struct FitFightAPI {
             body: payload,
             idempotencyKey: idempotencyKey,
             expected: [200, 201]
+        )
+    }
+
+    func listJoinableFights(accessToken: String) async throws -> [FitFightJoinableFight] {
+        let list: FitFightJoinableList = try await get(
+            path: "fights/joinable",
+            accessToken: accessToken,
+            expected: [200]
+        )
+        return list.fights
+    }
+
+    func joinableFight(code: String, accessToken: String) async throws -> FitFightJoinableFight {
+        try await get(
+            path: "fights/joinable/\(code)",
+            accessToken: accessToken,
+            expected: [200]
+        )
+    }
+
+    func joinFight(
+        code: String? = nil,
+        fightID: UUID? = nil,
+        accessToken: String
+    ) async throws -> FitFightSummary {
+        try await post(
+            path: "fights/join",
+            accessToken: accessToken,
+            body: JoinFightBody(code: code, fightId: fightID),
+            expected: [200]
+        )
+    }
+
+    func leaveFight(fightID: UUID, accessToken: String) async throws -> FitFightSummary {
+        try await post(
+            path: "fights/leave",
+            accessToken: accessToken,
+            body: LeaveFightBody(fightId: fightID),
+            expected: [200]
         )
     }
 
@@ -496,6 +563,15 @@ private struct EmptyJSON: Codable {}
 
 private struct APIErrorResponse: Decodable {
     var code: String
+}
+
+private struct JoinFightBody: Encodable {
+    var code: String?
+    var fightId: UUID?
+}
+
+private struct LeaveFightBody: Encodable {
+    var fightId: UUID
 }
 
 private struct HandleBody: Encodable {

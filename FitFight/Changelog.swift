@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 4,
+            notes: "New now starts with Create or Join. Joinable fights use a 4-character code and a live list; share the code or link from the fight. Recurring fights roll into the next window when the current one ends. Leave from the fight if you do not want the next one."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 4,
             notes: "Every fight in the list is now titled by the action the loser owes, because that is the only name a fight has. The number on the right is how far ahead or behind you are, the days left sit underneath, and every live fight is the same size instead of one large card on top."
         ),
         ReleaseNote(

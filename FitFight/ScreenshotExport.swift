@@ -108,7 +108,10 @@ enum ScreenshotExport {
                 frame(detail(invited), tab: .fights, themeStore: store, model: model)
             },
             Shot(name: "04-new") { store, model in
-                frame(NewFightView(), tab: .newFight, themeStore: store, model: model)
+                frame(NewFightView(opening: .choose), tab: .newFight, themeStore: store, model: model)
+            },
+            Shot(name: "04-new-join") { store, model in
+                frame(NewFightView(opening: .join), tab: .newFight, themeStore: store, model: model)
             },
             Shot(name: "05-you") { store, model in
                 frame(YouView(), tab: .you, themeStore: store, model: model)
@@ -129,7 +132,7 @@ enum ScreenshotExport {
                 frame(detail(fight), tab: .fights, themeStore: store, model: model)
             },
             Shot(name: "appstore-03-new") { store, model in
-                frame(NewFightView(), tab: .newFight, themeStore: store, model: model)
+                frame(NewFightView(opening: .choose), tab: .newFight, themeStore: store, model: model)
             },
             Shot(name: "appstore-04-invitation") { store, model in
                 frame(detail(invited), tab: .fights, themeStore: store, model: model)

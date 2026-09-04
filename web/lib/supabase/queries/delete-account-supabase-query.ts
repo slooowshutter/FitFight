@@ -5,7 +5,7 @@ import { createDatabaseClient } from "@/lib/supabase/postgres";
 import { readStoredAppleRefreshToken } from "./apple-sign-in-supabase-query";
 import { removeProviderInboxObjects } from "./provider-uploads-supabase-query";
 
-/** Permanently delete the account, its data, and every Fight it owns. */
+/** Permanently delete the account. Owned fights with other members stay live. */
 export async function deleteAccount(
   userId: string,
   database: Sql = createDatabaseClient(),
@@ -32,7 +32,38 @@ export async function deleteAccount(
         throw new ApiError(404, ERROR_CODES.not_found, "Account not found");
       }
 
-      await sql`delete from public.fights where owner_id = ${userId}`;
+      await sql`
+        update public.fight_series
+        set paused_at = coalesce(paused_at, now())
+        where owner_id = ${userId}
+      `;
+
+      const kept = await sql<{ id: string }[]>`
+        select fight.id
+        from public.fights as fight
+        where fight.owner_id = ${userId}
+          and exists (
+            select 1
+            from public.fight_members as member
+            where member.fight_id = fight.id
+              and member.user_id <> ${userId}
+              and member.state = 'accepted'
+          )
+      `;
+      const keptIds = kept.map((row) => row.id);
+
+      if (keptIds.length === 0) {
+        await sql`delete from public.fights where owner_id = ${userId}`;
+        await sql`delete from public.fight_series where owner_id = ${userId}`;
+      } else {
+        await sql`
+          delete from public.fights
+          where owner_id = ${userId}
+            and id <> all(${sql.array(keptIds)}::uuid[])
+        `;
+      }
+
+      await sql`delete from public.fight_series_members where user_id = ${userId}`;
       await sql`delete from private.fight_score_snapshots where user_id = ${userId}`;
       await sql`delete from private.metric_observations where user_id = ${userId}`;
       await sql`delete from private.provider_events where user_id = ${userId}`;
@@ -53,7 +84,20 @@ export async function deleteAccount(
       await sql`delete from auth.sessions where user_id = ${userId}`;
       await sql`delete from auth.refresh_tokens where user_id = ${userId}`;
       await sql`delete from auth.identities where user_id = ${userId}`;
-      await sql`delete from auth.users where id = ${userId}`;
+
+      if (keptIds.length > 0) {
+        const stub = `gone_${userId.replaceAll("-", "").slice(0, 8)}`;
+        await sql`
+          update public.profiles
+          set
+            handle = ${stub},
+            display_name = 'Deleted account',
+            deleted_at = now()
+          where user_id = ${userId}
+        `;
+      } else {
+        await sql`delete from auth.users where id = ${userId}`;
+      }
     });
 
     if (!appleRefreshToken) {

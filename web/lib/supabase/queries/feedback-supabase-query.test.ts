@@ -144,6 +144,7 @@ test("toggling a vote inserts when the viewer has not voted", async () => {
   assert.equal(result.voted, true);
   assert.equal(result.vote_count, 1);
   assert.ok(queries.some((query) => query.includes("insert into public.feedback_votes")));
+  assert.ok(queries.some((query) => query.includes("on conflict (post_id, user_id) do nothing")));
 });
 
 test("commenting on a missing post returns not found", async () => {

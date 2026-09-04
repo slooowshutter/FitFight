@@ -232,6 +232,7 @@ export async function toggleFeedbackVote(
       await sql`
         insert into public.feedback_votes (post_id, user_id)
         values (${postId}, ${userId})
+        on conflict (post_id, user_id) do nothing
       `;
       voted = true;
     }

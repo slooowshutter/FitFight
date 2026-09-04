@@ -10,26 +10,42 @@ final class FeedbackStore: ObservableObject {
     @Published var error: String?
 
     private let api = FitFightAPI()
+    private var listLoad = 0
+    private var detailLoad = 0
+    private var voting: Set<UUID> = []
 
     func load(session: SessionStore, kind: String?) async {
+        listLoad += 1
+        let load = listLoad
         isLoading = true
-        defer { isLoading = false }
+        defer {
+            if load == listLoad { isLoading = false }
+        }
         do {
             let token = try await session.freshAccessToken()
-            posts = try await api.listFeedback(kind: kind, accessToken: token).posts
+            let posts = try await api.listFeedback(kind: kind, accessToken: token).posts
+            guard load == listLoad else { return }
+            self.posts = posts
             error = nil
         } catch {
+            if Task.isCancelled || error is CancellationError { return }
+            guard load == listLoad else { return }
             self.error = error.localizedDescription
         }
     }
 
     func loadDetail(session: SessionStore, postID: UUID) async {
+        detailLoad += 1
+        let load = detailLoad
         comments = []
         isLoading = true
-        defer { isLoading = false }
+        defer {
+            if load == detailLoad { isLoading = false }
+        }
         do {
             let token = try await session.freshAccessToken()
             let result = try await api.feedbackDetail(postID: postID, accessToken: token)
+            guard load == detailLoad else { return }
             detail = result.post
             comments = result.comments
             if let index = posts.firstIndex(where: { $0.id == result.post.id }) {
@@ -37,11 +53,15 @@ final class FeedbackStore: ObservableObject {
             }
             error = nil
         } catch {
+            if Task.isCancelled || error is CancellationError { return }
+            guard load == detailLoad else { return }
             self.error = error.localizedDescription
         }
     }
 
     func vote(session: SessionStore, postID: UUID) async {
+        guard voting.insert(postID).inserted else { return }
+        defer { voting.remove(postID) }
         do {
             let token = try await session.freshAccessToken()
             let result = try await api.toggleFeedbackVote(postID: postID, accessToken: token)
@@ -131,7 +151,7 @@ final class FeedbackStore: ObservableObject {
             commentCount: 2,
             voted: true,
             authorHandle: "maya_moves",
-            createdAt: Date(timeIntervalSince1970: 1_756_900_800)
+            createdAt: previewDate("2026-09-03T18:00:00Z")
         ),
         FitFightFeedbackPost(
             id: UUID(uuidString: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2")!,
@@ -142,7 +162,7 @@ final class FeedbackStore: ObservableObject {
             commentCount: 1,
             voted: false,
             authorHandle: "dorian",
-            createdAt: Date(timeIntervalSince1970: 1_756_814_400)
+            createdAt: previewDate("2026-09-03T12:00:00Z")
         ),
     ]
 
@@ -151,15 +171,19 @@ final class FeedbackStore: ObservableObject {
             id: UUID(uuidString: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3")!,
             body: "Same here after the Watch catches up.",
             authorHandle: "dorian",
-            createdAt: Date(timeIntervalSince1970: 1_756_904_400)
+            createdAt: previewDate("2026-09-03T19:00:00Z")
         ),
         FitFightFeedbackComment(
             id: UUID(uuidString: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa4")!,
             body: "Pulling to refresh did not fill the bars.",
             authorHandle: "maya_moves",
-            createdAt: Date(timeIntervalSince1970: 1_756_908_000)
+            createdAt: previewDate("2026-09-03T20:00:00Z")
         ),
     ]
+
+    private static func previewDate(_ iso: String) -> Date {
+        ISO8601DateFormatter().date(from: iso) ?? Date()
+    }
 }
 
 @MainActor
@@ -231,13 +255,9 @@ struct RequestsView: View {
             }
         }
         .background(theme.bg.ignoresSafeArea())
-        .task {
+        .task(id: filter) {
             guard !staticRender else { return }
             await store.load(session: session, kind: filter.kind)
-        }
-        .onChange(of: filter) { _, value in
-            guard !staticRender else { return }
-            Task { await store.load(session: session, kind: value.kind) }
         }
         .sheet(isPresented: $composing, onDismiss: {
             guard !staticRender else { return }

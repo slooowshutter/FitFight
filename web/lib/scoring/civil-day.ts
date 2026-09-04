@@ -16,6 +16,15 @@ export function isCivilDay(day: string): boolean {
   );
 }
 
+export function completeLocalDay(completeThrough: string, timeZone: string): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: resolveTimeZone(timeZone),
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(completeThrough));
+}
+
 export function resolveTimeZone(timeZone: string | null | undefined): string {
   const tz = timeZone?.trim() || "UTC";
   try {

@@ -8,7 +8,7 @@ export async function verifyBackendReadiness(
 ): Promise<void> {
   await database`
     select 1 / migration.applied::integer as migration_ready,
-      profile.deleted_at, fight.action_text, member.current_value,
+      profile.deleted_at, fight.action_text, member.current_value, member.calculation_version,
       source.complete_through, day.calculation_version, snapshot.cutoff_at,
       apple_token.encrypted_refresh_token
     from (

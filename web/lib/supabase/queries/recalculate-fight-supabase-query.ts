@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Sql } from "postgres";
 import { ApiError, ERROR_CODES } from "@/lib/http";
 import { nextFightState, observationOverlapsWindow } from "@/lib/scoring/fight-clock";
-import { scoreFight } from "@/lib/scoring/score-fight";
+import { STEPS_CALCULATION_VERSION, scoreFight } from "@/lib/scoring/score-fight";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import {
@@ -201,6 +201,7 @@ export async function recalculateFight(
       outcome_minor: result.outcomeMinor,
       freshness: "recent",
       input_revision: nextRevision,
+      calculation_version: STEPS_CALCULATION_VERSION,
     };
     if (member.selected_source_id) {
       const completeThrough = sourcesById.get(member.selected_source_id)?.complete_through;
@@ -208,7 +209,7 @@ export async function recalculateFight(
         patch.final_steps_complete = true;
       }
     }
-    if (nextState === "final") {
+    if (nextState === "final" && member.finalized_at == null) {
       patch.final_value = result.currentValue;
       patch.finalized_at = nowIso;
     }
@@ -216,10 +217,26 @@ export async function recalculateFight(
       .from("fight_members")
       .update(patch)
       .eq("fight_id", fightId)
-      .eq("user_id", member.user_id);
+      .eq("user_id", member.user_id)
+      .is("finalized_at", null);
     if (updateError) {
       throw new ApiError(500, ERROR_CODES.db_error, "Could not update fight member scores");
     }
+  }
+
+  if (nextState === "final") {
+    await database`
+      update private.fight_score_snapshots as snapshot
+      set is_final = true
+      where snapshot.fight_id = ${fightId}
+        and snapshot.is_final = false
+        and snapshot.id in (
+          select distinct on (user_id) id
+          from private.fight_score_snapshots
+          where fight_id = ${fightId}
+          order by user_id, cutoff_at desc, created_at desc, id desc
+        )
+    `;
   }
 
   if (nextState !== fight.state) {

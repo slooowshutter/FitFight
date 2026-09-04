@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 4,
+            notes: "A day's Steps now match on You and on the fight chart. Pull-to-refresh says whether standings updated or failed, with a way to retry."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 4,
             notes: "Share on a fight uses the same space under the section title as Action and Standings."
         ),
         ReleaseNote(

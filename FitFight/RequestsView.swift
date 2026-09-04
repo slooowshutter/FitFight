@@ -23,7 +23,7 @@ final class FeedbackStore: ObservableObject {
         listLoad += 1
         let load = listLoad
         let voteStartedAt = voteClock
-        let commentStartedAt = commentClock
+        let localCounts = Dictionary(uniqueKeysWithValues: posts.map { ($0.id, $0.commentCount) })
         isLoading = true
         defer {
             if load == listLoad { isLoading = false }
@@ -32,8 +32,12 @@ final class FeedbackStore: ObservableObject {
             let token = try await session.freshAccessToken()
             let posts = try await api.listFeedback(kind: kind, accessToken: token).posts
             guard load == listLoad else { return }
-            self.posts = posts.map {
-                keepingPostedCommentCount(keepingNewerVote($0, startedAt: voteStartedAt), startedAt: commentStartedAt)
+            self.posts = posts.map { fetched in
+                var post = keepingNewerVote(fetched, startedAt: voteStartedAt)
+                if let local = localCounts[post.id] {
+                    post.commentCount = max(post.commentCount, local)
+                }
+                return post
             }
             error = nil
         } catch {
@@ -166,14 +170,6 @@ final class FeedbackStore: ObservableObject {
         (postedComments[postID] ?? []).compactMap { item in
             item.clock > startedAt ? item.comment : nil
         }
-    }
-
-    private func keepingPostedCommentCount(_ post: FitFightFeedbackPost, startedAt: Int) -> FitFightFeedbackPost {
-        let extra = postedAfter(postID: post.id, startedAt: startedAt).count
-        guard extra > 0 else { return post }
-        var post = post
-        post.commentCount += extra
-        return post
     }
 
     static func previewBoard() -> FeedbackStore {

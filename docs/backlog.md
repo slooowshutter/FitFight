@@ -21,7 +21,7 @@ Honest works / doesn’t / next: [`status.md`](status.md). Read that before the 
 
 [`system-design.md`](system-design.md) is the golden guide. Follow it. Do not implement the whole document. Production Metric is **Steps**; Active Minutes and Workout Count stay later.
 
-**Current scope lock (3 Sep 2026):** three tabs (**Fights**, **New**, **You**); direct exact-username invitations; Steps × highest total; a required typed loser action; and 3-day, 1-week, 2-week, or 1-month durations. Do not restore friends, the old Requests tab, money, other metrics, alternate scoring, or removed settings unless Marc explicitly reopens that scope.
+**Current scope lock (4 Sep 2026):** three tabs (**Fights**, **New**, **You**); direct exact-username invitations; Steps × highest total; an optional fight title and optional typed loser action; and 3-day, 1-week, 2-week, or 1-month durations. Do not restore friends, the old Requests tab, money, other metrics, alternate scoring, or removed settings unless Marc explicitly reopens that scope.
 
 ## Urgent
 
@@ -51,7 +51,7 @@ If the app is closed or killed, iOS will not reliably run timers, settle a month
 
 The phone’s job is: show the UI, read Apple Health Steps when it is open (or briefly woken), and upload the required aggregates. Push notifications are not in the current scope.
 
-**Last TestFlight:** 4 Sep 2026 — Share on a fight uses the same space under the section title as Action and Standings. You → Settings has Bugs & requests: post a bug or a feature request, browse the board, upvote, and comment with your username. New starts with Create or Join. Joinable fights use a 4-character code and a live list (no scores on that list); share the code or link from the fight itself. Recurring fights roll into the next window when the current one ends. Leave from the fight if you do not want the next window. The Fights list titles every row with the loser action, puts the gap on the right and the days left underneath, and keeps live fights one size. FitFight follows the iPhone’s English or French app language across the native UI, Health permissions, errors, accessibility labels, and Versions. The TestFlight update notice sits under the version line as a solid card. Apple Health background sync installs at launch, preserves one interrupted opportunity, and shows private status under You; standings show relative freshness and exact final-window completeness. Look for `1.0.0 · build N · staging`.
+**Last TestFlight:** 4 Sep 2026 — Share on a fight uses the same space under the section title as Action and Standings. New fights can have a title. Title and action are both optional; if you skip a title, the action is the name on Fights. You → Settings has Bugs & requests: post a bug or a feature request, browse the board, upvote, and comment with your username. New starts with Create or Join. Joinable fights use a 4-character code and a live list (no scores on that list); share the code or link from the fight itself. Recurring fights roll into the next window when the current one ends. Leave from the fight if you do not want the next window. The Fights list titles every row with the fight name (or the action when there is no title), puts the gap on the right and the days left underneath, and keeps live fights one size. FitFight follows the iPhone’s English or French app language across the native UI, Health permissions, errors, accessibility labels, and Versions. The TestFlight update notice sits under the version line as a solid card. Apple Health background sync installs at launch, preserves one interrupted opportunity, and shows private status under You; standings show relative freshness and exact final-window completeness. Look for `1.0.0 · build N · staging`.
 
 ## Semi urgent
 
@@ -64,14 +64,14 @@ The phone’s job is: show the UI, read Apple Health Steps when it is open (or b
 
 - Marc: Apple → On on the **new** develop Auth ([providers](https://supabase.com/dashboard/project/zstzbfocunthczzubggz/auth/providers)), client ID `com.fitfight.mvp`.
 - Marc: add the Sign in with Apple key and a stable 32-byte token-encryption key to the staging and production Vercel environments before testing fresh sign-in or submitting.
-- Marc: one Steps fight on staging. Exact username, required action, Apple Health, Start **once**.
+- Marc: one Steps fight on staging. Exact username, optional title and action, Apple Health, Start **once**.
 - Participants on TestFlight Internal Testing. Same build, their own Apple IDs and usernames. Start with a 3-day Steps fight.
 
 ## Next
 
 - **Validate aggregate-only Apple Health sync on staging.** Use two phones to confirm the authenticated request sends the server-issued Fight windows, the exact-window totals drive both standings, relevant merged daily buckets drive charts only, and no raw archive or Storage object is created.
 - **Watch a real 3-day fight close.** Opening the app marks a due fight finished; the daily Vercel cron is the safety net. Proof is two phones: standings match, the Fight ends, and Steps after `ends_at` do not count. Do that before App Store.
-- **Smoke-test every allowed duration.** Confirm New sends 3, 7, 14, or 30 days and the detail screen shows the typed action and correct end date.
+- **Smoke-test every allowed duration.** Confirm New sends 3, 7, 14, or 30 days and the detail screen shows the title or action and the correct end date.
 - App Store when Marc says ship (`develop` → `main`).
 
 ## Later — outside the current product
@@ -114,7 +114,7 @@ are not missing screens; they are out of scope.
 
 The phone writes fights and Steps to staging after this PR is merged. See [`status.md`](status.md).
 
-- Current launch shape: Fights, New, and You; direct exact-username Steps challenges; required loser action; 3/7/14/30-day durations; Privacy and Support links; essential settings only.
+- Current launch shape: Fights, New, and You; direct exact-username Steps challenges; optional fight title and optional loser action; 3/7/14/30-day durations; Privacy and Support links; essential settings only.
 - Account deletion hard-deletes the account and owned Fights, removes participation elsewhere, clears local Health sync data, and supports encrypted Sign in with Apple token revocation.
 - Historical v0.3 design port: four tabs, dark/light, 10 accents, fixture fights. Requests and extra accents were later removed.
 - Historical Talk to the boss on Requests: private chat with Marc, emailed to him. Removed with Requests on 30 Aug 2026.

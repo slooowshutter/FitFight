@@ -20,7 +20,7 @@ Do not rename the bundle ID without Apple + CI updates.
 - Three tabs: **Fights**, **New**, **You**.
 - Every fight is **Steps × highest total**. There are no other metrics or scoring modes.
 - Add participants directly by exact username. There is no friends list or friend-request flow.
-- Type the action the loser must do; it is required. There is no money or bragging-rights option.
+- Type an optional title and an optional action the loser must do. If there is no title, the action is the fight name. There is no money or bragging-rights option.
 - Choose **1 hour**, **6 hours**, or **1 day** for testing, or **3 days**, **1 week**, **2 weeks**, or **1 month**.
 - Apple Health sends only merged Steps aggregates needed for active fights.
 - Settings keeps Privacy, Support, Bugs & requests, Versions, Sign out, and Delete account. Look is Night or Day.

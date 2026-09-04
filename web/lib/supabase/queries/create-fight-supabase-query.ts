@@ -11,9 +11,21 @@ import { fightSummary } from "./fight-access-supabase-query";
 
 const dateTime = z.string().refine((value) => Number.isFinite(Date.parse(value)), "must be a date-time");
 
+export function storedFightIdentity(
+  name: string | undefined,
+  actionText: string | undefined,
+): { name: string; actionText: string | null } {
+  const title = name?.trim() ?? "";
+  const action = actionText?.trim() ?? "";
+  return {
+    name: title || action || "Steps Fight",
+    actionText: action.length > 0 ? action : null,
+  };
+}
+
 export const createFightSchema = z
   .object({
-    name: z.string().min(1).max(80),
+    name: z.string().trim().max(120).optional(),
     startsAt: dateTime,
     endsAt: dateTime,
     timeZone: z.string().min(1),
@@ -23,7 +35,7 @@ export const createFightSchema = z
     stakeKind: z.enum(["bragging", "money", "action"]),
     stakeMinor: z.number().int().min(0).optional(),
     currency: z.string().default("USD"),
-    actionText: z.string().trim().min(1).max(120),
+    actionText: z.string().trim().max(120).optional(),
     inviteHandles: z.array(z.string()).optional(),
     start: z.enum(["now", "scheduled"]).default("now"),
     metric: z.literal("steps").optional(),
@@ -103,12 +115,13 @@ export async function createFight(userId: string, input: CreateFightInput) {
   const startsAt = new Date(input.startsAt).toISOString();
   const endsAt = new Date(input.endsAt).toISOString();
   const since = new Date(Date.now() - IDEMPOTENCY_WINDOW_MS).toISOString();
+  const stored = storedFightIdentity(input.name, input.actionText);
 
   const { data: existingData, error: existingError } = await admin
     .from("fights")
     .select("id, state")
     .eq("owner_id", userId)
-    .eq("name", input.name)
+    .eq("name", stored.name)
     .eq("starts_at", startsAt)
     .eq("ends_at", endsAt)
     .gte("created_at", since)
@@ -146,8 +159,8 @@ export async function createFight(userId: string, input: CreateFightInput) {
         visibility: input.visibility,
         recurring: input.recurring,
         duration_seconds: durationSeconds,
-        name: input.name,
-        action_text: input.actionText,
+        name: stored.name,
+        action_text: stored.actionText,
         time_zone: input.timeZone,
       })
       .select("id")
@@ -162,7 +175,7 @@ export async function createFight(userId: string, input: CreateFightInput) {
     .from("fights")
     .insert({
       owner_id: userId,
-      name: input.name,
+      name: stored.name,
       state,
       starts_at: startsAt,
       ends_at: endsAt,
@@ -174,7 +187,7 @@ export async function createFight(userId: string, input: CreateFightInput) {
       stake_kind: input.stakeKind,
       stake_minor: input.stakeMinor ?? null,
       currency: input.stakeKind === "money" ? input.currency : input.currency ?? null,
-      action_text: input.actionText,
+      action_text: stored.actionText,
       series_id: seriesId,
     })
     .select("id, state")

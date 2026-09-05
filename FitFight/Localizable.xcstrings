@@ -1,6 +1,7 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Apple Health on You shows today’s step count correctly." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Santé d’Apple, dans You, affiche correctement le nombre de pas du jour."}}}},
     "Invitation responses are secured, and unavailable Apple Health data no longer replaces saved Steps with zero." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Les réponses aux invitations sont sécurisées et les données Santé indisponibles ne remplacent plus les pas enregistrés par zéro."}}}},
     "1 month" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"1 mois"}}}},
     "1 week" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"1 semaine"}}}},

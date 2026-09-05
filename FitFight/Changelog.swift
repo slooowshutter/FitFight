@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 5,
+            notes: "Bugs & requests now sits on its own on You, above Settings."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 5,
             notes: "Invitation responses are secured, and unavailable Apple Health data no longer replaces saved Steps with zero."
         ),
         ReleaseNote(

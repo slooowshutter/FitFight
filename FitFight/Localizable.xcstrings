@@ -1,6 +1,7 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Bugs & requests now sits on its own on You, above Settings." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Bugs et demandes a désormais sa propre section dans Vous, au-dessus de Réglages."}}}},
     "Invitation responses are secured, and unavailable Apple Health data no longer replaces saved Steps with zero." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Les réponses aux invitations sont sécurisées et les données Santé indisponibles ne remplacent plus les pas enregistrés par zéro."}}}},
     "1 month" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"1 mois"}}}},
     "1 week" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"1 semaine"}}}},

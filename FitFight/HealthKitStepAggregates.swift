@@ -4,6 +4,17 @@ import HealthKit
 enum HealthKitStepAggregates {
     enum ReadError: Error {
         case noAccessibleSteps
+        case invalidStepCount
+    }
+
+    /// Same cap as `healthKitAggregateSyncSchema`. `Int(Double)` can wrap out-of-range values.
+    static let maxCount = 2_147_483_647
+
+    static func integerCount(from quantity: HKQuantity?) -> Int? {
+        guard let quantity else { return nil }
+        let steps = quantity.doubleValue(for: .count())
+        guard steps.isFinite, steps >= 0, steps <= Double(maxCount) else { return nil }
+        return Int(exactly: steps.rounded())
     }
 
     static func read(
@@ -108,8 +119,8 @@ enum HealthKitStepAggregates {
                 }
                 var totals: [String: Int] = [:]
                 collection?.enumerateStatistics(from: start, to: end) { statistics, _ in
-                    guard let steps = statistics.sumQuantity()?.doubleValue(for: .count()) else { return }
-                    totals[dayStamp(statistics.startDate, calendar: calendar)] = Int(steps.rounded())
+                    guard let count = integerCount(from: statistics.sumQuantity()) else { return }
+                    totals[dayStamp(statistics.startDate, calendar: calendar)] = count
                 }
                 continuation.resume(returning: totals)
             }
@@ -133,11 +144,13 @@ enum HealthKitStepAggregates {
             options: [.cumulativeSum]
         )
         // HealthKit hides denied read access; an absent quantity does not establish a zero total.
-        guard let steps = try await descriptor.result(for: store)?
-            .sumQuantity()?.doubleValue(for: .count()) else {
+        guard let quantity = try await descriptor.result(for: store)?.sumQuantity() else {
             throw ReadError.noAccessibleSteps
         }
-        return Int(steps.rounded())
+        guard let count = integerCount(from: quantity) else {
+            throw ReadError.invalidStepCount
+        }
+        return count
     }
 
     private static func dayStamp(_ date: Date, calendar: Calendar) -> String {

@@ -50,6 +50,23 @@ Normalize into one activity/observation shape at ingest. Vendor sport strings ma
 
 Secrets stay in Vercel/GitHub, never in git or iOS.
 
+## Strava — paths that stay inside their rules
+
+Do not hide numbers, score in secret, or keep a 7-day Fight as a way around the policy. Processing two people’s Strava totals for a Fight is still their API used as a challenge product.
+
+What **does** keep both FitFight and Strava inside the published rules:
+
+| Path | What the person sees | Fight? | Notes |
+| --- | --- | --- | --- |
+| **1. Fight from the watch / Garmin / WHOOP / Oura** | Standings as today | Yes | Most “Strava people” recorded on a device. Strava is the post, not the source. Ship this. |
+| **2. Connect Strava, You only** | Only *your* activities | No Strava score on someone else’s card | Build this. 7-day cache, delete on disconnect. |
+| **3. Email Strava** | Private Fight, named friends, derived total, no map | Only after they write yes | Send `developers@strava.com` that UX. Allowlist exists (§3.2). Do not ship Fight scoring on a hope. |
+| **4. User gives us the file** | Same as other uploads | Yes, as *user-provided* activity | They use Strava’s bulk export / GPX and upload to FitFight. GDPR portability. Ugly. Not the API. |
+| **5. Photo / “I did this”** | Honor-system proof on the Fight | Yes, labeled unverified | Fits later social; not a sensor source. |
+| **6. HealthKit copy** | Workout Strava already wrote into Apple Health, if they enabled it | Only as Apple Health, not labeled as Strava API | Different pipe. Not a legal opinion. Do not fetch the API to fill gaps. |
+
+Not a path: opaque backend comparison, “trust us,” week-long then delete, or reading §6.1 (apps under 10k athletes) as permission to show other people’s Strava data. §2.3 has no such exception.
+
 ## Honest limits
 
 - Connecting WHOOP in FitFight does not also give us Apple Watch. Two sources, two connections, one selected source per Fight.

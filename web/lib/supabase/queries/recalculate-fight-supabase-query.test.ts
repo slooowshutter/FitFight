@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Sql } from "postgres";
+import postgres, { type Sql } from "postgres";
 import { recalculateFight } from "./recalculate-fight-supabase-query";
+
+const json = postgres().json;
 
 test("finalizing a fight uses a bounded number of writes as the roster grows", async () => {
   const statementCounts: number[] = [];
@@ -31,7 +33,7 @@ test("finalizing a fight uses a bounded number of writes as the roster grows", a
       if (query.includes("from public.fight_members")) return Promise.resolve(members);
       if (query.includes("from private.fight_score_snapshots")) return Promise.resolve(snapshots);
       return Promise.resolve([]);
-    }, { array: (values: readonly unknown[]) => values });
+    }, { array: (values: readonly unknown[]) => values, json });
     const database = Object.assign(() => { throw new Error("query must run inside a transaction"); }, {
       begin: async (_options: string, callback: (sql: Sql) => Promise<unknown>) =>
         callback(transaction as unknown as Sql),
@@ -45,16 +47,15 @@ test("finalizing a fight uses a bounded number of writes as the roster grows", a
     assert.equal(memberUpdates[0].values.filter((value) => value === true).length, 2,
       "both final value and finalized_at must freeze");
     const memberPayload = memberUpdates[0].values.find((value) =>
-      typeof value === "string" && value.startsWith("[")
+      JSON.stringify(value).includes('"final_steps_complete"')
     );
-    assert.ok(typeof memberPayload === "string");
-    assert.deepEqual(JSON.parse(memberPayload), members.map((member, index) => ({
+    assert.deepEqual(memberPayload, json(members.map((member, index) => ({
       user_id: member.user_id,
       current_value: 100 - index,
       rank: index + 1,
       outcome_minor: 0,
       final_steps_complete: true,
-    })));
+    }))));
     const snapshotUpdates = queries.filter(({ query }) => query.includes("set is_final"));
     assert.equal(snapshotUpdates.length, 1);
     assert.deepEqual(snapshotUpdates[0].values, [snapshots.map((snapshot) => snapshot.id)]);

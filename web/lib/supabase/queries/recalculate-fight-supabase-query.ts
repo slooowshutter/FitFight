@@ -86,7 +86,7 @@ export async function recalculateFight(
           final_steps_complete = score.final_steps_complete,
           final_value = case when ${final} then score.current_value else member.final_value end,
           finalized_at = case when ${final} then ${now.toISOString()}::timestamptz else member.finalized_at end
-        from jsonb_to_recordset(${JSON.stringify(scoredMembers)}::jsonb) as score (
+        from jsonb_to_recordset(${sql.json(scoredMembers)}::jsonb) as score (
           user_id uuid, current_value numeric, rank integer, outcome_minor integer,
           final_steps_complete boolean
         )

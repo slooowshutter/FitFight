@@ -6,7 +6,9 @@ import postgres from "postgres";
 import { deleteAccount } from "./delete-account-supabase-query";
 import { declineMembership } from "./decline-membership-supabase-query";
 import { syncHealthKitAggregates } from "./healthkit-aggregates-supabase-query";
+import { saveHealthKitDiagnosticSnapshot } from "./healthkit-diagnostics-supabase-query";
 import { recalculateFight } from "./recalculate-fight-supabase-query";
+import { healthKitDiagnosticSnapshotSchema } from "@/lib/types/healthkit/healthkit-diagnostic";
 
 const databaseURL = process.env.DATABASE_URL;
 if (process.env.CI !== "true" || !databaseURL
@@ -56,6 +58,35 @@ async function fixture(t: TestContext) {
   }
   return { users, owner, peer, fightId, sourceIds, now, endsAt, startsAt };
 }
+
+test("diagnostic reports persist JSON timing arrays once per user and attempt", async (t) => {
+  const f = await fixture(t);
+  const input = healthKitDiagnosticSnapshotSchema.parse({
+    background_refresh_status: "available",
+    delivery_registration_status: "enabled",
+    app_version: "1.0.0",
+    app_build: "42",
+    attempts: [{
+      attempt_id: randomUUID(), trigger: "foreground", started_at: f.now.toISOString(),
+      outcome: "succeeded", total_ms: 125.5,
+      stages: [{
+        stage: "upload", started_ms: 20, duration_ms: 100.5, outcome: "succeeded",
+        server_timing: { db_ms: 25.5 },
+      }],
+    }],
+  });
+  const result = await saveHealthKitDiagnosticSnapshot(f.owner, input, database);
+  assert.ok(Number.isFinite(Date.parse(result.updated_at)));
+  await saveHealthKitDiagnosticSnapshot(f.owner, input, database);
+  const rows = await database`
+    select user_id, total_ms, stages from private.healthkit_sync_attempts
+    where user_id = any(${database.array(f.users)}::uuid[])
+  `;
+  assert.equal(rows.length, 1);
+  assert.deepEqual(rows[0], {
+    user_id: f.owner, total_ms: 125.5, stages: input.attempts?.[0].stages,
+  });
+});
 
 test("a source watermark cannot finalize a fight without exact end snapshots", async (t) => {
   const f = await fixture(t);
@@ -137,7 +168,7 @@ test("batched uploads preserve independent fight scores, corrections, replay, an
     insert into public.fights (
       id, owner_id, name, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy
     ) values (${secondFightId}, ${f.owner}, 'Second batch fight', 'live', ${f.startsAt},
-      ${secondEndsAt}, "UTC", 'highest_total', 'shared')
+      ${secondEndsAt}, 'UTC', 'highest_total', 'shared')
   `;
   for (const [index, userId] of f.users.entries()) {
     await database`

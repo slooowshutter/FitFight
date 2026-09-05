@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { Sql } from "postgres";
+import postgres, { type Sql } from "postgres";
 import { saveHealthKitDiagnosticSnapshot } from "@/lib/supabase/queries/healthkit-diagnostics-supabase-query";
 import {
   healthKitDiagnosticSnapshotResponseSchema,
@@ -40,6 +40,8 @@ const validAttempt = {
   payload_bytes: 1_240,
 };
 
+const json = postgres().json;
+
 function recordingDatabase(statements: { text: string; values: unknown[] }[]): Sql {
   const sql = ((strings: TemplateStringsArray, ...values: unknown[]) => {
     const text = strings.join("?");
@@ -50,6 +52,7 @@ function recordingDatabase(statements: { text: string; values: unknown[] }[]): S
   }) as unknown as Sql;
   sql.begin = ((_mode: string, callback: (transaction: Sql) => Promise<unknown>) =>
     callback(sql)) as Sql["begin"];
+  sql.json = json;
   return sql;
 }
 
@@ -172,6 +175,6 @@ test("HealthKit diagnostics batch attempt inserts with authenticated ownership a
   assert.match(statements[1].text, /insert into private.healthkit_sync_attempts/);
   assert.match(statements[1].text, /on conflict \(user_id, attempt_id\) do nothing/);
   assert.deepEqual(statements[1].values, [
-    "5b2216f4-762d-4890-a516-63046a01df31", "1.0.0", "42", JSON.stringify(attempts),
+    "5b2216f4-762d-4890-a516-63046a01df31", "1.0.0", "42", json(attempts),
   ]);
 });

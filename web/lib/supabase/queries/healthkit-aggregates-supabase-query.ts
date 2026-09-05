@@ -178,7 +178,7 @@ export async function syncHealthKitAggregates(
         )
         select aggregate.fight_id, ${userId}, ${source.id}, aggregate.cutoff_at,
           aggregate.value, aggregate.input_hash, 1, false, clock_timestamp()
-        from jsonb_to_recordset(${JSON.stringify(aggregateFights)}::jsonb) as aggregate (
+        from jsonb_to_recordset(${sql.json(aggregateFights)}::jsonb) as aggregate (
           fight_id uuid, cutoff_at timestamptz, value numeric, input_hash text
         )
         where true
@@ -211,7 +211,7 @@ export async function syncHealthKitAggregates(
             else member.input_revision
           end
         from latest
-        join jsonb_to_recordset(${JSON.stringify(aggregateFights)}::jsonb) as aggregate (
+        join jsonb_to_recordset(${sql.json(aggregateFights)}::jsonb) as aggregate (
           fight_id uuid, final_steps_complete boolean
         ) on aggregate.fight_id = latest.fight_id
         where member.fight_id = latest.fight_id
@@ -249,7 +249,7 @@ export async function syncHealthKitAggregates(
         await sql`
           update public.fight_members as member
           set rank = score.rank, outcome_minor = score.outcome_minor
-          from jsonb_to_recordset(${JSON.stringify(scores)}::jsonb) as score (
+          from jsonb_to_recordset(${sql.json(scores)}::jsonb) as score (
             fight_id uuid, user_id uuid, rank integer, outcome_minor integer
           )
           where member.fight_id = score.fight_id and member.user_id = score.user_id

@@ -57,7 +57,7 @@ export async function saveHealthKitDiagnosticSnapshot(
           attempt.outcome, attempt.error_code, attempt.total_ms, attempt.stages,
           attempt.fight_count, attempt.day_count, attempt.payload_bytes,
           ${input.app_version}, ${input.app_build}
-        from jsonb_to_recordset(${JSON.stringify(input.attempts)}::jsonb) as attempt (
+        from jsonb_to_recordset(${sql.json(input.attempts)}::jsonb) as attempt (
           attempt_id uuid, trigger text, started_at timestamptz, outcome text,
           error_code text, total_ms double precision, stages jsonb,
           fight_count integer, day_count integer, payload_bytes integer

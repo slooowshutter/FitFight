@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Sql } from "postgres";
+import postgres, { type Sql } from "postgres";
 import {
   healthKitAggregateSyncResponseSchema,
   healthKitAggregateSyncSchema,
 } from "@/lib/types/healthkit/healthkit-aggregate";
 import { syncHealthKitAggregates } from "./healthkit-aggregates-supabase-query";
+
+const json = postgres().json;
 
 function createDatabaseStub(
   respond: (query: string, values: readonly unknown[]) => unknown[],
@@ -20,7 +22,7 @@ function createDatabaseStub(
     queries.push({ query, values });
     return Promise.resolve(respond(query, values));
   }) as unknown as Sql;
-  Object.assign(transaction, { array: (values: readonly unknown[]) => values });
+  Object.assign(transaction, { array: (values: readonly unknown[]) => values, json });
   const database = Object.assign(
     (() => Promise.reject(new Error("query must run inside a transaction"))) as unknown as Sql,
     {
@@ -188,15 +190,14 @@ test("Apple Health aggregate upload query count stays bounded across fights and 
     const rankUpdates = queries.filter(({ query }) => query.includes("set rank"));
     assert.equal(rankUpdates.length, 1);
     const rankPayload = rankUpdates[0].values[0];
-    assert.ok(typeof rankPayload === "string");
-    assert.deepEqual(JSON.parse(rankPayload), fights.flatMap((fight) =>
+    assert.deepEqual(rankPayload, json(fights.flatMap((fight) =>
       Array.from({ length: memberCount }, (_, index) => ({
         fight_id: fight.fight_id,
         user_id: index === 0 ? userId : `a0000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
         rank: index + 1,
         outcome_minor: 0,
       }))
-    ));
+    )));
   }
 
   assert.equal(statementCounts[1], statementCounts[0], "fight and roster size must not add database round trips");
@@ -447,7 +448,7 @@ test("Apple Health aggregate sync makes the newest Fight snapshot authoritative 
   ));
   const memberUpdate = queries.find(({ query }) => query.includes("set current_value"));
   assert.ok(memberUpdate?.values.some((value) =>
-    typeof value === "string" && value.includes('"final_steps_complete":false')
+    JSON.stringify(value).includes('"final_steps_complete":false')
   ));
   assert.ok(queries.some(({ query }) => query.includes("set rank")));
   assert.ok(queries.every(({ query }) => !/set\s+final_value/i.test(query)));
@@ -501,7 +502,7 @@ test("Apple Health aggregate sync marks exact Fight-end coverage complete", asyn
 
   const memberUpdate = queries.find(({ query }) => query.includes("set current_value"));
   assert.ok(memberUpdate?.values.some((value) =>
-    typeof value === "string" && value.includes('"final_steps_complete":true')
+    JSON.stringify(value).includes('"final_steps_complete":true')
   ));
 });
 

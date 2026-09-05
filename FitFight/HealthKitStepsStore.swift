@@ -81,9 +81,11 @@ final class HealthKitStepsStore: ObservableObject {
     var metaText: String {
         switch status {
         case .steps(let count):
+            // NOTE: The catalog string uses %lld and pluralizes on the integer.
+            // `format: .number` passes a FormatStyle value, so %lld printed garbage.
             return String(
                 localized: "health.steps-today",
-                defaultValue: "\(count, format: .number) steps today"
+                defaultValue: "\(count) steps today"
             )
         default:
             return ""
@@ -309,7 +311,11 @@ final class HealthKitStepsStore: ObservableObject {
             Task { await reportDiagnostics(session: session) }
             return true
         } catch {
-            connection = error is HealthKitStepAggregates.ReadError ? .noAccessibleSteps : .syncFailed
+            if case HealthKitStepAggregates.ReadError.noAccessibleSteps = error {
+                connection = .noAccessibleSteps
+            } else {
+                connection = .syncFailed
+            }
             UserDefaults.standard.set(true, forKey: Self.pendingSyncKey)
             updateDiagnostics { $0.errorCode = Self.errorCode(for: error) }
             Task { await reportDiagnostics(session: session) }
@@ -366,8 +372,9 @@ final class HealthKitStepsStore: ObservableObject {
             predicate: .quantitySample(type: type, predicate: predicate), options: [.cumulativeSum]
         )
         guard let statistics = try await descriptor.result(for: store) else { return nil }
-        let steps = statistics.sumQuantity()?.doubleValue(for: .count()) ?? 0
-        return steps > 0 ? Int(steps.rounded()) : nil
+        guard let count = HealthKitStepAggregates.integerCount(from: statistics.sumQuantity()),
+              count > 0 else { return nil }
+        return count
     }
 
     private static func askedKey(userId: UUID) -> String {

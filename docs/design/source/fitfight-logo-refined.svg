@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Paired tips align after rotation; translation centers the mark's visual weight. -->
+  <g fill="none" stroke="#2F6B44" stroke-width="25" stroke-linecap="round" transform="translate(3.811937 10.261438) rotate(19 128 128)">
+    <path d="M63 193.773105V113A62 62 0 0 1 187 113V166.226895"/>
+    <path d="M107 193.773105V113A18 18 0 0 1 143 113V166.226895"/>
+  </g>
+</svg>

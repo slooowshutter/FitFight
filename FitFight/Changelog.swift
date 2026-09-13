@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 13,
+            notes: "The website now uses the centered FitFight logo with a transparent background in browser tabs."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 13,
             notes: "Internal TestFlight build so the update overlay can be checked from 188."
         ),
         ReleaseNote(

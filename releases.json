@@ -2,19 +2,11 @@
   "staging": {
     "latest": {
       "version": "1.0.0",
-      "build": 184,
-      "update_url": "itms-beta://"
-    },
-    "review": {
-      "version": "1.0.0",
       "build": 190,
       "update_url": "itms-beta://"
     },
-    "internal": {
-      "version": "1.0.0",
-      "build": 190,
-      "update_url": "itms-beta://"
-    },
+    "review": null,
+    "internal": null,
     "enforced": true
   },
   "prod": {

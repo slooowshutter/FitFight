@@ -29,7 +29,7 @@ export async function syncHealthKitAggregates(
       ) values (
         ${userId}, 'apple_health', 'Apple Health', 'healthkit',
         array[
-          'steps','active_energy','walking_running_distance','exercise_minutes',
+          'steps','active_energy','resting_energy','walking_running_distance','exercise_minutes',
           'stand_minutes','stand_hours','flights_climbed','cycling_distance',
           'swimming_distance','move_time_minutes','wheelchair_distance',
           'wheelchair_pushes','swimming_strokes','rowing_distance','paddle_distance',
@@ -332,6 +332,7 @@ export async function syncHealthKitAggregates(
           ended_at: workout.ended_at,
           activity_type: workout.activity_type,
           duration_seconds: workout.duration_seconds,
+          active_minutes: workout.active_minutes ?? null,
           distance_m: workout.distance_m ?? null,
           energy_kcal: workout.energy_kcal ?? null,
           effort: workout.effort ?? null,
@@ -346,6 +347,7 @@ export async function syncHealthKitAggregates(
             "ended_at",
             "activity_type",
             "duration_seconds",
+            "active_minutes",
             "distance_m",
             "energy_kcal",
             "effort",
@@ -356,6 +358,7 @@ export async function syncHealthKitAggregates(
             ended_at = excluded.ended_at,
             activity_type = excluded.activity_type,
             duration_seconds = excluded.duration_seconds,
+            active_minutes = excluded.active_minutes,
             distance_m = excluded.distance_m,
             energy_kcal = excluded.energy_kcal,
             effort = excluded.effort,

@@ -144,6 +144,7 @@ struct FitFightHealthKitStepSync: Encodable, Equatable {
         var endedAt: String
         var activityType: String
         var durationSeconds: Double
+        var activeMinutes: Double?
         var distanceM: Double?
         var energyKcal: Double?
         var effort: Double?
@@ -154,6 +155,7 @@ struct FitFightHealthKitStepSync: Encodable, Equatable {
             case endedAt = "ended_at"
             case activityType = "activity_type"
             case durationSeconds = "duration_seconds"
+            case activeMinutes = "active_minutes"
             case distanceM = "distance_m"
             case energyKcal = "energy_kcal"
             case effort

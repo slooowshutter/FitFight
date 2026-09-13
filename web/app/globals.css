@@ -519,7 +519,7 @@ footer .brand-mark {
   line-height: 1.1;
 }
 
-.testflight-dialog > p {
+.testflight-dialog > p:not(.eyebrow) {
   margin: 14px 0 0;
   color: var(--secondary);
   font-size: 15px;

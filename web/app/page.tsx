@@ -28,7 +28,7 @@ export default function HomePage() {
               See how it works <span aria-hidden="true">↓</span>
             </a>
           </div>
-          <p className="platform-note">iPhone · Install with TestFlight · Apple Health</p>
+          <p className="platform-note">iPhone · Tap the TestFlight link twice · Apple Health</p>
         </div>
 
         <div className="fight-stage" aria-label="Example FitFight leaderboard">

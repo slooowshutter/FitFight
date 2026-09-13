@@ -1,15 +1,54 @@
 import SwiftUI
 
+enum FightsListFilter: CaseIterable {
+    case current, invited, past
+
+    var title: String {
+        switch self {
+        case .current: String(localized: "Current")
+        case .invited: String(localized: "fights.filter-invited", defaultValue: "Invited")
+        case .past: String(localized: "Past")
+        }
+    }
+}
+
 struct FightsListView: View {
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var steps: HealthKitStepsStore
     @Environment(\.ffTheme) private var theme
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @State private var filter: FightsListFilter
+
+    init(filter: FightsListFilter = .current) {
+        _filter = State(initialValue: filter)
+    }
 
     var body: some View {
         FFScreen(refresh: fightsRefresh) {
-            FFScreenTitle(title: String(localized: "Fights"), subtitle: subtitle)
-                .padding(.bottom, 6)
+            CompanionIntroduction(surface: .fights)
+
+            let layout = typeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+                : AnyLayout(HStackLayout(alignment: .center, spacing: 4))
+            layout {
+                Text("Challenges")
+                    .font(.custom("Nunito-ExtraBold", size: 14, relativeTo: .headline))
+                    .foregroundStyle(theme.text)
+                if !typeSize.isAccessibilitySize { Spacer(minLength: 0) }
+                FFSegmented(items: FightsListFilter.allCases, selection: $filter) { item in
+                    item.title
+                }
+            }
+
+            if isEmpty, model.isRefreshingFights {
+                ForEach(0..<3, id: \.self) { _ in
+                    RoundedRectangle(cornerRadius: theme.radius.card)
+                        .fill(theme.skeleton)
+                        .frame(height: 76)
+                        .accessibilityLabel(String(localized: "Loading"))
+                }
+            }
 
             if isEmpty, !model.isRefreshingFights {
                 FFEmptyState(
@@ -21,31 +60,43 @@ struct FightsListView: View {
                 )
             }
 
-            if !model.invitations.isEmpty {
-                FFSectionHeader(title: String(localized: "Invitations"))
+            if !isEmpty, selectedFights.isEmpty {
+                Text(filter == .current ? String(localized: "No current fights")
+                     : filter == .invited ? String(localized: "No invitations")
+                     : String(localized: "No past fights"))
+                    .ffType(.body)
+                    .foregroundStyle(theme.textSecondary)
+                    .frame(maxWidth: .infinity, minHeight: 100)
+            }
+
+            if filter == .invited {
                 ForEach(model.invitations) { fight in
                     InvitationRow(fight: fight)
                 }
             }
 
-            ForEach(model.live) { fight in
-                let standing = difference(in: fight)
-                let opponent = opponent(in: fight)
-                FFListRow(
-                    monogram: opponent?.initials ?? "?",
-                    title: fight.listTitle,
-                    subtitle: fight.timeLeftLabel,
-                    metric: standing.text,
-                    ahead: standing.ahead,
-                    metricIsGap: standing.isGap,
-                    photoURL: opponent?.photoURL,
-                    action: { model.openFightID = fight.id }
-                )
+            if filter == .current {
+                ForEach(model.live) { fight in
+                    let standing = difference(in: fight)
+                    let opponent = opponent(in: fight)
+                    FFListRow(
+                        monogram: opponent?.initials ?? "?",
+                        title: fight.listTitle,
+                        subtitle: fight.timeLeftLabel,
+                        metric: fight.isUpcoming ? String(localized: "Scheduled") : standing.text,
+                        ahead: standing.ahead,
+                        metricIsGap: !fight.isUpcoming && standing.isGap,
+                        photoURL: opponent?.photoURL,
+                        avatar: AnyView(CompanionAvatar(
+                            personID: opponent?.id, isYou: opponent?.isYou ?? false,
+                            monogram: opponent?.initials ?? "?", photoURL: opponent?.photoURL
+                        )),
+                        action: { model.openFightID = fight.id }
+                    )
+                }
             }
 
-            if !model.finished.isEmpty {
-                FFSectionHeader(title: String(localized: "Finished"))
-                    .padding(.top, theme.space.lg)
+            if filter == .past {
                 ForEach(model.finished) { fight in
                     FinishedRow(fight: fight)
                 }
@@ -67,22 +118,12 @@ struct FightsListView: View {
         model.live.isEmpty && model.invitations.isEmpty && model.finished.isEmpty
     }
 
-    private var subtitle: String {
-        var parts: [String] = [
-            String(
-                localized: "fights.live-count",
-                defaultValue: "\(model.live.count) live"
-            ),
-        ]
-        if !model.invitations.isEmpty {
-            parts.append(
-                String(
-                    localized: "fights.waiting-count",
-                    defaultValue: "\(model.invitations.count) waiting"
-                )
-            )
+    private var selectedFights: [Fight] {
+        switch filter {
+        case .current: model.live
+        case .invited: model.invitations
+        case .past: model.finished
         }
-        return parts.joined(separator: " · ")
     }
 
     /// The number on the right is your distance from whoever you are actually
@@ -122,7 +163,8 @@ struct InvitationRow: View {
 
     var body: some View {
         HStack(spacing: 13) {
-            FFAvatar(fight.inviter ?? fight.standings.first?.person, size: 44)
+            let inviter = fight.inviter ?? fight.standings.first?.person
+            CompanionAvatar(personID: inviter?.id, monogram: inviter?.initials ?? "?", photoURL: inviter?.photoURL)
             VStack(alignment: .leading, spacing: 2) {
                 Text(fight.listTitle)
                     .ffType(.heading)
@@ -168,8 +210,8 @@ struct FinishedRow: View {
                         .foregroundStyle(theme.textSecondary)
                 }
                 Spacer(minLength: 8)
-                FFAvatarStack(
-                    faces: fight.standings.map { (monogram: $0.person.initials, photoURL: $0.person.photoURL) },
+                CompanionAvatarStack(
+                    people: fight.standings.map(\.person),
                     visible: 2,
                     size: 26,
                     ring: theme.card

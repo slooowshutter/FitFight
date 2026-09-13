@@ -143,6 +143,62 @@ A push to `preview` that touches the app or Fastlane starts TestFlight. Feature-
 
 Both staging and production binaries check `/api/app-release` at launch, on foregrounding, and every minute while active. Until the installed build is admitted, the previous full overlay sits under the version line (not a popup over Fights). A failed or offline check keeps that overlay. Known mismatches still survive relaunch.
 
+## API compatibility for every change
+
+The app explicitly calls `/api/v1` through `FitFightAPI`. Its marketing version and
+build travel separately in `X-FitFight-Version` and `X-FitFight-Build` for update
+enforcement. Database migrations version storage independently. There is currently
+no `/api/v2` or automatic selection of an API version from the build number.
+
+Use `/api/v1` for ordinary releases. Decide whether a change is compatible by checking
+the requests, decoded responses, and behavior of supported installed apps:
+
+| Change | Required treatment |
+| --- | --- |
+| UI change, new endpoint, or compatible bug fix | Keep the API version. |
+| New optional request field | Keep the existing behavior when older apps omit it. |
+| New response field | Verify older decoders ignore it; extra fields alone must not expose unsupported behavior. |
+| Rename/remove an API field, change its type/nullability/meaning, or make input required | Preserve the existing contract, or introduce an incompatible version for the affected endpoint while retaining the old one. |
+| New enum value | Check old decoders and behavior; a new value can break an old app even though the field is unchanged. |
+| Internal column rename/type change, new constraint, or permission change | Stage the database/backend transition; preserve supported API behavior, old writers, and running backend versions. |
+
+For a future `/api/v2/fights`, keep `/api/v1/fights` as the old contract while it is
+supported. Both handlers may call shared business logic and the same database;
+rebuild neither the database nor unrelated routes. Explicitly update the native
+request path for that endpoint when needed. Do not add a version router or duplicate
+all routes in anticipation of a future change.
+
+For each affected contract, agents must:
+
+1. Read the affected environment's live `/api/app-release` and identify the public,
+   internal, and review builds it admits. Preserve legacy behavior too while backend
+   enforcement is off. Inspect the relevant released client code/contracts; the
+   manifest identifies builds but does not prove their compatibility. Staging changes
+   reach Friends Beta's database on `develop`, before any new TestFlight upload.
+2. Describe how old requests and responses remain valid. For storage changes, add
+   support first, deploy compatible backend code, backfill and maintain concurrent
+   writes consistently, then switch storage usage. Keep the public API shape stable
+   when the change is internal. Do not put a later incompatible cutoff in the same
+   automatically applied migration batch.
+3. Preserve representative requests/responses for affected supported clients. Test
+   old requests against the new handlers and new responses against the old decoding
+   expectations, alongside the new contract. Schema changes also need those database
+   paths checked against the migrated disposable cloud database. Do not overwrite
+   the previous contract fixtures to bless a breaking change.
+4. Use the [rollout sequence below](#mandatory-updates-and-database-rollout). Upload,
+   approval, and actual installability are separate. Admit the review candidate
+   before Apple tests it. Remove behavior needed by retired clients only after
+   verifying the replacement is installable and required; include admitted candidates
+   and running backend versions in that decision. A purely internal cleanup can happen
+   sooner when all supported contracts remain intact.
+
+Existing CI checks the native database boundary, release selection, update blocking,
+shared profile/Fight fixtures, backend tests, and disposable database migrations/RLS.
+It does **not** automatically compare every released binary against every new schema
+or detect every semantic API break. The SQL guard catches selected destructive SQL,
+not all incompatible constraints, renames, or grants. Add regression coverage for the
+actual affected contract; follow [AGENTS.md](../AGENTS.md#mobile-api-and-database-compatibility--every-agent).
+
 ## Mandatory updates and database rollout
 
 **Always require the latest installable version/build.** There is no independently adjustable minimum. Marketing version remains `1.0.0` for TestFlight; build numbers distinguish releases.

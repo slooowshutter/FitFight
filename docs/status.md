@@ -1,22 +1,56 @@
 # FitFight status — what works, what’s fake, what’s next
 
-Read this before building. Last updated **12 Sep 2026**. App: **1.0.0**.
+Read this before building. Last updated **13 Sep 2026**. App: **1.0.0**.
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, notifications, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts and the Feed tab are in this build. Only the public privacy and support pages exist on the web.
 
 ---
 
-**Last TestFlight:** 12 Sep 2026 — Pending next **internal** TestFlight: Plus starts with no destination (Public vs fight); public feed no longer mixes private fight posts; author ⋯ can edit or delete; tags are people you’ve finished a fight with. Filing a Bugs & requests item works again. Friends Beta stays on 184.
+**Last TestFlight:** 13 Sep 2026 — Internal build **189**, Friends Beta **184**, as advertised by the live release policy. The [preview upload succeeded](https://github.com/slooowshutter/FitFight/actions/runs/34764089811). This does not verify which build is installed on an individual phone.
 
-## Prepared, not deployed: backend-only database access (9 Sep)
+## API and update rollout (verified 13 Sep 2026)
+
+Read-only checks on **13 Sep 2026 (UTC)** supersede the earlier blanket "prepared, not deployed"
+description for staging. Recheck these endpoints before any rollout; build numbers
+and availability are observations, not permanent configuration.
+
+| Part | Observed status |
+| --- | --- |
+| Native/API separation | Current source calls `/api/v1`, sends app version/build headers, and routes application database access through `FitFightAPI`. The full update overlay checks release eligibility at launch/foreground and every minute while active. No `/api/v2` is needed or implemented. |
+| Staging release policy | [`/api/app-release`](https://staging.fitfight.app/api/app-release) returned 200: `latest` 184, `review`/`internal` 189, all `1.0.0`, `enforced: true`. |
+| Staging backend enforcement | A read-only `GET /api/v1/me` with build 183 and an intentionally invalid audit bearer returned `426 update_required` before authentication. No real user session or data was used. |
+| Staging profile readiness | [`/api/health`](https://staging.fitfight.app/api/health) returned `schema: ready`, `profile_api: true`. This readiness check includes the additive profile migration and backend reader role. |
+| Production | [`/api/app-release`](https://fitfight.app/api/app-release) returned 404. `/api/health` returned 200 with `schema: ready` but no `profile_api` marker. The public release manifest had no production latest/review/internal build and `enforced: false`. Production rollout of these protections is incomplete. |
+| Automatic availability refresh | `.github/workflows/app-releases.yml` is absent from default branch `main`, so its 15-minute schedule is not active. Uploads and matching `develop` pushes refresh the manifest; background discovery of later Apple availability still needs normal authorized promotion. |
+
+Cloud evidence: the [preview simulator run](https://github.com/slooowshutter/FitFight/actions/runs/34764089855)
+passed native update tests, API fixtures, release-selection tests, and compilation at
+`2b03b13`. The latest checked `develop` commit `c819fd2` passed
+[web typecheck/tests](https://github.com/slooowshutter/FitFight/actions/runs/34766054191)
+and [database/RLS/permission-cutoff tests](https://github.com/slooowshutter/FitFight/actions/runs/34766054167).
+These runs test repository code in disposable environments; they are not a production
+deployment or proof of every historical client's compatibility.
+
+Still needed: signed-in device verification of the public/internal builds, production
+migration/backend/release-policy rollout, the scheduled updater on `main`, and a
+separately authorized direct-client permission cutoff. This audit did not inspect
+hosted database grants or perform App Store/device testing. Future changes follow
+[the mandatory API compatibility procedure](shipping.md#api-compatibility-for-every-change).
+
+## Companion and custom schedule PR — prepared 13 Sep 2026
+
+The live staging policy still admits public build **184** and review/internal **189**, all `1.0.0`, with enforcement on (read-only recheck before PR preparation). This change keeps the existing `/api/v1/fights` request/response shape: old requests still default to `start: now`, while explicit scheduled requests retain their exact timestamps and enter the existing `scheduled` state even with invitees. Regression tests cover both creation paths; shared native decoding fixtures remain unchanged. No database migration or direct-access cutoff is included. Deploy the compatible backend from `develop` before distributing the native change via `preview`; no hosted deployment or individual released-binary/device test was performed here.
+
+## Backend-only database access — staging ready, production pending
 
 Native profile loading, username selection, and Apple display-name saving now use
 `GET/PATCH /api/v1/me`; all application database traffic goes through the backend.
 Supabase Auth stays direct. The Fight snapshot uses a restricted backend read role
-with the existing row-visibility rules. Deploy its additive migration and backend
-before distributing the app. Direct client permissions remain until the separate
-cutoff described in [backend.md](backend.md#application-database-boundary-prepared-9-sep-2026-not-deployed).
-Cloud database/iOS checks and staging-device verification are still pending.
+with the existing row-visibility rules. Staging readiness and cloud checks passed as
+recorded above; production must verify/apply the additive migration and deploy the backend
+before distributing its app. The separate direct-client permission cutoff remains outside
+automatic migrations, as described in [backend.md](backend.md#application-database-boundary).
+Signed-in staging-device verification was not performed by this audit.
 
 ## Prepared, not deployed: Notion Product Backlog (9 Sep)
 
@@ -46,7 +80,7 @@ You still do **not** paste `sb_secret_...` anywhere.
 
 ## Before this branch ships
 
-The 7 Sep mandatory-update change needs the public release manifest and `GET /api/app-release` deployed before the native build. The existing server `NEXT_PUBLIC_SUPABASE_URL` selects the staging/production release channel. The native app replaces Fights with the full update overlay until the installed build is the public latest, an admitted review candidate, or the latest internal TestFlight build. A failed check keeps that overlay. Internal-only builds do not become the Friends Beta requirement. No database migration is part of this change. See [mandatory updates and database rollout](shipping.md#mandatory-updates-and-database-rollout).
+The mandatory-update manifest and `GET /api/app-release` are live on staging; production still needs the endpoint before its native build, and the scheduled publisher must reach `main`. The existing server `NEXT_PUBLIC_SUPABASE_URL` selects the staging/production release channel. The native app replaces Fights with the full update overlay until the installed build is the public latest, an admitted review candidate, or the latest internal TestFlight build. A failed check keeps that overlay. Internal-only builds do not become the Friends Beta requirement. No database migration is part of the update check itself. See [mandatory updates and database rollout](shipping.md#mandatory-updates-and-database-rollout).
 
 The 7 Sep referral changes require the referral migration, `POST /api/v1/referrals`,
 and updated Universal Link association before the native build. You → Settings →
@@ -61,12 +95,12 @@ Apple Health synchronization requires `FITFIGHT_API_URL=https://staging.fitfight
 
 After the backend is configured, merge the feature PR into **`develop`**, not `main`. The staging migration must land before merging `develop` → `preview` for the TestFlight build.
 
-The 9 Sep Feed destinations change needs `20260909233000_feed_destinations_and_engagement.sql` plus the feed/posts, people, comments, and reactions APIs deployed before the native build. Old `GET /api/v1/feed` still returns only fight-audience posts so installed builds keep decoding. The 12 Sep one-feed list uses `GET /api/v1/feed?scope=all` (Main and fight posts).
+The 9 Sep Feed destinations change needs `20260909233000_feed_destinations_and_engagement.sql` plus the feed/posts, people, comments, and reactions APIs deployed before the native build. Old `GET /api/v1/feed` still returns only fight-audience posts so installed builds keep decoding. The 12 Sep one-feed list uses `GET /api/v1/feed?scope=all` (Main and fight posts). Current Feed uses `GET /api/v1/feed` with no scope (fight posts from membership only).
 
 Verify the minimal product alongside Apple Health synchronization:
 
 1. TestFlight → **Update**. Look for `1.0.0 · build N · staging · 9 Sep` at the top.
-2. Check Fights, Feed, a Fight detail, New, and You in both Night and Day. There are four tabs: Fights, New, Feed, You. Feed is one list; each post has a destination badge. A fight opens on Stats, with Feed beside it.
+2. Check Fights, Feed, a Fight detail, New, and You in both Night and Day. There are four tabs: Fights, New, Feed, You. Feed shows Public posts; fight-only posts are inside their fight. Each post identifies its channel with plain text beneath the author. A fight opens on Stats, with Feed and Share beside it.
 3. New starts on Create or Join. Create still guides Steps, duration, private by default (or public), optional usernames, repeat on by default, optional title and action, and review. Every fight has a code and a share link; people join with that code or invite link. Join is that code plus a live public list with no scores. Private fights stay off the list. Earlier create steps use **Next**. Review uses **Slide to start**.
 4. Confirm sign-in, username, Apple Health Steps, Fight invitations, standings with last-sync times, Privacy, Support, Bugs & requests, Versions, sign out, and Delete account.
 5. Confirm the old Requests tab, friend requests/lists, money, other Metrics, and dead settings are absent.
@@ -84,10 +118,10 @@ The native Fight path uses the API to create and join; Apple Health synchronizat
 | Languages | English and French follow the iPhone's per-app language. Usernames, Fight names, and loser actions remain exactly as entered. |
 | Username onboarding | Works. Required once after sign-in. Optional profile photo on the same screen; then Connect Apple Health; then challenge reminders (pre-prompt before iPhone’s sheet); then a last screen that Settings can take a feature or a bug. Existing accounts keep You → Apple Health. |
 | Version line | Release-candidate TestFlight says `1.0.0 · build N · staging`; the App Store build says `prod` |
-| Create Steps challenge | Follow a guided flow: Create or Join, then Steps × highest total, 3 / 7 / 14 / 30 days, private by default (or public), optional usernames, repeat on by default, optional title and loser action, and review. Public and private fights may start with the owner alone. Every fight gets a code and a share link; people join with that code or invite link. |
+| Create Steps challenge | Follow a guided flow: Create or Join, then Steps × highest total, 3 / 7 / 14 / 30 days or Custom with exact future start and end dates/times, private by default (or public), optional usernames, repeat on by default, optional title and loser action, and review. Public and private fights may start with the owner alone. Every fight gets a code and a share link; people join with that code or invite link. |
 | Accept / Join | Invites still accept in the fight. Anyone can open the same Accept/Join screen from a code or a shared link. Public fights also appear on the live Join list with no scores. Private fights do not. Joins go through the server. If a repeating fight is past its start day, joiners choose this round (steps count from that start date) or the next round. Same-day joins, even hours later, still count as this round. People waiting for the next round are visible on the fight and do not count in this round. Leave a public, private, or repeating fight from the fight itself so the next window does not copy you in. |
 | Invite participants | Exact username in New is optional on public and private fights. They must have signed in and chosen a username. There is no friendship or friend-request layer. |
-| Apple Health | Installs background delivery at launch, keeps one interrupted opportunity for foreground reconciliation, and shows private capability/sync status under You. It sends Apple's merged cumulative Steps total for each exact active/ending Fight window in one small authenticated request. The same request may also send private energy, distance, exercise, stand, flights, and workout summaries. It does not send raw samples, deletions, per-source totals, device/source metadata, anchors, or archives. Extra activity is not a Fight option yet. |
+| Apple Health | Installs background delivery at launch, keeps one interrupted opportunity for foreground reconciliation, and shows private capability/sync status under You → Apple Health → More settings. It sends Apple's merged cumulative Steps total for each exact active/ending Fight window in one small authenticated request. The same request may also send private energy, distance, exercise, stand, flights, and workout summaries. It does not send raw samples, deletions, per-source totals, device/source metadata, anchors, or archives. Extra activity is not a Fight option yet. |
 | Daily totals | Sends Apple's merged daily buckets only for days relevant to active Fight charts. They are display data, not the source of the Fight score. |
 | Fights list | Every row is titled by the fight name. If there is no title, the loser action is used; older fights still stored as `Steps Fight` show the action the same way. The right-hand number is your gap to the person you are racing, moss when ahead and ember when behind; remaining time sits under the title as months, weeks, days, hours, and minutes, with days and hours when under two days, and without the calendar end date. There is no moss hero — live Fights are all the same size. Pull to refresh on Fights, a fight, Feed, and You stays open with the current sync sentence; opening the app shows the same while Steps are read, uploaded, and standings refresh. |
 | Standings | Live scoring uses exact Fight-window HealthKit aggregates, not overlapping whole-day totals. Both phones read the same serving rows. Each standing shows relative sync freshness; ended Fights distinguish exact final-window coverage from the last available Steps. |
@@ -95,12 +129,12 @@ The native Fight path uses the API to create and join; Apple Health synchronizat
 | Tabs | Fights, New, Feed, You. The old Requests tab and Design are removed. |
 | Look | Night/Day, Nunito, fixed Moss/Ember/Gold semantics; no accent picker or public design-system showcase. |
 | Versions | Works under You → Settings (the public changelog). The top version label stays on every root screen. Tapping it opens the admin/debug menu only for signed-in username `marc`. |
-| Bugs & requests | Works on You in its own section above Settings. Signed-in people can post a bug or a feature request, browse the board, upvote, and comment with their username. After `NOTION_TOKEN` is on Vercel, each new post also lands as a P0 Inbox row in the Product Backlog. After `CURSOR_API_KEY` is on Vercel, Marc sees **Send to Cursor** on a post and can start a cloud agent with that post and its comments. A successful send moves the matching Notion Product Backlog row to Building; when that agent finishes and opens a PR, FitFight marks the same row Done. |
+| Bugs & requests | Works on You in its own section above Settings. Signed-in people can post a bug or a feature request, browse the board, upvote, and comment with their username. Device/debug metadata is collected for Send to Cursor and is not shown on the board. After `NOTION_TOKEN` is on Vercel, each new post also lands as a P0 Inbox row in the Product Backlog. After `CURSOR_API_KEY` is on Vercel, Marc sees **Send to Cursor** on a post and can start a cloud agent with that post, comments, and device metadata. A successful send moves the matching Notion Product Backlog row to Building; when that agent finishes and opens a PR, FitFight marks the same row Done. |
 | Privacy / Support | Pages are implemented and linked under You → Settings. Staging uses `staging.fitfight.app`; production uses `fitfight.app`. Each route must be deployed before that build is tested or submitted. |
-| Fight posts / Feed | Accepted and waiting-next-round members can post a short note, photos, or a short video. Feed is one list, not a tab per fight. Each post has a badge for the fight (or Main). + opens one composer: note at the top, tag people, and a destination field next to photo/video. The destination is a multi-select dropdown; **Everything** selects every fight. Inside a fight, posting goes to that fight and does not ask for a destination. A tag never grants access; it only appears on copies that person can already see. Posts support any emoji reaction and nested comments. A fight has **Stats** (default) and **Feed** tabs. Recurring fights keep earlier posts. Invited-only people do not see posts until they join. You can delete your post, report someone else’s, or hide that person from your feed. |
+| Fight posts / Feed | Accepted and waiting-next-round members can post a short note, up to four photos, or one short video. Root Feed lists posts from fights you’re in. The root + is the only composer: choose one or more fights, or All fights, then add a note and Media. There is no Public/Main destination, tag-people picker, or inline fight composer. Each card puts its plain channel label, then the relative time, beneath the author, with actions at the top right. Posts support emoji reactions, nested comments, editing/deleting your own post, reporting another post and hiding its author. Fight detail opens on Stats, with Feed, Share and recurring History alongside it. Recurring fights retain earlier posts; invited-only people gain access after joining. |
 | Account deletion | Permanently deletes the profile, photos, username, authentication, Health/Steps data, relationships, invitations, memberships, scores, owned Fights, fight posts, and bugs/requests the User posted; removes participation from other Fights; clears local Health sync state; and revokes a stored Apple credential when available. |
 | WHOOP / Strava | Not built |
-| Removed scope | No persistent friends, Requests tab, money/payouts, bragging-rights option, other Metrics, goals, custom dates, or dead settings/actions. |
+| Removed scope | No persistent friends, Requests tab, money/payouts, bragging-rights option, other Metrics, goals, or dead settings/actions. |
 
 ---
 

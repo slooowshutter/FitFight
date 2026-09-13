@@ -53,6 +53,15 @@ test("fight posts need a note or a photo and reject extra fields", () => {
     destinations: [{ type: "main" }, { type: "fight", fight_id: fightId }],
     tagged_user_ids: [],
   });
+  assert.deepEqual(createFeedPostsRequestSchema.parse({
+    body: "Hill.",
+    destinations: [{ type: "fight", fight_id: fightId }],
+  }), {
+    body: "Hill.",
+    media_ids: [],
+    destinations: [{ type: "fight", fight_id: fightId }],
+    tagged_user_ids: [],
+  });
   assert.equal(createFeedPostsRequestSchema.safeParse({
     body: "Hill.",
     destinations: Array.from({ length: 9 }, () => ({ type: "fight" as const, fight_id: fightId })),

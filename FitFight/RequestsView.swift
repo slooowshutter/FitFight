@@ -22,6 +22,12 @@ final class FeedbackStore: ObservableObject {
     private var commentsFor: UUID?
 
     func load(session: SessionStore, kind: String?) async {
+        #if DEBUG && targetEnvironment(simulator)
+        if CompanionPreview.isEnabled {
+            posts = Self.previewPosts.filter { kind == nil || $0.kind == kind }
+            return
+        }
+        #endif
         listLoad += 1
         let load = listLoad
         let voteStartedAt = voteClock
@@ -50,6 +56,14 @@ final class FeedbackStore: ObservableObject {
     }
 
     func loadDetail(session: SessionStore, postID: UUID) async {
+        #if DEBUG && targetEnvironment(simulator)
+        if CompanionPreview.isEnabled {
+            detail = Self.previewPosts.first { $0.id == postID }
+            comments = Self.previewComments
+            canLaunchFix = false
+            return
+        }
+        #endif
         detailLoad += 1
         let load = detailLoad
         let voteStartedAt = voteClock
@@ -695,10 +709,6 @@ private struct RequestDetailView: View {
                     .lineSpacing(3)
                     .fixedSize(horizontal: false, vertical: true)
 
-                if store.canLaunchFix, !post.metadata.isEmpty {
-                    RequestMetadataCard(metadata: post.metadata)
-                }
-
                 if store.canLaunchFix {
                     if launchedAgentURL != nil {
                         FFNotice(
@@ -752,11 +762,6 @@ private struct RequestDetailView: View {
                             .ffType(.body)
                             .foregroundStyle(theme.text)
                             .fixedSize(horizontal: false, vertical: true)
-                        if store.canLaunchFix, let caption = item.metadata.debugCaption {
-                            Text(verbatim: caption)
-                                .ffType(.micro)
-                                .foregroundStyle(theme.textFaint)
-                        }
                     }
                     .padding(14)
                     .background(
@@ -788,32 +793,6 @@ private struct RequestDetailView: View {
     private func sendToCursor() async {
         guard let url = await store.launchFix(session: session, postID: postID) else { return }
         launchedAgentURL = url
-    }
-}
-
-private struct RequestMetadataCard: View {
-    let metadata: FitFightFeedbackMetadata
-    @Environment(\.ffTheme) private var theme
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(String(localized: "Device"))
-                .ffType(.label)
-                .foregroundStyle(theme.textSecondary)
-            ForEach(Array(metadata.debugLines.enumerated()), id: \.offset) { _, line in
-                Text(verbatim: line)
-                    .ffType(.caption)
-                    .foregroundStyle(theme.text)
-                    .textSelection(.enabled)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(
-            theme.card,
-            in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous)
-        )
-        .ffBorder(theme.hairline, radius: theme.radius.field)
     }
 }
 

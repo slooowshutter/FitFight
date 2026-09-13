@@ -101,16 +101,45 @@ test("starts a v1 cloud agent on develop without a webhook", async () => {
     assert.equal(calls[0]?.body.skipReviewerRequest, true);
     assert.equal(calls[0]?.body.name, "Steps chart is blank");
     const prompt = (calls[0]?.body.prompt as { text: string }).text;
-    assert.match(prompt, /Steps chart is blank/);
+    assert.match(prompt, /There was a request\/bug from the Bugs & requests tab/);
+    assert.match(prompt, /Kind: bug/);
+    assert.match(prompt, /Title: Steps chart is blank/);
     assert.match(prompt, /daily Steps chart/);
+    assert.match(prompt, /Device metadata:/);
+    assert.match(prompt, /"os":"iOS"/);
     assert.match(prompt, /@dorian/);
     assert.match(prompt, /Watch catches up/);
-    assert.match(prompt, /PR into develop/);
-    assert.match(prompt, /Feedback post ID: dddddddd-dddd-4ddd-8ddd-dddddddddddd/);
-    assert.match(prompt, /Device: .*iOS/);
-    assert.match(prompt, /Do not create or update Notion rows/);
-    assert.match(prompt, /https:\/\/github.com\/slooowshutter\/FitFight/);
+    assert.match(prompt, /Comments, including later comments if people added more:/);
+    assert.match(prompt, /Device: .*183/);
+    assert.doesNotMatch(prompt, /MARKETING_VERSION/);
+    assert.doesNotMatch(prompt, /PR into develop/);
+    assert.doesNotMatch(prompt, /Feedback post ID/);
+    assert.doesNotMatch(prompt, /Do not create or update Notion rows/);
+    assert.doesNotMatch(prompt, /https:\/\/github.com\/slooowshutter\/FitFight/);
     assert.equal(fitFightGithubRepoUrl, "https://github.com/slooowshutter/FitFight");
+  } finally {
+    restoreEnv("CURSOR_API_KEY", previous);
+  }
+});
+
+test("labels a feature request and still attaches device metadata with no comments", async () => {
+  const previous = process.env.CURSOR_API_KEY;
+  process.env.CURSOR_API_KEY = longCursorKey;
+  const featureDetail: FeedbackPostDetail = {
+    post: { ...detail.post, kind: "feature" },
+    comments: [],
+  };
+  try {
+    let prompt = "";
+    await launchFeedbackFixAgent(featureDetail, (async (_url, init) => {
+      prompt = (JSON.parse(String(init?.body)) as { prompt: { text: string } }).prompt.text;
+      return v1CreatedResponse(agentUrl);
+    }) as typeof fetch);
+    assert.match(prompt, /Kind: feature request/);
+    assert.match(prompt, /Device metadata:/);
+    assert.match(prompt, /No comments\./);
+    assert.doesNotMatch(prompt, /AGENTS\.md/);
+    assert.doesNotMatch(prompt, /1\.0\.0 if people will see/);
   } finally {
     restoreEnv("CURSOR_API_KEY", previous);
   }

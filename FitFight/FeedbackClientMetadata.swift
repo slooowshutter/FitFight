@@ -33,69 +33,6 @@ struct FitFightFeedbackMetadata: Equatable, Hashable {
     var screenWidth: Double?
     var screenHeight: Double?
 
-    var isEmpty: Bool {
-        debugLines.isEmpty
-    }
-
-    var debugLines: [String] {
-        var lines: [String] = []
-        let version = [appVersion, appBuild.map { "build \($0)" }, backend]
-            .compactMap { $0 }
-            .joined(separator: " · ")
-        if !version.isEmpty { lines.append(version) }
-
-        let phone = [os, osVersion, deviceModel, idiom]
-            .compactMap { $0 }
-            .joined(separator: " · ")
-        if !phone.isEmpty { lines.append(phone) }
-
-        let lang = [language, locale, region, timeZone]
-            .compactMap { $0 }
-            .joined(separator: " · ")
-        if !lang.isEmpty { lines.append(lang) }
-
-        if let preferredLanguages, !preferredLanguages.isEmpty {
-            lines.append(preferredLanguages.joined(separator: ", "))
-        }
-
-        var settings: [String] = []
-        if let look { settings.append(look) }
-        if let appearance { settings.append(appearance) }
-        if let hourCycle { settings.append("\(hourCycle)h") }
-        if let measurementSystem { settings.append(measurementSystem) }
-        if let calendar { settings.append(calendar) }
-        if let layoutDirection { settings.append(layoutDirection) }
-        if let contentSize { settings.append(contentSize) }
-        if reduceMotion == true { settings.append("reduce motion") }
-        if boldText == true { settings.append("bold text") }
-        if increaseContrast == true { settings.append("increase contrast") }
-        if voiceOver == true { settings.append("VoiceOver") }
-        if lowPowerMode == true { settings.append("Low Power") }
-        if let thermalState { settings.append(thermalState) }
-        if let backgroundRefresh { settings.append("BAR \(backgroundRefresh)") }
-        if !settings.isEmpty { lines.append(settings.joined(separator: " · ")) }
-
-        if let screenWidth, let screenHeight, let screenScale {
-            lines.append(
-                "\(Int(screenWidth.rounded()))×\(Int(screenHeight.rounded())) @\(screenScale.formatted(.number.precision(.fractionLength(0...1))))"
-            )
-        }
-        if let bundleId { lines.append(bundleId) }
-        return lines
-    }
-
-    var debugCaption: String? {
-        let parts = [
-            appVersion.flatMap { version in
-                appBuild.map { "\(version) (\($0))" } ?? version
-            },
-            [os, osVersion].compactMap { $0 }.joined(separator: " ").nilIfEmpty,
-            language,
-            look,
-        ].compactMap { $0 }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
-    }
-
     @MainActor
     static func current() -> FitFightFeedbackMetadata {
         let locale = Locale.current
@@ -248,8 +185,4 @@ extension FitFightFeedbackMetadata: Codable {
         try container.encodeIfPresent(screenWidth, forKey: .screenWidth)
         try container.encodeIfPresent(screenHeight, forKey: .screenHeight)
     }
-}
-
-private extension String {
-    var nilIfEmpty: String? { isEmpty ? nil : self }
 }

@@ -141,10 +141,12 @@ struct FightPostEngagement: View {
     private func commentRow(_ comment: FitFightFightPostComment) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .top, spacing: 8) {
-                FFAvatar(
+                CompanionAvatar(
+                    personID: comment.author.userId.uuidString,
+                    isYou: comment.mine,
                     monogram: comment.author.initials,
-                    size: 26,
-                    photoURL: comment.author.avatar?.url
+                    photoURL: comment.author.avatar?.url,
+                    size: 26
                 )
                 VStack(alignment: .leading, spacing: 3) {
                     Text(comment.author.atHandle)
@@ -188,6 +190,12 @@ struct FightPostEngagement: View {
     }
 
     private func loadComments(more: Bool = false) async {
+        #if DEBUG && targetEnvironment(simulator)
+        if CompanionPreview.isEnabled {
+            comments = post.commentCount == 0 ? [] : CompanionPreview.comments(postID: post.id)
+            return
+        }
+        #endif
         loading = true
         defer { loading = false }
         do {

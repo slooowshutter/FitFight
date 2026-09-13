@@ -19,6 +19,9 @@ struct NewFightView: View {
     @State private var inviteHandles: [String] = []
     @State private var usernameError: String?
     @State private var durationDays = 7
+    @State private var customSchedule = false
+    @State private var customStart = Date(timeIntervalSince1970: ceil(Date().timeIntervalSince1970 / 60) * 60 + 3_600)
+    @State private var customEnd = Date(timeIntervalSince1970: ceil(Date().timeIntervalSince1970 / 60) * 60 + 7 * 86_400 + 3_600)
     @State private var fightTitle = ""
     @State private var actionText = ""
     @State private var visibilityJoinable = false
@@ -32,11 +35,13 @@ struct NewFightView: View {
     @FocusState private var actionFocused: Bool
     @FocusState private var joinCodeFocused: Bool
 
-    init(opening: NewFightOpening = .choose) {
+    init(opening: NewFightOpening = .choose, initialStep: Int = 0) {
         _opening = State(initialValue: opening)
+        _step = State(initialValue: initialStep)
     }
 
     private var duration: String {
+        if customSchedule { return String(localized: "Custom") }
         switch durationDays {
         case 3: return String(localized: "3 days")
         case 14: return String(localized: "2 weeks")
@@ -45,13 +50,21 @@ struct NewFightView: View {
         }
     }
 
+    private var scheduleError: String? {
+        guard customSchedule else { return nil }
+        if customStart <= Date() { return String(localized: "Choose a start time in the future.") }
+        if customEnd <= customStart { return String(localized: "The end must be after the start.") }
+        return nil
+    }
+
     private var canStart: Bool {
         let title = fightTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         let action = actionText.trimmingCharacters(in: .whitespacesAndNewlines)
         return session.isSignedIn
-            && steps.hasAsked
+            && (steps.hasAsked || CompanionPreview.isEnabled)
             && title.count <= 120
             && action.count <= 120
+            && scheduleError == nil
             && !model.isCreatingFight
     }
 
@@ -117,14 +130,19 @@ struct NewFightView: View {
             FFSlideToConfirm(
                 title: model.isCreatingFight
                     ? String(localized: "Starting…")
-                    : String(localized: "Slide to start"),
+                    : customSchedule ? String(localized: "Slide to schedule") : String(localized: "Slide to start"),
                 enabled: canStart,
                 busy: model.isCreatingFight
             ) {
                 startFight()
             }
 
-            if !steps.hasAsked {
+            if CompanionPreview.isEnabled {
+                Text(CompanionPreview.writeUnavailable)
+                    .ffType(.caption)
+                    .foregroundStyle(theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if !steps.hasAsked {
                 Text("Connect Apple Health above to start this fight.")
                     .ffType(.caption)
                     .foregroundStyle(theme.textSecondary)
@@ -134,8 +152,11 @@ struct NewFightView: View {
             if let error = model.createError, !error.isEmpty {
                 FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
             }
+            if let scheduleError {
+                FFNotice(text: scheduleError, tone: .ember, systemImage: "calendar")
+            }
         } else {
-            FFButton(title: String(localized: "Next"), size: .large, enabled: true, fullWidth: true) {
+            FFButton(title: String(localized: "Next"), size: .large, enabled: step != 1 || scheduleError == nil, fullWidth: true) {
                 step += 1
             }
         }
@@ -222,6 +243,7 @@ struct NewFightView: View {
 
     private var chooseStep: some View {
         VStack(alignment: .leading, spacing: 16) {
+            CompanionIntroduction(surface: .newFight)
             VStack(alignment: .leading, spacing: 6) {
                 Text("Create or join?")
                     .ffType(.heading)
@@ -492,7 +514,9 @@ struct NewFightView: View {
                 Text("How long will the fight last?")
                     .ffType(.heading)
                     .foregroundStyle(theme.text)
-                Text("It starts immediately. Steps after the exact end time do not count.")
+                Text(customSchedule
+                     ? String(localized: "Choose the exact start and end. Only steps inside this window count.")
+                     : String(localized: "It starts immediately. Steps after the exact end time do not count."))
                     .ffType(.body)
                     .foregroundStyle(theme.textSecondary)
                     .lineSpacing(2)
@@ -512,6 +536,7 @@ struct NewFightView: View {
                     selection: Binding(
                         get: { duration },
                         set: { selection in
+                            customSchedule = false
                             if selection == String(localized: "3 days") { durationDays = 3 }
                             else if selection == String(localized: "2 weeks") { durationDays = 14 }
                             else if selection == String(localized: "1 month") { durationDays = 30 }
@@ -519,6 +544,28 @@ struct NewFightView: View {
                         }
                     )
                 )
+                FFButton(title: String(localized: "Custom"), kind: customSchedule ? .primary : .secondary, fullWidth: true) {
+                    customSchedule = true
+                }
+            }
+
+            if customSchedule {
+                FFCard {
+                    VStack(alignment: .leading, spacing: 16) {
+                        DatePicker("Start", selection: $customStart, in: Date()..., displayedComponents: [.date, .hourAndMinute])
+                        FFDivider()
+                        DatePicker("End", selection: $customEnd, displayedComponents: [.date, .hourAndMinute])
+                        Text(TimeZone.current.identifier)
+                            .ffType(.caption)
+                            .foregroundStyle(theme.textSecondary)
+                    }
+                    .ffType(.rowTitle)
+                    .foregroundStyle(theme.text)
+                    .tint(theme.mossText)
+                }
+                if let scheduleError {
+                    FFNotice(text: scheduleError, tone: .ember, systemImage: "calendar")
+                }
             }
 
             FFGroupedRows {
@@ -643,9 +690,12 @@ struct NewFightView: View {
                 FFDivider()
                 FFGroupedRow(
                     title: String(localized: "Duration"),
-                    subtitle: String(
+                    subtitle: customSchedule ? String(
+                        localized: "fight.custom-window",
+                        defaultValue: "\(customStart.formatted(date: .abbreviated, time: .shortened)) → \(customEnd.formatted(date: .abbreviated, time: .shortened))"
+                    ) : String(
                         localized: "fight.duration-end",
-                        defaultValue: "\(duration)\(recurring ? " · repeats" : "") · ends \(endDate(from: Date()).formatted(date: .abbreviated, time: .shortened))"
+                        defaultValue: "\(duration) · ends \(endDate(from: Date()).formatted(date: .abbreviated, time: .shortened))"
                     ),
                     systemImage: "calendar",
                     subtitleTone: .neutral,
@@ -684,7 +734,7 @@ struct NewFightView: View {
                 FFDivider()
                 FFGroupedRow(
                     title: String(localized: "Apple Health Steps"),
-                    subtitle: steps.hasAsked
+                    subtitle: CompanionPreview.isEnabled ? String(localized: "Sample steps · preview") : steps.hasAsked
                         ? String(localized: "Ready to score this fight")
                         : String(localized: "Connect to score this fight"),
                     systemImage: "heart",
@@ -712,7 +762,7 @@ struct NewFightView: View {
                         .ffType(.rowTitle)
                         .foregroundStyle(theme.text)
                     Text(
-                        String(
+                        customSchedule ? String(localized: "Most Steps inside the selected window wins.") : String(
                             localized: "fight.winner-after-duration",
                             defaultValue: "Most Steps wins after \(duration.lowercased())."
                         )
@@ -799,7 +849,8 @@ struct NewFightView: View {
         guard canStart else { return false }
         guard model.beginCreateFight() else { return false }
 
-        let startsAt = Date()
+        let startsAt = customSchedule ? customStart : Date()
+        let endsAt = customSchedule ? customEnd : endDate(from: startsAt)
         let title = fightTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         let action = actionText.trimmingCharacters(in: .whitespacesAndNewlines)
 
@@ -807,11 +858,12 @@ struct NewFightView: View {
             await model.createAndStartFight(
                 name: title,
                 startsAt: startsAt,
-                endsAt: endDate(from: startsAt),
+                endsAt: endsAt,
                 actionText: action,
                 inviteHandles: inviteHandles,
                 visibility: visibilityJoinable ? "joinable" : "invite_only",
-                recurring: recurring
+                recurring: recurring,
+                scheduled: customSchedule
             )
             if (model.createError ?? "").isEmpty {
                 opening = .choose

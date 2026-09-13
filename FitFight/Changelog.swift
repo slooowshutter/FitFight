@@ -29,6 +29,48 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 13,
+            notes: "Your selected companion now appears as your avatar across You, fights and Feed. Apple Health details stay behind More settings. Choose Custom when creating a fight to set exact start and end dates and times."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 13,
+            notes: "Posting is simpler: choose one or more channels from Feed and add photos or a video with Media. Post headers pair the time with a plain channel label, fight links are always available, and the bottom tabs have more breathing room. Charts show scales and exact daily steps, with tap and slide inspection, corrected avatars and rounded stacks. Invitations separate the rules and round choices, with clear tap buttons."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 13,
+            notes: "Fights takes less space: a smaller companion, today’s steps, and Current, Invited and Past filters. Fight details bring standings below your score, put the loser’s action under the title, and keep codes and links in Share. Countdowns stay simple until the finish is close."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 13,
+            notes: "Meet your walking companion. Fights shows today’s Apple Health steps, fight details use a clearer score layout, and New and You share the Companion look. Try the stock animals in You; this design-preview choice lasts for the current session."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 13,
+            notes: "Feed lists posts from fights you’re in, not Public. Plus posts to those fights. Bugs & requests no longer shows device details."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 13,
+            notes: "The website now uses the centered FitFight logo with a transparent background in browser tabs."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 13,
             notes: "Internal TestFlight build so the update overlay can be checked from 188."
         ),
         ReleaseNote(

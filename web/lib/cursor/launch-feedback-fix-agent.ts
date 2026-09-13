@@ -25,33 +25,32 @@ export async function launchFeedbackFixAgent(
     : detail.comments.map((comment, index) => (
       `${index + 1}. @${comment.author_handle} (${comment.created_at})\n${comment.body}\nDevice: ${JSON.stringify(comment.metadata)}`
     )).join("\n\n");
+  let kindLabel: string;
+  switch (detail.post.kind) {
+    case "bug":
+      kindLabel = "bug";
+      break;
+    case "feature":
+      kindLabel = "feature request";
+      break;
+    default: {
+      const _exhaustive: never = detail.post.kind;
+      throw new Error(`Unhandled feedback kind ${_exhaustive}`);
+    }
+  }
   const prompt = [
-    `Fix this FitFight Bugs & requests item in ${fitFightGithubRepoUrl}.`,
+    "There was a request/bug from the Bugs & requests tab. Look into it and fix it if you can.",
     "",
-    "Rules:",
-    "- Branch off develop. Open a PR into develop. Do not merge. Do not PR into main.",
-    "- Do not bump MARKETING_VERSION. Changelog rows reuse 1.0.0 if people will see the change.",
-    "- Do exactly this request. Do not add extras, refactors, or unrelated cleanup.",
-    "- Never put secrets, .p8 files, or database passwords in git or chat.",
-    "- Cloud only. Do not ask Marc to open Xcode or a home Mac.",
-    "- Do not create or call app-facing Postgres RPCs.",
-    "- Do not run destructive database commands.",
-    "- Do not create or update Notion rows. FitFight already created the Product Backlog item and will move it to Building.",
-    "",
-    "Use the post and comments as the spec.",
-    "",
-    `Kind: ${detail.post.kind}`,
+    `Kind: ${kindLabel}`,
     `Title: ${detail.post.title}`,
-    `Author: @${detail.post.author_handle}`,
-    `Created: ${detail.post.created_at}`,
-    `Feedback post ID: ${detail.post.id}`,
-    `Upvotes: ${detail.post.vote_count}`,
-    `Device: ${JSON.stringify(detail.post.metadata)}`,
     "",
     "Post:",
     detail.post.body,
     "",
-    "Comments:",
+    "Device metadata:",
+    JSON.stringify(detail.post.metadata),
+    "",
+    "Comments, including later comments if people added more:",
     commentBlock,
   ].join("\n");
 

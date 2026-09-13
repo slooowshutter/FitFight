@@ -214,6 +214,22 @@ class TestFlightLane
       end
     end
   end
+
+  def run_promote_friends
+    values = {
+      "APP_STORE_CONNECT_KEY_ID" => "test",
+      "APP_STORE_CONNECT_ISSUER_ID" => "test",
+      "APP_STORE_CONNECT_API_KEY" => "test",
+      "FITFIGHT_PROMOTE_VERSION" => "1.0.0",
+      "FITFIGHT_PROMOTE_BUILD" => "190",
+      "FITFIGHT_PROMOTE_GROUP" => "Friends Beta"
+    }
+    stub(:write_api_key_file, nil) do
+      ENV.stub(:fetch, ->(key) { values.fetch(key) }) do
+        @lanes.fetch(:promote_friends).call
+      end
+    end
+  end
 end
 
 class TestFlightTest < Minitest::Test
@@ -262,5 +278,28 @@ class TestFlightTest < Minitest::Test
     with_apple { @lane.run_beta }
     assert_equal 1, @lane.uploads.length
     assert_equal [["staging", "1.0.0", 154]], @lane.pointers
+  end
+
+  def test_promote_friends_distributes_the_existing_build_to_friends_beta
+    with_apple { @lane.run_promote_friends }
+    assert_equal 1, @lane.uploads.length
+    upload = @lane.uploads.first
+    assert_equal true, upload[:distribute_only]
+    assert_equal true, upload[:distribute_external]
+    assert_equal true, upload[:submit_beta_review]
+    assert_equal true, upload[:notify_external_testers]
+    assert_equal false, upload[:skip_waiting_for_build_processing]
+    assert_equal false, upload[:skip_submission]
+    assert_equal "1.0.0", upload[:app_version]
+    assert_equal "190", upload[:build_number]
+    assert_equal ["friends"], upload[:groups]
+    assert_empty @lane.pointers
+  end
+
+  def test_promote_friends_requires_the_named_external_group
+    @groups.reject! { |group| !group.is_internal_group }
+    error = assert_raises(RuntimeError) { with_apple { @lane.run_promote_friends } }
+    assert_match(/Friends Beta/, error.message)
+    assert_empty @lane.uploads
   end
 end

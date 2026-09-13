@@ -1,0 +1,55 @@
+# One-shot: add an already-uploaded TestFlight build to Friends Beta.
+# Does not archive an IPA. Does not change the preview internal-only upload path.
+name: Promote Friends Beta
+
+on:
+  push:
+    branches:
+      - cursor/promote-friends-beta-1882
+
+concurrency:
+  group: ios-distribution
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    name: Add to Friends Beta
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    env:
+      APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+      FITFIGHT_PROMOTE_VERSION: "1.0.0"
+      FITFIGHT_PROMOTE_BUILD: "190"
+      FITFIGHT_PROMOTE_GROUP: "Friends Beta"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require App Store Connect secrets
+        run: |
+          missing=0
+          for name in APP_STORE_CONNECT_KEY_ID APP_STORE_CONNECT_ISSUER_ID APP_STORE_CONNECT_API_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing GitHub secret: $name. Add it under Settings → Secrets and variables → Actions."
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Check TestFlight distribution
+        run: bundle exec ruby fastlane/testflight_test.rb
+
+      - name: Add existing build to Friends Beta
+        run: bundle exec fastlane promote_friends
+
+      - name: Publish available app releases
+        if: ${{ !cancelled() }}
+        run: bash scripts/publish-app-releases.sh

@@ -520,10 +520,24 @@ footer .brand-mark {
 }
 
 .testflight-dialog > p {
-  margin: 14px 0 22px;
+  margin: 14px 0 0;
   color: var(--secondary);
   font-size: 15px;
   line-height: 1.6;
+}
+
+.install-steps {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0 22px;
+  padding-left: 22px;
+  color: var(--secondary);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.install-steps strong {
+  color: var(--text-dim);
 }
 
 .testflight-dialog .primary-action {
@@ -632,7 +646,8 @@ footer .brand-mark {
   margin: 12px 0 0;
 }
 
-.legal-content ul {
+.legal-content ul,
+.legal-content ol {
   display: grid;
   gap: 12px;
   padding-left: 22px;
@@ -644,6 +659,7 @@ footer .brand-mark {
 }
 
 .legal-content a.invite-download {
+  margin-top: 22px;
   color: var(--text);
 }
 

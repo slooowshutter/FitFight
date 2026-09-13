@@ -41,6 +41,38 @@ export default function SupportPage() {
         </p>
 
         <section>
+          <h2>Comment installer</h2>
+          <p>
+            FitFight est une bêta TestFlight, pas encore sur l’App Store. Utilisez
+            le même lien TestFlight deux fois.
+          </p>
+          <ol className="install-steps">
+            <li>
+              <strong>Le premier tap installe TestFlight.</strong> Si vous n’avez
+              pas encore l’app TestFlight d’Apple, le lien installe TestFlight —
+              pas FitFight. C’est normal.
+            </li>
+            <li>
+              <strong>Rouvrez le même lien pour installer FitFight.</strong> Une
+              fois TestFlight sur l’iPhone, ouvrez ce même lien une deuxième fois.
+              C’est ce second tap qui ajoute FitFight.
+            </li>
+            <li>
+              <strong>Vous n’avez pas besoin de code.</strong> Si TestFlight
+              demande un code, vous avez sauté le second tap. Fermez cet écran et
+              rouvrez le même lien TestFlight.
+            </li>
+          </ol>
+          <a
+            className="primary-action invite-download"
+            href="https://testflight.apple.com/join/wcZKdwVZ"
+            rel="noreferrer"
+          >
+            Ouvrir ce lien TestFlight
+          </a>
+        </section>
+
+        <section>
           <h2>Pas de Santé d’Apple</h2>
           <p>
             Dans FitFight, ouvrez <strong>Vous → Santé d’Apple</strong> pour autoriser la

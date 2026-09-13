@@ -46,7 +46,7 @@ You still do **not** paste `sb_secret_...` anywhere.
 
 ## Before this branch ships
 
-The 7 Sep mandatory-update change needs the public release manifest and `GET /api/app-release` deployed before the native build. The existing server `NEXT_PUBLIC_SUPABASE_URL` selects the staging/production release channel. The native app shows last Fights during the check and only a small popup when a new build is available; a failed check does not lock the app. Subsequent available releases still become the advertised latest. No database migration is part of this change. See [mandatory updates and database rollout](shipping.md#mandatory-updates-and-database-rollout).
+The 7 Sep mandatory-update change needs the public release manifest and `GET /api/app-release` deployed before the native build. The existing server `NEXT_PUBLIC_SUPABASE_URL` selects the staging/production release channel. The native app replaces Fights with the full update overlay until the installed build is the public latest, an admitted review candidate, or the latest internal TestFlight build. A failed check keeps that overlay. Internal-only builds do not become the Friends Beta requirement. No database migration is part of this change. See [mandatory updates and database rollout](shipping.md#mandatory-updates-and-database-rollout).
 
 The 7 Sep referral changes require the referral migration, `POST /api/v1/referrals`,
 and updated Universal Link association before the native build. You → Settings →

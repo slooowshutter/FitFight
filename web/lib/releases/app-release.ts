@@ -39,7 +39,7 @@ export async function requireLatestAppRelease(request: Request): Promise<void> {
   if (!policy.enforced) return;
   const version = request.headers.get("x-fitfight-version");
   const build = request.headers.get("x-fitfight-build");
-  if (![policy.latest, policy.review].some((release) => release
+  if (![policy.latest, policy.review, policy.internal].some((release) => release
     && version === release.version && build === String(release.build))) {
     throw new ApiError(426, "update_required", "Update FitFight to continue");
   }

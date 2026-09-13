@@ -61,6 +61,34 @@ test("production admits its live build and the selected Apple review candidate, 
   })), (error: unknown) => error instanceof ApiError && error.status === 426);
 });
 
+test("internal TestFlight latest is admitted without making the public build mandatory", async (t) => {
+  const previousProject = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  process.env.NEXT_PUBLIC_SUPABASE_URL = "https://zstzbfocunthczzubggz.supabase.co";
+  t.after(() => {
+    if (previousProject === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    else process.env.NEXT_PUBLIC_SUPABASE_URL = previousProject;
+  });
+  t.mock.method(globalThis, "fetch", async () => Response.json({
+    ...manifest,
+    staging: {
+      latest: { version: "1.0.0", build: 184, update_url: "itms-beta://" },
+      review: { version: "1.0.0", build: 187, update_url: "itms-beta://" },
+      internal: { version: "1.0.0", build: 187, update_url: "itms-beta://" },
+      enforced: true,
+    },
+  }));
+  for (const build of ["184", "187"]) {
+    await requireLatestAppRelease(new Request("https://staging.fitfight.app/api/v1/fights", {
+      headers: { "X-FitFight-Version": "1.0.0", "X-FitFight-Build": build },
+    }));
+  }
+  for (const build of ["183", "185", "186"]) {
+    await assert.rejects(requireLatestAppRelease(new Request("https://staging.fitfight.app/api/v1/fights", {
+      headers: { "X-FitFight-Version": "1.0.0", "X-FitFight-Build": build },
+    })), (error: unknown) => error instanceof ApiError && error.status === 426 && error.code === "update_required");
+  }
+});
+
 test("a registered TestFlight review build can run before it becomes mandatory for testers", async (t) => {
   const previousProject = process.env.NEXT_PUBLIC_SUPABASE_URL;
   process.env.NEXT_PUBLIC_SUPABASE_URL = "https://zstzbfocunthczzubggz.supabase.co";
@@ -91,6 +119,25 @@ test("the public version check is available without auth and never cached", asyn
   assert.equal(response.status, 200);
   assert.equal(response.headers.get("cache-control"), "no-store");
   assert.deepEqual(await response.json(), manifest.prod);
+});
+
+test("the public version check returns the internal TestFlight latest when present", async (t) => {
+  const previousProject = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  process.env.NEXT_PUBLIC_SUPABASE_URL = "https://zstzbfocunthczzubggz.supabase.co";
+  t.after(() => {
+    if (previousProject === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    else process.env.NEXT_PUBLIC_SUPABASE_URL = previousProject;
+  });
+  const staging = {
+    latest: { version: "1.0.0", build: 184, update_url: "itms-beta://" },
+    review: { version: "1.0.0", build: 187, update_url: "itms-beta://" },
+    internal: { version: "1.0.0", build: 187, update_url: "itms-beta://" },
+    enforced: true,
+  };
+  t.mock.method(globalThis, "fetch", async () => Response.json({ ...manifest, staging }));
+  const response = await GET(new Request("https://staging.fitfight.app/api/app-release"), { params: Promise.resolve({}) });
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), staging);
 });
 
 test("unavailable or malformed release metadata never admits a client", async (t) => {

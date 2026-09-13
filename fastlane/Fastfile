@@ -127,8 +127,9 @@ def record_uploaded_release(channel, version, build_number)
   UI.message("Registered #{channel} candidate #{version} (#{build_number}); it is not yet mandatory")
 end
 
-# Only installable builds become mandatory. Registered review candidates are admitted
-# separately so neither TestFlight nor App Store review is blocked by the old minimum.
+# Only public-group installable builds become mandatory. Registered internal
+# TestFlight latest and review candidates are admitted separately so Internal
+# testers and Apple review are not blocked by the Friends Beta minimum.
 def available_app_releases(app, registered, previous)
   builds = Spaceship::ConnectAPI::Build.all(app_id: app.id, platform: "IOS", processing_states: "VALID")
   external_groups = app.get_beta_groups.reject(&:is_internal_group)
@@ -141,6 +142,15 @@ def available_app_releases(app, registered, previous)
   staging_candidate = builds.select do |build|
     build.processing_state == "VALID" && !build.expired &&
       %w[WAITING_FOR_BETA_REVIEW IN_BETA_REVIEW].include?(build.build_beta_detail.external_build_state) &&
+      registered.any? { |entry|
+        entry["channel"] == "staging" && entry["version"] == build.app_version &&
+          entry["build"] == Integer(build.version)
+      }
+  end.max_by { |build| [Gem::Version.new(build.app_version), Integer(build.version)] }
+  # Internal testers receive every processed build. The newest registered VALID
+  # staging binary is installable for them even when Friends Beta still has an older one.
+  staging_internal = builds.select do |build|
+    build.processing_state == "VALID" && !build.expired &&
       registered.any? { |entry|
         entry["channel"] == "staging" && entry["version"] == build.app_version &&
           entry["build"] == Integer(build.version)
@@ -177,7 +187,26 @@ def available_app_releases(app, registered, previous)
         review = nil
       end
     end
-    manifest[channel] = { "latest" => latest, "review" => review, "enforced" => was_enforced || known }
+    internal = nil
+    if channel == "staging" && staging_internal
+      internal_release = {
+        "version" => staging_internal.app_version,
+        "build" => Integer(staging_internal.version),
+        "update_url" => update_url
+      }
+      newer_than_latest = latest.nil? ||
+        ([Gem::Version.new(internal_release["version"]), internal_release["build"]] <=>
+         [Gem::Version.new(latest["version"]), latest["build"]]) > 0
+      if newer_than_latest
+        internal = internal_release
+        # Existing app binaries only admit latest + review. Copy the internal
+        # latest into review when Apple beta review is not occupying that slot.
+        review = internal if review.nil?
+      end
+    end
+    manifest[channel] = {
+      "latest" => latest, "review" => review, "internal" => internal, "enforced" => was_enforced || known
+    }
   end
   manifest
 end

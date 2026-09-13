@@ -5,12 +5,22 @@
       "build": 184,
       "update_url": "itms-beta://"
     },
-    "review": null,
+    "review": {
+      "version": "1.0.0",
+      "build": 187,
+      "update_url": "itms-beta://"
+    },
+    "internal": {
+      "version": "1.0.0",
+      "build": 187,
+      "update_url": "itms-beta://"
+    },
     "enforced": true
   },
   "prod": {
     "latest": null,
     "review": null,
+    "internal": null,
     "enforced": false
   }
 }

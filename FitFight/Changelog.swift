@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 13,
+            notes: "Internal TestFlight build so the update overlay can be checked from 188."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 13,
             notes: "The update screen is the full overlay again. Internal TestFlight latest no longer asks you to update; Friends stay on the public build."
         ),
         ReleaseNote(

@@ -92,6 +92,31 @@ test("Apple Health aggregate sync keeps extra activity optional", () => {
   assert.equal(parsed.workouts?.[0]?.activity_type, "running");
 });
 
+test("Apple Health aggregate sync accepts resting energy and workout active minutes", () => {
+  const parsed = healthKitAggregateSyncSchema.parse({
+    ...validAggregate,
+    activity_days: [{
+      day: "2026-08-30",
+      starts_at: "2026-08-29T22:00:00.000Z",
+      ends_at: "2026-08-30T13:53:27.350Z",
+      metric: "resting_energy",
+      value: 1_540,
+      unit: "kcal",
+    }],
+    workouts: [{
+      healthkit_uuid: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      started_at: "2026-08-30T08:00:00.000Z",
+      ended_at: "2026-08-30T09:00:00.000Z",
+      activity_type: "running",
+      duration_seconds: 3600,
+      active_minutes: 58,
+    }],
+  });
+
+  assert.equal(parsed.activity_days?.[0]?.value, 1_540);
+  assert.equal(parsed.workouts?.[0]?.active_minutes, 58);
+});
+
 test("Apple Health aggregate sync rejects a mismatched activity unit", () => {
   assert.throws(() => healthKitAggregateSyncSchema.parse({
     ...validAggregate,

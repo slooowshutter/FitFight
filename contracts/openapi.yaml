@@ -625,7 +625,7 @@ components:
           items: { $ref: "#/components/schemas/HealthKitFightAggregate" }
         activity_days:
           type: array
-          maxItems: 800
+          maxItems: 1000
           items: { $ref: "#/components/schemas/HealthKitActivityDay" }
         workouts:
           type: array
@@ -671,6 +671,7 @@ components:
         ended_at: { type: string, format: date-time }
         activity_type: { type: string }
         duration_seconds: { type: number, minimum: 0 }
+        active_minutes: { type: [number, "null"], minimum: 0 }
         distance_m: { type: [number, "null"], minimum: 0 }
         energy_kcal: { type: [number, "null"], minimum: 0 }
         effort: { type: [number, "null"], minimum: 0 }

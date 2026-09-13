@@ -13,7 +13,8 @@ export const POST = apiRoute<{ postID: string }>(async (request, { params }) => 
   if (!parsed.success) {
     throw parsed.error;
   }
-  return json(await createFeedbackComment(userId, postId, parsed.data), 201);
+  const created = await createFeedbackComment(userId, postId, parsed.data);
+  return json({ comment: { ...created.comment, metadata: {} } }, 201);
 });
 
 export function OPTIONS(request: Request) {

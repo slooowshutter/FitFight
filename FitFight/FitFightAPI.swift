@@ -1035,12 +1035,13 @@ struct FitFightAPI {
 
     func launchFeedbackFix(
         postID: UUID,
+        metadata: FitFightFeedbackMetadata,
         accessToken: String
     ) async throws -> FitFightFeedbackFixAgent {
         try await post(
             path: "feedback/\(postID.uuidString.lowercased())/fix-agent",
             accessToken: accessToken,
-            body: EmptyJSON(),
+            body: FeedbackFixAgentBody(metadata: metadata),
             expected: [201]
         )
     }
@@ -1411,6 +1412,10 @@ private struct AppleAuthorizationBody: Encodable {
 
 private struct FeedbackCommentBody: Encodable {
     var body: String
+    var metadata: FitFightFeedbackMetadata
+}
+
+private struct FeedbackFixAgentBody: Encodable {
     var metadata: FitFightFeedbackMetadata
 }
 

@@ -1,0 +1,88 @@
+# FitFight — panorama des modèles économiques
+
+Préparé le 12 septembre 2026 à la demande de Marc. Il confirme ne pas avoir de modèle économique défini. Ce document examine des possibilités ; il n’autorise aucune fonctionnalité, intégration, modification du prix ou mise en place de paiements.
+
+## Point de départ
+
+Le produit actuel propose des défis de pas sur iPhone, avec les données de Santé d’Apple. La vision de Marc est de réunir les applications de suivi sportif et les objets connectés pour permettre à chacun de pratiquer son sport et de se motiver avec ses amis. [Produit](../product.md), [état actuel](../status.md), [pitch révisé](fitfight-roast-pitches-fr.md).
+
+**Mon analyse :** les payeurs possibles n’achètent pas tous la même chose. Une personne pourrait payer pour sa régularité ; un organisateur, pour faire vivre un groupe ; une entreprise, pour une animation collective ; un partenaire, pour un service ou une audience. Réunir des données est une fonction. Il reste à établir quel bénéfice mérite un paiement, pour quel acheteur.
+
+Les [exemples commerciaux vérifiés](fitfight-monetization-examples.md) montrent que ces familles existent. Ils ne prouvent pas que les utilisateurs de FitFight paieront. Les fonctions décrites ci-dessous sont des propositions, pas des capacités déjà disponibles.
+
+## Les grandes familles possibles
+
+Les appréciations sont des hypothèses de travail. « À tester » ne signifie pas « à construire maintenant ».
+
+| Modèle | Qui paie et pour quoi | Intérêt et difficulté pour FitFight |
+| --- | --- | --- |
+| **1. Licence organisateur** | Un coach, club, créateur ou responsable de communauté paie pour gérer ses groupes, préparer des saisons, animer des défis et suivre la participation. Les membres rejoignent gratuitement. | Première piste à tester : identifier une tâche répétitive et un budget existant. La valeur doit être du temps gagné ou une animation utile. |
+| **2. Offre entreprises / CSE** | L’entreprise finance un défi ponctuel ou un abonnement pour ses équipes, au forfait ou selon le nombre de participants. | Acheteur identifiable. Demande aussi vente, accompagnement et gestion des équipes. Éviter de transformer l’activité des salariés en outil d’évaluation individuelle. |
+| **3. Pass organisateur entre amis** | Une personne paie pour personnaliser et animer une compétition de son groupe : saisons, équipes, règles, trophées. Ses amis participent gratuitement. | Proche de l’idée initiale. La personne qui entraîne le groupe doit vouloir payer pour une valeur supplémentaire ; une simple création de défi ne le démontre pas. |
+| **4. Paiement par défi ou saison** | L’organisateur ou chaque participant achète une expérience limitée dans le temps. | Peut convenir à un usage occasionnel. Faire payer chaque invité ajoute une décision d’achat avant de rejoindre ses amis. Un prix d’accès n’est pas une mise d’argent sur le résultat. |
+| **5. Abonnement individuel premium** | L’utilisateur paie pour des programmes, des bilans ou des possibilités de personnalisation qui l’aident à rester régulier. | Revenu récurrent possible, mais bénéfice personnel à prouver. Une valeur surtout sociale peut rendre difficile un abonnement imposé à chaque ami. |
+| **6. Abonnement partagé** | Un titulaire achète plusieurs places premium pour son couple, sa famille ou ses amis. | Différent du pass organisateur : chaque membre reçoit l’offre premium. Pertinent si l’abonnement individuel apporte déjà une valeur claire. |
+| **7. Programme accompagné** | Une personne achète quelques semaines de suivi avec un coach ou un animateur, FitFight servant de support au programme. | Le service humain peut justifier le prix. Il faut payer et organiser ce travail ; le revenu ne correspond pas à la seule vente du logiciel. |
+| **8. Animation clé en main** | Une entreprise, association ou communauté achète la préparation, le lancement et l’animation d’un défi. | Vend du travail et un résultat d’organisation avant une offre entièrement automatisée. La marge dépend du temps passé sur chaque client. |
+| **9. Licence en marque blanche** | Un réseau de salles, une marque ou un acteur du bien-être paie pour un service utilisant sa propre identité. | Mise en place, abonnement et éventuellement prix par utilisateur. Attention aux demandes spécifiques qui multiplient les versions à maintenir. |
+| **10. Offre intégrée à un autre abonnement ou appareil** | Un fabricant, une salle ou un service partenaire inclut FitFight dans son offre et paie par activation, utilisateur ou contrat. | Distribution par un partenaire. Suppose un accord et une valeur démontrée pour ses clients ; aucun partenariat n’est acquis. |
+| **11. Sponsoring** | Une marque finance un événement ou une opération auprès d’une communauté. | L’audience et l’intérêt commercial doivent exister. Un défi sponsorisé exploitant des données de santé demande une vérification spécifique des règles des sources ; ce n’est pas automatiquement compatible avec HealthKit. |
+| **12. Affiliation** | Un partenaire verse une commission sur un achat attribué à FitFight : équipement, inscription à un événement ou service sportif. | Complément possible si les achats sont réels. Les recommandations ne doivent pas exploiter les données de santé à des fins marketing. |
+| **13. Place de marché** | FitFight prélève une commission sur les programmes, cours ou événements vendus par des coachs et organisateurs. | Plus de responsabilité que l’affiliation : attirer vendeurs et acheteurs, gérer paiement, qualité et support. Changement important du produit. |
+| **14. Licence technique / API / SDK** | Une autre entreprise paie pour intégrer un moteur de défis, de classement ou des connecteurs autorisés. | Possibilité plus lointaine si FitFight développe une technologie utile à d’autres. La redistribution de données et l’accès aux fournisseurs ne sont pas automatiquement autorisés. |
+| **15. Événements physiques payants** | Les participants achètent une sortie, un tournoi ou un événement communautaire. | Revenu de billetterie et éventuellement de services. Exige de l’organisation sur le terrain. |
+| **16. Objets physiques** | Vente de médailles, trophées, vêtements ou coffrets associés aux défis. | Revenu complémentaire ; logistique, fabrication et marge à vérifier. Une communauté attachée à FitFight aiderait, sans être acquise. |
+| **17. Achat unique / offre à vie** | L’utilisateur achète l’app ou des fonctions en une fois. | Encaissement initial, mais coûts de fonctionnement qui continuent. L’achat obligatoire peut freiner les invitations ; l’offre à vie engage longtemps. |
+| **18. Personnalisation visuelle** | Achat de thèmes, avatars ou objets virtuels. | Facultatif et compatible avec une base gratuite. Suppose que les utilisateurs tiennent à leur identité dans l’app. Ne pas vendre un avantage de score. |
+| **19. Prévention financée** | Une mutuelle, une collectivité ou un organisme finance un programme d’activité pour une population. | Cycle de vente et preuves attendues potentiellement exigeants. Le service acheté, les bénéficiaires et les usages de données doivent être précis ; pas de vente du profil de santé individuel. |
+| **20. Publicité d’affichage** | Un annonceur achète des impressions ou clics sans ciblage fondé sur les données de santé. | Je la classerais tard : son intérêt dépend du volume et elle occupe une partie de l’expérience. Les contraintes HealthKit restent applicables. |
+| **21. Soutien volontaire** | Des utilisateurs contribuent pour soutenir le développement, éventuellement via une formule de membre fondateur. | Peut financer un petit projet, mais revenu incertain. Une prévente avec avantages futurs crée aussi des engagements. Ce n’est pas la validation d’une offre récurrente. |
+| **22. Engagement financier / mises** | Frais fixes de gestion d’un engagement, commission sur une cagnotte, ou prélèvement lié à un objectif manqué. | À écarter au départ : argent réel, contestations et besoin de scores fiables. Se payer sur les échecs crée aussi un conflit avec la promesse de motivation. Les mécanismes ne sont pas tous juridiquement équivalents. |
+
+La revente de données de santé à des annonceurs et le ciblage publicitaire fondé sur ces données ne constituent pas une piste à retenir pour FitFight : les règles Apple limitent explicitement ces usages. Les autres restrictions pertinentes sont précisées plus bas. [Apple, §5.1.2(vi) et §5.1.3](https://developer.apple.com/app-store/review/guidelines/#health-and-health-research).
+
+Les levées de fonds, prêts et subventions financent l’entreprise ; ils n’expliquent pas comment des clients paient son produit. Un financement d’étude ou de recherche répondrait à un contrat distinct, avec ses propres exigences, et ne validerait pas l’abonnement grand public.
+
+## Ce que je testerais d’abord
+
+### 1. Un organisateur paie, son groupe rejoint gratuitement
+
+C’est ma première hypothèse pour préserver l’entrée facile des amis dans un défi. Le premier acheteur à interroger pourrait être un coach ou responsable de communauté qui anime déjà un groupe. L’offre proposée serait une saison de défis avec préparation, invitations, animation et bilan de participation. Commencer par vérifier comment il fait aujourd’hui, combien de temps cela prend et ce qu’il accepterait de payer.
+
+L’offre pourrait être facturée à la saison pour un usage ponctuel, ou en abonnement pour un groupe actif toute l’année. Je ne verrouillerais pas le modèle avant de comprendre cette fréquence d’usage.
+
+**Repère observé :** Challenge Hound affiche 149 $ pour un défi jusqu’à 50 personnes et ChallengeRunner 15 $ par semaine pour 1–50 participants. Les pages affichent le symbole dollar ; ces montants ne sont ni des devis France ni des prix recommandés pour FitFight. [Challenge Hound](https://www.challengehound.com/pricing), [ChallengeRunner](https://www.challengerunner.com/Pricing).
+
+### 2. Un défi d’entreprise ponctuel
+
+Proposition à tester : une animation sportive volontaire pour une équipe, achetée par son responsable ou le CSE. Le client paie pour la mise en place et le déroulement du défi. Un abonnement annuel ne devient intéressant que si ces opérations se répètent.
+
+YuMuuv facture selon les participants inscrits et la durée. Wellable distingue notamment les offres selon l’accompagnement fourni au client. Ces exemples soutiennent la plausibilité de cette catégorie d’acheteurs ; ils ne prouvent pas que FitFight peut déjà répondre à leurs besoins. [YuMuuv](https://yumuuv.com/pricing), [Wellable](https://www.wellable.co/pricing/single-challenge/).
+
+### 3. Un abonnement collectif entre proches
+
+C’est la piste la plus proche du produit entre amis si Marc veut rester exclusivement grand public. Elle pourrait donner accès à des saisons et personnalisations supplémentaires pour tout un groupe, avec participation simple des invités. Il faut d’abord voir si le groupe revient après plusieurs défis, puis proposer un prix réel à son organisateur.
+
+Strava propose déjà une formule annuelle partagée à quatre ; elle vend son propre ensemble de fonctions premium, pas seulement des défis entre amis. Ce modèle ne suffit donc pas à prouver qu’un groupe paiera pour FitFight. [Strava Family](https://support.strava.com/en-us/articles/15401631-what-is-strava-s-family-plan).
+
+## Comment obtenir une première réponse commerciale
+
+Pour ces trois hypothèses, préparer une offre courte qui décrit l’acheteur, le contenu, la durée et un prix proposé. Les tarifs publiés des concurrents donnent un contexte, pas une décision de prix.
+
+Discuter de cette offre avec des personnes qui correspondent à l’acheteur : par exemple cinq organisateurs de communautés ou coachs, trois responsables d’équipe et quelques personnes qui lancent déjà les défis dans leurs groupes d’amis. Ces nombres sont une proposition de premier tour qualitatif, pas un échantillon représentatif.
+
+Chercher un engagement sur un pilote au périmètre clair, avec ses conditions de livraison explicites. Un accord sur le principe est moins probant qu’un achat ; un premier achat est moins probant qu’un renouvellement. Les premières mesures utiles sont : temps d’organisation économisé, participants qui terminent et groupes qui recommencent.
+
+Le choix entre grand public, clubs et entreprises est un choix de clientèle. Il faut le faire avant de multiplier les fonctions. Les propositions de ce document ne sont pas une feuille de route à implémenter.
+
+## Deux limites qui influencent le modèle
+
+**Données et intégrations.** La vision de réunir différents sports doit rester une ambition. Les conditions Strava limitent notamment le partage, la facturation et la redistribution de données/API. Un connecteur qui fonctionne chez un concurrent n’accorde pas les mêmes droits à FitFight. Vendre un moteur de défis peut être une piste ; revendre l’accès à toutes les données ne l’est pas automatiquement. [Strava, API Policy](https://www.strava.com/legal/api_policy).
+
+**Publicité, sponsors et argent réel.** Apple interdit certains usages marketing des données de santé et encadre les jeux d’argent. Un sponsoring sans données transmises au sponsor n’est pas, à lui seul, une validation d’un défi commercial alimenté par HealthKit. Les abonnements numériques et les prestations physiques suivent aussi des règles d’achat différentes ; calculer une recette nette après frais selon le canal retenu. [Apple, App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/).
+
+## Ce qui mérite une réponse dans le roast
+
+La centralisation et les défis multisports existent déjà chez des acteurs tels que Challenge Hound et GoJoe. Ce constat porte sur leurs offres annoncées, pas sur une équivalence complète avec FitFight. La différenciation de FitFight doit se préciser : public mieux servi, simplicité, plaisir du défi, régularité obtenue ou temps d’organisation économisé. Aucune de ces différences n’est encore démontrée par des chiffres fournis dans cette conversation. [Challenge Hound](https://www.challengehound.com/product), [GoJoe](https://www.gojoe.com/pricing).
+
+La question à résoudre reste concrète : **qui a assez besoin de ce résultat pour payer, puis renouveler ?**

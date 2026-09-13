@@ -241,8 +241,7 @@ struct FFIconButton: View {
     }
 }
 
-/// The signature: full width, 60pt tall, label left, filled circle chevron right.
-/// One per screen, pinned above the tab bar.
+/// The full-width tap action. Sliding confirmation uses `FFSlideToConfirm`.
 struct FFScreenCTA: View {
     let title: String
     var kind: FFButtonKind = .primary
@@ -250,39 +249,17 @@ struct FFScreenCTA: View {
     var busy: Bool = false
     let action: () -> Void
 
-    @Environment(\.ffTheme) private var theme
-
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                HStack(spacing: 8) {
-                    if busy {
-                        ProgressView()
-                            .controlSize(.small)
-                            .tint(theme.mossOn)
-                    }
-                    Text(title)
-                        .ffType(.buttonLarge)
-                }
-                .foregroundStyle(enabled ? theme.mossOn : theme.disabledText)
-                Spacer(minLength: 0)
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 17, weight: .bold))
-                    .foregroundStyle(enabled ? fill : theme.disabledText)
-                    .frame(width: 44, height: 44)
-                    .background(enabled ? theme.mossOn : theme.disabledBg, in: Circle())
-            }
-            .padding(.leading, 26)
-            .padding(.trailing, 8)
-            .frame(height: 60)
-            .frame(maxWidth: .infinity)
-            .background(enabled ? fill : theme.disabledBg, in: Capsule())
-        }
-        .buttonStyle(FFPressStyle(scale: 0.985))
-        .disabled(!enabled || busy)
+        FFButton(
+            title: title,
+            kind: kind,
+            size: .large,
+            enabled: enabled,
+            busy: busy,
+            fullWidth: true,
+            action: action
+        )
     }
-
-    private var fill: Color { kind == .ember ? theme.emberFill : theme.mossFill }
 }
 
 /// Track with a knob on the left. Drag the knob across to confirm.
@@ -978,13 +955,14 @@ struct FFListRow: View {
     var metricIsGap: Bool = false
     var selected: Bool = false
     var photoURL: URL? = nil
+    var avatar: AnyView? = nil
     var action: (() -> Void)?
 
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
         let row = HStack(spacing: 13) {
-            FFAvatar(monogram: monogram, size: 44, photoURL: photoURL)
+            if let avatar { avatar } else { FFAvatar(monogram: monogram, size: 44, photoURL: photoURL) }
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .ffType(.heading)
@@ -999,6 +977,11 @@ struct FFListRow: View {
                     .font(.ff(18, 800))
                     .tracking(18 * -0.02)
                     .foregroundStyle(metricIsGap ? (ahead ? theme.mossText : theme.emberText) : theme.text)
+                if metricIsGap {
+                    Text(ahead ? String(localized: "steps ahead") : String(localized: "steps behind"))
+                        .ffType(.micro)
+                        .foregroundStyle(ahead ? theme.mossText : theme.emberText)
+                }
                 if let delta {
                     Text(delta)
                         .ffType(.caption)

@@ -11,10 +11,11 @@ struct ContentView: View {
     @EnvironmentObject private var appUpdate: AppUpdateChecker
     @EnvironmentObject private var push: PushNotificationService
     @EnvironmentObject private var steps: HealthKitStepsStore
+    @EnvironmentObject private var companions: CompanionStore
 
     var body: some View {
         Group {
-            if appUpdate.status == .current || ScreenshotExport.isEnabled {
+            if appUpdate.status == .current || ScreenshotExport.isEnabled || CompanionPreview.isEnabled {
                 VStack(spacing: 0) {
                     VersionBanner(onTap: versionBannerTap)
                     appContent
@@ -26,7 +27,7 @@ struct ContentView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(theme.bg.ignoresSafeArea())
         .task(id: scenePhase) {
-            guard scenePhase == .active, !ScreenshotExport.isEnabled else { return }
+            guard scenePhase == .active, !ScreenshotExport.isEnabled, !CompanionPreview.isEnabled else { return }
             await appUpdate.check()
             while !Task.isCancelled {
                 do { try await Task.sleep(for: .seconds(60)) } catch { return }
@@ -34,6 +35,7 @@ struct ContentView: View {
             }
         }
         .onChange(of: appUpdate.status) { previous, status in
+            guard !CompanionPreview.isEnabled else { return }
             if status != .current {
                 model.showingVersions = false
                 model.showingDebugMenu = false
@@ -52,6 +54,19 @@ struct ContentView: View {
                 WelcomeView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+        }
+        .sheet(isPresented: $companions.showingPicker) {
+            CompanionPicker(selection: companions.selection)
+                .fitFightTheme(themeStore.theme)
+                .presentationBackground(themeStore.theme.bg)
+        }
+        .alert(String(localized: "Companion preview"), isPresented: Binding(
+            get: { model.companionPreviewNotice != nil },
+            set: { if !$0 { model.companionPreviewNotice = nil } }
+        )) {
+            Button(String(localized: "OK"), role: .cancel) { model.companionPreviewNotice = nil }
+        } message: {
+            Text(model.companionPreviewNotice ?? "")
         }
         .sheet(isPresented: $model.showingVersions) {
             VersionsView()
@@ -118,6 +133,7 @@ struct ContentView: View {
     }
 
     private var versionBannerTap: (() -> Void)? {
+        guard !CompanionPreview.isEnabled else { return nil }
         guard appUpdate.status == .current, session.isFitFightAdmin else { return nil }
         return { model.showingDebugMenu = true }
     }
@@ -386,6 +402,7 @@ private struct InteractivePopGestureEnabler: UIViewRepresentable {
     return ContentView()
         .environmentObject(themeStore)
         .environmentObject(AppModel())
+        .environmentObject(CompanionStore())
         .environmentObject(session)
         .environmentObject(HealthKitStepsStore())
         .environmentObject(FeedStore())

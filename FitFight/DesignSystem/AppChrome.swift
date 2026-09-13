@@ -243,7 +243,7 @@ enum FFTab: Hashable {
     case fights, newFight, feed, you
 }
 
-/// 46×32 glyph pill, 22pt icon, 11pt label. The live tab takes the moss wash.
+/// Equal square icon frames with six-point insets; the live tab takes the moss wash.
 struct FFTabBar: View {
     @Binding var tab: FFTab
     /// iOS convention: tapping the already-selected tab returns that tab to its root.
@@ -257,10 +257,7 @@ struct FFTabBar: View {
             item(.feed, "text.below.photo", String(localized: "Feed"))
             item(.you, "person", String(localized: "You"))
         }
-        // The kit uses the classic full-width iPhone geometry: about 49pt of
-        // controls plus the device's bottom safe area. Extra top/bottom padding
-        // would make the custom bar feel tall.
-        .frame(height: 50)
+        .padding(.vertical, 8)
         .padding(.horizontal, 10)
         .background {
             // The kit's fill is 94% opaque. On a mock nothing scrolls under it; in the
@@ -283,11 +280,14 @@ struct FFTabBar: View {
                 tab = value
             }
         } label: {
-            VStack(spacing: 3) {
+            VStack(spacing: 4) {
                 Image(systemName: on ? "\(symbol).fill" : symbol)
-                    .font(.system(size: 19, weight: .medium))
+                    .resizable()
+                    .scaledToFit()
+                    .fontWeight(.medium)
                     .foregroundStyle(on ? theme.tabInkOn : theme.tabInkOff)
-                    .frame(width: 46, height: 30)
+                    .frame(width: 20, height: 20)
+                    .padding(6)
                     .background(
                         on ? theme.tabPillOn : .clear,
                         in: RoundedRectangle(cornerRadius: theme.radius.glyph, style: .continuous)
@@ -297,8 +297,10 @@ struct FFTabBar: View {
                     .foregroundStyle(on ? theme.tabInkOn : theme.tabInkOff)
             }
             .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
         }
         .buttonStyle(FFHapticPlainStyle())
+        .accessibilityAddTraits(on ? .isSelected : [])
     }
 }
 

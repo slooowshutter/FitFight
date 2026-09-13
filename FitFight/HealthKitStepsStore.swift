@@ -70,6 +70,13 @@ final class HealthKitStepsStore: ObservableObject {
         return UserDefaults.standard.bool(forKey: Self.askedKey(userId: activeUserId))
     }
 
+    #if DEBUG && targetEnvironment(simulator)
+    func setCompanionPreviewStatus(_ value: Status) {
+        guard CompanionPreview.isEnabled else { return }
+        status = value
+    }
+    #endif
+
     var detailText: String {
         switch connection {
         case .notConnected: return String(localized: "Not connected")
@@ -127,6 +134,7 @@ final class HealthKitStepsStore: ObservableObject {
     }
 
     func installObserverAtLaunch() {
+        guard !CompanionPreview.isEnabled else { return }
         guard HKHealthStore.isHealthDataAvailable(),
               let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount)
         else {
@@ -200,6 +208,7 @@ final class HealthKitStepsStore: ObservableObject {
     }
 
     func configure(session: SessionStore) {
+        guard !CompanionPreview.isEnabled else { return }
         self.session = session
         if let userId = session.authSession?.user.id ?? session.client.auth.currentUser?.id {
             activate(userId: userId)
@@ -211,6 +220,7 @@ final class HealthKitStepsStore: ObservableObject {
     }
 
     func activate(userId: UUID?) {
+        guard !CompanionPreview.isEnabled else { return }
         guard activeUserId != userId else { refreshBackgroundStatus(); return }
         activeUserId = userId
         status = .idle
@@ -308,6 +318,7 @@ final class HealthKitStepsStore: ObservableObject {
         trace: HealthKitSyncTrace,
         coalesceInFlight: Bool = true
     ) async -> Bool {
+        guard !CompanionPreview.isEnabled else { return false }
         if let inFlightSync {
             if coalesceInFlight {
                 return await inFlightSync.value

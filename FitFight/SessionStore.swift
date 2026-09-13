@@ -12,7 +12,13 @@ final class SessionStore: ObservableObject {
     @Published private(set) var profileUnavailable = false
     private var screenshotSignedIn = false
 
-    let client: SupabaseClient
+    // Construct Auth only when needed; a fixture session never opens Keychain or refreshes tokens.
+    lazy var client = SupabaseClient(
+        supabaseURL: SupabaseConfig.projectURL,
+        supabaseKey: SupabaseConfig.publishableKey.isEmpty
+            ? "sb_publishable_missing"
+            : SupabaseConfig.publishableKey
+    )
     private let api = FitFightAPI()
     private static let handleChosenKey = "ff.handle.chosen"
     private static let needsHealthKey = "ff.onboarding.needsHealth"
@@ -31,20 +37,21 @@ final class SessionStore: ObservableObject {
     }
 
     var needsHealthOnboarding: Bool {
-        !needsOnboarding && UserDefaults.standard.bool(forKey: Self.needsHealthKey)
+        !screenshotSignedIn && !needsOnboarding && UserDefaults.standard.bool(forKey: Self.needsHealthKey)
     }
 
     var needsNotificationOnboarding: Bool {
-        !needsOnboarding && !needsHealthOnboarding
+        !screenshotSignedIn && !needsOnboarding && !needsHealthOnboarding
             && UserDefaults.standard.bool(forKey: Self.needsNotificationKey)
     }
 
     var needsRequestsOnboarding: Bool {
-        !needsOnboarding && !needsHealthOnboarding && !needsNotificationOnboarding
+        !screenshotSignedIn && !needsOnboarding && !needsHealthOnboarding && !needsNotificationOnboarding
             && UserDefaults.standard.bool(forKey: Self.needsRequestsKey)
     }
 
     var isFitFightAdmin: Bool {
+        guard !screenshotSignedIn else { return false }
         guard let handle = profile?.handle else { return false }
         return handle.caseInsensitiveCompare(Self.adminHandle) == .orderedSame
     }
@@ -65,6 +72,7 @@ final class SessionStore: ObservableObject {
     }
 
     func freshAccessToken() async throws -> String {
+        guard !screenshotSignedIn else { throw CompanionPreview.WriteUnavailable() }
         let userID = authSession?.user.id ?? client.auth.currentUser?.id
         let session = try await client.auth.session
         try Task.checkCancellation()
@@ -77,13 +85,7 @@ final class SessionStore: ObservableObject {
     }
 
     init(listenForSession: Bool = true) {
-        client = SupabaseClient(
-            supabaseURL: SupabaseConfig.projectURL,
-            supabaseKey: SupabaseConfig.publishableKey.isEmpty
-                ? "sb_publishable_missing"
-                : SupabaseConfig.publishableKey
-        )
-        guard listenForSession else { return }
+        guard listenForSession, !CompanionPreview.isEnabled else { return }
         Task { await listen() }
     }
 
@@ -106,12 +108,24 @@ final class SessionStore: ObservableObject {
         )
     }
 
+    #if DEBUG && targetEnvironment(simulator)
+    convenience init(companionPreview: Void) {
+        self.init(screenshot: ())
+        profile = FitFightProfile(
+            userId: UUID(uuidString: CompanionPreview.people[0].id)!,
+            handle: "marc", displayName: "Marc", handleSetAt: "2026-09-13T00:00:00Z",
+            referralCode: nil, avatar: nil
+        )
+    }
+    #endif
+
     func signInWithApple(
         idToken: String,
         authorizationCode: String,
         nonce: String,
         fullName: String?
     ) async {
+        guard !CompanionPreview.isEnabled else { authError = CompanionPreview.writeUnavailable; return }
         authError = nil
         guard await AppUpdateChecker.shared.permitsRequests() else { return }
         isBusy = true
@@ -171,6 +185,7 @@ final class SessionStore: ObservableObject {
     #endif
 
     func signOut() async {
+        guard !screenshotSignedIn else { authError = CompanionPreview.writeUnavailable; return }
         authError = nil
         try? await client.auth.signOut()
         authSession = nil
@@ -214,6 +229,7 @@ final class SessionStore: ObservableObject {
     }
 
     func setHandle(_ raw: String, avatarMediaId: UUID? = nil) async throws {
+        guard !screenshotSignedIn else { throw CompanionPreview.WriteUnavailable() }
         guard await AppUpdateChecker.shared.permitsRequests() else {
             let requiresUpdate = AppUpdateChecker.shared.status == .updateRequired
             throw FitFightAPIError.http(
@@ -264,6 +280,7 @@ final class SessionStore: ObservableObject {
     }
 
     func setAvatar(_ media: FitFightMedia) async throws {
+        guard !screenshotSignedIn else { throw CompanionPreview.WriteUnavailable() }
         guard let userId = authSession?.user.id ?? client.auth.currentUser?.id else {
             throw HandleError.notSignedIn
         }
@@ -279,6 +296,7 @@ final class SessionStore: ObservableObject {
 
     @discardableResult
     func deleteAccount() async -> Bool {
+        guard !screenshotSignedIn else { authError = CompanionPreview.writeUnavailable; return false }
         authError = nil
         isBusy = true
         defer { isBusy = false }
@@ -342,6 +360,7 @@ final class SessionStore: ObservableObject {
     }
 
     func loadProfile() async {
+        guard !screenshotSignedIn else { return }
         guard await AppUpdateChecker.shared.permitsRequests() else { return }
         guard let userId = authSession?.user.id ?? client.auth.currentUser?.id else {
             profile = nil

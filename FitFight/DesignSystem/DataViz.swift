@@ -251,10 +251,11 @@ struct FFLeaderboardRow: View {
     var move: FFMove = .same
     var isYou: Bool = false
     var photoURL: URL? = nil
+    var avatar: AnyView? = nil
     var caption: String? = nil
     var captionUrgent: Bool = false
     var captionAt: ((Date) -> String)? = nil
-    /// Nested rows step down to `field`; canvas rows keep `card`.
+    /// Nested rows subtract their inset from the outer card radius.
     var radius: CGFloat? = nil
 
     @Environment(\.ffTheme) private var theme
@@ -267,7 +268,7 @@ struct FFLeaderboardRow: View {
                 .ffType(.button)
                 .foregroundStyle(rank == 1 ? theme.gold : theme.textTertiary)
                 .frame(width: 22)
-            FFAvatar(monogram: monogram, size: 38, photoURL: photoURL)
+            if let avatar { avatar } else { FFAvatar(monogram: monogram, size: 38, photoURL: photoURL) }
             VStack(alignment: .leading, spacing: 2) {
                 Text(name)
                     .ffType(.rowTitle)

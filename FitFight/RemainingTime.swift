@@ -9,9 +9,7 @@ enum RemainingTime {
         var minutes: Int = 0
     }
 
-    /// Months, weeks, and days while there are at least two days left. Below that,
-    /// keep the day count instead of rounding up, and show hours (and minutes once
-    /// the remaining time is under a day).
+    /// Use one coarse unit, adding hours only below two days and minutes only below two hours.
     static func breakdown(
         from now: Date = Date(),
         until end: Date,
@@ -27,22 +25,17 @@ enum RemainingTime {
         let months = max(0, remaining.month ?? 0)
         let totalDays = max(0, remaining.day ?? 0)
         let weeks = totalDays / 7
-        let leftoverDays = totalDays % 7
         let hours = max(0, remaining.hour ?? 0)
         let minutes = max(0, remaining.minute ?? 0)
 
-        if months > 0 || weeks > 0 || totalDays >= 2 {
-            var result = Breakdown(months: months, weeks: weeks)
-            if months > 0, weeks > 0 {
-                return result
-            }
-            result.days = months == 0 && weeks == 0 ? totalDays : leftoverDays
-            return result
-        }
+        if months > 0 { return Breakdown(months: months) }
+        if weeks > 0 { return Breakdown(weeks: weeks) }
+        if totalDays >= 2 { return Breakdown(days: totalDays) }
         if totalDays >= 1 {
             return Breakdown(days: totalDays, hours: hours)
         }
-        if hours >= 1 {
+        if hours >= 2 { return Breakdown(hours: hours) }
+        if hours == 1 {
             return Breakdown(hours: hours, minutes: minutes)
         }
         return Breakdown(minutes: max(1, minutes))

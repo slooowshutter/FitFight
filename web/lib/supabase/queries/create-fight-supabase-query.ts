@@ -59,16 +59,6 @@ export type CreateFightInput = z.infer<typeof createFightSchema>;
 const IDEMPOTENCY_WINDOW_MS = 2 * 60 * 1000;
 const JOIN_CODE_ATTEMPTS = 8;
 
-function initialState(input: CreateFightInput): "live" | "scheduled" | "inviting" {
-  if (input.start === "now") {
-    return "live";
-  }
-  if ((input.inviteHandles?.length ?? 0) > 0) {
-    return "inviting";
-  }
-  return "scheduled";
-}
-
 async function allocateJoinCode(admin: SupabaseClient): Promise<string> {
   for (let attempt = 0; attempt < JOIN_CODE_ATTEMPTS; attempt += 1) {
     const code = randomJoinCode();
@@ -134,7 +124,7 @@ export async function createFight(userId: string, input: CreateFightInput) {
       throw new ApiError(400, ERROR_CODES.validation, "Cannot invite yourself");
     }
   }
-  const state = initialState({ ...input, inviteHandles: handles });
+  const state = input.start === "now" ? "live" : "scheduled";
   const source = await ensureAppleHealthSource(userId, { admin });
   const durationSeconds = Math.round((Date.parse(endsAt) - Date.parse(startsAt)) / 1000);
   const { data: series, error: seriesError } = await admin

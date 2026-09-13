@@ -161,26 +161,6 @@ struct FitFightFightPost: Codable, Equatable, Hashable, Identifiable {
     }
 }
 
-struct FitFightFeedPerson: Codable, Equatable, Hashable, Identifiable {
-    let userId: UUID
-    let handle: String
-    let displayName: String
-    let avatar: FitFightMedia?
-
-    var id: UUID { userId }
-    var atHandle: String { "@\(handle)" }
-
-    enum CodingKeys: String, CodingKey {
-        case handle, avatar
-        case userId = "user_id"
-        case displayName = "display_name"
-    }
-}
-
-struct FitFightFeedPeople: Decodable {
-    let people: [FitFightFeedPerson]
-}
-
 struct FitFightFightPostComment: Codable, Equatable, Hashable, Identifiable {
     let id: UUID
     let postId: UUID

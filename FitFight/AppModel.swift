@@ -161,6 +161,9 @@ struct Fight: Codable, Identifiable, Hashable {
     }
 
     var timeLeftLabel: String {
+        if isUpcoming {
+            return String(localized: "fight.starts-at", defaultValue: "Starts \(Self.deadlineStamp(windowStart))")
+        }
         if hasPassedDeadline {
             return deadlineLabel
         }
@@ -170,6 +173,8 @@ struct Fight: Codable, Identifiable, Hashable {
             defaultValue: "\(remaining) left"
         )
     }
+
+    var isUpcoming: Bool { serverState == "scheduled" && windowStart > Date() }
 
     /// Exact stored cutoff, in the phone’s local date and time.
     var deadlineLabel: String {
@@ -220,6 +225,7 @@ final class AppModel: ObservableObject {
     @Published var showingVersions = false
     @Published var showingDebugMenu = false
     @Published var showingRequests = false
+    @Published var companionPreviewNotice: String?
     @Published var joined: Set<String> = []
     @Published var createError: String?
     @Published var pendingJoinable: Fight?
@@ -285,6 +291,22 @@ final class AppModel: ObservableObject {
     convenience init(preview: Void) {
         self.init(fixtures: true)
     }
+
+    #if DEBUG && targetEnvironment(simulator)
+    func showCompanionPreviewState(_ state: CompanionPreview.DisplayState) {
+        guard CompanionPreview.isEnabled else { return }
+        let fixture = CompanionPreview.model(state: state)
+        you = fixture.you
+        fights = fixture.fights
+        tab = .fights
+        openFightID = nil
+        createError = nil
+        isRefreshingFights = state == .loading
+        refreshPhase = state == .loading ? .updatingFights : .idle
+        companionPreviewNotice = state == .offline
+            ? String(localized: "Offline preview. These are the last cached sample fights.") : nil
+    }
+    #endif
 
     init(fixtures: Bool) {
         let bundle = AppModelFixtures.load()
@@ -428,6 +450,7 @@ final class AppModel: ObservableObject {
     }
 
     func restoreCachedFights(session: SessionStore) {
+        guard !CompanionPreview.isEnabled else { return }
         guard let userID = session.authSession?.user.id ?? session.client.auth.currentUser?.id else {
             cachedUserID = nil
             fights = []
@@ -451,6 +474,10 @@ final class AppModel: ObservableObject {
         trigger: HealthKitStepsStore.SyncTrigger = .foreground,
         requestAccess: Bool = false
     ) async {
+        if CompanionPreview.isEnabled {
+            if requestAccess || trigger == .manual { companionPreviewNotice = CompanionPreview.writeUnavailable }
+            return
+        }
         if refreshTask != nil {
             pendingRefresh = (session, steps, trigger, requestAccess)
             return
@@ -577,6 +604,7 @@ final class AppModel: ObservableObject {
     }
 
     func refreshFromServer(session: SessionStore, trace: HealthKitSyncTrace? = nil) async {
+        guard !CompanionPreview.isEnabled else { return }
         self.session = session
         guard let userId = session.authSession?.user.id ?? session.client.auth.currentUser?.id else {
             return
@@ -627,6 +655,7 @@ final class AppModel: ObservableObject {
 
     /// Locks Start fight immediately so extra taps cannot insert another row.
     func beginCreateFight() -> Bool {
+        guard !CompanionPreview.isEnabled else { createError = CompanionPreview.writeUnavailable; return false }
         guard !isCreatingFight else { return false }
         isCreatingFight = true
         createError = nil
@@ -640,8 +669,10 @@ final class AppModel: ObservableObject {
         actionText: String,
         inviteHandles: [String],
         visibility: String = "invite_only",
-        recurring: Bool = true
+        recurring: Bool = true,
+        scheduled: Bool = false
     ) async {
+        guard !CompanionPreview.isEnabled else { createError = CompanionPreview.writeUnavailable; return }
         if !isCreatingFight {
             isCreatingFight = true
         }
@@ -661,6 +692,14 @@ final class AppModel: ObservableObject {
             createError = String(localized: "Keep the action to 120 characters.")
             return
         }
+        guard endsAt > startsAt else {
+            createError = String(localized: "The end must be after the start.")
+            return
+        }
+        guard !scheduled || startsAt > Date() else {
+            createError = String(localized: "Choose a start time in the future.")
+            return
+        }
         let storedName = title.isEmpty
             ? (action.isEmpty ? String(localized: "Steps Fight") : action)
             : title
@@ -674,7 +713,7 @@ final class AppModel: ObservableObject {
         let payload = FitFightCreateFight(
             name: storedName,
             startsAt: startsAt,
-            endsAt: max(endsAt, startsAt.addingTimeInterval(60)),
+            endsAt: endsAt,
             timeZone: TimeZone.current.identifier,
             outcomeRule: "highest_total",
             goalPolicy: "shared",
@@ -684,7 +723,7 @@ final class AppModel: ObservableObject {
             currency: nil,
             actionText: action.isEmpty ? nil : action,
             inviteHandles: handles.isEmpty ? nil : handles,
-            start: "now",
+            start: scheduled ? "scheduled" : "now",
             visibility: visibility,
             recurring: recurring
         )
@@ -706,6 +745,7 @@ final class AppModel: ObservableObject {
     }
 
     func acceptInvite(token: String, start: String = "now") async throws {
+        guard !CompanionPreview.isEnabled else { throw CompanionPreview.WriteUnavailable() }
         createError = nil
         guard let access = session?.authSession?.accessToken else {
             throw FitFightAPIError.notConfigured
@@ -716,6 +756,7 @@ final class AppModel: ObservableObject {
     }
 
     func acceptFight(id: String, start: String = "now") async {
+        guard !CompanionPreview.isEnabled else { createError = CompanionPreview.writeUnavailable; return }
         guard !isJoiningFight else { return }
         isJoiningFight = true
         defer { isJoiningFight = false }
@@ -748,6 +789,7 @@ final class AppModel: ObservableObject {
     }
 
     func declineFight(id: String) async {
+        guard !CompanionPreview.isEnabled else { createError = CompanionPreview.writeUnavailable; return }
         createError = nil
         if pendingJoinable?.id == id {
             pendingJoinable = nil
@@ -768,6 +810,20 @@ final class AppModel: ObservableObject {
     }
 
     func listJoinableFights(session: SessionStore) async -> [FitFightJoinableFight] {
+        #if DEBUG && targetEnvironment(simulator)
+        if CompanionPreview.isEnabled {
+            return fights.filter { $0.status == .live }.map { fight in
+                FitFightJoinableFight(
+                    fightId: UUID(uuidString: fight.id)!,
+                    seriesId: UUID(uuidString: fight.seriesId ?? fight.id)!,
+                    name: fight.name, joinCode: fight.joinCode!, ownerHandle: "lea",
+                    actionText: fight.actionText, startsAt: fight.windowStart.ISO8601Format(),
+                    endsAt: fight.windowEnd.ISO8601Format(), memberCount: fight.of,
+                    recurring: fight.recurring, alreadyMember: true, canJoinNext: false
+                )
+            }
+        }
+        #endif
         self.session = session
         guard let access = session.authSession?.accessToken, api.isConfigured else {
             return []
@@ -798,6 +854,17 @@ final class AppModel: ObservableObject {
     }
 
     func openJoinCode(_ raw: String, session: SessionStore) async {
+        #if DEBUG && targetEnvironment(simulator)
+        if CompanionPreview.isEnabled {
+            if let match = fights.first(where: { $0.joinCode == raw.uppercased() }) {
+                tab = .fights
+                openFightID = match.id
+            } else {
+                createError = String(localized: "Preview codes: K7M2, H8P4, B4K9.")
+            }
+            return
+        }
+        #endif
         self.session = session
         createError = nil
         let code = raw.replacingOccurrences(of: "[\\s-]", with: "", options: .regularExpression).uppercased()
@@ -936,6 +1003,7 @@ final class AppModel: ObservableObject {
     }
 
     func leaveFight(id: String) async {
+        guard !CompanionPreview.isEnabled else { createError = CompanionPreview.writeUnavailable; return }
         createError = nil
         guard let access = session?.authSession?.accessToken, api.isConfigured else {
             createError = String(localized: "Sign in to leave this fight.")

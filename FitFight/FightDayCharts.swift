@@ -6,11 +6,9 @@ enum FightDayChartKind: String, CaseIterable, Identifiable {
     case bars
     case pace
     case heat
-    case track
     case oval
     case rings
     case stack
-    case dots
 
     var id: String { rawValue }
 
@@ -21,11 +19,9 @@ enum FightDayChartKind: String, CaseIterable, Identifiable {
         case .bars: return String(localized: "Bars")
         case .pace: return String(localized: "Pace")
         case .heat: return String(localized: "Heat")
-        case .track: return String(localized: "Track")
         case .oval: return String(localized: "Oval")
         case .rings: return String(localized: "Rings")
         case .stack: return String(localized: "Stack")
-        case .dots: return String(localized: "Dots")
         }
     }
 }
@@ -37,6 +33,7 @@ struct FightDayChartsView: View {
 
     @AppStorage("fight.dayChart.kind") private var kindRaw = FightDayChartKind.line.rawValue
     @State private var pickedKind: FightDayChartKind?
+    @State private var selectedDay: Int?
     @Environment(\.ffTheme) private var theme
 
     private var kind: FightDayChartKind {
@@ -52,8 +49,52 @@ struct FightDayChartsView: View {
                 }
             }
             if !model.series.isEmpty {
+                if kind == .rings || kind == .oval {
+                    Text("Totals across the days shown")
+                        .ffType(.micro)
+                        .foregroundStyle(theme.textSecondary)
+                }
                 chart(model)
-                if showsLegend {
+                if [.line, .histogram, .pace, .heat, .stack].contains(kind), model.dayCount > 0 {
+                    let day = min(selectedDay ?? model.dayCount - 1, model.dayCount - 1)
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Text(model.labels[day])
+                                .ffType(.label)
+                                .foregroundStyle(theme.text)
+                            Spacer()
+                            Text(kind == .pace ? String(localized: "Cumulative steps") : String(localized: "Daily steps"))
+                                .ffType(.micro)
+                                .foregroundStyle(theme.textSecondary)
+                        }
+                        FFFlow(spacing: 12) {
+                            ForEach(model.series) { series in
+                                HStack(spacing: 6) {
+                                    Circle().fill(series.color).frame(width: 7, height: 7)
+                                    Text(series.person.isYou ? String(localized: "You") : series.person.name)
+                                    Text((kind == .pace ? series.cumulative[day] : series.daily[day]).formatted(.number.precision(.fractionLength(0))))
+                                        .fontWeight(.heavy)
+                                        .monospacedDigit()
+                                }
+                                .ffType(.caption)
+                                .foregroundStyle(theme.text)
+                            }
+                        }
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityAdjustableAction { direction in
+                        switch direction {
+                        case .increment: selectedDay = min(day + 1, model.dayCount - 1)
+                        case .decrement: selectedDay = max(day - 1, 0)
+                        @unknown default: break
+                        }
+                    }
+                    Text(kind == .line || kind == .pace
+                         ? String(localized: "Touch or slide to inspect a day.")
+                         : String(localized: "Tap a day to see its steps."))
+                        .ffType(.micro)
+                        .foregroundStyle(theme.textFaint)
+                } else if showsLegend {
                     legend(model)
                 }
             }
@@ -89,33 +130,29 @@ struct FightDayChartsView: View {
     private func chart(_ model: FightDayChartModel) -> some View {
         switch kind {
         case .line:
-            FightDayLineChart(model: model, cumulative: false)
+            FightDayLineChart(model: model, cumulative: false, selectedDay: $selectedDay)
         case .histogram:
-            FightDayHistogramChart(model: model)
+            FightDayHistogramChart(model: model, selectedDay: $selectedDay)
         case .bars:
             FightDayBarsChart(model: model, formatScore: formatScore)
         case .pace:
-            FightDayLineChart(model: model, cumulative: true)
+            FightDayLineChart(model: model, cumulative: true, selectedDay: $selectedDay)
         case .heat:
-            FightDayHeatChart(model: model)
-        case .track:
-            FightDayTrackChart(model: model, formatScore: formatScore)
+            FightDayHeatChart(model: model, selectedDay: $selectedDay)
         case .oval:
             FightDayOvalChart(model: model, formatScore: formatScore)
         case .rings:
-            FightDayRingsChart(model: model, formatScore: formatScore)
+            FightDayRingsChart(model: model)
         case .stack:
-            FightDayStackChart(model: model)
-        case .dots:
-            FightDayDotsChart(model: model)
+            FightDayStackChart(model: model, selectedDay: $selectedDay)
         }
     }
 
     private var showsLegend: Bool {
         switch kind {
-        case .bars, .heat, .track, .rings:
+        case .bars, .heat, .rings:
             return false
-        case .line, .histogram, .pace, .oval, .stack, .dots:
+        case .line, .histogram, .pace, .oval, .stack:
             return true
         }
     }
@@ -253,63 +290,97 @@ private func fightDayPolyline(values: [Double], peak: Double, in size: CGSize) -
 private struct FightDayLineChart: View {
     let model: FightDayChartModel
     var cumulative: Bool
+    @Binding var selectedDay: Int?
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
+        let peak = model.peak(cumulative: cumulative)
         VStack(alignment: .leading, spacing: 10) {
-            GeometryReader { geo in
-                let peak = max(model.peak(cumulative: cumulative), 0.0001)
-                ZStack {
-                    Path { path in
-                        path.move(to: CGPoint(x: 0, y: geo.size.height))
-                        path.addLine(to: CGPoint(x: geo.size.width, y: geo.size.height))
-                    }
-                    .stroke(theme.line, lineWidth: 1)
-                    ForEach(model.series) { series in
-                        let points = fightDayPolyline(
-                            values: model.values(series, cumulative: cumulative),
-                            peak: peak,
-                            in: geo.size
-                        )
-                        if series.person.isYou, let first = points.first, let last = points.last {
+            HStack(spacing: 8) {
+                VStack(alignment: .trailing) {
+                    Text(peak.formatted(.number.notation(.compactName).precision(.fractionLength(0...1))))
+                    Spacer()
+                    Text((peak / 2).formatted(.number.notation(.compactName).precision(.fractionLength(0...1))))
+                    Spacer()
+                    Text("0")
+                }
+                .ffType(.micro)
+                .foregroundStyle(theme.textFaint)
+                .frame(width: 34, height: 156)
+                GeometryReader { geo in
+                    ZStack {
+                        ForEach([0.0, 0.5, 1.0], id: \.self) { fraction in
                             Path { path in
-                                path.move(to: CGPoint(x: first.x, y: geo.size.height))
-                                for point in points { path.addLine(to: point) }
-                                path.addLine(to: CGPoint(x: last.x, y: geo.size.height))
-                                path.closeSubpath()
+                                let y = geo.size.height * fraction
+                                path.move(to: CGPoint(x: 0, y: y))
+                                path.addLine(to: CGPoint(x: geo.size.width, y: y))
                             }
-                            .fill(series.color.opacity(0.20))
+                            .stroke(theme.line, style: StrokeStyle(lineWidth: 1, dash: [3, 4]))
                         }
-                        Path { path in
-                            guard let first = points.first else { return }
-                            path.move(to: first)
-                            for point in points.dropFirst() { path.addLine(to: point) }
+                        if let selectedDay, selectedDay < model.dayCount {
+                            let x = model.dayCount == 1 ? geo.size.width / 2
+                                : CGFloat(selectedDay) / CGFloat(model.dayCount - 1) * geo.size.width
+                            Path { path in
+                                path.move(to: CGPoint(x: x, y: 0))
+                                path.addLine(to: CGPoint(x: x, y: geo.size.height))
+                            }
+                            .stroke(theme.textTertiary, style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
                         }
-                        .stroke(
-                            series.color,
-                            style: StrokeStyle(lineWidth: series.person.isYou ? 2.6 : 2.2, lineCap: .round, lineJoin: .round)
-                        )
-                        if let last = points.last {
+                        ForEach(model.series) { series in
+                            let values = model.values(series, cumulative: cumulative)
+                            let points = fightDayPolyline(values: values, peak: peak, in: geo.size)
+                            if series.person.isYou, let first = points.first, let last = points.last {
+                                Path { path in
+                                    path.move(to: CGPoint(x: first.x, y: geo.size.height))
+                                    for point in points { path.addLine(to: point) }
+                                    path.addLine(to: CGPoint(x: last.x, y: geo.size.height))
+                                    path.closeSubpath()
+                                }
+                                .fill(series.color.opacity(0.12))
+                            }
+                            Path { path in
+                                guard let first = points.first else { return }
+                                path.move(to: first)
+                                for point in points.dropFirst() { path.addLine(to: point) }
+                            }
+                            .stroke(series.color, style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
+                            let day = min(selectedDay ?? model.dayCount - 1, model.dayCount - 1)
+                            let x = model.dayCount == 1 ? geo.size.width / 2
+                                : CGFloat(day) / CGFloat(model.dayCount - 1) * geo.size.width
                             Circle()
                                 .fill(series.color)
                                 .frame(width: 7, height: 7)
-                                .position(last)
+                                .position(x: x, y: fightDayPlotY(value: values[day], peak: peak, height: geo.size.height))
                         }
                     }
+                    .contentShape(Rectangle())
+                    .simultaneousGesture(
+                        DragGesture(minimumDistance: 0).onChanged { value in
+                            guard abs(value.translation.width) >= abs(value.translation.height) else { return }
+                            let fraction = min(max(value.location.x / max(geo.size.width, 1), 0), 1)
+                            selectedDay = Int((fraction * CGFloat(model.dayCount - 1)).rounded())
+                        }
+                    )
+                    .accessibilityLabel(String(localized: "Steps chart"))
                 }
+                .frame(height: 156)
             }
-            .frame(height: 156)
             FightDayAxisLabels(labels: model.labels)
+                .padding(.leading, 42)
         }
     }
 }
 
 private struct FightDayHistogramChart: View {
     let model: FightDayChartModel
+    @Binding var selectedDay: Int?
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
+            Text(String(localized: "chart.scale", defaultValue: "0–\(model.peakDaily.formatted(.number.notation(.compactName).precision(.fractionLength(0...1)))) steps"))
+                .ffType(.micro)
+                .foregroundStyle(theme.textSecondary)
             GeometryReader { geo in
                 let people = max(model.series.count, 1)
                 let minGroup = CGFloat(people) * 9 + 10
@@ -318,7 +389,7 @@ private struct FightDayHistogramChart: View {
                 let contentWidth = max(geo.size.width, natural)
                 let groupWidth = (contentWidth - CGFloat(max(model.dayCount - 1, 0)) * gap) / CGFloat(max(model.dayCount, 1))
                 let barWidth = max((groupWidth - CGFloat(people - 1) * 2) / CGFloat(people), 3)
-                ScrollView(.horizontal, showsIndicators: contentWidth > geo.size.width + 1) {
+                FightDayHorizontalScroll(showsIndicators: contentWidth > geo.size.width + 1) {
                     HStack(alignment: .bottom, spacing: gap) {
                         ForEach(0..<model.dayCount, id: \.self) { day in
                             VStack(spacing: 8) {
@@ -326,8 +397,8 @@ private struct FightDayHistogramChart: View {
                                     ForEach(model.series) { series in
                                         let value = series.daily[day]
                                         let height = model.peakDaily == 0
-                                            ? 4
-                                            : max(CGFloat(value / model.peakDaily) * 140, value > 0 ? 4 : 3)
+                                            ? 0
+                                            : CGFloat(value / model.peakDaily) * 140
                                         RoundedRectangle(cornerRadius: theme.radius.glyph, style: .continuous)
                                             .fill(series.color)
                                             .frame(width: barWidth, height: height)
@@ -336,11 +407,14 @@ private struct FightDayHistogramChart: View {
                                 .frame(height: 140, alignment: .bottom)
                                 Text(model.labels[day])
                                     .ffType(.micro)
-                                    .foregroundStyle(theme.textFaint)
+                                    .foregroundStyle(selectedDay == day ? theme.mossText : theme.textFaint)
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.6)
                             }
                             .frame(width: groupWidth)
+                            .contentShape(Rectangle())
+                            .onTapGesture { selectedDay = day }
+                            .accessibilityAddTraits(.isButton)
                         }
                     }
                     .frame(width: contentWidth, alignment: .leading)
@@ -389,90 +463,34 @@ private struct FightDayBarsChart: View {
 
 private struct FightDayHeatChart: View {
     let model: FightDayChartModel
+    @Binding var selectedDay: Int?
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
         let cell: CGFloat = 22
-        ScrollView(.horizontal, showsIndicators: model.dayCount > 10) {
+        FightDayHorizontalScroll(showsIndicators: model.dayCount > 10) {
             VStack(alignment: .leading, spacing: 6) {
                 ForEach(model.series) { series in
                     HStack(spacing: 4) {
-                        FFAvatar(series.person, size: 22, selected: series.person.isYou)
+                        CompanionAvatar(personID: series.person.id, isYou: series.person.isYou, monogram: series.person.initials, photoURL: series.person.photoURL, size: 22)
                         ForEach(0..<model.dayCount, id: \.self) { day in
                             let value = series.daily[day]
                             let tone = model.peakDaily == 0 ? 0 : value / model.peakDaily
                             RoundedRectangle(cornerRadius: theme.radius.glyph, style: .continuous)
                                 .fill(value == 0 ? theme.track : series.color.opacity(0.18 + 0.82 * tone))
                                 .frame(width: cell, height: cell)
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: theme.radius.glyph, style: .continuous)
+                                        .strokeBorder(selectedDay == day ? theme.text : .clear, lineWidth: 1.5)
+                                }
+                                .onTapGesture { selectedDay = day }
+                                .accessibilityLabel(Text(verbatim: "\(series.person.name), \(model.labels[day]), \(value.formatted(.number.precision(.fractionLength(0))))"))
+                                .accessibilityAddTraits(.isButton)
                         }
                     }
                 }
             }
         }
-    }
-}
-
-private struct FightDayTrackChart: View {
-    let model: FightDayChartModel
-    let formatScore: (Double) -> String
-    @Environment(\.ffTheme) private var theme
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            GeometryReader { geo in
-                let inset: CGFloat = 18
-                let usable = max(geo.size.width - inset * 2, 1)
-                ZStack(alignment: .leading) {
-                    Capsule().fill(theme.track)
-                    Capsule()
-                        .fill(theme.gold)
-                        .frame(width: 4, height: 22)
-                        .offset(x: inset + usable - 2)
-                    ForEach(Array(model.series.enumerated()), id: \.element.id) { index, series in
-                        let progress = model.peakTotal == 0 ? 0 : series.total / model.peakTotal
-                        FFAvatar(series.person, size: 28, selected: series.person.isYou)
-                            .overlay { Circle().strokeBorder(series.color, lineWidth: 2) }
-                            .offset(
-                                x: inset + usable * progress - 14,
-                                y: overlapOffset(index: index, progress: progress)
-                            )
-                            .zIndex(progress)
-                    }
-                }
-            }
-            .frame(height: 52)
-            HStack {
-                Text(String(localized: "Start"))
-                Spacer(minLength: 0)
-                Text(String(localized: "Lead"))
-            }
-            .ffType(.micro)
-            .foregroundStyle(theme.textFaint)
-            VStack(alignment: .leading, spacing: 6) {
-                ForEach(model.series) { series in
-                    HStack {
-                        Circle().fill(series.color).frame(width: 7, height: 7)
-                        Text(series.person.isYou ? String(localized: "You") : series.person.name)
-                            .ffType(.caption)
-                            .foregroundStyle(theme.text)
-                            .lineLimit(1)
-                        Spacer(minLength: 0)
-                        Text(formatScore(series.total))
-                            .ffType(.caption)
-                            .foregroundStyle(theme.textSecondary)
-                    }
-                }
-            }
-        }
-    }
-
-    private func overlapOffset(index: Int, progress: Double) -> CGFloat {
-        let close = model.series.enumerated().filter { other in
-            other.offset != index
-                && abs((model.peakTotal == 0 ? 0 : other.element.total / model.peakTotal) - progress) < 0.08
-        }
-        guard !close.isEmpty else { return 0 }
-        return index.isMultiple(of: 2) ? -11 : 11
     }
 }
 
@@ -514,7 +532,7 @@ private struct FightDayOvalChart: View {
                         ? 0.02
                         : 0.04 + 0.90 * (series.total / model.peakTotal)
                     let point = pointOnCircuit(progress: progress, in: rect, corner: corner)
-                    FFAvatar(series.person, size: 30, selected: series.person.isYou)
+                    CompanionAvatar(personID: series.person.id, isYou: series.person.isYou, monogram: series.person.initials, photoURL: series.person.photoURL, size: 30)
                         .overlay { Circle().strokeBorder(series.color, lineWidth: 2) }
                         .position(point)
                         .zIndex(series.total)
@@ -527,7 +545,6 @@ private struct FightDayOvalChart: View {
 
 private struct FightDayRingsChart: View {
     let model: FightDayChartModel
-    let formatScore: (Double) -> String
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
@@ -540,13 +557,13 @@ private struct FightDayRingsChart: View {
                         lineWidth: 8,
                         fill: series.color
                     ) {
-                        FFAvatar(series.person, size: 32, selected: series.person.isYou)
+                        CompanionAvatar(personID: series.person.id, isYou: series.person.isYou, monogram: series.person.initials, photoURL: series.person.photoURL, size: 32)
                     }
                     Text(series.person.isYou ? String(localized: "You") : series.person.name)
                         .ffType(.micro)
                         .foregroundStyle(theme.text)
                         .lineLimit(1)
-                    Text(formatScore(series.total))
+                    Text(series.total.formatted(.number.precision(.fractionLength(0))))
                         .ffType(.caption)
                         .foregroundStyle(theme.textSecondary)
                 }
@@ -559,6 +576,7 @@ private struct FightDayRingsChart: View {
 
 private struct FightDayStackChart: View {
     let model: FightDayChartModel
+    @Binding var selectedDay: Int?
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
@@ -567,36 +585,42 @@ private struct FightDayStackChart: View {
         }
         let peak = max(peaks.max() ?? 0, 0.0001)
         VStack(alignment: .leading, spacing: 10) {
+            Text(String(localized: "chart.group-scale", defaultValue: "0–\((peaks.max() ?? 0).formatted(.number.notation(.compactName).precision(.fractionLength(0...1)))) combined steps"))
+                .ffType(.micro)
+                .foregroundStyle(theme.textSecondary)
             GeometryReader { geo in
                 let minGroup: CGFloat = 18
                 let gap: CGFloat = 6
                 let natural = CGFloat(model.dayCount) * minGroup + CGFloat(max(model.dayCount - 1, 0)) * gap
                 let contentWidth = max(geo.size.width, natural)
                 let groupWidth = (contentWidth - CGFloat(max(model.dayCount - 1, 0)) * gap) / CGFloat(max(model.dayCount, 1))
-                ScrollView(.horizontal, showsIndicators: contentWidth > geo.size.width + 1) {
+                FightDayHorizontalScroll(showsIndicators: contentWidth > geo.size.width + 1) {
                     HStack(alignment: .bottom, spacing: gap) {
                         ForEach(0..<model.dayCount, id: \.self) { day in
                             VStack(spacing: 8) {
-                                VStack(spacing: 1) {
-                                    Spacer(minLength: 0)
+                                VStack(spacing: 0) {
                                     ForEach(Array(model.series.reversed())) { series in
                                         let value = series.daily[day]
                                         if value > 0 {
                                             Rectangle()
                                                 .fill(series.color)
-                                                .frame(height: max(CGFloat(value / peak) * 140, 3))
+                                                .frame(height: CGFloat(value / peak) * 140)
                                         }
                                     }
                                 }
-                                .frame(width: groupWidth, height: 140, alignment: .bottom)
+                                .frame(width: groupWidth)
                                 .clipShape(RoundedRectangle(cornerRadius: theme.radius.glyph, style: .continuous))
+                                .frame(height: 140, alignment: .bottom)
                                 Text(model.labels[day])
                                     .ffType(.micro)
-                                    .foregroundStyle(theme.textFaint)
+                                    .foregroundStyle(selectedDay == day ? theme.mossText : theme.textFaint)
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.6)
                             }
                             .frame(width: groupWidth)
+                            .contentShape(Rectangle())
+                            .onTapGesture { selectedDay = day }
+                            .accessibilityAddTraits(.isButton)
                         }
                     }
                     .frame(width: contentWidth, alignment: .leading)
@@ -607,53 +631,17 @@ private struct FightDayStackChart: View {
     }
 }
 
-private struct FightDayDotsChart: View {
-    let model: FightDayChartModel
-    @Environment(\.ffTheme) private var theme
+private struct FightDayHorizontalScroll<Content: View>: View {
+    var showsIndicators: Bool
+    @ViewBuilder var content: () -> Content
+    @Environment(\.ffStaticRender) private var staticRender
 
     var body: some View {
-        GeometryReader { geo in
-            let people = max(model.series.count, 1)
-            let minGroup = CGFloat(people) * 12 + 8
-            let gap: CGFloat = 10
-            let natural = CGFloat(model.dayCount) * minGroup + CGFloat(max(model.dayCount - 1, 0)) * gap
-            let contentWidth = max(geo.size.width, natural)
-            let groupWidth = (contentWidth - CGFloat(max(model.dayCount - 1, 0)) * gap) / CGFloat(max(model.dayCount, 1))
-            ScrollView(.horizontal, showsIndicators: contentWidth > geo.size.width + 1) {
-                HStack(alignment: .bottom, spacing: gap) {
-                    ForEach(0..<model.dayCount, id: \.self) { day in
-                        VStack(spacing: 8) {
-                            HStack(alignment: .bottom, spacing: 4) {
-                                ForEach(model.series) { series in
-                                    let value = series.daily[day]
-                                    let height = model.peakDaily == 0
-                                        ? 4
-                                        : max(CGFloat(value / model.peakDaily) * 140, value > 0 ? 8 : 4)
-                                    ZStack(alignment: .bottom) {
-                                        Capsule()
-                                            .fill(series.color.opacity(0.35))
-                                            .frame(width: 2, height: height)
-                                        Circle()
-                                            .fill(series.color)
-                                            .frame(width: 9, height: 9)
-                                    }
-                                    .frame(height: 140, alignment: .bottom)
-                                }
-                            }
-                            .frame(height: 140, alignment: .bottom)
-                            Text(model.labels[day])
-                                .ffType(.micro)
-                                .foregroundStyle(theme.textFaint)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.6)
-                        }
-                        .frame(width: groupWidth)
-                    }
-                }
-                .frame(width: contentWidth, alignment: .leading)
-            }
+        if staticRender {
+            content()
+        } else {
+            ScrollView(.horizontal, showsIndicators: showsIndicators) { content() }
         }
-        .frame(height: 168)
     }
 }
 
@@ -662,17 +650,28 @@ private struct FightDayAxisLabels: View {
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
-        let ticks = Set(fightDayTickIndices(count: labels.count))
-        HStack(spacing: 0) {
-            ForEach(Array(labels.enumerated()), id: \.offset) { index, label in
-                Text(ticks.contains(index) ? label : "")
+        let ticks = fightDayTickIndices(count: labels.count)
+        GeometryReader { geo in
+            let width = geo.size.width / CGFloat(max(ticks.count, 1))
+            ForEach(ticks, id: \.self) { index in
+                let first = index == 0
+                let last = index == labels.count - 1
+                Text(labels[index])
                     .ffType(.micro)
                     .foregroundStyle(theme.textFaint)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
-                    .frame(maxWidth: .infinity)
+                    .frame(width: width, alignment: first ? .leading : last ? .trailing : .center)
+                    .position(
+                        x: labels.count == 1 ? geo.size.width / 2
+                            : first ? width / 2
+                            : last ? geo.size.width - width / 2
+                            : geo.size.width * CGFloat(index) / CGFloat(labels.count - 1),
+                        y: 8
+                    )
             }
         }
+        .frame(height: 16)
     }
 }
 

@@ -705,16 +705,6 @@ struct FitFightAPI {
         )
     }
 
-    func feedPeople(main: Bool, fightIDs: [UUID], accessToken: String) async throws -> FitFightFeedPeople {
-        var parts: [String] = []
-        if main { parts.append("main=true") }
-        if !fightIDs.isEmpty {
-            let value = fightIDs.map { $0.uuidString.lowercased() }.joined(separator: ",")
-            parts.append("fight_ids=\(value)")
-        }
-        let path = parts.isEmpty ? "feed/people" : "feed/people?\(parts.joined(separator: "&"))"
-        return try await get(path: path, accessToken: accessToken, expected: [200])
-    }
 
     func fightPostComments(postID: UUID, cursor: String?, accessToken: String) async throws -> FitFightFightPostCommentList {
         var path = "posts/\(postID.uuidString.lowercased())/comments"

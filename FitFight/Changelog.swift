@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 13,
+            notes: "Feed lists posts from fights you’re in, not Public. Plus posts to those fights. Bugs & requests no longer shows device details."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 13,
             notes: "The website now uses the centered FitFight logo with a transparent background in browser tabs."
         ),
         ReleaseNote(

@@ -28,7 +28,7 @@ final class FeedStore: ObservableObject {
             if let fightID {
                 result = try await api.fightPosts(fightID: fightID, cursor: more ? nextCursor : nil, accessToken: token)
             } else {
-                result = try await api.feed(scope: "main", cursor: more ? nextCursor : nil, accessToken: token)
+                result = try await api.feed(cursor: more ? nextCursor : nil, accessToken: token)
             }
             guard load == listLoad else { return }
             posts = more ? posts + result.posts.filter { post in !posts.contains(where: { $0.id == post.id }) } : result.posts
@@ -175,7 +175,7 @@ struct FeedView: View {
         FFScreen(refresh: feedRefresh) {
             FFScreenTitle(
                 title: String(localized: "Feed"),
-                subtitle: String(localized: "Public posts. Fight-only posts stay in that fight."),
+                subtitle: String(localized: "Posts from fights you’re in."),
                 trailing: AnyView(composeButton)
             )
             if let error = feed.error, !error.isEmpty {
@@ -304,9 +304,8 @@ struct FeedComposeSheet: View {
     }
 
     private func loadPeople() async {
-        let includeMain = destinations.contains(.main)
         let fightIDs = destinations.compactMap(\.fightId)
-        guard includeMain || !fightIDs.isEmpty else {
+        guard !fightIDs.isEmpty else {
             people = []
             tagged = []
             return
@@ -314,7 +313,7 @@ struct FeedComposeSheet: View {
         do {
             let token = try await session.freshAccessToken()
             let result = try await FitFightAPI().feedPeople(
-                main: includeMain,
+                main: false,
                 fightIDs: fightIDs,
                 accessToken: token
             )
@@ -346,22 +345,12 @@ struct FeedDestinationMenu: View {
         if destinations.isEmpty {
             return String(localized: "Choose where")
         }
-        let publicSelected = destinations.contains(.main)
-        if everythingSelected && publicSelected {
-            return String(localized: "Public + all fights")
-        }
         if everythingSelected {
             return String(localized: "All fights")
-        }
-        if destinations.count == 1, publicSelected {
-            return String(localized: "Public")
         }
         if destinations.count == 1, let id = destinations.first?.fightId {
             return fights.first(where: { $0.id.caseInsensitiveCompare(id.uuidString) == .orderedSame })?.listTitle
                 ?? String(localized: "Choose where")
-        }
-        if publicSelected {
-            return String(localized: "Public + \(destinations.count - 1) fights")
         }
         return String(localized: "\(destinations.count) fights")
     }
@@ -369,15 +358,10 @@ struct FeedDestinationMenu: View {
     var body: some View {
         Menu {
             Button {
-                toggle(.main)
-            } label: {
-                destinationLabel(String(localized: "Public"), selected: destinations.contains(.main))
-            }
-            Button {
                 if everythingSelected {
-                    destinations = destinations.filter { $0.type == "main" }
+                    destinations.removeAll()
                 } else {
-                    destinations.formUnion(allFightDestinations)
+                    destinations = allFightDestinations
                 }
             } label: {
                 destinationLabel(String(localized: "All fights"), selected: everythingSelected)

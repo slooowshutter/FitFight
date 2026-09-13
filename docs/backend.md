@@ -23,10 +23,10 @@ and nullable `avatar` (the shared media object).
 `PATCH /api/v1/me` accepts a handle, display name, `avatar_media_id`, or any mix;
 omitted fields stay unchanged. `POST /api/v1/media` mints a private signed upload
 for a photo or short video; `POST /api/v1/media/{id}/commit` verifies size and checksum.
-`GET /api/v1/feed` lists fight-audience posts for old clients. `GET /api/v1/feed?scope=all`
-is the one Feed (Main and fight posts). `GET /api/v1/feed?scope=main`
+`GET /api/v1/feed` lists fight-audience posts from fights the caller is in. `GET /api/v1/feed?scope=all`
+is the older one Feed (Main and fight posts). `GET /api/v1/feed?scope=main`
 is Main-only. `POST /api/v1/feed/posts` creates one copy per selected destination
-(Main and/or fights) and applies tags only where that person can already see the copy.
+(Main still accepted for old clients; current compose sends fights only) and applies tags only where that person can already see the copy.
 `GET /api/v1/feed/people` lists tag candidates. `GET/POST /api/v1/fights/{id}/posts`
 remain the single-fight list and the old one-fight compose. Comments, reactions,
 delete, and report for any post use `/api/v1/posts/{id}/...`.

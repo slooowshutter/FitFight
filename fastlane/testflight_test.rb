@@ -292,6 +292,7 @@ class TestFlightTest < Minitest::Test
     assert_equal false, upload[:skip_submission]
     assert_equal "1.0.0", upload[:app_version]
     assert_equal "190", upload[:build_number]
+    assert_equal "ios", upload[:app_platform]
     assert_equal ["friends"], upload[:groups]
     assert_empty @lane.pointers
   end

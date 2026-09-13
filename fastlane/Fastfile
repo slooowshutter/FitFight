@@ -118,6 +118,7 @@ def promote_friends_beta(version, build_number, api_key:)
   upload_to_testflight(
     api_key: api_key,
     app_identifier: BUNDLE_ID,
+    app_platform: "ios",
     app_version: version,
     build_number: build_number.to_s,
     distribute_only: true,

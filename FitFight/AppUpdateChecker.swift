@@ -19,11 +19,42 @@ struct AppRelease: Codable, Equatable {
 struct AppReleasePolicy: Codable, Equatable {
     let latest: AppRelease?
     let review: AppRelease?
+    let internalLatest: AppRelease?
     let enforced: Bool
 
-    func allows(version: String, build: String) -> Bool {
-        [latest, review].compactMap { $0 }.contains { $0.matches(version: version, build: build) }
+    enum CodingKeys: String, CodingKey {
+        case latest, review, enforced
+        case internalLatest = "internal"
     }
+
+    init(latest: AppRelease?, review: AppRelease?, enforced: Bool, internalLatest: AppRelease? = nil) {
+        self.latest = latest
+        self.review = review
+        self.internalLatest = internalLatest
+        self.enforced = enforced
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        latest = try values.decodeIfPresent(AppRelease.self, forKey: .latest)
+        review = try values.decodeIfPresent(AppRelease.self, forKey: .review)
+        internalLatest = try values.decodeIfPresent(AppRelease.self, forKey: .internalLatest)
+        enforced = try values.decode(Bool.self, forKey: .enforced)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(latest, forKey: .latest)
+        try values.encode(review, forKey: .review)
+        try values.encodeIfPresent(internalLatest, forKey: .internalLatest)
+        try values.encode(enforced, forKey: .enforced)
+    }
+
+    func allows(version: String, build: String) -> Bool {
+        [latest, review, internalLatest].compactMap { $0 }.contains { $0.matches(version: version, build: build) }
+    }
+
+    var offeredRelease: AppRelease? { internalLatest ?? latest ?? review }
 }
 
 extension AppRelease {
@@ -110,20 +141,25 @@ final class AppUpdateChecker: ObservableObject {
                 self.verifiedAt = nil
                 if self.status != .updateRequired { self.status = .unavailable }
             }
-            return self.status != .updateRequired
+            return self.status == .current
         }
         inFlight = task
         return await task.value
     }
 
     func permitsRequests() async -> Bool {
-        true
+        if status == .current, let verifiedAt, Date().timeIntervalSince(verifiedAt) < 60 {
+            return true
+        }
+        return await check()
     }
 
     func rejectRequest(updateRequired: Bool) {
         verifiedAt = nil
         if updateRequired {
             status = .updateRequired
+        } else if status != .updateRequired {
+            status = .unavailable
         }
     }
 }

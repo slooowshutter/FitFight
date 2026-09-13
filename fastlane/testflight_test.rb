@@ -60,35 +60,67 @@ class ReleaseAvailabilityTest < Minitest::Test
     assert_equal 153, policy.fetch("latest").fetch("build")
     assert_equal false, policy.fetch("enforced")
     assert_equal 160, policy.fetch("review").fetch("build")
+    assert_equal 160, policy.fetch("internal").fetch("build")
   end
 
   def test_approval_and_group_availability_automatically_require_the_new_build
     @newer.build_beta_detail.external_build_state = "IN_BETA_TESTING"
     policy = manifest.fetch("staging")
     assert_equal 160, policy.fetch("latest").fetch("build")
+    assert_nil policy.fetch("review")
+    assert_nil policy.fetch("internal")
     assert_equal true, policy.fetch("enforced")
   end
 
   def test_a_build_missing_from_an_external_group_is_not_yet_mandatory
     @newer.build_beta_detail.external_build_state = "IN_BETA_TESTING"
     @app.groups << OpenStruct.new(is_internal_group: false, fetch_builds: [@older])
-    assert_equal 153, manifest.dig("staging", "latest", "build")
+    policy = manifest.fetch("staging")
+    assert_equal 153, policy.fetch("latest").fetch("build")
+    assert_equal 160, policy.fetch("internal").fetch("build")
+    assert_equal 160, policy.fetch("review").fetch("build")
   end
 
   def test_beta_review_is_admitted_but_unsubmitted_and_unregistered_builds_are_not
     @newer.build_beta_detail.external_build_state = "IN_BETA_REVIEW"
     assert_equal 160, manifest.dig("staging", "review", "build")
     @newer.build_beta_detail.external_build_state = "READY_FOR_BETA_SUBMISSION"
-    assert_nil manifest.dig("staging", "review")
+    policy = manifest.fetch("staging")
+    assert_equal 153, policy.fetch("latest").fetch("build")
+    assert_equal 160, policy.fetch("review").fetch("build")
+    assert_equal 160, policy.fetch("internal").fetch("build")
     @newer.build_beta_detail.external_build_state = "IN_BETA_REVIEW"
     @registered.clear
     assert_nil manifest.dig("staging", "review")
+    assert_nil manifest.dig("staging", "internal")
   end
 
   def test_internal_groups_do_not_hold_back_an_external_release
     @newer.build_beta_detail.external_build_state = "IN_BETA_TESTING"
     @app.groups << OpenStruct.new(is_internal_group: true, fetch_builds: [])
     assert_equal 160, manifest.dig("staging", "latest", "build")
+    assert_nil manifest.dig("staging", "internal")
+  end
+
+  def test_internal_only_latest_is_offered_without_making_friends_update
+    @newer.build_beta_detail.external_build_state = "READY_FOR_BETA_SUBMISSION"
+    mid = OpenStruct.new(
+      id: "mid", version: "155", app_version: "1.0.0", processing_state: "VALID", expired: false,
+      build_beta_detail: OpenStruct.new(external_build_state: "READY_FOR_BETA_SUBMISSION")
+    )
+    @registered = [
+      { "channel" => "staging", "version" => "1.0.0", "build" => 153 },
+      { "channel" => "staging", "version" => "1.0.0", "build" => 155 },
+      { "channel" => "staging", "version" => "1.0.0", "build" => 160 }
+    ]
+    @previous = { "staging" => { "enforced" => true } }
+    Spaceship::ConnectAPI::Build.stub(:all, [@older, mid, @newer]) do
+      policy = @lane.available_app_releases(@app, @registered, @previous).fetch("staging")
+      assert_equal 153, policy.fetch("latest").fetch("build")
+      assert_equal 160, policy.fetch("internal").fetch("build")
+      assert_equal 160, policy.fetch("review").fetch("build")
+      assert_equal true, policy.fetch("enforced")
+    end
   end
 
   def test_expired_or_unprocessed_builds_do_not_become_mandatory
@@ -107,6 +139,7 @@ class ReleaseAvailabilityTest < Minitest::Test
     policy = manifest.fetch("prod")
     assert_equal 140, policy.fetch("latest").fetch("build")
     assert_equal 170, policy.fetch("review").fetch("build")
+    assert_nil policy.fetch("internal")
     assert_equal false, policy.fetch("enforced")
     @app.live = @app.candidate
     policy = manifest.fetch("prod")
@@ -120,6 +153,7 @@ class ReleaseAvailabilityTest < Minitest::Test
     @registered << { "channel" => "prod", "version" => "1.0.0", "build" => 170 }
     assert_nil manifest.dig("prod", "latest")
     assert_equal 170, manifest.dig("prod", "review", "build")
+    assert_nil manifest.dig("prod", "internal")
   end
 
   def test_enforcement_cannot_be_disabled_by_a_release_built_without_the_gate

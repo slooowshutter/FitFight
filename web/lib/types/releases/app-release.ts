@@ -12,6 +12,7 @@ export const appReleaseSchema = z.object({
 export const appReleasePolicySchema = z.object({
   latest: appReleaseSchema.nullable(),
   review: appReleaseSchema.nullable(),
+  internal: appReleaseSchema.nullable().optional(),
   enforced: z.boolean(),
 });
 
@@ -19,6 +20,7 @@ export const appReleaseManifestSchema = z.object({
   staging: appReleasePolicySchema.extend({
     latest: appReleaseSchema.extend({ update_url: z.literal("itms-beta://") }).nullable(),
     review: appReleaseSchema.extend({ update_url: z.literal("itms-beta://") }).nullable(),
+    internal: appReleaseSchema.extend({ update_url: z.literal("itms-beta://") }).nullable().optional(),
   }),
   prod: appReleasePolicySchema.extend({
     latest: appReleaseSchema.extend({
@@ -27,6 +29,9 @@ export const appReleaseManifestSchema = z.object({
     review: appReleaseSchema.extend({
       update_url: z.string().regex(/^https:\/\/apps\.apple\.com\/app\/id\d+$/),
     }).nullable(),
+    internal: appReleaseSchema.extend({
+      update_url: z.string().regex(/^https:\/\/apps\.apple\.com\/app\/id\d+$/),
+    }).nullable().optional(),
   }),
 });
 

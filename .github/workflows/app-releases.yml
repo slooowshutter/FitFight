@@ -8,6 +8,7 @@ on:
     paths:
       - ".github/workflows/app-releases.yml"
       - "scripts/publish-app-releases.sh"
+      - "fastlane/Fastfile"
 
 concurrency:
   group: ios-distribution

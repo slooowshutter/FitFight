@@ -11,6 +11,7 @@ on:
       - "scripts/check_native_api_boundary.py"
       - "docs/design/source/tokens.json"
       - "scripts/check_localizations.py"
+      - "fastlane/**"
       - ".github/workflows/ios-build.yml"
   push:
     branches: [main, develop, preview]
@@ -22,6 +23,7 @@ on:
       - "scripts/check_native_api_boundary.py"
       - "docs/design/source/tokens.json"
       - "scripts/check_localizations.py"
+      - "fastlane/**"
       - ".github/workflows/ios-build.yml"
 
 concurrency:
@@ -37,6 +39,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+      - name: Release availability
+        run: ruby fastlane/testflight_test.rb
       - name: Native API boundary
         run: python3 scripts/check_native_api_boundary.py
       - name: tokens.json is valid and in sync

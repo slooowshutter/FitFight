@@ -1,22 +1,52 @@
 # FitFight status — what works, what’s fake, what’s next
 
-Read this before building. Last updated **12 Sep 2026**. App: **1.0.0**.
+Read this before building. Last updated **13 Sep 2026**. App: **1.0.0**.
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, notifications, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts and the Feed tab are in this build. Only the public privacy and support pages exist on the web.
 
 ---
 
-**Last TestFlight:** 12 Sep 2026 — Pending next **internal** TestFlight: Plus starts with no destination (Public vs fight); public feed no longer mixes private fight posts; author ⋯ can edit or delete; tags are people you’ve finished a fight with. Filing a Bugs & requests item works again. Friends Beta stays on 184.
+**Last TestFlight:** 13 Sep 2026 — Internal build **189**, Friends Beta **184**, as advertised by the live release policy. The [preview upload succeeded](https://github.com/slooowshutter/FitFight/actions/runs/34764089811). This does not verify which build is installed on an individual phone.
 
-## Prepared, not deployed: backend-only database access (9 Sep)
+## API and update rollout (verified 13 Sep 2026)
+
+Read-only checks on **13 Sep 2026 (UTC)** supersede the earlier blanket "prepared, not deployed"
+description for staging. Recheck these endpoints before any rollout; build numbers
+and availability are observations, not permanent configuration.
+
+| Part | Observed status |
+| --- | --- |
+| Native/API separation | Current source calls `/api/v1`, sends app version/build headers, and routes application database access through `FitFightAPI`. The full update overlay checks release eligibility at launch/foreground and every minute while active. No `/api/v2` is needed or implemented. |
+| Staging release policy | [`/api/app-release`](https://staging.fitfight.app/api/app-release) returned 200: `latest` 184, `review`/`internal` 189, all `1.0.0`, `enforced: true`. |
+| Staging backend enforcement | A read-only `GET /api/v1/me` with build 183 and an intentionally invalid audit bearer returned `426 update_required` before authentication. No real user session or data was used. |
+| Staging profile readiness | [`/api/health`](https://staging.fitfight.app/api/health) returned `schema: ready`, `profile_api: true`. This readiness check includes the additive profile migration and backend reader role. |
+| Production | [`/api/app-release`](https://fitfight.app/api/app-release) returned 404. `/api/health` returned 200 with `schema: ready` but no `profile_api` marker. The public release manifest had no production latest/review/internal build and `enforced: false`. Production rollout of these protections is incomplete. |
+| Automatic availability refresh | `.github/workflows/app-releases.yml` is absent from default branch `main`, so its 15-minute schedule is not active. Uploads and matching `develop` pushes refresh the manifest; background discovery of later Apple availability still needs normal authorized promotion. |
+
+Cloud evidence: the [preview simulator run](https://github.com/slooowshutter/FitFight/actions/runs/34764089855)
+passed native update tests, API fixtures, release-selection tests, and compilation at
+`2b03b13`. The latest checked `develop` commit `c819fd2` passed
+[web typecheck/tests](https://github.com/slooowshutter/FitFight/actions/runs/34766054191)
+and [database/RLS/permission-cutoff tests](https://github.com/slooowshutter/FitFight/actions/runs/34766054167).
+These runs test repository code in disposable environments; they are not a production
+deployment or proof of every historical client's compatibility.
+
+Still needed: signed-in device verification of the public/internal builds, production
+migration/backend/release-policy rollout, the scheduled updater on `main`, and a
+separately authorized direct-client permission cutoff. This audit did not inspect
+hosted database grants or perform App Store/device testing. Future changes follow
+[the mandatory API compatibility procedure](shipping.md#api-compatibility-for-every-change).
+
+## Backend-only database access — staging ready, production pending
 
 Native profile loading, username selection, and Apple display-name saving now use
 `GET/PATCH /api/v1/me`; all application database traffic goes through the backend.
 Supabase Auth stays direct. The Fight snapshot uses a restricted backend read role
-with the existing row-visibility rules. Deploy its additive migration and backend
-before distributing the app. Direct client permissions remain until the separate
-cutoff described in [backend.md](backend.md#application-database-boundary-prepared-9-sep-2026-not-deployed).
-Cloud database/iOS checks and staging-device verification are still pending.
+with the existing row-visibility rules. Staging readiness and cloud checks passed as
+recorded above; production must verify/apply the additive migration and deploy the backend
+before distributing its app. The separate direct-client permission cutoff remains outside
+automatic migrations, as described in [backend.md](backend.md#application-database-boundary).
+Signed-in staging-device verification was not performed by this audit.
 
 ## Prepared, not deployed: Notion Product Backlog (9 Sep)
 
@@ -46,7 +76,7 @@ You still do **not** paste `sb_secret_...` anywhere.
 
 ## Before this branch ships
 
-The 7 Sep mandatory-update change needs the public release manifest and `GET /api/app-release` deployed before the native build. The existing server `NEXT_PUBLIC_SUPABASE_URL` selects the staging/production release channel. The native app replaces Fights with the full update overlay until the installed build is the public latest, an admitted review candidate, or the latest internal TestFlight build. A failed check keeps that overlay. Internal-only builds do not become the Friends Beta requirement. No database migration is part of this change. See [mandatory updates and database rollout](shipping.md#mandatory-updates-and-database-rollout).
+The mandatory-update manifest and `GET /api/app-release` are live on staging; production still needs the endpoint before its native build, and the scheduled publisher must reach `main`. The existing server `NEXT_PUBLIC_SUPABASE_URL` selects the staging/production release channel. The native app replaces Fights with the full update overlay until the installed build is the public latest, an admitted review candidate, or the latest internal TestFlight build. A failed check keeps that overlay. Internal-only builds do not become the Friends Beta requirement. No database migration is part of the update check itself. See [mandatory updates and database rollout](shipping.md#mandatory-updates-and-database-rollout).
 
 The 7 Sep referral changes require the referral migration, `POST /api/v1/referrals`,
 and updated Universal Link association before the native build. You → Settings →

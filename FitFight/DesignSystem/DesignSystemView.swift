@@ -229,8 +229,8 @@ struct DesignSystemView: View {
             }
             FFCard {
                 VStack(alignment: .leading, spacing: 12) {
-                    FFEyebrow("Screen CTA — the signature")
-                    Text("Full-width, 60pt tall, label left and a filled circle chevron right. One per screen, pinned above the tab bar.")
+                    FFEyebrow("Screen CTA — tap to continue")
+                    Text("A full-width button with a centered label. Sliding confirmation is reserved for creating a fight.")
                         .ffType(.body)
                         .foregroundStyle(theme.textSecondary)
                         .lineSpacing(3)

@@ -9,6 +9,8 @@ This folder contains the current approved design and the archived design dump it
 | [`kit/FitFight Design System.dc.html`](./kit/FitFight%20Design%20System.dc.html) | Approved visual specification and interactive component catalogue. |
 | [`kit/support.js`](./kit/support.js) | Runtime used by the HTML source. Documentation only; it is not bundled in the iOS app. |
 | [`tokens.json`](./tokens.json) | Machine-readable SwiftUI tokens. This must remain byte-for-byte identical to `FitFight/DesignSystem/tokens.json`. |
+| [`kit/companion-app-proposal.html`](./kit/companion-app-proposal.html) | Selected Companion screen direction, retained as the tappable reference. Existing native behavior remains authoritative. |
+| [`companion/`](./companion/README.md) | Preserved artwork, asset manifest, reproducible crops, and native review captures. |
 
 The approved system has two bases, Night and Day, and fixed semantic colour families:
 
@@ -34,7 +36,7 @@ When archived material conflicts with the current HTML or `tokens.json`, the cur
 
 ## Native rules
 
-- Four fixed tabs: Fights, New, Requests, You.
+- Four fixed tabs: Fights, New, Feed, You.
 - The version label stays at the top of the screen.
 - Versions remains permanently available under You → Settings.
 - Every number uses tabular figures.

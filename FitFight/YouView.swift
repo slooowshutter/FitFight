@@ -7,6 +7,7 @@ struct YouView: View {
     @EnvironmentObject private var themeStore: ThemeStore
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var steps: HealthKitStepsStore
+    @EnvironmentObject private var companions: CompanionStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
     @State private var confirmDelete = false
@@ -15,10 +16,16 @@ struct YouView: View {
     @State private var isUploadingPhoto = false
     @State private var photoError = ""
     @State private var showingOnboardingPreview = false
+    @State private var showingHealthDetails = false
+    @State private var showingCompanionPreviewControls = false
 
     var body: some View {
         FFScreen(refresh: fightsRefresh) {
             profile
+            CompanionIntroduction(surface: .you)
+            Text("Companion design preview · this session only")
+                .ffType(.micro)
+                .foregroundStyle(theme.textSecondary)
             if session.isSignedIn, let authError = session.authError {
                 FFNotice(text: authError, tone: .ember, systemImage: "exclamationmark.triangle")
             }
@@ -41,6 +48,19 @@ struct YouView: View {
             FFSection(title: String(localized: "Look")) {
                 appearance
             }
+
+            #if DEBUG && targetEnvironment(simulator)
+            if CompanionPreview.isEnabled {
+                FFButton(title: String(localized: "Companion preview"), kind: .ghost, fullWidth: true) {
+                    showingCompanionPreviewControls = true
+                }
+                .sheet(isPresented: $showingCompanionPreviewControls) {
+                    CompanionPreviewControls()
+                        .fitFightTheme(themeStore.theme)
+                        .presentationBackground(themeStore.theme.bg)
+                }
+            }
+            #endif
 
             if session.isFitFightAdmin {
                 FFSection(title: String(localized: "Developer")) {
@@ -101,26 +121,35 @@ struct YouView: View {
     private var profile: some View {
         if session.isSignedIn {
             HStack(spacing: 14) {
-                PhotosPicker(selection: $pickerItem, matching: .images) {
-                    FFAvatar(
-                        monogram: session.profile?.initials ?? "FF",
-                        size: 68,
-                        selected: true,
-                        photoURL: session.profile?.avatar?.url
-                    )
-                    .overlay {
-                        if isUploadingPhoto {
-                            ZStack {
-                                Circle().fill(theme.bg.opacity(0.45))
-                                ProgressView().tint(theme.text)
+                if companions.animal(for: session.profile?.userId.uuidString, isYou: true) != nil {
+                    Button { companions.showingPicker = true } label: {
+                        CompanionAvatar(isYou: true, size: 68)
+                            .overlay { Circle().strokeBorder(theme.mossEdge, lineWidth: 3) }
+                    }
+                    .buttonStyle(FFHapticPlainStyle())
+                    .accessibilityLabel(String(localized: "Choose your companion"))
+                } else {
+                    PhotosPicker(selection: $pickerItem, matching: .images) {
+                        FFAvatar(
+                            monogram: session.profile?.initials ?? "FF",
+                            size: 68,
+                            selected: true,
+                            photoURL: session.profile?.avatar?.url
+                        )
+                        .overlay {
+                            if isUploadingPhoto {
+                                ZStack {
+                                    Circle().fill(theme.bg.opacity(0.45))
+                                    ProgressView().tint(theme.text)
+                                }
                             }
                         }
                     }
-                }
-                .buttonStyle(FFHapticPlainStyle())
-                .disabled(isUploadingPhoto)
-                .onChange(of: pickerItem) { _, item in
-                    Task { await uploadPhoto(item) }
+                    .buttonStyle(FFHapticPlainStyle())
+                    .disabled(isUploadingPhoto)
+                    .onChange(of: pickerItem) { _, item in
+                        Task { await uploadPhoto(item) }
+                    }
                 }
                 VStack(alignment: .leading, spacing: 3) {
                     Text(verbatim: session.profile?.displayName ?? String(localized: "Signed in"))
@@ -155,20 +184,18 @@ struct YouView: View {
         FFGroupedRows {
             Button {
                 Task {
-                    await model.refreshFights(session: session, steps: steps, trigger: .manual, requestAccess: true)
+                    await model.refreshFights(session: session, steps: steps, trigger: .manual, requestAccess: !steps.hasAsked)
                 }
             } label: {
                 FFGroupedRow(
                     title: String(localized: "Apple Health Steps"),
-                    subtitle: steps.metaText.isEmpty
-                        ? steps.detailText
-                        : "\(steps.detailText) · \(steps.metaText)",
+                    subtitle: steps.connection == .upToDate ? String(localized: "Up to date") : steps.detailText,
                     systemImage: "heart",
                     enabled: steps.status != .reading && !model.isRefreshingFights,
                     subtitleTone: steps.isConnected ? .moss : .neutral,
                     trailing: AnyView(
                         FFPill(
-                            steps.isConnected ? String(localized: "On") : String(localized: "Connect"),
+                            steps.isConnected ? String(localized: "Connected") : String(localized: "Connect"),
                             style: steps.isConnected ? .softMoss : .solidMoss
                         )
                     )
@@ -178,74 +205,94 @@ struct YouView: View {
             .disabled(steps.status == .reading || model.isRefreshingFights)
             FFDivider()
             FFGroupedRow(
-                title: String(localized: "Update Apple Health access"),
-                subtitle: String(localized: "Ask iPhone for the extra Health types FitFight uses. Fights still use steps."),
-                systemImage: "heart.circle",
-                enabled: steps.status != .reading && !model.isRefreshingFights,
-                subtitleTone: .neutral,
+                title: showingHealthDetails ? String(localized: "Fewer settings") : String(localized: "More settings"),
+                systemImage: "slider.horizontal.3",
                 trailing: AnyView(
-                    FFPill(String(localized: "Allow"), style: .softMoss)
+                    Image(systemName: showingHealthDetails ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(theme.textFaint)
                 ),
-                action: {
-                    Task {
-                        await model.refreshFights(
-                            session: session,
-                            steps: steps,
-                            trigger: .manual,
-                            requestAccess: true
-                        )
+                action: { showingHealthDetails.toggle() }
+            )
+            if showingHealthDetails {
+                FFDivider()
+                FFGroupedRow(
+                    title: String(localized: "Request Health access"),
+                    subtitle: String(localized: "Ask for access to Health types you haven’t reviewed yet. Fights use Steps only."),
+                    systemImage: "heart.circle",
+                    enabled: steps.status != .reading && !model.isRefreshingFights,
+                    subtitleTone: .neutral,
+                    trailing: AnyView(
+                        FFPill(String(localized: "Review"), style: .softMoss)
+                    ),
+                    action: {
+                        Task {
+                            await model.refreshFights(
+                                session: session,
+                                steps: steps,
+                                trigger: .manual,
+                                requestAccess: true
+                            )
+                        }
                     }
-                }
-            )
-            .disabled(steps.status == .reading || model.isRefreshingFights)
-            FFDivider()
-            FFGroupedRow(
-                title: String(localized: "Background App Refresh"),
-                subtitle: steps.backgroundRefreshText,
-                systemImage: "arrow.clockwise",
-                subtitleTone: steps.diagnostics.backgroundRefreshStatus == .available ? .moss : .neutral,
-                trailing: steps.diagnostics.backgroundRefreshStatus == .denied
-                    ? AnyView(FFPill(String(localized: "Open Settings"), style: .softMoss)) : nil,
-                action: steps.diagnostics.backgroundRefreshStatus == .denied
-                    ? { UIApplication.shared.open(URL(string: UIApplication.openSettingsURLString)!) }
-                    : nil
-            )
-            FFDivider()
-            FFGroupedRow(
-                title: String(localized: "HealthKit background delivery"),
-                subtitle: steps.backgroundDeliveryText,
-                systemImage: "heart.text.square",
-                subtitleTone: steps.diagnostics.deliveryRegistrationStatus == .enabled ? .moss : .neutral
-            )
-            FFDivider()
-            FFGroupedRow(
-                title: String(localized: "Last automatic sync"),
-                subtitle: diagnosticDate(steps.diagnostics.lastAutomaticSync),
-                systemImage: "bolt"
-            )
-            FFDivider()
-            FFGroupedRow(
-                title: String(localized: "Last manual or foreground sync"),
-                subtitle: diagnosticDate(steps.diagnostics.lastManualSync),
-                systemImage: "hand.tap"
-            )
-            if let failure = steps.currentFailureText {
-                FFDivider()
-                FFGroupedRow(
-                    title: String(localized: "Current sync issue"),
-                    subtitle: failure,
-                    systemImage: "exclamationmark.triangle",
-                    subtitleTone: .ember
                 )
-            }
-            if let reference = steps.diagnostics.failureReference {
+                .disabled(steps.status == .reading || model.isRefreshingFights)
                 FFDivider()
                 FFGroupedRow(
-                    title: String(localized: "Sync error reference"),
-                    subtitle: reference,
-                    systemImage: "number",
+                    title: String(localized: "Change Health permissions"),
+                    subtitle: String(localized: "In Health, tap your profile → Apps → FitFight to turn each type of access on or off."),
+                    systemImage: "hand.raised",
                     subtitleTone: .neutral
                 )
+                FFDivider()
+                FFGroupedRow(
+                    title: String(localized: "Background App Refresh"),
+                    subtitle: steps.backgroundRefreshText,
+                    systemImage: "arrow.clockwise",
+                    subtitleTone: steps.diagnostics.backgroundRefreshStatus == .available ? .moss : .neutral,
+                    trailing: steps.diagnostics.backgroundRefreshStatus == .denied
+                        ? AnyView(FFPill(String(localized: "Open Settings"), style: .softMoss)) : nil,
+                    action: steps.diagnostics.backgroundRefreshStatus == .denied
+                        ? { UIApplication.shared.open(URL(string: UIApplication.openSettingsURLString)!) }
+                        : nil
+                )
+                FFDivider()
+                FFGroupedRow(
+                    title: String(localized: "HealthKit background delivery"),
+                    subtitle: steps.backgroundDeliveryText,
+                    systemImage: "heart.text.square",
+                    subtitleTone: steps.diagnostics.deliveryRegistrationStatus == .enabled ? .moss : .neutral
+                )
+                FFDivider()
+                FFGroupedRow(
+                    title: String(localized: "Last automatic sync"),
+                    subtitle: diagnosticDate(steps.diagnostics.lastAutomaticSync),
+                    systemImage: "bolt"
+                )
+                FFDivider()
+                FFGroupedRow(
+                    title: String(localized: "Last manual or foreground sync"),
+                    subtitle: diagnosticDate(steps.diagnostics.lastManualSync),
+                    systemImage: "hand.tap"
+                )
+                if let failure = steps.currentFailureText {
+                    FFDivider()
+                    FFGroupedRow(
+                        title: String(localized: "Current sync issue"),
+                        subtitle: failure,
+                        systemImage: "exclamationmark.triangle",
+                        subtitleTone: .ember
+                    )
+                }
+                if let reference = steps.diagnostics.failureReference {
+                    FFDivider()
+                    FFGroupedRow(
+                        title: String(localized: "Sync error reference"),
+                        subtitle: reference,
+                        systemImage: "number",
+                        subtitleTone: .neutral
+                    )
+                }
             }
         }
     }
@@ -253,6 +300,7 @@ struct YouView: View {
     private func uploadPhoto(_ item: PhotosPickerItem?) async {
         defer { pickerItem = nil }
         guard let item else { return }
+        guard !CompanionPreview.isEnabled else { photoError = CompanionPreview.writeUnavailable; return }
         guard let data = try? await item.loadTransferable(type: Data.self),
               let image = UIImage(data: data) else {
             photoError = String(localized: "That photo could not be read.")

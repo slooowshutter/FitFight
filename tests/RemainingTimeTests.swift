@@ -45,8 +45,8 @@ struct RemainingTimeTests {
             calendar: calendar
         )
         precondition(
-            tenDays == RemainingTime.Breakdown(weeks: 1, days: 3),
-            "10 days should read as 1 week and 3 days"
+            tenDays == RemainingTime.Breakdown(weeks: 1),
+            "10 days should show only whole weeks"
         )
 
         let fiveHours = RemainingTime.breakdown(
@@ -55,8 +55,8 @@ struct RemainingTimeTests {
             calendar: calendar
         )
         precondition(
-            fiveHours == RemainingTime.Breakdown(hours: 5, minutes: 20),
-            "Under a day should show hours and minutes"
+            fiveHours == RemainingTime.Breakdown(hours: 5),
+            "Two hours or more should show only hours"
         )
 
         let fortyFiveMinutes = RemainingTime.breakdown(
@@ -89,6 +89,31 @@ struct RemainingTimeTests {
             "A calendar month later should show 1 month"
         )
 
+        let boundaries: [(TimeInterval, RemainingTime.Breakdown)] = [
+            (0, .init()),
+            (-60, .init()),
+            (60, .init(minutes: 1)),
+            (3_599, .init(minutes: 59)),
+            (3_600, .init(hours: 1)),
+            (7_140, .init(hours: 1, minutes: 59)),
+            (7_200, .init(hours: 2)),
+            (86_340, .init(hours: 23)),
+            (86_400, .init(days: 1)),
+            (172_740, .init(days: 1, hours: 23)),
+            (172_800, .init(days: 2)),
+            (604_740, .init(days: 6)),
+            (604_800, .init(weeks: 1)),
+            (29 * 86_400, .init(weeks: 4)),
+            (40 * 86_400, .init(months: 1)),
+            (65 * 86_400, .init(months: 2)),
+        ]
+        for (seconds, expected) in boundaries {
+            precondition(
+                RemainingTime.breakdown(from: now, until: now.addingTimeInterval(seconds), calendar: calendar) == expected,
+                "Incorrect countdown at \(seconds) seconds remaining"
+            )
+        }
+
         let phrase = RemainingTime.phrase(
             from: now,
             until: date(2026, 9, 11, 17, 0, calendar: calendar),
@@ -99,6 +124,7 @@ struct RemainingTimeTests {
             !phrase.contains("2026") && !phrase.contains("Sep"),
             "Remaining phrase must not include a calendar date"
         )
+        print("Remaining-time thresholds passed")
     }
 
     private static func date(

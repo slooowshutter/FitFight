@@ -22,6 +22,12 @@ final class FeedbackStore: ObservableObject {
     private var commentsFor: UUID?
 
     func load(session: SessionStore, kind: String?) async {
+        #if DEBUG && targetEnvironment(simulator)
+        if CompanionPreview.isEnabled {
+            posts = Self.previewPosts.filter { kind == nil || $0.kind == kind }
+            return
+        }
+        #endif
         listLoad += 1
         let load = listLoad
         let voteStartedAt = voteClock
@@ -50,6 +56,14 @@ final class FeedbackStore: ObservableObject {
     }
 
     func loadDetail(session: SessionStore, postID: UUID) async {
+        #if DEBUG && targetEnvironment(simulator)
+        if CompanionPreview.isEnabled {
+            detail = Self.previewPosts.first { $0.id == postID }
+            comments = Self.previewComments
+            canLaunchFix = false
+            return
+        }
+        #endif
         detailLoad += 1
         let load = detailLoad
         let voteStartedAt = voteClock

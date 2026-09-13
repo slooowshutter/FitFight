@@ -2,10 +2,11 @@ import Combine
 import SwiftUI
 import UIKit
 
-private enum FightDetailPane: Hashable {
+enum FightDetailPane: Hashable {
     case stats
     case history
     case feed
+    case share
 
     var title: String {
         switch self {
@@ -15,6 +16,8 @@ private enum FightDetailPane: Hashable {
             return String(localized: "History")
         case .feed:
             return String(localized: "Feed")
+        case .share:
+            return String(localized: "Share")
         }
     }
 }
@@ -31,8 +34,9 @@ struct FightDetailView: View {
     @State private var fightsRevision = 0
     @State private var pane: FightDetailPane = .stats
 
-    init(fight: Fight) {
+    init(fight: Fight, pane: FightDetailPane = .stats) {
         initialFight = fight
+        _pane = State(initialValue: pane)
     }
 
     private var fight: Fight {
@@ -45,6 +49,7 @@ struct FightDetailView: View {
             items.append(.history)
         }
         items.append(.feed)
+        if fight.joinCode != nil { items.append(.share) }
         return items
     }
 
@@ -100,6 +105,8 @@ struct FightDetailView: View {
                     if let fightID = UUID(uuidString: fight.id) {
                         FightPostsSection(fightID: fightID)
                     }
+                case .share:
+                    shareCard
                 }
             }
         }
@@ -141,32 +148,14 @@ struct FightDetailView: View {
                 deferredHero
             } else if fight.status == .pending {
                 settlementHero
-            } else if let pair = headToHead {
-                FFVSBlock(
-                    you: pair.you,
-                    them: pair.them,
-                    delta: fight.kickerEmphasis,
-                    ahead: fight.rank == 1 && !fight.isTiedForFirst,
-                    footnote: "\(fight.metric.eyebrow) · \(fight.durationLabel) fight",
-                    timeLeft: fight.deadlineLabel
-                )
             } else {
-                liveHero
+                CompanionFightSummary(fight: fight)
             }
         }
         .id(fightsRevision)
 
-        if isPendingSettlement {
-            daysSection
-            actionSection
-            standingsSection
-            shareSection
-        } else {
-            shareSection
-            actionSection
-            standingsSection
-            daysSection
-        }
+        standingsSection
+        daysSection
 
         if canLeave {
             FFButton(
@@ -184,29 +173,6 @@ struct FightDetailView: View {
                     .ffType(.caption)
                     .foregroundStyle(theme.emberText)
                     .padding(.top, 10)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var shareSection: some View {
-        if fight.joinCode != nil {
-            FFSection(title: String(localized: "Share")) {
-                shareCard
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var actionSection: some View {
-        if fight.hasAction {
-            FFSection(title: String(localized: "Action")) {
-                FFCard {
-                    Text(fight.actionText)
-                        .ffType(.rowTitle)
-                        .foregroundStyle(theme.text)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
             }
         }
     }
@@ -352,31 +318,36 @@ struct FightDetailView: View {
     }
 
     private var nav: some View {
-        FFNavDetail(
-            title: fight.listTitle,
-            subtitle: fight.timeAndDeadlineLabel,
-            onBack: { model.openFightID = nil }
-        )
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .top, spacing: 8) {
+                Button { model.openFightID = nil } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(theme.text)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(FFHapticPlainStyle())
+                .accessibilityLabel(String(localized: "Back"))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(fight.listTitle)
+                        .font(.custom("Nunito-ExtraBold", size: 18, relativeTo: .headline))
+                        .foregroundStyle(theme.text)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if !pendingJoin, fight.hasAction, fight.actionText != fight.listTitle {
+                        Text(fight.actionText)
+                            .font(.custom("Nunito-Bold", size: 12, relativeTo: .caption))
+                            .foregroundStyle(theme.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            }
+        }
+        .fixedSize(horizontal: false, vertical: true)
         .padding(.horizontal, theme.space.screenPadding)
-        .padding(.bottom, 12)
+        .padding(.bottom, 4)
         .background(theme.bg)
-    }
-
-    /// The kit's VS block only makes sense for two people.
-    private var headToHead: (
-        you: (monogram: String, name: String, value: String, progress: Double, photoURL: URL?),
-        them: (monogram: String, name: String, value: String, progress: Double, photoURL: URL?)
-    )? {
-        let joined = fight.standings.filter { !$0.invited && !$0.deferred }
-        guard joined.count == 2,
-              let mine = joined.first(where: { $0.person.isYou }),
-              let theirs = joined.first(where: { !$0.person.isYou })
-        else { return nil }
-        let peak = max(mine.score, theirs.score, 1)
-        return (
-            (mine.person.initials, String(localized: "You"), model.formatScore(mine.score, metric: fight.metric), mine.score / peak, mine.person.photoURL),
-            (theirs.person.initials, theirs.person.name, model.formatScore(theirs.score, metric: fight.metric), theirs.score / peak, theirs.person.photoURL)
-        )
     }
 
     private var joinRoundNext: String {
@@ -447,36 +418,36 @@ struct FightDetailView: View {
     }
 
     private var shareCard: some View {
-        FFCard {
+        FFCard(padding: 16) {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Anyone with the code or invite link can join.")
-                    .ffType(.caption)
-                    .foregroundStyle(theme.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
                 if let code = fight.joinCode {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Code")
+                            Text("Fight code")
+                                .ffType(.rowTitle)
+                                .foregroundStyle(theme.text)
+                            Text("Anyone with the code or invite link can join.")
                                 .ffType(.caption)
                                 .foregroundStyle(theme.textSecondary)
-                            Text(code)
-                                .ffType(.heading)
-                                .foregroundStyle(theme.text)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                         Spacer()
                         Button {
                             UIPasteboard.general.string = code
                             copiedCode = true
                         } label: {
-                            Text(copiedCode ? String(localized: "Copied") : String(localized: "Copy code"))
-                                .ffType(.caption)
+                            Text(copiedCode ? String(localized: "Copied") : code)
+                                .ffType(.heading)
                                 .foregroundStyle(theme.mossText)
+                                .frame(minHeight: 44)
                         }
                         .buttonStyle(FFHapticPlainStyle())
+                        .accessibilityLabel(String(localized: "Copy code"))
+                        .accessibilityValue(code)
                     }
                 }
-                if let code = fight.joinCode, let referralCode = session.profile?.referralCode {
-                    let url = APIConfig.joinShareURL(code: code, referralCode: referralCode)
+                if let code = fight.joinCode {
+                    let url = APIConfig.joinShareURL(code: code, referralCode: session.profile?.referralCode)
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Link")
@@ -508,36 +479,6 @@ struct FightDetailView: View {
         }
     }
 
-    private var liveHero: some View {
-        FFRingCard(
-            progress: ringProgress,
-            title: fight.status == .finished
-                ? (fight.isTiedForFirst
-                    ? String(localized: "Tied")
-                    : String(
-                        localized: "fight.finished-rank",
-                        defaultValue: "Finished #\(fight.rank)"
-                    ))
-                : String(
-                    localized: "fight.rank-of-count",
-                    defaultValue: "#\(fight.rank) of \(fight.of)"
-                ),
-            subtitle: String(
-                localized: "fight.metric-time-left",
-                defaultValue: "\(fight.metric.eyebrow) · \(fight.timeAndDeadlineLabel)"
-            ),
-            metric: model.formatScore(you?.score ?? 0, metric: fight.metric),
-            delta: fight.kickerEmphasis,
-            ahead: fight.rank == 1 && !fight.isTiedForFirst
-        )
-    }
-
-    private var ringProgress: Double {
-        let leader = fight.standings.first?.score ?? 1
-        let yours = you?.score ?? 0
-        return leader == 0 ? 0 : min(yours / leader, 1)
-    }
-
     private func standingRow(
         index: Int,
         row: Standing,
@@ -551,7 +492,8 @@ struct FightDetailView: View {
                         .ffType(.button)
                         .foregroundStyle(theme.textFaint)
                         .frame(width: 22)
-                    FFAvatar(row.person, size: 38, pending: true)
+                    CompanionAvatar(personID: row.person.id, isYou: row.person.isYou,
+                                    monogram: row.person.initials, photoURL: row.person.photoURL, size: 38, pending: true)
                     Text(row.person.name)
                         .ffType(.rowTitle)
                         .foregroundStyle(theme.textSecondary)
@@ -569,7 +511,7 @@ struct FightDetailView: View {
                 pendingStandingRow(
                     row,
                     contextFight: contextFight,
-                    radius: inWinnerBand ? theme.radius.field : theme.radius.card
+                    radius: inWinnerBand ? theme.radius.card - 4 : theme.radius.card
                 )
             } else {
                 FFLeaderboardRow(
@@ -580,11 +522,15 @@ struct FightDetailView: View {
                     move: .same,
                     isYou: row.person.isYou,
                     photoURL: row.person.photoURL,
+                    avatar: AnyView(CompanionAvatar(
+                        personID: row.person.id, isYou: row.person.isYou,
+                        monogram: row.person.initials, photoURL: row.person.photoURL, size: 38
+                    )),
                     captionUrgent: !inWinnerBand && row.person.isYou && contextFight.status == .live,
                     captionAt: { now in
                         model.formatStandingFreshness(row, fight: contextFight, now: now)
                     },
-                    radius: inWinnerBand ? theme.radius.field : theme.radius.card
+                    radius: inWinnerBand ? theme.radius.card - 4 : theme.radius.card
                 )
             }
         }
@@ -599,7 +545,8 @@ struct FightDetailView: View {
                 .ffType(.button)
                 .foregroundStyle(needsSync ? theme.textFaint : (rank == 1 ? theme.gold : theme.textTertiary))
                 .frame(width: 22)
-            FFAvatar(row.person, size: 38, pending: needsSync)
+            CompanionAvatar(personID: row.person.id, isYou: row.person.isYou,
+                            monogram: row.person.initials, photoURL: row.person.photoURL, size: 38, pending: needsSync)
             VStack(alignment: .leading, spacing: 2) {
                 Text(row.person.name)
                     .ffType(.rowTitle)
@@ -664,109 +611,100 @@ struct JoinFightPreview: View {
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
-        FFCard(padding: 24) {
-            VStack(spacing: 0) {
-                FFTag(fight.metric.eyebrow)
-                    .padding(.bottom, 12)
-                Text(fight.listTitle)
-                    .ffType(.title)
+        FFCard(padding: 20) {
+            VStack(alignment: .leading, spacing: 20) {
+                VStack(spacing: 8) {
+                    Text(fight.listTitle)
+                        .ffType(.title)
+                        .foregroundStyle(theme.text)
+                    if let pitch = fight.invitePitch {
+                        Text(pitch)
+                            .ffType(.body)
+                            .foregroundStyle(theme.textSecondary)
+                    }
+                }
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(
+                        String(
+                            localized: "fight.duration-rule",
+                            defaultValue: "\(fight.durationLabel) · Most steps wins"
+                        )
+                    )
+                    .ffType(.label)
                     .foregroundStyle(theme.text)
-                    .multilineTextAlignment(.center)
-                    .padding(.bottom, 12)
-                if let pitch = fight.invitePitch {
-                    Text(pitch)
-                        .ffType(.body)
-                        .foregroundStyle(theme.text)
-                        .multilineTextAlignment(.center)
-                        .padding(.bottom, 8)
-                }
-                Text(
-                    String(
-                        localized: "fight.duration-rule",
-                        defaultValue: "\(fight.durationLabel) · Most steps wins"
-                    )
-                )
-                    .ffType(.caption)
-                    .foregroundStyle(theme.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.bottom, 8)
-                Text(fight.deadlineLabel)
-                    .ffType(.caption)
-                    .fontWeight(.heavy)
-                    .foregroundStyle(theme.gold)
-                    .multilineTextAlignment(.center)
-                    .padding(.bottom, fight.hasAction && fight.actionText != fight.listTitle ? 8 : 22)
-                if fight.hasAction, fight.actionText != fight.listTitle {
-                    Text(fight.actionText)
-                        .ffType(.body)
-                        .foregroundStyle(theme.text)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.bottom, 22)
-                }
-                if fight.offersJoinNext {
-                    Text(
-                        String(
-                            localized: "fight.join-now-copy",
-                            defaultValue: "This round started \(joinRoundStarted). Join now and your steps count from that date."
-                        )
-                    )
-                    .ffType(.caption)
-                    .foregroundStyle(theme.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.bottom, 8)
-                    Text(
-                        String(
-                            localized: "fight.join-next-copy",
-                            defaultValue: "Or start next round, from \(joinRoundNext)."
-                        )
-                    )
-                    .ffType(.caption)
-                    .foregroundStyle(theme.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.bottom, 22)
-                    FFScreenCTA(
-                        title: joining ? String(localized: "Joining…") : String(localized: "Join this round"),
-                        busy: joining
-                    ) {
-                        onJoinNow()
+                    Text(fight.deadlineLabel)
+                        .ffType(.caption)
+                        .foregroundStyle(theme.textSecondary)
+                    if fight.hasAction, fight.actionText != fight.listTitle {
+                        Text(fight.actionText)
+                            .ffType(.body)
+                            .foregroundStyle(theme.text)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    FFButton(
-                        title: String(localized: "Start next round"),
-                        kind: .ghost,
-                        enabled: !joining,
-                        fullWidth: true
-                    ) {
-                        onJoinNext()
-                    }
-                    .padding(.top, 8)
-                } else {
-                    FFScreenCTA(
-                        title: joining
-                            ? String(localized: "Joining…")
-                            : (fight.pendingJoin ? String(localized: "Join fight") : String(localized: "Accept challenge")),
-                        busy: joining
-                    ) {
-                        onJoinNow()
+                }
+                Rectangle().fill(theme.line).frame(height: 1)
+
+                VStack(alignment: .leading, spacing: 16) {
+                    if fight.offersJoinNext {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text(
+                                String(
+                                    localized: "fight.join-now-copy",
+                                    defaultValue: "This round started \(joinRoundStarted). Join now and your steps count from that date."
+                                )
+                            )
+                            .ffType(.caption)
+                            .foregroundStyle(theme.textSecondary)
+                            FFScreenCTA(
+                                title: joining ? String(localized: "Joining…") : String(localized: "Join this round"),
+                                busy: joining,
+                                action: onJoinNow
+                            )
+                        }
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text(
+                                String(
+                                    localized: "fight.join-next-copy",
+                                    defaultValue: "Or start next round, from \(joinRoundNext)."
+                                )
+                            )
+                            .ffType(.caption)
+                            .foregroundStyle(theme.textSecondary)
+                            FFButton(
+                                title: String(localized: "Start next round"),
+                                kind: .secondary,
+                                enabled: !joining,
+                                fullWidth: true,
+                                action: onJoinNext
+                            )
+                        }
+                    } else {
+                        FFScreenCTA(
+                            title: joining
+                                ? String(localized: "Joining…")
+                                : (fight.pendingJoin ? String(localized: "Join fight") : String(localized: "Accept challenge")),
+                            busy: joining,
+                            action: onJoinNow
+                        )
                     }
                 }
                 FFButton(
                     title: fight.pendingJoin ? String(localized: "Not now") : String(localized: "Decline"),
                     kind: .ghost,
                     enabled: !joining,
-                    fullWidth: true
-                ) {
-                    onDismiss()
-                }
-                .padding(.top, 8)
+                    fullWidth: true,
+                    action: onDismiss
+                )
                 if let error = model.createError, !error.isEmpty {
                     Text(error)
                         .ffType(.caption)
                         .foregroundStyle(theme.emberText)
-                        .padding(.top, 10)
                 }
             }
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 

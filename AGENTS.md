@@ -21,6 +21,18 @@ Read this first, then `docs/`. Marc talks from his phone, often transcribing. Be
 - Never nuke the hosted database. No `supabase db reset` / `db push` against production or `develop`, no `DROP TABLE` / `TRUNCATE` / `DROP SCHEMA` / `DROP DATABASE` unless Marc asked in that chat and the migration starts with `-- allow-destructive`. Never put `sb_secret_...`, `service_role`, or the database password in git, chat, or iOS. Never merge to `main` unless Marc asked to ship to production. Never merge to `develop` or `preview` unless Marc asked. Production migrations apply only after `preview` is merged to `main`.
 - Do not create or call app-facing Postgres RPCs (`.rpc(...)`). Server-owned business logic belongs in the TypeScript backend. Small internal Postgres functions used only by RLS policies or triggers, such as signup plumbing, are allowed.
 
+## Mobile API and database compatibility — every agent
+
+Before changing an API, native API model, or database schema, read [API compatibility](docs/shipping.md#api-compatibility-for-every-change) and the live rollout evidence in [status.md](docs/status.md#api-and-update-rollout-verified-13-sep-2026).
+
+- **API version, app version/build, and database migration are independent.** Keep `/api/v1` across ordinary app builds. Never put the build number in route URLs or bump the API version on a schedule.
+- **Preserve every supported client's contract.** Classify changes by whether an older app can still send its requests, decode responses, and behave correctly. Removing/renaming required API fields, changing types/meaning, or requiring previously optional input breaks compatibility. Additions are safe only when old clients handle them.
+- **The backend owns the translation.** Native application data uses `FitFightAPI`; Supabase Auth stays direct. A database rename does not require an app update when the API contract stays intact. If an incompatible API is necessary, add only the affected versioned endpoints, retain the old contract during overlap, and share domain/query logic.
+- **Staging also has installed users.** Internal TestFlight and Friends Beta share its database. Before deployment, check `/api/app-release` for each affected environment and preserve `latest`, `review`, and `internal` contracts, plus legacy clients while enforcement is off. A build uploaded for Marc is not necessarily installable by friends.
+- **Prepare first; remove later.** Add schema support, deploy compatible backend code, then distribute the app. Keep data consistent through backfills and concurrent writes. Retire required API behavior or client permissions only in a separate rollout after the replacement is installable and required, admitted candidates are compatible, and old backend instances have drained. The update gate does not protect direct table access. Existing deployment/destructive-SQL authorization rules still apply.
+- **Prove compatibility for the change.** Preserve regression requests/responses for affected supported clients; test them against the changed backend and, for schema changes, the migrated disposable cloud database. Do not replace old fixtures just to make a breaking change pass. A green typecheck or SQL lint alone is insufficient.
+- **Report code, cloud checks, and live deployment separately.** Include the affected contract, supported builds checked, deployment order, and remaining verification. Record current evidence in `docs/status.md`; never infer production readiness from a staging result.
+
 ## What exists (2026-08-30)
 
 Current map: [`docs/status.md`](docs/status.md). Sign-in, username, direct-username Steps challenges, Apple Health aggregate sync, invitations, and standings work on staging.

@@ -7,7 +7,14 @@ Production Metric is **Steps**. Phone vs server status: [`status.md`](status.md)
 Hosted production (no secrets): https://pvqntpteehdvhqyctwum.supabase.co  
 Hosted staging / git `develop` (no secrets): https://zstzbfocunthczzubggz.supabase.co
 
-## Application database boundary (prepared 9 Sep 2026; not deployed)
+## Application database boundary
+
+**13 Sep 2026:** staging reports `profile_api: true`; cloud native/API/database checks
+passed. Production's health response lacks that marker and its release-policy endpoint
+returns 404. The direct-client permission cutoff remains a separate rollout, and this
+audit did not verify hosted grants or signed-in devices. See the
+[dated deployment evidence](status.md#api-and-update-rollout-verified-13-sep-2026).
+Every API/schema edit must follow [API compatibility](shipping.md#api-compatibility-for-every-change).
 
 The native app uses Supabase directly only for Auth. All application database reads
 and writes use the authenticated FitFight API. `GET /api/v1/me` returns

@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 13,
+            notes: "Feed photos keep their original shape and fill the post width. A wide photo stays short, a tall one stays tall — nothing is cropped to a fixed frame."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 13,
             notes: "Your selected companion now appears as your avatar across You, fights and Feed. Apple Health details stay behind More settings. Choose Custom when creating a fight to set exact start and end dates and times."
         ),
         ReleaseNote(

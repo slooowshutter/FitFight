@@ -57,16 +57,15 @@ final class CompanionStore: ObservableObject {
 
     func apply(_ profile: FitFightProfile?) {
         guard !CompanionPreview.isEnabled else { return }
-        if let id = profile?.companionId, let animal = StockCompanion(rawValue: id) {
+        if let userId = profile?.userId,
+           let pending = UserDefaults.standard.string(forKey: Self.pendingPrefix + userId.uuidString),
+           let animal = StockCompanion(rawValue: pending) {
             selection = animal
             hasChosen = true
-            if let userId = profile?.userId,
-               UserDefaults.standard.string(forKey: Self.pendingPrefix + userId.uuidString) == id {
+            if profile?.companionId == pending {
                 UserDefaults.standard.removeObject(forKey: Self.pendingPrefix + userId.uuidString)
             }
-        } else if let userId = profile?.userId,
-                  let pending = UserDefaults.standard.string(forKey: Self.pendingPrefix + userId.uuidString),
-                  let animal = StockCompanion(rawValue: pending) {
+        } else if let id = profile?.companionId, let animal = StockCompanion(rawValue: id) {
             selection = animal
             hasChosen = true
         } else {
@@ -101,7 +100,7 @@ final class CompanionStore: ObservableObject {
         } catch is CancellationError {
             throw CancellationError()
         } catch {
-            // Keep the local pick so the app stays usable if the save is offline.
+            // Keep the local pick and the pending key until the server confirms.
         }
     }
 
@@ -109,13 +108,11 @@ final class CompanionStore: ObservableObject {
         guard let userId = session.profile?.userId,
               let pending = UserDefaults.standard.string(forKey: Self.pendingPrefix + userId.uuidString),
               let animal = StockCompanion(rawValue: pending) else { return }
-        if session.profile?.companionId == pending {
-            UserDefaults.standard.removeObject(forKey: Self.pendingPrefix + userId.uuidString)
-            return
-        }
         do {
             try await session.setCompanion(animal)
-            UserDefaults.standard.removeObject(forKey: Self.pendingPrefix + userId.uuidString)
+            if session.profile?.companionId == pending {
+                UserDefaults.standard.removeObject(forKey: Self.pendingPrefix + userId.uuidString)
+            }
         } catch {
             return
         }

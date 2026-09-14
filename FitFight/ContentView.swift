@@ -70,11 +70,14 @@ struct ContentView: View {
                 .presentationBackground(themeStore.theme.bg)
                 .interactiveDismissDisabled(session.needsCompanionSelection)
         }
-        .onChange(of: session.profile?.companionId) { _, companionId in
+        .onChange(of: session.profile?.companionId) { _, _ in
             companions.apply(session.profile)
-            if companionId == nil {
-                Task { await companions.publishPending(session: session) }
-            }
+            Task { await companions.publishPending(session: session) }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            companions.apply(session.profile)
+            Task { await companions.publishPending(session: session) }
         }
         .onAppear {
             companions.apply(session.profile)

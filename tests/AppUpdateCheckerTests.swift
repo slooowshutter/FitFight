@@ -125,6 +125,10 @@ private struct AppUpdateCheckerTests {
         precondition(reviewer.status == .updateRequired, "An API rejection must immediately block the app")
         reviewer.rejectRequest(updateRequired: false)
         precondition(reviewer.status == .updateRequired, "An API outage must not clear a known requirement")
+        let lockedReviewer = AppUpdateChecker(version: "1.1.0", build: "170", releaseURL: url,
+                                              defaults: defaults, session: session)
+        precondition(lockedReviewer.status == .updateRequired,
+                     "A 426 lock must survive relaunch even if the cached policy still admits the build")
         let otherReview = AppRelease(version: "1.1.0", build: 171,
                                      updateURL: URL(string: "https://apps.apple.com/app/id1234")!)
         ReleaseProtocol.responseData = try JSONEncoder().encode(
@@ -134,6 +138,12 @@ private struct AppUpdateCheckerTests {
         precondition(reviewer.status == .updateRequired,
                      "A later check without latest must not clear a 426 lock")
         precondition(!reviewer.allowsUse, "A 426 lock must keep the overlay")
+        let relaunchedReviewer = AppUpdateChecker(version: "1.1.0", build: "170", releaseURL: url,
+                                                  defaults: defaults, session: session)
+        precondition(relaunchedReviewer.status == .updateRequired,
+                     "A 426 lock must survive relaunch after a no-latest policy")
+        precondition(relaunchedReviewer.policy?.review?.build == 170,
+                     "A no-latest policy must not replace the cached update offer")
 
         ReleaseProtocol.responseData = try JSONEncoder().encode(policy)
         let concurrent = AppUpdateChecker(version: "1.0.0", build: "184", releaseURL: url,

@@ -92,6 +92,7 @@ final class AppUpdateChecker: ObservableObject {
     private let defaults: UserDefaults
     private let session: URLSession
     private let cacheKey: String
+    private let requiredKey: String
     private var inFlight: Task<Bool, Never>?
 
     init(version: String, build: String, releaseURL: URL, defaults: UserDefaults = .standard,
@@ -102,14 +103,17 @@ final class AppUpdateChecker: ObservableObject {
         self.defaults = defaults
         self.session = session
         cacheKey = "fitfight.release-policy.\(releaseURL.absoluteString)"
+        requiredKey = "fitfight.release-required.\(releaseURL.absoluteString).\(version).\(build)"
         if let data = defaults.data(forKey: cacheKey),
            let cached = try? JSONDecoder().decode(AppReleasePolicy.self, from: data) {
             policy = cached
-            if cached.allows(version: version, build: build) {
-                status = .current
-            } else if cached.latest != nil {
-                status = .updateRequired
-            }
+        }
+        if defaults.bool(forKey: requiredKey) {
+            status = .updateRequired
+        } else if let policy, policy.allows(version: version, build: build) {
+            status = .current
+        } else if let policy, policy.latest != nil {
+            status = .updateRequired
         }
     }
 
@@ -132,13 +136,21 @@ final class AppUpdateChecker: ObservableObject {
                     throw URLError(.badServerResponse)
                 }
                 let policy = try JSONDecoder().decode(AppReleasePolicy.self, from: data)
-                self.policy = policy
-                self.defaults.set(data, forKey: self.cacheKey)
                 if policy.allows(version: self.version, build: self.build) {
+                    self.policy = policy
+                    self.defaults.set(data, forKey: self.cacheKey)
+                    self.defaults.removeObject(forKey: self.requiredKey)
                     self.status = .current
-                } else if self.status == .updateRequired || policy.latest != nil {
+                } else if policy.latest != nil {
+                    self.policy = policy
+                    self.defaults.set(data, forKey: self.cacheKey)
+                    self.defaults.set(true, forKey: self.requiredKey)
                     self.status = .updateRequired
+                } else if self.status == .updateRequired {
+                    self.defaults.set(true, forKey: self.requiredKey)
                 } else {
+                    self.policy = policy
+                    self.defaults.set(data, forKey: self.cacheKey)
                     self.status = .unavailable
                 }
             } catch {
@@ -157,6 +169,7 @@ final class AppUpdateChecker: ObservableObject {
     func rejectRequest(updateRequired: Bool) {
         if updateRequired {
             status = .updateRequired
+            defaults.set(true, forKey: requiredKey)
         } else if status != .updateRequired {
             status = .unavailable
         }

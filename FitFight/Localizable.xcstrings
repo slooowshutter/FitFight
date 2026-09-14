@@ -11,6 +11,8 @@
     "Cumulative steps" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Pas cumulés"}}}},
     "Steps chart" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Graphique des pas"}}}},
     "Your post will only appear in the channels you select. You can choose more than one." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Ta publication apparaîtra uniquement dans les canaux sélectionnés. Tu peux en choisir plusieurs."}}}},
+    "This post stays in this fight." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Cette publication reste dans ce défi."}}}},
+    "A fight’s Feed tab now has the same + as the main Feed, so you can post without leaving the fight." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"L’onglet Fil d’un défi a maintenant le même + que le Fil principal, pour publier sans quitter le défi."}}}},
     "Choose up to four photos or one video per post." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Choisis jusqu’à quatre photos ou une vidéo par publication."}}}},
     "Post from Feed and select this fight’s channel." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Publie depuis le Fil en sélectionnant le canal de ce défi."}}}},
     "Tap a day to see its steps." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Touche un jour pour voir ses pas."}}}},

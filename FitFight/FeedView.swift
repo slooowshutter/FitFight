@@ -92,6 +92,10 @@ final class FeedStore: ObservableObject {
         }
     }
 
+    func prepare(fightID: UUID) {
+        lastFightID = fightID
+    }
+
     func replace(_ post: FitFightFightPost) {
         if let index = posts.firstIndex(where: { $0.id == post.id }) {
             posts[index] = post
@@ -191,7 +195,7 @@ struct FeedView: View {
             FFScreenTitle(
                 title: String(localized: "Feed"),
                 subtitle: String(localized: "Posts from fights you’re in."),
-                trailing: AnyView(composeButton)
+                trailing: AnyView(FeedComposeButton { composing = true })
             )
             if let error = feed.error, !error.isEmpty {
                 FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
@@ -245,11 +249,15 @@ struct FeedView: View {
             }
         )
     }
+}
 
-    private var composeButton: some View {
-        Button {
-            composing = true
-        } label: {
+struct FeedComposeButton: View {
+    var action: () -> Void
+
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        Button(action: action) {
             Image(systemName: "plus")
                 .font(.system(size: 16, weight: .bold))
                 .foregroundStyle(theme.mossOn)
@@ -262,6 +270,8 @@ struct FeedView: View {
 }
 
 struct FeedComposeSheet: View {
+    var lockedFightID: UUID? = nil
+
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var feed: FeedStore
@@ -284,11 +294,17 @@ struct FeedComposeSheet: View {
                     .ffType(.label)
                     .foregroundStyle(theme.mossText)
             }
-            Text("Your post will only appear in the channels you select. You can choose more than one.")
+            Text(lockedFightID == nil
+                 ? String(localized: "Your post will only appear in the channels you select. You can choose more than one.")
+                 : String(localized: "This post stays in this fight."))
                 .ffType(.caption)
                 .foregroundStyle(theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
-            if fights.isEmpty {
+            if let lockedFightID {
+                FightPostComposer(destinations: [.fight(lockedFightID)]) {
+                    dismiss()
+                }
+            } else if fights.isEmpty {
                 FFCard {
                     Text(String(localized: "Join a fight first, then post from here."))
                         .ffType(.body)
@@ -305,6 +321,11 @@ struct FeedComposeSheet: View {
             }
             if let error = feed.error, !error.isEmpty {
                 FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
+            }
+        }
+        .onAppear {
+            if let lockedFightID {
+                feed.prepare(fightID: lockedFightID)
             }
         }
     }
@@ -406,8 +427,8 @@ struct FightPostsSection: View {
     let fightID: UUID
 
     @EnvironmentObject private var session: SessionStore
+    @EnvironmentObject private var fightFeed: FeedStore
     @Environment(\.ffTheme) private var theme
-    @StateObject private var fightFeed = FeedStore()
 
     var body: some View {
         VStack(alignment: .leading, spacing: theme.space.cardGap) {
@@ -416,17 +437,21 @@ struct FightPostsSection: View {
                     .ffType(.caption)
                     .foregroundStyle(theme.emberText)
             }
-            if fightFeed.posts.isEmpty && !fightFeed.isLoading {
-                Text(String(localized: "Post from Feed and select this fight’s channel."))
-                    .ffType(.caption)
-                    .foregroundStyle(theme.textSecondary)
+            if fightFeed.posts.isEmpty && fightFeed.isLoading {
+                FFLoadingBlock()
+            } else if fightFeed.posts.isEmpty && !fightFeed.isLoading {
+                FFCard {
+                    Text(String(localized: "Nothing here yet. Tap + to post."))
+                        .ffType(.body)
+                        .foregroundStyle(theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             ForEach(fightFeed.posts) { post in
                 FightPostCard(post: post, onOpen: nil)
             }
         }
-        .environmentObject(fightFeed)
-        .task {
+        .task(id: fightID) {
             await fightFeed.load(session: session, fightID: fightID)
         }
     }

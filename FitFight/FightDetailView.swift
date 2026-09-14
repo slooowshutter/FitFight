@@ -29,8 +29,10 @@ struct FightDetailView: View {
     @EnvironmentObject private var steps: HealthKitStepsStore
     @Environment(\.ffTheme) private var theme
 
+    @StateObject private var fightFeed = FeedStore()
     @State private var copiedCode = false
     @State private var copiedLink = false
+    @State private var composingFeed = false
     @State private var fightsRevision = 0
     @State private var pane: FightDetailPane = .stats
 
@@ -68,6 +70,10 @@ struct FightDetailView: View {
             && (fight.recurring || fight.joinCode != nil)
     }
 
+    private var fightUUID: UUID? {
+        UUID(uuidString: fight.id)
+    }
+
     private var youDeferred: Bool {
         you?.deferred == true
     }
@@ -102,12 +108,24 @@ struct FightDetailView: View {
                 case .history:
                     historyPane
                 case .feed:
-                    if let fightID = UUID(uuidString: fight.id) {
-                        FightPostsSection(fightID: fightID)
+                    if let fightUUID {
+                        FightPostsSection(fightID: fightUUID)
+                            .environmentObject(fightFeed)
                     }
                 case .share:
                     shareCard
                 }
+            }
+        }
+        .environmentObject(fightFeed)
+        .sheet(isPresented: $composingFeed) {
+            if let fightUUID {
+                FeedComposeSheet(lockedFightID: fightUUID)
+                    .environmentObject(model)
+                    .environmentObject(session)
+                    .environmentObject(fightFeed)
+                    .fitFightTheme(theme)
+                    .presentationBackground(theme.bg)
             }
         }
         .onReceive(model.$fights) { _ in
@@ -131,6 +149,9 @@ struct FightDetailView: View {
             message: model.refreshStatusText,
             action: {
                 await model.refreshFights(session: session, steps: steps, trigger: .manual)
+                if pane == .feed, let fightUUID {
+                    await fightFeed.load(session: session, fightID: fightUUID)
+                }
             }
         )
     }
@@ -342,6 +363,15 @@ struct FightDetailView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                if pane == .feed, !pendingJoin, fightUUID != nil {
+                    FeedComposeButton {
+                        if let fightUUID {
+                            fightFeed.prepare(fightID: fightUUID)
+                        }
+                        composingFeed = true
+                    }
+                    .padding(.top, 4)
+                }
             }
         }
         .fixedSize(horizontal: false, vertical: true)

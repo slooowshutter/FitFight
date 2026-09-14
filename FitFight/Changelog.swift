@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 14,
+            notes: "A fight’s Feed tab now has the same + as the main Feed, so you can post without leaving the fight."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
             notes: "You can still use FitFight when you’re offline. The update screen only appears when an update is actually required, not when the version check can’t reach the internet."
         ),
         ReleaseNote(

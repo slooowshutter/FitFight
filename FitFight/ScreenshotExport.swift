@@ -126,6 +126,7 @@ enum ScreenshotExport {
                 ("invitation", AnyView(FightDetailView(fight: invite)), .fights),
                 ("history", AnyView(FightDetailView(fight: group, pane: .history)), .fights),
                 ("share", AnyView(FightDetailView(fight: group, pane: .share)), .fights),
+                ("fight-feed", AnyView(FightDetailView(fight: group, pane: .feed)), .fights),
                 ("new", AnyView(NewFightView()), .newFight),
                 ("review", AnyView(NewFightView(opening: .create, initialStep: 4)), .newFight),
                 ("feed", AnyView(FeedView()), .feed),

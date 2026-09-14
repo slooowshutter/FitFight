@@ -262,12 +262,21 @@ struct FeedView: View {
 }
 
 struct FeedComposeSheet: View {
+    var lockedFightID: UUID? = nil
+
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var feed: FeedStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.dismiss) private var dismiss
-    @State private var destinations: Set<FeedPostDestination> = []
+    @State private var destinations: Set<FeedPostDestination>
+
+    init(lockedFightID: UUID? = nil) {
+        self.lockedFightID = lockedFightID
+        _destinations = State(
+            initialValue: lockedFightID.map { Set([FeedPostDestination.fight($0)]) } ?? []
+        )
+    }
 
     private var fights: [Fight] {
         postableFights(model.fights)
@@ -284,11 +293,13 @@ struct FeedComposeSheet: View {
                     .ffType(.label)
                     .foregroundStyle(theme.mossText)
             }
-            Text("Your post will only appear in the channels you select. You can choose more than one.")
-                .ffType(.caption)
-                .foregroundStyle(theme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-            if fights.isEmpty {
+            if lockedFightID == nil {
+                Text("Your post will only appear in the channels you select. You can choose more than one.")
+                    .ffType(.caption)
+                    .foregroundStyle(theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if lockedFightID == nil && fights.isEmpty {
                 FFCard {
                     Text(String(localized: "Join a fight first, then post from here."))
                         .ffType(.body)
@@ -298,7 +309,9 @@ struct FeedComposeSheet: View {
             } else {
                 FightPostComposer(
                     destinations: Array(destinations),
-                    destination: AnyView(FeedDestinationMenu(fights: fights, destinations: $destinations))
+                    destination: lockedFightID == nil
+                        ? AnyView(FeedDestinationMenu(fights: fights, destinations: $destinations))
+                        : nil
                 ) {
                     dismiss()
                 }
@@ -405,19 +418,35 @@ struct FeedDestinationMenu: View {
 struct FightPostsSection: View {
     let fightID: UUID
 
+    @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
     @StateObject private var fightFeed = FeedStore()
+    @State private var composing = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: theme.space.cardGap) {
+            HStack {
+                Spacer()
+                Button {
+                    composing = true
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(theme.mossOn)
+                        .frame(width: 36, height: 36)
+                        .background(theme.mossFill, in: Circle())
+                }
+                .buttonStyle(FFHapticPlainStyle())
+                .accessibilityLabel(String(localized: "New post"))
+            }
             if let error = fightFeed.error, !error.isEmpty {
                 Text(error)
                     .ffType(.caption)
                     .foregroundStyle(theme.emberText)
             }
             if fightFeed.posts.isEmpty && !fightFeed.isLoading {
-                Text(String(localized: "Post from Feed and select this fight’s channel."))
+                Text(String(localized: "Nothing here yet. Tap + to post."))
                     .ffType(.caption)
                     .foregroundStyle(theme.textSecondary)
             }
@@ -428,6 +457,14 @@ struct FightPostsSection: View {
         .environmentObject(fightFeed)
         .task {
             await fightFeed.load(session: session, fightID: fightID)
+        }
+        .sheet(isPresented: $composing) {
+            FeedComposeSheet(lockedFightID: fightID)
+                .environmentObject(model)
+                .environmentObject(session)
+                .environmentObject(fightFeed)
+                .fitFightTheme(theme)
+                .presentationBackground(theme.bg)
         }
     }
 }

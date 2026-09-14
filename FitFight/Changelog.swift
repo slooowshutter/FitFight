@@ -50,6 +50,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 14,
+            notes: "Posting from a fight’s Feed starts on that fight. You can still add other channels."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
             notes: "Every day so far opens on the oval. Bars show a small companion next to each name. Heat, stack, and rings are gone."
         ),
         ReleaseNote(

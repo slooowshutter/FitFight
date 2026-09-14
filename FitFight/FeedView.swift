@@ -248,22 +248,12 @@ struct FeedView: View {
     }
 
     private var composeButton: some View {
-        Button {
-            composing = true
-        } label: {
-            Image(systemName: "plus")
-                .font(.system(size: 16, weight: .bold))
-                .foregroundStyle(theme.mossOn)
-                .frame(width: 36, height: 36)
-                .background(theme.mossFill, in: Circle())
-        }
-        .buttonStyle(FFHapticPlainStyle())
-        .accessibilityLabel(String(localized: "New post"))
+        FeedComposeButton { composing = true }
     }
 }
 
 struct FeedComposeSheet: View {
-    var lockedFightID: UUID? = nil
+    var defaultFightID: UUID? = nil
 
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var session: SessionStore
@@ -272,10 +262,10 @@ struct FeedComposeSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var destinations: Set<FeedPostDestination>
 
-    init(lockedFightID: UUID? = nil) {
-        self.lockedFightID = lockedFightID
+    init(defaultFightID: UUID? = nil) {
+        self.defaultFightID = defaultFightID
         _destinations = State(
-            initialValue: lockedFightID.map { Set([FeedPostDestination.fight($0)]) } ?? []
+            initialValue: defaultFightID.map { Set([FeedPostDestination.fight($0)]) } ?? []
         )
     }
 
@@ -294,13 +284,11 @@ struct FeedComposeSheet: View {
                     .ffType(.label)
                     .foregroundStyle(theme.mossText)
             }
-            if lockedFightID == nil {
-                Text("Your post will only appear in the channels you select. You can choose more than one.")
-                    .ffType(.caption)
-                    .foregroundStyle(theme.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            if lockedFightID == nil && fights.isEmpty {
+            Text("Your post will only appear in the channels you select. You can choose more than one.")
+                .ffType(.caption)
+                .foregroundStyle(theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if fights.isEmpty && defaultFightID == nil {
                 FFCard {
                     Text(String(localized: "Join a fight first, then post from here."))
                         .ffType(.body)
@@ -310,9 +298,7 @@ struct FeedComposeSheet: View {
             } else {
                 FightPostComposer(
                     destinations: Array(destinations),
-                    destination: lockedFightID == nil
-                        ? AnyView(FeedDestinationMenu(fights: fights, destinations: $destinations))
-                        : nil
+                    destination: AnyView(FeedDestinationMenu(fights: fights, destinations: $destinations))
                 ) {
                     dismiss()
                 }
@@ -416,6 +402,24 @@ struct FeedDestinationMenu: View {
     }
 }
 
+private struct FeedComposeButton: View {
+    let action: () -> Void
+
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "plus")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(theme.mossOn)
+                .frame(width: 36, height: 36)
+                .background(theme.mossFill, in: Circle())
+        }
+        .buttonStyle(FFHapticPlainStyle())
+        .accessibilityLabel(String(localized: "New post"))
+    }
+}
+
 struct FightPostsSection: View {
     let fightID: UUID
 
@@ -427,40 +431,30 @@ struct FightPostsSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: theme.space.cardGap) {
-            HStack {
-                Spacer()
-                Button {
-                    composing = true
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(theme.mossOn)
-                        .frame(width: 36, height: 36)
-                        .background(theme.mossFill, in: Circle())
+            HStack(alignment: .center, spacing: 12) {
+                if fightFeed.posts.isEmpty && !fightFeed.isLoading {
+                    Text(String(localized: "Tap + to post to this fight."))
+                        .ffType(.caption)
+                        .foregroundStyle(theme.textSecondary)
                 }
-                .buttonStyle(FFHapticPlainStyle())
-                .accessibilityLabel(String(localized: "New post"))
+                Spacer(minLength: 0)
+                FeedComposeButton { composing = true }
             }
             if let error = fightFeed.error, !error.isEmpty {
                 Text(error)
                     .ffType(.caption)
                     .foregroundStyle(theme.emberText)
             }
-            if fightFeed.posts.isEmpty && !fightFeed.isLoading {
-                Text(String(localized: "Nothing here yet. Tap + to post."))
-                    .ffType(.caption)
-                    .foregroundStyle(theme.textSecondary)
-            }
             ForEach(fightFeed.posts) { post in
                 FightPostCard(post: post, onOpen: nil)
             }
         }
         .environmentObject(fightFeed)
-        .task {
+        .task(id: fightID) {
             await fightFeed.load(session: session, fightID: fightID)
         }
         .sheet(isPresented: $composing) {
-            FeedComposeSheet(lockedFightID: fightID)
+            FeedComposeSheet(defaultFightID: fightID)
                 .environmentObject(model)
                 .environmentObject(session)
                 .environmentObject(fightFeed)

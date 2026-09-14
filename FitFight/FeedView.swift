@@ -254,6 +254,7 @@ struct FeedView: View {
 
 struct FeedComposeSheet: View {
     var defaultFightID: UUID? = nil
+    var onPosted: (() -> Void)? = nil
 
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var session: SessionStore
@@ -262,8 +263,9 @@ struct FeedComposeSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var destinations: Set<FeedPostDestination>
 
-    init(defaultFightID: UUID? = nil) {
+    init(defaultFightID: UUID? = nil, onPosted: (() -> Void)? = nil) {
         self.defaultFightID = defaultFightID
+        self.onPosted = onPosted
         _destinations = State(
             initialValue: defaultFightID.map { Set([FeedPostDestination.fight($0)]) } ?? []
         )
@@ -300,6 +302,7 @@ struct FeedComposeSheet: View {
                     destinations: Array(destinations),
                     destination: AnyView(FeedDestinationMenu(fights: fights, destinations: $destinations))
                 ) {
+                    onPosted?()
                     dismiss()
                 }
             }
@@ -425,6 +428,7 @@ struct FightPostsSection: View {
 
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var session: SessionStore
+    @EnvironmentObject private var feed: FeedStore
     @Environment(\.ffTheme) private var theme
     @StateObject private var fightFeed = FeedStore()
     @State private var composing = false
@@ -454,12 +458,14 @@ struct FightPostsSection: View {
             await fightFeed.load(session: session, fightID: fightID)
         }
         .sheet(isPresented: $composing) {
-            FeedComposeSheet(defaultFightID: fightID)
-                .environmentObject(model)
-                .environmentObject(session)
-                .environmentObject(fightFeed)
-                .fitFightTheme(theme)
-                .presentationBackground(theme.bg)
+            FeedComposeSheet(defaultFightID: fightID) {
+                Task { await fightFeed.load(session: session, fightID: fightID) }
+            }
+            .environmentObject(model)
+            .environmentObject(session)
+            .environmentObject(feed)
+            .fitFightTheme(theme)
+            .presentationBackground(theme.bg)
         }
     }
 }

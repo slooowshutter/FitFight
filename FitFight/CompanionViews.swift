@@ -48,9 +48,25 @@ final class CompanionStore: ObservableObject {
     @Published private(set) var hasChosen = false
     @Published var showingPicker = false
 
+    private static let pendingPrefix = "ff.companion.pending."
+
+    static func hasPendingChoice(for userId: UUID?) -> Bool {
+        guard let userId else { return false }
+        return UserDefaults.standard.string(forKey: pendingPrefix + userId.uuidString) != nil
+    }
+
     func apply(_ profile: FitFightProfile?) {
         guard !CompanionPreview.isEnabled else { return }
         if let id = profile?.companionId, let animal = StockCompanion(rawValue: id) {
+            selection = animal
+            hasChosen = true
+            if let userId = profile?.userId,
+               UserDefaults.standard.string(forKey: Self.pendingPrefix + userId.uuidString) == id {
+                UserDefaults.standard.removeObject(forKey: Self.pendingPrefix + userId.uuidString)
+            }
+        } else if let userId = profile?.userId,
+                  let pending = UserDefaults.standard.string(forKey: Self.pendingPrefix + userId.uuidString),
+                  let animal = StockCompanion(rawValue: pending) {
             selection = animal
             hasChosen = true
         } else {
@@ -71,10 +87,38 @@ final class CompanionStore: ObservableObject {
             return
         }
         #endif
-        try await session.setCompanion(animal)
         selection = animal
         hasChosen = true
         showingPicker = false
+        if let userId = session.profile?.userId {
+            UserDefaults.standard.set(animal.rawValue, forKey: Self.pendingPrefix + userId.uuidString)
+        }
+        do {
+            try await session.setCompanion(animal)
+            if let userId = session.profile?.userId {
+                UserDefaults.standard.removeObject(forKey: Self.pendingPrefix + userId.uuidString)
+            }
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            // Keep the local pick so the app stays usable if the save is offline.
+        }
+    }
+
+    func publishPending(session: SessionStore) async {
+        guard let userId = session.profile?.userId,
+              let pending = UserDefaults.standard.string(forKey: Self.pendingPrefix + userId.uuidString),
+              let animal = StockCompanion(rawValue: pending) else { return }
+        if session.profile?.companionId == pending {
+            UserDefaults.standard.removeObject(forKey: Self.pendingPrefix + userId.uuidString)
+            return
+        }
+        do {
+            try await session.setCompanion(animal)
+            UserDefaults.standard.removeObject(forKey: Self.pendingPrefix + userId.uuidString)
+        } catch {
+            return
+        }
     }
 
     func animal(for personID: String?, companionID: String? = nil, isYou: Bool = false) -> StockCompanion? {

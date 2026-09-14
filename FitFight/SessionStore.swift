@@ -56,7 +56,7 @@ final class SessionStore: ObservableObject {
         guard !needsOnboarding, !needsHealthOnboarding, !needsNotificationOnboarding, !needsRequestsOnboarding else {
             return false
         }
-        return profile?.companionId == nil
+        return profile?.companionId == nil && !CompanionStore.hasPendingChoice(for: profile?.userId)
     }
 
     var isFitFightAdmin: Bool {
@@ -307,6 +307,13 @@ final class SessionStore: ObservableObject {
         guard !screenshotSignedIn else { throw CompanionPreview.WriteUnavailable() }
         guard let userId = authSession?.user.id ?? client.auth.currentUser?.id else {
             throw HandleError.notSignedIn
+        }
+        if var current = profile, current.userId == userId {
+            current.companionId = companion.rawValue
+            profile = current
+            if let data = try? JSONEncoder().encode(current) {
+                UserDefaults.standard.set(data, forKey: Self.profileCachePrefix + userId.uuidString)
+            }
         }
         let token = try await freshAccessToken()
         let updated = try await api.updateProfile(companionId: companion.rawValue, accessToken: token)

@@ -70,11 +70,15 @@ struct ContentView: View {
                 .presentationBackground(themeStore.theme.bg)
                 .interactiveDismissDisabled(session.needsCompanionSelection)
         }
-        .onChange(of: session.profile?.companionId) { _, _ in
+        .onChange(of: session.profile?.companionId) { _, companionId in
             companions.apply(session.profile)
+            if companionId == nil {
+                Task { await companions.publishPending(session: session) }
+            }
         }
         .onAppear {
             companions.apply(session.profile)
+            Task { await companions.publishPending(session: session) }
         }
         .alert(String(localized: "Companion preview"), isPresented: Binding(
             get: { model.companionPreviewNotice != nil },

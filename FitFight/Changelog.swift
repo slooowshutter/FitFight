@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 14,
+            notes: "A failed Apple Health sync now shows why, in ember, with a Retry pill instead of Connected."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
             notes: "Bugs & requests can include a photo, a video, or any file."
         ),
         ReleaseNote(

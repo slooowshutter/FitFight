@@ -29,6 +29,27 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 14,
+            notes: "You can take a photo with the camera when you add Media, not only pick one from the library."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "If you created a fight, Edit lets you change private or public, the title, the loser action, the duration, whether it repeats, who is in it, and kick people out."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "You can post from a fight’s Feed, not only from the main Feed tab."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
             notes: "You can still use FitFight when you’re offline. The update screen only appears when an update is actually required, not when the version check can’t reach the internet."
         ),
         ReleaseNote(

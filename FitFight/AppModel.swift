@@ -130,6 +130,7 @@ struct Fight: Codable, Identifiable, Hashable {
     var joinCode: String? = nil
     var seriesId: String? = nil
     var recurring: Bool = false
+    var visibility: String = "invite_only"
     var pendingJoin: Bool = false
     var offersJoinNext: Bool = false
 
@@ -175,6 +176,10 @@ struct Fight: Codable, Identifiable, Hashable {
     }
 
     var isUpcoming: Bool { serverState == "scheduled" && windowStart > Date() }
+
+    var canOwnerEdit: Bool {
+        inviter?.isYou == true && (status == .live || isUpcoming)
+    }
 
     /// Exact stored cutoff, in the phone’s local date and time.
     var deadlineLabel: String {
@@ -231,6 +236,7 @@ final class AppModel: ObservableObject {
     @Published var pendingJoinable: Fight?
     @Published var pendingReferralError: String?
     @Published private(set) var isCreatingFight = false
+    @Published private(set) var isUpdatingFight = false
     @Published private(set) var isJoiningFight = false
     @Published private(set) var isRefreshingFights = false
     @Published private(set) var refreshPhase: FightRefreshPhase = .idle
@@ -749,6 +755,87 @@ final class AppModel: ObservableObject {
         }
     }
 
+    func updateFight(
+        id: String,
+        name: String,
+        actionText: String,
+        visibility: String,
+        recurring: Bool,
+        startsAt: Date?,
+        endsAt: Date,
+        inviteHandles: [String],
+        removeUserIds: [String]
+    ) async -> Bool {
+        guard !CompanionPreview.isEnabled else {
+            createError = CompanionPreview.writeUnavailable
+            return false
+        }
+        guard !isUpdatingFight else { return false }
+        isUpdatingFight = true
+        defer { isUpdatingFight = false }
+        createError = nil
+        guard let access = session?.authSession?.accessToken, api.isConfigured else {
+            createError = String(localized: "Sign in to edit this fight.")
+            return false
+        }
+        guard let fightID = UUID(uuidString: id) else {
+            createError = String(localized: "Couldn’t save the fight.")
+            return false
+        }
+        let title = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let action = actionText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard title.count <= 120 else {
+            createError = String(localized: "Keep the title to 120 characters.")
+            return false
+        }
+        guard action.count <= 120 else {
+            createError = String(localized: "Keep the action to 120 characters.")
+            return false
+        }
+        if let startsAt, startsAt <= Date() {
+            createError = String(localized: "Choose a start time in the future.")
+            return false
+        }
+        guard endsAt > (startsAt ?? Date.distantPast) else {
+            createError = String(localized: "The end must be after the start.")
+            return false
+        }
+        guard endsAt > Date() else {
+            createError = String(localized: "The end must be in the future.")
+            return false
+        }
+        let handles = inviteHandles.reduce(into: [String]()) { result, raw in
+            let handle = SessionStore.strippedHandle(raw)
+            if SessionStore.isValidHandle(handle), !result.contains(handle) {
+                result.append(handle)
+            }
+        }
+        let removals = removeUserIds.compactMap(UUID.init(uuidString:))
+        do {
+            _ = try await api.updateFight(
+                fightID: fightID,
+                payload: FitFightUpdateFight(
+                    name: title,
+                    actionText: action,
+                    visibility: visibility,
+                    recurring: recurring,
+                    startsAt: startsAt,
+                    endsAt: endsAt,
+                    inviteHandles: handles.isEmpty ? nil : handles,
+                    removeUserIds: removals.isEmpty ? nil : removals
+                ),
+                accessToken: access
+            )
+            await refreshFromServer()
+            return true
+        } catch {
+            createError = (error as? LiveFightError)?.errorDescription
+                ?? (error as? FitFightAPIError)?.errorDescription
+                ?? String(localized: "Couldn’t save the fight.")
+            return false
+        }
+    }
+
     func acceptInvite(token: String, start: String = "now") async throws {
         guard !CompanionPreview.isEnabled else { throw CompanionPreview.WriteUnavailable() }
         createError = nil
@@ -1087,6 +1174,7 @@ final class AppModel: ObservableObject {
             windowEnd: ends,
             joinCode: summary.joinCode,
             recurring: summary.recurring,
+            visibility: "joinable",
             pendingJoin: true,
             offersJoinNext: offersJoinNext
         )
@@ -1223,7 +1311,13 @@ final class AppModel: ObservableObject {
         }
         let remainingLabel = RemainingTime.phrase(until: ends)
 
-        let peopleUnsorted = members.map { member -> Standing in
+        let peopleUnsorted = members.compactMap { member -> Standing? in
+            switch member.state {
+            case "invited", "accepted", "deferred":
+                break
+            default:
+                return nil
+            }
             let profile = profiles[member.userId]
             let person: Person
             if let profile {
@@ -1433,6 +1527,7 @@ final class AppModel: ObservableObject {
             joinCode: series?.joinCode,
             seriesId: series?.id.uuidString,
             recurring: series?.recurring ?? false,
+            visibility: series?.visibility ?? "invite_only",
             offersJoinNext: (series?.recurring ?? false)
                 && Self.isAfterFightStartDay(starts)
                 && mine?.state == "invited"
@@ -1550,6 +1645,7 @@ private enum AppModelFixtures {
                 kickerEmphasis: "12.0k",
                 kickerRest: String(localized: "behind @leo_runs"),
                 listSubtitle: String(localized: "12.0k behind @leo_runs"),
+                inviter: you,
                 standings: [
                     Standing(person: leo, score: 54_000, lastSyncedAt: syncedJustNow),
                     Standing(person: you, score: 42_000, lastSyncedAt: syncedToday),

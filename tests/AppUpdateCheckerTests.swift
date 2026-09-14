@@ -41,9 +41,13 @@ private struct AppUpdateCheckerTests {
 
         let outdated = AppUpdateChecker(version: "1.0.0", build: "183", releaseURL: url,
                                           defaults: defaults, session: session)
-        precondition(outdated.status == .checking, "No app access before the first check")
+        precondition(outdated.status == .checking, "First launch starts checking until a result arrives")
+        precondition(outdated.allowsUse && await outdated.permitsRequests(),
+                     "An unverified launch must remain usable")
         await outdated.check()
         precondition(outdated.status == .updateRequired, "An old public build must be blocked")
+        precondition(!outdated.allowsUse && !(await outdated.permitsRequests()),
+                     "A known mandatory update must block the app and API")
         await outdated.check()
         precondition(outdated.status == .updateRequired, "Checking again must not dismiss the gate")
         precondition(outdated.policy?.latest?.updateURL.absoluteString == "itms-beta://")
@@ -55,23 +59,28 @@ private struct AppUpdateCheckerTests {
         ReleaseProtocol.responseStatus = 503
         await relaunched.check()
         precondition(relaunched.status == .updateRequired, "A failed check must not clear a known update")
+        precondition(!relaunched.allowsUse, "Offline must not dismiss a known mandatory update")
 
         let installed = AppUpdateChecker(version: "1.0.0", build: "184", releaseURL: url,
                                          defaults: defaults, session: session)
-        precondition(installed.status == .checking, "A cached matching build still needs a fresh check")
+        precondition(installed.status == .current, "A cached admitted build stays usable before a fresh check")
         await installed.check()
-        precondition(installed.status == .unavailable, "Network failure must not grant unverified access")
+        precondition(installed.status == .unavailable, "A failed check is recorded as unavailable")
+        precondition(installed.allowsUse && await installed.permitsRequests(),
+                     "A failed check must not lock an admitted build")
         ReleaseProtocol.responseStatus = 200
         await installed.check()
         precondition(installed.status == .current, "Friends on the public latest must not be asked to update")
         let previousRequests = ReleaseProtocol.requests
         let permitted = await installed.permitsRequests()
         precondition(permitted && ReleaseProtocol.requests == previousRequests,
-                     "A foreground sync can reuse the just-completed version check")
+                     "API use must not wait on another version check")
 
         ReleaseProtocol.responseData = Data("{broken".utf8)
         await installed.check()
-        precondition(installed.status == .unavailable, "Malformed metadata must not grant access")
+        precondition(installed.status == .unavailable, "Malformed metadata is treated as a failed check")
+        precondition(installed.allowsUse && await installed.permitsRequests(),
+                     "Malformed metadata must not lock the app")
         ReleaseProtocol.responseData = try JSONEncoder().encode(policy)
         let otherVersion = AppUpdateChecker(version: "1.1.0", build: "184", releaseURL: url,
                                             defaults: defaults, session: session)
@@ -131,7 +140,23 @@ private struct AppUpdateCheckerTests {
         precondition(allowed.0 && allowed.1 && ReleaseProtocol.requests == beforeConcurrent + 1,
                      "Launch and session checks must share one request and the same result")
         concurrent.rejectRequest(updateRequired: false)
-        precondition(concurrent.status == .unavailable, "An API release-check failure must block use")
-        print("App update checks passed: overlay gate, public vs internal, persistence, review and concurrency")
+        precondition(concurrent.status == .unavailable, "An API release-check failure is recorded as unavailable")
+        precondition(concurrent.allowsUse && await concurrent.permitsRequests(),
+                     "An API release-check failure must not lock the app")
+
+        let offlineSuite = "fitfight-release-tests-offline.\(UUID().uuidString)"
+        let offlineDefaults = UserDefaults(suiteName: offlineSuite)!
+        defer { offlineDefaults.removePersistentDomain(forName: offlineSuite) }
+        ReleaseProtocol.responseStatus = 503
+        let offline = AppUpdateChecker(version: "1.0.0", build: "184", releaseURL: url,
+                                       defaults: offlineDefaults, session: session)
+        precondition(offline.status == .checking, "No cache means the first launch still checks")
+        precondition(offline.allowsUse && await offline.permitsRequests(),
+                     "No internet must not lock the app before the first check")
+        await offline.check()
+        precondition(offline.status == .unavailable, "An offline check is recorded as unavailable")
+        precondition(offline.allowsUse && await offline.permitsRequests(),
+                     "No internet must not lock the app after a failed check")
+        print("App update checks passed: overlay gate, public vs internal, persistence, review, concurrency and offline use")
     }
 }

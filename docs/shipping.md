@@ -152,7 +152,7 @@ After a feature PR merges, CI deletes that branch. `main`, `develop`, `preview`,
 
 A push to `preview` that touches the app or Fastlane starts TestFlight. Feature-branch and `develop` pushes do not. Tell Marc only after that upload: wait for the TestFlight notification, then **Update** (internal testers only). Processing often takes ~10–20 minutes. Do not tell friends the public join link has a new build unless Marc promoted that build in App Store Connect. Check the workflow result before promising a build. Do not ask him to Run workflow.
 
-Both staging and production binaries check `/api/app-release` at launch, on foregrounding, and every minute while active. Until the installed build is admitted, the previous full overlay sits under the version line (not a popup over Fights). A failed or offline check keeps that overlay. Known mismatches still survive relaunch.
+Both staging and production binaries check `/api/app-release` at launch, on foregrounding, and every minute while active. Until the installed build is admitted, the previous full overlay sits under the version line (not a popup over Fights). A failed or offline check leaves the app usable. Known mismatches still survive relaunch.
 
 ## API compatibility for every change
 
@@ -235,4 +235,4 @@ later promote the cutoff from [`supabase/deferred-migrations`](../supabase/defer
 after installability, enforcement, review-candidate compatibility, staging checks, and
 old-backend drainage are verified. CI tests both permission states on disposable Supabase.
 
-Verification: Ruby release tests cover review, group availability, expiry, the first gated rollout, internal-only TestFlight latest, and production candidates. The GitHub-hosted macOS simulator workflow also runs `tests/AppUpdateCheckerTests.swift` for persistence, failed checks, exact matching, public vs internal latest, review access and concurrent checks. Check both English and French, launch/resume, that the full overlay appears only when the installed build is not admitted, a failed check keeps the overlay, and the store link works on a real staging build before shipping.
+Verification: Ruby release tests cover review, group availability, expiry, the first gated rollout, internal-only TestFlight latest, and production candidates. The GitHub-hosted macOS simulator workflow also runs `tests/AppUpdateCheckerTests.swift` for persistence, failed checks, exact matching, public vs internal latest, review access, concurrent checks, and offline use. Check both English and French, launch/resume, that the full overlay appears only when the installed build is known not to be admitted, a failed check leaves the app usable, and the store link works on a real staging build before shipping.

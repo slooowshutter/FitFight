@@ -137,11 +137,11 @@ struct FitFightApp: App {
                     guard let userId = session.authSession?.user.id else { return }
                     CrashReporting.identify(userId: userId)
                 }
-                .task(id: appUpdate.status == .current ? session.authSession?.user.id : nil) {
+                .task(id: appUpdate.allowsUse ? session.authSession?.user.id : nil) {
                     guard !CompanionPreview.isEnabled else { return }
                     model.pendingReferralError = nil
-                    steps.activate(userId: appUpdate.status == .current ? session.authSession?.user.id : nil)
-                    guard appUpdate.status == .current else { return }
+                    steps.activate(userId: appUpdate.allowsUse ? session.authSession?.user.id : nil)
+                    guard appUpdate.allowsUse else { return }
                     model.restoreCachedFights(session: session)
                     await model.refreshFights(session: session, steps: steps)
                     if !session.needsOnboarding,
@@ -151,9 +151,9 @@ struct FitFightApp: App {
                         await push.considerPromptIfNeeded(fights: model.fights)
                     }
                 }
-                .task(id: appUpdate.status == .current ? session.profile?.userId : nil) {
+                .task(id: appUpdate.allowsUse ? session.profile?.userId : nil) {
                     guard !CompanionPreview.isEnabled else { return }
-                    guard appUpdate.status == .current else { return }
+                    guard appUpdate.allowsUse else { return }
                     await model.consumePendingLinks(session: session)
                 }
                 .onOpenURL { url in

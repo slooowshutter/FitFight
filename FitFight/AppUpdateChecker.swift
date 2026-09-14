@@ -84,6 +84,8 @@ final class AppUpdateChecker: ObservableObject {
     @Published private(set) var policy: AppReleasePolicy?
     @Published private(set) var isChecking = false
 
+    var allowsUse: Bool { status != .updateRequired }
+
     private let version: String
     private let build: String
     private let releaseURL: URL
@@ -91,7 +93,6 @@ final class AppUpdateChecker: ObservableObject {
     private let session: URLSession
     private let cacheKey: String
     private var inFlight: Task<Bool, Never>?
-    private var verifiedAt: Date?
 
     init(version: String, build: String, releaseURL: URL, defaults: UserDefaults = .standard,
          session: URLSession = .shared) {
@@ -102,10 +103,13 @@ final class AppUpdateChecker: ObservableObject {
         self.session = session
         cacheKey = "fitfight.release-policy.\(releaseURL.absoluteString)"
         if let data = defaults.data(forKey: cacheKey),
-           let cached = try? JSONDecoder().decode(AppReleasePolicy.self, from: data),
-           cached.latest != nil, !cached.allows(version: version, build: build) {
+           let cached = try? JSONDecoder().decode(AppReleasePolicy.self, from: data) {
             policy = cached
-            status = .updateRequired
+            if cached.allows(version: version, build: build) {
+                status = .current
+            } else if cached.latest != nil {
+                status = .updateRequired
+            }
         }
     }
 
@@ -131,31 +135,24 @@ final class AppUpdateChecker: ObservableObject {
                 self.policy = policy
                 self.defaults.set(data, forKey: self.cacheKey)
                 if policy.allows(version: self.version, build: self.build) {
-                    self.verifiedAt = Date()
                     self.status = .current
                 } else {
-                    self.verifiedAt = nil
                     self.status = policy.latest == nil ? .unavailable : .updateRequired
                 }
             } catch {
-                self.verifiedAt = nil
                 if self.status != .updateRequired { self.status = .unavailable }
             }
-            return self.status == .current
+            return self.status != .updateRequired
         }
         inFlight = task
         return await task.value
     }
 
     func permitsRequests() async -> Bool {
-        if status == .current, let verifiedAt, Date().timeIntervalSince(verifiedAt) < 60 {
-            return true
-        }
-        return await check()
+        allowsUse
     }
 
     func rejectRequest(updateRequired: Bool) {
-        verifiedAt = nil
         if updateRequired {
             status = .updateRequired
         } else if status != .updateRequired {

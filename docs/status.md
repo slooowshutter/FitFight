@@ -16,7 +16,7 @@ and availability are observations, not permanent configuration.
 
 | Part | Observed status |
 | --- | --- |
-| Native/API separation | Current source calls `/api/v1`, sends app version/build headers, and routes application database access through `FitFightAPI`. The full update overlay checks release eligibility at launch/foreground and every minute while active. No `/api/v2` is needed or implemented. |
+| Native/API separation | Current source calls `/api/v1`, sends app version/build headers, and routes application database access through `FitFightAPI`. The full update overlay checks release eligibility at launch/foreground and every minute while active, and only replaces the app when the installed build is known to be outdated. A failed or offline check leaves the app usable. No `/api/v2` is needed or implemented. |
 | Staging release policy | [`/api/app-release`](https://staging.fitfight.app/api/app-release) returned 200: `latest` 184, `review`/`internal` 189, all `1.0.0`, `enforced: true`. |
 | Staging backend enforcement | A read-only `GET /api/v1/me` with build 183 and an intentionally invalid audit bearer returned `426 update_required` before authentication. No real user session or data was used. |
 | Staging profile readiness | [`/api/health`](https://staging.fitfight.app/api/health) returned `schema: ready`, `profile_api: true`. This readiness check includes the additive profile migration and backend reader role. |
@@ -80,7 +80,7 @@ You still do **not** paste `sb_secret_...` anywhere.
 
 ## Before this branch ships
 
-The mandatory-update manifest and `GET /api/app-release` are live on staging; production still needs the endpoint before its native build, and the scheduled publisher must reach `main`. The existing server `NEXT_PUBLIC_SUPABASE_URL` selects the staging/production release channel. The native app replaces Fights with the full update overlay until the installed build is the public latest, an admitted review candidate, or the latest internal TestFlight build. A failed check keeps that overlay. Internal-only builds do not become the Friends Beta requirement. No database migration is part of the update check itself. See [mandatory updates and database rollout](shipping.md#mandatory-updates-and-database-rollout).
+The mandatory-update manifest and `GET /api/app-release` are live on staging; production still needs the endpoint before its native build, and the scheduled publisher must reach `main`. The existing server `NEXT_PUBLIC_SUPABASE_URL` selects the staging/production release channel. The native app replaces Fights with the full update overlay when the installed build is known to be outdated. A failed or offline check leaves the app usable. Known mismatches still survive relaunch. Internal-only builds do not become the Friends Beta requirement. No database migration is part of the update check itself. See [mandatory updates and database rollout](shipping.md#mandatory-updates-and-database-rollout).
 
 The 7 Sep referral changes require the referral migration, `POST /api/v1/referrals`,
 and updated Universal Link association before the native build. You → Settings →

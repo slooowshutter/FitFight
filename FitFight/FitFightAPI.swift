@@ -1135,10 +1135,9 @@ struct FitFightAPI {
         do {
             try Task.checkCancellation()
             guard await AppUpdateChecker.shared.permitsRequests() else {
-                let requiresUpdate = await AppUpdateChecker.shared.status == .updateRequired
                 throw FitFightAPIError.http(
-                    status: requiresUpdate ? 426 : 503,
-                    code: requiresUpdate ? "update_required" : "release_unavailable",
+                    status: 426,
+                    code: "update_required",
                     message: nil
                 )
             }

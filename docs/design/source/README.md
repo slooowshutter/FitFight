@@ -11,6 +11,7 @@ This folder contains the current approved design and the archived design dump it
 | [`tokens.json`](./tokens.json) | Machine-readable SwiftUI tokens. This must remain byte-for-byte identical to `FitFight/DesignSystem/tokens.json`. |
 | [`kit/companion-app-proposal.html`](./kit/companion-app-proposal.html) | Selected Companion screen direction, retained as the tappable reference. Existing native behavior remains authoritative. |
 | [`companion/`](./companion/README.md) | Preserved artwork, asset manifest, reproducible crops, and native review captures. |
+| [`companion/generation-studies/`](./companion/generation-studies/README.md) | 14 Sep 2026 dump: identity sheet, five activity forms, group scenes. Style references for Blend, not bundled assets. |
 
 The approved system has two bases, Night and Day, and fixed semantic colour families:
 

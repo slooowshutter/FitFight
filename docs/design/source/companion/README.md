@@ -18,6 +18,8 @@ See [the Simulator handoff](../../companion-simulator-handoff.md) and [captures]
 
 ## Planned generation APIs — P0, requested 13 Sep 2026
 
+Provider choice (14 Sep 2026): **three private Blend workflows**, called from the TypeScript backend. Product rules, allowances, and FitFight/Blend contracts: [companion-generation-proposal.md](../../companion-generation-proposal.md). Style dump: [generation-studies](generation-studies/README.md). None of this is implemented.
+
 These are future backend features, not implemented endpoints. The native screens and stock artwork are already in `FitFight/`; they do not require another HTML-to-SwiftUI port. Stock selection is still local to the current app session. Persisted identity is the prerequisite for other people and devices to see the same companion.
 
 A selected companion becomes the person's app avatar on You, fights, standings, Feed and comments. Profile-photo controls must not compete with that choice. The account keeps its real user ID, username and display name; changing an animal never changes membership or scores.
@@ -28,18 +30,18 @@ Add **Custom** to companion selection. The person supplies an animal, optional b
 
 An authenticated TypeScript endpoint creates the companion through the chosen image workflow/provider, saves the resulting avatar and full-body asset, and returns their references. The profile read API returns the chosen companion and its assets so every native surface uses the same identity. Save the prompt/workflow version and reference artwork required to reproduce the character. Generation failure must preserve the existing selection; only a successful, confirmed result becomes the person's avatar.
 
-Before implementation: select the workflow/provider and server credentials, approve the character recipe and output sizes, and decide generation allowances. The app needs loading, failure and confirmation states. Secrets stay on the server; generated files use the existing owned-media/storage boundary. Account selection and its read contract must ship before generated avatars are shown to other people.
+Before implementation: Marc publishes the three Blend workflows to the contract in the generation proposal, adds a server `bai_` key, and answers the eight product questions there. The app needs loading, failure and confirmation states. Secrets stay on the server; generated files use the existing owned-media/storage boundary. Account selection and its read contract must ship before generated avatars are shown to other people.
 
 ### 2. Five activity forms of the same companion
 
-A separate generation operation takes the saved identity, customization and reference artwork and creates **five consistent forms**. Form 1 sits on a couch with a blanket and a cup of tea; form 5 is tall and very muscular. Forms 2–4 and the activity thresholds/window still need a product decision.
+A separate generation operation takes the saved identity, customization and reference artwork and creates **five consistent forms**. Form 1 sits on a couch with a blanket and a cup of tea; form 5 is sprinting and more muscular. Forms 2–4 are up/walking/jogging. Recommended step bands are in the generation proposal until Marc confirms them.
 
-Store each form against the same companion revision. Activity changes select an already saved form; they do not generate another image every time the screen opens. Preserve the animal, breed, face, clothes and accessories across the set. Partial generation must not replace a complete usable set. These forms are presentation only and do not change Steps scoring.
+Store each form against the same companion revision. Activity changes select an already saved form; they do not generate another image every time the screen opens. Proposed bands (today’s merged Steps): 0–2,999 couch, 3,000–5,999 up, 6,000–9,999 walking, 10,000–14,999 jogging, 15,000+ sprint — see the generation proposal. Preserve the animal, breed, face, clothes and accessories across the set. Partial generation must not replace a complete usable set. These forms are presentation only and do not change Steps scoring.
 
 ### 3. Group challenge artwork
 
 A third operation uses the participants' saved companion avatars, characteristics and reference images to create one coherent challenge scene. Read the cast from authorized fight membership. Store the scene with the fight/round, participant IDs and companion revisions used to generate it, then reuse it on subsequent reads.
 
-Before implementation: decide when to generate the scene, what membership or customization changes require a new one, and the allowance per fight/round. Every participant must remain recognizable. Keep ordinary standings available while artwork is pending or unavailable. This case is explicitly planned only.
+Before implementation: follow the generation proposal (organizer tap, one image per fight ID, 2–4 in frame) unless Marc picks another option from that list. Every participant in the drawing must remain recognizable. Keep ordinary standings available while artwork is pending or unavailable. This case is explicitly planned only.
 
 All three cases need authenticated ownership checks, validated requests and provider responses, persistent generation status, and protection against duplicate paid submissions. Server business logic belongs under `web/`; database access belongs in `web/lib/supabase/queries/`. No app-facing Postgres RPCs and no provider keys in iOS.

@@ -2,7 +2,7 @@
 
 **Source of truth:** [`source/`](source/README.md) — the approved web kit (tokens, inventory, screenshots).
 
-**Selected Companion direction:** [`companion-implementation-plan.md`](companion-implementation-plan.md) and [the tappable layout](source/kit/companion-app-proposal.html). The first implementation checkpoint is the native Simulator review; account identity and generation follow acceptance.
+**Selected Companion direction:** [`companion-implementation-plan.md`](companion-implementation-plan.md) and [the tappable layout](source/kit/companion-app-proposal.html). The first implementation checkpoint is the native Simulator review; account identity and generation follow acceptance. Blend generation (identity, five activity forms, group scene) is proposed in [`companion-generation-proposal.md`](companion-generation-proposal.md); do not implement it until Marc answers the questions there.
 
 **Design options for Marc:** one self-contained HTML page per screen in [`source/kit/`](source/README.md), every option behind a picker, built from the kit tokens. PRs still require Marc’s explicit request. Proposal-only work does not change Swift — see [`AGENTS.md`](../../AGENTS.md).
 

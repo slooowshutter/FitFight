@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 14,
+            notes: "You can still use FitFight when you’re offline. The update screen only appears when an update is actually required, not when the version check can’t reach the internet."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
             notes: "Crashes are now reported so we can fix them. Reports do not include Apple Health or Steps."
         ),
         ReleaseNote(

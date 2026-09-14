@@ -236,7 +236,7 @@ enum FFMove {
         switch self {
         case .up: return "▲"
         case .down: return "▼"
-        case .same: return "—"
+        case .same: return "-"
         }
     }
 }

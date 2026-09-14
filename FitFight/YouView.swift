@@ -181,7 +181,8 @@ struct YouView: View {
     }
 
     private var health: some View {
-        FFGroupedRows {
+        let syncFailed = steps.connection == .syncFailed
+        return FFGroupedRows {
             Button {
                 Task {
                     await model.refreshFights(session: session, steps: steps, trigger: .manual, requestAccess: !steps.hasAsked)
@@ -192,11 +193,13 @@ struct YouView: View {
                     subtitle: steps.connection == .upToDate ? String(localized: "Up to date") : steps.detailText,
                     systemImage: "heart",
                     enabled: steps.status != .reading && !model.isRefreshingFights,
-                    subtitleTone: steps.isConnected ? .moss : .neutral,
+                    subtitleTone: syncFailed ? .ember : (steps.isConnected ? .moss : .neutral),
                     trailing: AnyView(
                         FFPill(
-                            steps.isConnected ? String(localized: "Connected") : String(localized: "Connect"),
-                            style: steps.isConnected ? .softMoss : .solidMoss
+                            syncFailed
+                                ? String(localized: "Retry")
+                                : (steps.isConnected ? String(localized: "Connected") : String(localized: "Connect")),
+                            style: syncFailed ? .softEmber : (steps.isConnected ? .softMoss : .solidMoss)
                         )
                     )
                 )

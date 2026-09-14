@@ -289,8 +289,13 @@ enum HealthKitActivityAggregates {
             }
             store.execute(query)
         }
-        return samples.map { workout in
-            FitFightHealthKitStepSync.Workout(
+        return samples.compactMap { workout -> FitFightHealthKitStepSync.Workout? in
+            guard workout.endDate > workout.startDate,
+                  workout.endDate <= end,
+                  workout.duration >= 0,
+                  workout.duration <= 7 * 24 * 60 * 60
+            else { return nil }
+            return FitFightHealthKitStepSync.Workout(
                 healthkitUuid: workout.uuid.uuidString.lowercased(),
                 startedAt: iso8601(workout.startDate),
                 endedAt: iso8601(workout.endDate),

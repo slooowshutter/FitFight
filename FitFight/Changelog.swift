@@ -50,6 +50,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 14,
+            notes: "Two-word companion names now capitalize both words, like Red Panda."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
             notes: "If you created a fight, Edit lets you change private or public, the title, the loser action, the duration, whether it repeats, who is in it, and kick people out."
         ),
         ReleaseNote(

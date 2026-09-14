@@ -10,7 +10,7 @@ enum StockCompanion: String, CaseIterable, Identifiable {
         switch self {
         case .badger: String(localized: "Badger")
         case .raccoon: String(localized: "Raccoon")
-        case .redPanda: String(localized: "Red panda")
+        case .redPanda: String(localized: "Red Panda")
         case .otter: String(localized: "Otter")
         case .rabbit: String(localized: "Rabbit")
         case .fox: String(localized: "Fox")

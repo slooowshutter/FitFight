@@ -51,6 +51,8 @@
 		A10000000000000000000323 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000325 /* Localizable.xcstrings */; };
 		A10000000000000000000324 /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000326 /* InfoPlist.xcstrings */; };
 		A1000000000000000000F002 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = A1000000000000000000F001 /* Supabase */; };
+		A1000000000000000000F012 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = A1000000000000000000F011 /* PostHog */; };
+		A10000000000000000000421 /* CrashReporting.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000420 /* CrashReporting.swift */; };
 		A10000000000000000000332 /* HealthKitSyncTrace.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000331 /* HealthKitSyncTrace.swift */; };
 		A10000000000000000000351 /* Profile.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000350 /* Profile.swift */; };
 		A10000000000000000000353 /* FightSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000352 /* FightSnapshot.swift */; };
@@ -146,6 +148,7 @@
 		A10000000000000000000412 /* RemoteImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteImage.swift; sourceTree = "<group>"; };
 		A10000000000000000000414 /* SlideHaptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlideHaptics.swift; sourceTree = "<group>"; };
 		A10000000000000000000416 /* SlideHapticsLabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlideHapticsLabView.swift; sourceTree = "<group>"; };
+		A10000000000000000000420 /* CrashReporting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrashReporting.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -154,6 +157,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1000000000000000000F002 /* Supabase in Frameworks */,
+				A1000000000000000000F012 /* PostHog in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -179,6 +183,7 @@
 				A10000000000000000000340 /* RequestsView.swift */,
 				A10000000000000000000301 /* SupabaseConfig.swift */,
 				A10000000000000000000305 /* BuildEnv.swift */,
+				A10000000000000000000420 /* CrashReporting.swift */,
 				A10000000000000000000306 /* APIConfig.swift */,
 				A10000000000000000000307 /* FitFightAPI.swift */,
 				A10000000000000000000388 /* FeedbackClientMetadata.swift */,
@@ -283,6 +288,7 @@
 			name = FitFight;
 			packageProductDependencies = (
 				A1000000000000000000F001 /* Supabase */,
+				A1000000000000000000F011 /* PostHog */,
 			);
 			productName = FitFight;
 			productReference = A10000000000000000000010 /* FitFight.app */;
@@ -315,6 +321,7 @@
 			mainGroup = A10000000000000000000032;
 			packageReferences = (
 				A1000000000000000000F000 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				A1000000000000000000F010 /* XCRemoteSwiftPackageReference "posthog-ios" */,
 			);
 			productRefGroup = A10000000000000000000031 /* Products */;
 			projectDirPath = "";
@@ -376,6 +383,7 @@
 				A10000000000000000000021 /* ScreenshotExport.swift in Sources */,
 				A10000000000000000000311 /* SupabaseConfig.swift in Sources */,
 				A10000000000000000000315 /* BuildEnv.swift in Sources */,
+				A10000000000000000000421 /* CrashReporting.swift in Sources */,
 				A10000000000000000000316 /* APIConfig.swift in Sources */,
 				A10000000000000000000317 /* FitFightAPI.swift in Sources */,
 				A10000000000000000000389 /* FeedbackClientMetadata.swift in Sources */,
@@ -640,6 +648,14 @@
 				minimumVersion = 2.55.1;
 			};
 		};
+		A1000000000000000000F010 /* XCRemoteSwiftPackageReference "posthog-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/PostHog/posthog-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.59.3;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -647,6 +663,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = A1000000000000000000F000 /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Supabase;
+		};
+		A1000000000000000000F011 /* PostHog */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A1000000000000000000F010 /* XCRemoteSwiftPackageReference "posthog-ios" */;
+			productName = PostHog;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

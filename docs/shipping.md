@@ -86,6 +86,16 @@ Names only. Never print values. Never ask Marc to paste the `.p8` into chat.
 
 There is a separate Expo EAS key in App Store Connect. Do not reuse it.
 
+### Still needed for crash reports
+
+Names only. Never print values. Never paste the PostHog project token in chat.
+
+| Secret | Used when | What it is |
+| --- | --- | --- |
+| `POSTHOG_PROJECT_API_KEY` | TestFlight (`preview`) and App Store archives | PostHog **project** API key (`phc_...`). Crash reports only. |
+
+Optional Actions **variable** `POSTHOG_HOST`: `https://us.i.posthog.com` (default) or `https://eu.i.posthog.com` if the PostHog project is EU Cloud. In PostHog, turn on error-tracking exception autocapture and leave session replay off.
+
 Do **not** add a Supabase `service_role` or `sb_secret_...` key to GitHub. Deploys use GitHub Integration. See [`backend.md`](backend.md).
 
 ## GitHub variables (TestFlight environment)
@@ -97,6 +107,7 @@ Names only. Never print values. Settings → Secrets and variables → Actions �
 | `SUPABASE_STAGING_URL` | every TestFlight | Persistent `develop` Supabase project URL |
 | `SUPABASE_STAGING_PUBLISHABLE_KEY` | every TestFlight | Publishable key for that project (`sb_publishable_...`) |
 | `FITFIGHT_API_URL` | every TestFlight | `https://staging.fitfight.app` |
+| `POSTHOG_HOST` | TestFlight and App Store, optional | PostHog ingest host. Default `https://us.i.posthog.com`. Use `https://eu.i.posthog.com` for EU Cloud. |
 
 Every TestFlight ships `https://zstzbfocunthczzubggz.supabase.co` (GitHub `SUPABASE_STAGING_*` variables override if set). The staging publishable key must be that project’s key, not production’s. Persistent `develop` must stay persistent so merging to `main` does not delete it. TestFlight CI builds the `preview` commit that triggered it. The top version label always shows `staging`. `main` never uploads to TestFlight.
 

@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 14,
+            notes: "Crashes are now reported so we can fix them. Reports do not include Apple Health or Steps."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
             notes: "Slide to start now ticks like a switch as you drag, instead of buzzing the whole time."
         ),
         ReleaseNote(

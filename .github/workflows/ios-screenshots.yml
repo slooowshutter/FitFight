@@ -46,6 +46,8 @@ jobs:
               '    static let supabaseURL = "https://pvqntpteehdvhqyctwum.supabase.co"\n'
               '    static let supabasePublishableKey = "sb_publishable_6wP1KNFvJwIE_hX1U2aTfg_u3sk40Li"\n'
               '    static let apiBaseURL = "https://fitfight.app"\n'
+              '    static let posthogProjectAPIKey = ""\n'
+              '    static let posthogHost = ""\n'
               "}\n"
           )
           PY

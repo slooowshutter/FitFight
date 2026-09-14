@@ -31,18 +31,24 @@ enum CrashReporting {
         config.flushAt = 1
         // Crash-only: never send screens, sessions, Health, or product events.
         config.setBeforeSend { event in
-            event.event == "$exception" ? event : nil
+            switch event.event {
+            case "$exception", "$identify":
+                return event
+            default:
+                return nil
+            }
         }
         PostHogSDK.shared.setup(config)
         started = true
     }
 
-    static func identify(userId: UUID?) {
+    static func identify(userId: UUID) {
         guard started else { return }
-        if let userId {
-            PostHogSDK.shared.identify(userId.uuidString)
-        } else {
-            PostHogSDK.shared.reset()
-        }
+        PostHogSDK.shared.identify(userId.uuidString)
+    }
+
+    static func reset() {
+        guard started else { return }
+        PostHogSDK.shared.reset()
     }
 }

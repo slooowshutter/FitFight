@@ -191,6 +191,7 @@ final class SessionStore: ObservableObject {
         authSession = nil
         profile = nil
         profileUnavailable = false
+        CrashReporting.reset()
         UserDefaults.standard.removeObject(forKey: Self.handleChosenKey)
         UserDefaults.standard.removeObject(forKey: Self.needsHealthKey)
         UserDefaults.standard.removeObject(forKey: Self.needsNotificationKey)
@@ -314,6 +315,7 @@ final class SessionStore: ObservableObject {
             authSession = nil
             profile = nil
             profileUnavailable = false
+            CrashReporting.reset()
             UserDefaults.standard.removeObject(forKey: Self.handleChosenKey)
             UserDefaults.standard.removeObject(forKey: Self.needsHealthKey)
             UserDefaults.standard.removeObject(forKey: Self.needsNotificationKey)

@@ -134,7 +134,8 @@ struct FitFightApp: App {
                 }
                 .task(id: session.authSession?.user.id) {
                     guard !CompanionPreview.isEnabled else { return }
-                    CrashReporting.identify(userId: session.authSession?.user.id)
+                    guard let userId = session.authSession?.user.id else { return }
+                    CrashReporting.identify(userId: userId)
                 }
                 .task(id: appUpdate.status == .current ? session.authSession?.user.id : nil) {
                     guard !CompanionPreview.isEnabled else { return }

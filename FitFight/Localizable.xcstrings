@@ -215,6 +215,8 @@
     "Change" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Modifier"}}}},
     "Check the agreement before you invite everyone." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Vérifiez l’accord avant d’inviter tout le monde."}}}},
     "Close" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Fermer"}}}},
+    "View photo" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Voir la photo"}}}},
+    "Tap a photo in Feed to see it full screen." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Touche une photo dans le Fil pour la voir en plein écran."}}}},
     "Connect" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Connecter"}}}},
     "Connect Apple Health above to start this fight." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Connectez Santé d’Apple ci-dessus pour lancer ce défi."}}}},
     "Connect to score this fight" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Connectez-vous pour comptabiliser ce défi"}}}},

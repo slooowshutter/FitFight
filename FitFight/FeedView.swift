@@ -859,22 +859,63 @@ private struct FightPostPhoto: View {
     let height: Int
 
     @Environment(\.ffTheme) private var theme
+    @State private var opened = false
 
     var body: some View {
-        Color.clear
-            .aspectRatio(ratio, contentMode: .fit)
-            .frame(maxWidth: .infinity)
-            .fixedSize(horizontal: false, vertical: true)
-            .overlay {
-                RemotePhoto(url: url, kind: .photo) {
-                    theme.control
+        Button {
+            opened = true
+        } label: {
+            Color.clear
+                .aspectRatio(ratio, contentMode: .fit)
+                .frame(maxWidth: .infinity)
+                .fixedSize(horizontal: false, vertical: true)
+                .overlay {
+                    RemotePhoto(url: url, kind: .photo) {
+                        theme.control
+                    }
                 }
-            }
-            .clipShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
+        }
+        .buttonStyle(FFHapticPlainStyle())
+        .accessibilityLabel(String(localized: "View photo"))
+        .fullScreenCover(isPresented: $opened) {
+            FightPostPhotoViewer(url: url)
+                .fitFightTheme(theme)
+                .presentationBackground(theme.bg)
+        }
     }
 
     private var ratio: CGFloat {
         CGFloat(max(width, 1)) / CGFloat(max(height, 1))
+    }
+}
+
+private struct FightPostPhotoViewer: View {
+    let url: URL
+    @Environment(\.ffTheme) private var theme
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ZStack {
+            theme.bg.ignoresSafeArea()
+            RemotePhoto(url: url, kind: .photo, contentMode: .fit) {
+                theme.control
+            }
+            .ignoresSafeArea()
+            .accessibilityHidden(true)
+            VStack {
+                HStack {
+                    Spacer()
+                    Button(String(localized: "Close")) { dismiss() }
+                        .ffType(.label)
+                        .foregroundStyle(theme.mossText)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .buttonStyle(FFHapticPlainStyle())
+                }
+                Spacer()
+            }
+            .padding(.horizontal, theme.space.screenPadding)
+        }
     }
 }
 

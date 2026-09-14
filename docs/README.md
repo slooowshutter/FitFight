@@ -13,5 +13,6 @@ For Cursor cloud agents and anyone picking up this repo cold.
 | [history.md](history.md) | What already shipped and the traps we hit |
 | [research/pending-final-sync-plan.md](research/pending-final-sync-plan.md) | Pending **P**, tentative result, 24h forfeit (10 Sep 2026) |
 | [research/apns-remote-push-plan.md](research/apns-remote-push-plan.md) | Final-sync push reminders (plan only) |
+| [research/recording-vs-apple-health.md](research/recording-vs-apple-health.md) | Record a run ourselves vs pull Apple Health (14 Sep 2026) |
 
 Start with [`AGENTS.md`](../AGENTS.md) in the repo root.

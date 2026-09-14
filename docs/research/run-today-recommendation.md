@@ -11,7 +11,7 @@ This is a daily **session picker**, not a periodized coach. It answers one quest
 
 It must be safe when data is thin, boring when they are tired, and useful when they are ready. It must never invent intervals because the calendar looks empty.
 
-FitFight’s shipped product is still private Steps fights. This document is a training-recommendation design, not a new fight type and not a WHOOP/Strava integration. See [`sports-health-integrations.md`](sports-health-integrations.md) and [`apple-health-next-metrics.md`](apple-health-next-metrics.md).
+FitFight’s shipped product is still private Steps fights. This document is a training-recommendation design, not a new fight type and not a WHOOP/Strava integration. Parent research (Runna reverse-engineer, weekly mix, ±% speed verdict, cycling/swim adapters): [`runna-style-training-algorithm.md`](runna-style-training-algorithm.md). Also [`sports-health-integrations.md`](sports-health-integrations.md) and [`apple-health-next-metrics.md`](apple-health-next-metrics.md).
 
 ---
 

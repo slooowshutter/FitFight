@@ -26,6 +26,7 @@
 		A1000000000000000000000B /* FightsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001B /* FightsListView.swift */; };
 		A1000000000000000000000C /* FightDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001C /* FightDetailView.swift */; };
 		A1000000000000000000000D /* NewFightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001D /* NewFightView.swift */; };
+		A10000000000000000000423 /* EditFightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000422 /* EditFightView.swift */; };
 		A1000000000000000000000F /* YouView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001F /* YouView.swift */; };
 		A10000000000000000000341 /* RequestsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000340 /* RequestsView.swift */; };
 		A10000000000000000000021 /* ScreenshotExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000022 /* ScreenshotExport.swift */; };
@@ -107,6 +108,7 @@
 		A1000000000000000000001B /* FightsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FightsListView.swift; sourceTree = "<group>"; };
 		A1000000000000000000001C /* FightDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FightDetailView.swift; sourceTree = "<group>"; };
 		A1000000000000000000001D /* NewFightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewFightView.swift; sourceTree = "<group>"; };
+		A10000000000000000000422 /* EditFightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditFightView.swift; sourceTree = "<group>"; };
 		A1000000000000000000001F /* YouView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouView.swift; sourceTree = "<group>"; };
 		A10000000000000000000340 /* RequestsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestsView.swift; sourceTree = "<group>"; };
 		A10000000000000000000022 /* ScreenshotExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotExport.swift; sourceTree = "<group>"; };
@@ -179,6 +181,7 @@
 				A1000000000000000000001C /* FightDetailView.swift */,
 				A10000000000000000000368 /* FightDayCharts.swift */,
 				A1000000000000000000001D /* NewFightView.swift */,
+				A10000000000000000000422 /* EditFightView.swift */,
 				A1000000000000000000001F /* YouView.swift */,
 				A10000000000000000000340 /* RequestsView.swift */,
 				A10000000000000000000301 /* SupabaseConfig.swift */,
@@ -378,6 +381,7 @@
 				A1000000000000000000000C /* FightDetailView.swift in Sources */,
 				A10000000000000000000369 /* FightDayCharts.swift in Sources */,
 				A1000000000000000000000D /* NewFightView.swift in Sources */,
+				A10000000000000000000423 /* EditFightView.swift in Sources */,
 				A1000000000000000000000F /* YouView.swift in Sources */,
 				A10000000000000000000341 /* RequestsView.swift in Sources */,
 				A10000000000000000000021 /* ScreenshotExport.swift in Sources */,

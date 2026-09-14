@@ -100,6 +100,7 @@ extension CompanionPreview {
                           totals: [28_430, 25_590, 22_340, 20_840], cast: Array(people.prefix(4)), length: 7, hoursLeft: 54)
         group.recurring = true
         group.seriesId = "A0000000-0000-4000-8000-000000000001"
+        group.inviter = people[0]
         var duel = fight(2, name: french ? "Sans ascenseur, sans pitié" : "No lift, no mercy", code: "H8P4",
                          totals: [18_420, 19_680], cast: [people[0], people[4]], length: 7, hoursLeft: 124)
         duel.actionText = french ? "Prend les escaliers toute la semaine" : "Takes the stairs all next week"

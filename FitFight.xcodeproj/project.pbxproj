@@ -69,6 +69,8 @@
 		A10000000000000000000389 /* FeedbackClientMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000388 /* FeedbackClientMetadata.swift */; };
 		A10000000000000000000401 /* CompanionViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000400 /* CompanionViews.swift */; };
 		A10000000000000000000403 /* CompanionPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000402 /* CompanionPreview.swift */; };
+		A10000000000000000000411 /* RemoteImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000410 /* RemoteImageCache.swift */; };
+		A10000000000000000000413 /* RemoteImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000412 /* RemoteImage.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -138,6 +140,8 @@
 		A10000000000000000000372 /* FightPostThread.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FightPostThread.swift; sourceTree = "<group>"; };
 		A10000000000000000000400 /* CompanionViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionViews.swift; sourceTree = "<group>"; };
 		A10000000000000000000402 /* CompanionPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionPreview.swift; sourceTree = "<group>"; };
+		A10000000000000000000410 /* RemoteImageCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteImageCache.swift; sourceTree = "<group>"; };
+		A10000000000000000000412 /* RemoteImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteImage.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -178,6 +182,8 @@
 				A10000000000000000000352 /* FightSnapshot.swift */,
 				A10000000000000000000360 /* Media.swift */,
 				A10000000000000000000362 /* MediaUploader.swift */,
+				A10000000000000000000410 /* RemoteImageCache.swift */,
+				A10000000000000000000412 /* RemoteImage.swift */,
 				A10000000000000000000364 /* FeedView.swift */,
 				A10000000000000000000372 /* FightPostThread.swift */,
 				A10000000000000000000366 /* HealthOnboardingView.swift */,
@@ -370,6 +376,8 @@
 				A10000000000000000000353 /* FightSnapshot.swift in Sources */,
 				A10000000000000000000361 /* Media.swift in Sources */,
 				A10000000000000000000363 /* MediaUploader.swift in Sources */,
+				A10000000000000000000411 /* RemoteImageCache.swift in Sources */,
+				A10000000000000000000413 /* RemoteImage.swift in Sources */,
 				A10000000000000000000365 /* FeedView.swift in Sources */,
 				A10000000000000000000379 /* PushNotificationService.swift in Sources */,
 				A10000000000000000000381 /* NotificationOnboardingView.swift in Sources */,

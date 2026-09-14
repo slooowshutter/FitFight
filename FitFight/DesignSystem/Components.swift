@@ -696,16 +696,8 @@ struct FFAvatar: View {
     @ViewBuilder
     private var face: some View {
         if let photoURL {
-            AsyncImage(url: photoURL) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .interpolation(.high)
-                        .scaledToFill()
-                default:
-                    monogramLabel
-                }
+            RemotePhoto(url: photoURL, kind: .avatar) {
+                monogramLabel
             }
         } else if let photo, UIImage(named: photo) != nil {
             Image(photo)

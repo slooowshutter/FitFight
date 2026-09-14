@@ -42,6 +42,14 @@ final class FeedStore: ObservableObject {
             posts = more ? posts + result.posts.filter { post in !posts.contains(where: { $0.id == post.id }) } : result.posts
             nextCursor = result.nextCursor
             error = nil
+            RemoteImageLoader.shared.prefetch(
+                posts.compactMap { $0.author.avatar?.url },
+                kind: .avatar
+            )
+            RemoteImageLoader.shared.prefetch(
+                posts.flatMap { $0.media }.compactMap { $0.kind == "video" ? nil : $0.url },
+                kind: .photo
+            )
         } catch {
             if Task.isCancelled || error is CancellationError { return }
             guard load == listLoad else { return }
@@ -766,15 +774,8 @@ private struct FightPostPhoto: View {
             .frame(maxWidth: .infinity)
             .fixedSize(horizontal: false, vertical: true)
             .overlay {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    default:
-                        theme.control
-                    }
+                RemotePhoto(url: url, kind: .photo) {
+                    theme.control
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))

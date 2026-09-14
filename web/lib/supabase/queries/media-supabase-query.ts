@@ -11,8 +11,28 @@ import {
 } from "@/lib/types/media/media";
 
 const BUCKET = "user-media";
-const SIGNED_READ_SECONDS = 3600;
+const SIGNED_READ_SECONDS = 21_600;
+const SIGNED_REUSE_MS = (SIGNED_READ_SECONDS - 300) * 1000;
+const SIGN_BATCH = 50;
 const PENDING_LIMIT = 3;
+
+type CachedSignedUrl = { url: string; expiresAtMs: number };
+
+const signedUrlCache = new Map<string, CachedSignedUrl>();
+
+export function signedUrlsFromBatch(
+  paths: string[],
+  rows: { path: string | null; signedUrl: string | null; error: string | null }[],
+): Map<string, string | null> {
+  const urls = new Map<string, string | null>();
+  for (const path of paths) urls.set(path, null);
+  for (const [index, row] of rows.entries()) {
+    const path = row.path ?? paths[index];
+    if (!path) continue;
+    urls.set(path, row.error || !row.signedUrl ? null : row.signedUrl);
+  }
+  return urls;
+}
 
 export type MediaRow = {
   id: string;
@@ -53,11 +73,45 @@ export function mapMedia(row: MediaRow, url: string | null): MediaObject {
   });
 }
 
-export async function signMediaUrl(objectPath: string): Promise<string | null> {
+export async function signMediaUrls(objectPaths: string[]): Promise<Map<string, string | null>> {
+  const nowMs = Date.now();
+  if (signedUrlCache.size > 2000) {
+    for (const [path, entry] of signedUrlCache) {
+      if (entry.expiresAtMs <= nowMs) signedUrlCache.delete(path);
+    }
+    if (signedUrlCache.size > 2000) signedUrlCache.clear();
+  }
+
+  const urls = new Map<string, string | null>();
+  const missing: string[] = [];
+  for (const path of objectPaths) {
+    if (!path || urls.has(path)) continue;
+    const cached = signedUrlCache.get(path);
+    if (cached && cached.expiresAtMs > nowMs) {
+      urls.set(path, cached.url);
+    } else {
+      missing.push(path);
+      urls.set(path, null);
+    }
+  }
+  if (missing.length === 0) return urls;
+
   const admin = createAdminClient();
-  const { data, error } = await admin.storage.from(BUCKET).createSignedUrl(objectPath, SIGNED_READ_SECONDS);
-  if (error || !data?.signedUrl) return null;
-  return data.signedUrl;
+  const expiresAtMs = nowMs + SIGNED_REUSE_MS;
+  for (let index = 0; index < missing.length; index += SIGN_BATCH) {
+    const slice = missing.slice(index, index + SIGN_BATCH);
+    const { data, error } = await admin.storage.from(BUCKET).createSignedUrls(slice, SIGNED_READ_SECONDS);
+    const rows = error || !data ? [] : data;
+    for (const [path, url] of signedUrlsFromBatch(slice, rows)) {
+      urls.set(path, url);
+      if (url) signedUrlCache.set(path, { url, expiresAtMs });
+    }
+  }
+  return urls;
+}
+
+export async function signMediaUrl(objectPath: string): Promise<string | null> {
+  return (await signMediaUrls([objectPath])).get(objectPath) ?? null;
 }
 
 export async function createMediaUpload(

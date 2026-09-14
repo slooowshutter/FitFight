@@ -21,6 +21,13 @@
         "en" : {"stringUnit":{"state":"translated","value":"FitFight does not add to or change Apple Health. It only requests read-only access to the activity types in the read description."}},
         "fr" : {"stringUnit":{"state":"translated","value":"FitFight n’ajoute ni ne modifie aucune donnée dans Santé d’Apple. L’app demande uniquement un accès en lecture aux types d’activité indiqués dans la description de lecture."}}
       }
+    },
+    "NSCameraUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {"stringUnit":{"state":"translated","value":"FitFight uses the camera so you can take a photo and attach it to a fight post."}},
+        "fr" : {"stringUnit":{"state":"translated","value":"FitFight utilise l’appareil photo pour que tu puisses prendre une photo et la joindre à une publication."}}
+      }
     }
   },
   "version" : "1.0"

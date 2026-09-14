@@ -560,6 +560,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = FitFight;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = public.app-category.sports;
+				INFOPLIST_KEY_NSCameraUsageDescription = "FitFight uses the camera so you can take a photo and attach it to a fight post.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "FitFight reads your Apple Health steps and other movement—energy, distance, exercise, stand, flights, and workouts. Steps fights share only your step totals with accepted participants. Other activity stays on your account until a future challenge type uses it.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "FitFight does not add to or change Apple Health. It only requests read-only access to the activity types in the read description.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -597,6 +598,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = FitFight;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = public.app-category.sports;
+				INFOPLIST_KEY_NSCameraUsageDescription = "FitFight uses the camera so you can take a photo and attach it to a fight post.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "FitFight reads your Apple Health steps and other movement—energy, distance, exercise, stand, flights, and workouts. Steps fights share only your step totals with accepted participants. Other activity stays on your account until a future challenge type uses it.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "FitFight does not add to or change Apple Health. It only requests read-only access to the activity types in the read description.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

@@ -203,8 +203,8 @@ struct RemotePhoto<Placeholder: View>: View {
             }
         }
         .onAppear {
-            if let url {
-                image = RemoteImageLoader.shared.cached(url: url, kind: kind)
+            if let url, let cached = RemoteImageLoader.shared.cached(url: url, kind: kind) {
+                image = cached
             }
         }
         .task(id: url?.absoluteString ?? "") {

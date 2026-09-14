@@ -13,5 +13,6 @@ For Cursor cloud agents and anyone picking up this repo cold.
 | [history.md](history.md) | What already shipped and the traps we hit |
 | [research/pending-final-sync-plan.md](research/pending-final-sync-plan.md) | Pending **P**, tentative result, 24h forfeit (10 Sep 2026) |
 | [research/apns-remote-push-plan.md](research/apns-remote-push-plan.md) | Final-sync push reminders (plan only) |
+| [research/run-today-recommendation.md](research/run-today-recommendation.md) | Spec: “I want to run today” picker (not a build) |
 
 Start with [`AGENTS.md`](../AGENTS.md) in the repo root.

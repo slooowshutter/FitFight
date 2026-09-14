@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 14,
+            notes: "Apple Health Steps still syncs even if extra workout details fail. You shows the real server or network error instead of only Sync failed, and no longer labels a failed sync as Connected."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
             notes: "Photos and profile pictures now show up much faster. They stay on the phone after the first load, so Feed, Fights and You don’t sit on empty boxes."
         ),
         ReleaseNote(
@@ -36,7 +43,7 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 13,
-            notes: "Feed photos keep their original shape and fill the post width. A wide photo stays short, a tall one stays tall — nothing is cropped to a fixed frame."
+            notes: "Feed photos keep their original shape and fill the post width. A wide photo stays short, a tall one stays tall, nothing is cropped to a fixed frame."
         ),
         ReleaseNote(
             version: "1.0.0",
@@ -99,7 +106,7 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 12,
-            notes: "Plus starts with no destination — pick Public or a fight. Public posts and fight posts look different. You can edit or delete your own posts. Tags are people you’ve already finished a fight with."
+            notes: "Plus starts with no destination, pick Public or a fight. Public posts and fight posts look different. You can edit or delete your own posts. Tags are people you’ve already finished a fight with."
         ),
         ReleaseNote(
             version: "1.0.0",
@@ -120,7 +127,7 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 12,
-            notes: "Fights, the challenge page, and stats now show everyone’s photo when they have one — not just initials."
+            notes: "Fights, the challenge page, and stats now show everyone’s photo when they have one, not just initials."
         ),
         ReleaseNote(
             version: "1.0.0",
@@ -666,7 +673,7 @@ enum Changelog {
             year: 2026,
             month: 8,
             day: 29,
-            notes: "New look, built from the approved design kit. One palette instead of ten accent colours — moss is you and winning, ember is losing and urgent, gold is progress. Nunito replaces Manrope. Every screen rebuilt: a moss hero card on Fights, a head-to-head block and leaderboard on a fight, new form controls on New fight. Look is now Night or Day. You → Settings → Design system shows every token and component in the app."
+            notes: "New look, built from the approved design kit. One palette instead of ten accent colours, moss is you and winning, ember is losing and urgent, gold is progress. Nunito replaces Manrope. Every screen rebuilt: a moss hero card on Fights, a head-to-head block and leaderboard on a fight, new form controls on New fight. Look is now Night or Day. You → Settings → Design system shows every token and component in the app."
         ),
         ReleaseNote(
             version: "0.9.0",
@@ -701,7 +708,7 @@ enum Changelog {
             year: 2026,
             month: 8,
             day: 25,
-            notes: "This TestFlight talks to develop. The version at the top includes staging and the date of the last ship. Still 0.9.0 — only the build number and the date change."
+            notes: "This TestFlight talks to develop. The version at the top includes staging and the date of the last ship. Still 0.9.0, only the build number and the date change."
         ),
         ReleaseNote(
             version: "0.8.0",
@@ -715,7 +722,7 @@ enum Changelog {
             year: 2026,
             month: 8,
             day: 25,
-            notes: "Sign in, add friends by handle, start a real Steps fight, Apple Health uploads to the server, standings come from the database. Fights are no longer the fixture people. When the days are up the fight closes on the server — you do not have to leave the app open. Design tab still previews the old mock. Requests is unchanged."
+            notes: "Sign in, add friends by handle, start a real Steps fight, Apple Health uploads to the server, standings come from the database. Fights are no longer the fixture people. When the days are up the fight closes on the server, you do not have to leave the app open. Design tab still previews the old mock. Requests is unchanged."
         ),
         ReleaseNote(
             version: "0.8.0",
@@ -729,14 +736,14 @@ enum Changelog {
             year: 2026,
             month: 8,
             day: 23,
-            notes: "Requests has a Talk to the boss button. It opens a private chat with Marc — not the public vote board. What you send is emailed to him; he writes back from his inbox until the app has a server."
+            notes: "Requests has a Talk to the boss button. It opens a private chat with Marc, not the public vote board. What you send is emailed to him; he writes back from his inbox until the app has a server."
         ),
         ReleaseNote(
             version: "0.6.0",
             year: 2026,
             month: 8,
             day: 23,
-            notes: "Ten new looks for the app, plus a Design tab to flip between them. Each one is a real redesign of the fights screen with its own colours and its own idea of what matters: Ring closes an activity ring for every fight, Ledger reads like a betting statement, Arena puts you face to face with whoever is beating you, Soft says it in a sentence, Terminal prints it as monospace, Stack floats it on frosted glass, Podium builds a gold podium, Pulse turns the pot into one stacked bar, Bento lays it out as uneven tiles and Zine sets it like a printed page. Every design shows the same fights and the same money — only the look changes. The tab shows all eleven side by side, live, and one tap swaps the app over."
+            notes: "Ten new looks for the app, plus a Design tab to flip between them. Each one is a real redesign of the fights screen with its own colours and its own idea of what matters: Ring closes an activity ring for every fight, Ledger reads like a betting statement, Arena puts you face to face with whoever is beating you, Soft says it in a sentence, Terminal prints it as monospace, Stack floats it on frosted glass, Podium builds a gold podium, Pulse turns the pot into one stacked bar, Bento lays it out as uneven tiles and Zine sets it like a printed page. Every design shows the same fights and the same money, only the look changes. The tab shows all eleven side by side, live, and one tap swaps the app over."
         ),
         ReleaseNote(
             version: "0.5.1",
@@ -750,7 +757,7 @@ enum Changelog {
             year: 2026,
             month: 8,
             day: 23,
-            notes: "The app was shouting. Measuring the brightness of every line against the mockups showed that most quiet text — the eyebrows over card titles, the line under each screen title, stat labels, handles, timestamps, +2 more — was rendering at 62% white where the design uses 40%. The bell, the Edit pill and the fight nav buttons also had a grey fill the design does not have, and the bell itself was three points too big. Buttons are the mockups' size now, and a part-filled progress bar is no longer two translucent whites stacked up."
+            notes: "The app was shouting. Measuring the brightness of every line against the mockups showed that most quiet text, the eyebrows over card titles, the line under each screen title, stat labels, handles, timestamps, +2 more, was rendering at 62% white where the design uses 40%. The bell, the Edit pill and the fight nav buttons also had a grey fill the design does not have, and the bell itself was three points too big. Buttons are the mockups' size now, and a part-filled progress bar is no longer two translucent whites stacked up."
         ),
         ReleaseNote(
             version: "0.4.2",

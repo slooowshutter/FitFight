@@ -1,4 +1,4 @@
-# FitFight — for agents
+# FitFight for agents
 
 Read this first, then `docs/`. Marc talks from his phone, often transcribing. Be concise. Do the work in the cloud. Do not send him into Apple/GitHub docs.
 
@@ -13,6 +13,7 @@ Read this first, then `docs/`. Marc talks from his phone, often transcribing. Be
 - This Linux environment cannot compile or upload iOS. CI on GitHub-hosted `macos-26` does that.
 - Never put `.p8` / API keys / provisioning profiles in git or chat.
 - Keep the repo **public** (free GitHub macOS minutes). Don’t make it private without saying so.
+- Never use em dashes (U+2014) or en dashes (U+2013). Use a comma, period, colon, or ASCII hyphen `-`. This applies to user-facing copy, docs, comments, and agent writing.
 - Version label stays at the **top of the screen** (not the nav bar), e.g. `1.0.0 · build N · staging · 2 Sep`.
 - Permanent **Versions** button: under You → Settings, and the version label at the top. Every user-facing ship adds a `ReleaseNote` in `FitFight/Changelog.swift` (same marketing version, new date/notes).
 - **Do not bump `MARKETING_VERSION` for TestFlight.** The App Store release version is **1.0.0**. Stay on `1.0.0`; CI increments the **build number**. Changelog rows reuse `1.0.0`. Only bump marketing version for the next App Store version or if Marc asks.
@@ -21,7 +22,7 @@ Read this first, then `docs/`. Marc talks from his phone, often transcribing. Be
 - Never nuke the hosted database. No `supabase db reset` / `db push` against production or `develop`, no `DROP TABLE` / `TRUNCATE` / `DROP SCHEMA` / `DROP DATABASE` unless Marc asked in that chat and the migration starts with `-- allow-destructive`. Never put `sb_secret_...`, `service_role`, or the database password in git, chat, or iOS. Never merge to `main` unless Marc asked to ship to production. Never merge to `develop` or `preview` unless Marc asked. Production migrations apply only after `preview` is merged to `main`.
 - Do not create or call app-facing Postgres RPCs (`.rpc(...)`). Server-owned business logic belongs in the TypeScript backend. Small internal Postgres functions used only by RLS policies or triggers, such as signup plumbing, are allowed.
 
-## Mobile API and database compatibility — every agent
+## Mobile API and database compatibility: every agent
 
 Before changing an API, native API model, or database schema, read [API compatibility](docs/shipping.md#api-compatibility-for-every-change) and the live rollout evidence in [status.md](docs/status.md#api-and-update-rollout-verified-13-sep-2026).
 
@@ -79,7 +80,7 @@ He asks for several designs of a screen. He wants to **tap them on his phone**, 
 5. Shipping to production is Marc merging `preview` → `main`. Agents do not do that unless he said so in that chat.
 6. Merged feature branches are deleted by CI. `main`, `develop`, `preview`, and `testflight-latest` stay. Do not enable GitHub’s “Automatically delete head branches.”
 
-## Coding conduct — all languages
+## Coding conduct: all languages
 
 These rules apply to Swift, TypeScript, SQL, scripts, and documentation. The detailed TypeScript rules in the next section do **not** apply to Swift or SwiftUI.
 
@@ -91,7 +92,7 @@ These rules apply to Swift, TypeScript, SQL, scripts, and documentation. The det
 - When blocked by missing credentials, information, or a product decision, stop and ask. Do not fake, stub, or guess past the gap.
 - Report what was completed and verified, what was skipped and why, and what is still needed.
 
-## TypeScript and Next.js — `web/` only, never Swift
+## TypeScript and Next.js: `web/` only, never Swift
 
 Everything in this section applies only to JavaScript, TypeScript, and TSX under `web/`. It does **not** apply to `.swift` files, SwiftUI views, native models, HealthKit code, or Xcode project structure. Do not translate these rules into Swift conventions. Zod is a TypeScript runtime validator; it is not a requirement for native code.
 
@@ -117,7 +118,7 @@ The product scope rules above still win. The existence of this section does not 
 - This project uses the App Router and Route Handlers. Follow `docs/system-design.md`; server routes use the Node.js runtime, not Edge, unless the architecture changes explicitly.
 - After TypeScript changes, normally run `npm run typecheck` and the relevant tests from `web/`. Run the full `npm test` when the change can affect shared backend behavior.
 
-### Code shape — fewest functions that do the job
+### Code shape: fewest functions that do the job
 
 Write few, deep functions. One function that reads from top to bottom is often better than many small functions that make the reader jump between them. Do not split a job into pieces only to make each piece look tidy.
 
@@ -131,7 +132,7 @@ Do not extract a function when:
 
 Names such as `get*`, `is*`, `has*`, `resolve*`, `normalize*`, `describe*`, `format*`, `build*`, `make*`, `to*`, `compute*`, `with*`, `ensure*`, `prepare*`, `derive*`, and `extract*` often reveal unnecessary single-use helpers. Use one when it has at least two real call sites, hides substantial complexity, or gives a real domain operation a name.
 
-- A normal feature should add roughly 1–3 functions. If a plan needs more than five, simplify before coding.
+- A normal feature should add roughly 1-3 functions. If a plan needs more than five, simplify before coding.
 - Inline single-use short logic as a loop, callback, or local expression.
 - Extract when logic has two or more callers, is substantial pure logic worth testing, hides a complex boundary, or names a domain operation readers need.
 - Keep a helper file-private until a second module needs it.
@@ -139,7 +140,7 @@ Names such as `get*`, `is*`, `has*`, `resolve*`, `normalize*`, `describe*`, `for
 - Before finishing, count the functions added and inline short single-use helpers.
 
 ```ts
-// WRONG — three single-use helpers make one flow harder to read
+// WRONG: three single-use helpers make one flow harder to read
 function normalizeFightID(id: string) { return id.trim().toLowerCase(); }
 function isFinalFight(fight: Fight) { return fight.state === "final"; }
 function getFightLabel(fight: Fight) { return `${fight.name} (${fight.state})`; }
@@ -149,7 +150,7 @@ export function summarizeFight(id: string, fights: Fight[]) {
   return { label: getFightLabel(fight), final: isFinalFight(fight) };
 }
 
-// RIGHT — one function keeps the operation visible
+// RIGHT: one function keeps the operation visible
 export function summarizeFight(id: string, fights: Fight[]) {
   const fight = fights.find((item) => item.id === id.trim().toLowerCase());
   if (!fight) return null;
@@ -157,7 +158,7 @@ export function summarizeFight(id: string, fights: Fight[]) {
 }
 ```
 
-### Defensive code — validate boundaries, trust types internally
+### Defensive code: validate boundaries, trust types internally
 
 Validate untrusted data at trust boundaries: HTTP bodies, path and query parameters, database rows without generated types, provider and third-party responses, `process.env`, files, webhooks, local storage, and values typed `unknown` or `any`. Parse once, then use the parsed value internally without repeating the same checks.
 

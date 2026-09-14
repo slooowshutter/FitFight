@@ -54,7 +54,7 @@ struct FightsListView: View {
                 FFEmptyState(
                     systemImage: "trophy",
                     title: String(localized: "No fights yet"),
-                    message: String(localized: "Start one under New. Add people with their username — they must have signed in once."),
+                    message: String(localized: "Start one under New. Add people with their username. They must have signed in once."),
                     actionTitle: String(localized: "Start one"),
                     action: { model.tab = .newFight }
                 )
@@ -135,7 +135,7 @@ struct FightsListView: View {
         }
         let rivals = fight.standings.filter { !$0.person.isYou && !$0.invited && !$0.deferred }.map(\.score)
         guard let mine = model.youStanding(in: fight)?.score else {
-            guard let leader = rivals.max() else { return ("—", true, false) }
+            guard let leader = rivals.max() else { return ("-", true, false) }
             return (stepCount(leader), true, false)
         }
         guard let best = rivals.max() else { return (stepCount(mine), true, false) }

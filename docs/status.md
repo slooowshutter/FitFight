@@ -1,12 +1,12 @@
-# FitFight status — what works, what’s fake, what’s next
+# FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **13 Sep 2026**. App: **1.0.0**.
+Read this before building. Last updated **14 Sep 2026**. App: **1.0.0**.
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, notifications, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts and the Feed tab are in this build. Only the public privacy and support pages exist on the web.
 
 ---
 
-**Last TestFlight:** 13 Sep 2026 — Internal build **189**, Friends Beta **184**, as advertised by the live release policy. The [preview upload succeeded](https://github.com/slooowshutter/FitFight/actions/runs/34764089811). This does not verify which build is installed on an individual phone.
+**Last TestFlight:** 14 Sep 2026. Internal build **190** is on phones and was failing Apple Health upload with HTTP 500 when extra workout minutes could not be saved. This change keeps Steps even if extras fail. Native error copy needs a later `preview` TestFlight.
 
 ## API and update rollout (verified 13 Sep 2026)
 
@@ -37,11 +37,11 @@ separately authorized direct-client permission cutoff. This audit did not inspec
 hosted database grants or perform App Store/device testing. Future changes follow
 [the mandatory API compatibility procedure](shipping.md#api-compatibility-for-every-change).
 
-## Companion and custom schedule PR — prepared 13 Sep 2026
+## Companion and custom schedule PR: prepared 13 Sep 2026
 
 The live staging policy still admits public build **184** and review/internal **189**, all `1.0.0`, with enforcement on (read-only recheck before PR preparation). This change keeps the existing `/api/v1/fights` request/response shape: old requests still default to `start: now`, while explicit scheduled requests retain their exact timestamps and enter the existing `scheduled` state even with invitees. Regression tests cover both creation paths; shared native decoding fixtures remain unchanged. No database migration or direct-access cutoff is included. Deploy the compatible backend from `develop` before distributing the native change via `preview`; no hosted deployment or individual released-binary/device test was performed here.
 
-## Backend-only database access — staging ready, production pending
+## Backend-only database access: staging ready, production pending
 
 Native profile loading, username selection, and Apple display-name saving now use
 `GET/PATCH /api/v1/me`; all application database traffic goes through the backend.
@@ -121,9 +121,9 @@ The native Fight path uses the API to create and join; Apple Health synchronizat
 | Create Steps challenge | Follow a guided flow: Create or Join, then Steps × highest total, 3 / 7 / 14 / 30 days or Custom with exact future start and end dates/times, private by default (or public), optional usernames, repeat on by default, optional title and loser action, and review. Public and private fights may start with the owner alone. Every fight gets a code and a share link; people join with that code or invite link. |
 | Accept / Join | Invites still accept in the fight. Anyone can open the same Accept/Join screen from a code or a shared link. Public fights also appear on the live Join list with no scores. Private fights do not. Joins go through the server. If a repeating fight is past its start day, joiners choose this round (steps count from that start date) or the next round. Same-day joins, even hours later, still count as this round. People waiting for the next round are visible on the fight and do not count in this round. Leave a public, private, or repeating fight from the fight itself so the next window does not copy you in. |
 | Invite participants | Exact username in New is optional on public and private fights. They must have signed in and chosen a username. There is no friendship or friend-request layer. |
-| Apple Health | Installs background delivery at launch, keeps one interrupted opportunity for foreground reconciliation, and shows private capability/sync status under You → Apple Health → More settings. It sends Apple's merged cumulative Steps total for each exact active/ending Fight window in one small authenticated request. The same request may also send private active and resting energy, distance, exercise, stand, flights, and workout summaries including each workout's active minutes. It does not send raw samples, deletions, per-source totals, device/source metadata, anchors, or archives. Extra activity is not a Fight option yet. **In PR (not deployed):** resting energy and workout active minutes need the collection migration and staging backend before a native build sends them. |
+| Apple Health | Installs background delivery at launch, keeps one interrupted opportunity for foreground reconciliation, and shows private capability/sync status under You → Apple Health → More settings. It sends Apple's merged cumulative Steps total for each exact active/ending Fight window in one small authenticated request. The same request may also send private active and resting energy, distance, exercise, stand, flights, and workout summaries including each workout's active minutes. Extra activity is stored separately so a workout-details failure cannot roll back Steps. You shows the real server or network error on the Apple Health row instead of only "Sync failed", and a failed sync is Retry, not Connected. Extra activity is not a Fight option yet. |
 | Daily totals | Sends Apple's merged daily buckets only for days relevant to active Fight charts. They are display data, not the source of the Fight score. |
-| Fights list | Every row is titled by the fight name. If there is no title, the loser action is used; older fights still stored as `Steps Fight` show the action the same way. The right-hand number is your gap to the person you are racing, moss when ahead and ember when behind; remaining time sits under the title as months, weeks, days, hours, and minutes, with days and hours when under two days, and without the calendar end date. There is no moss hero — live Fights are all the same size. Pull to refresh on Fights, a fight, Feed, and You stays open with the current sync sentence; opening the app shows the same while Steps are read, uploaded, and standings refresh. |
+| Fights list | Every row is titled by the fight name. If there is no title, the loser action is used; older fights still stored as `Steps Fight` show the action the same way. The right-hand number is your gap to the person you are racing, moss when ahead and ember when behind; remaining time sits under the title as months, weeks, days, hours, and minutes, with days and hours when under two days, and without the calendar end date. There is no moss hero: live Fights are all the same size. Pull to refresh on Fights, a fight, Feed, and You stays open with the current sync sentence; opening the app shows the same while Steps are read, uploaded, and standings refresh. |
 | Standings | Live scoring uses exact Fight-window HealthKit aggregates, not overlapping whole-day totals. Both phones read the same serving rows. Each standing shows relative sync freshness; ended Fights distinguish exact final-window coverage from the last available Steps. |
 | Fight end | Exact `ends_at` is the final cutoff. The fight screen and finished list show that date and time. The live list shows remaining months, weeks, days, hours, and minutes instead of the stop date; under two days it shows days and hours. Opening the app closes due fights; the protected Vercel cron runs daily if nobody opens it. After finalization, later Steps cannot change the result. **Fix in PR (not on TestFlight yet):** Finished shows **P** during `awaiting_final_sync`. After 24h, people who did not submit forfeit; both miss is a draw. |
 | Tabs | Fights, New, Feed, You. The old Requests tab and Design are removed. |

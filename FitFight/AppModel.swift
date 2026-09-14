@@ -1328,7 +1328,7 @@ final class AppModel: ObservableObject {
                     ? String(localized: "Tentative lead")
                     : String(localized: "Tentative loss")
             } else {
-                kickerEmphasis = String(localized: "Pending — open the app")
+                kickerEmphasis = String(localized: "Pending. Open the app")
             }
         case .live:
             if row.state == "awaiting_final_sync" {

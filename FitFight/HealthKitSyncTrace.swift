@@ -177,9 +177,13 @@ final class HealthKitSyncTrace: @unchecked Sendable {
             stages[index].durationMs = totalMs - stages[index].startedMs
             stages[index].outcome = .cancelled
         }
+        let uploadSucceeded = stages.contains { $0.stage == .upload && $0.outcome == .succeeded }
+        let blockingFailure = stages.contains { stage in
+            stage.outcome == .failed && !(stage.stage == .upload && uploadSucceeded)
+        }
         let outcome: Outcome = cancelled || errorCode == .attemptExpired || stages.contains(where: { $0.outcome == .cancelled })
             ? .cancelled
-            : (errorCode != nil || stages.contains(where: { $0.outcome == .failed }) ? .failed : .succeeded)
+            : (errorCode != nil || blockingFailure ? .failed : .succeeded)
         let attempt = Attempt(
             attemptId: id, trigger: trigger, startedAt: startedAt, outcome: outcome,
             errorCode: outcome == .cancelled ? .attemptExpired : errorCode,

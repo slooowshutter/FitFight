@@ -39,13 +39,13 @@ enum FitFightAPIError: LocalizedError {
                 return message ?? String(localized: "You’ve posted a few times recently. Try again later.")
             case "not_found":
                 return message ?? String(localized: "That isn’t available anymore.")
-            case "internal":
+            case "db_error", "internal":
                 return message ?? String(
                     localized: "api.request-failed",
                     defaultValue: "Request failed (\(status))."
                 )
             default:
-                return String(
+                return message ?? String(
                     localized: "api.request-failed",
                     defaultValue: "Request failed (\(status))."
                 )

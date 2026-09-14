@@ -4,6 +4,7 @@ import postgres, { type Sql } from "postgres";
 import {
   healthKitAggregateSyncResponseSchema,
   healthKitAggregateSyncSchema,
+  parseHealthKitAggregateSync,
 } from "@/lib/types/healthkit/healthkit-aggregate";
 import { syncHealthKitAggregates } from "./healthkit-aggregates-supabase-query";
 
@@ -129,6 +130,25 @@ test("Apple Health aggregate sync rejects a mismatched activity unit", () => {
       unit: "steps",
     }],
   }));
+});
+
+test("Apple Health aggregate sync keeps Steps when extra activity is invalid", (t) => {
+  const warn = t.mock.method(console, "warn", () => {});
+  const parsed = parseHealthKitAggregateSync({
+    ...validAggregate,
+    workouts: [{
+      healthkit_uuid: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      started_at: "2026-08-30T08:00:00.000Z",
+      ended_at: "2026-08-30T18:00:00.000Z",
+      activity_type: "running",
+      duration_seconds: 3600,
+    }],
+  });
+
+  assert.equal(parsed.fight_aggregates[0]?.steps, 42_000);
+  assert.equal(parsed.workouts, undefined);
+  assert.equal(warn.mock.callCount(), 1);
+  assert.equal(warn.mock.calls[0].arguments[0], "fitfight_healthkit_extras_dropped");
 });
 
 test("Apple Health aggregate sync rejects raw HealthKit records", () => {
@@ -530,6 +550,71 @@ test("Apple Health aggregate sync stores private activity without changing Steps
   assert.ok(queries.some(({ query }) => query.includes("insert into private.healthkit_activity_days")));
   assert.ok(queries.some(({ query }) => query.includes("insert into private.healthkit_workouts")));
   assert.ok(queries.some(({ query }) => query.includes("insert into private.fight_score_snapshots")));
+});
+
+test("Apple Health Steps sync succeeds when private activity writes fail", async (t) => {
+  const log = t.mock.method(console, "error", () => {});
+  const { database, queries } = createDatabaseStub((query) => {
+    if (query.includes("insert into private.healthkit_workouts")) {
+      throw Object.assign(new Error('column "active_minutes" of relation "healthkit_workouts" does not exist'), {
+        code: "42703",
+      });
+    }
+    if (query.includes("returning id")) {
+      return [sourceRow];
+    }
+    if (query.includes("from public.fights as fight")) {
+      return [{
+        fight_id: "b4c1285d-0232-4d15-b8cc-1a916ba2bbf7",
+        starts_at: "2026-08-27 16:06:36.729+00",
+        ends_at: "2026-09-03 16:06:35.093+00",
+        outcome_rule: "highest_total",
+        stake_minor: null,
+        default_goal_value: null,
+      }];
+    }
+    if (query.includes("from private.fight_score_snapshots")) {
+      return [{ fight_id: "b4c1285d-0232-4d15-b8cc-1a916ba2bbf7" }];
+    }
+    if (query.includes("from public.fight_members") && query.includes("state = 'accepted'")) {
+      return [{
+        fight_id: "b4c1285d-0232-4d15-b8cc-1a916ba2bbf7",
+        user_id: "5b2216f4-762d-4890-a516-63046a01df31",
+        current_value: "42000",
+        final_value: null,
+        personal_target: null,
+      }];
+    }
+    return [];
+  });
+
+  const result = await syncHealthKitAggregates(
+    "5b2216f4-762d-4890-a516-63046a01df31",
+    healthKitAggregateSyncSchema.parse({
+      ...validAggregate,
+      activity_days: [{
+        day: "2026-08-30",
+        starts_at: "2026-08-29T22:00:00.000Z",
+        ends_at: "2026-08-30T13:53:27.350Z",
+        metric: "exercise_minutes",
+        value: 32,
+        unit: "min",
+      }],
+      workouts: [{
+        healthkit_uuid: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        started_at: "2026-08-30T08:00:00.000Z",
+        ended_at: "2026-08-30T09:00:00.000Z",
+        activity_type: "running",
+        duration_seconds: 3600,
+      }],
+    }),
+    database,
+  );
+
+  assert.equal(result.synced_fights, 1);
+  assert.ok(queries.some(({ query }) => query.includes("insert into private.fight_score_snapshots")));
+  assert.equal(log.mock.callCount(), 1);
+  assert.equal(log.mock.calls[0].arguments[0], "fitfight_healthkit_extras_failed");
 });
 
 test("Apple Health aggregate sync makes the newest Fight snapshot authoritative without finalizing", async () => {

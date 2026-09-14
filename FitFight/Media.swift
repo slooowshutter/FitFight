@@ -77,6 +77,18 @@ struct FitFightFightPost: Codable, Equatable, Hashable, Identifiable {
     let reactions: [Reaction]
     let commentCount: Int
     let mine: Bool
+    let broadcast: Bool
+    let channels: [Channel]
+
+    struct Channel: Codable, Equatable, Hashable {
+        let fightId: UUID
+        let name: String
+
+        enum CodingKeys: String, CodingKey {
+            case fightId = "fight_id"
+            case name
+        }
+    }
 
     struct Tag: Codable, Equatable, Hashable {
         let userId: UUID
@@ -124,6 +136,38 @@ struct FitFightFightPost: Codable, Equatable, Hashable, Identifiable {
         }
     }
 
+    init(
+        id: UUID,
+        audience: String,
+        fightId: UUID?,
+        fightName: String,
+        body: String,
+        createdAt: String,
+        author: Author,
+        media: [FitFightMedia],
+        tags: [Tag],
+        reactions: [Reaction],
+        commentCount: Int,
+        mine: Bool,
+        broadcast: Bool = false,
+        channels: [Channel] = []
+    ) {
+        self.id = id
+        self.audience = audience
+        self.fightId = fightId
+        self.fightName = fightName
+        self.body = body
+        self.createdAt = createdAt
+        self.author = author
+        self.media = media
+        self.tags = tags
+        self.reactions = reactions
+        self.commentCount = commentCount
+        self.mine = mine
+        self.broadcast = broadcast
+        self.channels = channels
+    }
+
     var createdDate: Date {
         let iso = ISO8601DateFormatter()
         iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -133,6 +177,16 @@ struct FitFightFightPost: Codable, Equatable, Hashable, Identifiable {
     }
 
     var isMain: Bool { audience == "main" }
+
+    var channelLabel: String {
+        if broadcast || isMain {
+            return String(localized: "Public")
+        }
+        let names = channels.map(\.name).filter { !$0.isEmpty }
+        if names.isEmpty { return fightName }
+        if names.count == 1 { return names[0] }
+        return names.joined(separator: " · ")
+    }
 
     func updating(
         reactions: [Reaction]? = nil,
@@ -150,16 +204,36 @@ struct FitFightFightPost: Codable, Equatable, Hashable, Identifiable {
             tags: tags,
             reactions: reactions ?? self.reactions,
             commentCount: commentCount ?? self.commentCount,
-            mine: mine
+            mine: mine,
+            broadcast: broadcast,
+            channels: channels
         )
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, audience, body, author, media, tags, reactions, mine
+        case id, audience, body, author, media, tags, reactions, mine, broadcast, channels
         case fightId = "fight_id"
         case fightName = "fight_name"
         case createdAt = "created_at"
         case commentCount = "comment_count"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        audience = try container.decode(String.self, forKey: .audience)
+        fightId = try container.decodeIfPresent(UUID.self, forKey: .fightId)
+        fightName = try container.decode(String.self, forKey: .fightName)
+        body = try container.decode(String.self, forKey: .body)
+        createdAt = try container.decode(String.self, forKey: .createdAt)
+        author = try container.decode(Author.self, forKey: .author)
+        media = try container.decode([FitFightMedia].self, forKey: .media)
+        tags = try container.decode([Tag].self, forKey: .tags)
+        reactions = try container.decode([Reaction].self, forKey: .reactions)
+        commentCount = try container.decode(Int.self, forKey: .commentCount)
+        mine = try container.decode(Bool.self, forKey: .mine)
+        broadcast = try container.decodeIfPresent(Bool.self, forKey: .broadcast) ?? false
+        channels = try container.decodeIfPresent([Channel].self, forKey: .channels) ?? []
     }
 }
 

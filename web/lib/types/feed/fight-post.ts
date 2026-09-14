@@ -28,11 +28,18 @@ export const fightPostReactionSchema = z.object({
   mine: z.boolean(),
 }).strict();
 
+export const fightPostChannelSchema = z.object({
+  fight_id: z.string().uuid(),
+  name: z.string(),
+}).strict();
+
 export const fightPostSchema = z.object({
   id: z.string().uuid(),
   audience: feedAudienceSchema,
   fight_id: z.string().uuid().nullable(),
   fight_name: z.string(),
+  broadcast: z.boolean(),
+  channels: z.array(fightPostChannelSchema),
   body: z.string(),
   created_at: z.string().datetime({ offset: true }),
   author: fightPostAuthorSchema,
@@ -179,6 +186,7 @@ export type FeedScope = z.infer<typeof feedScopeSchema>;
 export type FightPostAuthor = z.infer<typeof fightPostAuthorSchema>;
 export type FightPostTag = z.infer<typeof fightPostTagSchema>;
 export type FightPostReaction = z.infer<typeof fightPostReactionSchema>;
+export type FightPostChannel = z.infer<typeof fightPostChannelSchema>;
 export type FightPost = z.infer<typeof fightPostSchema>;
 export type FightPostListResponse = z.infer<typeof fightPostListResponseSchema>;
 export type FightPostResponse = z.infer<typeof fightPostResponseSchema>;

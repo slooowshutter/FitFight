@@ -132,6 +132,7 @@ struct Fight: Codable, Identifiable, Hashable {
     var seriesId: String? = nil
     var recurring: Bool = false
     var visibility: String = "invite_only"
+    var suggested: Bool = false
     var pendingJoin: Bool = false
     var offersJoinNext: Bool = false
 
@@ -930,6 +931,47 @@ final class AppModel: ObservableObject {
         }
     }
 
+    func listSuggestedFights(session: SessionStore) async -> [FitFightJoinableFight] {
+        #if DEBUG && targetEnvironment(simulator)
+        if CompanionPreview.isEnabled {
+            return await listJoinableFights(session: session)
+        }
+        #endif
+        self.session = session
+        guard let access = session.authSession?.accessToken, api.isConfigured else {
+            return []
+        }
+        do {
+            return try await api.listSuggestedFights(accessToken: access)
+        } catch {
+            createError = (error as? FitFightAPIError)?.errorDescription
+                ?? String(localized: "Couldn’t load suggested fights.")
+            return []
+        }
+    }
+
+    func setFightSuggested(id: String, suggested: Bool) async {
+        createError = nil
+        guard let session, session.authSession != nil, let fightID = UUID(uuidString: id) else {
+            createError = String(localized: "Sign in to suggest this fight.")
+            return
+        }
+        if let index = fights.firstIndex(where: { $0.id == id }) {
+            fights[index].suggested = suggested
+        }
+        do {
+            let token = try await session.freshAccessToken()
+            _ = try await api.setFightSuggested(fightID: fightID, suggested: suggested, accessToken: token)
+            await refreshFromServer()
+        } catch {
+            if let index = fights.firstIndex(where: { $0.id == id }) {
+                fights[index].suggested = !suggested
+            }
+            createError = (error as? FitFightAPIError)?.errorDescription
+                ?? String(localized: "Couldn’t update that suggestion.")
+        }
+    }
+
     func openJoinable(_ summary: FitFightJoinableFight, session: SessionStore) async {
         self.session = session
         createError = nil
@@ -1530,6 +1572,7 @@ final class AppModel: ObservableObject {
             seriesId: series?.id.uuidString,
             recurring: series?.recurring ?? false,
             visibility: series?.visibility ?? "invite_only",
+            suggested: series?.suggested ?? false,
             offersJoinNext: (series?.recurring ?? false)
                 && Self.isAfterFightStartDay(starts)
                 && mine?.state == "invited"

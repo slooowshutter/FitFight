@@ -10,6 +10,7 @@ struct NewFightView: View {
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var steps: HealthKitStepsStore
+    @EnvironmentObject private var feed: FeedStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
 
@@ -30,6 +31,8 @@ struct NewFightView: View {
     @State private var joinable: [FitFightJoinableFight] = []
     @State private var lookingUp = false
     @State private var loadingJoinable = false
+    @State private var composing = false
+    @State private var suggested: [FitFightJoinableFight] = []
     @FocusState private var usernameFocused: Bool
     @FocusState private var titleFocused: Bool
     @FocusState private var actionFocused: Bool
@@ -88,6 +91,18 @@ struct NewFightView: View {
             if joinable.isEmpty { loadingJoinable = true }
             joinable = await model.listJoinableFights(session: session)
             loadingJoinable = false
+        }
+        .task {
+            guard !staticRender else { return }
+            suggested = await model.listSuggestedFights(session: session)
+        }
+        .sheet(isPresented: $composing) {
+            FeedComposeSheet()
+                .environmentObject(model)
+                .environmentObject(session)
+                .environmentObject(feed)
+                .fitFightTheme(theme)
+                .presentationBackground(theme.bg)
         }
         .task {
             if model.pendingJoinable != nil, opening != .create {
@@ -166,7 +181,7 @@ struct NewFightView: View {
         VStack(spacing: 10) {
             HStack {
                 if effectiveOpening == .choose {
-                    Text("New fight")
+                    Text("New")
                         .ffType(.title)
                         .foregroundStyle(theme.text)
                         .frame(minHeight: 44)
@@ -245,10 +260,10 @@ struct NewFightView: View {
         VStack(alignment: .leading, spacing: 16) {
             CompanionIntroduction(surface: .newFight)
             VStack(alignment: .leading, spacing: 6) {
-                Text("Create or join?")
+                Text("Create, join, or post?")
                     .ffType(.heading)
                     .foregroundStyle(theme.text)
-                Text("Start a new fight, or join one that's already going.")
+                Text("Start a new fight, join one that's already going, or post to the Feed.")
                     .ffType(.body)
                     .foregroundStyle(theme.textSecondary)
                     .lineSpacing(2)
@@ -273,6 +288,52 @@ struct NewFightView: View {
                         opening = .join
                     }
                 )
+                FFDivider()
+                FFGroupedRow(
+                    title: String(localized: "Post"),
+                    subtitle: String(localized: "Share a note, photo, or video on the Feed"),
+                    systemImage: "square.and.pencil",
+                    subtitleTone: .neutral,
+                    action: { composing = true }
+                )
+            }
+
+            suggestedSection
+        }
+    }
+
+    private var suggestedSection: some View {
+        let rows = staticRender ? Array(Self.screenshotJoinable.prefix(2)) : suggested
+        return VStack(alignment: .leading, spacing: 12) {
+            FFSectionHeader(title: String(localized: "Suggested"))
+            if rows.isEmpty {
+                Text(String(localized: "No suggested fights right now."))
+                    .ffType(.body)
+                    .foregroundStyle(theme.textSecondary)
+            } else {
+                FFGroupedRows {
+                    ForEach(Array(rows.enumerated()), id: \.element.id) { index, item in
+                        if index > 0 { FFDivider() }
+                        FFGroupedRow(
+                            title: Fight.displayTitle(name: item.name, actionText: item.actionText),
+                            subtitle: item.recurring
+                                ? String(
+                                    localized: "fight.joinable-row-repeats",
+                                    defaultValue: "@\(item.ownerHandle) · \(item.memberCount) in · repeats"
+                                )
+                                : String(
+                                    localized: "fight.joinable-row",
+                                    defaultValue: "@\(item.ownerHandle) · \(item.memberCount) in"
+                                ),
+                            systemImage: "figure.walk",
+                            subtitleTone: .neutral,
+                            trailing: AnyView(Text(item.joinCode).ffType(.caption).foregroundStyle(theme.textSecondary)),
+                            action: {
+                                Task { await model.openJoinable(item, session: session) }
+                            }
+                        )
+                    }
+                }
             }
         }
     }

@@ -165,18 +165,22 @@ export async function listJoinableFights(
   userId: string,
   admin = createAdminClient(),
   now: Date = new Date(),
+  suggestedOnly = false,
 ): Promise<JoinableFightSummary[]> {
-  const { data, error } = await admin
+  let request = admin
     .from("fight_series")
     .select("*")
     .eq("visibility", "joinable")
-    .is("paused_at", null)
-    .order("created_at", { ascending: false })
-    .limit(50);
+    .is("paused_at", null);
+  request = suggestedOnly
+    ? request.eq("suggested", true).order("suggested_at", { ascending: false }).limit(8)
+    : request.order("created_at", { ascending: false }).limit(50);
+  const { data, error } = await request;
   if (error) {
     throw new ApiError(500, ERROR_CODES.db_error, "Could not list joinable fights");
   }
   const summaries: JoinableFightSummary[] = [];
+  const cap = suggestedOnly ? 8 : 50;
   for (const row of (data ?? []) as FightSeriesRow[]) {
     const fight = await currentJoinableFight(row, admin, now);
     if (!fight) {
@@ -186,7 +190,7 @@ export async function listJoinableFights(
       continue;
     }
     summaries.push(await toSummary(row, fight, userId, admin, now));
-    if (summaries.length >= 50) {
+    if (summaries.length >= cap) {
       break;
     }
   }

@@ -43,6 +43,27 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 14,
+            notes: "Choosing a companion now shows five effort poses. Weekly movement changes the pose; you can set sport, breed, and mood."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "Posting to several fights now shows once on Feed, with those fight names or Public."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "New can start a fight, join one, or post. Suggested fights sit under those choices."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
             notes: "Bugs & requests can include a photo, a video, or any file."
         ),
         ReleaseNote(

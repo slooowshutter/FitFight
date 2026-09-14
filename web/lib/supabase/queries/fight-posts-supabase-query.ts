@@ -41,6 +41,7 @@ type PostRow = {
   audience: FeedAudience;
   fight_id: string | null;
   fight_name: string;
+  broadcast: boolean;
   body: string;
   created_at: Date | string;
   author_id: string;
@@ -155,9 +156,6 @@ export async function loadVisiblePost(
     return post;
   }
   if (post.audience === "fight") {
-    if (!post.fight_id) {
-      throw new ApiError(404, ERROR_CODES.not_found, "Post not found");
-    }
     const [member] = await database<{ state: string }[]>`
       select membership.state
       from public.fight_members as membership
@@ -173,6 +171,24 @@ export async function loadVisiblePost(
             where posted.id = ${post.fight_id}
               and posted.series_id is not null
               and sibling.id = membership.fight_id
+          )
+          or exists (
+            select 1
+            from public.fight_post_channels as channel
+            join public.fights as posted
+              on posted.id = channel.fight_id
+            where channel.post_id = ${post.id}
+              and (
+                membership.fight_id = channel.fight_id
+                or (
+                  posted.series_id is not null
+                  and exists (
+                    select 1 from public.fights as sibling
+                    where sibling.series_id = posted.series_id
+                      and sibling.id = membership.fight_id
+                  )
+                )
+              )
           )
         )
       limit 1
@@ -273,12 +289,53 @@ async function mapPosts(userId: string, rows: PostRow[], database: Sql): Promise
     reactionsByPost.set(reaction.post_id, list);
   }
   const commentCount = new Map(comments.map((row) => [row.post_id, row.n]));
+  const channelRows = await database<{ post_id: string; fight_id: string; name: string }[]>`
+    select channel.post_id, channel.fight_id, coalesce(fight.name, '') as name
+    from public.fight_post_channels as channel
+    join public.fights as fight on fight.id = channel.fight_id
+    where channel.post_id in ${database(postIds)}
+      and (
+        exists (
+          select 1 from public.fight_posts as posted
+          where posted.id = channel.post_id and posted.author_id = ${userId}
+        )
+        or exists (
+          select 1
+          from public.fight_members as membership
+          where membership.user_id = ${userId}
+            and membership.state in ('accepted', 'deferred')
+            and (
+              membership.fight_id = channel.fight_id
+              or exists (
+                select 1
+                from public.fights as posted
+                join public.fights as sibling
+                  on sibling.series_id = posted.series_id
+                where posted.id = channel.fight_id
+                  and posted.series_id is not null
+                  and sibling.id = membership.fight_id
+              )
+            )
+        )
+      )
+    order by fight.name, channel.fight_id
+  `;
+  const channelsByPost = new Map<string, { fight_id: string; name: string }[]>();
+  for (const channel of channelRows) {
+    const list = channelsByPost.get(channel.post_id) ?? [];
+    list.push({ fight_id: channel.fight_id, name: channel.name });
+    channelsByPost.set(channel.post_id, list);
+  }
 
   return rows.map((row) => ({
     id: row.id,
     audience: row.audience,
-    fight_id: row.fight_id,
-    fight_name: row.fight_name,
+    fight_id: (channelsByPost.get(row.id) ?? [])[0]?.fight_id ?? row.fight_id,
+    fight_name: row.broadcast
+      ? "Public"
+      : (channelsByPost.get(row.id) ?? [])[0]?.name || row.fight_name,
+    broadcast: row.broadcast,
+    channels: channelsByPost.get(row.id) ?? [],
     body: row.body,
     created_at: isoUtc(row.created_at),
     mine: row.author_id === userId,
@@ -313,7 +370,7 @@ export async function listFightPosts(
   const rows = cursor
     ? await database<PostRow[]>`
         select
-          post.id, post.audience::text as audience, post.fight_id,
+          post.id, post.audience::text as audience, post.fight_id, post.broadcast,
           coalesce(fight.name, '') as fight_name, post.body, post.created_at,
           post.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
           profile.companion_id as author_companion_id,
@@ -337,13 +394,33 @@ export async function listFightPosts(
           and (
             (
               ${fightId ?? null}::uuid is not null
-              and post.audience = 'fight'
               and (
-                post.fight_id = ${fightId ?? null}
+                exists (
+                  select 1
+                  from public.fight_post_channels as channel
+                  join public.fights as posted
+                    on posted.id = channel.fight_id
+                  where channel.post_id = post.id
+                    and (
+                      channel.fight_id = ${fightId ?? null}
+                      or (
+                        posted.series_id is not null
+                        and posted.series_id = (
+                          select viewed.series_id from public.fights as viewed where viewed.id = ${fightId ?? null}
+                        )
+                      )
+                    )
+                )
                 or (
-                  fight.series_id is not null
-                  and fight.series_id = (
-                    select viewed.series_id from public.fights as viewed where viewed.id = ${fightId ?? null}
+                  post.audience = 'fight'
+                  and (
+                    post.fight_id = ${fightId ?? null}
+                    or (
+                      fight.series_id is not null
+                      and fight.series_id = (
+                        select viewed.series_id from public.fights as viewed where viewed.id = ${fightId ?? null}
+                      )
+                    )
                   )
                 )
               )
@@ -369,21 +446,43 @@ export async function listFightPosts(
             or (
               ${fightId ?? null}::uuid is null
               and ${includeSharedFightFeed}::boolean
-              and post.audience = 'fight'
               and exists (
                 select 1
                 from public.fight_members as membership
                 where membership.user_id = ${userId}
                   and membership.state in ('accepted', 'deferred')
                   and (
-                    membership.fight_id = post.fight_id
-                    or (
-                      fight.series_id is not null
-                      and exists (
-                        select 1 from public.fights as sibling
-                        where sibling.series_id = fight.series_id
-                          and sibling.id = membership.fight_id
+                    (
+                      post.audience = 'fight'
+                      and (
+                        membership.fight_id = post.fight_id
+                        or (
+                          fight.series_id is not null
+                          and exists (
+                            select 1 from public.fights as sibling
+                            where sibling.series_id = fight.series_id
+                              and sibling.id = membership.fight_id
+                          )
+                        )
                       )
+                    )
+                    or exists (
+                      select 1
+                      from public.fight_post_channels as channel
+                      join public.fights as posted
+                        on posted.id = channel.fight_id
+                      where channel.post_id = post.id
+                        and (
+                          membership.fight_id = channel.fight_id
+                          or (
+                            posted.series_id is not null
+                            and exists (
+                              select 1 from public.fights as sibling
+                              where sibling.series_id = posted.series_id
+                                and sibling.id = membership.fight_id
+                            )
+                          )
+                        )
                     )
                   )
               )
@@ -394,7 +493,7 @@ export async function listFightPosts(
       `
     : await database<PostRow[]>`
         select
-          post.id, post.audience::text as audience, post.fight_id,
+          post.id, post.audience::text as audience, post.fight_id, post.broadcast,
           coalesce(fight.name, '') as fight_name, post.body, post.created_at,
           post.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
           profile.companion_id as author_companion_id,
@@ -417,13 +516,33 @@ export async function listFightPosts(
           and (
             (
               ${fightId ?? null}::uuid is not null
-              and post.audience = 'fight'
               and (
-                post.fight_id = ${fightId ?? null}
+                exists (
+                  select 1
+                  from public.fight_post_channels as channel
+                  join public.fights as posted
+                    on posted.id = channel.fight_id
+                  where channel.post_id = post.id
+                    and (
+                      channel.fight_id = ${fightId ?? null}
+                      or (
+                        posted.series_id is not null
+                        and posted.series_id = (
+                          select viewed.series_id from public.fights as viewed where viewed.id = ${fightId ?? null}
+                        )
+                      )
+                    )
+                )
                 or (
-                  fight.series_id is not null
-                  and fight.series_id = (
-                    select viewed.series_id from public.fights as viewed where viewed.id = ${fightId ?? null}
+                  post.audience = 'fight'
+                  and (
+                    post.fight_id = ${fightId ?? null}
+                    or (
+                      fight.series_id is not null
+                      and fight.series_id = (
+                        select viewed.series_id from public.fights as viewed where viewed.id = ${fightId ?? null}
+                      )
+                    )
                   )
                 )
               )
@@ -449,21 +568,43 @@ export async function listFightPosts(
             or (
               ${fightId ?? null}::uuid is null
               and ${includeSharedFightFeed}::boolean
-              and post.audience = 'fight'
               and exists (
                 select 1
                 from public.fight_members as membership
                 where membership.user_id = ${userId}
                   and membership.state in ('accepted', 'deferred')
                   and (
-                    membership.fight_id = post.fight_id
-                    or (
-                      fight.series_id is not null
-                      and exists (
-                        select 1 from public.fights as sibling
-                        where sibling.series_id = fight.series_id
-                          and sibling.id = membership.fight_id
+                    (
+                      post.audience = 'fight'
+                      and (
+                        membership.fight_id = post.fight_id
+                        or (
+                          fight.series_id is not null
+                          and exists (
+                            select 1 from public.fights as sibling
+                            where sibling.series_id = fight.series_id
+                              and sibling.id = membership.fight_id
+                          )
+                        )
                       )
+                    )
+                    or exists (
+                      select 1
+                      from public.fight_post_channels as channel
+                      join public.fights as posted
+                        on posted.id = channel.fight_id
+                      where channel.post_id = post.id
+                        and (
+                          membership.fight_id = channel.fight_id
+                          or (
+                            posted.series_id is not null
+                            and exists (
+                              select 1 from public.fights as sibling
+                              where sibling.series_id = posted.series_id
+                                and sibling.id = membership.fight_id
+                            )
+                          )
+                        )
                     )
                   )
               )
@@ -489,15 +630,24 @@ async function insertFightPost(
   body: string,
   mediaIds: string[],
   tagIds: string[],
+  channelIds: string[],
+  broadcast: boolean,
   database: Sql,
 ): Promise<string> {
   const [created] = await database<{ id: string }[]>`
-    insert into public.fight_posts (fight_id, author_id, body, audience)
-    values (${fightId}, ${userId}, ${body}, ${audience})
+    insert into public.fight_posts (fight_id, author_id, body, audience, broadcast)
+    values (${fightId}, ${userId}, ${body}, ${audience}, ${broadcast})
     returning id
   `;
   if (!created) {
     throw new ApiError(500, ERROR_CODES.db_error, "Could not save that post");
+  }
+  const channels = channelIds.length > 0 ? channelIds : fightId ? [fightId] : [];
+  for (const channelId of channels) {
+    await database`
+      insert into public.fight_post_channels (post_id, fight_id)
+      values (${created.id}, ${channelId})
+    `;
   }
   for (const [index, mediaId] of mediaIds.entries()) {
     await database`
@@ -518,7 +668,7 @@ async function loadPostRows(ids: string[], database: Sql): Promise<PostRow[]> {
   if (ids.length === 0) return [];
   return database<PostRow[]>`
     select
-      post.id, post.audience::text as audience, post.fight_id,
+      post.id, post.audience::text as audience, post.fight_id, post.broadcast,
       coalesce(fight.name, '') as fight_name, post.body, post.created_at,
       post.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
       profile.companion_id as author_companion_id,
@@ -585,7 +735,7 @@ export async function createFightPost(
 
   const createdId = await database.begin("read write", async (sql) => {
     const mediaIds = await preparePostMedia(userId, input.media_ids, sql);
-    return insertFightPost(userId, "fight", fightId, input.body, mediaIds, [], sql);
+    return insertFightPost(userId, "fight", fightId, input.body, mediaIds, [], [fightId], false, sql);
   });
 
   const [row] = await loadPostRows([createdId], database);
@@ -646,40 +796,29 @@ export async function createFeedPosts(
     where author_id = ${userId}
       and created_at > now() - interval '24 hours'
   `;
-  const copies = (includeMain ? 1 : 0) + fightIds.length;
-  if ((rate?.n ?? 0) + copies > POST_LIMIT_PER_DAY) {
+  if ((rate?.n ?? 0) + 1 > POST_LIMIT_PER_DAY) {
     throw new ApiError(429, ERROR_CODES.rate_limited, "You’ve posted a few times recently. Try again later.");
   }
 
+  const [roster] = await database<{ n: number }[]>`
+    select count(*)::int as n
+    from public.fight_members as membership
+    join public.fights as fight on fight.id = membership.fight_id
+    where membership.user_id = ${userId}
+      and membership.state in ('accepted', 'deferred')
+      and fight.state in ('draft', 'inviting', 'scheduled', 'live')
+  `;
+  const broadcast = includeMain || (fightIds.length > 0 && fightIds.length >= (roster?.n ?? 0));
   const wantedTags = [...new Set(input.tagged_user_ids)].filter((id) => id !== userId);
   const createdIds = await database.begin("read write", async (sql) => {
     const mediaIds = await preparePostMedia(userId, input.media_ids, sql);
-    const ids: string[] = [];
-    if (includeMain) {
-      const mainTags = wantedTags.length === 0
-        ? []
-        : (await sql<{ user_id: string }[]>`
-            select distinct them.user_id
-            from public.fight_members as me
-            join public.fight_members as them
-              on them.fight_id = me.fight_id
-            join public.fights as fight
-              on fight.id = me.fight_id
-            where me.user_id = ${userId}
-              and them.user_id in ${sql(wantedTags)}
-              and me.state = 'accepted'
-              and them.state = 'accepted'
-              and fight.state = 'final'
-          `).map((row) => row.user_id);
-      ids.push(await insertFightPost(userId, "main", null, input.body, mediaIds, mainTags, sql));
-    }
-    for (const fightId of fightIds) {
-      const fightTags = wantedTags.length === 0
-        ? []
-        : (await sql<{ user_id: string }[]>`
-            select membership.user_id
+    const tagIds = wantedTags.length === 0
+      ? []
+      : fightIds.length > 0
+        ? (await sql<{ user_id: string }[]>`
+            select distinct membership.user_id
             from public.fight_members as membership
-            where membership.fight_id = ${fightId}
+            where membership.fight_id in ${sql(fightIds)}
               and membership.user_id in ${sql(wantedTags)}
               and membership.state in ('accepted', 'deferred')
               and exists (
@@ -695,10 +834,34 @@ export async function createFeedPosts(
                   and done_them.state = 'accepted'
                   and done_fight.state = 'final'
               )
+          `).map((row) => row.user_id)
+        : (await sql<{ user_id: string }[]>`
+            select distinct them.user_id
+            from public.fight_members as me
+            join public.fight_members as them
+              on them.fight_id = me.fight_id
+            join public.fights as fight
+              on fight.id = me.fight_id
+            where me.user_id = ${userId}
+              and them.user_id in ${sql(wantedTags)}
+              and me.state = 'accepted'
+              and them.state = 'accepted'
+              and fight.state = 'final'
           `).map((row) => row.user_id);
-      ids.push(await insertFightPost(userId, "fight", fightId, input.body, mediaIds, fightTags, sql));
-    }
-    return ids;
+    const createdId = fightIds.length > 0
+      ? await insertFightPost(
+        userId,
+        "fight",
+        fightIds[0] ?? null,
+        input.body,
+        mediaIds,
+        tagIds,
+        fightIds,
+        broadcast,
+        sql,
+      )
+      : await insertFightPost(userId, "main", null, input.body, mediaIds, tagIds, [], broadcast, sql);
+    return [createdId];
   });
 
   return { posts: await mapPosts(userId, await loadPostRows(createdIds, database), database) };

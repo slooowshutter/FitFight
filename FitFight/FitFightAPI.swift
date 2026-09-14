@@ -307,6 +307,14 @@ private struct FitFightJoinableList: Decodable {
     var fights: [FitFightJoinableFight]
 }
 
+struct FitFightSuggested: Decodable {
+    var suggested: Bool
+}
+
+private struct FitFightSuggestBody: Encodable {
+    var suggested: Bool
+}
+
 struct FitFightSummary: Codable, Equatable {
     var id: UUID
     var state: String
@@ -940,6 +948,30 @@ struct FitFightAPI {
             expected: [200]
         )
         return list.fights
+    }
+
+    func listSuggestedFights(accessToken: String) async throws -> [FitFightJoinableFight] {
+        let list: FitFightJoinableList = try await get(
+            path: "fights/suggested",
+            accessToken: accessToken,
+            expected: [200]
+        )
+        return list.fights
+    }
+
+    func setFightSuggested(
+        fightID: UUID,
+        suggested: Bool,
+        accessToken: String
+    ) async throws -> FitFightSuggested {
+        try await request(
+            path: "fights/\(fightID.uuidString.lowercased())/suggested",
+            method: "PATCH",
+            accessToken: accessToken,
+            body: Self.encoder.encode(FitFightSuggestBody(suggested: suggested)),
+            idempotencyKey: nil,
+            expected: [200]
+        )
     }
 
     func joinableFight(code: String, accessToken: String) async throws -> FitFightJoinableFight {

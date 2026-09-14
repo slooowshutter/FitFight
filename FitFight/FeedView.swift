@@ -736,7 +736,7 @@ struct FightPostCard: View {
                             .foregroundStyle(theme.text)
                             .lineLimit(1)
                         HStack(spacing: 5) {
-                            Text(post.isMain ? String(localized: "Public") : post.fightName)
+                            Text(post.channelLabel)
                                 .lineLimit(1)
                             Text("·")
                             Text(post.createdDate, format: .relative(presentation: .named, unitsStyle: .abbreviated))

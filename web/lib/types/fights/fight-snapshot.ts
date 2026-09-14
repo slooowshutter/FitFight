@@ -51,6 +51,7 @@ export const fightSnapshotSchema = z.object({
     join_code: z.string().nullable(),
     visibility: z.enum(fightVisibilityValues),
     recurring: z.boolean(),
+    suggested: z.boolean(),
   })),
   step_days: z.array(z.object({
     user_id: z.string().uuid(),

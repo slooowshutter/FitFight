@@ -52,6 +52,14 @@ export async function launchFeedbackFixAgent(
     "Post:",
     detail.post.body,
     "",
+    "Attachments:",
+    detail.post.media.length === 0
+      ? "No attachments."
+      : detail.post.media.map((item, index) => {
+        const link = item.url ? ` ${item.url}` : "";
+        return `${index + 1}. ${item.original_filename} (${item.kind}, ${item.content_type})${link}`;
+      }).join("\n"),
+    "",
     "Device metadata:",
     deviceSnapshot(detail.post.metadata),
     "",

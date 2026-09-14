@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { mediaObjectSchema } from "@/lib/types/media/media";
 
 export const feedbackKindValues = ["bug", "feature"] as const;
 export const feedbackKindSchema = z.enum(feedbackKindValues);
@@ -46,6 +47,7 @@ export const createFeedbackPostRequestSchema = z
     kind: feedbackKindSchema,
     title: z.string().trim().min(1).max(80),
     body: z.string().trim().min(1).max(2000),
+    media_ids: z.array(z.string().uuid()).max(8).default([]),
     metadata: feedbackMetadataSchema.optional(),
   })
   .strict();
@@ -96,6 +98,7 @@ export const feedbackPostSummarySchema = z
     mine: z.boolean(),
     created_at: z.string().datetime(),
     metadata: feedbackMetadataSchema,
+    media: z.array(mediaObjectSchema).default([]),
   })
   .strict();
 

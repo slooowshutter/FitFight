@@ -349,6 +349,7 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
     var mine: Bool
     var createdAt: Date
     var metadata: FitFightFeedbackMetadata
+    var media: [FitFightMedia]
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -363,6 +364,7 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
         case mine
         case createdAt = "created_at"
         case metadata
+        case media
     }
 
     init(
@@ -377,7 +379,8 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
         authorHandle: String,
         mine: Bool,
         createdAt: Date,
-        metadata: FitFightFeedbackMetadata = FitFightFeedbackMetadata()
+        metadata: FitFightFeedbackMetadata = FitFightFeedbackMetadata(),
+        media: [FitFightMedia] = []
     ) {
         self.id = id
         self.kind = kind
@@ -391,6 +394,7 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
         self.mine = mine
         self.createdAt = createdAt
         self.metadata = metadata
+        self.media = media
     }
 
     init(from decoder: Decoder) throws {
@@ -408,6 +412,7 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         metadata = try container.decodeIfPresent(FitFightFeedbackMetadata.self, forKey: .metadata)
             ?? FitFightFeedbackMetadata()
+        media = try container.decodeIfPresent([FitFightMedia].self, forKey: .media) ?? []
     }
 }
 
@@ -506,7 +511,24 @@ struct FitFightCreateFeedback: Encodable, Equatable {
     var kind: String
     var title: String
     var body: String
+    var mediaIds: [UUID] = []
     var metadata: FitFightFeedbackMetadata
+
+    enum CodingKeys: String, CodingKey {
+        case kind, title, body, metadata
+        case mediaIds = "media_ids"
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(kind, forKey: .kind)
+        try container.encode(title, forKey: .title)
+        try container.encode(body, forKey: .body)
+        try container.encode(metadata, forKey: .metadata)
+        if !mediaIds.isEmpty {
+            try container.encode(mediaIds, forKey: .mediaIds)
+        }
+    }
 }
 
 struct FitFightReferralLink: Encodable {

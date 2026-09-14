@@ -86,6 +86,16 @@ Names only. Never print values. Never ask Marc to paste the `.p8` into chat.
 
 There is a separate Expo EAS key in App Store Connect. Do not reuse it.
 
+### Still needed for crash reports
+
+Names only. Never print values. Never paste the PostHog project token in chat.
+
+| Secret | Used when | What it is |
+| --- | --- | --- |
+| `POSTHOG_PROJECT_API_KEY` | TestFlight (`preview`) and App Store archives | PostHog **project** API key (`phc_...`). Crash reports only. |
+
+Optional Actions **variable** `POSTHOG_HOST`: `https://us.i.posthog.com` (default) or `https://eu.i.posthog.com` if the PostHog project is EU Cloud. In PostHog, turn on error-tracking exception autocapture and leave session replay off.
+
 Do **not** add a Supabase `service_role` or `sb_secret_...` key to GitHub. Deploys use GitHub Integration. See [`backend.md`](backend.md).
 
 ## GitHub variables (TestFlight environment)
@@ -97,6 +107,7 @@ Names only. Never print values. Settings → Secrets and variables → Actions �
 | `SUPABASE_STAGING_URL` | every TestFlight | Persistent `develop` Supabase project URL |
 | `SUPABASE_STAGING_PUBLISHABLE_KEY` | every TestFlight | Publishable key for that project (`sb_publishable_...`) |
 | `FITFIGHT_API_URL` | every TestFlight | `https://staging.fitfight.app` |
+| `POSTHOG_HOST` | TestFlight and App Store, optional | PostHog ingest host. Default `https://us.i.posthog.com`. Use `https://eu.i.posthog.com` for EU Cloud. |
 
 Every TestFlight ships `https://zstzbfocunthczzubggz.supabase.co` (GitHub `SUPABASE_STAGING_*` variables override if set). The staging publishable key must be that project’s key, not production’s. Persistent `develop` must stay persistent so merging to `main` does not delete it. TestFlight CI builds the `preview` commit that triggered it. The top version label always shows `staging`. `main` never uploads to TestFlight.
 
@@ -141,7 +152,7 @@ After a feature PR merges, CI deletes that branch. `main`, `develop`, `preview`,
 
 A push to `preview` that touches the app or Fastlane starts TestFlight. Feature-branch and `develop` pushes do not. Tell Marc only after that upload: wait for the TestFlight notification, then **Update** (internal testers only). Processing often takes ~10–20 minutes. Do not tell friends the public join link has a new build unless Marc promoted that build in App Store Connect. Check the workflow result before promising a build. Do not ask him to Run workflow.
 
-Both staging and production binaries check `/api/app-release` at launch, on foregrounding, and every minute while active. Until the installed build is admitted, the previous full overlay sits under the version line (not a popup over Fights). A failed or offline check keeps that overlay. Known mismatches still survive relaunch.
+Both staging and production binaries check `/api/app-release` at launch, on foregrounding, and every minute while active. Until the installed build is admitted, the previous full overlay sits under the version line (not a popup over Fights). A failed or offline check leaves the app usable. Known mismatches still survive relaunch.
 
 ## API compatibility for every change
 
@@ -224,4 +235,4 @@ later promote the cutoff from [`supabase/deferred-migrations`](../supabase/defer
 after installability, enforcement, review-candidate compatibility, staging checks, and
 old-backend drainage are verified. CI tests both permission states on disposable Supabase.
 
-Verification: Ruby release tests cover review, group availability, expiry, the first gated rollout, internal-only TestFlight latest, and production candidates. The GitHub-hosted macOS simulator workflow also runs `tests/AppUpdateCheckerTests.swift` for persistence, failed checks, exact matching, public vs internal latest, review access and concurrent checks. Check both English and French, launch/resume, that the full overlay appears only when the installed build is not admitted, a failed check keeps the overlay, and the store link works on a real staging build before shipping.
+Verification: Ruby release tests cover review, group availability, expiry, the first gated rollout, internal-only TestFlight latest, and production candidates. The GitHub-hosted macOS simulator workflow also runs `tests/AppUpdateCheckerTests.swift` for persistence, failed checks, exact matching, public vs internal latest, review access, concurrent checks, and offline use. Check both English and French, launch/resume, that the full overlay appears only when the installed build is known not to be admitted, a failed check leaves the app usable, and the store link works on a real staging build before shipping.

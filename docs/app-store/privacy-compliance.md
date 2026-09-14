@@ -19,10 +19,11 @@ Declare these collected data types:
 | Customer Support | Email and message content sent to support | Yes | App Functionality |
 | Other Data Types | Time zone and limited request metadata such as IP address | Yes | App Functionality |
 | Other Diagnostic Data | Limited server error details used to keep the service working and secure | Yes | App Functionality |
+| Crash Data | Stack traces and related crash diagnostics sent to PostHog | Yes | App Functionality |
 
-Do **not** declare Contacts: FitFight does not read the address book and no longer stores a friends graph. Also do not declare location, purchases, financial information, browsing history, search history, advertising data, photos, videos, audio, crash analytics, or product-interaction analytics unless the final binary or a production processor adds them.
+Do **not** declare Contacts: FitFight does not read the address book and no longer stores a friends graph. Also do not declare location, purchases, financial information, browsing history, search history, advertising data, photos, videos, audio, or product-interaction analytics unless the final binary or a production processor adds them. Crash reports are crash-only: no session replay, heatmaps, or Health/Steps in PostHog.
 
-The launch privacy manifest covers Health, Name, Email Address, User ID, Gameplay Content, Other User Content, Customer Support, Other Data Types, Other Diagnostic Data, no tracking, and the `CA92.1` UserDefaults reason. Before submission, make the exact archive's privacy report, App Store answers, published policy, and manifest agree.
+The launch privacy manifest covers Health, Name, Email Address, User ID, Gameplay Content, Other User Content, Customer Support, Other Data Types, Other Diagnostic Data, Crash Data, no tracking, and the `CA92.1` UserDefaults reason. Before submission, make the exact archive's privacy report, App Store answers, published policy, and manifest agree.
 
 ## Age rating
 

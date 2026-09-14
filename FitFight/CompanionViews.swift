@@ -264,7 +264,7 @@ struct CompanionIntroduction: View {
                     .ffType(.caption)
                     .foregroundStyle(theme.textSecondary)
             case .idle, .empty:
-                Text("—")
+                Text("-")
                     .ffType(.metric)
                     .foregroundStyle(theme.text)
                 Text(steps.isConnected ? String(localized: "Today’s steps unavailable") : String(localized: "Connect Apple Health"))
@@ -360,7 +360,7 @@ struct CompanionFightSummary: View {
                 : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 12))
             layout {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(mine.map { $0.score.formatted(.number.precision(.fractionLength(0))) } ?? "—")
+                    Text(mine.map { $0.score.formatted(.number.precision(.fractionLength(0))) } ?? "-")
                         .font(.custom("Nunito-ExtraBold", size: 34, relativeTo: .largeTitle))
                         .monospacedDigit()
                         .foregroundStyle(theme.text)

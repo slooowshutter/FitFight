@@ -20,7 +20,10 @@ export const GET = apiRoute(async (request) => {
   if (!parsed.success) {
     throw parsed.error;
   }
-  return json(await listFeedbackPosts(userId, parsed.data));
+  const listed = await listFeedbackPosts(userId, parsed.data);
+  return json({
+    posts: listed.posts.map((post) => ({ ...post, metadata: {} })),
+  });
 });
 
 export const POST = apiRoute(async (request) => {
@@ -31,7 +34,7 @@ export const POST = apiRoute(async (request) => {
   }
   const created = await createFeedbackPost(userId, parsed.data);
   await createAppFeedbackBacklogItem(created.post);
-  return json(created, 201);
+  return json({ post: { ...created.post, metadata: {} } }, 201);
 });
 
 export function OPTIONS(request: Request) {

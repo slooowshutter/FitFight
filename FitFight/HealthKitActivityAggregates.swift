@@ -49,6 +49,7 @@ enum HealthKitActivityAggregates {
             kinds.append(QuantityKind(metric: metric, unitName: unitName, type: type, unit: unit))
         }
         add("active_energy", "kcal", .activeEnergyBurned, .kilocalorie())
+        add("resting_energy", "kcal", .basalEnergyBurned, .kilocalorie())
         add("walking_running_distance", "m", .distanceWalkingRunning, .meter())
         add("exercise_minutes", "min", .appleExerciseTime, .minute())
         add("stand_minutes", "min", .appleStandTime, .minute())
@@ -142,6 +143,7 @@ enum HealthKitActivityAggregates {
 
         let units: [String: String] = [
             "active_energy": "kcal",
+            "resting_energy": "kcal",
             "walking_running_distance": "m",
             "exercise_minutes": "min",
             "stand_minutes": "min",
@@ -287,13 +289,23 @@ enum HealthKitActivityAggregates {
             }
             store.execute(query)
         }
-        return samples.map { workout in
-            FitFightHealthKitStepSync.Workout(
+        return samples.compactMap { workout -> FitFightHealthKitStepSync.Workout? in
+            guard workout.endDate > workout.startDate,
+                  workout.endDate <= end,
+                  workout.duration >= 0,
+                  workout.duration <= 7 * 24 * 60 * 60
+            else { return nil }
+            return FitFightHealthKitStepSync.Workout(
                 healthkitUuid: workout.uuid.uuidString.lowercased(),
                 startedAt: iso8601(workout.startDate),
                 endedAt: iso8601(workout.endDate),
                 activityType: activityTypeName(workout.workoutActivityType),
                 durationSeconds: max(0, workout.duration),
+                activeMinutes: quantityValue(
+                    HKQuantityType.quantityType(forIdentifier: .appleExerciseTime)
+                        .flatMap { workout.statistics(for: $0)?.sumQuantity() },
+                    unit: .minute()
+                ),
                 distanceM: workoutDistanceMeters(workout),
                 energyKcal: quantityValue(
                     HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)

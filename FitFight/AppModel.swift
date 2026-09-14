@@ -647,6 +647,11 @@ final class AppModel: ObservableObject {
             if let data = try? JSONEncoder().encode(loaded) {
                 UserDefaults.standard.set(data, forKey: Self.fightsCachePrefix + userId.uuidString)
             }
+            RemoteImageLoader.shared.prefetch(
+                (loaded.flatMap { $0.standings.map(\.person.photoURL) } + [session.profile?.avatar?.url])
+                    .compactMap { $0 },
+                kind: .avatar
+            )
         } catch {
             attempt.fail(HealthKitStepsStore.errorCode(for: error))
             // Keep the last successful result visible while the phone is offline.
@@ -1323,7 +1328,7 @@ final class AppModel: ObservableObject {
                     ? String(localized: "Tentative lead")
                     : String(localized: "Tentative loss")
             } else {
-                kickerEmphasis = String(localized: "Pending — open the app")
+                kickerEmphasis = String(localized: "Pending. Open the app")
             }
         case .live:
             if row.state == "awaiting_final_sync" {

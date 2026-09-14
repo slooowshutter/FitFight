@@ -21,7 +21,7 @@ export async function syncHealthKitAggregates(
   input: HealthKitAggregateSync,
   database: Sql = createDatabaseClient(),
 ): Promise<HealthKitAggregateSyncResponse> {
-  return database.begin("read write", async (sql) => {
+  const result = await database.begin("read write", async (sql) => {
     const [sourceRow] = await sql`
       insert into public.data_sources (
         user_id, provider, source_label, connection_route, capabilities,
@@ -29,7 +29,7 @@ export async function syncHealthKitAggregates(
       ) values (
         ${userId}, 'apple_health', 'Apple Health', 'healthkit',
         array[
-          'steps','active_energy','walking_running_distance','exercise_minutes',
+          'steps','active_energy','resting_energy','walking_running_distance','exercise_minutes',
           'stand_minutes','stand_hours','flights_climbed','cycling_distance',
           'swimming_distance','move_time_minutes','wheelchair_distance',
           'wheelchair_pushes','swimming_strokes','rowing_distance','paddle_distance',
@@ -287,103 +287,134 @@ export async function syncHealthKitAggregates(
       }
     }
 
-    if (input.activity_days && input.activity_days.length > 0) {
-      const activityRows = input.activity_days.map((day) => ({
-        user_id: userId,
-        source_id: source.id,
-        metric: day.metric,
-        day: day.day,
-        starts_at: day.starts_at,
-        ends_at: day.ends_at,
-        value: day.value,
-        unit: day.unit,
-      }));
-      await sql`
-        insert into private.healthkit_activity_days ${sql(
-          activityRows,
-          "user_id",
-          "source_id",
-          "metric",
-          "day",
-          "starts_at",
-          "ends_at",
-          "value",
-          "unit",
-        )}
-        on conflict (user_id, source_id, metric, day) do update
-        set starts_at = excluded.starts_at,
-          ends_at = excluded.ends_at,
-          value = excluded.value,
-          unit = excluded.unit,
-          updated_at = now()
-      `;
-    }
-
-    if (input.workouts) {
-      const lookback = new Date(
-        Date.parse(input.complete_through) - MAX_ACTIVITY_LOOKBACK_MS,
-      ).toISOString();
-      if (input.workouts.length > 0) {
-        const workoutRows = input.workouts.map((workout) => ({
-          user_id: userId,
-          source_id: source.id,
-          healthkit_uuid: workout.healthkit_uuid,
-          started_at: workout.started_at,
-          ended_at: workout.ended_at,
-          activity_type: workout.activity_type,
-          duration_seconds: workout.duration_seconds,
-          distance_m: workout.distance_m ?? null,
-          energy_kcal: workout.energy_kcal ?? null,
-          effort: workout.effort ?? null,
-        }));
-        await sql`
-          insert into private.healthkit_workouts ${sql(
-            workoutRows,
-            "user_id",
-            "source_id",
-            "healthkit_uuid",
-            "started_at",
-            "ended_at",
-            "activity_type",
-            "duration_seconds",
-            "distance_m",
-            "energy_kcal",
-            "effort",
-          )}
-          on conflict (user_id, healthkit_uuid) do update
-          set source_id = excluded.source_id,
-            started_at = excluded.started_at,
-            ended_at = excluded.ended_at,
-            activity_type = excluded.activity_type,
-            duration_seconds = excluded.duration_seconds,
-            distance_m = excluded.distance_m,
-            energy_kcal = excluded.energy_kcal,
-            effort = excluded.effort,
-            updated_at = now()
-        `;
-        await sql`
-          delete from private.healthkit_workouts
-          where user_id = ${userId}
-            and source_id = ${source.id}
-            and started_at >= ${lookback}
-            and healthkit_uuid <> all(${sql.array(
-              input.workouts.map((workout) => workout.healthkit_uuid),
-            )}::uuid[])
-        `;
-      } else {
-        await sql`
-          delete from private.healthkit_workouts
-          where user_id = ${userId}
-            and source_id = ${source.id}
-            and started_at >= ${lookback}
-        `;
-      }
-    }
-
     return {
       complete_through: input.complete_through,
       synced_days: input.merged_days.length,
       synced_fights: input.fight_aggregates.length,
+      sourceId: source.id,
     };
   });
+
+  if ((input.activity_days && input.activity_days.length > 0) || input.workouts) {
+    try {
+      await database.begin("read write", async (sql) => {
+        await persistHealthKitExtras(sql, userId, result.sourceId, input);
+      });
+    } catch (error) {
+      console.error(
+        "fitfight_healthkit_extras_failed",
+        error instanceof Error ? error.message : "unknown",
+      );
+    }
+  }
+
+  return {
+    complete_through: result.complete_through,
+    synced_days: result.synced_days,
+    synced_fights: result.synced_fights,
+  };
+}
+
+async function persistHealthKitExtras(
+  sql: Sql,
+  userId: string,
+  sourceId: string,
+  input: HealthKitAggregateSync,
+): Promise<void> {
+  if (input.activity_days && input.activity_days.length > 0) {
+    const activityRows = input.activity_days.map((day) => ({
+      user_id: userId,
+      source_id: sourceId,
+      metric: day.metric,
+      day: day.day,
+      starts_at: day.starts_at,
+      ends_at: day.ends_at,
+      value: day.value,
+      unit: day.unit,
+    }));
+    await sql`
+      insert into private.healthkit_activity_days ${sql(
+        activityRows,
+        "user_id",
+        "source_id",
+        "metric",
+        "day",
+        "starts_at",
+        "ends_at",
+        "value",
+        "unit",
+      )}
+      on conflict (user_id, source_id, metric, day) do update
+      set starts_at = excluded.starts_at,
+        ends_at = excluded.ends_at,
+        value = excluded.value,
+        unit = excluded.unit,
+        updated_at = now()
+    `;
+  }
+
+  if (!input.workouts) {
+    return;
+  }
+  const lookback = new Date(
+    Date.parse(input.complete_through) - MAX_ACTIVITY_LOOKBACK_MS,
+  ).toISOString();
+  if (input.workouts.length > 0) {
+    const workoutRows = input.workouts.map((workout) => ({
+      user_id: userId,
+      source_id: sourceId,
+      healthkit_uuid: workout.healthkit_uuid,
+      started_at: workout.started_at,
+      ended_at: workout.ended_at,
+      activity_type: workout.activity_type,
+      duration_seconds: workout.duration_seconds,
+      active_minutes: workout.active_minutes ?? null,
+      distance_m: workout.distance_m ?? null,
+      energy_kcal: workout.energy_kcal ?? null,
+      effort: workout.effort ?? null,
+    }));
+    await sql`
+      insert into private.healthkit_workouts ${sql(
+        workoutRows,
+        "user_id",
+        "source_id",
+        "healthkit_uuid",
+        "started_at",
+        "ended_at",
+        "activity_type",
+        "duration_seconds",
+        "active_minutes",
+        "distance_m",
+        "energy_kcal",
+        "effort",
+      )}
+      on conflict (user_id, healthkit_uuid) do update
+      set source_id = excluded.source_id,
+        started_at = excluded.started_at,
+        ended_at = excluded.ended_at,
+        activity_type = excluded.activity_type,
+        duration_seconds = excluded.duration_seconds,
+        active_minutes = excluded.active_minutes,
+        distance_m = excluded.distance_m,
+        energy_kcal = excluded.energy_kcal,
+        effort = excluded.effort,
+        updated_at = now()
+    `;
+    await sql`
+      delete from private.healthkit_workouts
+      where user_id = ${userId}
+        and source_id = ${sourceId}
+        and started_at >= ${lookback}
+        and healthkit_uuid <> all(${sql.array(
+          input.workouts.map((workout) => workout.healthkit_uuid),
+        )}::uuid[])
+    `;
+    return;
+  }
+  await sql`
+    delete from private.healthkit_workouts
+    where user_id = ${userId}
+      and source_id = ${sourceId}
+      and started_at >= ${lookback}
+  `;
 }

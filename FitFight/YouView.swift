@@ -16,6 +16,7 @@ struct YouView: View {
     @State private var isUploadingPhoto = false
     @State private var photoError = ""
     @State private var showingOnboardingPreview = false
+    @State private var showingSlideHapticsLab = false
     @State private var showingHealthDetails = false
     @State private var showingCompanionPreviewControls = false
 
@@ -77,6 +78,11 @@ struct YouView: View {
                 .environmentObject(session)
                 .environmentObject(steps)
                 .environmentObject(themeStore)
+                .fitFightTheme(themeStore.theme)
+                .presentationBackground(themeStore.theme.bg)
+        }
+        .sheet(isPresented: $showingSlideHapticsLab) {
+            SlideHapticsLabView()
                 .fitFightTheme(themeStore.theme)
                 .presentationBackground(themeStore.theme.bg)
         }
@@ -181,7 +187,8 @@ struct YouView: View {
     }
 
     private var health: some View {
-        FFGroupedRows {
+        let syncFailed = steps.connection == .syncFailed
+        return FFGroupedRows {
             Button {
                 Task {
                     await model.refreshFights(session: session, steps: steps, trigger: .manual, requestAccess: !steps.hasAsked)
@@ -192,11 +199,13 @@ struct YouView: View {
                     subtitle: steps.connection == .upToDate ? String(localized: "Up to date") : steps.detailText,
                     systemImage: "heart",
                     enabled: steps.status != .reading && !model.isRefreshingFights,
-                    subtitleTone: steps.isConnected ? .moss : .neutral,
+                    subtitleTone: syncFailed ? .ember : (steps.isConnected ? .moss : .neutral),
                     trailing: AnyView(
                         FFPill(
-                            steps.isConnected ? String(localized: "Connected") : String(localized: "Connect"),
-                            style: steps.isConnected ? .softMoss : .solidMoss
+                            syncFailed
+                                ? String(localized: "Retry")
+                                : (steps.isConnected ? String(localized: "Connected") : String(localized: "Connect")),
+                            style: syncFailed ? .softEmber : (steps.isConnected ? .softMoss : .solidMoss)
                         )
                     )
                 )
@@ -379,6 +388,19 @@ struct YouView: View {
                         .foregroundStyle(theme.textFaint)
                 ),
                 action: { showingOnboardingPreview = true }
+            )
+            FFDivider()
+            FFGroupedRow(
+                title: "Slide haptics",
+                subtitle: "Twenty Slide to start vibrations. This page is only on your account.",
+                systemImage: "iphone.radiowaves.left.and.right",
+                subtitleTone: .neutral,
+                trailing: AnyView(
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(theme.textFaint)
+                ),
+                action: { showingSlideHapticsLab = true }
             )
         }
     }

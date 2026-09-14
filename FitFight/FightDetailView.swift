@@ -488,7 +488,7 @@ struct FightDetailView: View {
         Group {
             if row.invited || row.deferred {
                 HStack(spacing: 13) {
-                    Text("—")
+                    Text("-")
                         .ffType(.button)
                         .foregroundStyle(theme.textFaint)
                         .frame(width: 22)
@@ -541,7 +541,7 @@ struct FightDetailView: View {
         let submitted = contextFight.standings.filter { !$0.invited && !$0.deferred && $0.finalStepsComplete == true }
         let rank = submitted.firstIndex { $0.id == row.id }.map { $0 + 1 }
         return HStack(spacing: 13) {
-            Text(needsSync ? "—" : "\(rank ?? 0)")
+            Text(needsSync ? "-" : "\(rank ?? 0)")
                 .ffType(.button)
                 .foregroundStyle(needsSync ? theme.textFaint : (rank == 1 ? theme.gold : theme.textTertiary))
                 .frame(width: 22)

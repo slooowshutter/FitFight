@@ -22,7 +22,7 @@ import type {
 import {
   loadReadyMedia,
   mapMedia,
-  signMediaUrl,
+  signMediaUrls,
   type MediaRow,
 } from "./media-supabase-query";
 
@@ -253,17 +253,10 @@ async function mapPosts(userId: string, rows: PostRow[], database: Sql): Promise
       )
     group by comment.post_id
   `;
-  const urls = new Map<string, string | null>();
-  for (const row of rows) {
-    if (row.avatar_object_path && !urls.has(row.avatar_object_path)) {
-      urls.set(row.avatar_object_path, await signMediaUrl(row.avatar_object_path));
-    }
-  }
-  for (const attachment of attachments) {
-    if (!urls.has(attachment.object_path)) {
-      urls.set(attachment.object_path, await signMediaUrl(attachment.object_path));
-    }
-  }
+  const urls = await signMediaUrls([
+    ...rows.flatMap((row) => (row.avatar_object_path ? [row.avatar_object_path] : [])),
+    ...attachments.map((attachment) => attachment.object_path),
+  ]);
 
   const tagsByPost = new Map<string, FightPostTag[]>();
   for (const tag of tags) {
@@ -803,6 +796,9 @@ export async function listFeedPeople(
     limit 80
   `;
 
+  const urls = await signMediaUrls(
+    rows.flatMap((row) => (row.avatar_object_path ? [row.avatar_object_path] : [])),
+  );
   const people = [];
   for (const row of rows) {
     let avatar = null;
@@ -825,7 +821,7 @@ export async function listFeedPeople(
         duration_ms: row.avatar_duration_ms,
         sha256: row.avatar_sha256,
         created_at: row.avatar_created_at,
-      }, await signMediaUrl(row.avatar_object_path));
+      }, urls.get(row.avatar_object_path) ?? null);
     }
     people.push({
       user_id: row.user_id,

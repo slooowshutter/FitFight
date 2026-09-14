@@ -107,6 +107,8 @@ test("starts a v1 cloud agent on develop without a webhook", async () => {
     assert.match(prompt, /daily Steps chart/);
     assert.match(prompt, /Device metadata:/);
     assert.match(prompt, /"os":"iOS"/);
+    assert.match(prompt, /Sent to Cursor from:/);
+    assert.match(prompt, /none recorded/);
     assert.match(prompt, /@dorian/);
     assert.match(prompt, /Watch catches up/);
     assert.match(prompt, /Comments, including later comments if people added more:/);
@@ -137,9 +139,43 @@ test("labels a feature request and still attaches device metadata with no commen
     }) as typeof fetch);
     assert.match(prompt, /Kind: feature request/);
     assert.match(prompt, /Device metadata:/);
+    assert.match(prompt, /Sent to Cursor from:/);
     assert.match(prompt, /No comments\./);
     assert.doesNotMatch(prompt, /AGENTS\.md/);
     assert.doesNotMatch(prompt, /1\.0\.0 if people will see/);
+  } finally {
+    restoreEnv("CURSOR_API_KEY", previous);
+  }
+});
+
+test("attaches the sender device when the original post has no snapshot", async () => {
+  const previous = process.env.CURSOR_API_KEY;
+  process.env.CURSOR_API_KEY = longCursorKey;
+  const emptyDetail: FeedbackPostDetail = {
+    post: { ...detail.post, metadata: {} },
+    comments: [{
+      id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+      body: "Same here after the Watch catches up.",
+      author_handle: "dorian",
+      created_at: "2026-09-04T13:00:00Z",
+      metadata: {},
+    }],
+  };
+  try {
+    let prompt = "";
+    await launchFeedbackFixAgent(emptyDetail, (async (_url, init) => {
+      prompt = (JSON.parse(String(init?.body)) as { prompt: { text: string } }).prompt.text;
+      return v1CreatedResponse(agentUrl);
+    }) as typeof fetch, {
+      app_version: "1.0.0",
+      app_build: "190",
+      os: "iOS",
+      device_model: "iPhone18,1",
+    });
+    assert.match(prompt, /Device metadata:\nnone recorded/);
+    assert.match(prompt, /Sent to Cursor from:/);
+    assert.match(prompt, /"device_model":"iPhone18,1"/);
+    assert.match(prompt, /Device: none recorded/);
   } finally {
     restoreEnv("CURSOR_API_KEY", previous);
   }

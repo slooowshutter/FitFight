@@ -12,7 +12,8 @@ export const GET = apiRoute<{ postID: string }>(async (request, { params }) => {
   const detail = await getFeedbackPost(userId, postId);
   const viewer = await readAdminViewer(userId);
   return json({
-    ...detail,
+    post: { ...detail.post, metadata: {} },
+    comments: detail.comments.map((comment) => ({ ...comment, metadata: {} })),
     can_launch_fix: isFitFightAdmin(viewer),
   });
 });

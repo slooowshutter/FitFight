@@ -51,6 +51,8 @@
 		A10000000000000000000323 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000325 /* Localizable.xcstrings */; };
 		A10000000000000000000324 /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000326 /* InfoPlist.xcstrings */; };
 		A1000000000000000000F002 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = A1000000000000000000F001 /* Supabase */; };
+		A1000000000000000000F012 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = A1000000000000000000F011 /* PostHog */; };
+		A10000000000000000000421 /* CrashReporting.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000420 /* CrashReporting.swift */; };
 		A10000000000000000000332 /* HealthKitSyncTrace.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000331 /* HealthKitSyncTrace.swift */; };
 		A10000000000000000000351 /* Profile.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000350 /* Profile.swift */; };
 		A10000000000000000000353 /* FightSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000352 /* FightSnapshot.swift */; };
@@ -69,6 +71,10 @@
 		A10000000000000000000389 /* FeedbackClientMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000388 /* FeedbackClientMetadata.swift */; };
 		A10000000000000000000401 /* CompanionViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000400 /* CompanionViews.swift */; };
 		A10000000000000000000403 /* CompanionPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000402 /* CompanionPreview.swift */; };
+		A10000000000000000000411 /* RemoteImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000410 /* RemoteImageCache.swift */; };
+		A10000000000000000000413 /* RemoteImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000412 /* RemoteImage.swift */; };
+		A10000000000000000000415 /* SlideHaptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000414 /* SlideHaptics.swift */; };
+		A10000000000000000000417 /* SlideHapticsLabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000416 /* SlideHapticsLabView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -138,6 +144,11 @@
 		A10000000000000000000372 /* FightPostThread.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FightPostThread.swift; sourceTree = "<group>"; };
 		A10000000000000000000400 /* CompanionViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionViews.swift; sourceTree = "<group>"; };
 		A10000000000000000000402 /* CompanionPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionPreview.swift; sourceTree = "<group>"; };
+		A10000000000000000000410 /* RemoteImageCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteImageCache.swift; sourceTree = "<group>"; };
+		A10000000000000000000412 /* RemoteImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteImage.swift; sourceTree = "<group>"; };
+		A10000000000000000000414 /* SlideHaptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlideHaptics.swift; sourceTree = "<group>"; };
+		A10000000000000000000416 /* SlideHapticsLabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlideHapticsLabView.swift; sourceTree = "<group>"; };
+		A10000000000000000000420 /* CrashReporting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrashReporting.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -146,6 +157,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1000000000000000000F002 /* Supabase in Frameworks */,
+				A1000000000000000000F012 /* PostHog in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -171,6 +183,7 @@
 				A10000000000000000000340 /* RequestsView.swift */,
 				A10000000000000000000301 /* SupabaseConfig.swift */,
 				A10000000000000000000305 /* BuildEnv.swift */,
+				A10000000000000000000420 /* CrashReporting.swift */,
 				A10000000000000000000306 /* APIConfig.swift */,
 				A10000000000000000000307 /* FitFightAPI.swift */,
 				A10000000000000000000388 /* FeedbackClientMetadata.swift */,
@@ -178,12 +191,15 @@
 				A10000000000000000000352 /* FightSnapshot.swift */,
 				A10000000000000000000360 /* Media.swift */,
 				A10000000000000000000362 /* MediaUploader.swift */,
+				A10000000000000000000410 /* RemoteImageCache.swift */,
+				A10000000000000000000412 /* RemoteImage.swift */,
 				A10000000000000000000364 /* FeedView.swift */,
 				A10000000000000000000372 /* FightPostThread.swift */,
 				A10000000000000000000366 /* HealthOnboardingView.swift */,
 				A10000000000000000000380 /* NotificationOnboardingView.swift */,
 				A10000000000000000000386 /* RequestsOnboardingView.swift */,
 				A10000000000000000000384 /* OnboardingPreviewView.swift */,
+				A10000000000000000000416 /* SlideHapticsLabView.swift */,
 				A10000000000000000000302 /* SessionStore.swift */,
 				A10000000000000000000303 /* AppleSignInControl.swift */,
 				A10000000000000000000309 /* WelcomeView.swift */,
@@ -217,6 +233,7 @@
 				A1000000000000000000001A /* tokens.json */,
 				A10000000000000000000017 /* Theme.swift */,
 				A10000000000000000000018 /* Components.swift */,
+				A10000000000000000000414 /* SlideHaptics.swift */,
 				A100000000000000000000C5 /* AppChrome.swift */,
 				A100000000000000000000C2 /* Controls.swift */,
 				A100000000000000000000C3 /* DataViz.swift */,
@@ -271,6 +288,7 @@
 			name = FitFight;
 			packageProductDependencies = (
 				A1000000000000000000F001 /* Supabase */,
+				A1000000000000000000F011 /* PostHog */,
 			);
 			productName = FitFight;
 			productReference = A10000000000000000000010 /* FitFight.app */;
@@ -303,6 +321,7 @@
 			mainGroup = A10000000000000000000032;
 			packageReferences = (
 				A1000000000000000000F000 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				A1000000000000000000F010 /* XCRemoteSwiftPackageReference "posthog-ios" */,
 			);
 			productRefGroup = A10000000000000000000031 /* Products */;
 			projectDirPath = "";
@@ -344,6 +363,7 @@
 				A10000000000000000000006 /* VersionsView.swift in Sources */,
 				A10000000000000000000007 /* Theme.swift in Sources */,
 				A10000000000000000000008 /* Components.swift in Sources */,
+				A10000000000000000000415 /* SlideHaptics.swift in Sources */,
 				A100000000000000000000D5 /* AppChrome.swift in Sources */,
 				A100000000000000000000D2 /* Controls.swift in Sources */,
 				A100000000000000000000D3 /* DataViz.swift in Sources */,
@@ -363,6 +383,7 @@
 				A10000000000000000000021 /* ScreenshotExport.swift in Sources */,
 				A10000000000000000000311 /* SupabaseConfig.swift in Sources */,
 				A10000000000000000000315 /* BuildEnv.swift in Sources */,
+				A10000000000000000000421 /* CrashReporting.swift in Sources */,
 				A10000000000000000000316 /* APIConfig.swift in Sources */,
 				A10000000000000000000317 /* FitFightAPI.swift in Sources */,
 				A10000000000000000000389 /* FeedbackClientMetadata.swift in Sources */,
@@ -370,11 +391,14 @@
 				A10000000000000000000353 /* FightSnapshot.swift in Sources */,
 				A10000000000000000000361 /* Media.swift in Sources */,
 				A10000000000000000000363 /* MediaUploader.swift in Sources */,
+				A10000000000000000000411 /* RemoteImageCache.swift in Sources */,
+				A10000000000000000000413 /* RemoteImage.swift in Sources */,
 				A10000000000000000000365 /* FeedView.swift in Sources */,
 				A10000000000000000000379 /* PushNotificationService.swift in Sources */,
 				A10000000000000000000381 /* NotificationOnboardingView.swift in Sources */,
 				A10000000000000000000383 /* DebugMenuView.swift in Sources */,
 				A10000000000000000000385 /* OnboardingPreviewView.swift in Sources */,
+				A10000000000000000000417 /* SlideHapticsLabView.swift in Sources */,
 				A10000000000000000000387 /* RequestsOnboardingView.swift in Sources */,
 				A10000000000000000000373 /* FightPostThread.swift in Sources */,
 				A10000000000000000000367 /* HealthOnboardingView.swift in Sources */,
@@ -624,6 +648,14 @@
 				minimumVersion = 2.55.1;
 			};
 		};
+		A1000000000000000000F010 /* XCRemoteSwiftPackageReference "posthog-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/PostHog/posthog-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.59.3;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -631,6 +663,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = A1000000000000000000F000 /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Supabase;
+		};
+		A1000000000000000000F011 /* PostHog */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A1000000000000000000F010 /* XCRemoteSwiftPackageReference "posthog-ios" */;
+			productName = PostHog;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

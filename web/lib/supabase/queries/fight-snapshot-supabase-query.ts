@@ -4,7 +4,7 @@ import { ApiError, ERROR_CODES } from "@/lib/http";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import { fightSnapshotSchema, type FightSnapshot } from "@/lib/types/fights/fight-snapshot";
-import { mapMedia, signMediaUrl, type MediaRow } from "./media-supabase-query";
+import { mapMedia, signMediaUrls, type MediaRow } from "./media-supabase-query";
 
 const snapshotRowSchema = fightSnapshotSchema.extend({
   profiles: z.array(z.object({
@@ -92,11 +92,9 @@ async function attachProfileAvatars(
       .in("id", ids)
       .eq("status", "ready");
     if (error) throw new ApiError(500, ERROR_CODES.db_error, "Could not load profile photos");
-    const urls = new Map<string, string | null>();
-    for (const media of (data ?? []) as MediaRow[]) {
-      if (!urls.has(media.object_path)) {
-        urls.set(media.object_path, await signMediaUrl(media.object_path));
-      }
+    const mediaRows = (data ?? []) as MediaRow[];
+    const urls = await signMediaUrls(mediaRows.map((media) => media.object_path));
+    for (const media of mediaRows) {
       avatars.set(media.id, mapMedia(media, urls.get(media.object_path) ?? null));
     }
   }

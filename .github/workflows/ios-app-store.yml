@@ -60,6 +60,9 @@ jobs:
           exit "$missing"
 
       - name: Wait for production and write backend environment
+        env:
+          POSTHOG_PROJECT_API_KEY: ${{ secrets.POSTHOG_PROJECT_API_KEY }}
+          POSTHOG_HOST: ${{ vars.POSTHOG_HOST }}
         run: |
           set -euo pipefail
           mkdir -p FitFight/Generated
@@ -145,12 +148,25 @@ jobs:
               )
               return f'"{escaped}"'
 
+          posthog_key = os.environ.get("POSTHOG_PROJECT_API_KEY", "").strip()
+          posthog_host = os.environ.get("POSTHOG_HOST", "").strip() or "https://us.i.posthog.com"
+          if not posthog_key.startswith("phc_"):
+              raise SystemExit(
+                  "Missing GitHub secret POSTHOG_PROJECT_API_KEY. "
+                  "Add the PostHog project API key (phc_...) under "
+                  "Settings → Secrets and variables → Actions. "
+                  "Do not paste it in chat. Optional variable POSTHOG_HOST: "
+                  "https://us.i.posthog.com or https://eu.i.posthog.com."
+              )
+
           Path("FitFight/Generated/BuildEnv.swift").write_text(
               "/// Written by App Store CI before archive.\n"
               "enum BuildEnv {\n"
               f"    static let supabaseURL = {swift_string(supabase_url)}\n"
               f"    static let supabasePublishableKey = {swift_string(publishable_key)}\n"
               f"    static let apiBaseURL = {swift_string(api_url)}\n"
+              f"    static let posthogProjectAPIKey = {swift_string(posthog_key)}\n"
+              f"    static let posthogHost = {swift_string(posthog_host)}\n"
               "}\n"
           )
           print("Production services and generated build environment are ready")

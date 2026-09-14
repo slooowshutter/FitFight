@@ -191,6 +191,7 @@ final class SessionStore: ObservableObject {
         authSession = nil
         profile = nil
         profileUnavailable = false
+        CrashReporting.reset()
         UserDefaults.standard.removeObject(forKey: Self.handleChosenKey)
         UserDefaults.standard.removeObject(forKey: Self.needsHealthKey)
         UserDefaults.standard.removeObject(forKey: Self.needsNotificationKey)
@@ -231,10 +232,9 @@ final class SessionStore: ObservableObject {
     func setHandle(_ raw: String, avatarMediaId: UUID? = nil) async throws {
         guard !screenshotSignedIn else { throw CompanionPreview.WriteUnavailable() }
         guard await AppUpdateChecker.shared.permitsRequests() else {
-            let requiresUpdate = AppUpdateChecker.shared.status == .updateRequired
             throw FitFightAPIError.http(
-                status: requiresUpdate ? 426 : 503,
-                code: requiresUpdate ? "update_required" : "release_unavailable",
+                status: 426,
+                code: "update_required",
                 message: nil
             )
         }
@@ -314,6 +314,7 @@ final class SessionStore: ObservableObject {
             authSession = nil
             profile = nil
             profileUnavailable = false
+            CrashReporting.reset()
             UserDefaults.standard.removeObject(forKey: Self.handleChosenKey)
             UserDefaults.standard.removeObject(forKey: Self.needsHealthKey)
             UserDefaults.standard.removeObject(forKey: Self.needsNotificationKey)
@@ -339,6 +340,9 @@ final class SessionStore: ObservableObject {
                     authSession = session
                     continue
                 }
+                if let previousId = authSession?.user.id, previousId != session.user.id {
+                    CrashReporting.reset()
+                }
                 profileUnavailable = false
                 if let data = UserDefaults.standard.data(
                     forKey: Self.profileCachePrefix + session.user.id.uuidString
@@ -353,6 +357,10 @@ final class SessionStore: ObservableObject {
                 authSession = session
                 await loadProfile()
             } else {
+                // Launch emits nil before restore; only reset after a real session is dropped.
+                if authSession != nil {
+                    CrashReporting.reset()
+                }
                 authSession = nil
                 profile = nil
             }

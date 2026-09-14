@@ -28,6 +28,55 @@ enum Changelog {
             version: "1.0.0",
             year: 2026,
             month: 9,
+            day: 14,
+            notes: "You can still use FitFight when you’re offline. The update screen only appears when an update is actually required, not when the version check can’t reach the internet."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "Crashes are now reported so we can fix them. Reports do not include Apple Health or Steps."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "Slide to start now ticks like a switch as you drag, instead of buzzing the whole time."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "Apple Health Steps still syncs even if extra workout details fail. You shows the real server or network error instead of only Sync failed, and no longer labels a failed sync as Connected."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "Photos and profile pictures now show up much faster. They stay on the phone after the first load, so Feed, Fights and You don’t sit on empty boxes."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 13,
+            notes: "Feed photos keep their original shape and fill the post width. A wide photo stays short, a tall one stays tall — nothing is cropped to a fixed frame."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 13,
+            notes: "Send to Cursor includes the phone details from your device. Bugs & requests still hides them on the board."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
             day: 13,
             notes: "Your selected companion now appears as your avatar across You, fights and Feed. Apple Health details stay behind More settings. Choose Custom when creating a fight to set exact start and end dates and times."
         ),
@@ -79,13 +128,6 @@ enum Changelog {
             month: 9,
             day: 13,
             notes: "The update screen is the full overlay again. Internal TestFlight latest no longer asks you to update; Friends stay on the public build."
-        ),
-        ReleaseNote(
-            version: "1.0.0",
-            year: 2026,
-            month: 9,
-            day: 12,
-            notes: "Plus starts with no destination — pick Public or a fight. Public posts and fight posts look different. You can edit or delete your own posts. Tags are people you’ve already finished a fight with."
         ),
         ReleaseNote(
             version: "1.0.0",

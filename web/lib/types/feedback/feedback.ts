@@ -134,6 +134,12 @@ export const feedbackDetailResponseSchema = feedbackPostDetailSchema
   })
   .strict();
 
+export const launchFeedbackFixRequestSchema = z
+  .object({
+    metadata: feedbackMetadataSchema.optional(),
+  })
+  .strict();
+
 export const feedbackFixAgentResponseSchema = z
   .object({
     agent_id: z.string().min(1),
@@ -169,6 +175,7 @@ export type FeedbackListResponse = z.infer<typeof feedbackListResponseSchema>;
 export type FeedbackPostResponse = z.infer<typeof feedbackPostResponseSchema>;
 export type FeedbackPostDetail = z.infer<typeof feedbackPostDetailSchema>;
 export type FeedbackDetailResponse = z.infer<typeof feedbackDetailResponseSchema>;
+export type LaunchFeedbackFixRequest = z.infer<typeof launchFeedbackFixRequestSchema>;
 export type FeedbackFixAgentResponse = z.infer<typeof feedbackFixAgentResponseSchema>;
 export type FeedbackVoteResponse = z.infer<typeof feedbackVoteResponseSchema>;
 export type FeedbackCommentResponse = z.infer<typeof feedbackCommentResponseSchema>;

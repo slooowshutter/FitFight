@@ -191,6 +191,7 @@ final class SessionStore: ObservableObject {
         authSession = nil
         profile = nil
         profileUnavailable = false
+        CrashReporting.reset()
         UserDefaults.standard.removeObject(forKey: Self.handleChosenKey)
         UserDefaults.standard.removeObject(forKey: Self.needsHealthKey)
         UserDefaults.standard.removeObject(forKey: Self.needsNotificationKey)
@@ -314,6 +315,7 @@ final class SessionStore: ObservableObject {
             authSession = nil
             profile = nil
             profileUnavailable = false
+            CrashReporting.reset()
             UserDefaults.standard.removeObject(forKey: Self.handleChosenKey)
             UserDefaults.standard.removeObject(forKey: Self.needsHealthKey)
             UserDefaults.standard.removeObject(forKey: Self.needsNotificationKey)
@@ -339,6 +341,9 @@ final class SessionStore: ObservableObject {
                     authSession = session
                     continue
                 }
+                if let previousId = authSession?.user.id, previousId != session.user.id {
+                    CrashReporting.reset()
+                }
                 profileUnavailable = false
                 if let data = UserDefaults.standard.data(
                     forKey: Self.profileCachePrefix + session.user.id.uuidString
@@ -353,6 +358,10 @@ final class SessionStore: ObservableObject {
                 authSession = session
                 await loadProfile()
             } else {
+                // Launch emits nil before restore; only reset after a real session is dropped.
+                if authSession != nil {
+                    CrashReporting.reset()
+                }
                 authSession = nil
                 profile = nil
             }

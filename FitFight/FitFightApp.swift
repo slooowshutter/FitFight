@@ -16,6 +16,7 @@ final class FitFightAppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
+        CrashReporting.start()
         guard !CompanionPreview.isEnabled else { return true }
         HealthKitStepsStore.shared.installObserverAtLaunch()
         UNUserNotificationCenter.current().delegate = PushNotificationService.shared
@@ -130,6 +131,11 @@ struct FitFightApp: App {
                     #if DEBUG
                     await session.devAdoptSessionIfNeeded()
                     #endif
+                }
+                .task(id: session.authSession?.user.id) {
+                    guard !CompanionPreview.isEnabled else { return }
+                    guard let userId = session.authSession?.user.id else { return }
+                    CrashReporting.identify(userId: userId)
                 }
                 .task(id: appUpdate.status == .current ? session.authSession?.user.id : nil) {
                     guard !CompanionPreview.isEnabled else { return }

@@ -69,6 +69,8 @@ jobs:
           SUPABASE_STAGING_URL: ${{ vars.SUPABASE_STAGING_URL || secrets.SUPABASE_STAGING_URL }}
           SUPABASE_STAGING_PUBLISHABLE_KEY: ${{ vars.SUPABASE_STAGING_PUBLISHABLE_KEY || secrets.SUPABASE_STAGING_PUBLISHABLE_KEY }}
           FITFIGHT_API_URL: ${{ vars.FITFIGHT_API_URL || secrets.FITFIGHT_API_URL }}
+          POSTHOG_PROJECT_API_KEY: ${{ secrets.POSTHOG_PROJECT_API_KEY }}
+          POSTHOG_HOST: ${{ vars.POSTHOG_HOST }}
         run: |
           set -euo pipefail
           mkdir -p FitFight/Generated
@@ -76,6 +78,7 @@ jobs:
           echo "staging url set: ${#SUPABASE_STAGING_URL}"
           echo "staging key set: ${#SUPABASE_STAGING_PUBLISHABLE_KEY}"
           echo "staging api url set: ${#FITFIGHT_API_URL}"
+          echo "posthog key set: ${#POSTHOG_PROJECT_API_KEY}"
           if [ -z "${SUPABASE_STAGING_URL}" ] || [ -z "${SUPABASE_STAGING_PUBLISHABLE_KEY}" ]; then
             echo "GitHub staging variables empty; using the compiled develop project fallback."
           fi
@@ -137,6 +140,18 @@ jobs:
                   "https://zstzbfocunthczzubggz.supabase.co"
               )
 
+          posthog_key = os.environ.get("POSTHOG_PROJECT_API_KEY", "").strip()
+          posthog_host = os.environ.get("POSTHOG_HOST", "").strip() or "https://us.i.posthog.com"
+          if not posthog_key.startswith("phc_"):
+              sys.exit(
+                  "Missing GitHub secret POSTHOG_PROJECT_API_KEY. "
+                  "Add the PostHog project API key (phc_...) under "
+                  "Settings → Secrets and variables → Actions. "
+                  "Do not paste it in chat. Optional variable POSTHOG_HOST: "
+                  "https://us.i.posthog.com or https://eu.i.posthog.com."
+              )
+          print("posthog host set:", posthog_host)
+
           path = Path("FitFight/Generated/BuildEnv.swift")
           path.write_text(
               "/// Written by TestFlight CI before archive. Empty strings use fallbacks.\n"
@@ -144,6 +159,8 @@ jobs:
               f"    static let supabaseURL = {swift_string(url)}\n"
               f"    static let supabasePublishableKey = {swift_string(key)}\n"
               f"    static let apiBaseURL = {swift_string(api)}\n"
+              f"    static let posthogProjectAPIKey = {swift_string(posthog_key)}\n"
+              f"    static let posthogHost = {swift_string(posthog_host)}\n"
               "}\n"
           )
           print("Wrote FitFight/Generated/BuildEnv.swift")

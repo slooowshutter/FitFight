@@ -9,7 +9,7 @@ struct SlideHapticsLabView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text(String(localized: "Slide haptics"))
+                Text(verbatim: "Slide haptics")
                     .ffType(.title)
                     .foregroundStyle(theme.text)
                 Spacer()
@@ -20,7 +20,7 @@ struct SlideHapticsLabView: View {
             .padding(.horizontal, theme.space.screenPadding)
             .padding(.vertical, 12)
 
-            Text(String(localized: "Only on your account. Intensity is strength. Sharpness is crisp versus dull. Ticks follow the track or a clock. Rumble is a continuous buzz. Use on Slide to start puts that recipe on New fight on this phone."))
+            Text(verbatim: "Only on your account. Intensity is strength. Sharpness is crisp versus dull. Ticks follow the track or a clock. Rumble is a continuous buzz. Use on Slide to start puts that recipe on New fight on this phone.")
                 .ffType(.caption)
                 .foregroundStyle(theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -49,10 +49,10 @@ struct SlideHapticsLabView: View {
                         .ffType(.heading)
                         .foregroundStyle(selected ? theme.mossText : theme.text)
                     if recipe.id == FFSlideHapticRecipe.shippedID {
-                        FFPill(String(localized: "default"))
+                        FFPill("default")
                     }
                     if selected {
-                        FFPill(String(localized: "on Slide to start"))
+                        FFPill("on Slide to start")
                     }
                     Spacer(minLength: 0)
                 }
@@ -61,14 +61,14 @@ struct SlideHapticsLabView: View {
                     .foregroundStyle(theme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                 FFSlideToConfirm(
-                    title: String(localized: "Slide to test"),
+                    title: "Slide to test",
                     recipe: recipe,
                     resetsAfterSuccess: true
                 ) {
                     true
                 }
                 if !selected {
-                    FFButton(title: String(localized: "Use on Slide to start"), kind: .ghost, size: .small) {
+                    FFButton(title: "Use on Slide to start", kind: .ghost, size: .small) {
                         selectedRecipeID = recipe.id
                     }
                 }

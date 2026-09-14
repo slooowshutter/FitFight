@@ -391,8 +391,8 @@ struct YouView: View {
             )
             FFDivider()
             FFGroupedRow(
-                title: String(localized: "Slide haptics"),
-                subtitle: String(localized: "Twenty Slide to start vibrations. This page is only on your account."),
+                title: "Slide haptics",
+                subtitle: "Twenty Slide to start vibrations. This page is only on your account.",
                 systemImage: "iphone.radiowaves.left.and.right",
                 subtitleTone: .neutral,
                 trailing: AnyView(

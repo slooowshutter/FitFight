@@ -413,10 +413,13 @@ final class FFSlideHapticEngine {
 
     private func fireDistanceTick(count: Int) {
         guard count > 0 else { return }
-        let index = Int(progress * CGFloat(count + 1))
+        // Confirm fires at 85% travel, so notches fill that span. Cap below 1 so
+        // progress 1.0 does not emit an extra tick past `count`.
+        let span: CGFloat = 0.85
+        let t = min(max(progress / span, 0), 0.999999)
+        let index = Int(t * CGFloat(count + 1))
         guard index != lastTickIndex else { return }
-        let inBand = { (value: Int) in (1...count).contains(value) }
-        if inBand(index) || inBand(lastTickIndex) {
+        if (1...count).contains(index) || (1...count).contains(lastTickIndex) {
             playTick()
         }
         lastTickIndex = index

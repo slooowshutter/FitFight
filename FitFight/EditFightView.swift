@@ -236,7 +236,7 @@ struct EditFightView: View {
     private var peopleSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             FFSectionHeader(title: String(localized: "People"))
-            Text("Add a username or remove someone. Only you can kick people out.")
+            Text(String(localized: "Add a username or remove someone. Only you can kick people out."))
                 .ffType(.caption)
                 .foregroundStyle(theme.textSecondary)
                 .lineSpacing(2)

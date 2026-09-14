@@ -554,10 +554,12 @@ struct FightPostComposer: View {
                 }
                 HStack(alignment: .center, spacing: 10) {
                     Button {
+                        showCamera = false
+                        showLibrary = false
                         if CameraPhotoPicker.isAvailable {
                             showMediaSource = true
                         } else {
-                            showLibrary = true
+                            presentMedia(.library, waitForSourceDialog: false)
                         }
                     } label: {
                         Label(String(localized: "Media"), systemImage: "photo.on.rectangle.angled")
@@ -590,15 +592,10 @@ struct FightPostComposer: View {
         }
         .onChange(of: showMediaSource) { _, presented in
             guard !presented else { return }
-            if let pendingMedia {
-                switch pendingMedia {
-                case .camera:
-                    showCamera = true
-                case .library:
-                    showLibrary = true
-                }
-            }
+            let next = pendingMedia
             pendingMedia = nil
+            guard let next else { return }
+            presentMedia(next, waitForSourceDialog: true)
         }
         .photosPicker(
             isPresented: $showLibrary,
@@ -629,6 +626,26 @@ struct FightPostComposer: View {
     private var canPost: Bool {
         let note = bodyText.trimmingCharacters(in: .whitespacesAndNewlines)
         return !feed.isSaving && !isLoadingMedia && !destinations.isEmpty && (!note.isEmpty || !images.isEmpty || videoURL != nil)
+    }
+
+    private func presentMedia(_ source: MediaSource, waitForSourceDialog: Bool) {
+        Task { @MainActor in
+            showCamera = false
+            showLibrary = false
+            if waitForSourceDialog {
+                // NOTE: the composer is already a sheet; presenting camera/library while Add media is still dismissing never appears.
+                try? await Task.sleep(for: .milliseconds(450))
+            } else {
+                await Task.yield()
+            }
+            guard !Task.isCancelled else { return }
+            switch source {
+            case .camera:
+                showCamera = true
+            case .library:
+                showLibrary = true
+            }
+        }
     }
 
     private func loadMedia(_ items: [PhotosPickerItem]) async {

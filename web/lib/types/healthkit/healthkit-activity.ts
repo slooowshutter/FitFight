@@ -3,6 +3,7 @@ import { isCivilDay } from "@/lib/scoring/civil-day";
 
 export const healthKitActivityMetricValues = [
   "active_energy",
+  "resting_energy",
   "walking_running_distance",
   "exercise_minutes",
   "stand_minutes",
@@ -28,6 +29,7 @@ export const healthKitActivityMetricSchema = z.enum(healthKitActivityMetricValue
 
 export const healthKitActivityUnitByMetric = {
   active_energy: "kcal",
+  resting_energy: "kcal",
   walking_running_distance: "m",
   exercise_minutes: "min",
   stand_minutes: "min",
@@ -49,7 +51,7 @@ export const healthKitActivityUnitByMetric = {
   walk_run_workout_distance: "m",
 } as const;
 
-export const MAX_ACTIVITY_DAYS = 800;
+export const MAX_ACTIVITY_DAYS = 1_000;
 export const MAX_WORKOUTS = 200;
 export const MAX_ACTIVITY_LOOKBACK_MS = 40 * 24 * 60 * 60 * 1000;
 const MAX_ACTIVITY_VALUE = 2_147_483_647;
@@ -87,6 +89,7 @@ export const healthKitWorkoutSchema = z.object({
   ended_at: dateTimeSchema,
   activity_type: z.string().min(1).max(64).regex(/^[a-z0-9_]+$/),
   duration_seconds: z.number().finite().min(0).max(7 * 24 * 60 * 60),
+  active_minutes: activityValueSchema.nullable().optional(),
   distance_m: activityValueSchema.nullable().optional(),
   energy_kcal: activityValueSchema.nullable().optional(),
   effort: activityValueSchema.nullable().optional(),

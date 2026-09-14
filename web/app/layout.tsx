@@ -26,7 +26,7 @@ const nunito = localFont({
 });
 
 export const metadata = {
-  title: "FitFight — Challenge friends. Move to win",
+  title: "FitFight: Challenge friends. Move to win",
   description:
     "Your step competition scorekeeper. Connect Apple Health, start a private group challenge, and see who records the most steps.",
   robots: { index: false, follow: false },

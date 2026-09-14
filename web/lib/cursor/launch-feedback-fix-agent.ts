@@ -1,5 +1,5 @@
 import { ApiError, ERROR_CODES } from "@/lib/http";
-import type { FeedbackPostDetail } from "@/lib/types/feedback/feedback";
+import type { FeedbackMetadata, FeedbackPostDetail } from "@/lib/types/feedback/feedback";
 import {
   cursorApiErrorSchema,
   cursorApiKeySchema,
@@ -11,9 +11,14 @@ import {
 const CURSOR_AGENTS_URL = "https://api.cursor.com/v1/agents";
 const CURSOR_LAUNCH_TIMEOUT_MS = 45_000;
 
+function deviceSnapshot(metadata: FeedbackMetadata): string {
+  return Object.keys(metadata).length === 0 ? "none recorded" : JSON.stringify(metadata);
+}
+
 export async function launchFeedbackFixAgent(
   detail: FeedbackPostDetail,
   fetchImpl: typeof fetch = fetch,
+  senderMetadata: FeedbackMetadata = {},
 ): Promise<{ agent_id: string; agent_url: string }> {
   const apiKey = cursorApiKeySchema.safeParse(process.env.CURSOR_API_KEY);
   if (!apiKey.success) {
@@ -23,7 +28,7 @@ export async function launchFeedbackFixAgent(
   const commentBlock = detail.comments.length === 0
     ? "No comments."
     : detail.comments.map((comment, index) => (
-      `${index + 1}. @${comment.author_handle} (${comment.created_at})\n${comment.body}\nDevice: ${JSON.stringify(comment.metadata)}`
+      `${index + 1}. @${comment.author_handle} (${comment.created_at})\n${comment.body}\nDevice: ${deviceSnapshot(comment.metadata)}`
     )).join("\n\n");
   let kindLabel: string;
   switch (detail.post.kind) {
@@ -48,7 +53,10 @@ export async function launchFeedbackFixAgent(
     detail.post.body,
     "",
     "Device metadata:",
-    JSON.stringify(detail.post.metadata),
+    deviceSnapshot(detail.post.metadata),
+    "",
+    "Sent to Cursor from:",
+    deviceSnapshot(senderMetadata),
     "",
     "Comments, including later comments if people added more:",
     commentBlock,

@@ -6,7 +6,10 @@ import {
   createMediaUploadRequestSchema,
   mediaObjectSchema,
 } from "@/lib/types/media/media";
-import { mapMedia } from "./media-supabase-query";
+import {
+  mapMedia,
+  signedUrlsFromBatch,
+} from "./media-supabase-query";
 
 const mediaId = "55555555-5555-4555-8555-555555555555";
 
@@ -94,6 +97,20 @@ test("media uploads accept short fight-post videos and reject invalid ones", () 
   ]) {
     assert.equal(createMediaUploadRequestSchema.safeParse(input).success, false);
   }
+});
+
+test("batch signed URLs keep one URL per object path and ignore failed rows", () => {
+  const urls = signedUrlsFromBatch(
+    ["a/photo", "b/photo", "c/photo"],
+    [
+      { path: "a/photo", signedUrl: "https://example.com/a?token=1", error: null },
+      { path: null, signedUrl: "https://example.com/b?token=2", error: null },
+      { path: "c/photo", signedUrl: null, error: "not_found" },
+    ],
+  );
+  assert.equal(urls.get("a/photo"), "https://example.com/a?token=1");
+  assert.equal(urls.get("b/photo"), "https://example.com/b?token=2");
+  assert.equal(urls.get("c/photo"), null);
 });
 
 test("mapped media objects keep file identity and hide storage paths", () => {

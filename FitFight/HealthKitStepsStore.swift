@@ -30,6 +30,7 @@ final class HealthKitStepsStore: ObservableObject {
         var lastTrigger: SyncTrigger?
         var errorCode: SyncErrorCode?
         var failureReference: String?
+        var failureDetail: String?
 
         @MainActor static var current: Diagnostics {
             Diagnostics(
@@ -40,7 +41,9 @@ final class HealthKitStepsStore: ObservableObject {
                 lastAutomaticSync: nil,
                 lastManualSync: nil,
                 lastTrigger: nil,
-                errorCode: nil
+                errorCode: nil,
+                failureReference: nil,
+                failureDetail: nil
             )
         }
     }
@@ -86,7 +89,8 @@ final class HealthKitStepsStore: ObservableObject {
                 ? String(localized: "Up to date · Background sync unavailable")
                 : String(localized: "Up to date")
         case .noAccessibleSteps: return String(localized: "No accessible Steps")
-        case .syncFailed: return String(localized: "Sync failed — tap to retry")
+        case .syncFailed:
+            return diagnostics.failureDetail ?? String(localized: "Sync failed. Tap to retry.")
         }
     }
 
@@ -128,7 +132,9 @@ final class HealthKitStepsStore: ObservableObject {
         case .attemptExpired: return String(localized: "Open FitFight to finish syncing.")
         case .healthKitUnavailable: return String(localized: "Apple Health isn’t available on this device.")
         case .backgroundDeliveryUnavailable: return String(localized: "Open FitFight to sync your Steps.")
-        case .syncFailed: return String(localized: "Open FitFight and try the Apple Health sync again.")
+        case .syncFailed:
+            return diagnostics.failureDetail
+                ?? String(localized: "Open FitFight and try the Apple Health sync again.")
         case nil: return nil
         }
     }
@@ -382,7 +388,16 @@ final class HealthKitStepsStore: ObservableObject {
             try Task.checkCancellation()
             let syncToken = try await trace.measure(.session) { try await session.freshAccessToken() }
             guard activeUserId == userId, session.authSession?.user.id == userId else { throw CancellationError() }
-            _ = try await api.syncHealthKitSteps(sync, accessToken: syncToken, trace: trace)
+            do {
+                _ = try await api.syncHealthKitSteps(sync, accessToken: syncToken, trace: trace)
+            } catch {
+                guard sync.activityDays != nil || sync.workouts != nil else { throw error }
+                Self.logger.error("healthkit_extras_dropped retrying_steps_only")
+                var stepsOnly = sync
+                stepsOnly.activityDays = nil
+                stepsOnly.workouts = nil
+                _ = try await api.syncHealthKitSteps(stepsOnly, accessToken: syncToken, trace: trace)
+            }
             try Task.checkCancellation()
             guard activeUserId == userId else { throw CancellationError() }
             connection = .upToDate
@@ -392,13 +407,16 @@ final class HealthKitStepsStore: ObservableObject {
                 else { $0.lastManualSync = Date() }
                 $0.errorCode = nil
                 $0.failureReference = nil
+                $0.failureDetail = nil
             }
             if trigger == .observer {
                 await onBackendSync?()
             }
             return true
         } catch {
-            trace.fail(Self.errorCode(for: error))
+            let code = Self.errorCode(for: error)
+            let detail = Self.failureDetail(for: error)
+            trace.fail(code)
             guard activeUserId == userId else { return false }
             if case HealthKitStepAggregates.ReadError.noAccessibleSteps = error {
                 connection = .noAccessibleSteps
@@ -406,7 +424,11 @@ final class HealthKitStepsStore: ObservableObject {
                 connection = .syncFailed
             }
             UserDefaults.standard.set(true, forKey: Self.pendingSyncKey)
-            updateDiagnostics { $0.errorCode = Self.errorCode(for: error) }
+            updateDiagnostics {
+                $0.errorCode = code
+                $0.failureDetail = detail
+            }
+            Self.logger.error("healthkit_sync_failed code=\(code.rawValue, privacy: .public) detail=\(detail, privacy: .public)")
             return false
         }
     }
@@ -482,6 +504,30 @@ final class HealthKitStepsStore: ObservableObject {
             return .authenticationUnavailable
         }
         return .syncFailed
+    }
+
+    private static func failureDetail(for error: Error) -> String {
+        if case HealthKitStepAggregates.ReadError.noAccessibleSteps = error {
+            return String(localized: "No accessible Steps")
+        }
+        if let api = error as? FitFightAPIError, let description = api.errorDescription {
+            var text = description.trimmingCharacters(in: .whitespaces)
+            if let last = text.last, !".!?".contains(last) {
+                text += "."
+            }
+            return String(localized: "\(text) Tap to retry.")
+        }
+        if let urlError = error as? URLError {
+            switch urlError.code {
+            case .notConnectedToInternet, .networkConnectionLost:
+                return String(localized: "No internet connection. Tap to retry.")
+            case .timedOut:
+                return String(localized: "The server took too long. Tap to retry.")
+            default:
+                break
+            }
+        }
+        return String(localized: "Sync failed. Tap to retry.")
     }
 
     private static func todayTotal(store: HKHealthStore, type: HKQuantityType) async throws -> Int? {

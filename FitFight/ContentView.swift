@@ -15,7 +15,7 @@ struct ContentView: View {
 
     var body: some View {
         Group {
-            if appUpdate.status == .current || ScreenshotExport.isEnabled || CompanionPreview.isEnabled {
+            if appUpdate.allowsUse || ScreenshotExport.isEnabled || CompanionPreview.isEnabled {
                 VStack(spacing: 0) {
                     VersionBanner(onTap: versionBannerTap)
                     appContent
@@ -34,13 +34,13 @@ struct ContentView: View {
                 await appUpdate.check()
             }
         }
-        .onChange(of: appUpdate.status) { previous, status in
+        .onChange(of: appUpdate.status) { _, status in
             guard !CompanionPreview.isEnabled else { return }
-            if status != .current {
+            if status == .updateRequired {
                 model.showingVersions = false
                 model.showingDebugMenu = false
                 model.showingRequests = false
-            } else if previous != .checking, session.isSignedIn, session.profile == nil {
+            } else if status == .current, session.isSignedIn, session.profile == nil {
                 Task { await session.loadProfile() }
             }
         }
@@ -134,7 +134,7 @@ struct ContentView: View {
 
     private var versionBannerTap: (() -> Void)? {
         guard !CompanionPreview.isEnabled else { return nil }
-        guard appUpdate.status == .current, session.isFitFightAdmin else { return nil }
+        guard appUpdate.allowsUse, session.isFitFightAdmin else { return nil }
         return { model.showingDebugMenu = true }
     }
 
@@ -151,48 +151,33 @@ struct ContentView: View {
 
     private var updateCard: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if appUpdate.status == .checking {
-                ProgressView()
-                    .tint(theme.text)
-                Text("Checking for updates…")
-                    .font(.ff(18, 800))
-                    .tracking(18 * -0.015)
-                    .foregroundStyle(theme.text)
-                    .padding(.top, 14)
-            } else {
-                Text(appUpdate.status == .updateRequired
-                     ? String(localized: "Update FitFight to continue")
-                     : String(localized: "Couldn’t check for updates"))
-                    .font(.ff(18, 800))
-                    .tracking(18 * -0.015)
-                    .foregroundStyle(theme.text)
-                Text(appUpdate.status == .updateRequired
-                     ? String(localized: "You can’t use FitFight until you install the latest version.")
-                     : String(localized: "Connect to the internet and try again to use FitFight."))
-                    .ffType(.body)
-                    .foregroundStyle(theme.textSecondary)
-                    .lineSpacing(3)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 7)
-                HStack(spacing: 9) {
-                    FFButton(
-                        title: String(localized: "Check again"),
-                        kind: appUpdate.status == .updateRequired && appUpdate.policy?.offeredRelease != nil
-                            ? .secondary : .primary,
-                        fullWidth: true
-                    ) {
-                        Task { await appUpdate.check() }
-                    }
-                    .disabled(appUpdate.isChecking)
-                    if appUpdate.status == .updateRequired, let release = appUpdate.policy?.offeredRelease {
-                        FFButton(title: String(localized: "Update FitFight"), kind: .primary, fullWidth: true) {
-                            openURL(release.updateURL)
-                        }
-                        .accessibilityIdentifier("required-update-button")
-                    }
+            Text(String(localized: "Update FitFight to continue"))
+                .font(.ff(18, 800))
+                .tracking(18 * -0.015)
+                .foregroundStyle(theme.text)
+            Text(String(localized: "You can’t use FitFight until you install the latest version."))
+                .ffType(.body)
+                .foregroundStyle(theme.textSecondary)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 7)
+            HStack(spacing: 9) {
+                FFButton(
+                    title: String(localized: "Check again"),
+                    kind: appUpdate.policy?.offeredRelease != nil ? .secondary : .primary,
+                    fullWidth: true
+                ) {
+                    Task { await appUpdate.check() }
                 }
-                .padding(.top, 18)
+                .disabled(appUpdate.isChecking)
+                if let release = appUpdate.policy?.offeredRelease {
+                    FFButton(title: String(localized: "Update FitFight"), kind: .primary, fullWidth: true) {
+                        openURL(release.updateURL)
+                    }
+                    .accessibilityIdentifier("required-update-button")
+                }
             }
+            .padding(.top, 18)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 22)

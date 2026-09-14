@@ -13,7 +13,7 @@ import type {
   ReportFightPostCommentResponse,
 } from "@/lib/types/feed/fight-post";
 import { loadVisiblePost, listPostReactions } from "./fight-posts-supabase-query";
-import { mapMedia, signMediaUrl, type MediaRow } from "./media-supabase-query";
+import { mapMedia, signMediaUrls, type MediaRow } from "./media-supabase-query";
 
 const COMMENT_LIMIT_PER_DAY = 40;
 
@@ -99,12 +99,9 @@ function authorFromRow(row: CommentRow, url: string | null): FightPostAuthor {
 }
 
 async function mapComments(userId: string, rows: CommentRow[]): Promise<FightPostComment[]> {
-  const urls = new Map<string, string | null>();
-  for (const row of rows) {
-    if (row.avatar_object_path && !urls.has(row.avatar_object_path)) {
-      urls.set(row.avatar_object_path, await signMediaUrl(row.avatar_object_path));
-    }
-  }
+  const urls = await signMediaUrls(
+    rows.flatMap((row) => (row.avatar_object_path ? [row.avatar_object_path] : [])),
+  );
   return rows.map((row) => ({
     id: row.id,
     post_id: row.post_id,

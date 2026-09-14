@@ -24,7 +24,7 @@ export default function PrivacyPage() {
       <article className="legal-content">
         <p className="eyebrow">YOUR DATA, IN PLAIN LANGUAGE</p>
         <h1>Privacy Policy</h1>
-          <p className="legal-updated">Effective 10 September 2026</p>
+          <p className="legal-updated">Effective 13 September 2026</p>
         <p className="legal-intro">
           FitFight lets named participants compete on who records the most Steps during
           a private Fight. This policy explains the data used by the FitFight iPhone app
@@ -53,10 +53,11 @@ export default function PrivacyPage() {
             </li>
             <li>
               <strong>Apple Health:</strong> with your permission, FitFight reads Step
-              Count and other movement types (energy, distance, exercise, stand, flights,
-              and workouts). Steps fights still send the merged step total for each exact
-              Fight window plus the relevant daily step totals used by Fight charts. Other
-              activity totals stay on your account and are not shown to other participants.
+              Count and other movement types (active and resting energy, distance, exercise,
+              stand, flights, and workouts). Steps fights still send the merged step total
+              for each exact Fight window plus the relevant daily step totals used by Fight
+              charts. Other activity totals stay on your account and are not shown to other
+              participants.
             </li>
             <li>
               <strong>Bugs and feature requests:</strong> the title, details, votes, and
@@ -81,9 +82,9 @@ export default function PrivacyPage() {
             Apple Health access is read-only. FitFight does not write to Apple Health.
             The current app does not send raw Health samples, GPS routes, heart rate, or
             device and source metadata. It may send merged daily activity totals and
-            workout summaries (type, time, optional distance, energy, and effort) so
-            FitFight can prepare later challenge types. Those extra readings are not used
-            to score today&apos;s Steps fights and are not shown to other people.
+            workout summaries (type, time, optional active minutes, distance, energy, and
+            effort) so FitFight can prepare later challenge types. Those extra readings
+            are not used to score today&apos;s Steps fights and are not shown to other people.
           </p>
           <p>
             Participants in the same private Fight can see each other&apos;s username,

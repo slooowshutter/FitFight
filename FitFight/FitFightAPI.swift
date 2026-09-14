@@ -39,13 +39,13 @@ enum FitFightAPIError: LocalizedError {
                 return message ?? String(localized: "You’ve posted a few times recently. Try again later.")
             case "not_found":
                 return message ?? String(localized: "That isn’t available anymore.")
-            case "internal":
+            case "db_error", "internal":
                 return message ?? String(
                     localized: "api.request-failed",
                     defaultValue: "Request failed (\(status))."
                 )
             default:
-                return String(
+                return message ?? String(
                     localized: "api.request-failed",
                     defaultValue: "Request failed (\(status))."
                 )
@@ -144,6 +144,7 @@ struct FitFightHealthKitStepSync: Encodable, Equatable {
         var endedAt: String
         var activityType: String
         var durationSeconds: Double
+        var activeMinutes: Double?
         var distanceM: Double?
         var energyKcal: Double?
         var effort: Double?
@@ -154,6 +155,7 @@ struct FitFightHealthKitStepSync: Encodable, Equatable {
             case endedAt = "ended_at"
             case activityType = "activity_type"
             case durationSeconds = "duration_seconds"
+            case activeMinutes = "active_minutes"
             case distanceM = "distance_m"
             case energyKcal = "energy_kcal"
             case effort
@@ -1033,12 +1035,13 @@ struct FitFightAPI {
 
     func launchFeedbackFix(
         postID: UUID,
+        metadata: FitFightFeedbackMetadata,
         accessToken: String
     ) async throws -> FitFightFeedbackFixAgent {
         try await post(
             path: "feedback/\(postID.uuidString.lowercased())/fix-agent",
             accessToken: accessToken,
-            body: EmptyJSON(),
+            body: FeedbackFixAgentBody(metadata: metadata),
             expected: [201]
         )
     }
@@ -1132,10 +1135,9 @@ struct FitFightAPI {
         do {
             try Task.checkCancellation()
             guard await AppUpdateChecker.shared.permitsRequests() else {
-                let requiresUpdate = await AppUpdateChecker.shared.status == .updateRequired
                 throw FitFightAPIError.http(
-                    status: requiresUpdate ? 426 : 503,
-                    code: requiresUpdate ? "update_required" : "release_unavailable",
+                    status: 426,
+                    code: "update_required",
                     message: nil
                 )
             }
@@ -1409,6 +1411,10 @@ private struct AppleAuthorizationBody: Encodable {
 
 private struct FeedbackCommentBody: Encodable {
     var body: String
+    var metadata: FitFightFeedbackMetadata
+}
+
+private struct FeedbackFixAgentBody: Encodable {
     var metadata: FitFightFeedbackMetadata
 }
 

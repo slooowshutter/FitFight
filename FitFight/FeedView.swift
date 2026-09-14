@@ -42,6 +42,14 @@ final class FeedStore: ObservableObject {
             posts = more ? posts + result.posts.filter { post in !posts.contains(where: { $0.id == post.id }) } : result.posts
             nextCursor = result.nextCursor
             error = nil
+            RemoteImageLoader.shared.prefetch(
+                posts.compactMap { $0.author.avatar?.url },
+                kind: .avatar
+            )
+            RemoteImageLoader.shared.prefetch(
+                posts.flatMap { $0.media }.compactMap { $0.kind == "video" ? nil : $0.url },
+                kind: .photo
+            )
         } catch {
             if Task.isCancelled || error is CancellationError { return }
             guard load == listLoad else { return }
@@ -662,22 +670,7 @@ struct FightPostCard: View {
                         if media.kind == "video" {
                             FightPostVideo(url: url)
                         } else {
-                            AsyncImage(url: url) { phase in
-                                switch phase {
-                                case .success(let image):
-                                    image
-                                        .resizable()
-                                        .scaledToFill()
-                                        .frame(maxWidth: .infinity)
-                                        .frame(height: 220)
-                                        .clipped()
-                                        .clipShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
-                                default:
-                                    RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous)
-                                        .fill(theme.control)
-                                        .frame(height: 220)
-                                }
-                            }
+                            FightPostPhoto(url: url, width: media.width, height: media.height)
                         }
                     }
                 }
@@ -765,6 +758,31 @@ private struct FightPostEditSheet: View {
             }
             .disabled(feed.isSaving)
         }
+    }
+}
+
+private struct FightPostPhoto: View {
+    let url: URL
+    let width: Int
+    let height: Int
+
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        Color.clear
+            .aspectRatio(ratio, contentMode: .fit)
+            .frame(maxWidth: .infinity)
+            .fixedSize(horizontal: false, vertical: true)
+            .overlay {
+                RemotePhoto(url: url, kind: .photo) {
+                    theme.control
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
+    }
+
+    private var ratio: CGFloat {
+        CGFloat(max(width, 1)) / CGFloat(max(height, 1))
     }
 }
 

@@ -212,3 +212,29 @@ export type HealthKitAggregateSync = z.infer<typeof healthKitAggregateSyncSchema
 export type HealthKitAggregateSyncResponse = z.infer<
   typeof healthKitAggregateSyncResponseSchema
 >;
+
+export function parseHealthKitAggregateSync(body: unknown): HealthKitAggregateSync {
+  const parsed = healthKitAggregateSyncSchema.safeParse(body);
+  if (parsed.success) {
+    return parsed.data;
+  }
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    throw parsed.error;
+  }
+  if (!("activity_days" in body) && !("workouts" in body)) {
+    throw parsed.error;
+  }
+  const stepsOnly: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(body)) {
+    if (key === "activity_days" || key === "workouts") {
+      continue;
+    }
+    stepsOnly[key] = value;
+  }
+  const fallback = healthKitAggregateSyncSchema.safeParse(stepsOnly);
+  if (!fallback.success) {
+    throw parsed.error;
+  }
+  console.warn("fitfight_healthkit_extras_dropped");
+  return fallback.data;
+}

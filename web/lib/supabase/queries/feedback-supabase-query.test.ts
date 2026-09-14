@@ -8,6 +8,7 @@ import {
   createFeedbackPostRequestSchema,
   feedbackDetailResponseSchema,
   feedbackListResponseSchema,
+  launchFeedbackFixRequestSchema,
   listFeedbackQuerySchema,
   reportFeedbackPostRequestSchema,
 } from "@/lib/types/feedback/feedback";
@@ -138,6 +139,54 @@ test("feedback schemas accept a one-character title and details", () => {
   }).can_launch_fix, true);
   assert.equal(reportFeedbackPostRequestSchema.safeParse({ reason: "other" }).success, true);
   assert.equal(blockFeedbackAuthorRequestSchema.safeParse({ user_id: authorId }).success, true);
+  assert.deepEqual(launchFeedbackFixRequestSchema.parse({}), {});
+  assert.deepEqual(
+    launchFeedbackFixRequestSchema.parse({
+      metadata: { app_version: "1.0.0", device_model: "iPhone18,1" },
+    }).metadata,
+    { app_version: "1.0.0", device_model: "iPhone18,1" },
+  );
+  assert.throws(() => launchFeedbackFixRequestSchema.parse({ extra: true }));
+  assert.deepEqual(
+    createFeedbackPostRequestSchema.parse({
+      kind: "bug",
+      title: "H",
+      body: "A",
+      metadata: {
+        os: "iOS",
+        look: "night",
+        idiom: "phone",
+        locale: "fr_FR",
+        region: "FR",
+        backend: "staging",
+        calendar: "gregorian",
+        language: "fr",
+        app_build: "190",
+        bold_text: false,
+        bundle_id: "com.fitfight.mvp",
+        time_zone: "Europe/Paris",
+        appearance: "dark",
+        hour_cycle: "24",
+        os_version: "26.6.1",
+        voice_over: false,
+        app_version: "1.0.0",
+        content_size: "UICTContentSizeCategoryL",
+        device_model: "iPhone14,5",
+        screen_scale: 3,
+        screen_width: 390,
+        reduce_motion: false,
+        screen_height: 844,
+        thermal_state: "fair",
+        low_power_mode: false,
+        layout_direction: "ltr",
+        increase_contrast: false,
+        background_refresh: "available",
+        measurement_system: "metric",
+        preferred_languages: ["fr-FR"],
+      },
+    }).metadata?.device_model,
+    "iPhone14,5",
+  );
 });
 
 test("listing feedback posts maps vote counts and the viewer vote", async () => {

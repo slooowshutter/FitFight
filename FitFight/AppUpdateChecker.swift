@@ -136,8 +136,10 @@ final class AppUpdateChecker: ObservableObject {
                 self.defaults.set(data, forKey: self.cacheKey)
                 if policy.allows(version: self.version, build: self.build) {
                     self.status = .current
+                } else if self.status == .updateRequired || policy.latest != nil {
+                    self.status = .updateRequired
                 } else {
-                    self.status = policy.latest == nil ? .unavailable : .updateRequired
+                    self.status = .unavailable
                 }
             } catch {
                 if self.status != .updateRequired { self.status = .unavailable }

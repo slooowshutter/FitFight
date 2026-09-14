@@ -34,13 +34,13 @@ struct ContentView: View {
                 await appUpdate.check()
             }
         }
-        .onChange(of: appUpdate.status) { previous, status in
+        .onChange(of: appUpdate.status) { _, status in
             guard !CompanionPreview.isEnabled else { return }
             if status == .updateRequired {
                 model.showingVersions = false
                 model.showingDebugMenu = false
                 model.showingRequests = false
-            } else if previous == .updateRequired, session.isSignedIn, session.profile == nil {
+            } else if status == .current, session.isSignedIn, session.profile == nil {
                 Task { await session.loadProfile() }
             }
         }

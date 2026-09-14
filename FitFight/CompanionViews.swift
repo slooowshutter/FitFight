@@ -490,7 +490,9 @@ struct CompanionPicker: View {
             }
             LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 150 : 96), spacing: 10)], spacing: 10) {
                 ForEach(StockCompanion.allCases) { animal in
-                    Button { draft = animal } label: {
+                    Button {
+                        Task { await save(animal) }
+                    } label: {
                         VStack(spacing: 3) {
                             Image(animal.image)
                                 .resizable()
@@ -508,23 +510,15 @@ struct CompanionPicker: View {
                         .ffBorder(draft == animal ? theme.mossEdge : theme.hairline, radius: theme.radius.card)
                     }
                     .buttonStyle(FFHapticPlainStyle())
+                    .disabled(isSaving)
                     .accessibilityAddTraits(draft == animal ? .isSelected : [])
                 }
             }
             if let draft {
-                Text(draft.caption)
+                Text(isSaving ? String(localized: "Saving…") : draft.caption)
                     .ffType(.body)
                     .foregroundStyle(theme.textSecondary)
                     .frame(maxWidth: .infinity)
-            }
-            FFButton(
-                title: isSaving ? String(localized: "Saving…") : String(localized: "Use this companion"),
-                size: .large,
-                enabled: draft != nil && !isSaving,
-                busy: isSaving,
-                fullWidth: true
-            ) {
-                Task { await save() }
             }
             #if DEBUG && targetEnvironment(simulator)
             if CompanionPreview.isEnabled {
@@ -540,13 +534,13 @@ struct CompanionPicker: View {
         .interactiveDismissDisabled(required)
     }
 
-    private func save() async {
-        guard let draft else { return }
+    private func save(_ animal: StockCompanion) async {
         error = ""
+        draft = animal
         isSaving = true
         defer { isSaving = false }
         do {
-            try await companions.choose(draft, session: session)
+            try await companions.choose(animal, session: session)
             dismiss()
         } catch is CancellationError {
             return

@@ -50,6 +50,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 14,
+            notes: "Every day so far opens on the oval. Bars show a small companion next to each name. Heat, stack, and rings are gone."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
             notes: "Tap a photo in Feed to see it full screen."
         ),
         ReleaseNote(
@@ -57,7 +64,7 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 14,
-            notes: "Your companion is now your avatar for other people in fights and Feed. If you have not chosen one yet, FitFight will ask you to pick."
+            notes: "Tapping an animal saves that companion for everyone. If you have not chosen one yet, FitFight will ask you to pick."
         ),
         ReleaseNote(
             version: "1.0.0",

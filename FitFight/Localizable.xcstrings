@@ -217,6 +217,8 @@
     "Close" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Fermer"}}}},
     "View photo" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Voir la photo"}}}},
     "Tap a photo in Feed to see it full screen." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Touche une photo dans le Fil pour la voir en plein écran."}}}},
+    "Every day so far opens on the oval. Bars show a small companion next to each name. Heat, stack, and rings are gone." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Jusqu’ici chaque jour s’ouvre sur l’ovale. Les barres montrent un petit compagnon à côté de chaque nom. La grille, la pile et les anneaux ont disparu."}}}},
+    "Tapping an animal saves that companion for everyone. If you have not chosen one yet, FitFight will ask you to pick." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Toucher un animal enregistre ce compagnon pour tout le monde. Si tu n’en as pas encore choisi, FitFight te demandera d’en choisir un."}}}},
     "Connect" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Connecter"}}}},
     "Connect Apple Health above to start this fight." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Connectez Santé d’Apple ci-dessus pour lancer ce défi."}}}},
     "Connect to score this fight" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Connectez-vous pour comptabiliser ce défi"}}}},

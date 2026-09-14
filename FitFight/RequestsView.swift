@@ -156,7 +156,11 @@ final class FeedbackStore: ObservableObject {
         defer { isLaunchingFix = false }
         do {
             let token = try await session.freshAccessToken()
-            let launched = try await api.launchFeedbackFix(postID: postID, accessToken: token)
+            let launched = try await api.launchFeedbackFix(
+                postID: postID,
+                metadata: .current(),
+                accessToken: token
+            )
             error = nil
             return launched.agentURL
         } catch {

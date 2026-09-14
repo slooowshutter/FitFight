@@ -50,6 +50,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 13,
+            notes: "Send to Cursor includes the phone details from your device. Bugs & requests still hides them on the board."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 13,
             notes: "Your selected companion now appears as your avatar across You, fights and Feed. Apple Health details stay behind More settings. Choose Custom when creating a fight to set exact start and end dates and times."
         ),
         ReleaseNote(

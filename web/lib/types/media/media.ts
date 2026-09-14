@@ -1,9 +1,9 @@
 import { z } from "zod";
 
-export const mediaKindValues = ["photo", "video"] as const;
+export const mediaKindValues = ["photo", "video", "file"] as const;
 export const mediaKindSchema = z.enum(mediaKindValues);
 
-export const mediaPurposeValues = ["profile", "fight_post"] as const;
+export const mediaPurposeValues = ["profile", "fight_post", "feedback"] as const;
 export const mediaPurposeSchema = z.enum(mediaPurposeValues);
 
 export const mediaStatusValues = ["pending", "ready", "rejected"] as const;
@@ -15,10 +15,24 @@ export const mediaContentTypeValues = [
   ...mediaPhotoContentTypeValues,
   ...mediaVideoContentTypeValues,
 ] as const;
-export const mediaContentTypeSchema = z.enum(mediaContentTypeValues);
+
+export const mediaContentTypeSchema = z.string().trim().min(3).max(200)
+  .regex(/^[a-z0-9!#$&^_.+-]+\/[a-z0-9!#$&^_.+-]+$/);
 
 const PHOTO_MAX_BYTES = 8_388_608;
 const VIDEO_MAX_BYTES = 52_428_800;
+
+const mediaFileDeniedContentTypeValues = [
+  "text/html",
+  "application/xhtml+xml",
+  "image/svg+xml",
+  "text/javascript",
+  "application/javascript",
+  "application/x-msdownload",
+  "application/x-msdos-program",
+  "application/x-executable",
+  "application/x-mach-binary",
+] as const;
 
 export const mediaObjectSchema = z.object({
   id: z.string().uuid(),
@@ -60,15 +74,32 @@ export const createMediaUploadRequestSchema = z.object({
     }
     return;
   }
-  if (input.purpose !== "fight_post") {
-    ctx.addIssue({ code: "custom", message: "Videos can only be posted to a fight", path: ["purpose"] });
+  if (input.kind === "video") {
+    if (input.purpose === "profile") {
+      ctx.addIssue({ code: "custom", message: "Videos can only be posted to a fight or a request", path: ["purpose"] });
+    }
+    if (!(mediaVideoContentTypeValues as readonly string[]).includes(input.content_type)) {
+      ctx.addIssue({ code: "custom", message: "Videos must be MP4 or QuickTime", path: ["content_type"] });
+    }
+    if (input.duration_ms == null) {
+      ctx.addIssue({ code: "custom", message: "Videos need a duration", path: ["duration_ms"] });
+    }
+    return;
   }
-  if (!(mediaVideoContentTypeValues as readonly string[]).includes(input.content_type)) {
-    ctx.addIssue({ code: "custom", message: "Videos must be MP4 or QuickTime", path: ["content_type"] });
+  if (input.kind === "file") {
+    if (input.purpose !== "feedback") {
+      ctx.addIssue({ code: "custom", message: "Files can only be attached to a request", path: ["purpose"] });
+    }
+    if ((mediaFileDeniedContentTypeValues as readonly string[]).includes(input.content_type)) {
+      ctx.addIssue({ code: "custom", message: "That file type is not allowed", path: ["content_type"] });
+    }
+    if (input.duration_ms != null) {
+      ctx.addIssue({ code: "custom", message: "Files cannot have a duration", path: ["duration_ms"] });
+    }
+    return;
   }
-  if (input.duration_ms == null) {
-    ctx.addIssue({ code: "custom", message: "Videos need a duration", path: ["duration_ms"] });
-  }
+  const _exhaustive: never = input.kind;
+  void _exhaustive;
 });
 
 export const mediaUploadResponseSchema = z.object({

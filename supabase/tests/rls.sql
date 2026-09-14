@@ -1,5 +1,5 @@
 begin;
-select plan(36);
+select plan(37);
 
 create function pg_temp.make_user(uid uuid, email text)
 returns void
@@ -367,6 +367,18 @@ select throws_ok(
   '42501',
   'permission denied for table feedback_votes',
   'clients cannot insert feedback votes'
+);
+
+select throws_ok(
+  $$ insert into public.feedback_post_media (post_id, media_id, sort)
+     values (
+       'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+       '55555555-5555-4555-8555-555555555555',
+       0
+     ) $$,
+  '42501',
+  'permission denied for table feedback_post_media',
+  'clients cannot insert feedback attachments'
 );
 
 reset role;

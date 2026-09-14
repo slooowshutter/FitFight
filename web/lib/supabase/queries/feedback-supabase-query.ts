@@ -1,6 +1,12 @@
 import type { Sql } from "postgres";
 import { ApiError, ERROR_CODES } from "@/lib/http";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
+import {
+  loadReadyMedia,
+  mapMedia,
+  signMediaUrls,
+  type MediaRow,
+} from "@/lib/supabase/queries/media-supabase-query";
 import type {
   BlockFeedbackAuthorResponse,
   CreateFeedbackCommentRequest,
@@ -19,6 +25,7 @@ import type {
   ReportFeedbackPostResponse,
 } from "@/lib/types/feedback/feedback";
 import { feedbackMetadataSchema } from "@/lib/types/feedback/feedback";
+import type { MediaObject } from "@/lib/types/media/media";
 
 const POST_LIMIT_PER_DAY = 8;
 const COMMENT_LIMIT_PER_DAY = 30;
@@ -55,7 +62,7 @@ function mapMetadata(value: unknown): FeedbackMetadata {
   return parsed.success ? parsed.data : {};
 }
 
-function mapPost(row: FeedbackPostRow): FeedbackPostSummary {
+function mapPost(row: FeedbackPostRow, media: MediaObject[] = []): FeedbackPostSummary {
   return {
     id: row.id,
     kind: row.kind,
@@ -69,7 +76,69 @@ function mapPost(row: FeedbackPostRow): FeedbackPostSummary {
     mine: row.mine,
     created_at: isoUtc(row.created_at),
     metadata: mapMetadata(row.metadata),
+    media,
   };
+}
+
+type FeedbackMediaRow = MediaRow & { post_id: string };
+
+async function loadFeedbackMedia(
+  postIds: string[],
+  database: Sql,
+): Promise<Map<string, MediaObject[]>> {
+  const byPost = new Map<string, MediaObject[]>();
+  if (postIds.length === 0) return byPost;
+  const rows = await database<FeedbackMediaRow[]>`
+    select
+      attachment.post_id,
+      media.id, media.owner_id, media.kind::text as kind, media.purpose::text as purpose,
+      media.status::text as status, media.object_path, media.original_filename,
+      media.content_type, media.byte_size::text, media.width, media.height,
+      media.duration_ms, media.sha256, media.created_at
+    from public.feedback_post_media as attachment
+    join public.media_objects as media on media.id = attachment.media_id
+    where attachment.post_id in ${database(postIds)}
+      and media.status = 'ready'
+    order by attachment.post_id, attachment.sort, media.id
+  `;
+  const urls = await signMediaUrls(rows.map((row) => row.object_path));
+  for (const row of rows) {
+    const list = byPost.get(row.post_id) ?? [];
+    list.push(mapMedia(row, urls.get(row.object_path) ?? null));
+    byPost.set(row.post_id, list);
+  }
+  return byPost;
+}
+
+async function prepareFeedbackMedia(
+  userId: string,
+  mediaIds: string[],
+  database: Sql,
+): Promise<string[]> {
+  const uniqueMediaIds = [...new Set(mediaIds)];
+  if (uniqueMediaIds.length === 0) return [];
+  const media = await loadReadyMedia(userId, uniqueMediaIds, "feedback", database);
+  if (media.length !== uniqueMediaIds.length) {
+    throw new ApiError(
+      400,
+      ERROR_CODES.validation,
+      "Every photo, video, or file must be one you just uploaded",
+    );
+  }
+  const [fightTaken] = await database<{ n: number }[]>`
+    select count(*)::int as n
+    from public.fight_post_media
+    where media_id in ${database(uniqueMediaIds)}
+  `;
+  const [feedbackTaken] = await database<{ n: number }[]>`
+    select count(*)::int as n
+    from public.feedback_post_media
+    where media_id in ${database(uniqueMediaIds)}
+  `;
+  if ((fightTaken?.n ?? 0) + (feedbackTaken?.n ?? 0) > 0) {
+    throw new ApiError(409, ERROR_CODES.conflict, "A file was already used on another post");
+  }
+  return uniqueMediaIds;
 }
 
 function mapComment(row: FeedbackCommentRow): FeedbackComment {
@@ -132,7 +201,8 @@ export async function listFeedbackPosts(
     order by vote_count desc, post.created_at desc
     limit 100
   `;
-  return { posts: rows.map(mapPost) };
+  const attachments = await loadFeedbackMedia(rows.map((row) => row.id), database);
+  return { posts: rows.map((row) => mapPost(row, attachments.get(row.id) ?? [])) };
 }
 
 export async function getFeedbackPost(
@@ -200,7 +270,11 @@ export async function getFeedbackPost(
       )
     order by comment.created_at
   `;
-  return { post: mapPost(row), comments: comments.map(mapComment) };
+  const attachments = await loadFeedbackMedia([row.id], database);
+  return {
+    post: mapPost(row, attachments.get(row.id) ?? []),
+    comments: comments.map(mapComment),
+  };
 }
 
 export async function createFeedbackPost(
@@ -222,8 +296,39 @@ export async function createFeedbackPost(
     );
   }
 
+  if (input.media_ids.length === 0) {
+    const [row] = await insertFeedbackPost(userId, input, database);
+    if (!row?.author_handle) {
+      throw new ApiError(400, ERROR_CODES.profile_missing, "Profile is missing");
+    }
+    return { post: mapPost(row, []) };
+  }
+
+  const created = await database.begin("read write", async (sql) => {
+    const mediaIds = await prepareFeedbackMedia(userId, input.media_ids, sql);
+    const [row] = await insertFeedbackPost(userId, input, sql);
+    if (!row?.author_handle) {
+      throw new ApiError(400, ERROR_CODES.profile_missing, "Profile is missing");
+    }
+    for (const [index, mediaId] of mediaIds.entries()) {
+      await sql`
+        insert into public.feedback_post_media (post_id, media_id, sort)
+        values (${row.id}, ${mediaId}, ${index})
+      `;
+    }
+    return row;
+  });
+  const attachments = await loadFeedbackMedia([created.id], database);
+  return { post: mapPost(created, attachments.get(created.id) ?? []) };
+}
+
+async function insertFeedbackPost(
+  userId: string,
+  input: CreateFeedbackPostRequest,
+  database: Sql,
+): Promise<FeedbackPostRow[]> {
   // NOTE: sql.json(object) so postgres.js sends jsonb. JSON.stringify(text)::jsonb is stringified again and fails feedback_posts_metadata_object.
-  const [row] = await database<FeedbackPostRow[]>`
+  return database<FeedbackPostRow[]>`
     insert into public.feedback_posts (author_id, kind, title, body, metadata)
     values (
       ${userId},
@@ -251,10 +356,6 @@ export async function createFeedbackPost(
       created_at,
       metadata
   `;
-  if (!row?.author_handle) {
-    throw new ApiError(400, ERROR_CODES.profile_missing, "Profile is missing");
-  }
-  return { post: mapPost(row) };
 }
 
 export async function toggleFeedbackVote(

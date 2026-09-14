@@ -37,8 +37,8 @@ export function signedUrlsFromBatch(
 export type MediaRow = {
   id: string;
   owner_id: string;
-  kind: "photo" | "video";
-  purpose: "profile" | "fight_post";
+  kind: MediaObject["kind"];
+  purpose: MediaObject["purpose"];
   status: "pending" | "ready" | "rejected";
   object_path: string;
   original_filename: string;
@@ -237,7 +237,7 @@ export async function commitMediaUpload(
 export async function loadReadyMedia(
   userId: string,
   mediaIds: string[],
-  purpose: "profile" | "fight_post",
+  purpose: MediaObject["purpose"],
   database: Sql = createDatabaseClient(),
 ): Promise<MediaRow[]> {
   if (mediaIds.length === 0) return [];

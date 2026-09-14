@@ -46,18 +46,30 @@ enum MediaUploader {
         let sha256: String
     }
 
+    struct PreparedFile {
+        let data: Data
+        let filename: String
+        let contentType: String
+        let byteSize: Int
+        let sha256: String
+    }
+
     enum UploadError: LocalizedError {
         case invalidImage
         case invalidVideo
+        case invalidFile
         case tooLarge
         case tooLong
+        case fileTooLarge
 
         var errorDescription: String? {
             switch self {
             case .invalidImage: return String(localized: "That photo could not be read.")
             case .invalidVideo: return String(localized: "That video could not be read.")
+            case .invalidFile: return String(localized: "That file could not be read.")
             case .tooLarge: return String(localized: "Choose a smaller photo or video.")
             case .tooLong: return String(localized: "Choose a video under 3 minutes.")
+            case .fileTooLarge: return String(localized: "Choose a smaller file.")
             }
         }
     }
@@ -183,6 +195,66 @@ enum MediaUploader {
             sha256: prepared.sha256,
             session: session,
             api: api
+        )
+    }
+
+    static func uploadFile(
+        _ url: URL,
+        purpose: String,
+        session: SessionStore,
+        api: FitFightAPI = FitFightAPI()
+    ) async throws -> FitFightMedia {
+        let prepared = try prepareFile(url: url)
+        return try await put(
+            data: prepared.data,
+            purpose: purpose,
+            kind: "file",
+            filename: prepared.filename,
+            contentType: prepared.contentType,
+            byteSize: prepared.byteSize,
+            width: 1,
+            height: 1,
+            durationMs: nil,
+            sha256: prepared.sha256,
+            session: session,
+            api: api
+        )
+    }
+
+    static func prepareFile(url: URL) throws -> PreparedFile {
+        let accessing = url.startAccessingSecurityScopedResource()
+        defer {
+            if accessing { url.stopAccessingSecurityScopedResource() }
+        }
+        let values = try url.resourceValues(forKeys: [.fileSizeKey, .nameKey])
+        let fileSize = values.fileSize ?? 0
+        if fileSize < 1 || fileSize > 52_428_800 {
+            throw UploadError.fileTooLarge
+        }
+        let data = try Data(contentsOf: url, options: .mappedIfSafe)
+        if data.count < 1 || data.count > 52_428_800 {
+            throw UploadError.fileTooLarge
+        }
+        var name = (values.name ?? url.lastPathComponent)
+            .replacingOccurrences(of: "/", with: "-")
+            .replacingOccurrences(of: "\\", with: "-")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if name.isEmpty { name = "file" }
+        if name.count > 200 { name = String(name.prefix(200)) }
+        let raw = (UTType(filenameExtension: url.pathExtension)?.preferredMIMEType ?? "application/octet-stream")
+            .lowercased()
+        let mime = raw.split(separator: ";", maxSplits: 1, omittingEmptySubsequences: true)
+            .first
+            .map(String.init)
+            .flatMap { $0.contains("/") ? $0 : nil }
+            ?? "application/octet-stream"
+        let digest = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+        return PreparedFile(
+            data: data,
+            filename: name,
+            contentType: mime,
+            byteSize: data.count,
+            sha256: digest
         )
     }
 

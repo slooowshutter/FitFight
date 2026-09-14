@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 14,
+            notes: "Bugs & requests can include a photo, a video, or any file."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
             notes: "You can take a photo with the camera when you add Media, not only pick one from the library."
         ),
         ReleaseNote(

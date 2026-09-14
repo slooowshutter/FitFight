@@ -49,6 +49,9 @@ export async function createAppFeedbackBacklogItem(
   const notes = [
     `@${post.author_handle} · ${post.kind} · ${channel}`,
     post.body,
+    ...post.media.map((item) => (
+      item.url ? `${item.original_filename} ${item.url}` : item.original_filename
+    )),
     `${feedbackPostNotionMarkerPrefix}${post.id}`,
   ].join("\n\n");
 

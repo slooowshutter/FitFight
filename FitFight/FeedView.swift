@@ -1,6 +1,7 @@
 import AVKit
 import PhotosUI
 import SwiftUI
+import UIKit
 import UniformTypeIdentifiers
 
 @MainActor
@@ -484,6 +485,15 @@ struct FightPostComposer: View {
     @State private var isLoadingMedia = false
     @State private var images: [UIImage] = []
     @State private var videoURL: URL?
+    @State private var showMediaSource = false
+    @State private var showLibrary = false
+    @State private var showCamera = false
+    @State private var pendingMedia: MediaSource?
+
+    private enum MediaSource {
+        case camera
+        case library
+    }
 
     var body: some View {
         FFCard {
@@ -543,11 +553,13 @@ struct FightPostComposer: View {
                     .padding(.vertical, 8)
                 }
                 HStack(alignment: .center, spacing: 10) {
-                    PhotosPicker(
-                        selection: $mediaItems,
-                        maxSelectionCount: max(1, 4 - images.count),
-                        matching: .any(of: [.images, .videos])
-                    ) {
+                    Button {
+                        if CameraPhotoPicker.isAvailable {
+                            showMediaSource = true
+                        } else {
+                            showLibrary = true
+                        }
+                    } label: {
                         Label(String(localized: "Media"), systemImage: "photo.on.rectangle.angled")
                             .ffType(.label)
                             .foregroundStyle(theme.mossText)
@@ -566,6 +578,48 @@ struct FightPostComposer: View {
                     .disabled(!canPost)
                 }
             }
+        }
+        .confirmationDialog(String(localized: "Add media"), isPresented: $showMediaSource, titleVisibility: .visible) {
+            Button(String(localized: "Take Photo")) {
+                pendingMedia = .camera
+            }
+            Button(String(localized: "Photo Library")) {
+                pendingMedia = .library
+            }
+            Button(String(localized: "Cancel"), role: .cancel) {}
+        }
+        .onChange(of: showMediaSource) { _, presented in
+            guard !presented else { return }
+            if let pendingMedia {
+                switch pendingMedia {
+                case .camera:
+                    showCamera = true
+                case .library:
+                    showLibrary = true
+                }
+            }
+            pendingMedia = nil
+        }
+        .photosPicker(
+            isPresented: $showLibrary,
+            selection: $mediaItems,
+            maxSelectionCount: max(1, 4 - images.count),
+            matching: .any(of: [.images, .videos])
+        )
+        .fullScreenCover(isPresented: $showCamera) {
+            CameraPhotoPicker(
+                onCapture: { image in
+                    showCamera = false
+                    if images.count < 4, videoURL == nil {
+                        images.append(image)
+                        feed.error = nil
+                    }
+                },
+                onCancel: {
+                    showCamera = false
+                }
+            )
+            .ignoresSafeArea()
         }
         .onChange(of: mediaItems) { _, items in
             Task { await loadMedia(items) }
@@ -842,5 +896,61 @@ private struct FightPostVideo: View {
                 player?.pause()
                 player = nil
             }
+    }
+}
+
+private struct CameraPhotoPicker: UIViewControllerRepresentable {
+    var onCapture: (UIImage) -> Void
+    var onCancel: () -> Void
+
+    static var isAvailable: Bool {
+        UIImagePickerController.isSourceTypeAvailable(.camera)
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onCapture: onCapture, onCancel: onCancel)
+    }
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.allowsEditing = false
+        picker.mediaTypes = [UTType.image.identifier]
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ picker: UIImagePickerController, context: Context) {
+        picker.delegate = context.coordinator
+    }
+
+    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let onCapture: (UIImage) -> Void
+        let onCancel: () -> Void
+
+        init(onCapture: @escaping (UIImage) -> Void, onCancel: @escaping () -> Void) {
+            self.onCapture = onCapture
+            self.onCancel = onCancel
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            Task { @MainActor in
+                onCancel()
+            }
+        }
+
+        func imagePickerController(
+            _ picker: UIImagePickerController,
+            didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
+        ) {
+            let image = info[.originalImage] as? UIImage
+            Task { @MainActor in
+                if let image {
+                    onCapture(image)
+                } else {
+                    onCancel()
+                }
+            }
+        }
     }
 }

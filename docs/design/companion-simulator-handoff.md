@@ -26,7 +26,7 @@ The three active examples include a winning group and losing duel. The invitatio
 
 - Custom duration sets an exact future start and end date/time, validates their order, and shows both in review. The preset durations still start immediately. Scheduled fights show their start time. Long custom windows retain the existing 41-day chart limit; the fight score still uses the exact full window.
 - Choosing a companion updates your avatar on You, fights, standings, Feed and comments. The choice is still local to this session. Apple Health shows a collapsed summary with More settings for access requests and diagnostics. Previously reviewed permissions must be changed in Health → profile → Apps → FitFight ([Apple guidance](https://support.apple.com/guide/iphone/share-your-health-data-iph5ede58c3d/ios)).
-- The [Companion README](source/companion/README.md#planned-generation-apis--p0-requested-13-sep-2026) describes three future P0 generation operations. None is implemented.
+- The [Companion README](source/companion/README.md#planned-generation-apis--p0-requested-13-sep-2026) describes three future P0 generation operations. The Blend product/API proposal is in [companion-generation-proposal.md](companion-generation-proposal.md). None is implemented.
 
 - Fights, New, and You share the personal companion introduction. Fights uses the HealthKit store's daily total; fight detail uses the fight's exact scoring window. Missing daily data is explicitly unavailable or connection-needed.
 - Marc's review refinement: the shared introduction uses only the ground painted into the animal asset. The extra green ellipse beneath Fights, New and You was removed.

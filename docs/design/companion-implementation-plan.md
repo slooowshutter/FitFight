@@ -16,6 +16,7 @@ The stages below are implementation checkpoints. Complete and review the native 
 - Visual foundations: [tokens.json](source/tokens.json) and [the native design kit](source/kit/FitFight%20Design%20System.dc.html). Keep Nunito, Night/Day, semantic Moss/Ember/Gold, 22-point cards, hairline borders, and the top version line.
 - Product behavior: [current status](../status.md). The HTML contains sample data and simplified interactions; the existing native/backend behavior remains authoritative.
 - Architecture: [system design](../system-design.md) and [backend boundary](../backend.md). SwiftUI calls the TypeScript backend for application data; Supabase remains the Auth provider and backend persistence.
+- Generation (pending Marc’s answers): [companion-generation-proposal.md](companion-generation-proposal.md) and [generation studies](source/companion/generation-studies/README.md).
 
 The native app already has Fights, New, Feed, You, create/join/share, recurring rounds, standings, chart data, profile photos, and media posts. Modify those screens rather than creating a second application or embedding the HTML.
 
@@ -112,11 +113,11 @@ Generation inputs have three explicit layers:
 
 Treat user text as customization data, not permission to replace the FitFight rules. Do not send unrelated identity information, HealthKit records, steps, or authentication data to the image provider for this first version. Artwork expresses the cast and activity, not live ranking.
 
-Before choosing a provider/model, run a small, explicitly authorized image-quality trial using current provider documentation and pricing. Evaluate character consistency, multiple reference handling, accessory preservation, duplicate species, framing, actual transparency, and Night/Day appearance. Do not promise exact identity from text prompts alone or assume the prototype tool is the production API.
+Provider is **Blend** (three private published workflows). Before wiring FitFight, Marc authors those graphs to the contract in [companion-generation-proposal.md](companion-generation-proposal.md) and we run a small image-quality trial: character consistency, multiple reference handling, accessory preservation, duplicate species, framing, and group cast size. Do not promise exact identity from text prompts alone.
 
 The custom flow is: choose animal → describe its personality/style → generate draft → inspect → use this companion or revise within the agreed generation allowance. Persist the approved reference image and prompt inputs. Keep the current companion while a new draft is pending or fails.
 
-The TypeScript backend owns provider calls, credentials, persistence, and usage limits. Generation runs as background work with a persisted status, so leaving the screen does not lose a result. The iOS app requests a generation and displays its progress/result. Select the smallest worker mechanism that fits the measured provider behavior and the existing backend; do not introduce a generic workflow platform for this feature.
+The TypeScript backend owns provider calls, credentials, persistence, and usage limits. Generation runs as background work with a persisted status, so leaving the screen does not lose a result. The iOS app requests a generation and displays its progress/result. Image generation uses **three private Blend published workflows** (identity, five forms, group scene), polled from FitFight. That is not a generic in-app workflow platform. Do not call Blend from iOS. See [companion-generation-proposal.md](companion-generation-proposal.md).
 
 **Complete when:** custom details survive saving and subsequent group-image tests, a failed generation leaves the current companion usable, and generation count/cost can be inspected before opening the feature to more users.
 
@@ -154,7 +155,7 @@ For identity and generation:
 
 ## Later decisions and deferred work
 
-Before generation implementation, settle the group-image trigger, provider/model, supported customization fields, generation allowance, and acceptable group-composition size. These choices do not delay the fixed-artwork Simulator review.
+The 14 Sep generation proposal recommends: Blend as provider; one confirmed custom identity now (three tries later); generate all five forms once after confirm; daily Fights-tab form from today’s steps; one shared group image per fight ID on organizer tap; 2–4 companions in the drawing. Marc still needs to answer the eight questions in [companion-generation-proposal.md](companion-generation-proposal.md) before implementation. These choices do not delay the fixed-artwork Simulator review.
 
 Paid customization, subscriptions, generated video, real-time effort-dependent artwork, additional activity types, and automatic image regeneration remain future product work. This plan records the direction without building those features.
 

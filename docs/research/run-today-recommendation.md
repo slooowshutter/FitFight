@@ -25,7 +25,7 @@ Runna keeps a weekly plan and treats unplanned work as a **separate object**:
 
 - **Instant Workout** — pick a structured session (easy, tempo, intervals, parkrun, …) with time/distance/pace. It is logged on the calendar. It does **not** rewrite the plan by itself. ([Runna Instant Workouts](https://support.runna.com/en/articles/10116460-how-to-use-instant-workouts))
 - **Free Run** — unstructured extra. Same: logged, not a plan edit. ([Add extra runs](https://support.runna.com/en/articles/6206280-how-can-i-adjust-my-plan-to-add-extra-runs-parkrun-and-club-runs))
-- **Mileage Insights** — after the fact, looks at *all* completed distance (planned + Instant + Free). If the athlete is consistently over or under, it *suggests* changing weekly mileage, long-run distance, or days/week. The athlete accepts or declines. It does not auto-mutate. ([Mileage Insights](https://support.runna.com/en/articles/11794078-what-are-mileage-insights))
+- **Mileage Insights** — after the fact, looks at *all* completed distance (planned + Instant + Free). If the athlete is consistently over or under, it *suggests* changing weekly mileage, long-run distance, or days/week. The athlete accepts or declines. It does not auto-mutate. ([Mileage Insights](https://support.runna.com/en/articles/11794078-what-are-mileage-insights)) Official docs **conflict** on whether Instant/parkrun distance feeds the plan mileage number vs only the Progress tab. Treat extras as load for *tomorrow’s* pick; do not let them silently rebuild the written week.
 
 Coaching rule they spell out: before adding extras, leave recovery around quality days; if a parkrun or club run is hard, **swap it for that week’s quality session**, don’t stack it on top.
 

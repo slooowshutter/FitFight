@@ -102,16 +102,20 @@ final class RemoteImageLoader {
     nonisolated private static func download(_ url: URL, session: URLSession) async -> Data? {
         var request = URLRequest(url: url)
         request.timeoutInterval = 25
-        do {
-            let (data, response) = try await session.data(for: request)
-            guard let http = response as? HTTPURLResponse,
-                  (200..<300).contains(http.statusCode),
-                  !data.isEmpty
-            else { return nil }
-            return data
-        } catch {
-            return nil
+        for attempt in 0..<3 {
+            do {
+                let (data, response) = try await session.data(for: request)
+                guard let http = response as? HTTPURLResponse else { return nil }
+                if (200..<300).contains(http.statusCode), !data.isEmpty { return data }
+                if (400..<500).contains(http.statusCode) { return nil }
+            } catch {
+                if Task.isCancelled { return nil }
+            }
+            if attempt < 2 {
+                try? await Task.sleep(nanoseconds: 400_000_000 * UInt64(attempt + 1))
+            }
         }
+        return nil
     }
 
     nonisolated private static func decode(_ data: Data, maxPixel: CGFloat) -> UIImage? {
@@ -208,7 +212,15 @@ struct RemotePhoto<Placeholder: View>: View {
                 image = nil
                 return
             }
-            image = await RemoteImageLoader.shared.image(for: url, kind: kind)
+            var delay: UInt64 = 400_000_000
+            while !Task.isCancelled {
+                if let loaded = await RemoteImageLoader.shared.image(for: url, kind: kind) {
+                    image = loaded
+                    return
+                }
+                try? await Task.sleep(nanoseconds: delay)
+                if delay < 8_000_000_000 { delay *= 2 }
+            }
         }
     }
 }

@@ -259,6 +259,33 @@ struct FitFightCreateFight: Encodable, Equatable {
     var recurring: Bool?
 }
 
+struct FitFightUpdateFight: Encodable, Equatable {
+    var name: String?
+    var actionText: String?
+    var visibility: String?
+    var recurring: Bool?
+    var startsAt: Date?
+    var endsAt: Date?
+    var inviteHandles: [String]?
+    var removeUserIds: [UUID]?
+
+    enum CodingKeys: String, CodingKey {
+        case name, actionText, visibility, recurring, startsAt, endsAt, inviteHandles, removeUserIds
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(name, forKey: .name)
+        try container.encodeIfPresent(actionText, forKey: .actionText)
+        try container.encodeIfPresent(visibility, forKey: .visibility)
+        try container.encodeIfPresent(recurring, forKey: .recurring)
+        try container.encodeIfPresent(startsAt, forKey: .startsAt)
+        try container.encodeIfPresent(endsAt, forKey: .endsAt)
+        try container.encodeIfPresent(inviteHandles, forKey: .inviteHandles)
+        try container.encodeIfPresent(removeUserIds, forKey: .removeUserIds)
+    }
+}
+
 struct FitFightJoinableFight: Decodable, Equatable, Identifiable {
     var fightId: UUID
     var seriesId: UUID
@@ -864,6 +891,21 @@ struct FitFightAPI {
             body: payload,
             idempotencyKey: idempotencyKey,
             expected: [200, 201]
+        )
+    }
+
+    func updateFight(
+        fightID: UUID,
+        payload: FitFightUpdateFight,
+        accessToken: String
+    ) async throws -> FitFightSummary {
+        try await request(
+            path: "fights/\(fightID.uuidString.lowercased())",
+            method: "PATCH",
+            accessToken: accessToken,
+            body: Self.encoder.encode(payload),
+            idempotencyKey: nil,
+            expected: [200]
         )
     }
 

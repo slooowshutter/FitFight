@@ -123,6 +123,7 @@ enum ScreenshotExport {
                 ("fights-past", AnyView(FightsListView(filter: .past)), .fights),
                 ("duel", AnyView(FightDetailView(fight: duel)), .fights),
                 ("group", AnyView(FightDetailView(fight: group)), .fights),
+                ("edit", AnyView(EditFightView(fight: group)), .fights),
                 ("invitation", AnyView(FightDetailView(fight: invite)), .fights),
                 ("history", AnyView(FightDetailView(fight: group, pane: .history)), .fights),
                 ("share", AnyView(FightDetailView(fight: group, pane: .share)), .fights),
@@ -192,6 +193,12 @@ enum ScreenshotExport {
             },
             Shot(name: "02-fight-detail") { store, model in
                 frame(detail(fight), tab: .fights, themeStore: store, model: model)
+            },
+            Shot(name: "02-edit-fight") { store, model in
+                if let fight {
+                    return sheet(EditFightView(fight: fight), themeStore: store, model: model)
+                }
+                return sheet(Color.clear, themeStore: store, model: model)
             },
             Shot(name: "03-fight-invited") { store, model in
                 frame(detail(invited), tab: .fights, themeStore: store, model: model)

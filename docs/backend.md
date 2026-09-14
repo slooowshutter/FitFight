@@ -181,6 +181,12 @@ Every TestFlight binary talks to the develop project. The workflow runs on push 
 the signed-in User. It locks the Fight and membership, declines it, and revokes its
 invitations in one transaction. Repeating a successful decline is harmless.
 
+`PATCH /api/v1/fights/{fightID}` is owner-only. It can change title, loser action,
+private/public, whether the series repeats, the end time (and the start only while the
+fight is still `scheduled`), extra usernames, and kicking anyone except the owner.
+`draft`, `inviting`, `scheduled`, and `live` fights can be edited; `awaiting_final_sync`,
+`final`, and `cancelled` stay frozen. Old apps never call this route.
+
 Recalculation locks the Fight, then accepted memberships, before reading the latest
 selected-source exact-window snapshots. It freezes scores, completeness, selected
 snapshots (`is_final`), and Fight state in the same transaction. It never substitutes

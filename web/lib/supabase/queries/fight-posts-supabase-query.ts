@@ -20,12 +20,14 @@ import type {
   UpdateFightPostRequest,
 } from "@/lib/types/feed/fight-post";
 import { companionIdSchema } from "@/lib/types/companions/companion";
+import { enqueueFightFeedPostNotifications } from "./feed-social-notifications-supabase-query";
 import {
   loadReadyMedia,
   mapMedia,
   signMediaUrls,
   type MediaRow,
 } from "./media-supabase-query";
+import { processNotificationOutbox } from "./process-notification-outbox-supabase-query";
 
 const POST_LIMIT_PER_DAY = 20;
 
@@ -735,8 +737,11 @@ export async function createFightPost(
 
   const createdId = await database.begin("read write", async (sql) => {
     const mediaIds = await preparePostMedia(userId, input.media_ids, sql);
-    return insertFightPost(userId, "fight", fightId, input.body, mediaIds, [], [fightId], false, sql);
+    const id = await insertFightPost(userId, "fight", fightId, input.body, mediaIds, [], [fightId], false, sql);
+    await enqueueFightFeedPostNotifications(sql, { fightId, postId: id, actorId: userId });
+    return id;
   });
+  await processNotificationOutbox(new Date(), database);
 
   const [row] = await loadPostRows([createdId], database);
   if (!row) {
@@ -853,8 +858,16 @@ export async function createFeedPosts(
         sql,
       )
       : await insertFightPost(userId, "main", null, input.body, mediaIds, tagIds, [], broadcast, sql);
+    for (const destinationFightId of fightIds) {
+      await enqueueFightFeedPostNotifications(sql, {
+        fightId: destinationFightId,
+        postId: createdId,
+        actorId: userId,
+      });
+    }
     return [createdId];
   });
+  await processNotificationOutbox(new Date(), database);
 
   return { posts: await mapPosts(userId, await loadPostRows(createdIds, database), database) };
 }

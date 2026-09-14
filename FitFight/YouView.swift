@@ -18,6 +18,7 @@ struct YouView: View {
     @State private var showingOnboardingPreview = false
     @State private var showingSlideHapticsLab = false
     @State private var showingHealthDetails = false
+    @State private var showingNotificationSettings = false
     @State private var showingCompanionPreviewControls = false
 
     var body: some View {
@@ -87,6 +88,12 @@ struct YouView: View {
         }
         .sheet(isPresented: $showingSlideHapticsLab) {
             SlideHapticsLabView()
+                .fitFightTheme(themeStore.theme)
+                .presentationBackground(themeStore.theme.bg)
+        }
+        .sheet(isPresented: $showingNotificationSettings) {
+            NotificationSettingsView()
+                .environmentObject(session)
                 .fitFightTheme(themeStore.theme)
                 .presentationBackground(themeStore.theme.bg)
         }
@@ -387,6 +394,8 @@ struct YouView: View {
             linkRow(String(localized: "Privacy"), destination: sitePage("privacy"))
             FFDivider()
             linkRow(String(localized: "Support"), destination: sitePage("support"))
+            FFDivider()
+            navRow(String(localized: "Notifications")) { showingNotificationSettings = true }
             FFDivider()
             navRow(String(localized: "Versions")) { model.showingVersions = true }
             if session.isSignedIn {

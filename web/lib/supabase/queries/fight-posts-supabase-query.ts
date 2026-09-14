@@ -800,15 +800,7 @@ export async function createFeedPosts(
     throw new ApiError(429, ERROR_CODES.rate_limited, "You’ve posted a few times recently. Try again later.");
   }
 
-  const [roster] = await database<{ n: number }[]>`
-    select count(*)::int as n
-    from public.fight_members as membership
-    join public.fights as fight on fight.id = membership.fight_id
-    where membership.user_id = ${userId}
-      and membership.state in ('accepted', 'deferred')
-      and fight.state in ('draft', 'inviting', 'scheduled', 'live')
-  `;
-  const broadcast = includeMain || (fightIds.length > 0 && fightIds.length >= (roster?.n ?? 0));
+  const broadcast = includeMain;
   const wantedTags = [...new Set(input.tagged_user_ids)].filter((id) => id !== userId);
   const createdIds = await database.begin("read write", async (sql) => {
     const mediaIds = await preparePostMedia(userId, input.media_ids, sql);

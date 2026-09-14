@@ -32,139 +32,60 @@ on conflict do nothing;
 
 -- Copies from one compose (same author, body, and second) become one post
 -- with every fight attached, so comments and the root Feed stop splitting.
-with ranked as (
+create temporary table fight_post_dupes (
+  id uuid primary key,
+  keeper_id uuid not null
+) on commit drop;
+
+insert into fight_post_dupes (id, keeper_id)
+select id, keeper_id
+from (
   select
     id,
-    min(id) over (
+    first_value(id) over (
       partition by author_id, body, date_trunc('second', created_at)
+      order by id
     ) as keeper_id
   from public.fight_posts
   where audience = 'fight'
-),
-dupes as (
-  select id, keeper_id
-  from ranked
-  where id <> keeper_id
-)
+) as ranked
+where id <> keeper_id;
+
 insert into public.fight_post_channels (post_id, fight_id)
 select dupes.keeper_id, channel.fight_id
-from dupes
+from fight_post_dupes as dupes
 join public.fight_post_channels as channel on channel.post_id = dupes.id
 on conflict do nothing;
 
-with ranked as (
-  select
-    id,
-    min(id) over (
-      partition by author_id, body, date_trunc('second', created_at)
-    ) as keeper_id
-  from public.fight_posts
-  where audience = 'fight'
-),
-dupes as (
-  select id, keeper_id
-  from ranked
-  where id <> keeper_id
-)
-update public.fight_post_comments as comment
-set post_id = dupes.keeper_id
-from dupes
-where comment.post_id = dupes.id
-  and comment.parent_id is null;
+-- Move every comment in one shot. The same-post trigger would reject a
+-- child whose parent still points at the duplicate post.
+alter table public.fight_post_comments disable trigger fight_post_comments_same_post;
 
-with ranked as (
-  select
-    id,
-    min(id) over (
-      partition by author_id, body, date_trunc('second', created_at)
-    ) as keeper_id
-  from public.fight_posts
-  where audience = 'fight'
-),
-dupes as (
-  select id, keeper_id
-  from ranked
-  where id <> keeper_id
-)
 update public.fight_post_comments as comment
 set post_id = dupes.keeper_id
-from dupes
+from fight_post_dupes as dupes
 where comment.post_id = dupes.id;
 
-with ranked as (
-  select
-    id,
-    min(id) over (
-      partition by author_id, body, date_trunc('second', created_at)
-    ) as keeper_id
-  from public.fight_posts
-  where audience = 'fight'
-),
-dupes as (
-  select id, keeper_id
-  from ranked
-  where id <> keeper_id
-)
+alter table public.fight_post_comments enable trigger fight_post_comments_same_post;
+
 insert into public.fight_post_reactions (post_id, user_id, emoji, created_at)
 select dupes.keeper_id, reaction.user_id, reaction.emoji, reaction.created_at
-from dupes
+from fight_post_dupes as dupes
 join public.fight_post_reactions as reaction on reaction.post_id = dupes.id
 on conflict (post_id, user_id) do nothing;
 
-with ranked as (
-  select
-    id,
-    min(id) over (
-      partition by author_id, body, date_trunc('second', created_at)
-    ) as keeper_id
-  from public.fight_posts
-  where audience = 'fight'
-),
-dupes as (
-  select id, keeper_id
-  from ranked
-  where id <> keeper_id
-)
 delete from public.fight_post_reactions as reaction
-using dupes
+using fight_post_dupes as dupes
 where reaction.post_id = dupes.id;
 
-with ranked as (
-  select
-    id,
-    min(id) over (
-      partition by author_id, body, date_trunc('second', created_at)
-    ) as keeper_id
-  from public.fight_posts
-  where audience = 'fight'
-),
-dupes as (
-  select id, keeper_id
-  from ranked
-  where id <> keeper_id
-)
 insert into public.fight_post_tags (post_id, user_id, created_at)
 select dupes.keeper_id, tag.user_id, tag.created_at
-from dupes
+from fight_post_dupes as dupes
 join public.fight_post_tags as tag on tag.post_id = dupes.id
 on conflict (post_id, user_id) do nothing;
 
-with ranked as (
-  select
-    id,
-    min(id) over (
-      partition by author_id, body, date_trunc('second', created_at)
-    ) as keeper_id
-  from public.fight_posts
-  where audience = 'fight'
-),
-dupes as (
-  select id, keeper_id
-  from ranked
-  where id <> keeper_id
-)
 delete from public.fight_posts
-where id in (select id from dupes);
+where id in (select id from fight_post_dupes);
 
 revoke all on table public.fight_post_channels from public, anon, authenticated;
 grant select on public.fight_post_channels to authenticated, fitfight_backend_reader;

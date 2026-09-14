@@ -187,8 +187,7 @@ struct YouView: View {
     }
 
     private var health: some View {
-        let syncFailed = steps.connection == .syncFailed
-        return FFGroupedRows {
+        FFGroupedRows {
             Button {
                 Task {
                     await model.refreshFights(session: session, steps: steps, trigger: .manual, requestAccess: !steps.hasAsked)
@@ -199,15 +198,8 @@ struct YouView: View {
                     subtitle: steps.connection == .upToDate ? String(localized: "Up to date") : steps.detailText,
                     systemImage: "heart",
                     enabled: steps.status != .reading && !model.isRefreshingFights,
-                    subtitleTone: syncFailed ? .ember : (steps.isConnected ? .moss : .neutral),
-                    trailing: AnyView(
-                        FFPill(
-                            syncFailed
-                                ? String(localized: "Retry")
-                                : (steps.isConnected ? String(localized: "Connected") : String(localized: "Connect")),
-                            style: syncFailed ? .softEmber : (steps.isConnected ? .softMoss : .solidMoss)
-                        )
-                    )
+                    subtitleTone: healthSubtitleTone,
+                    trailing: AnyView(healthPill)
                 )
             }
             .buttonStyle(FFHapticPlainStyle())
@@ -303,6 +295,27 @@ struct YouView: View {
                     )
                 }
             }
+        }
+    }
+
+    private var healthSubtitleTone: FFTone {
+        switch steps.connection {
+        case .syncFailed, .noAccessibleSteps: return .ember
+        case .upToDate: return .moss
+        case .syncing, .notConnected: return .neutral
+        }
+    }
+
+    private var healthPill: FFPill {
+        switch steps.connection {
+        case .syncFailed:
+            return FFPill(String(localized: "Retry"), style: .softEmber)
+        case .syncing:
+            return FFPill(String(localized: "Syncing"), style: .neutral)
+        case .upToDate, .noAccessibleSteps:
+            return FFPill(String(localized: "Connected"), style: .softMoss)
+        case .notConnected:
+            return FFPill(String(localized: "Connect"), style: .solidMoss)
         }
     }
 

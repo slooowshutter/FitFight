@@ -753,7 +753,11 @@
     "The server took too long. Tap to retry." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Le serveur a trop tardé. Touche pour réessayer."}}}},
     "Pending. Open the app" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"En attente. Ouvre l’app"}}}},
     "Start one under New. Add people with their username. They must have signed in once." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Lance-en un dans Nouveau. Ajoute des personnes avec leur nom d’utilisateur. Elles doivent s’être connectées au moins une fois."}}}},
-    "\\(text) Tap to retry." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"\\(text) Touche pour réessayer."}}}}
+    "\\(text) Tap to retry." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"\\(text) Touche pour réessayer."}}}},
+    "Tap to retry" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Touche pour réessayer"}}}},
+    "Syncing" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Synchro"}}}},
+    "A failed Apple Health sync now shows why, in ember, with a Retry pill instead of Connected." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Une synchro Santé d’Apple ratée affiche maintenant pourquoi, en braise, avec un bouton Réessayer au lieu de Connecté."}}}},
+    "health.sync-server-failed" : {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"FitFight's server could not save your Steps (error %lld)."}},"fr":{"stringUnit":{"state":"translated","value":"Le serveur FitFight n’a pas pu enregistrer tes pas (erreur %lld)."}}}}
   },
   "version" : "1.0"
 }

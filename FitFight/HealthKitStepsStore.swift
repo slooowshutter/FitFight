@@ -517,12 +517,20 @@ final class HealthKitStepsStore: ObservableObject {
         if case HealthKitStepAggregates.ReadError.noAccessibleSteps = error {
             return String(localized: "No accessible Steps")
         }
+        let retry = String(localized: "Tap to retry")
         if case FitFightAPIError.http(let status, _, _) = error, status >= 500 {
             let saved = String(
                 localized: "health.sync-server-failed",
                 defaultValue: "FitFight's server could not save your Steps (error \(status))."
             )
-            return "\(saved) \(String(localized: "Tap to retry"))"
+            return "\(saved) \(retry)"
+        }
+        if let api = error as? FitFightAPIError, let description = api.errorDescription, !description.isEmpty {
+            var text = description.trimmingCharacters(in: .whitespaces)
+            if let last = text.last, !".!?".contains(last) {
+                text += "."
+            }
+            return "\(text) \(retry)"
         }
         if let urlError = error as? URLError {
             switch urlError.code {

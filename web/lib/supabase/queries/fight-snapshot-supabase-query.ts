@@ -4,6 +4,7 @@ import { ApiError, ERROR_CODES } from "@/lib/http";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import { fightSnapshotSchema, type FightSnapshot } from "@/lib/types/fights/fight-snapshot";
+import { stockCompanionIdSchema } from "@/lib/types/companions/companion";
 import { mapMedia, signMediaUrls, type MediaRow } from "./media-supabase-query";
 
 const snapshotRowSchema = fightSnapshotSchema.extend({
@@ -12,6 +13,7 @@ const snapshotRowSchema = fightSnapshotSchema.extend({
     handle: z.string(),
     display_name: z.string(),
     avatar_media_id: z.string().uuid().nullable().optional(),
+    companion_id: stockCompanionIdSchema.nullable().default(null),
   })),
 });
 
@@ -40,7 +42,7 @@ export async function readFightSnapshot(
         from public.fight_members
         where fight_id in (select id from visible_fights)
       ), visible_profiles as (
-        select user_id, handle, display_name, avatar_media_id
+        select user_id, handle, display_name, avatar_media_id, companion_id
         from public.profiles
         where user_id in (
           select user_id from visible_members union select owner_id from visible_fights
@@ -103,5 +105,6 @@ async function attachProfileAvatars(
     handle: profile.handle,
     display_name: profile.display_name,
     avatar: profile.avatar_media_id ? avatars.get(profile.avatar_media_id) ?? null : null,
+    companion_id: profile.companion_id,
   }));
 }

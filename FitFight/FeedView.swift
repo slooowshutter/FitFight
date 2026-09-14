@@ -707,6 +707,7 @@ struct FightPostCard: View {
                 HStack(alignment: .top, spacing: 10) {
                     CompanionAvatar(
                         personID: post.author.userId.uuidString,
+                        companionID: post.author.companionId,
                         isYou: post.mine,
                         monogram: post.author.initials,
                         photoURL: post.author.avatar?.url,

@@ -19,6 +19,7 @@ import type {
   ReportFightPostResponse,
   UpdateFightPostRequest,
 } from "@/lib/types/feed/fight-post";
+import { stockCompanionIdSchema } from "@/lib/types/companions/companion";
 import {
   loadReadyMedia,
   mapMedia,
@@ -45,6 +46,7 @@ type PostRow = {
   author_id: string;
   author_handle: string;
   author_display_name: string;
+  author_companion_id: string | null;
   avatar_id: string | null;
   avatar_kind: MediaRow["kind"] | null;
   avatar_purpose: MediaRow["purpose"] | null;
@@ -285,6 +287,7 @@ async function mapPosts(userId: string, rows: PostRow[], database: Sql): Promise
       handle: row.author_handle,
       display_name: row.author_display_name,
       avatar: avatarFromPost(row, row.avatar_object_path ? urls.get(row.avatar_object_path) ?? null : null),
+      companion_id: stockCompanionIdSchema.nullable().parse(row.author_companion_id),
     },
     media: attachments
       .filter((attachment) => attachment.post_id === row.id)
@@ -313,6 +316,7 @@ export async function listFightPosts(
           post.id, post.audience::text as audience, post.fight_id,
           coalesce(fight.name, '') as fight_name, post.body, post.created_at,
           post.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
+          profile.companion_id as author_companion_id,
           avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
           avatar.status::text as avatar_status, avatar.object_path as avatar_object_path,
           avatar.original_filename as avatar_original_filename, avatar.content_type as avatar_content_type,
@@ -393,6 +397,7 @@ export async function listFightPosts(
           post.id, post.audience::text as audience, post.fight_id,
           coalesce(fight.name, '') as fight_name, post.body, post.created_at,
           post.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
+          profile.companion_id as author_companion_id,
           avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
           avatar.status::text as avatar_status, avatar.object_path as avatar_object_path,
           avatar.original_filename as avatar_original_filename, avatar.content_type as avatar_content_type,
@@ -516,6 +521,7 @@ async function loadPostRows(ids: string[], database: Sql): Promise<PostRow[]> {
       post.id, post.audience::text as audience, post.fight_id,
       coalesce(fight.name, '') as fight_name, post.body, post.created_at,
       post.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
+      profile.companion_id as author_companion_id,
       avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
       avatar.status::text as avatar_status, avatar.object_path as avatar_object_path,
       avatar.original_filename as avatar_original_filename, avatar.content_type as avatar_content_type,
@@ -722,6 +728,7 @@ export async function listFeedPeople(
     user_id: string;
     handle: string;
     display_name: string;
+    companion_id: string | null;
     avatar_id: string | null;
     avatar_kind: MediaRow["kind"] | null;
     avatar_purpose: MediaRow["purpose"] | null;
@@ -737,7 +744,7 @@ export async function listFeedPeople(
     avatar_created_at: Date | string | null;
   })[]>`
     select distinct
-      profile.user_id, profile.handle, profile.display_name,
+      profile.user_id, profile.handle, profile.display_name, profile.companion_id,
       avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
       avatar.status::text as avatar_status, avatar.object_path as avatar_object_path,
       avatar.original_filename as avatar_original_filename, avatar.content_type as avatar_content_type,
@@ -828,6 +835,7 @@ export async function listFeedPeople(
       handle: row.handle,
       display_name: row.display_name,
       avatar,
+      companion_id: stockCompanionIdSchema.nullable().parse(row.companion_id),
     });
   }
   return { people };

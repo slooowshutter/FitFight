@@ -472,7 +472,7 @@ private struct FightDayHeatChart: View {
             VStack(alignment: .leading, spacing: 6) {
                 ForEach(model.series) { series in
                     HStack(spacing: 4) {
-                        CompanionAvatar(personID: series.person.id, isYou: series.person.isYou, monogram: series.person.initials, photoURL: series.person.photoURL, size: 22)
+                        CompanionAvatar(series.person, size: 22)
                         ForEach(0..<model.dayCount, id: \.self) { day in
                             let value = series.daily[day]
                             let tone = model.peakDaily == 0 ? 0 : value / model.peakDaily
@@ -532,7 +532,7 @@ private struct FightDayOvalChart: View {
                         ? 0.02
                         : 0.04 + 0.90 * (series.total / model.peakTotal)
                     let point = pointOnCircuit(progress: progress, in: rect, corner: corner)
-                    CompanionAvatar(personID: series.person.id, isYou: series.person.isYou, monogram: series.person.initials, photoURL: series.person.photoURL, size: 30)
+                    CompanionAvatar(series.person, size: 30)
                         .overlay { Circle().strokeBorder(series.color, lineWidth: 2) }
                         .position(point)
                         .zIndex(series.total)
@@ -557,7 +557,7 @@ private struct FightDayRingsChart: View {
                         lineWidth: 8,
                         fill: series.color
                     ) {
-                        CompanionAvatar(personID: series.person.id, isYou: series.person.isYou, monogram: series.person.initials, photoURL: series.person.photoURL, size: 32)
+                        CompanionAvatar(series.person, size: 32)
                     }
                     Text(series.person.isYou ? String(localized: "You") : series.person.name)
                         .ffType(.micro)

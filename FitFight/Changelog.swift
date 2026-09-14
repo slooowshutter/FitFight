@@ -50,6 +50,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 14,
+            notes: "Your companion is now your avatar for other people in fights and Feed. If you have not chosen one yet, FitFight will ask you to pick."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
             notes: "Two-word companion names now capitalize both words, like Red Panda."
         ),
         ReleaseNote(

@@ -1,4 +1,3 @@
-import CoreHaptics
 import SwiftUI
 import UIKit
 
@@ -267,12 +266,19 @@ struct FFSlideToConfirm: View {
     let title: String
     var enabled: Bool = true
     var busy: Bool = false
+    var recipe: FFSlideHapticRecipe? = nil
+    var resetsAfterSuccess: Bool = false
     let action: () -> Bool
 
     @Environment(\.ffTheme) private var theme
+    @AppStorage(FFSlideHapticRecipe.storageKey) private var selectedRecipeID = FFSlideHapticRecipe.shippedID
     @State private var drag: CGFloat = 0
     @State private var completed = false
     @State private var slideHaptics = FFSlideHapticEngine()
+
+    private var resolvedRecipe: FFSlideHapticRecipe {
+        recipe ?? FFSlideHapticRecipe.named(selectedRecipeID)
+    }
 
     private let knobSize: CGFloat = 44
     private let inset: CGFloat = 8
@@ -333,6 +339,9 @@ struct FFSlideToConfirm: View {
                 reset()
             }
         }
+        .onDisappear {
+            slideHaptics.stop()
+        }
     }
 
     private func slideGesture(travel: CGFloat) -> some Gesture {
@@ -340,7 +349,7 @@ struct FFSlideToConfirm: View {
             .onChanged { value in
                 guard enabled, !busy, !completed else { return }
                 drag = min(max(0, value.translation.width), travel)
-                slideHaptics.drag(progress: travel == 0 ? 0 : drag / travel)
+                slideHaptics.drag(progress: travel == 0 ? 0 : drag / travel, recipe: resolvedRecipe)
             }
             .onEnded { _ in
                 slideHaptics.stop()
@@ -361,6 +370,9 @@ struct FFSlideToConfirm: View {
         slideHaptics.stop()
         if action() {
             FFHaptics.success()
+            if resetsAfterSuccess {
+                reset()
+            }
         } else {
             reset()
         }
@@ -372,117 +384,6 @@ struct FFSlideToConfirm: View {
         withAnimation(.timingCurve(0.16, 1, 0.3, 1, duration: 0.22)) {
             drag = 0
         }
-    }
-}
-
-/// Continuous rumble while the thumb is down. Rate and bite rise with progress.
-@MainActor
-private final class FFSlideHapticEngine {
-    private var engine: CHHapticEngine?
-    private var player: CHHapticAdvancedPatternPlayer?
-    private let pulse = UIImpactFeedbackGenerator(style: .medium)
-    private var progress: CGFloat = 0
-    private var loop: Task<Void, Never>?
-    private var lastPulse = Date.distantPast
-
-    func drag(progress: CGFloat) {
-        self.progress = min(max(progress, 0), 1)
-        startIfNeeded()
-        updateContinuous()
-    }
-
-    func stop() {
-        loop?.cancel()
-        loop = nil
-        lastPulse = .distantPast
-        try? player?.stop(atTime: CHHapticTimeImmediate)
-        player = nil
-        engine?.stop(completionHandler: { _ in })
-        engine = nil
-        progress = 0
-    }
-
-    private func startIfNeeded() {
-        guard player == nil, loop == nil else { return }
-        pulse.prepare()
-        if CHHapticEngine.capabilitiesForHardware().supportsHaptics,
-           let started = try? makeContinuousPlayer() {
-            engine = started.engine
-            player = started.player
-            try? player?.start(atTime: CHHapticTimeImmediate)
-        }
-        loop = Task { @MainActor [weak self] in
-            while let engine = self, !Task.isCancelled {
-                engine.tick()
-                do {
-                    try await Task.sleep(nanoseconds: 8_000_000)
-                } catch {
-                    return
-                }
-            }
-        }
-    }
-
-    private func makeContinuousPlayer() throws -> (engine: CHHapticEngine, player: CHHapticAdvancedPatternPlayer) {
-        let engine = try CHHapticEngine()
-        engine.playsHapticsOnly = true
-        try engine.start()
-        let event = CHHapticEvent(
-            eventType: .hapticContinuous,
-            parameters: [
-                CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.22),
-                CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.1),
-            ],
-            relativeTime: 0,
-            duration: 60
-        )
-        let pattern = try CHHapticPattern(events: [event], parameters: [])
-        return (engine, try engine.makeAdvancedPlayer(with: pattern))
-    }
-
-    private func updateContinuous() {
-        guard let player else { return }
-        let p = Double(progress)
-        let params = [
-            CHHapticDynamicParameter(
-                parameterID: .hapticIntensityControl,
-                value: Float(0.2 + 0.8 * pow(p, 1.15)),
-                relativeTime: 0
-            ),
-            CHHapticDynamicParameter(
-                parameterID: .hapticSharpnessControl,
-                value: Float(0.08 + 0.92 * pow(p, 1.55)),
-                relativeTime: 0
-            ),
-        ]
-        try? player.sendParameters(params, atTime: CHHapticTimeImmediate)
-    }
-
-    private func tick() {
-        let needed = 1 / (20.0 * pow(50.0 / 20.0, Double(progress)))
-        guard Date().timeIntervalSince(lastPulse) >= needed else { return }
-        lastPulse = Date()
-        if let engine {
-            playClick(on: engine)
-        } else {
-            pulse.impactOccurred(intensity: 0.55)
-            pulse.prepare()
-        }
-    }
-
-    private func playClick(on engine: CHHapticEngine) {
-        let event = CHHapticEvent(
-            eventType: .hapticTransient,
-            parameters: [
-                CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.7),
-                CHHapticEventParameter(parameterID: .hapticSharpness, value: Float(0.25 + 0.75 * progress)),
-            ],
-            relativeTime: 0
-        )
-        guard let pattern = try? CHHapticPattern(events: [event], parameters: []),
-              let click = try? engine.makePlayer(with: pattern)
-        else { return }
-        try? click.start(atTime: CHHapticTimeImmediate)
     }
 }
 

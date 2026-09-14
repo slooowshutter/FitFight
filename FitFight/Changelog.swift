@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 14,
+            notes: "Slide to start now ticks like a switch as you drag, instead of buzzing the whole time."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
             notes: "Apple Health Steps still syncs even if extra workout details fail. You shows the real server or network error instead of only Sync failed, and no longer labels a failed sync as Connected."
         ),
         ReleaseNote(

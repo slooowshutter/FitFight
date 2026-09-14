@@ -16,6 +16,7 @@ struct YouView: View {
     @State private var isUploadingPhoto = false
     @State private var photoError = ""
     @State private var showingOnboardingPreview = false
+    @State private var showingSlideHapticsLab = false
     @State private var showingHealthDetails = false
     @State private var showingCompanionPreviewControls = false
 
@@ -77,6 +78,11 @@ struct YouView: View {
                 .environmentObject(session)
                 .environmentObject(steps)
                 .environmentObject(themeStore)
+                .fitFightTheme(themeStore.theme)
+                .presentationBackground(themeStore.theme.bg)
+        }
+        .sheet(isPresented: $showingSlideHapticsLab) {
+            SlideHapticsLabView()
                 .fitFightTheme(themeStore.theme)
                 .presentationBackground(themeStore.theme.bg)
         }
@@ -382,6 +388,19 @@ struct YouView: View {
                         .foregroundStyle(theme.textFaint)
                 ),
                 action: { showingOnboardingPreview = true }
+            )
+            FFDivider()
+            FFGroupedRow(
+                title: String(localized: "Slide haptics"),
+                subtitle: String(localized: "Twenty Slide to start vibrations. This page is only on your account."),
+                systemImage: "iphone.radiowaves.left.and.right",
+                subtitleTone: .neutral,
+                trailing: AnyView(
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(theme.textFaint)
+                ),
+                action: { showingSlideHapticsLab = true }
             )
         }
     }

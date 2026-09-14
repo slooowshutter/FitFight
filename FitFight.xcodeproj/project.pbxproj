@@ -71,6 +71,8 @@
 		A10000000000000000000403 /* CompanionPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000402 /* CompanionPreview.swift */; };
 		A10000000000000000000411 /* RemoteImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000410 /* RemoteImageCache.swift */; };
 		A10000000000000000000413 /* RemoteImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000412 /* RemoteImage.swift */; };
+		A10000000000000000000415 /* SlideHaptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000414 /* SlideHaptics.swift */; };
+		A10000000000000000000417 /* SlideHapticsLabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000416 /* SlideHapticsLabView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -142,6 +144,8 @@
 		A10000000000000000000402 /* CompanionPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionPreview.swift; sourceTree = "<group>"; };
 		A10000000000000000000410 /* RemoteImageCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteImageCache.swift; sourceTree = "<group>"; };
 		A10000000000000000000412 /* RemoteImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteImage.swift; sourceTree = "<group>"; };
+		A10000000000000000000414 /* SlideHaptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlideHaptics.swift; sourceTree = "<group>"; };
+		A10000000000000000000416 /* SlideHapticsLabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlideHapticsLabView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -190,6 +194,7 @@
 				A10000000000000000000380 /* NotificationOnboardingView.swift */,
 				A10000000000000000000386 /* RequestsOnboardingView.swift */,
 				A10000000000000000000384 /* OnboardingPreviewView.swift */,
+				A10000000000000000000416 /* SlideHapticsLabView.swift */,
 				A10000000000000000000302 /* SessionStore.swift */,
 				A10000000000000000000303 /* AppleSignInControl.swift */,
 				A10000000000000000000309 /* WelcomeView.swift */,
@@ -223,6 +228,7 @@
 				A1000000000000000000001A /* tokens.json */,
 				A10000000000000000000017 /* Theme.swift */,
 				A10000000000000000000018 /* Components.swift */,
+				A10000000000000000000414 /* SlideHaptics.swift */,
 				A100000000000000000000C5 /* AppChrome.swift */,
 				A100000000000000000000C2 /* Controls.swift */,
 				A100000000000000000000C3 /* DataViz.swift */,
@@ -350,6 +356,7 @@
 				A10000000000000000000006 /* VersionsView.swift in Sources */,
 				A10000000000000000000007 /* Theme.swift in Sources */,
 				A10000000000000000000008 /* Components.swift in Sources */,
+				A10000000000000000000415 /* SlideHaptics.swift in Sources */,
 				A100000000000000000000D5 /* AppChrome.swift in Sources */,
 				A100000000000000000000D2 /* Controls.swift in Sources */,
 				A100000000000000000000D3 /* DataViz.swift in Sources */,
@@ -383,6 +390,7 @@
 				A10000000000000000000381 /* NotificationOnboardingView.swift in Sources */,
 				A10000000000000000000383 /* DebugMenuView.swift in Sources */,
 				A10000000000000000000385 /* OnboardingPreviewView.swift in Sources */,
+				A10000000000000000000417 /* SlideHapticsLabView.swift in Sources */,
 				A10000000000000000000387 /* RequestsOnboardingView.swift in Sources */,
 				A10000000000000000000373 /* FightPostThread.swift in Sources */,
 				A10000000000000000000367 /* HealthOnboardingView.swift in Sources */,

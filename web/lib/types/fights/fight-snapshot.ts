@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { stockCompanionIdSchema } from "@/lib/types/companions/companion";
+import { companionIdSchema } from "@/lib/types/companions/companion";
 import { mediaObjectSchema } from "@/lib/types/media/media";
 import { fightMemberStateValues, fightStateValues } from "./membership-decision";
 import { fightVisibilityValues } from "./fight-visibility";
@@ -44,7 +44,7 @@ export const fightSnapshotSchema = z.object({
     handle: z.string(),
     display_name: z.string(),
     avatar: mediaObjectSchema.nullable(),
-    companion_id: stockCompanionIdSchema.nullable().default(null),
+    companion_id: companionIdSchema.nullable().default(null),
   })),
   series: z.array(z.object({
     id: z.string().uuid(),

@@ -14,12 +14,20 @@ struct APIContractTests {
         precondition(profile.handleSetAt == "2026-09-01T10:00:00Z")
         precondition(profile.referralCode?.uuidString.lowercased() == "22222222-2222-4222-8222-222222222222")
         precondition(profile.companionId == nil)
+        precondition(profile.companionPrompt == nil)
 
         var withCompanionJSON = try JSONSerialization.jsonObject(with: profileData) as! [String: Any]
         withCompanionJSON["companion_id"] = "fox"
         let withCompanion = try decoder.decode(FitFightProfile.self,
             from: JSONSerialization.data(withJSONObject: withCompanionJSON))
         precondition(withCompanion.companionId == "fox")
+        precondition(withCompanion.companionPrompt == nil)
+        withCompanionJSON["companion_id"] = "custom"
+        withCompanionJSON["companion_prompt"] = "a cream frenchie with gold sunglasses"
+        let customCompanion = try decoder.decode(FitFightProfile.self,
+            from: JSONSerialization.data(withJSONObject: withCompanionJSON))
+        precondition(customCompanion.companionId == "custom")
+        precondition(customCompanion.companionPrompt == "a cream frenchie with gold sunglasses")
 
         guard var extendedProfile = try JSONSerialization.jsonObject(with: profileData) as? [String: Any] else {
             preconditionFailure("Profile fixture must be a JSON object")

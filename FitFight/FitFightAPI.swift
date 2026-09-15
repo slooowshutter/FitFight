@@ -678,6 +678,7 @@ struct FitFightAPI {
         displayName: String? = nil,
         avatarMediaId: UUID? = nil,
         companionId: String? = nil,
+        companionPrompt: String? = nil,
         accessToken: String
     ) async throws -> FitFightProfile {
         try await request(
@@ -688,7 +689,8 @@ struct FitFightAPI {
                 handle: handle,
                 displayName: displayName,
                 avatarMediaId: avatarMediaId,
-                companionId: companionId
+                companionId: companionId,
+                companionPrompt: companionPrompt
             )),
             idempotencyKey: nil,
             expected: [200]
@@ -1348,12 +1350,14 @@ private struct ProfileUpdate: Encodable {
     let displayName: String?
     let avatarMediaId: UUID?
     let companionId: String?
+    let companionPrompt: String?
 
     enum CodingKeys: String, CodingKey {
         case handle
         case displayName = "display_name"
         case avatarMediaId = "avatar_media_id"
         case companionId = "companion_id"
+        case companionPrompt = "companion_prompt"
     }
 
     func encode(to encoder: Encoder) throws {
@@ -1362,6 +1366,9 @@ private struct ProfileUpdate: Encodable {
         try container.encodeIfPresent(displayName, forKey: .displayName)
         try container.encodeIfPresent(avatarMediaId, forKey: .avatarMediaId)
         try container.encodeIfPresent(companionId, forKey: .companionId)
+        if companionId != nil {
+            try container.encode(companionPrompt, forKey: .companionPrompt)
+        }
     }
 }
 

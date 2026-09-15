@@ -64,7 +64,12 @@ struct ContentView: View {
                 }
             }
         )) {
-            CompanionPicker(selection: companions.selection, required: session.needsCompanionSelection)
+            CompanionPicker(
+                selection: companions.selection,
+                required: session.needsCompanionSelection,
+                isCustom: companions.isCustom,
+                prompt: companions.customPrompt
+            )
                 .fitFightTheme(themeStore.theme)
                 .presentationBackground(themeStore.theme.bg)
                 .interactiveDismissDisabled(session.needsCompanionSelection)
@@ -273,10 +278,10 @@ struct ContentView: View {
             fightsStack
         case .newFight:
             NewFightView()
-        case .feedback:
-            FeedbackTabView()
         case .you:
             YouView()
+        case .feedback:
+            FeedbackTabView()
         }
     }
 

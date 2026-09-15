@@ -4,7 +4,7 @@ import { ApiError, ERROR_CODES } from "@/lib/http";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import { fightSnapshotSchema, type FightSnapshot } from "@/lib/types/fights/fight-snapshot";
-import { stockCompanionIdSchema } from "@/lib/types/companions/companion";
+import { companionIdSchema } from "@/lib/types/companions/companion";
 import { mapMedia, signMediaUrls, type MediaRow } from "./media-supabase-query";
 
 const snapshotRowSchema = fightSnapshotSchema.extend({
@@ -13,7 +13,7 @@ const snapshotRowSchema = fightSnapshotSchema.extend({
     handle: z.string(),
     display_name: z.string(),
     avatar_media_id: z.string().uuid().nullable().optional(),
-    companion_id: stockCompanionIdSchema.nullable().default(null),
+    companion_id: companionIdSchema.nullable().default(null),
   })),
 });
 

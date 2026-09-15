@@ -19,21 +19,21 @@ See [the Simulator handoff](../../companion-simulator-handoff.md) and [captures]
 
 ## Planned generation APIs — P0, requested 13 Sep 2026
 
-These are future backend features, not implemented endpoints. The native screens and stock artwork are already in `FitFight/`; they do not require another HTML-to-SwiftUI port. Stock selection is saved on the account so other people and devices see the same companion. Sport, breed, mood, and accessories stay on this iPhone. Custom generation is still later.
+These are future backend features, not implemented endpoints. The native screens and stock artwork are already in `FitFight/`; they do not require another HTML-to-SwiftUI port. Stock selection is saved on the account so other people and devices see the same companion. Custom is one description stored on the account. Image generation is still later.
 
 A selected companion becomes the person's app avatar on You, fights, standings, Feed and comments. Profile-photo controls must not compete with that choice. The account keeps its real user ID, username and display name; changing an animal never changes membership or scores.
 
 ### 1. Custom animal identity and avatar
 
-Add **Custom** to companion selection. The person supplies an animal, optional breed, and appearance instructions such as sunglasses, a hat, clothing and colours. Keep both the original prompt and structured characteristics, with an owner ID, companion ID and revision. Store the selected stock ID or custom companion ID on the account.
+The native picker is a **grid of stock animals** plus **Custom**. Custom is one text area for species, breed or race, accessories, colors, and anything else that should appear. That text is stored on the profile (`companion_id = custom`, `companion_prompt`) for a later generation job. The picker does not show poses, sport, mood, or other generation internals.
 
-An authenticated TypeScript endpoint creates the companion through the chosen image workflow/provider, saves the resulting avatar and full-body asset, and returns their references. The profile read API returns the chosen companion and its assets so every native surface uses the same identity. Save the prompt/workflow version and reference artwork required to reproduce the character. Generation failure must preserve the existing selection; only a successful, confirmed result becomes the person's avatar.
+An authenticated TypeScript endpoint is still later: it will take the saved prompt through the chosen image workflow/provider, save the resulting avatar and full-body asset, and return their references. Until then, a custom choice uses initials or a photo as the avatar. Generation failure must preserve the existing selection; only a successful, confirmed result becomes the person's avatar.
 
 Before implementation: select the workflow/provider and server credentials, approve the character recipe and output sizes, and decide generation allowances. The app needs loading, failure and confirmation states. Secrets stay on the server; generated files use the existing owned-media/storage boundary. Account selection and its read contract must ship before generated avatars are shown to other people.
 
 ### 2. Five activity forms of the same companion
 
-The native picker already shows **five effort poses** and explains that weekly movement changes the scene. Hiking goat has real artwork (resting with tea → peak). Other animals and sports reuse that same animal’s stock body with sport-specific labels until generation exists. Today’s step count picks the live pose (under 2k resting, 8k+ peak). A later generation operation should take the saved identity, sport, mood, breed, accessories and reference artwork and create five consistent sport scenes. Activity changes must select an already saved form; they do not generate another image every time the screen opens.
+The native picker no longer shows effort poses. Hiking goat still has real rest-to-peak artwork on You and fights when that stock animal is selected. Other animals reuse that same animal’s stock body until generation exists. Today’s step count still picks the live pose for those surfaces (under 2k resting, 8k+ peak). A later generation operation should take the saved identity and reference artwork and create five consistent sport scenes. Activity changes must select an already saved form; they do not generate another image every time the screen opens.
 
 Store each form against the same companion revision. Activity changes select an already saved form; they do not generate another image every time the screen opens. Preserve the animal, breed, face, clothes and accessories across the set. Partial generation must not replace a complete usable set. These forms are presentation only and do not change Steps scoring.
 

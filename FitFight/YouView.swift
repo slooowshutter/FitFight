@@ -131,7 +131,7 @@ struct YouView: View {
     private var profile: some View {
         if session.isSignedIn {
             HStack(spacing: 14) {
-                if companions.animal(for: session.profile?.userId.uuidString, companionID: session.profile?.companionId, isYou: true) != nil {
+                if companions.hasChosen {
                     Button { companions.showingPicker = true } label: {
                         CompanionAvatar(
                             personID: session.profile?.userId.uuidString,

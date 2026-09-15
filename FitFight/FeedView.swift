@@ -178,17 +178,6 @@ private func postableFights(_ fights: [Fight]) -> [Fight] {
         }
 }
 
-private enum FeedRanking: Hashable, CaseIterable {
-    case recent, top
-
-    var title: String {
-        switch self {
-        case .recent: return String(localized: "Recent")
-        case .top: return String(localized: "Top")
-        }
-    }
-}
-
 struct FeedView: View {
     var showsChrome: Bool = true
 
@@ -199,7 +188,6 @@ struct FeedView: View {
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
     @State private var composing = false
-    @State private var ranking: FeedRanking = .recent
 
     var body: some View {
         FFScreen(refresh: feedRefresh) {
@@ -210,15 +198,12 @@ struct FeedView: View {
                     trailing: AnyView(composeButton)
                 )
             }
-            FFSegmented(items: FeedRanking.allCases, selection: $ranking) { item in
-                item.title
-            }
             if let error = feed.error, !error.isEmpty {
                 FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
             }
-            if rankedPosts.isEmpty && feed.isLoading {
+            if feed.posts.isEmpty && feed.isLoading {
                 FFLoadingBlock()
-            } else if rankedPosts.isEmpty && !feed.isLoading {
+            } else if feed.posts.isEmpty && !feed.isLoading {
                 FFCard {
                     Text(String(localized: "Nothing here yet. Tap + to post."))
                         .ffType(.body)
@@ -226,7 +211,7 @@ struct FeedView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            ForEach(rankedPosts) { post in
+            ForEach(feed.posts) { post in
                 FightPostCard(
                     post: post,
                     onOpen: post.fightId.map { fightID in
@@ -252,21 +237,6 @@ struct FeedView: View {
                 .environmentObject(feed)
                 .fitFightTheme(theme)
                 .presentationBackground(theme.bg)
-        }
-    }
-
-    private var rankedPosts: [FitFightFightPost] {
-        switch ranking {
-        case .recent:
-            return feed.posts
-        case .top:
-            return feed.posts.sorted { lhs, rhs in
-                let left = lhs.reactions.reduce(0) { $0 + $1.count }
-                let right = rhs.reactions.reduce(0) { $0 + $1.count }
-                if left != right { return left > right }
-                if lhs.commentCount != rhs.commentCount { return lhs.commentCount > rhs.commentCount }
-                return lhs.createdAt > rhs.createdAt
-            }
         }
     }
 

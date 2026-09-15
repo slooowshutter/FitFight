@@ -240,6 +240,7 @@ final class AppModel: ObservableObject {
     @Published var pendingReferralError: String?
     @Published private(set) var isCreatingFight = false
     @Published private(set) var isUpdatingFight = false
+    @Published private(set) var isDeletingFight = false
     @Published private(set) var isJoiningFight = false
     @Published private(set) var isRefreshingFights = false
     @Published private(set) var refreshPhase: FightRefreshPhase = .idle
@@ -836,6 +837,36 @@ final class AppModel: ObservableObject {
             createError = (error as? LiveFightError)?.errorDescription
                 ?? (error as? FitFightAPIError)?.errorDescription
                 ?? String(localized: "Couldn’t save the fight.")
+            return false
+        }
+    }
+
+    func deleteFight(id: String) async -> Bool {
+        guard !CompanionPreview.isEnabled else {
+            createError = CompanionPreview.writeUnavailable
+            return false
+        }
+        guard !isDeletingFight, !isUpdatingFight else { return false }
+        isDeletingFight = true
+        defer { isDeletingFight = false }
+        createError = nil
+        guard let access = session?.authSession?.accessToken, api.isConfigured else {
+            createError = String(localized: "Sign in to delete this fight.")
+            return false
+        }
+        guard let fightID = UUID(uuidString: id) else {
+            createError = String(localized: "Couldn’t delete the fight.")
+            return false
+        }
+        do {
+            try await api.cancel(fightID: fightID, accessToken: access)
+            openFightID = nil
+            await refreshFromServer()
+            return true
+        } catch {
+            createError = (error as? LiveFightError)?.errorDescription
+                ?? (error as? FitFightAPIError)?.errorDescription
+                ?? String(localized: "Couldn’t delete the fight.")
             return false
         }
     }

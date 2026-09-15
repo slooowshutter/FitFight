@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { profileSchema, type Profile, type UpdateProfileRequest } from "@/lib/types/profiles/profile";
 import { loadReadyMedia, mapMedia, signMediaUrl, type MediaRow } from "./media-supabase-query";
 
-const PROFILE_COLUMNS = "user_id, handle, display_name, handle_set_at, referral_code, avatar_media_id, companion_id";
+const PROFILE_COLUMNS = "user_id, handle, display_name, handle_set_at, referral_code, avatar_media_id, companion_id, companion_prompt";
 
 type ProfileRow = {
   user_id: string;
@@ -14,6 +14,7 @@ type ProfileRow = {
   referral_code: string;
   avatar_media_id: string | null;
   companion_id: string | null;
+  companion_prompt: string | null;
 };
 
 async function asProfile(row: ProfileRow, admin: SupabaseClient): Promise<Profile> {
@@ -38,6 +39,7 @@ async function asProfile(row: ProfileRow, admin: SupabaseClient): Promise<Profil
     referral_code: row.referral_code,
     avatar,
     companion_id: row.companion_id,
+    companion_prompt: row.companion_prompt,
   });
 }
 
@@ -71,7 +73,10 @@ export async function updateProfile(
       ...(input.handle !== undefined ? { handle: input.handle, handle_set_at: new Date().toISOString() } : {}),
       ...(input.display_name !== undefined ? { display_name: input.display_name } : {}),
       ...(input.avatar_media_id !== undefined ? { avatar_media_id: input.avatar_media_id } : {}),
-      ...(input.companion_id !== undefined ? { companion_id: input.companion_id } : {}),
+      ...(input.companion_id !== undefined ? {
+        companion_id: input.companion_id,
+        companion_prompt: input.companion_id === "custom" ? input.companion_prompt : null,
+      } : input.companion_prompt !== undefined ? { companion_prompt: input.companion_prompt } : {}),
     })
     .eq("user_id", userId)
     .is("deleted_at", null)

@@ -154,6 +154,7 @@ struct YouView: View {
                             size: 68
                         )
                             .overlay { Circle().strokeBorder(theme.mossEdge, lineWidth: 3) }
+                            .contentShape(Circle())
                     }
                     .buttonStyle(FFHapticPlainStyle())
                     .accessibilityLabel(String(localized: "Choose your companion"))
@@ -165,6 +166,7 @@ struct YouView: View {
                             selected: true,
                             photoURL: session.profile?.avatar?.url
                         )
+                        .contentShape(Circle())
                         .overlay {
                             if isUploadingPhoto {
                                 ZStack {

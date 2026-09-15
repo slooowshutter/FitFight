@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 15,
+            notes: "Tap a Feed or fight photo to open it. A tall photo no longer covers the caption field, so you can type after you add one."
+        ),
+        ReleaseNote(
+            version: "1.1.0",
+            year: 2026,
+            month: 9,
+            day: 15,
             notes: "The version line is only on You. Fights, New, Feed, and Feedback no longer show it at the top."
         ),
         ReleaseNote(

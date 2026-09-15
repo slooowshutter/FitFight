@@ -339,6 +339,7 @@ struct CompanionCharacter: View {
                 .rotationEffect(.degrees(greeting ? -3 : 0), anchor: .bottom)
                 .scaleEffect(greeting ? 1.025 : 1, anchor: .bottom)
                 .padding(4)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(String(localized: "companion.greet", defaultValue: "Say hello to \(animal.name)"))
@@ -400,6 +401,7 @@ struct CompanionAvatar: View {
                 .frame(width: size, height: size)
                 .background(theme.control, in: Circle())
                 .clipShape(Circle())
+                .contentShape(Circle())
                 .opacity(pending ? 0.55 : 1)
                 .accessibilityHidden(true)
         } else {
@@ -464,6 +466,8 @@ struct CompanionIntroduction: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     youCharacter
                         .frame(width: typeSize.isAccessibilitySize ? 96 : 142, height: 156)
+                        .clipped()
+                        .contentShape(Rectangle())
                         .accessibilitySortPriority(-1)
                 }
             } else if typeSize > .large {
@@ -472,12 +476,16 @@ struct CompanionIntroduction: View {
                     youCharacter
                         .frame(height: 220)
                         .frame(maxWidth: .infinity)
+                        .clipped()
+                        .contentShape(Rectangle())
                 }
             } else {
                 GeometryReader { proxy in
                     ZStack(alignment: .topLeading) {
                         youCharacter
                             .frame(width: proxy.size.width * 0.53, height: height - 24)
+                            .clipped()
+                            .contentShape(Rectangle())
                             .position(x: proxy.size.width * 0.735, y: height / 2 + 12)
                         copy
                             .frame(width: proxy.size.width * 0.52, height: height - 22, alignment: .topLeading)
@@ -764,7 +772,9 @@ struct CompanionPicker: View {
                             Image(animal.image)
                                 .resizable()
                                 .scaledToFit()
+                                .frame(maxWidth: .infinity)
                                 .frame(height: 104)
+                                .clipped()
                             Text(animal.name)
                                 .font(.custom("Nunito-ExtraBold", size: 12, relativeTo: .caption))
                                 .foregroundStyle(draft == animal && !pickingCustom ? theme.mossText : theme.text)
@@ -775,6 +785,7 @@ struct CompanionPicker: View {
                         .background(draft == animal && !pickingCustom ? theme.mossWash : theme.card,
                                     in: RoundedRectangle(cornerRadius: theme.radius.card))
                         .ffBorder(draft == animal && !pickingCustom ? theme.mossEdge : theme.hairline, radius: theme.radius.card)
+                        .contentShape(RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
                     }
                     .buttonStyle(FFHapticPlainStyle())
                     .disabled(isSaving)

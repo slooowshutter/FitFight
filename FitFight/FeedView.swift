@@ -188,6 +188,7 @@ struct FeedView: View {
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
     @State private var composing = false
+    @State private var openedPhoto: FeedOpenedPhoto?
 
     var body: some View {
         FFScreen(refresh: feedRefresh) {
@@ -216,7 +217,8 @@ struct FeedView: View {
                     post: post,
                     onOpen: post.fightId.map { fightID in
                         { model.openFightFromFeed(id: fightID.uuidString) }
-                    }
+                    },
+                    onOpenPhoto: { openedPhoto = FeedOpenedPhoto(url: $0) }
                 )
             }
             if feed.nextCursor != nil {
@@ -235,6 +237,11 @@ struct FeedView: View {
                 .environmentObject(model)
                 .environmentObject(session)
                 .environmentObject(feed)
+                .fitFightTheme(theme)
+                .presentationBackground(theme.bg)
+        }
+        .fullScreenCover(item: $openedPhoto) { photo in
+            FightPostPhotoViewer(url: photo.url)
                 .fitFightTheme(theme)
                 .presentationBackground(theme.bg)
         }
@@ -439,6 +446,7 @@ struct FightPostsSection: View {
     @Environment(\.ffTheme) private var theme
     @StateObject private var fightFeed = FeedStore()
     @State private var composing = false
+    @State private var openedPhoto: FeedOpenedPhoto?
 
     var body: some View {
         VStack(alignment: .leading, spacing: theme.space.cardGap) {
@@ -457,7 +465,11 @@ struct FightPostsSection: View {
                     .foregroundStyle(theme.emberText)
             }
             ForEach(fightFeed.posts) { post in
-                FightPostCard(post: post, onOpen: nil)
+                FightPostCard(
+                    post: post,
+                    onOpen: nil,
+                    onOpenPhoto: { openedPhoto = FeedOpenedPhoto(url: $0) }
+                )
             }
         }
         .environmentObject(fightFeed)
@@ -473,6 +485,11 @@ struct FightPostsSection: View {
             .environmentObject(feed)
             .fitFightTheme(theme)
             .presentationBackground(theme.bg)
+        }
+        .fullScreenCover(item: $openedPhoto) { photo in
+            FightPostPhotoViewer(url: photo.url)
+                .fitFightTheme(theme)
+                .presentationBackground(theme.bg)
         }
     }
 }
@@ -530,6 +547,7 @@ struct FightPostComposer: View {
                                     .scaledToFill()
                                     .frame(width: 72, height: 72)
                                     .clipShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
+                                    .contentShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
                                     .onTapGesture {
                                         images.remove(at: index)
                                     }
@@ -716,6 +734,7 @@ struct FightPostComposer: View {
 struct FightPostCard: View {
     let post: FitFightFightPost
     var onOpen: (() -> Void)?
+    var onOpenPhoto: (URL) -> Void
 
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var feed: FeedStore
@@ -786,7 +805,12 @@ struct FightPostCard: View {
                         if media.kind == "video" {
                             FightPostVideo(url: url)
                         } else {
-                            FightPostPhoto(url: url, width: media.width, height: media.height)
+                            FightPostPhoto(
+                                url: url,
+                                width: media.width,
+                                height: media.height,
+                                onOpen: { onOpenPhoto(url) }
+                            )
                         }
                     }
                 }
@@ -877,18 +901,21 @@ private struct FightPostEditSheet: View {
     }
 }
 
+private struct FeedOpenedPhoto: Identifiable {
+    let url: URL
+    var id: String { url.absoluteString }
+}
+
 private struct FightPostPhoto: View {
     let url: URL
     let width: Int
     let height: Int
+    let onOpen: () -> Void
 
     @Environment(\.ffTheme) private var theme
-    @State private var opened = false
 
     var body: some View {
-        Button {
-            opened = true
-        } label: {
+        Button(action: onOpen) {
             Color.clear
                 .aspectRatio(ratio, contentMode: .fit)
                 .frame(maxWidth: .infinity)
@@ -899,14 +926,10 @@ private struct FightPostPhoto: View {
                     }
                 }
                 .clipShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
+                .contentShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
         }
         .buttonStyle(FFHapticPlainStyle())
         .accessibilityLabel(String(localized: "View photo"))
-        .fullScreenCover(isPresented: $opened) {
-            FightPostPhotoViewer(url: url)
-                .fitFightTheme(theme)
-                .presentationBackground(theme.bg)
-        }
     }
 
     private var ratio: CGFloat {
@@ -922,10 +945,14 @@ private struct FightPostPhotoViewer: View {
     var body: some View {
         ZStack {
             theme.bg.ignoresSafeArea()
+                .contentShape(Rectangle())
+                .onTapGesture { dismiss() }
             RemotePhoto(url: url, kind: .photo, contentMode: .fit) {
                 theme.control
             }
             .ignoresSafeArea()
+            .contentShape(Rectangle())
+            .onTapGesture { dismiss() }
             .accessibilityHidden(true)
             VStack {
                 HStack {

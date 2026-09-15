@@ -2,7 +2,7 @@
 
 Production Metric is **Steps**. Phone vs server status: [`status.md`](status.md). Fights, memberships, scores, and data sources are writable only by the backend. Native Accept and Decline use authenticated commands; database grants deny direct client mutations. For Apple Health, it asks HealthKit for Apple's merged cumulative total over each exact Fight window and sends those totals to one authenticated Next.js endpoint. It may also send Apple's merged daily buckets for the active Fight days needed by charts; those buckets never determine the Fight score. The same request may include private activity totals and workout summaries that are not used for scoring. The backend validates the User, Fight membership, server-issued windows and cutoffs, then stores the exact-window snapshots and updates standings in a TypeScript-owned Postgres transaction. There are no app-facing database RPCs.
 
-[`system-design.md`](system-design.md) is the golden guide. This folder is the first slice of it, not the whole thing. Do not add Active Minutes, Workout Count, WHOOP, Strava, payments, notifications, or a website until the backlog says so. Fight posts and photo uploads go through the API below.
+[`system-design.md`](system-design.md) is the golden guide. This folder is the first slice of it, not the whole thing. Do not add Active Minutes, Workout Count, WHOOP, Strava, payments, or a website until the backlog says so. Fight posts and photo uploads go through the API below.
 
 Hosted production (no secrets): https://pvqntpteehdvhqyctwum.supabase.co  
 Hosted staging / git `develop` (no secrets): https://zstzbfocunthczzubggz.supabase.co
@@ -33,6 +33,12 @@ delete, and report for any post use `/api/v1/posts/{id}/...`.
 Listing a fight includes posts from other windows in the same recurring series.
 Roster members (`accepted` or `deferred`) can read and post. Invited-only
 members cannot. Delete own posts; report or hide another author.
+`GET/PATCH /api/v1/notifications/preferences` reads and updates per-type
+toggles (fight posts, comments, replies, reactions, challenge reminders, daily
+status). Missing rows default on. Creating a fight post notifies other members
+of that fight; a comment notifies the post author; a reply notifies the parent
+commenter, not sibling commenters; a reaction notifies the post author. The closer
+still drains APNs. Lock-screen copy names the person and does not include Steps.
 The verified session owns the operation. TypeScript normalizes and validates handles,
 sets their timestamp, and translates uniqueness conflicts to `409 handle_taken`.
 Missing/deleted profiles return `401 profile_missing`; account deletion remains `DELETE`.

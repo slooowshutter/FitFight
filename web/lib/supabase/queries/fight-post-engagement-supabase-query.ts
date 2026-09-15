@@ -15,6 +15,11 @@ import type {
 } from "@/lib/types/feed/fight-post";
 import { loadVisiblePost, listPostReactions } from "./fight-posts-supabase-query";
 import { mapMedia, signMediaUrls, type MediaRow } from "./media-supabase-query";
+import {
+  enqueueFightFeedCommentNotifications,
+  enqueueFightFeedReactionNotifications,
+} from "./feed-social-notifications-supabase-query";
+import { processNotificationOutbox } from "./process-notification-outbox-supabase-query";
 
 const COMMENT_LIMIT_PER_DAY = 40;
 
@@ -219,6 +224,13 @@ export async function createFightPostComment(
   if (!created) {
     throw new ApiError(500, ERROR_CODES.db_error, "Could not save that comment");
   }
+  await enqueueFightFeedCommentNotifications(database, {
+    postId,
+    commentId: created.id,
+    parentId: input.parent_id ?? null,
+    actorId: userId,
+  });
+  await processNotificationOutbox(new Date(), database);
   const [row] = await database<CommentRow[]>`
     select
       comment.id, comment.post_id, comment.parent_id, comment.body, comment.created_at,
@@ -317,6 +329,8 @@ export async function setFightPostReaction(
       on conflict (post_id, user_id) do update
         set emoji = excluded.emoji, created_at = now()
     `;
+    await enqueueFightFeedReactionNotifications(database, { postId, actorId: userId });
+    await processNotificationOutbox(new Date(), database);
   }
   return { reactions: await listPostReactions(userId, postId, database) };
 }

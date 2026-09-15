@@ -2,7 +2,7 @@ import type { Sql } from "postgres";
 import { sendApnsAlert } from "@/lib/apns/apns-client";
 import { isApnsConfigured, readApnsEnvironment } from "@/lib/apns/apns-config";
 import { resolveNotificationAlert } from "@/lib/notifications/resolve-notification-alert";
-import { pendingNotificationIntentSchema } from "@/lib/types/notifications/notification-intent";
+import { pendingNotificationIntentSchema, type PendingNotificationIntent } from "@/lib/types/notifications/notification-intent";
 import {
   decryptInstallationToken,
   readActiveDeviceInstallations,
@@ -31,7 +31,39 @@ type IntentRow = {
   alert_body: string | null;
   fight_state: string | null;
   final_steps_complete: boolean | null;
+  feed_post: boolean | null;
+  post_comment: boolean | null;
+  comment_reply: boolean | null;
+  post_reaction: boolean | null;
+  challenge_reminder: boolean | null;
+  daily_status: boolean | null;
 };
+
+function isMuted(
+  kind: PendingNotificationIntent["kind"],
+  row: IntentRow,
+): boolean {
+  switch (kind) {
+    case "feed_post":
+      return row.feed_post === false;
+    case "post_comment":
+      return row.post_comment === false;
+    case "comment_reply":
+      return row.comment_reply === false;
+    case "post_reaction":
+      return row.post_reaction === false;
+    case "fight_ended":
+    case "grace_reminder":
+    case "fight_finalized":
+      return row.challenge_reminder === false;
+    case "daily_status":
+      return row.daily_status === false;
+    default: {
+      const _exhaustive: never = kind;
+      return _exhaustive;
+    }
+  }
+}
 
 async function markIntent(
   sql: Sql,
@@ -113,13 +145,17 @@ export async function processNotificationOutbox(
     )
     select claimed.id, claimed.user_id, claimed.fight_id, claimed.kind, claimed.slot,
       claimed.route, claimed.copy_key, claimed.alert_body, fight.state::text as fight_state,
-      member.final_steps_complete
+      member.final_steps_complete,
+      prefs.feed_post, prefs.post_comment, prefs.comment_reply, prefs.post_reaction,
+      prefs.challenge_reminder, prefs.daily_status
     from claimed
     left join public.fights as fight on fight.id = claimed.fight_id
     left join public.fight_members as member
       on member.fight_id = claimed.fight_id
       and member.user_id = claimed.user_id
       and member.state = 'accepted'
+    left join private.notification_preferences as prefs
+      on prefs.user_id = claimed.user_id
   `;
 
   result.checked = rows.length;
@@ -143,6 +179,12 @@ export async function processNotificationOutbox(
 
     if (row.fight_state === "cancelled" || row.fight_state === null) {
       await markIntent(database, intent.id, "skipped", "fight_cancelled");
+      result.skipped += 1;
+      continue;
+    }
+
+    if (isMuted(intent.kind, row)) {
+      await markIntent(database, intent.id, "skipped", "muted");
       result.skipped += 1;
       continue;
     }

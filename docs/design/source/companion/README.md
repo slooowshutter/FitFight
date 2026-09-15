@@ -33,7 +33,7 @@ Before implementation: select the workflow/provider and server credentials, appr
 
 ### 2. Five activity forms of the same companion
 
-The native picker already shows **five effort poses** and explains that weekly movement changes the scene. Hiking goat has real artwork (resting with tea → peak). Other animals and sports reuse the stock body with sport-specific labels, plus the hiking-goat strip as the example. Today’s step count picks the live pose (under 2k resting, 8k+ peak). A later generation operation should take the saved identity, sport, mood, breed, accessories and reference artwork and create five consistent sport scenes. Activity changes must select an already saved form; they do not generate another image every time the screen opens.
+The native picker already shows **five effort poses** and explains that weekly movement changes the scene. Hiking goat has real artwork (resting with tea → peak). Other animals and sports reuse that same animal’s stock body with sport-specific labels until generation exists. Today’s step count picks the live pose (under 2k resting, 8k+ peak). A later generation operation should take the saved identity, sport, mood, breed, accessories and reference artwork and create five consistent sport scenes. Activity changes must select an already saved form; they do not generate another image every time the screen opens.
 
 Store each form against the same companion revision. Activity changes select an already saved form; they do not generate another image every time the screen opens. Preserve the animal, breed, face, clothes and accessories across the set. Partial generation must not replace a complete usable set. These forms are presentation only and do not change Steps scoring.
 

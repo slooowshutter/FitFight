@@ -27,7 +27,7 @@ Do not rename the bundle ID without Apple + CI updates.
 - Choose **1 hour**, **6 hours**, or **1 day** for testing, or **3 days**, **1 week**, **2 weeks**, or **1 month**.
 - Apple Health sends merged Steps aggregates needed for active fights. It may also store private energy, distance, exercise, stand, flights, and workout summaries. Those extras are not fight options yet.
 - Settings keeps Privacy, Support, Bugs & requests, Versions, Sign out, and Delete account. Look is Night or Day.
-- Companion: pick a stock animal, then sport, breed, mood, and accessories. Five effort poses follow weekly movement. Hiking goat has real art; other scenes are labeled until generation exists. The animal is saved on the account. Sport, breed, mood, and accessories stay on this iPhone.
+- Companion: pick a stock animal, then sport, breed, mood, and accessories. Five effort poses follow weekly movement. Hiking goat has real art; other animals keep that same character with labeled stages until generation exists. The animal is saved on the account. Sport, breed, mood, and accessories stay on this iPhone.
 - Delete account removes the full account, uploaded Steps, memberships, owned fights, and bugs or requests the User posted; a stored Sign in with Apple authorization is revoked when available.
 - The old Requests tab, money, unsupported metrics, and dead settings are removed.
 

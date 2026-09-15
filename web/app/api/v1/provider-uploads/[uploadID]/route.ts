@@ -6,12 +6,14 @@ import { providerUploadIdSchema } from "@/lib/types/provider-uploads/provider-up
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export const GET = apiRoute<{ uploadID: string }>(async (request, { params }) => {
-  const { userId } = await verifyUser(request);
-  const uploadId = providerUploadIdSchema.parse(params.uploadID);
-  return json(await getProviderUpload(userId, uploadId));
-});
+export const GET = apiRoute<{ uploadID: string }>(
+    async (request, { params }) => {
+        const { userId } = await verifyUser(request);
+        const uploadId = providerUploadIdSchema.parse(params.uploadID);
+        return json(await getProviderUpload(userId, uploadId));
+    },
+);
 
 export function OPTIONS(request: Request) {
-  return corsPreflight(request);
+    return corsPreflight(request);
 }

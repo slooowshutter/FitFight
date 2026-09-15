@@ -111,26 +111,26 @@ iOS TestFlight is unchanged and still ignores this folder. iOS simulator and scr
 
 In the project: **Project Settings → Integrations → GitHub**.
 
-| Field | Value |
-| --- | --- |
-| GitHub repository | `marclelamy/FitFight` (same repo as `slooowshutter/FitFight`) |
-| Working directory | `.` |
-| Deploy to production | On |
-| Production branch | `main` |
-| Automatic branching | On |
-| Branch limit | `3` (preview branches cost extra; do not raise this) |
-| Supabase changes only | On |
+| Field                 | Value                                                         |
+| --------------------- | ------------------------------------------------------------- |
+| GitHub repository     | `marclelamy/FitFight` (same repo as `slooowshutter/FitFight`) |
+| Working directory     | `.`                                                           |
+| Deploy to production  | On                                                            |
+| Production branch     | `main`                                                        |
+| Automatic branching   | On                                                            |
+| Branch limit          | `3` (preview branches cost extra; do not raise this)          |
+| Supabase changes only | On                                                            |
 
 Then **Enable integration**. Do not paste a secret key, `service_role` key, or database password into GitHub. Those are legacy for this loop. Deploys go through the GitHub app, not a key in Actions.
 
 GitHub branches:
 
-| GitHub branch | Meaning | Hosted database |
-| --- | --- | --- |
-| Feature (`cursor/…`) | One piece of work | Preview (only if `supabase/` changed, max 3) |
-| `develop` | Integration / staging site | Persistent Supabase branch named **`develop`** |
-| `preview` | TestFlight cut | Same persistent `develop` project |
-| `main` | Production | The main project |
+| GitHub branch        | Meaning                    | Hosted database                                |
+| -------------------- | -------------------------- | ---------------------------------------------- |
+| Feature (`cursor/…`) | One piece of work          | Preview (only if `supabase/` changed, max 3)   |
+| `develop`            | Integration / staging site | Persistent Supabase branch named **`develop`** |
+| `preview`            | TestFlight cut             | Same persistent `develop` project              |
+| `main`               | Production                 | The main project                               |
 
 In **Branching**, create one long-lived branch named **`develop`** (not `staging`). It tracks the GitHub `develop` branch. Feature PRs merge into `develop`. GitHub `preview` only cuts TestFlight binaries; it must not become an extra hosted database. When Marc wants a TestFlight, he merges `develop` → `preview`. When he wants production, he merges `preview` into `main`.
 

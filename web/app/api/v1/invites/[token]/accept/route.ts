@@ -7,15 +7,22 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export const POST = apiRoute<{ token: string }>(async (request, { params }) => {
-  const { userId } = await verifyUser(request);
-  const parsed = membershipAcceptRequestSchema.safeParse(await readJson(request));
-  if (!parsed.success) {
-    throw parsed.error;
-  }
-  const fight = await acceptInvite(userId, params.token, parsed.data.personalTarget, parsed.data.start);
-  return json(fight);
+    const { userId } = await verifyUser(request);
+    const parsed = membershipAcceptRequestSchema.safeParse(
+        await readJson(request),
+    );
+    if (!parsed.success) {
+        throw parsed.error;
+    }
+    const fight = await acceptInvite(
+        userId,
+        params.token,
+        parsed.data.personalTarget,
+        parsed.data.start,
+    );
+    return json(fight);
 });
 
 export function OPTIONS(request: Request) {
-  return corsPreflight(request);
+    return corsPreflight(request);
 }

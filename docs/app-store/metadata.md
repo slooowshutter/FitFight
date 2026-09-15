@@ -4,23 +4,23 @@ Copy for the first public English (U.S.) listing. Do not change the app's market
 
 ## App information
 
-| Field | Value |
-| --- | --- |
-| App Store name | `FitFight: Step Challenges` |
-| On-device name | `FitFight` |
-| Subtitle | `Compete on steps with friends` |
-| Primary category | Health & Fitness |
-| Secondary category | Sports |
-| Bundle ID | `com.fitfight.mvp` |
-| SKU | `fitfight` |
-| Price | Free |
-| In-app purchases | None |
-| Advertising | None |
-| Privacy Policy URL | `https://fitfight.app/privacy` |
-| Support URL | `https://fitfight.app/support` |
-| Marketing URL | `https://fitfight.app` |
-| Copyright | `2026 Marc Lamy` |
-| Release method | Manually release after approval |
+| Field              | Value                           |
+| ------------------ | ------------------------------- |
+| App Store name     | `FitFight: Step Challenges`     |
+| On-device name     | `FitFight`                      |
+| Subtitle           | `Compete on steps with friends` |
+| Primary category   | Health & Fitness                |
+| Secondary category | Sports                          |
+| Bundle ID          | `com.fitfight.mvp`              |
+| SKU                | `fitfight`                      |
+| Price              | Free                            |
+| In-app purchases   | None                            |
+| Advertising        | None                            |
+| Privacy Policy URL | `https://fitfight.app/privacy`  |
+| Support URL        | `https://fitfight.app/support`  |
+| Marketing URL      | `https://fitfight.app`          |
+| Copyright          | `2026 Marc Lamy`                |
+| Release method     | Manually release after approval |
 
 ## Promotional text
 
@@ -77,13 +77,13 @@ Do not submit old design-source screenshots: they contain removed Requests, mone
 
 Keep English (U.S.) as the primary App Store language and add French (France) as a localization.
 
-| Field | Value |
-| --- | --- |
-| App Store name | `FitFight : Défis de pas` |
-| Subtitle | `Défiez vos amis à pied` |
+| Field              | Value                             |
+| ------------------ | --------------------------------- |
+| App Store name     | `FitFight : Défis de pas`         |
+| Subtitle           | `Défiez vos amis à pied`          |
 | Privacy Policy URL | `https://fitfight.app/fr/privacy` |
-| Support URL | `https://fitfight.app/fr/support` |
-| Marketing URL | `https://fitfight.app` |
+| Support URL        | `https://fitfight.app/fr/support` |
+| Marketing URL      | `https://fitfight.app`            |
 
 ### Promotional text
 

@@ -2,15 +2,15 @@
 
 These distinguish the **selected HTML direction** from the **implemented native SwiftUI views**. Native captures include Marc’s subsequent density review: a compact home header, filtered fights, smaller detail artwork and a separate Share tab. Existing native product behavior wins over the prototype's simplified interactions. In particular, native Feed does not invent illustration posts, and your chosen companion replaces your local avatar; other accounts still use their saved photos/initials until account-backed companions exist.
 
-| Surface | Selected prototype (Night / Day) | Native (Night / English) | Native (Day / French) |
-| --- | --- | --- | --- |
-| Fights | [Night](prototype/night-fights.png) / [Day](prototype/day-fights.png) | [Native](native-en/night-fights.png) | [Native](native-fr/day-fights.png) |
-| Two-person fight | [Night](prototype/night-duel.png) / [Day](prototype/day-duel.png) | [Native](native-en/night-duel.png) | [Native](native-fr/day-duel.png) |
-| Group fight | [Night](prototype/night-group.png) / [Day](prototype/day-group.png) | [Native](native-en/night-group.png) | [Native](native-fr/day-group.png) |
-| New | [Night](prototype/night-new.png) / [Day](prototype/day-new.png) | [Native](native-en/night-new.png) | [Native](native-fr/day-new.png) |
-| Creation review | [Night](prototype/night-review.png) / [Day](prototype/day-review.png) | [Native](native-en/night-review.png) | [Native](native-fr/day-review.png) |
-| Feed | [Night](prototype/night-feed.png) / [Day](prototype/day-feed.png) | [Native](native-en/night-feed.png) | [Native](native-fr/day-feed.png) |
-| You | [Night](prototype/night-you.png) / [Day](prototype/day-you.png) | [Native](native-en/night-you.png) | [Native](native-fr/day-you.png) |
+| Surface          | Selected prototype (Night / Day)                                      | Native (Night / English)             | Native (Day / French)              |
+| ---------------- | --------------------------------------------------------------------- | ------------------------------------ | ---------------------------------- |
+| Fights           | [Night](prototype/night-fights.png) / [Day](prototype/day-fights.png) | [Native](native-en/night-fights.png) | [Native](native-fr/day-fights.png) |
+| Two-person fight | [Night](prototype/night-duel.png) / [Day](prototype/day-duel.png)     | [Native](native-en/night-duel.png)   | [Native](native-fr/day-duel.png)   |
+| Group fight      | [Night](prototype/night-group.png) / [Day](prototype/day-group.png)   | [Native](native-en/night-group.png)  | [Native](native-fr/day-group.png)  |
+| New              | [Night](prototype/night-new.png) / [Day](prototype/day-new.png)       | [Native](native-en/night-new.png)    | [Native](native-fr/day-new.png)    |
+| Creation review  | [Night](prototype/night-review.png) / [Day](prototype/day-review.png) | [Native](native-en/night-review.png) | [Native](native-fr/day-review.png) |
+| Feed             | [Night](prototype/night-feed.png) / [Day](prototype/day-feed.png)     | [Native](native-en/night-feed.png)   | [Native](native-fr/day-feed.png)   |
+| You              | [Night](prototype/night-you.png) / [Day](prototype/day-you.png)       | [Native](native-en/night-you.png)    | [Native](native-fr/day-you.png)    |
 | Companion picker | [Night](prototype/night-picker.png) / [Day](prototype/day-picker.png) | [Native](native-en/night-picker.png) | [Native](native-fr/day-picker.png) |
 
 Both native folders include **both themes**, Current / Invited / Past lists, Share, the post composer, all eight chart modes, invitation, History, tied, solo, deferred, pending, finished, empty and loading states. Files ending `-large-text.png` render Fights, group detail, New, You and picker at Accessibility 3. The picker is scrollable; its confirmation button follows the grid, and the tennis artwork study follows confirmation.

@@ -11,14 +11,14 @@ Not: agent on Marc’s laptop or home Mac → local Xcode.
 
 ## Workflows
 
-| Workflow | File | When | Runner |
-| --- | --- | --- | --- |
-| Simulator | `.github/workflows/ios-build.yml` | PR + push to `main`, `develop`, or `preview` | `macos-26` |
-| Screenshots | `.github/workflows/ios-screenshots.yml` | PR + push to `main`, `develop`, or `preview` | `macos-26` |
-| TestFlight | `.github/workflows/ios-testflight.yml` | push to `preview` (app/fastlane paths), plus optional `workflow_dispatch` on that branch. No cron. Feature branches and `develop` do not upload. | `macos-26` |
-| App Store candidate | `.github/workflows/ios-app-store.yml` | app push to `main`; uploads only and never submits for review | `macos-26` |
-| Database | `.github/workflows/database.yml` | PR + push to `main`, `develop`, or `preview` | `ubuntu-latest` |
-| Delete merged branch | `.github/workflows/delete-merged-branch.yml` | PR merged | `ubuntu-latest` |
+| Workflow             | File                                         | When                                                                                                                                             | Runner          |
+| -------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | --------------- |
+| Simulator            | `.github/workflows/ios-build.yml`            | PR + push to `main`, `develop`, or `preview`                                                                                                     | `macos-26`      |
+| Screenshots          | `.github/workflows/ios-screenshots.yml`      | PR + push to `main`, `develop`, or `preview`                                                                                                     | `macos-26`      |
+| TestFlight           | `.github/workflows/ios-testflight.yml`       | push to `preview` (app/fastlane paths), plus optional `workflow_dispatch` on that branch. No cron. Feature branches and `develop` do not upload. | `macos-26`      |
+| App Store candidate  | `.github/workflows/ios-app-store.yml`        | app push to `main`; uploads only and never submits for review                                                                                    | `macos-26`      |
+| Database             | `.github/workflows/database.yml`             | PR + push to `main`, `develop`, or `preview`                                                                                                     | `ubuntu-latest` |
+| Delete merged branch | `.github/workflows/delete-merged-branch.yml` | PR merged                                                                                                                                        | `ubuntu-latest` |
 
 The iOS workflows **must** stay GitHub-hosted. Never `self-hosted`. Apple requires **Xcode 26 / iOS 26 SDK** to upload (Xcode 16.4 / iOS 18.5 is rejected).
 
@@ -32,17 +32,17 @@ External TestFlight builds must be submitted for beta review and distributed to 
 
 We used to bump 0.4.1, 0.4.2, 0.5.0 on every feature, so friends waited every time. Stay on **1.1.1** until Marc asks or Apple closes that train.
 
-| What | Who sets it | When it changes |
-| --- | --- | --- |
-| Marketing version (`1.1.1`) | `MARKETING_VERSION` in `project.pbxproj` | App Store ship, Apple closed the train, or Marc asked |
-| Build number (`105`) | CI / Fastlane at archive time | Every distribution upload |
-| Versions list | `FitFight/Changelog.swift` | Every user-facing change; reuse the current marketing version |
+| What                        | Who sets it                              | When it changes                                               |
+| --------------------------- | ---------------------------------------- | ------------------------------------------------------------- |
+| Marketing version (`1.1.1`) | `MARKETING_VERSION` in `project.pbxproj` | App Store ship, Apple closed the train, or Marc asked         |
+| Build number (`105`)        | CI / Fastlane at archive time            | Every distribution upload                                     |
+| Versions list               | `FitFight/Changelog.swift`               | Every user-facing change; reuse the current marketing version |
 
 The next version label is `1.1.1 · build N · staging`. Testers tap Update after upload and availability; ordinary follow-up builds keep `1.1.1` and only increment the build number.
 
 ### Everyone: Internal, External, Friends Beta
 
-The beta lane waits for build processing, then assigns **every** TestFlight group: Internal testers (automatic after processing; Apple rejects assigning them by hand), every External group, and **Friends Beta** (`https://testflight.apple.com/join/wcZKdwVZ`). Missing Internal testers, missing Friends Beta, or missing all External groups fails CI. Uploaded builds are registered separately from the latest *installable* (external) release. The advertised public release advances only after a build is `IN_BETA_TESTING` on every external group. TestFlight update prompts are optional in the prepared 1.1.1 app, so Friends can keep using their installed build.
+The beta lane waits for build processing, then assigns **every** TestFlight group: Internal testers (automatic after processing; Apple rejects assigning them by hand), every External group, and **Friends Beta** (`https://testflight.apple.com/join/wcZKdwVZ`). Missing Internal testers, missing Friends Beta, or missing all External groups fails CI. Uploaded builds are registered separately from the latest _installable_ (external) release. The advertised public release advances only after a build is `IN_BETA_TESTING` on every external group. TestFlight update prompts are optional in the prepared 1.1.1 app, so Friends can keep using their installed build.
 
 Marc must be on **Internal Testing** in App Store Connect (Users and Access) to see new preview uploads. External testers and Friends wait for Apple beta review on the first 1.1.1 build, then later 1.1.1 builds of the same version.
 
@@ -77,12 +77,12 @@ SwiftUI, push, download `screens`, compare the same numbers. Don't ask Marc to e
 
 Names only. Never print values. Never ask Marc to paste the `.p8` into chat.
 
-| Secret | What it is |
-| --- | --- |
-| `APP_STORE_CONNECT_KEY_ID` | Key ID for key named `FitFight GitHub` (Admin) |
-| `APP_STORE_CONNECT_ISSUER_ID` | Issuer ID on Users and Access → Integrations |
-| `APP_STORE_CONNECT_API_KEY` | Full `.p8` contents |
-| `APPLE_TEAM_ID` | `C92DPD8ME2` |
+| Secret                        | What it is                                     |
+| ----------------------------- | ---------------------------------------------- |
+| `APP_STORE_CONNECT_KEY_ID`    | Key ID for key named `FitFight GitHub` (Admin) |
+| `APP_STORE_CONNECT_ISSUER_ID` | Issuer ID on Users and Access → Integrations   |
+| `APP_STORE_CONNECT_API_KEY`   | Full `.p8` contents                            |
+| `APPLE_TEAM_ID`               | `C92DPD8ME2`                                   |
 
 There is a separate Expo EAS key in App Store Connect. Do not reuse it.
 
@@ -90,8 +90,8 @@ There is a separate Expo EAS key in App Store Connect. Do not reuse it.
 
 Names only. Never print values. Never paste the PostHog project token in chat.
 
-| Secret | Used when | What it is |
-| --- | --- | --- |
+| Secret                    | Used when                                     | What it is                                                   |
+| ------------------------- | --------------------------------------------- | ------------------------------------------------------------ |
 | `POSTHOG_PROJECT_API_KEY` | TestFlight (`preview`) and App Store archives | PostHog **project** API key (`phc_...`). Crash reports only. |
 
 Optional Actions **variable** `POSTHOG_HOST`: `https://us.i.posthog.com` (default) or `https://eu.i.posthog.com` if the PostHog project is EU Cloud. In PostHog, turn on error-tracking exception autocapture and leave session replay off.
@@ -102,12 +102,12 @@ Do **not** add a Supabase `service_role` or `sb_secret_...` key to GitHub. Deplo
 
 Names only. Never print values. Settings → Secrets and variables → Actions → Variables.
 
-| Variable | Used when | What it is |
-| --- | --- | --- |
-| `SUPABASE_STAGING_URL` | every TestFlight | Persistent `develop` Supabase project URL |
-| `SUPABASE_STAGING_PUBLISHABLE_KEY` | every TestFlight | Publishable key for that project (`sb_publishable_...`) |
-| `FITFIGHT_API_URL` | every TestFlight | `https://staging.fitfight.app` |
-| `POSTHOG_HOST` | TestFlight and App Store, optional | PostHog ingest host. Default `https://us.i.posthog.com`. Use `https://eu.i.posthog.com` for EU Cloud. |
+| Variable                           | Used when                          | What it is                                                                                            |
+| ---------------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `SUPABASE_STAGING_URL`             | every TestFlight                   | Persistent `develop` Supabase project URL                                                             |
+| `SUPABASE_STAGING_PUBLISHABLE_KEY` | every TestFlight                   | Publishable key for that project (`sb_publishable_...`)                                               |
+| `FITFIGHT_API_URL`                 | every TestFlight                   | `https://staging.fitfight.app`                                                                        |
+| `POSTHOG_HOST`                     | TestFlight and App Store, optional | PostHog ingest host. Default `https://us.i.posthog.com`. Use `https://eu.i.posthog.com` for EU Cloud. |
 
 Every TestFlight ships `https://zstzbfocunthczzubggz.supabase.co` (GitHub `SUPABASE_STAGING_*` variables override if set). The staging publishable key must be that project’s key, not production’s. Persistent `develop` must stay persistent so merging to `main` does not delete it. TestFlight CI builds the `preview` commit that triggered it. The You version label always shows `staging`. `main` never uploads to TestFlight.
 
@@ -131,7 +131,7 @@ Vercel Preview + Production also need the FitFight APNs secrets from [`docs/rese
 ## What Marc still does
 
 - Be listed under App Store Connect **Internal Testing** so new `preview` uploads appear in TestFlight (no beta review).
-- TestFlight → Update when a new *internal* build is ready (~10–20 min after a `preview` push). Friends Beta is submitted in the same upload; Apple beta review may still delay the public join link.
+- TestFlight → Update when a new _internal_ build is ready (~10–20 min after a `preview` push). Friends Beta is submitted in the same upload; Apple beta review may still delay the public join link.
 - Friends: TestFlight → Update, or https://testflight.apple.com/join/wcZKdwVZ after Apple approves. Friends can enable Automatic Updates inside TestFlight.
 - Apple account / legal / new secrets if they rotate.
 - After a production candidate passes: finish the App Store Connect metadata and review information, select the uploaded build, and explicitly submit it when ready.
@@ -164,14 +164,14 @@ no `/api/v2` or automatic selection of an API version from the build number.
 Use `/api/v1` for ordinary releases. Decide whether a change is compatible by checking
 the requests, decoded responses, and behavior of supported installed apps:
 
-| Change | Required treatment |
-| --- | --- |
-| UI change, new endpoint, or compatible bug fix | Keep the API version. |
-| New optional request field | Keep the existing behavior when older apps omit it. |
-| New response field | Verify older decoders ignore it; extra fields alone must not expose unsupported behavior. |
+| Change                                                                                  | Required treatment                                                                                                          |
+| --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| UI change, new endpoint, or compatible bug fix                                          | Keep the API version.                                                                                                       |
+| New optional request field                                                              | Keep the existing behavior when older apps omit it.                                                                         |
+| New response field                                                                      | Verify older decoders ignore it; extra fields alone must not expose unsupported behavior.                                   |
 | Rename/remove an API field, change its type/nullability/meaning, or make input required | Preserve the existing contract, or introduce an incompatible version for the affected endpoint while retaining the old one. |
-| New enum value | Check old decoders and behavior; a new value can break an old app even though the field is unchanged. |
-| Internal column rename/type change, new constraint, or permission change | Stage the database/backend transition; preserve supported API behavior, old writers, and running backend versions. |
+| New enum value                                                                          | Check old decoders and behavior; a new value can break an old app even though the field is unchanged.                       |
+| Internal column rename/type change, new constraint, or permission change                | Stage the database/backend transition; preserve supported API behavior, old writers, and running backend versions.          |
 
 For a future `/api/v2/fights`, keep `/api/v1/fights` as the old contract while it is
 supported. Both handlers may call shared business logic and the same database;

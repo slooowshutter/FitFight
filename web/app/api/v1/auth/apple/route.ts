@@ -7,12 +7,14 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export const POST = apiRoute(async (request) => {
-  const { userId } = await verifyUser(request);
-  const body = appleAuthorizationRequestSchema.parse(await readJson(request, 4_096));
-  await storeAppleAuthorization(userId, body.authorization_code);
-  return json({ stored: true });
+    const { userId } = await verifyUser(request);
+    const body = appleAuthorizationRequestSchema.parse(
+        await readJson(request, 4_096),
+    );
+    await storeAppleAuthorization(userId, body.authorization_code);
+    return json({ stored: true });
 });
 
 export function OPTIONS(request: Request) {
-  return corsPreflight(request);
+    return corsPreflight(request);
 }

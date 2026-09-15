@@ -57,7 +57,7 @@ for animal, face in CHARACTERS:
         (folder / "Contents.json").write_text(json.dumps({
             "images": [{"filename": "image.png", "idiom": "universal"}],
             "info": {"author": "xcode", "version": 1},
-        }, indent=2) + "\n")
+        }, indent=4) + "\n")
     manifest["animals"].append({
         "id": animal, "source": "originals/atlas.png", "source_bounds": bounds,
         "body_pixels": [352, 400], "avatar_source_bounds": avatar_bounds,
@@ -84,7 +84,7 @@ for scene in ("race", "tennis"):
         })
     (folder / "Contents.json").write_text(json.dumps({
         "images": images, "info": {"author": "xcode", "version": 1},
-    }, indent=2) + "\n")
+    }, indent=4) + "\n")
 
-(SOURCE / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+(SOURCE / "manifest.json").write_text(json.dumps(manifest, indent=4) + "\n")
 print(f"Prepared {len(CHARACTERS)} animals and 2 scenes.")

@@ -8,19 +8,19 @@ iOS command API only. No marketing pages. Node.js runtime, never Edge.
 2. Set **Root Directory** to `web/`.
 3. Env vars (Vercel dashboard only — never paste secrets in git or chat):
 
-| Vercel env | Preview + `develop` | Production (`main`) |
-| --- | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase **develop** project URL | Main / production project URL |
-| `SUPABASE_SECRET_KEY` | develop secret key | production secret key |
-| `DATABASE_URL` | develop transaction-pooler URL | production transaction-pooler URL |
-| `FITFIGHT_APP_URL` | staging site origin (optional) | production site origin (optional) |
-| `APPLE_SIGN_IN_TEAM_ID` | Apple developer Team ID | same Team ID |
-| `APPLE_SIGN_IN_KEY_ID` | Sign in with Apple key ID | same key ID |
-| `APPLE_SIGN_IN_PRIVATE_KEY` | Sign in with Apple `.p8` contents | same key, or its production replacement |
-| `APPLE_SIGN_IN_CLIENT_ID` | `com.fitfight.mvp` | `com.fitfight.mvp` |
-| `APPLE_SIGN_IN_TOKEN_ENCRYPTION_KEY` | separate base64 32-byte key | separate base64 32-byte key |
-| `NOTION_TOKEN` | Notion internal integration token with access to Product Backlog | same token |
-| `CURSOR_API_KEY` | Cursor Cloud Agents API key (Dashboard → API Keys) for admin “Send to Cursor” | same key |
+| Vercel env                           | Preview + `develop`                                                           | Production (`main`)                     |
+| ------------------------------------ | ----------------------------------------------------------------------------- | --------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`           | Supabase **develop** project URL                                              | Main / production project URL           |
+| `SUPABASE_SECRET_KEY`                | develop secret key                                                            | production secret key                   |
+| `DATABASE_URL`                       | develop transaction-pooler URL                                                | production transaction-pooler URL       |
+| `FITFIGHT_APP_URL`                   | staging site origin (optional)                                                | production site origin (optional)       |
+| `APPLE_SIGN_IN_TEAM_ID`              | Apple developer Team ID                                                       | same Team ID                            |
+| `APPLE_SIGN_IN_KEY_ID`               | Sign in with Apple key ID                                                     | same key ID                             |
+| `APPLE_SIGN_IN_PRIVATE_KEY`          | Sign in with Apple `.p8` contents                                             | same key, or its production replacement |
+| `APPLE_SIGN_IN_CLIENT_ID`            | `com.fitfight.mvp`                                                            | `com.fitfight.mvp`                      |
+| `APPLE_SIGN_IN_TOKEN_ENCRYPTION_KEY` | separate base64 32-byte key                                                   | separate base64 32-byte key             |
+| `NOTION_TOKEN`                       | Notion internal integration token with access to Product Backlog              | same token                              |
+| `CURSOR_API_KEY`                     | Cursor Cloud Agents API key (Dashboard → API Keys) for admin “Send to Cursor” | same key                                |
 
 Preview deployments must use the **develop** Supabase project. Never point Preview at production.
 The Sign in with Apple key must be enabled for the FitFight App ID. It is not the

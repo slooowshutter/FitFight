@@ -8,20 +8,20 @@ Select **No** for tracking. No data type is used for third-party advertising, de
 
 Declare these collected data types:
 
-| App Privacy type | What FitFight collects | Linked to the user | Purpose |
-| --- | --- | ---: | --- |
-| Health | Apple Health Steps totals, relevant daily chart totals, private activity totals and workout summaries | Yes | App Functionality |
-| Name | Name supplied by Sign in with Apple, when available | Yes | App Functionality |
-| Email Address | Apple email or private-relay email | Yes | App Functionality |
-| User ID | Apple subject, Supabase account ID, FitFight username, referral relationships, and crash-report account identifier | Yes | App Functionality |
-| Device ID | Encrypted APNs device token and its fingerprint for notification delivery | Yes | App Functionality |
-| Photos or Videos | Profile photo, Fight post photos/videos, and feedback attachments | Yes | App Functionality |
-| Gameplay Content | Fights, invitations, membership state, standings, scores, and results | Yes | App Functionality |
-| Other User Content | Fight titles/actions, posts, comments, reactions, companion descriptions, and uploaded feedback files | Yes | App Functionality |
-| Customer Support | Support emails, in-app bug/feature reports, comments, and report device metadata | Yes | App Functionality |
-| Other Data Types | Time zone and limited request metadata such as IP address | Yes | App Functionality |
-| Other Diagnostic Data | Limited server errors, Health sync timing/failure reports, app version and request sizes | Yes | App Functionality |
-| Crash Data | Stack traces and related crash diagnostics sent to PostHog | Yes | App Functionality |
+| App Privacy type      | What FitFight collects                                                                                             | Linked to the user | Purpose           |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------ | -----------------: | ----------------- |
+| Health                | Apple Health Steps totals, relevant daily chart totals, private activity totals and workout summaries              |                Yes | App Functionality |
+| Name                  | Name supplied by Sign in with Apple, when available                                                                |                Yes | App Functionality |
+| Email Address         | Apple email or private-relay email                                                                                 |                Yes | App Functionality |
+| User ID               | Apple subject, Supabase account ID, FitFight username, referral relationships, and crash-report account identifier |                Yes | App Functionality |
+| Device ID             | Encrypted APNs device token and its fingerprint for notification delivery                                          |                Yes | App Functionality |
+| Photos or Videos      | Profile photo, Fight post photos/videos, and feedback attachments                                                  |                Yes | App Functionality |
+| Gameplay Content      | Fights, invitations, membership state, standings, scores, and results                                              |                Yes | App Functionality |
+| Other User Content    | Fight titles/actions, posts, comments, reactions, companion descriptions, and uploaded feedback files              |                Yes | App Functionality |
+| Customer Support      | Support emails, in-app bug/feature reports, comments, and report device metadata                                   |                Yes | App Functionality |
+| Other Data Types      | Time zone and limited request metadata such as IP address                                                          |                Yes | App Functionality |
+| Other Diagnostic Data | Limited server errors, Health sync timing/failure reports, app version and request sizes                           |                Yes | App Functionality |
+| Crash Data            | Stack traces and related crash diagnostics sent to PostHog                                                         |                Yes | App Functionality |
 
 The app does not read the address book, GPS routes, or heart rate, and has no purchases, advertising identifiers, or product-interaction capture in its crash integration. Review uploaded files/video audio, stored referral relationships, and diagnostic timing against Apple's exact categories rather than copying older “no photos/videos” answers.
 
@@ -39,36 +39,36 @@ The app privacy manifest now includes Photos or Videos and Device ID alongside t
 
 Use these questionnaire answers:
 
-| Question | Answer |
-| --- | --- |
-| User-Generated Content | Yes: usernames, Fight titles/actions, posts, media, comments, and feedback |
-| Contests | Recurring fitness rankings and winners; confirm the questionnaire frequency |
-| Gambling | No |
-| Simulated Gambling | No |
-| Messaging and Chat | Yes: Fight posts and threaded replies |
-| Unrestricted Web Access | No |
-| Medical or Treatment Information | No |
-| Advertising | No |
-| Violence, sexual content, profanity, drugs, alcohol, tobacco, horror, or mature themes | None |
-| Made for Kids | No |
+| Question                                                                               | Answer                                                                      |
+| -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| User-Generated Content                                                                 | Yes: usernames, Fight titles/actions, posts, media, comments, and feedback  |
+| Contests                                                                               | Recurring fitness rankings and winners; confirm the questionnaire frequency |
+| Gambling                                                                               | No                                                                          |
+| Simulated Gambling                                                                     | No                                                                          |
+| Messaging and Chat                                                                     | Yes: Fight posts and threaded replies                                       |
+| Unrestricted Web Access                                                                | No                                                                          |
+| Medical or Treatment Information                                                       | No                                                                          |
+| Advertising                                                                            | No                                                                          |
+| Violence, sexual content, profanity, drugs, alcohol, tobacco, horror, or mature themes | None                                                                        |
+| Made for Kids                                                                          | No                                                                          |
 
 Apple calculates the final rating from the completed questionnaire. Marc must confirm the content and frequency answers for this social build; do not reuse the older expected 13+ rating as a guarantee.
 
 ## Other compliance fields
 
-| Field | Answer |
-| --- | --- |
-| Regulated medical device | No: FitFight does not diagnose, prevent, monitor, or treat disease |
-| HealthKit | Read-only Steps plus private movement totals/workout summaries; no Health writes |
-| In-app purchases | None |
-| Gambling, entry fees, money settlement, payouts, or prizes | None |
-| Advertising / IDFA | None; the app does not request tracking permission |
-| Non-exempt encryption | No; `ITSAppUsesNonExemptEncryption` is `NO` and the app uses ordinary platform HTTPS/TLS. Recheck the final archive. |
-| Third-party content rights | No streamed third-party content. Nunito is bundled under the SIL Open Font License; SF Symbols are used under Apple's platform terms. |
-| Sign-in | Sign in with Apple only |
-| Account deletion | Available in the app under You → Settings → Delete account |
-| Privacy URL | `https://fitfight.app/privacy` |
-| Support URL | `https://fitfight.app/support` |
+| Field                                                      | Answer                                                                                                                                |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Regulated medical device                                   | No: FitFight does not diagnose, prevent, monitor, or treat disease                                                                    |
+| HealthKit                                                  | Read-only Steps plus private movement totals/workout summaries; no Health writes                                                      |
+| In-app purchases                                           | None                                                                                                                                  |
+| Gambling, entry fees, money settlement, payouts, or prizes | None                                                                                                                                  |
+| Advertising / IDFA                                         | None; the app does not request tracking permission                                                                                    |
+| Non-exempt encryption                                      | No; `ITSAppUsesNonExemptEncryption` is `NO` and the app uses ordinary platform HTTPS/TLS. Recheck the final archive.                  |
+| Third-party content rights                                 | No streamed third-party content. Nunito is bundled under the SIL Open Font License; SF Symbols are used under Apple's platform terms. |
+| Sign-in                                                    | Sign in with Apple only                                                                                                               |
+| Account deletion                                           | Available in the app under You → Settings → Delete account                                                                            |
+| Privacy URL                                                | `https://fitfight.app/privacy`                                                                                                        |
+| Support URL                                                | `https://fitfight.app/support`                                                                                                        |
 
 Marc must personally confirm the legal/account answers that code cannot determine:
 

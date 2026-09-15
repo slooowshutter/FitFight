@@ -1,6 +1,6 @@
 # App Store metadata
 
-Copy for the first public English (U.S.) listing. Do not change the app's marketing version until Marc approves the production ship. Confirm the proposed App Store name is available before replacing the currently reserved `FitFight MVP` listing name.
+Prepared English (U.S.) and French (France) copy for the authorized 1.1.1 production update. Keep the existing approved app name, contact details, territories, and seller settings unless Marc requests a change. This file is a draft until saved in App Store Connect.
 
 ## App information
 
@@ -39,6 +39,9 @@ Copy for the first public English (U.S.) listing. Do not change the app's market
 > • Compare Steps recorded by Apple Health
 > • See totals, daily progress, rank, and the final result
 > • Accept or decline invitations inside the app
+> • Schedule challenges or repeat them automatically
+> • Share photos and posts with your chosen audience
+> • Choose a companion and manage optional notifications
 >
 > BUILT AROUND PRIVACY
 >
@@ -50,28 +53,24 @@ Copy for the first public English (U.S.) listing. Do not change the app's market
 
 `step challenge,walking,fitness,friends,competition,pedometer,health`
 
-## First-version release text
+## What is new in 1.1.1
 
-> The first App Store release of FitFight: private Steps challenges with exact-username invitations, Apple Health scoring, live standings, and permanent account deletion.
+> Meet your companion, share photos and posts, schedule or repeat challenges, and choose your notifications. This update also brings the new FitFight icon and improvements to Health sync and standings.
 
 ## Screenshot set
 
-Use screenshots generated from the final release commit, showing `prod` in the version line and fictional usernames and Steps. CI generates these five screens as 1320 × 2868 JPEGs for the highest-resolution 6.9-inch iPhone set; App Store Connect scales that set down for smaller iPhone displays:
+Use screenshots generated from the final release commit, showing `prod` in the version line and fictional usernames and Steps. The refresh package contains these six screens as 1320 × 2868 JPEGs for the highest-resolution 6.9-inch iPhone set; App Store Connect scales that set down for smaller iPhone displays:
 
 1. Fights list with live private Steps Fights.
 2. Accepted Fight with totals, daily progress, and standings.
 3. New Fight setup with Steps, duration, username, and action fields.
 4. Incoming invitation with Accept and Decline.
-5. You with Apple Health Steps and Bugs & requests, Privacy, Support, and Delete account.
+5. You with the companion, Apple Health, and Settings.
+6. Feed with fictional posts and photos.
+
+The [interactive gallery](2026-09-15/index.html) contains both languages and the exact icon PNG. Refresh the visible version/build labels from the final production candidate before submission.
 
 Do not submit old design-source screenshots: they contain removed Requests, money, unsupported metrics, and mock data. Do not use real names or real Health data in marketing assets.
-
-## Owner confirmations before saving
-
-- Confirm the proposed App Store name is available.
-- Supply the required international App Review phone number.
-- Confirm first-launch territories and DSA trader status.
-- Confirm the seller name used for copyright if it is not `Marc Lamy`.
 
 ## French (France) localization
 
@@ -102,10 +101,13 @@ Keep English (U.S.) as the primary App Store language and add French (France) as
 > • Comparez les pas enregistrés par Santé d’Apple
 > • Consultez les totaux, la progression quotidienne, le classement et le résultat final
 > • Acceptez ou refusez les invitations dans l’app
+> • Programmez des défis ou répétez-les automatiquement
+> • Partagez des photos et publications avec le public choisi
+> • Choisissez un compagnon et gérez les notifications facultatives
 >
 > CONÇU POUR LA CONFIDENTIALITÉ
 >
-> Les défis sont privés et réservés à leurs participants. L’accès à Santé d’Apple est en lecture seule et limité au nombre de pas. FitFight ne vend pas vos données, n’affiche aucune publicité et ne vous suit pas entre les apps et les sites. Vous pouvez supprimer définitivement votre compte et les données FitFight associées depuis les Réglages.
+> Les défis sont privés et réservés à leurs participants. L’accès à Santé d’Apple est en lecture seule. Les défis de pas partagent uniquement les totaux de pas avec les participants ayant accepté. FitFight ne vend pas vos données, n’affiche aucune publicité et ne vous suit pas entre les apps et les sites. Vous pouvez supprimer définitivement votre compte et les données FitFight associées depuis les Réglages.
 >
 > FitFight est gratuit. Il ne propose aucun achat, frais d’inscription, pari, paiement ni prix. FitFight est destiné aux défis sportifs amicaux et n’est pas un service médical.
 
@@ -113,8 +115,8 @@ Keep English (U.S.) as the primary App Store language and add French (France) as
 
 `défi de pas,marche,fitness,amis,compétition,podomètre,santé`
 
-### First-version release text
+### Nouveautés de la version 1.1.1
 
-> Première version App Store de FitFight : défis de pas privés avec invitations par nom d’utilisateur exact, scores Santé d’Apple, classements en direct et suppression définitive du compte.
+> Découvrez votre compagnon, partagez des photos et des publications, programmez ou répétez vos défis et choisissez vos notifications. Cette mise à jour apporte aussi la nouvelle icône FitFight et des améliorations de la synchronisation Santé et des classements.
 
-Use the same five screenshot subjects as English, rendered with the app language set to French and fictional usernames and Health data.
+Use the same six screenshot subjects as English, rendered with the app language set to French and fictional usernames and Health data.

@@ -26,7 +26,7 @@ struct YouView: View {
             profile
             CompanionIntroduction(surface: .you)
             #if DEBUG && targetEnvironment(simulator)
-            if CompanionPreview.isEnabled {
+            if CompanionPreview.isEnabled && !ScreenshotExport.isEnabled {
                 Text("Companion design preview · this session only")
                     .ffType(.micro)
                     .foregroundStyle(theme.textSecondary)
@@ -56,7 +56,7 @@ struct YouView: View {
             }
 
             #if DEBUG && targetEnvironment(simulator)
-            if CompanionPreview.isEnabled {
+            if CompanionPreview.isEnabled && !ScreenshotExport.isEnabled {
                 FFButton(title: String(localized: "Companion preview"), kind: .ghost, fullWidth: true) {
                     showingCompanionPreviewControls = true
                 }

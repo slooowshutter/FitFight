@@ -8,6 +8,25 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last TestFlight:** 15 Sep 2026. **1.1.0 (200)** from [#234](https://github.com/slooowshutter/FitFight/pull/234). Internal Tester and Friends Beta, same IPA. Friends wait Apple beta review (`WAITING_FOR_BETA_REVIEW`). Overlay: `latest` 190, `review`/`internal` 200.
 
+## Release workspace reconciliation, 15 Sep 2026 evening
+
+Latest merged application code is 1.1.1 at `685507d`. The release workspace now
+includes those fixes plus the English/French screenshot package and the legacy
+App Store build 113 database compatibility repair. Earlier screenshot labels and
+the 1.1.0 App Store draft need to be refreshed for 1.1.1.
+
+The earlier disposable production-copy rehearsal applied 28 pending migrations
+and preserved 3 accounts, 14 Fights, and 14 memberships. Legacy SQL request and
+permission checks passed. That rehearsal predates the latest 1.1.1 migrations;
+those still require validation. No beta history/media import or production
+rollout has been performed by this workspace.
+
+Read-only live check at 21:38 UTC: staging advertises public 1.0.0 (190) and
+review/internal 1.1.0 (200), with enforcement off. Production still returns 404
+for `/api/app-release`; its health response lacks `profile_api`. These live results
+take precedence over older availability descriptions below. Preview is still at
+`025f55c`; the newest develop fixes have not been uploaded to TestFlight yet.
+
 ## Fight charts and standings: prepared 15 Sep 2026
 
 **Code:** all Fight charts now use the same confirmed score revision as standings.

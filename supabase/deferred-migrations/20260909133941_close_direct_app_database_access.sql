@@ -10,6 +10,11 @@ revoke all on public.profiles, public.friendships, public.fights,
     from public, anon, authenticated;
 
 -- Table revocation does not remove privileges granted separately on columns.
+revoke all (owner_id, name, state, starts_at, ends_at, time_zone, metric,
+    outcome_rule, goal_policy, default_goal_value, stake_kind, stake_minor, currency, action_text)
+    on public.fights from public, anon, authenticated;
+revoke all (fight_id, user_id, state, accepted_at)
+    on public.fight_members from public, anon, authenticated;
 revoke all (handle, handle_set_at, display_name, avatar_path, time_zone, avatar_media_id)
     on public.profiles from public, anon, authenticated;
 revoke all (state) on public.friendships from public, anon, authenticated;

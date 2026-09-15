@@ -76,6 +76,16 @@ struct FitFightApp: App {
             let state = CompanionPreview.DisplayState(rawValue: ProcessInfo.processInfo.environment["FF_COMPANION_STATE"] ?? "") ?? .populated
             let model = CompanionPreview.model(state: state)
             model.showCompanionPreviewState(state)
+            if ScreenshotExport.isEnabled {
+                switch ProcessInfo.processInfo.environment["FF_SHOT"] {
+                case "fight": model.openFightID = CompanionPreview.duelID
+                case "invitation": model.openFightID = CompanionPreview.invitationID
+                case "new": model.tab = .newFight
+                case "feed": model.tab = .feed
+                case "you": model.tab = .you
+                default: break
+                }
+            }
             let feed = FeedStore()
             feed.posts = CompanionPreview.posts()
             let mode: Mode = ProcessInfo.processInfo.environment["FF_COMPANION_THEME"] == "day" ? .day : .night

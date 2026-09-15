@@ -1,6 +1,6 @@
 # App Store privacy and compliance answers
 
-Technical draft updated 15 Sep 2026 for Marc to review before submission. Steps is the only scoring metric, but the current app also collects private activity/workout summaries, posts, media, and notification data. Reconcile these facts against the exact production archive, processor settings, and published policy. This file does not confirm legal compliance or final App Store answers.
+Technical record updated 16 Sep 2026. Marc authorized the production rollout and App Store submission. The 12 App Privacy categories below are published in App Store Connect, with App Functionality, linked to the user, and no tracking. Steps is the only scoring metric, but the current app also collects private activity/workout summaries, posts, media, and notification data. This record describes technical behavior and submitted answers; it does not establish legal compliance.
 
 ## App Privacy
 
@@ -27,12 +27,12 @@ The app does not read the address book, GPS routes, or heart rate, and has no pu
 
 The app privacy manifest now includes Photos or Videos and Device ID alongside the existing categories, no tracking, and the `CA92.1` UserDefaults reason. Apple spells the photo/video value `NSPrivacyCollectedDataTypePhotosorVideos`. Verify the final archive report, SDK manifests, App Store answers, and both published privacy translations agree. Sources: [Apple privacy-manifest data types](https://developer.apple.com/documentation/bundleresources/app-privacy-configuration/nsprivacycollecteddatatypes/nsprivacycollecteddatatype) and [App Privacy details](https://developer.apple.com/app-store/app-privacy-details/).
 
-## Processor and consent gaps to resolve before submission
+## Processor behavior and retention responsibilities
 
 - Supabase stores account/application data and uploaded files; Vercel runs the backend. Confirm their live retention settings.
 - PostHog receives crash reports linked to the FitFight account UUID when configured. Session replay, screen views and interaction capture are disabled. Deleting the app account does not delete existing PostHog records.
 - Configured Notion integration copies feedback text, author handle and attachment links to the backlog. An administrator can send reports, comments, device metadata and attachment links to Cursor. These copies have no automatic account-deletion integration.
-- Configured OpenRouter daily-status generation sends standing category, participant count, days remaining, sync-needed status and language to a model provider. It excludes account identifiers, names, Fight titles, exact Steps and raw Health samples. Generation now respects the daily-status preference and requires an authorized active device; the preference defaults on. There is no separate AI-sharing consent flow. Marc must review disclosure, consent, and processor settings before submitting.
+- OpenRouter generation has no separate AI-sharing consent flow. Its production API key was removed before the 1.1.1 production deployment, disabling AI-generated daily statuses and recaps for this release. The App Review notes state that these features are disabled. Re-enabling generation requires a separate consent and disclosure review.
 - Establish how processor-held copies and routine backups are retained and removed. The draft public policy describes the actual deletion limitation; it is not proof that retention obligations are met.
 
 ## Age rating
@@ -46,13 +46,15 @@ Use these questionnaire answers:
 | Gambling                                                                               | No                                                                          |
 | Simulated Gambling                                                                     | No                                                                          |
 | Messaging and Chat                                                                     | Yes: Fight posts and threaded replies                                       |
+| Social Media                                                                           | Yes: profiles, posts, reactions, and threaded replies                        |
+| Health or Wellness Topics                                                              | Yes: Steps challenges and private activity summaries                        |
 | Unrestricted Web Access                                                                | No                                                                          |
 | Medical or Treatment Information                                                       | No                                                                          |
 | Advertising                                                                            | No                                                                          |
 | Violence, sexual content, profanity, drugs, alcohol, tobacco, horror, or mature themes | None                                                                        |
 | Made for Kids                                                                          | No                                                                          |
 
-Apple calculates the final rating from the completed questionnaire. Marc must confirm the content and frequency answers for this social build; do not reuse the older expected 13+ rating as a guarantee.
+The editable 1.1.1 questionnaire now declares Health or Wellness Topics, Messaging and Chat, and Social Media. Existing answers retain User-Generated Content and frequent contests. App Store Connect displays 13+ in 171 countries or regions, with regional exceptions, and 12+ for operating systems earlier than version 26.
 
 ## Other compliance fields
 
@@ -70,7 +72,7 @@ Apple calculates the final rating from the completed questionnaire. Marc must co
 | Privacy URL                                                | `https://fitfight.app/privacy`                                                                                                        |
 | Support URL                                                | `https://fitfight.app/support`                                                                                                        |
 
-Marc must personally confirm the legal/account answers that code cannot determine:
+Existing account and availability settings were preserved. App Store Connect shows non-trader status, 173 available territories and 2 that cannot sell, standard Apple licensing, the app declared not to be a regulated medical device, and Mac/Apple Vision Pro availability off. The review contact fields are complete. The following remain owner-maintained legal/account facts; this rollout does not change them:
 
 - Individual versus Organization seller enrollment and the correct legal entity.
 - DSA trader or non-trader status and any required verified public contact details.

@@ -1,12 +1,72 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **16 Sep 2026**. Next prepared app: **1.1.1**.
+Read this before building. Last updated **16 Sep 2026**. Production candidate: **1.1.1 (202)**.
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
 ---
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
+
+## Production rollout and App Store submission, 16 Sep 2026
+
+This section supersedes the earlier held-rollout and screenshot-upload notes below.
+Marc authorized the complete production rollout and App Store submission.
+[#245](https://github.com/slooowshutter/FitFight/pull/245) integrated release tools,
+[#246](https://github.com/slooowshutter/FitFight/pull/246) promoted them to preview,
+and [#247](https://github.com/slooowshutter/FitFight/pull/247) merged preview into
+main at 23:30 UTC on 15 September, commit `e2783be`.
+
+**Live backend:** all 40 production migrations are applied. The Supabase deployment
+completed while the operator migration command was running; that command stopped
+during media-policy creation. A fresh migration listing matches all 40
+repository versions and another `migration up` applied nothing. Production health
+returns `ok: true`, `backend: prod`, `schema: ready`, and `profile_api: true`.
+English and French Privacy and Support pages return 200. The old build 113 SQL
+request and forbidden-write checks passed on production with the fixture rolled
+back. `/api/v1/me` reaches authentication and returns 401 without credentials for
+build headers 113, 190, 200, 201, and 202. No API version changed. Production still
+advertises public 1.0.0 (113), with update enforcement off.
+
+**Live data:** a fresh cloud copy of production was created and verified before
+the rollout. The real import combined 23 beta accounts and 3 production accounts,
+matching 2 shared Apple identities, into 24 accounts, 36 Fights, and 88 memberships.
+Beta profile details win; production IDs, referral codes, and unrelated history
+remain. All 52 ready media files passed source/destination checksum and size checks;
+2 unfinished uploads were excluded. Two downloads initially failed; after the
+temporary worker was restarted, both passed the same byte checks. No account rows
+were committed until every media file passed.
+
+The production rehearsal verified the planned result then rolled back to the exact
+original digest. The committed import matched the planned digest; all foreign keys,
+24 Auth account/Apple-identity reads, and 50 account/role visibility checks passed.
+Repeating the import reported `already_applied: true`, with no duplicate rows.
+Checkpoint: `6b482e49-29d7-4442-b87c-871ac4c776cc`. Verified row digest:
+`c0d5a6c2b3ef0c6e30788e51c0bf74ecf6f7ef1f760d4c2b6b13ec8d3e7844db`.
+Data and media moved only between cloud services. Both temporary transfer functions,
+all three temporary secrets on both projects, and the local token file were removed.
+The private checkpoint and pre-rollout backup are retained for the final catch-up.
+
+**Production archive:** [App Store candidate CI](https://github.com/slooowshutter/FitFight/actions/runs/35036003664)
+uploaded 1.1.1 (202) at 23:37 UTC. The signed IPA passed production URL/key checks,
+HealthKit background-delivery entitlement verification, and bundled privacy-manifest
+validation. Database, backend, simulator, and native regression checks passed.
+The twelve English/French screenshots are uploaded and processed. The 12-category
+App Privacy disclosure is published, and the age questionnaire reflects Health or
+Wellness Topics, Messaging and Chat, and Social Media. The production OpenRouter
+key was removed, so AI daily statuses and recaps are disabled for this release.
+The existing availability and legal/account settings were preserved.
+
+**Review submission:** [submission CI](https://github.com/slooowshutter/FitFight/actions/runs/35036799296)
+selected production 1.1.1 (202) and submitted it at 23:42 UTC on 15 September,
+01:42 Paris time on 16 September. Both Apple's API and App Store Connect display
+`WAITING_FOR_REVIEW`; release type is `MANUAL`. The production release manifest
+admits review build 202 while public build 113 remains supported. The release-tools
+workflow now defaults to a read-only audit, so another push cannot resubmit the app.
+Beta stays usable during review; repeat the catch-up
+from the retained checkpoint immediately before the manual public release. No
+physical-device Apple sign-in or HealthKit test of build 202 has been performed;
+Auth reads and cloud checks do not replace that installed-app verification.
 
 ## Data transfer implementation and cloud rehearsal, 16 Sep 2026
 

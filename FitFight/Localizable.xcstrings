@@ -820,7 +820,6 @@
     "On the path" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Sur le chemin"}}}},
     "A long loop" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Une grande boucle"}}}},
     "Back with a view" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Retour avec une vue"}}}},
-    "Couldn’t load suggested fights." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Impossible de charger les défis suggérés."}}}},
     "Couldn’t update that suggestion." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Impossible de mettre à jour cette suggestion."}}}},
     "Share a note, photo, or video on the Feed" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Partage une note, une photo ou une vidéo dans le Fil"}}}},
     "Sign in to suggest this fight." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Connecte-toi pour suggérer ce défi."}}}},

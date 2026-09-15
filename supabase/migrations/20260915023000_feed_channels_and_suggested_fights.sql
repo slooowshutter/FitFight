@@ -165,3 +165,38 @@ create policy fight_post_channels_select_visible
   for select
   to authenticated, fitfight_backend_reader
   using (private.current_user_can_see_fight_post(post_id));
+
+-- fight_posts.fight_id still cascades. Rehome that pointer before the
+-- fight row goes away so a shared or Public post is not wiped.
+create function private.rehome_fight_posts_before_fight_delete()
+returns trigger
+language plpgsql
+as $$
+begin
+  update public.fight_posts as post
+  set fight_id = remaining.fight_id
+  from (
+    select distinct on (channel.post_id)
+      channel.post_id,
+      channel.fight_id
+    from public.fight_post_channels as channel
+    where channel.fight_id is distinct from old.id
+    order by channel.post_id, channel.fight_id
+  ) as remaining
+  where post.fight_id = old.id
+    and remaining.post_id = post.id;
+
+  update public.fight_posts
+  set audience = 'main',
+      fight_id = null
+  where fight_id = old.id
+    and broadcast;
+
+  return old;
+end;
+$$;
+
+create trigger rehome_fight_posts_before_fight_delete
+  before delete on public.fights
+  for each row
+  execute function private.rehome_fight_posts_before_fight_delete();

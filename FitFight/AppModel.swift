@@ -944,8 +944,6 @@ final class AppModel: ObservableObject {
         do {
             return try await api.listSuggestedFights(accessToken: access)
         } catch {
-            createError = (error as? FitFightAPIError)?.errorDescription
-                ?? String(localized: "Couldn’t load suggested fights.")
             return []
         }
     }

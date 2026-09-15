@@ -6,7 +6,7 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ---
 
-**Last TestFlight:** 15 Sep 2026. **1.0.0 (198)** from [#223](https://github.com/slooowshutter/FitFight/pull/223). Tester: Invited-tab count ([#222](https://github.com/slooowshutter/FitFight/pull/222)). Friends stay **190**.
+**Last TestFlight:** 15 Sep 2026. **1.0.1 (199)** from [#231](https://github.com/slooowshutter/FitFight/pull/231). Internal Tester and Friends Beta, same IPA. Friends wait Apple beta review (`WAITING_FOR_BETA_REVIEW`). Overlay: `latest` 190, `review`/`internal` 199.
 
 ## API and update rollout (verified 13 Sep 2026)
 

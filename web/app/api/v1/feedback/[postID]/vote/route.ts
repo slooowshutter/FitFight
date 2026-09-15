@@ -5,12 +5,14 @@ import { toggleFeedbackVote } from "@/lib/supabase/queries/feedback-supabase-que
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export const POST = apiRoute<{ postID: string }>(async (request, { params }) => {
-  const { userId } = await verifyUser(request);
-  const postId = requireUuid(params.postID, "postID");
-  return json(await toggleFeedbackVote(userId, postId));
-});
+export const POST = apiRoute<{ postID: string }>(
+    async (request, { params }) => {
+        const { userId } = await verifyUser(request);
+        const postId = requireUuid(params.postID, "postID");
+        return json(await toggleFeedbackVote(userId, postId));
+    },
+);
 
 export function OPTIONS(request: Request) {
-  return corsPreflight(request);
+    return corsPreflight(request);
 }

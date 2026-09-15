@@ -22,11 +22,11 @@ case. [Apple WWDC20: Synchronize health data with HealthKit](https://developer.a
 
 ## What the three read paths provide
 
-| Read path | Confirmed behavior | Consequence for FitFight |
-| --- | --- | --- |
-| Merged statistics | Statistics queries merge sources before calculating the result. | Use for the combined Apple Health Steps score. |
-| Statistics separated by source | `separateBySource` produces independent source statistics. | Useful for inspecting sources; adding those totals can count overlapping activity twice. |
-| Individual samples | Samples carry values and intervals; anchored queries return new samples and deleted-object identifiers. | Useful for change tracking and a deliberately specified audit system; they do not supply Apple's merged score. |
+| Read path                      | Confirmed behavior                                                                                      | Consequence for FitFight                                                                                       |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Merged statistics              | Statistics queries merge sources before calculating the result.                                         | Use for the combined Apple Health Steps score.                                                                 |
+| Statistics separated by source | `separateBySource` produces independent source statistics.                                              | Useful for inspecting sources; adding those totals can count overlapping activity twice.                       |
+| Individual samples             | Samples carry values and intervals; anchored queries return new samples and deleted-object identifiers. | Useful for change tracking and a deliberately specified audit system; they do not supply Apple's merged score. |
 
 Apple documents the first two behaviors in [HKStatistics](https://developer.apple.com/documentation/healthkit/hkstatistics)
 and [separateBySource](https://developer.apple.com/documentation/healthkit/hkstatisticsoptions/separatebysource).
@@ -79,7 +79,7 @@ hourly maximum frequency for iOS Steps background delivery, including when a mor
 frequent option is requested. This is a maximum wake frequency, not a guarantee
 of an upload each hour. Background queries require device testing and are not
 supported in the Simulator. [Observer queries](https://developer.apple.com/documentation/healthkit/executing-observer-queries),
-[Background delivery](https://developer.apple.com/documentation/healthkit/hkhealthstore/enablebackgrounddelivery(for:frequency:withcompletion:))
+[Background delivery](<https://developer.apple.com/documentation/healthkit/hkhealthstore/enablebackgrounddelivery(for:frequency:withcompletion:)>)
 
 Therefore a raw-sample backend would still need the phone to read and upload
 changes, server persistence, a shared scoring result, and clients that refresh
@@ -125,11 +125,11 @@ acknowledgement is required for this local mutation.
 
 Invented minimal reproduction:
 
-| State | Phone A sees | Phone B sees |
-| --- | --- | --- |
-| Same initial server snapshot | A: 8,000; B: 9,000. B leads. | A: 8,000; B: 9,000. B leads. |
-| Each applies its own local reading, before upload | A: 20,000; B: 9,000. A leads. | A: 8,000; B: 30,000. B leads. |
-| Both receive the same refreshed snapshot | A: 20,000; B: 30,000. B leads. | A: 20,000; B: 30,000. B leads. |
+| State                                             | Phone A sees                   | Phone B sees                   |
+| ------------------------------------------------- | ------------------------------ | ------------------------------ |
+| Same initial server snapshot                      | A: 8,000; B: 9,000. B leads.   | A: 8,000; B: 9,000. B leads.   |
+| Each applies its own local reading, before upload | A: 20,000; B: 9,000. A leads.  | A: 8,000; B: 30,000. B leads.  |
+| Both receive the same refreshed snapshot          | A: 20,000; B: 30,000. B leads. | A: 20,000; B: 30,000. B leads. |
 
 Command: `python3 .context/repro_standings_disagreement.py`. Both runs compiled
 and executed successfully, then intentionally exited 1 on the same assertion:
@@ -182,7 +182,7 @@ matches overlapping samples. The docs reviewed do not establish every allocation
 detail of a partially overlapping quantity sample or series. Do not describe a
 boundary query as exact individual-step timing without device evidence.
 [Strict start](https://developer.apple.com/documentation/healthkit/hkqueryoptions/strictstartdate),
-[Sample date predicate](https://developer.apple.com/documentation/healthkit/hkquery/predicateforsamples(withstart:end:options:))
+[Sample date predicate](<https://developer.apple.com/documentation/healthkit/hkquery/predicateforsamples(withstart:end:options:)>)
 
 Proposed acceptance criteria:
 
@@ -203,7 +203,6 @@ No hosted data, real HealthKit samples, or live two-phone behavior was tested fo
 this research. Any implementation requires the repository's normal compatibility
 review and authorized deployment order. A raw archive would additionally need a
 specific collection purpose and retention contract before collection expands.
-
 
 ## Implementation follow-up: 15 Sep 2026
 

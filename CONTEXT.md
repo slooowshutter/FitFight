@@ -90,6 +90,14 @@ _Avoid_: Medical advice, required target
 The agreed consequence of a Fight, such as bragging rights, money, or an action. A Stake is not money held by FitFight.
 _Avoid_: Balance, wallet, payment
 
+**Stake rule**:
+The agreement that identifies who owes a Stake, under which outcome, and whether an action or amount is owed individually or collectively.
+_Avoid_: Result rule, Allocation rule
+
+**Allocation rule**:
+The agreement that divides a defined prize pool among eligible recipients, equally, by rank, or by a permitted share of their Scores. Receiving a share is distinct from winning the Fight.
+_Avoid_: Result rule, payment execution
+
 **Result rule**:
 The part of a Fight rule that decides what a Score means: highest wins, reaching a value succeeds, or the outcome is proportional.
 _Avoid_: Outcome rule, settlement mode, payout type

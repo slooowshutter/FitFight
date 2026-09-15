@@ -1,7 +1,7 @@
 -- Membership acceptance grants access to health summaries; only server commands may write it.
 revoke insert, update, delete
-  on public.fights, public.fight_members, public.data_sources
-  from public, anon, authenticated;
+    on public.fights, public.fight_members, public.data_sources
+    from public, anon, authenticated;
 
 drop policy if exists fights_insert_own on public.fights;
 drop policy if exists fights_update_owner_or_due on public.fights;

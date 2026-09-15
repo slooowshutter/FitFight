@@ -86,6 +86,7 @@ These rules apply to Swift, TypeScript, SQL, scripts, and documentation. The det
 
 - Do exactly the requested task. Do not add features, options, abstractions, fallbacks, retries, refactors, or cleanup that the request does not require.
 - Keep the diff surgical. Every changed line must trace to the request. Match the style of the file being changed.
+- Use **four spaces per indentation level**, never two spaces or tabs. Follow the repository `.editorconfig` and `.prettierrc.json` settings when editing or formatting code.
 - Remove imports, variables, functions, and files that **your change** makes unused. Do not remove pre-existing dead code unless asked.
 - State material assumptions. Ask before coding only when different answers would produce meaningfully different work and the answer cannot be found in the repo.
 - For multi-step work, define verifiable success criteria, implement to those criteria, and run the smallest relevant checks.
@@ -141,20 +142,29 @@ Names such as `get*`, `is*`, `has*`, `resolve*`, `normalize*`, `describe*`, `for
 
 ```ts
 // WRONG: three single-use helpers make one flow harder to read
-function normalizeFightID(id: string) { return id.trim().toLowerCase(); }
-function isFinalFight(fight: Fight) { return fight.state === "final"; }
-function getFightLabel(fight: Fight) { return `${fight.name} (${fight.state})`; }
+function normalizeFightID(id: string) {
+    return id.trim().toLowerCase();
+}
+function isFinalFight(fight: Fight) {
+    return fight.state === "final";
+}
+function getFightLabel(fight: Fight) {
+    return `${fight.name} (${fight.state})`;
+}
 export function summarizeFight(id: string, fights: Fight[]) {
-  const fight = fights.find((item) => item.id === normalizeFightID(id));
-  if (!fight) return null;
-  return { label: getFightLabel(fight), final: isFinalFight(fight) };
+    const fight = fights.find((item) => item.id === normalizeFightID(id));
+    if (!fight) return null;
+    return { label: getFightLabel(fight), final: isFinalFight(fight) };
 }
 
 // RIGHT: one function keeps the operation visible
 export function summarizeFight(id: string, fights: Fight[]) {
-  const fight = fights.find((item) => item.id === id.trim().toLowerCase());
-  if (!fight) return null;
-  return { label: `${fight.name} (${fight.state})`, final: fight.state === "final" };
+    const fight = fights.find((item) => item.id === id.trim().toLowerCase());
+    if (!fight) return null;
+    return {
+        label: `${fight.name} (${fight.state})`,
+        final: fight.state === "final",
+    };
 }
 ```
 
@@ -196,8 +206,8 @@ export const fightStateValues = ["draft", "live", "final"] as const;
 export const fightStateSchema = z.enum(fightStateValues);
 
 export const fightSummarySchema = z.object({
-  id: z.string().uuid(),
-  state: fightStateSchema,
+    id: z.string().uuid(),
+    state: fightStateSchema,
 });
 
 export type FightState = z.infer<typeof fightStateSchema>;
@@ -228,7 +238,7 @@ const body = await readJson(request);
 const parsed = createFightRequestSchema.safeParse(body);
 
 if (!parsed.success) {
-  throw parsed.error;
+    throw parsed.error;
 }
 
 const input = parsed.data;

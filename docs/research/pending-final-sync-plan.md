@@ -38,13 +38,13 @@ The 10 hours is **how long since Samuel’s last upload**, not grace remaining. 
 
 The server already has the right states. The phone ignores them.
 
-| Already true | Broken |
-|---|---|
-| `live → awaiting_final_sync → final` (`web/lib/scoring/fight-clock.ts`) | iOS `mapFight` sets `.finished` when `ends < Date()`, even if `state == awaiting_final_sync` (`FitFight/AppModel.swift`) |
-| Default grace `final_sync_grace_seconds = 86400` | Finished row: `rank == 1` → **W** (`FitFight/FightsListView.swift`) |
-| `final_steps_complete` on each member, already in the snapshot | Detail page always uses `FFVSBlock` for two people |
-| Standings already say “Waiting for final steps · …” | That copy is last-sync age, not “time left to submit” |
-| Daily Vercel cron `0 3 * * *` + app-open closer | Cron is too coarse for 12h / 6h / 1h pushes. A fight can stay `live` after `ends_at` until someone opens or the next 03:00 UTC |
+| Already true                                                            | Broken                                                                                                                         |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `live → awaiting_final_sync → final` (`web/lib/scoring/fight-clock.ts`) | iOS `mapFight` sets `.finished` when `ends < Date()`, even if `state == awaiting_final_sync` (`FitFight/AppModel.swift`)       |
+| Default grace `final_sync_grace_seconds = 86400`                        | Finished row: `rank == 1` → **W** (`FitFight/FightsListView.swift`)                                                            |
+| `final_steps_complete` on each member, already in the snapshot          | Detail page always uses `FFVSBlock` for two people                                                                             |
+| Standings already say “Waiting for final steps · …”                     | That copy is last-sync age, not “time left to submit”                                                                          |
+| Daily Vercel cron `0 3 * * *` + app-open closer                         | Cron is too coarse for 12h / 6h / 1h pushes. A fight can stay `live` after `ends_at` until someone opens or the next 03:00 UTC |
 
 “Syncing final steps” already exists on the `.live` branch and is **dead code** once the clock ends.
 
@@ -54,19 +54,19 @@ The server already has the right states. The phone ignores them.
 
 Do not localize the glyphs **P / W / L**.
 
-| Surface | EN | FR |
-|---|---|---|
-| List glyph (not `final`) | **P** | **P** |
-| List subtitle | Pending · Ended {date} | En attente · Terminé le {date} |
-| You submitted, ahead | Tentative lead | En tête provisoire |
-| You submitted, behind | Tentative loss | Retard provisoire |
-| You have not submitted | Pending — open the app | À synchroniser — ouvrez l’app |
-| Ranking pill, not submitted | Pending | À synchroniser |
-| Ranking pill, submitted | Synced | À jour |
-| Ranking caption (keep) | Waiting for final steps · {freshness} | En attente des pas finaux · {freshness} |
-| After `final`, you won / lost | You won / You lost | Vous avez gagné / Vous avez perdu |
-| After `final`, both forfeited | Draw | Égalité |
-| After `final`, they didn’t submit | Did not sync · forfeited | Pas synchronisé · forfait |
+| Surface                           | EN                                    | FR                                      |
+| --------------------------------- | ------------------------------------- | --------------------------------------- |
+| List glyph (not `final`)          | **P**                                 | **P**                                   |
+| List subtitle                     | Pending · Ended {date}                | En attente · Terminé le {date}          |
+| You submitted, ahead              | Tentative lead                        | En tête provisoire                      |
+| You submitted, behind             | Tentative loss                        | Retard provisoire                       |
+| You have not submitted            | Pending — open the app                | À synchroniser — ouvrez l’app           |
+| Ranking pill, not submitted       | Pending                               | À synchroniser                          |
+| Ranking pill, submitted           | Synced                                | À jour                                  |
+| Ranking caption (keep)            | Waiting for final steps · {freshness} | En attente des pas finaux · {freshness} |
+| After `final`, you won / lost     | You won / You lost                    | Vous avez gagné / Vous avez perdu       |
+| After `final`, both forfeited     | Draw                                  | Égalité                                 |
+| After `final`, they didn’t submit | Did not sync · forfeited              | Pas synchronisé · forfait               |
 
 Reuse existing keys where they already match (`health.waiting-final-steps-at`, `fight.ended-on`). Stop using **Won by** until `final`.
 
@@ -78,12 +78,12 @@ Gold = progress toward a locked result. Moss = you / tentative lead. Ember = urg
 
 Keep the **Finished** section. Marc asked for **P** there, not a new tab.
 
-| Fight | Glyph | Subtitle |
-|---|---|---|
-| `awaiting_final_sync`, or `live` past `ends_at` before the closer ticks | **P** (gold) | Pending · Ended {date} |
-| `final`, you rank 1 | **W** | Ended {date} · 1st of N |
-| `final`, you do not rank 1 | **L** | Ended {date} · Nth of N |
-| You deferred (next round) | **–** | Ended {date} (unchanged) |
+| Fight                                                                   | Glyph        | Subtitle                 |
+| ----------------------------------------------------------------------- | ------------ | ------------------------ |
+| `awaiting_final_sync`, or `live` past `ends_at` before the closer ticks | **P** (gold) | Pending · Ended {date}   |
+| `final`, you rank 1                                                     | **W**        | Ended {date} · 1st of N  |
+| `final`, you do not rank 1                                              | **L**        | Ended {date} · Nth of N  |
+| You deferred (next round)                                               | **–**        | Ended {date} (unchanged) |
 
 Add `FFResult.pending = "P"` next to W / L / – in `FitFight/DesignSystem/Components.swift`.
 
@@ -156,13 +156,13 @@ At `final`:
 
 Full design: [`apns-remote-push-plan.md`](apns-remote-push-plan.md).
 
-| When | Who | Lock-screen idea |
-|---|---|---|
-| T+0 (`ends_at`) | Every accepted member | Fight ended. Open FitFight. Pending people: sync your steps. |
-| T+12h | Still pending | 12 hours left. Open FitFight or you lose. |
-| T+18h | Still pending | 6 hours left. Open or you lose. |
-| T+23h | Still pending | Last hour. Open or you lose. |
-| T+24h | Everyone | Result is in. Open FitFight. No W/L/steps on the lock screen. |
+| When            | Who                   | Lock-screen idea                                              |
+| --------------- | --------------------- | ------------------------------------------------------------- |
+| T+0 (`ends_at`) | Every accepted member | Fight ended. Open FitFight. Pending people: sync your steps.  |
+| T+12h           | Still pending         | 12 hours left. Open FitFight or you lose.                     |
+| T+18h           | Still pending         | 6 hours left. Open or you lose.                               |
+| T+23h           | Still pending         | Last hour. Open or you lose.                                  |
+| T+24h           | Everyone              | Result is in. Open FitFight. No W/L/steps on the lock screen. |
 
 Skip a grace reminder if that person already submitted. Cancel leftover reminders when the fight finals early.
 
@@ -244,14 +244,14 @@ UI + forfeit do not wait on this.
 
 ## Tests that will break (Slice B)
 
-| File | Today | After |
-|---|---|---|
-| `web/lib/supabase/queries/security.integration.ts` watermark test | Incomplete `42` becomes `final_value` | That person forfeits |
-| `recalculate-fight-supabase-query.test.ts` | Happy path only | Add mixed complete / forfeit |
-| `score-fight.test.ts` | Values only | Forfeit ranking cases |
-| `fight-clock.test.ts` | Clock only | Keep |
-| HealthKit upload tests | Completeness flag | Keep |
-| iOS | No AppModel unit tests | Compile + optional new `swiftc` label tests |
+| File                                                              | Today                                 | After                                       |
+| ----------------------------------------------------------------- | ------------------------------------- | ------------------------------------------- |
+| `web/lib/supabase/queries/security.integration.ts` watermark test | Incomplete `42` becomes `final_value` | That person forfeits                        |
+| `recalculate-fight-supabase-query.test.ts`                        | Happy path only                       | Add mixed complete / forfeit                |
+| `score-fight.test.ts`                                             | Values only                           | Forfeit ranking cases                       |
+| `fight-clock.test.ts`                                             | Clock only                            | Keep                                        |
+| HealthKit upload tests                                            | Completeness flag                     | Keep                                        |
+| iOS                                                               | No AppModel unit tests                | Compile + optional new `swiftc` label tests |
 
 New cases: high partial vs low complete → complete wins; both incomplete → draw; 3-person mixed order; early final when all complete.
 

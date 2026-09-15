@@ -8,12 +8,14 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export const POST = apiRoute(async (request) => {
-  const { userId } = await verifyUser(request);
-  const input = healthKitDiagnosticSnapshotSchema.parse(await readJson(request));
-  logHealthKitFailures(input);
-  return json(await saveHealthKitDiagnosticSnapshot(userId, input));
+    const { userId } = await verifyUser(request);
+    const input = healthKitDiagnosticSnapshotSchema.parse(
+        await readJson(request),
+    );
+    logHealthKitFailures(input);
+    return json(await saveHealthKitDiagnosticSnapshot(userId, input));
 });
 
 export function OPTIONS(request: Request) {
-  return corsPreflight(request);
+    return corsPreflight(request);
 }

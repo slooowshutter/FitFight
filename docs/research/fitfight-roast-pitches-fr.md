@@ -25,6 +25,7 @@ Les premières propositions privilégiaient des textes courts et une invitation 
 Intonation : début posé, sourire sur « personnel », pause de deux secondes. Expliquer le produit normalement. Laisser une respiration après « vaisselle ». Ralentir sur la dernière phrase. Ne pas attendre de rire pour continuer.
 
 <!-- pitch-1-start -->
+
 Dix mille pas par jour, c’est un objectif. Cinq cents pas pour battre votre pote, c’est personnel.
 
 Je suis Marc, et je crée FitFight : une appli qui transforme la marche en compétition entre amis.
@@ -40,6 +41,7 @@ L’app fonctionne déjà sur iPhone, en version de test. Maintenant, je veux vo
 Si vous avez un ami que vous aimeriez battre, venez me voir après.
 
 FitFight : quitte à avoir un ego, autant qu’il nous fasse marcher.
+
 <!-- pitch-1-end -->
 
 ## Version 2 — une scène du quotidien
@@ -47,6 +49,7 @@ FitFight : quitte à avoir un ego, autant qu’il nous fasse marcher.
 Intonation : raconter tranquillement, comme à une personne. Pause après « canapé ». Dire « huit cents pas » avec un léger défi dans la voix. Revenir à une voix simple et directe pour expliquer l’app. La scène est fictive.
 
 <!-- pitch-2-start -->
+
 Imaginez. Il est vingt et une heures. Vous êtes dans votre canapé. Un ami vous écrit : « Je te bats de huit cents pas. »
 
 Vous regardez vos chaussures. Finalement, le chien va ressortir.
@@ -64,6 +67,7 @@ La première version fonctionne sur iPhone. La suite, c’est de vérifier si ce
 Si cette scène vous rappelle un ami, venez essayer FitFight avec lui.
 
 Vous avez probablement déjà le nom en tête.
+
 <!-- pitch-2-end -->
 
 ## Version 3 — directe et entrepreneuriale
@@ -71,6 +75,7 @@ Vous avez probablement déjà le nom en tête.
 Intonation : voix calme, phrases nettes, peu d’effets. Marquer une pause avant « Le pari produit ». Assumer la phrase sur ce qui reste à démontrer sans s’excuser. Donner du poids à la dernière question.
 
 <!-- pitch-3-start -->
+
 Je suis Marc, et je développe FitFight : une application iPhone de défis de pas entre amis.
 
 Je vise d’abord les personnes qui veulent marcher davantage et aiment se challenger avec leurs proches. L’idée est de leur donner une raison concrète de faire quelques pas de plus dans leur journée.
@@ -84,6 +89,7 @@ Une première version fonctionne déjà. Il reste à démontrer que les gens mar
 Je cherche des groupes d’amis pour essayer l’app et comprendre ce qui leur donne envie de revenir.
 
 La question que je veux trancher : est-ce qu’on peut transformer une rivalité de quelques jours en une habitude qui dure ?
+
 <!-- pitch-3-end -->
 
 ## Version 4 — pitch actuel : problème, produit et ambition
@@ -95,6 +101,7 @@ Le pitch décrit la marche et Santé d’Apple comme le produit actuel ; les aut
 Gestes : lever une main avec la première question, puis la deuxième sur « j’en lève deux ». Enchaîner avec « Regardez autour de vous ! » et le problème. Laisser au public le temps de répondre sans ajouter de remerciement ou de consigne pour baisser les mains. Le nombre de mains restantes n’est pas garanti.
 
 <!-- pitch-4-start -->
+
 Qui ici a déjà fait du sport ? Allez, les mains en l’air !
 
 Gardez la main levée si vous avez déjà arrêté par manque de motivation.
@@ -116,6 +123,7 @@ L’objectif, c’est que chacun puisse pratiquer son sport, avec son matériel,
 On vise d’abord les groupes d’amis qui veulent être plus réguliers dans leur activité.
 
 Une première version fonctionne sur iPhone. Le modèle économique reste à définir. La prochaine étape, c’est de vérifier si les groupes relancent des défis et restent actifs une fois la nouveauté passée.
+
 <!-- pitch-4-end -->
 
 ## Répétition
@@ -131,15 +139,15 @@ Comptage des trois premiers textes : **171, 172 et 176 mots**. La version 4 comp
 
 Objections anticipées par cette analyse, pas questions annoncées par les organisateurs. Réponses proposées, à compléter avec les faits de Marc quand ils existent.
 
-| Objection possible | Réponse courte proposée |
-| --- | --- |
-| « C’est juste un compteur de pas avec un classement ? » | « Le cœur est volontairement simple : une compétition avec des gens qu’on connaît, une échéance et un gage choisi ensemble. La preuve à apporter, c’est que les gens reviennent jouer. » |
-| « Pourquoi pas un groupe WhatsApp ? » | « On peut déjà se lancer un défi par message. FitFight rassemble les pas et le classement sur la durée choisie. Il faut vérifier si cette simplicité suffit à faire adopter une app de plus. » |
-| « Qui paie ? » | « La version actuelle est gratuite. Le modèle économique reste à définir. » Marc a confirmé ne pas savoir encore comment monétiser FitFight. Les pistes étudiées restent des hypothèses. |
-| « Ça fait vraiment marcher davantage ? » | « C’est l’hypothèse que je veux tester. Je n’ai pas de résultat mesuré à annoncer ici. » À remplacer par un résultat seulement s’il est documenté. |
-| « On peut tricher ? » | « Aujourd’hui, on s’appuie sur les données de Santé d’Apple et la confiance entre participants. Ce n’est pas un système anti-triche. » |
-| « Comment comparez-vous plusieurs sports ? » | « Aujourd’hui, on compare uniquement les pas. Réunir différents sports est la vision ; les règles communes restent à définir et à tester. » |
-| « Tout connecter, c’est vraiment possible ? » | « C’est l’ambition. Chaque connexion dépend des données disponibles et des autorisations du fournisseur. » Les [conditions Strava](https://www.strava.com/legal/api_policy), notamment les restrictions de partage et de monétisation, illustrent pourquoi il ne faut pas garantir toutes les connexions. |
+| Objection possible                                      | Réponse courte proposée                                                                                                                                                                                                                                                                                   |
+| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| « C’est juste un compteur de pas avec un classement ? » | « Le cœur est volontairement simple : une compétition avec des gens qu’on connaît, une échéance et un gage choisi ensemble. La preuve à apporter, c’est que les gens reviennent jouer. »                                                                                                                  |
+| « Pourquoi pas un groupe WhatsApp ? »                   | « On peut déjà se lancer un défi par message. FitFight rassemble les pas et le classement sur la durée choisie. Il faut vérifier si cette simplicité suffit à faire adopter une app de plus. »                                                                                                            |
+| « Qui paie ? »                                          | « La version actuelle est gratuite. Le modèle économique reste à définir. » Marc a confirmé ne pas savoir encore comment monétiser FitFight. Les pistes étudiées restent des hypothèses.                                                                                                                  |
+| « Ça fait vraiment marcher davantage ? »                | « C’est l’hypothèse que je veux tester. Je n’ai pas de résultat mesuré à annoncer ici. » À remplacer par un résultat seulement s’il est documenté.                                                                                                                                                        |
+| « On peut tricher ? »                                   | « Aujourd’hui, on s’appuie sur les données de Santé d’Apple et la confiance entre participants. Ce n’est pas un système anti-triche. »                                                                                                                                                                    |
+| « Comment comparez-vous plusieurs sports ? »            | « Aujourd’hui, on compare uniquement les pas. Réunir différents sports est la vision ; les règles communes restent à définir et à tester. »                                                                                                                                                               |
+| « Tout connecter, c’est vraiment possible ? »           | « C’est l’ambition. Chaque connexion dépend des données disponibles et des autorisations du fournisseur. » Les [conditions Strava](https://www.strava.com/legal/api_policy), notamment les restrictions de partage et de monétisation, illustrent pourquoi il ne faut pas garantir toutes les connexions. |
 
 Le point le plus exposé : le dépôt montre un produit qui fonctionne, mais n’apporte pas de chiffres de rétention, de revenus ni de validation du besoin. Un bon pitch rend l’idée compréhensible ; il ne remplace pas ces preuves. Si Marc dispose de données réelles, intégrer une seule preuve à la place d’une phrase de contexte.
 

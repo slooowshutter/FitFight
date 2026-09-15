@@ -2,9 +2,9 @@ begin;
 select plan(10);
 
 select ok(
-  (select not rolcanlogin and not rolbypassrls and not rolinherit
-   from pg_roles where rolname = 'fitfight_backend_reader'),
-  'backend reader has no login, RLS bypass, or inherited client writes'
+    (select not rolcanlogin and not rolbypassrls and not rolinherit
+      from pg_roles where rolname = 'fitfight_backend_reader'),
+    'backend reader has no login, RLS bypass, or inherited client writes'
 );
 select ok(pg_has_role('postgres', 'fitfight_backend_reader', 'MEMBER'), 'server can assume reader');
 select ok(not pg_has_role('authenticated', 'fitfight_backend_reader', 'MEMBER'), 'users cannot assume reader');

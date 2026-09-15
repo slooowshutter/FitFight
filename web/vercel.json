@@ -1,15 +1,15 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "nextjs",
-  "regions": ["iad1"],
-  "crons": [
-    {
-      "path": "/api/internal/close-fights",
-      "schedule": "0 3 * * *"
-    },
-    {
-      "path": "/api/internal/daily-status-notifications",
-      "schedule": "0 9 * * *"
-    }
-  ]
+    "$schema": "https://openapi.vercel.sh/vercel.json",
+    "framework": "nextjs",
+    "regions": ["iad1"],
+    "crons": [
+        {
+            "path": "/api/internal/close-fights",
+            "schedule": "0 3 * * *"
+        },
+        {
+            "path": "/api/internal/daily-status-notifications",
+            "schedule": "0 9 * * *"
+        }
+    ]
 }

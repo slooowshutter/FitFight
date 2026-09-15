@@ -4,13 +4,13 @@ This folder contains the current approved design and the archived design dump it
 
 ## Current source of truth
 
-| File | Purpose |
-| --- | --- |
-| [`kit/FitFight Design System.dc.html`](./kit/FitFight%20Design%20System.dc.html) | Approved visual specification and interactive component catalogue. |
-| [`kit/support.js`](./kit/support.js) | Runtime used by the HTML source. Documentation only; it is not bundled in the iOS app. |
-| [`tokens.json`](./tokens.json) | Machine-readable SwiftUI tokens. This must remain byte-for-byte identical to `FitFight/DesignSystem/tokens.json`. |
-| [`kit/companion-app-proposal.html`](./kit/companion-app-proposal.html) | Selected Companion screen direction, retained as the tappable reference. Existing native behavior remains authoritative. |
-| [`companion/`](./companion/README.md) | Preserved artwork, asset manifest, reproducible crops, and native review captures. |
+| File                                                                             | Purpose                                                                                                                  |
+| -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| [`kit/FitFight Design System.dc.html`](./kit/FitFight%20Design%20System.dc.html) | Approved visual specification and interactive component catalogue.                                                       |
+| [`kit/support.js`](./kit/support.js)                                             | Runtime used by the HTML source. Documentation only; it is not bundled in the iOS app.                                   |
+| [`tokens.json`](./tokens.json)                                                   | Machine-readable SwiftUI tokens. This must remain byte-for-byte identical to `FitFight/DesignSystem/tokens.json`.        |
+| [`kit/companion-app-proposal.html`](./kit/companion-app-proposal.html)           | Selected Companion screen direction, retained as the tappable reference. Existing native behavior remains authoritative. |
+| [`companion/`](./companion/README.md)                                            | Preserved artwork, asset manifest, reproducible crops, and native review captures.                                       |
 
 The approved system has two bases, Night and Day, and fixed semantic colour families:
 

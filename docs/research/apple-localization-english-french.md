@@ -28,11 +28,11 @@ The project is prepared for extraction but is not localized yet:
 
 Adding a catalog alone will not translate the whole app. FitFight has three separate categories of text that need distinct handling.
 
-| FitFight text | Correct treatment |
-| --- | --- |
-| Static interface copy, status copy, validation errors, Health state, accessibility labels, changelog notes | Localize through the catalog |
-| Usernames, display names, Fight names, and the user-written loser action | Display verbatim; never treat them as localization keys |
-| Dates, numbers, counts, durations, ordinals, and lists | Format with locale-aware Foundation APIs inside complete localizable messages |
+| FitFight text                                                                                              | Correct treatment                                                             |
+| ---------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Static interface copy, status copy, validation errors, Health state, accessibility labels, changelog notes | Localize through the catalog                                                  |
+| Usernames, display names, Fight names, and the user-written loser action                                   | Display verbatim; never treat them as localization keys                       |
+| Dates, numbers, counts, durations, ordinals, and lists                                                     | Format with locale-aware Foundation APIs inside complete localizable messages |
 
 ## SwiftUI and custom components
 
@@ -99,7 +99,7 @@ Create `InfoPlist.xcstrings`, add it to the app target's Resources build phase, 
 
 For FitFight, translate both `NSHealthShareUsageDescription` and `NSHealthUpdateUsageDescription` into French. Keep the English values in build settings as source/fallback values. Each localization must remain accurate, meaningful, specific, concise, and normally a complete sentence; App Review checks localized purpose strings too. `CFBundleDisplayName` can remain `FitFight` in both languages, but it should be present if the catalog workflow extracts it.
 
-Localize custom VoiceOver labels, values, hints, and accessibility action names just like visible text. SwiftUI's accessibility label APIs accept localized resources/keys. Keep `accessibilityIdentifier` values stable and untranslated because UI automation uses them as identifiers, not spoken copy. Accessibility labels should be short and should not repeat the control type, such as “Save” rather than “Save button.” [Apple: SwiftUI `accessibilityLabel`](https://developer.apple.com/documentation/swiftui/view/accessibilitylabel(_:)) and [Apple: UIKit accessibility label guidance](https://developer.apple.com/documentation/uikit/uiaccessibilityelement/accessibilitylabel)
+Localize custom VoiceOver labels, values, hints, and accessibility action names just like visible text. SwiftUI's accessibility label APIs accept localized resources/keys. Keep `accessibilityIdentifier` values stable and untranslated because UI automation uses them as identifiers, not spoken copy. Accessibility labels should be short and should not repeat the control type, such as “Save” rather than “Save button.” [Apple: SwiftUI `accessibilityLabel`](<https://developer.apple.com/documentation/swiftui/view/accessibilitylabel(_:)>) and [Apple: UIKit accessibility label guidance](https://developer.apple.com/documentation/uikit/uiaccessibilityelement/accessibilitylabel)
 
 In the current app, this includes “Sign in with Apple,” “Step … of 5,” and “Remove @…”. Interpolate the username verbatim into the localized accessibility sentence. Also verify that images containing text do not exist; if a future asset contains language-specific text, Apple supports localized variants in asset catalogs. [Apple: Localizing assets in a catalog](https://developer.apple.com/documentation/xcode/localizing-assets-in-a-catalog)
 

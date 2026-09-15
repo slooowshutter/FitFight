@@ -1,5 +1,3 @@
 {
-  "reactions": [
-    { "emoji": "🔥", "count": 1, "mine": true }
-  ]
+    "reactions": [{ "emoji": "🔥", "count": 1, "mine": true }]
 }

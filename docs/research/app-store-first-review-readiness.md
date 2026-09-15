@@ -52,20 +52,20 @@ These foundations reduce risk and should be preserved:
 
 ## Common Apple rejection causes mapped to FitFight
 
-| Apple review concern | Current FitFight evidence | Status before submission |
-| --- | --- | --- |
-| **2.1 App Completeness**: crashes, placeholders, incomplete content, inaccessible features | Fake public Requests data, local-only votes, empty plus button, dead Settings/actions, unsupported metrics | **STOP** — remove or fully implement every visible surface |
-| **Broken links / support** | Production root, privacy, terms, and support returned 404 on 30 August 2026 | **STOP** — privacy and support must be live; terms is strongly recommended for this product |
-| **Incomplete review information/access** | A fresh Sign in with Apple account has no second participant or history | **STOP** — provide durable reviewer access or obtain prior approval for a built-in demo mode, with precise Review Notes |
-| **Misleading metadata or functionality** | Public-looking fixture board; “Private beta”; “FitFight MVP”; money UI with no payment/legal model | **STOP** — the binary, screenshots, name, description, and web pages must tell the same true story |
-| **Privacy / unclear permission requests** | Health prompt follows username save without explaining upload, retention, processors, or opponent visibility | **STOP** — add explicit contextual disclosure and consent |
-| **Account deletion** | Good partial server erasure, but stable handle/UUID/relationships and local data remain; no Apple revocation | **STOP** — complete and test end-to-end deletion |
-| **UGC / social abuse controls** | User handles and custom obligations are shared; no filter, report, block, or operating response process | **STOP if retained** — remove arbitrary content and add the full safety stack for remaining social content |
-| **Contests / gambling / safety** | `$10` is the default; “settle up,” pots, projected payouts, arbitrary forfeits | **STOP if retained** — launch with no money/prizes and answer the contest rating honestly |
-| **Privacy manifests / required-reason APIs** | No app `PrivacyInfo.xcprivacy`; direct `UserDefaults` use | **STOP** — add a valid manifest with `CA92.1`; verify the exact archive with Xcode's privacy report |
-| **Correct submitting entity** | Developer enrollment type is not visible in the repo; Health data is sensitive | **VERIFY** — confirm the legal entity/account posture before review |
-| **Current SDK/toolchain** | CI uses `macos-26`; the uploaded build processed successfully | **READY**, but validate the exact final archive |
-| **Minimum functionality** | Native Health integration, persistent fights, invitations, and standings are meaningful when working | **LIKELY READY** after fake/dead surfaces are removed and the production path is proven |
+| Apple review concern                                                                       | Current FitFight evidence                                                                                    | Status before submission                                                                                                |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| **2.1 App Completeness**: crashes, placeholders, incomplete content, inaccessible features | Fake public Requests data, local-only votes, empty plus button, dead Settings/actions, unsupported metrics   | **STOP** — remove or fully implement every visible surface                                                              |
+| **Broken links / support**                                                                 | Production root, privacy, terms, and support returned 404 on 30 August 2026                                  | **STOP** — privacy and support must be live; terms is strongly recommended for this product                             |
+| **Incomplete review information/access**                                                   | A fresh Sign in with Apple account has no second participant or history                                      | **STOP** — provide durable reviewer access or obtain prior approval for a built-in demo mode, with precise Review Notes |
+| **Misleading metadata or functionality**                                                   | Public-looking fixture board; “Private beta”; “FitFight MVP”; money UI with no payment/legal model           | **STOP** — the binary, screenshots, name, description, and web pages must tell the same true story                      |
+| **Privacy / unclear permission requests**                                                  | Health prompt follows username save without explaining upload, retention, processors, or opponent visibility | **STOP** — add explicit contextual disclosure and consent                                                               |
+| **Account deletion**                                                                       | Good partial server erasure, but stable handle/UUID/relationships and local data remain; no Apple revocation | **STOP** — complete and test end-to-end deletion                                                                        |
+| **UGC / social abuse controls**                                                            | User handles and custom obligations are shared; no filter, report, block, or operating response process      | **STOP if retained** — remove arbitrary content and add the full safety stack for remaining social content              |
+| **Contests / gambling / safety**                                                           | `$10` is the default; “settle up,” pots, projected payouts, arbitrary forfeits                               | **STOP if retained** — launch with no money/prizes and answer the contest rating honestly                               |
+| **Privacy manifests / required-reason APIs**                                               | No app `PrivacyInfo.xcprivacy`; direct `UserDefaults` use                                                    | **STOP** — add a valid manifest with `CA92.1`; verify the exact archive with Xcode's privacy report                     |
+| **Correct submitting entity**                                                              | Developer enrollment type is not visible in the repo; Health data is sensitive                               | **VERIFY** — confirm the legal entity/account posture before review                                                     |
+| **Current SDK/toolchain**                                                                  | CI uses `macos-26`; the uploaded build processed successfully                                                | **READY**, but validate the exact final archive                                                                         |
+| **Minimum functionality**                                                                  | Native Health integration, persistent fights, invitations, and standings are meaningful when working         | **LIKELY READY** after fake/dead surfaces are removed and the production path is proven                                 |
 
 Apple's own current guidance emphasizes testing on device, complete and accurate metadata, live backends, valid reviewer access, and explanations for non-obvious features. [App Review Guidelines: Before You Submit and 2.1](https://developer.apple.com/app-store/review/guidelines/)
 
@@ -120,14 +120,14 @@ The first-review-safe flow is:
 
 1. Ask only when the user deliberately taps **Connect Apple Health** or starts their first Steps fight.
 2. Before Apple's system sheet, say in plain language:
-   - FitFight asks only for Apple Health **Step Count**;
-   - the date range it reads;
-   - the data uploaded to FitFight;
-   - why it is uploaded and how long it is retained;
-   - only accepted participants see the stated fight total/rank, not raw samples;
-   - no sale, advertising, marketing, research, data brokerage, or cross-app tracking;
-   - how to withdraw and delete FitFight's copy;
-   - where to read the full policy.
+    - FitFight asks only for Apple Health **Step Count**;
+    - the date range it reads;
+    - the data uploaded to FitFight;
+    - why it is uploaded and how long it is retained;
+    - only accepted participants see the stated fight total/rank, not raw samples;
+    - no sale, advertising, marketing, research, data brokerage, or cross-app tracking;
+    - how to withdraw and delete FitFight's copy;
+    - where to read the full policy.
 3. Offer **Connect and upload Steps** and **Not now**. Record the consent version/time as operational evidence.
 4. At fight acceptance, identify the participants and the exact aggregate that becomes visible.
 5. Add **Disconnect and delete FitFight's Apple Health copy**. Explain separately that the system permission is managed in Apple Health/Settings; do not imitate Apple's permission UI.
@@ -298,20 +298,20 @@ These are less likely than the P0 items to cause a standalone rejection, but the
 
 Do not copy this blindly into App Store Connect. Reconcile it against the **final** binary, Xcode privacy report, production database, processors, CDN/server logs, backups, and support mailbox.
 
-| App Privacy type | Why it applies | Linked | Purpose | Tracking |
-| --- | --- | ---: | --- | ---: |
-| **Health** | Step Count and any derived/raw HealthKit data sent to the server | Yes | App Functionality | No |
-| **Name** | Full name requested through Sign in with Apple and stored as display name | Yes | App Functionality / Account Management | No |
-| **Email Address** | Real or private-relay Apple email processed by auth | Yes | App Functionality / Account Management | No |
-| **User ID** | Apple/provider subject, Supabase UUID, and public handle | Yes | App Functionality / Account Management | No |
-| **Gameplay Content** | Fights, membership/matching, rules, scores, and outcomes | Yes | App Functionality | No |
-| **Contacts** | The persisted in-app friendship/social graph; this is not an address-book claim | Yes | App Functionality | No |
-| **Other User Content** | Fight/action text if retained | Yes | App Functionality | No |
-| **Customer Support** | User-authored support email/content if retained | Usually | App Functionality | No |
-| **Device ID** | Required only if current Health device local/UDI identifiers remain; the recommendation is to remove them | Yes | App Functionality | No |
-| **Other Data Types** | Detailed source/device metadata and time-zone data if retained outside clearer categories | Yes | App Functionality | No |
-| **Diagnostics / Product Interaction / IP-derived data** | Only if the app, Supabase, Vercel, CDN, or another processor retains it | Verify | Exact real purpose | No unless practices change |
-| **Search History** | Handle searches if Supabase/Vercel/CDN logs retain the submitted queries beyond servicing the request | Verify | App Functionality | No |
+| App Privacy type                                        | Why it applies                                                                                            |  Linked | Purpose                                |                   Tracking |
+| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------: | -------------------------------------- | -------------------------: |
+| **Health**                                              | Step Count and any derived/raw HealthKit data sent to the server                                          |     Yes | App Functionality                      |                         No |
+| **Name**                                                | Full name requested through Sign in with Apple and stored as display name                                 |     Yes | App Functionality / Account Management |                         No |
+| **Email Address**                                       | Real or private-relay Apple email processed by auth                                                       |     Yes | App Functionality / Account Management |                         No |
+| **User ID**                                             | Apple/provider subject, Supabase UUID, and public handle                                                  |     Yes | App Functionality / Account Management |                         No |
+| **Gameplay Content**                                    | Fights, membership/matching, rules, scores, and outcomes                                                  |     Yes | App Functionality                      |                         No |
+| **Contacts**                                            | The persisted in-app friendship/social graph; this is not an address-book claim                           |     Yes | App Functionality                      |                         No |
+| **Other User Content**                                  | Fight/action text if retained                                                                             |     Yes | App Functionality                      |                         No |
+| **Customer Support**                                    | User-authored support email/content if retained                                                           | Usually | App Functionality                      |                         No |
+| **Device ID**                                           | Required only if current Health device local/UDI identifiers remain; the recommendation is to remove them |     Yes | App Functionality                      |                         No |
+| **Other Data Types**                                    | Detailed source/device metadata and time-zone data if retained outside clearer categories                 |     Yes | App Functionality                      |                         No |
+| **Diagnostics / Product Interaction / IP-derived data** | Only if the app, Supabase, Vercel, CDN, or another processor retains it                                   |  Verify | Exact real purpose                     | No unless practices change |
+| **Search History**                                      | Handle searches if Supabase/Vercel/CDN logs retain the submitted queries beyond servicing the request     |  Verify | App Functionality                      |                         No |
 
 Use **Health**, not merely Fitness, for HealthKit API data. Account-keyed Health data is linked even if opponents see only aggregates. “Tracking: No” is correct only if FitFight does not combine/share data for targeted advertising or measurement and does not use a data broker. Do not add an ATT prompt when there is no tracking. [Apple App Privacy definitions](https://developer.apple.com/app-store/app-privacy-details/)
 

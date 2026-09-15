@@ -4,14 +4,14 @@ One line: challenge friends to a private Steps fight; most steps wins, and the l
 
 ## Names (they’re different)
 
-| What | Value |
-| --- | --- |
-| On-device display name | **FitFight** |
+| What                           | Value                                                        |
+| ------------------------------ | ------------------------------------------------------------ |
+| On-device display name         | **FitFight**                                                 |
 | App Store Connect listing name | **FitFight MVP** (`FitFight` / `Fitfight` was already taken) |
-| SKU | `fitfight` |
-| Bundle ID | `com.fitfight.mvp` |
-| Team | Marc Lamy, Team ID `C92DPD8ME2` |
-| Xcode target / scheme | `FitFight` |
+| SKU                            | `fitfight`                                                   |
+| Bundle ID                      | `com.fitfight.mvp`                                           |
+| Team                           | Marc Lamy, Team ID `C92DPD8ME2`                              |
+| Xcode target / scheme          | `FitFight`                                                   |
 
 Do not rename the bundle ID without Apple + CI updates.
 

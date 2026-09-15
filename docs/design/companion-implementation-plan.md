@@ -39,14 +39,14 @@ Start from `develop` in an appropriate feature checkout, preserving the current 
 
 ### Screen changes
 
-| Surface | Implementation | Existing behavior to retain |
-| --- | --- | --- |
-| App frame | Match the selected spacing, tab treatment, surfaces, and type using native components. | Fights / New / Feed / You, top version line, system safe areas, navigation, and sheets. |
-| Fights | Add the personal companion hero and today's Steps above the invitations and compact fight rows. | Real invite counts, relative score gaps, remaining time, refresh progress, cached data, and finished results. |
-| Fight detail | Add the companion/group illustration area and the selected score/standings layout. | Stats by default; History only when previous rounds exist; Feed access, invitations, join choices, ties, deferred members, pending settlement, final results, sharing, and leaving. |
-| New | Apply the Companion introduction and the approved form styling to the existing flow. | Steps only; 3/7/14/30 days; public/private; optional exact usernames; repeat; title/action; review; Slide to start; code lookup and public join list. |
-| Feed | Apply the selected typography, spacing, and card treatment. | Actual posts, photos/video, Main/fight destinations, tags, emoji reactions, nested comments, deletion, reporting, hiding, and pagination. |
-| You | Add the companion display and stock-animal picker. | Profile identity and photo controls, Apple Health, Bugs & requests, settings, referrals, Versions, Night/Day, account deletion, and sign-out. |
+| Surface      | Implementation                                                                                  | Existing behavior to retain                                                                                                                                                         |
+| ------------ | ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| App frame    | Match the selected spacing, tab treatment, surfaces, and type using native components.          | Fights / New / Feed / You, top version line, system safe areas, navigation, and sheets.                                                                                             |
+| Fights       | Add the personal companion hero and today's Steps above the invitations and compact fight rows. | Real invite counts, relative score gaps, remaining time, refresh progress, cached data, and finished results.                                                                       |
+| Fight detail | Add the companion/group illustration area and the selected score/standings layout.              | Stats by default; History only when previous rounds exist; Feed access, invitations, join choices, ties, deferred members, pending settlement, final results, sharing, and leaving. |
+| New          | Apply the Companion introduction and the approved form styling to the existing flow.            | Steps only; 3/7/14/30 days; public/private; optional exact usernames; repeat; title/action; review; Slide to start; code lookup and public join list.                               |
+| Feed         | Apply the selected typography, spacing, and card treatment.                                     | Actual posts, photos/video, Main/fight destinations, tags, emoji reactions, nested comments, deletion, reporting, hiding, and pagination.                                           |
+| You          | Add the companion display and stock-animal picker.                                              | Profile identity and photo controls, Apple Health, Bugs & requests, settings, referrals, Versions, Night/Day, account deletion, and sign-out.                                       |
 
 The hero's daily total comes from the existing HealthKit store; fight totals continue to use their exact fight window. Missing daily data must read as unavailable/connection-needed, never as an invented total. Copy and expressions must agree with actual standings; do not port the HTML's fixed `#1`, “Synced just now,” or winning text into live data.
 
@@ -87,12 +87,12 @@ Keep companions separate from the existing uploaded profile-photo field. Add exp
 
 Proposed domain records:
 
-| Record | Persisted information |
-| --- | --- |
-| Companion version | Owner, stable companion ID/version, stock/custom source, species, original user description, structured traits, clothing/accessories, short user-visible caption, FitFight art-direction version, and approved reference asset(s). |
-| Active selection | The companion version currently chosen by the owner. A new draft does not replace the current selection until approved. |
-| Generation attempt | Operation kind, owner/fight, exact input versions and references, resolved prompt, provider/model, provider request ID, state, output asset, and recorded usage/cost when supplied. |
-| Fight artwork | Fight ID for one round, one published image, participant-to-companion-version mapping, generation attempt, and generation timestamp. |
+| Record             | Persisted information                                                                                                                                                                                                              |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Companion version  | Owner, stable companion ID/version, stock/custom source, species, original user description, structured traits, clothing/accessories, short user-visible caption, FitFight art-direction version, and approved reference asset(s). |
+| Active selection   | The companion version currently chosen by the owner. A new draft does not replace the current selection until approved.                                                                                                            |
+| Generation attempt | Operation kind, owner/fight, exact input versions and references, resolved prompt, provider/model, provider request ID, state, output asset, and recorded usage/cost when supplied.                                                |
+| Fight artwork      | Fight ID for one round, one published image, participant-to-companion-version mapping, generation attempt, and generation timestamp.                                                                                               |
 
 Companion edits produce a new version. A fight's saved image continues to point to the versions that created it; changing glasses next week must not rewrite an old scene. Store original free text alongside structured fields so interpretation does not erase what the user asked for. Keep free-form descriptions and complete generation prompts owner/server-private; other members receive the display identity and authorized artwork they need.
 

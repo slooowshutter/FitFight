@@ -10,16 +10,20 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export const POST = apiRoute(async (request) => {
-  const { userId } = await verifyUser(request);
-  const parsed = createFeedPostsRequestSchema.safeParse(await readJson(request));
-  if (!parsed.success) {
-    throw parsed.error;
-  }
-  const result = await createFeedPosts(userId, parsed.data);
-  after(async () => { await processNotificationOutbox(new Date(), createDatabaseClient()); });
-  return json(result, 201);
+    const { userId } = await verifyUser(request);
+    const parsed = createFeedPostsRequestSchema.safeParse(
+        await readJson(request),
+    );
+    if (!parsed.success) {
+        throw parsed.error;
+    }
+    const result = await createFeedPosts(userId, parsed.data);
+    after(async () => {
+        await processNotificationOutbox(new Date(), createDatabaseClient());
+    });
+    return json(result, 201);
 });
 
 export function OPTIONS(request: Request) {
-  return corsPreflight(request);
+    return corsPreflight(request);
 }

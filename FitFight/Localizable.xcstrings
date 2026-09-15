@@ -267,6 +267,7 @@
     "Every fight tracks one metric. Steps is the only metric available right now." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Chaque défi suit une mesure. Les pas sont la seule mesure disponible pour le moment."}}}},
     "Feed" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Fil"}}}},
     "Feedback" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Retours"}}}},
+    "You is now the last tab: Fights, New, Feed, Feedback, You." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Vous est maintenant le dernier onglet : Défis, Nouveau, Fil, Retours, Vous."}}}},
     "Feed and Feedback now have separate tabs: Fights, New, You, Feed, Feedback." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Fil et Retours ont maintenant des onglets séparés : Défis, Nouveau, Vous, Fil, Retours."}}}},
     "Posts, bugs, and reports." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Publications, bugs et signalements."}}}},
     "Feedback is the last tab: Fights, New, You, Feedback. Feed is the same fight posts list, with the fight picker when you post." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Retours est le dernier onglet : Défis, Nouveau, Vous, Retours. Le Fil est la même liste de publications des défis, avec le choix des combats quand tu publies."}}}},

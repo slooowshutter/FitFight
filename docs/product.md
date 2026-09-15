@@ -17,8 +17,8 @@ Do not rename the bundle ID without Apple + CI updates.
 
 ## Current 1.0 scope — 9 Sep 2026
 
-- Four tabs: **Fights**, **New**, **Feedback**, **You**.
-- Feedback holds the fight Feed, Bugs & requests, Top ranking, and a Report form. Plus on that tab opens a new post or a new request. You still has a shortcut into Bugs & requests.
+- Four tabs: **Fights**, **New**, **You**, **Feedback**.
+- Feedback holds the same fight Feed (posts from fights you’re in, fight picker when you post), Bugs & requests, Top ranking, and a Report form. Plus on that tab opens a new post or a new request. You still has a shortcut into Bugs & requests.
 - Feed is one list of posts from every fight you’re in. Each post has a badge for the fight, or Public if it went to every fight you chose. Tap + to write a note and pick one or more fights next to photo or video. **All fights** selects every fight and shows as Public. Inside a fight, posting starts on that fight and you can add other channels. There is no Main destination. A tag does not add someone to a fight they are not in. Posts can take any emoji and nested comments.
 - Each fight has posts on a Feed tab next to Stats.
 - New accounts pick an optional photo with their username, then connect Apple Health, then allow challenge reminders, then a last screen that the Feedback tab can take a feature or a bug.

@@ -36,7 +36,7 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 15,
-            notes: "Feedback is now a tab, just before You: fight posts, Bugs & requests, Top ranking, and a Report form. Plus opens a new post or a new request without going through Settings."
+            notes: "Feedback is the last tab: Fights, New, You, Feedback. Feed is the same fight posts list, with the fight picker when you post."
         ),
         ReleaseNote(
             version: "1.0.0",

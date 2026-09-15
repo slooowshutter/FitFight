@@ -240,7 +240,7 @@ private struct FFAlwaysBounceVertical: UIViewRepresentable {
 }
 
 enum FFTab: Hashable {
-    case fights, newFight, feedback, you
+    case fights, newFight, you, feedback
 }
 
 /// Equal square icon frames with six-point insets; the live tab takes the moss wash.
@@ -254,8 +254,8 @@ struct FFTabBar: View {
         HStack(spacing: 0) {
             item(.fights, "trophy", String(localized: "Fights"))
             item(.newFight, "plus.circle", String(localized: "New"))
-            item(.feedback, "bubble.left.and.bubble.right", String(localized: "Feedback"))
             item(.you, "person", String(localized: "You"))
+            item(.feedback, "bubble.left.and.bubble.right", String(localized: "Feedback"))
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 10)

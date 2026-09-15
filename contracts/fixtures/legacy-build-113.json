@@ -1,0 +1,22 @@
+{
+    "source_commit": "d1a3534c9800d845e25ad5b7bae73819cc0312a5",
+    "app_version": "1.0.0",
+    "app_build": 113,
+    "source_files": ["FitFight/AppModel.swift", "FitFight/SessionStore.swift"],
+    "profile_select": "user_id,handle,display_name",
+    "fight_select": "id,owner_id,name,state,starts_at,ends_at,action_text",
+    "member_select": "fight_id,user_id,state,current_value,rank,final_value",
+    "steps_select": "user_id,day,steps",
+    "fight_insert": {
+        "name": "Legacy Steps fight",
+        "state": "live",
+        "time_zone": "UTC",
+        "metric": "steps",
+        "outcome_rule": "highest_total",
+        "goal_policy": "shared",
+        "stake_kind": "action",
+        "action_text": "Loser chooses the next walk"
+    },
+    "accept_update": { "state": "accepted" },
+    "decline_update": { "state": "declined" }
+}

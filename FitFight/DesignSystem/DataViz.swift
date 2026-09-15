@@ -131,8 +131,8 @@ struct FFStreakStrip: View {
 
 /// VS block — the head-to-head. You are always the left side and always moss.
 struct FFVSBlock: View {
-    let you: (monogram: String, name: String, value: String, progress: Double)
-    let them: (monogram: String, name: String, value: String, progress: Double)
+    let you: (monogram: String, name: String, value: String, progress: Double, photoURL: URL?)
+    let them: (monogram: String, name: String, value: String, progress: Double, photoURL: URL?)
     let delta: String
     var ahead: Bool = true
     let footnote: String
@@ -179,11 +179,11 @@ struct FFVSBlock: View {
     }
 
     private func side(
-        _ person: (monogram: String, name: String, value: String, progress: Double),
+        _ person: (monogram: String, name: String, value: String, progress: Double, photoURL: URL?),
         highlighted: Bool
     ) -> some View {
         VStack(spacing: 9) {
-            FFAvatar(monogram: person.monogram, size: 64, selected: highlighted)
+            FFAvatar(monogram: person.monogram, size: 64, selected: highlighted, photoURL: person.photoURL)
             Text(person.name)
                 .ffType(.label)
                 .foregroundStyle(highlighted ? theme.text : theme.textSecondary)
@@ -236,7 +236,7 @@ enum FFMove {
         switch self {
         case .up: return "▲"
         case .down: return "▼"
-        case .same: return "—"
+        case .same: return "-"
         }
     }
 }
@@ -250,8 +250,17 @@ struct FFLeaderboardRow: View {
     let value: String
     var move: FFMove = .same
     var isYou: Bool = false
+    var photoURL: URL? = nil
+    var avatar: AnyView? = nil
+    var caption: String? = nil
+    var captionUrgent: Bool = false
+    var captionAt: ((Date) -> String)? = nil
+    /// Nested rows subtract their inset from the outer card radius.
+    var radius: CGFloat? = nil
 
     @Environment(\.ffTheme) private var theme
+
+    private var corner: CGFloat { radius ?? theme.radius.card }
 
     var body: some View {
         HStack(spacing: 13) {
@@ -259,11 +268,23 @@ struct FFLeaderboardRow: View {
                 .ffType(.button)
                 .foregroundStyle(rank == 1 ? theme.gold : theme.textTertiary)
                 .frame(width: 22)
-            FFAvatar(monogram: monogram, size: 38)
-            Text(name)
-                .ffType(.rowTitle)
-                .foregroundStyle(theme.text)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            if let avatar { avatar } else { FFAvatar(monogram: monogram, size: 38, photoURL: photoURL) }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(name)
+                    .ffType(.rowTitle)
+                    .foregroundStyle(theme.text)
+                    .lineLimit(1)
+                if let captionAt {
+                    // NOTE: Only the freshness line belongs in TimelineView. Wrapping
+                    // scores in a 30s schedule leaves standings stale after a sync.
+                    TimelineView(.periodic(from: .now, by: 30)) { context in
+                        captionText(captionAt(context.date))
+                    }
+                } else {
+                    captionText(caption)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
             Text(move.glyph)
                 .ffType(.micro)
                 .fontWeight(.heavy)
@@ -277,9 +298,19 @@ struct FFLeaderboardRow: View {
         .padding(.vertical, 12)
         .background(
             isYou ? theme.mossWash : theme.card,
-            in: RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous)
+            in: RoundedRectangle(cornerRadius: corner, style: .continuous)
         )
-        .ffBorder(isYou ? theme.mossEdge : theme.hairline, radius: theme.radius.card)
+        .ffBorder(isYou ? theme.mossEdge : theme.hairline, radius: corner)
+    }
+
+    @ViewBuilder
+    private func captionText(_ caption: String?) -> some View {
+        if let caption, !caption.isEmpty {
+            Text(caption)
+                .ffType(.micro)
+                .foregroundStyle(captionUrgent ? theme.emberText : theme.textSecondary)
+                .lineLimit(1)
+        }
     }
 
     private var moveInk: Color {

@@ -7,7 +7,7 @@ Decision horizon: **the next 6–12 months**
 
 This is the source of truth for how the real FitFight product should be built. It covers the iOS app, website, backend, authentication, access, fitness providers, synchronization, scoring, notifications, links, privacy, operations, and repository layout.
 
-**How to use this document:** it is a golden guide, not a build checklist. Follow it so new work fits the same model. Do not implement the whole thing. Current work is the empty platform (`supabase/`) and then the minimum Apple Health **Steps** Fight. Do not build Active Minutes, Workout Count, direct WHOOP/Strava, payments, notifications, social, or the website until [`backlog.md`](backlog.md) says so. The mock New screen may still show three metrics because that is the approved design kit; production scoring is Steps only.
+**How to use this document:** it is a golden guide, not a build checklist. Follow it so new work fits the same model. Do not implement the whole thing. Current work is the empty platform (`supabase/`) and then the minimum Apple Health **Steps** Fight. Do not build Active Minutes, Workout Count, direct WHOOP/Strava, payments, notifications, social, or the website until the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. The mock New screen may still show three metrics because that is the approved design kit; production scoring is Steps only.
 
 This is a reference, not a requirement to build everything at once. Sections 1–9 contain the product and architecture decisions; the later sections explain how those decisions can be implemented safely when their phase arrives.
 
@@ -20,13 +20,13 @@ These are the recommended calls that will still look sensible in a year:
 1. **Use one modular monorepo.** Keep the existing iOS project where it is for now; add `web/`, `supabase/`, and `contracts/` without a disruptive move.
 2. **Use Supabase in US East for data infrastructure.** Use Postgres, Auth, Queues, Cron, and Storage. Production is the main hosted project; staging is a persistent Supabase branch; local development uses the CLI stack. Do not use Supabase Edge Functions.
 3. **Use one Next.js Node.js project for the website and backend.** The visible website is marketing, legal, authentication, invitation fallback, and download pages. Route Handlers provide the iOS API, provider webhooks, and queue workers; there is no web version of the native product.
-4. **Use direct Supabase access without surrendering server authority.** Swift authenticates, reads reviewed `public` tables/views, and performs only explicitly whitelisted self-only profile/preference writes through the Supabase SDK and RLS. It sends sensitive data and domain commands to Next.js; clients never decide scores, ranks, state transitions, or final results.
+4. **Keep application database access behind the backend.** Swift uses Supabase for Auth and the FitFight API for all database reads and writes. The backend owns stable contracts, validation, authorization, and queries; clients never decide scores, ranks, state transitions, or final results.
 5. **Start with Apple Health as the iOS data gateway.** It already aggregates Apple Watch, iPhone, WHOOP, Garmin, Strava, and many other apps when users enable those connections.
 6. **Put provider behavior behind adapters while keeping available provenance visible.** Provider-specific APIs do not enter scoring logic. Every score identifies its selected provider; originating app/device detail is shown only when FitFight deliberately collects and can support that provenance. The aggregate-only Apple Health MVP labels the source as Apple Health and does not infer an underlying device.
-7. **Synchronize the minimum data the shipped product needs after one clear Collection consent.** For the Apple Health Steps MVP, query exact active/ending Fight windows and only the relevant merged daily chart buckets. Do not import unrelated history or collect data for hypothetical future features.
+7. **Synchronize the minimum data the shipped product needs after one clear Collection consent.** For the Apple Health Steps MVP, query exact active/ending Fight windows and cumulative checkpoints at their Fight-day boundaries. Retain relevant merged calendar buckets only for older clients during rollout. Do not import unrelated history or collect data for hypothetical future features.
 8. **Make data sharing part of Fight acceptance.** Accepting a Fight authorizes its relevant stored Metric and selected Data source to produce a derived score visible to the other members; it does not require a second granular health-permission flow.
 9. **Use one scoring Data source per member, per Metric, per Fight.** Do not add Apple Health steps to Garmin steps or a WHOOP workout to its Strava copy. Show the chosen source so everyone understands the comparison.
-10. **For each approved Metric, collect the least representation that supports the shipped behavior.** For v1 Steps, Apple's merged exact Fight-window cumulative total is authoritative; relevant Apple-merged daily buckets are optional chart data only. Do not collect raw HealthKit samples, deletions, per-source statistics, device/source metadata, anchors, or unrelated HealthKit types. Full-fidelity ingestion is deferred until a concrete feature justifies its consent, retention, deletion, reconciliation, and provenance costs.
+10. **For each approved Metric, collect the least representation that supports the shipped behavior.** For v1 Steps, Apple's merged Fight-window cumulative total is authoritative; charts use checkpoints saved with that same score revision. Legacy calendar buckets cannot determine the new Fight charts. Do not collect raw HealthKit samples, deletions, per-source statistics, device/source metadata, anchors, or unrelated HealthKit types. Full-fidelity ingestion is deferred until a concrete feature justifies its consent, retention, deletion, reconciliation, and provenance costs.
 11. **Use durable jobs and idempotent processing.** Webhooks are hints, delivery can repeat or arrive out of order, and provider data can be edited or deleted.
 12. **Compose each Fight from Measure, Score, and Result while shipping Steps first.** Add a Measure or Score operation once instead of creating a new type for every combination. The server exposes only reviewed combinations, not arbitrary formulas. Numeric Metrics still share canonical Observation storage; Activities later share a separate generic activity model. See [`fight-rules.md`](fight-rules.md).
 13. **Keep stakes informational in v1.** FitFight records the agreed outcome but does not hold funds, operate a wallet, or automatically pay winners until legal, payments, and App Store review are complete.
@@ -67,17 +67,17 @@ flowchart LR
 
 ### Sources of truth
 
-| Concern | Authority |
-| --- | --- |
-| User identity and sessions | Supabase Auth |
-| Profiles, friendships, Fights, membership, rules | Postgres |
-| Provider authorization | The provider plus FitFight's encrypted connection record |
-| Raw activity | The originating provider or device store; FitFight does not copy HealthKit raw activity in v1 |
-| Canonical aggregates | Postgres after adapter validation |
-| Live scores and ranks | Server scoring engine |
-| Final result | Versioned server outcome transaction |
-| UI state | Server read model; local state is only a cache or draft |
-| Notification delivery | Server outbox plus APNs delivery state |
+| Concern                                          | Authority                                                                                     |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| User identity and sessions                       | Supabase Auth                                                                                 |
+| Profiles, friendships, Fights, membership, rules | Postgres                                                                                      |
+| Provider authorization                           | The provider plus FitFight's encrypted connection record                                      |
+| Raw activity                                     | The originating provider or device store; FitFight does not copy HealthKit raw activity in v1 |
+| Canonical aggregates                             | Postgres after adapter validation                                                             |
+| Live scores and ranks                            | Server scoring engine                                                                         |
+| Final result                                     | Versioned server outcome transaction                                                          |
+| UI state                                         | Server read model; local state is only a cache or draft                                       |
+| Notification delivery                            | Server outbox plus APNs delivery state                                                        |
 
 ## 3. Deployment and repository shape
 
@@ -89,18 +89,18 @@ Use the existing public repository as a modular monorepo:
 FitFight/                       existing native SwiftUI app
 FitFight.xcodeproj/             existing Xcode project
 web/                            Next.js App Router website
-  app/api/                      iOS API, callbacks, webhooks, workers
-  lib/                          shared domain, validation, and scoring modules
-    supabase/                   Supabase clients and Postgres connection
-      queries/                  all Supabase data-access queries, split by domain
+    app/api/                      iOS API, callbacks, webhooks, workers
+    lib/                          shared domain, validation, and scoring modules
+        supabase/                   Supabase clients and Postgres connection
+            queries/                  all Supabase data-access queries, split by domain
 supabase/
-  migrations/                   reviewed schema and RLS migrations
-  tests/                        pgTAP RLS and database tests
+    migrations/                   reviewed schema and RLS migrations
+    tests/                        pgTAP RLS and database tests
 contracts/
-  openapi.yaml                  versioned client/server contract
-  schemas/                      shared JSON schemas and event envelopes
+    openapi.yaml                  versioned client/server contract
+    schemas/                      shared JSON schemas and event envelopes
 docs/
-  system-design.md              this document
+    system-design.md              this document
 ```
 
 Do not move the iOS files merely to create an aesthetically perfect `apps/ios` folder; that would create Xcode and CI churn without product value. A later move is harmless once the backend and web layouts have stabilized.
@@ -109,12 +109,12 @@ One repository is the right call because a Fight schema, invitation route, scori
 
 ### Deployables
 
-| Deployable | Platform | Trigger |
-| --- | --- | --- |
-| iOS app | GitHub Actions `macos-26` → TestFlight | Existing app push flow |
-| Next.js website and backend | Vercel, Node.js runtime | Changes under `web/` |
-| Database | Supabase migrations | Explicit CI deployment by environment |
-| Scheduled jobs | Supabase Cron | Migration-managed schedules |
+| Deployable                  | Platform                               | Trigger                               |
+| --------------------------- | -------------------------------------- | ------------------------------------- |
+| iOS app                     | GitHub Actions `macos-26` → TestFlight | Existing app push flow                |
+| Next.js website and backend | Vercel, Node.js runtime                | Changes under `web/`                  |
+| Database                    | Supabase migrations                    | Explicit CI deployment by environment |
+| Scheduled jobs              | Supabase Cron                          | Migration-managed schedules           |
 
 The repo remains public. Publishable Supabase keys and project URLs may be client configuration, but provider secrets, the Supabase secret/service key, APNs `.p8`, OAuth client secrets, database credentials, and encryption keys must stay in GitHub/Vercel/Supabase secret stores.
 
@@ -137,7 +137,7 @@ Publishing the schema and RLS policies is acceptable: security must come from au
 Use one local stack, one persistent staging branch, and one production project:
 
 - **Local**: `supabase start` runs Postgres, Auth, and Storage locally. It is not a hosted Supabase environment and costs nothing.
-- **Staging**: GitHub branch `develop`. A long-lived persistent branch of the production Supabase project, also named `develop`, with fake/test Users, stable branch credentials, staging OAuth callbacks, and staging secrets.
+- **Staging**: GitHub branch `develop` for the hosted database and site. TestFlight binaries are cut from GitHub `preview`. A long-lived persistent branch of the production Supabase project, also named `develop`, with fake/test Users, stable branch credentials, staging OAuth callbacks, and staging secrets.
 - **Production**: GitHub branch `main`. The main Supabase project in **US East (North Virginia)** with real Users, production OAuth callbacks, and production secrets.
 
 The persistent branch is still a fully isolated Supabase instance: it has its own project URL, publishable key, secret key, database, Auth users, Storage, secrets, and provider callback URLs. Production data is never copied into it. The branch remains attached to the production project for management, GitHub integration, and schema promotion.
@@ -189,11 +189,11 @@ Recommended states:
 - `final`: scores and outcomes are immutable except through an audited dispute correction.
 - `cancelled`: terminal, with a reason and actor.
 
-A Fight member has a separate state: `invited`, `accepted`, `declined`, `withdrawn`, or `disqualified`. Do not overload the Fight state with membership state.
+A Fight member has a separate state: `invited`, `accepted`, `deferred`, `declined`, `withdrawn`, or `disqualified`. Do not overload the Fight state with membership state.
 
 All members of one Fight use the same `starts_at` and `ends_at`, including a member who accepts late. Different clocks would make standings, daily goals, notifications, and outcomes unnecessarily ambiguous. Personal targets provide accessibility for different fitness levels; different windows do not.
 
-The creator may start immediately without waiting for invitees or schedule a future start. The creator is the initial accepted member. Pre-start invitations remain pending through `scheduled` and `live`, expire at `ends_at`, and do not reveal standings before acceptance. A late member accepts the original rules, selects a source and target once, and is scored over the entire Fight window from accessible historical and new data. Everyone is notified when the lineup changes.
+The creator may start immediately without waiting for invitees or schedule a future start. The creator is the initial accepted member. Pre-start invitations remain pending through `scheduled` and `live`, expire at `ends_at`, and do not reveal standings before acceptance. A late member who joins the current round accepts the original rules, selects a source and target once, and is scored over the entire Fight window from accessible historical and new data. On a **recurring** Fight, late means a later calendar day than the start day in the Fight time zone. That person may join this round or join as `deferred`: they are visible on this Fight, they are not scored until the next window, and the next window copies them in as `accepted`. Joining later on the start day is not late. Everyone is notified when the lineup changes. Non-recurring Fights have no next window, so late joiners only have the current round.
 
 Starting before every invitee answers means every accepted member agrees that the disclosed pending invitees may still join before `ends_at`. When one does, the server atomically adds them and recomputes every lineup-dependent projection for all members, including ranks, Proportional shares, and the informational pot or obligations. The immutable per-person Stake and Result rule do not change; only the result of applying them to the newly accepted lineup does. No undisclosed person can be invited after the Fight starts.
 
@@ -201,7 +201,7 @@ Starting before every invitee answers means every accepted member agrees that th
 
 Fight-level terms become immutable when the first invite is accepted or the Fight becomes `scheduled`/`live`, whichever happens first:
 
-- Measure, Score rule, Result rule, their versions, and all of their values
+- Every Measure, Score rule, required Objective and its combination, Result rule, their versions, and all of their values
 - Fight start and end instants
 - Fight time zone
 - Stake and currency/action text
@@ -252,14 +252,14 @@ Fight owner is a relationship to one Fight, not a platform role. The creator can
 
 ### Minimal permission matrix
 
-| Resource or action | Self/owner | Accepted Fight member | Unrelated User | Backend service |
-| --- | ---: | ---: | ---: | ---: |
-| Own profile, preferences, connections, history | Manage | Public profile subset only | Public profile subset only | Process when required |
-| Raw provider payloads and observations | Export where terms allow | No | No | Process only |
-| Fight rules, lineup, targets, score, source labels | Read | Same Fight only | No | Compute and transition |
-| Create or cancel a pre-start Fight | If creator | No | No | Enforce transition |
-| Accept/decline and set own target/source | Self | No | No | Validate and persist |
-| Finalize a Fight | No | No | No | Yes |
+| Resource or action                                 |               Self/owner |      Accepted Fight member |             Unrelated User |        Backend service |
+| -------------------------------------------------- | -----------------------: | -------------------------: | -------------------------: | ---------------------: |
+| Own profile, preferences, connections, history     |                   Manage | Public profile subset only | Public profile subset only |  Process when required |
+| Raw provider payloads and observations             | Export where terms allow |                         No |                         No |           Process only |
+| Fight rules, lineup, targets, score, source labels |                     Read |            Same Fight only |                         No | Compute and transition |
+| Create or cancel a pre-start Fight                 |               If creator |                         No |                         No |     Enforce transition |
+| Accept/decline and set own target/source           |                     Self |                         No |                         No |   Validate and persist |
+| Finalize a Fight                                   |                       No |                         No |                         No |                    Yes |
 
 Do not create blocking, support, or moderator models in v1. Blocking/reporting arrives only with social posting or messaging; staff tooling gets narrowly scoped backend access and audit logs rather than a generic “admin can read everything” permission.
 
@@ -306,13 +306,13 @@ Do not allow anonymous users into real Fights. A local demo may use fixtures, bu
 
 “Permission” still has separate layers, but the User should experience only one connection flow and one Fight acceptance flow:
 
-| Layer | Example | Controlled by |
-| --- | --- | --- |
-| OS permission | Read steps from Apple Health | iOS Settings / Health app |
-| Provider scope | WHOOP `read:workout` | Provider OAuth consent |
-| Collection consent | Import supported history and keep synchronizing | FitFight connection flow |
-| Fight acceptance | Use the selected source for this Fight and share the derived score/source | FitFight acceptance flow |
-| Visibility | Show only totals to the other three members | FitFight authorization and RLS |
+| Layer              | Example                                                                   | Controlled by                  |
+| ------------------ | ------------------------------------------------------------------------- | ------------------------------ |
+| OS permission      | Read steps from Apple Health                                              | iOS Settings / Health app      |
+| Provider scope     | WHOOP `read:workout`                                                      | Provider OAuth consent         |
+| Collection consent | Import supported history and keep synchronizing                           | FitFight connection flow       |
+| Fight acceptance   | Use the selected source for this Fight and share the derived score/source | FitFight acceptance flow       |
+| Visibility         | Show only totals to the other three members                               | FitFight authorization and RLS |
 
 ### Connect once, synchronize approved aggregates
 
@@ -386,17 +386,17 @@ attribution()
 
 ### Recommended order
 
-| Source | What it can contribute | Server sync without FitFight open? | Initial decision |
-| --- | --- | ---: | --- |
-| Apple Health / HealthKit | Merged Steps aggregate first; later approved workout metrics may add justified provenance | Sometimes via background delivery; final certainty still requires device execution | **Build first** |
-| iPhone / Apple Watch | Native HealthKit activity | Same HealthKit constraint | **Supported through HealthKit** |
-| WHOOP app/band → Apple Health | Workouts, active energy, heart rate, sleep, optional steps | Depends on WHOOP/iOS sync reaching HealthKit | **Supported through HealthKit first** |
-| Garmin app/watch → Apple Health | Steps and workouts among other types | Garmin states its app must be foregrounded to send to Apple Health | **Supported with freshness warning** |
-| Strava app → Apple Health | Recorded activity type, time, distance, calories | Depends on Strava's sync to HealthKit | **Use HealthKit copy where valid** |
-| Direct WHOOP API | Workouts, cycles/strain, recovery, sleep; current API does not provide a general step feed | Yes, via refresh tokens, webhooks, and reconciliation | **Second-wave candidate after approval** |
-| Direct Strava API | Recorded activities, not general daily step totals | Yes, via refresh tokens and webhooks | **Blocked pending written social-display approval** |
-| Health Connect | Android steps, exercise, intensity and other approved records | Background read can be requested where supported | **Adapter seam now; build with Android** |
-| Direct Bluetooth hardware | Device-specific | Only while supported device/app execution allows | **Do not build in v1** |
+| Source                          | What it can contribute                                                                     |                                                 Server sync without FitFight open? | Initial decision                                    |
+| ------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------: | --------------------------------------------------- |
+| Apple Health / HealthKit        | Merged Steps aggregate first; later approved workout metrics may add justified provenance  | Sometimes via background delivery; final certainty still requires device execution | **Build first**                                     |
+| iPhone / Apple Watch            | Native HealthKit activity                                                                  |                                                          Same HealthKit constraint | **Supported through HealthKit**                     |
+| WHOOP app/band → Apple Health   | Workouts, active energy, heart rate, sleep, optional steps                                 |                                       Depends on WHOOP/iOS sync reaching HealthKit | **Supported through HealthKit first**               |
+| Garmin app/watch → Apple Health | Steps and workouts among other types                                                       |                 Garmin states its app must be foregrounded to send to Apple Health | **Supported with freshness warning**                |
+| Strava app → Apple Health       | Recorded activity type, time, distance, calories                                           |                                              Depends on Strava's sync to HealthKit | **Use HealthKit copy where valid**                  |
+| Direct WHOOP API                | Workouts, cycles/strain, recovery, sleep; current API does not provide a general step feed |                              Yes, via refresh tokens, webhooks, and reconciliation | **Second-wave candidate after approval**            |
+| Direct Strava API               | Recorded activities, not general daily step totals                                         |                                               Yes, via refresh tokens and webhooks | **Blocked pending written social-display approval** |
+| Health Connect                  | Android steps, exercise, intensity and other approved records                              |                                   Background read can be requested where supported | **Adapter seam now; build with Android**            |
+| Direct Bluetooth hardware       | Device-specific                                                                            |                                   Only while supported device/app execution allows | **Do not build in v1**                              |
 
 Apple Health is a hub, not a guarantee that every manufacturer's cloud is current. WHOOP can export workouts and optional steps to Apple Health, while Garmin documents that Garmin Connect must be open in the foreground to transfer data to Apple Health ([WHOOP Apple Health](https://support.whoop.com/s/article/Apple-Health-Integration?language=en_US), [Garmin Apple Health](https://support.garmin.com/en-AU/?faq=lK5FPB9iPF5PXFkIpFlFPA)). FitFight must show freshness rather than claim “automatic” without qualification.
 
@@ -442,7 +442,9 @@ A Fight rule has three independent, readable parts:
 
 - **Measure**: Steps, distance, active minutes, workouts, or another supported activity value
 - **Score**: total, average per day, days reaching a value, or another reviewed calculation
-- **Result**: highest wins, reach a value, or proportional sharing
+- **Result**: highest wins, last loses, reach a value, ranking zones, or proportional sharing
+
+For the multiple-objective design, a Fight may use several named Measures and Scores under one Result. Each **Objective** is a condition on a Score, and a goal succeeds only when **all required Objectives pass** for the stated member or group. Extra progress on one never compensates for another. This extends the composition model; the live product remains Steps-only.
 
 This avoids a separate `daily_steps`, `daily_distance`, `average_daily_steps`, and `average_daily_distance` implementation. It also avoids an arbitrary formula language: the server owns a compatibility list of approved Measure and Score combinations.
 
@@ -476,9 +478,9 @@ Future running, swimming, volleyball, and similar records are **Activities**, no
 
 ### Invariants
 
-- A Fight has exactly one Metric definition version.
-- A Fight has exactly one Measure, Score rule, and Result rule with immutable validated values and versions.
-- A Fight member has at most one active Data source for that Metric.
+- Each Measure references exactly one Metric definition version. Current production Fights have one Steps Measure.
+- A Fight has one Result rule over immutable validated Measures, Score rules, and, for a goal, required Objectives. Current production uses one Measure and one Score; the multiple-objective design combines its Objectives with `all`.
+- A Fight member has at most one active Data source per Measure. Objectives sharing that Measure share its selected source and qualified evidence.
 - Every Observation has event time, received time, source, external identity, revision, and provenance.
 - The same provider record revision is idempotent.
 - A provider deletion retracts the corresponding Observation and triggers recomputation.
@@ -495,9 +497,9 @@ Future running, swimming, volleyball, and similar records are **Activities**, no
 
 The diagram below is logical. It does not mean FitFight needs a fleet of microservices:
 
-- **SwiftUI is the native client.** It uses Supabase Swift directly for Auth, reviewed RLS-protected reads, and explicitly whitelisted self-only profile/preference writes. It renders screens, asks HealthKit for Apple's merged exact-window and relevant daily Steps statistics, and sends one small authenticated JSON request to Next.js. It does not create raw archives, use TUS, hold provider secrets, consume queues, normalize cloud-provider payloads, or finalize Fights.
-- **Next.js is the only TypeScript backend and the website.** Node.js Route Handlers expose the iOS command/private-data API, receive OAuth callbacks and webhooks, and run bounded worker batches. Marketing/legal/auth pages live in the same project; native product screens do not.
-- **Supabase Postgres is the database**, with exposed `public` read models and unexposed `private` health/integration data.
+- **SwiftUI is the native client.** It uses Supabase Swift directly for Auth and the versioned FitFight backend for every application database read and write. It renders screens, asks HealthKit for Apple's merged exact-window and relevant daily Steps statistics, and sends one small authenticated JSON request to Next.js. It does not create raw archives, use TUS, hold provider secrets, consume queues, normalize cloud-provider payloads, or finalize Fights.
+- **Next.js is the only TypeScript backend and the website.** Node.js Route Handlers expose the iOS application API, receive OAuth callbacks and webhooks, and run bounded worker batches. Marketing/legal/auth pages live in the same project; native product screens do not.
+- **Supabase Postgres is the database**, with backend-accessible `public` product models and unexposed `private` health/integration data.
 - **Normalizer and Scoring engine are ordinary backend TypeScript modules**, imported by Next.js workers. Their names describe responsibilities, not machines.
 - **Supabase Queues is internal backend plumbing.** Swift never needs its JavaScript SDK. A protected Next.js worker Route Handler pulls jobs using server credentials.
 - **Supabase Edge Functions are not part of the architecture.**
@@ -548,7 +550,7 @@ Future direct-provider adapters produce canonical Observations with units and in
 
 ### Layer 4: aggregation
 
-Apple computes the v1 Steps aggregate. The exact `starts_at...cutoff_at` cumulative statistic becomes the per-member Fight snapshot and is authoritative for scoring. Relevant Apple-merged daily buckets serve charts only and cannot overwrite that score. Live values remain provisional because Apple may incorporate a late device sync, edit, or deletion; finished Fights freeze the exact-window snapshot at `ends_at`. Future interval Metrics must still split at Fight boundaries before aggregation.
+Apple computes the v1 Steps aggregate. The exact `starts_at...cutoff_at` cumulative statistic becomes the per-member Fight snapshot and is authoritative for scoring. The final cumulative checkpoint and score reuse the same query. Earlier checkpoints use the same Fight start and successive Fight-day cutoffs. Their differences supply daily charts. Legacy Apple-merged calendar buckets cannot overwrite the score or supply a new chart. Live values remain provisional because Apple may incorporate a late device sync, edit, or deletion; finished Fights freeze the exact-window snapshot at `ends_at`. Future interval Metrics must still split at Fight boundaries before aggregation.
 
 ### Layer 5: scoring
 
@@ -567,14 +569,14 @@ Reviewed `public` views shape direct Swift reads for the Fights list and Fight d
 
 ```json
 {
-  "value": 41600,
-  "unit": "steps",
-  "rank": 2,
-  "sourceLabel": "Apple Health",
-  "lastSyncedAt": "2026-08-24T15:42:00Z",
-  "completeThrough": "2026-08-24T15:40:00Z",
-  "freshness": "recent",
-  "revision": 18
+    "value": 41600,
+    "unit": "steps",
+    "rank": 2,
+    "sourceLabel": "Apple Health",
+    "lastSyncedAt": "2026-08-24T15:42:00Z",
+    "completeThrough": "2026-08-24T15:40:00Z",
+    "freshness": "recent",
+    "revision": 18
 }
 ```
 
@@ -584,7 +586,7 @@ The UI can truthfully say “updated 8 min ago,” “waiting for Maya to sync,�
 
 Start with **two application schemas and seven core product tables**, plus the aggregate serving/snapshot tables used by the first Metric:
 
-- `public`: product rows the iOS Supabase client may reach through explicit grants and RLS. “Public” means Data-API-exposed, not readable by everyone.
+- `public`: product rows reached by the backend through its database connection or server Data API. “Public” names a schema; it does not authorize direct iOS access. Existing client grants remain only until the separate permission-cutoff rollout.
 - `private`: canonical fitness history, provider credentials, raw caches, webhook envelopes, and operational details. It is not exposed through the Data API; only Next.js server code can reach it.
 - Supabase continues to own its managed `auth`, `storage`, and `pgmq`/queue schemas.
 
@@ -600,13 +602,13 @@ The separate `private` schema is defense in depth. Even if a future `public` gra
 6. `public.data_sources(id, user_id, provider, source_label, contributing_source_labels, connection_route, capabilities, status, consent_version, connected_at, revoked_at, last_success_at, complete_through, last_error_code)`
 7. `private.metric_observations(id, user_id, source_id, external_record_id, metric, starts_at, ends_at, value, unit, revision, provenance, retracted_at, created_at)`
 
-The aggregate-only Apple Health path writes `public.data_sources`, relevant chart rows in `public.metric_days` / the read-compatible `public.step_days` mirror, exact-window revisions in `private.fight_score_snapshots`, and the latest current/final score in `public.fight_members`. It does not write `private.metric_observations`, raw/provider events, or source-day rows. Exact Fight snapshots retain the calculation version and input revision needed to freeze results; daily rows are presentation data only.
+The aggregate-only Apple Health path writes `public.data_sources`, relevant chart rows in `public.metric_days` / the read-compatible `public.step_days` mirror, exact-window revisions in `private.fight_score_snapshots`, and the latest current/final score in `public.fight_members`. It does not write `private.metric_observations`, raw/provider events, or source-day rows. Exact Fight snapshots retain cumulative `step_checkpoints`, the calculation version, and the input revision needed to freeze results and chart history together. Legacy daily rows are retained for older clients only.
 
 Earlier additive migrations created `private.provider_uploads`, `private.provider_events`, the private `provider-inbox` Storage bucket, and the NDJSON archive contract. Those objects remain **legacy schema/storage** during rollout so migration history and older TestFlight compatibility are not rewritten. The active aggregate-only path creates no upload row or object, uses no TUS or archive checkpoint, and adds no raw rows. Remove the legacy surface in a separate compatible migration only when it is safe.
 
-This deliberately keeps Fight rules on `fights` and current/final score fields on `fight_members` until measured complexity requires history tables or projections. A direct public view may return only the member-safe subset and use `security_invoker = true`.
+This deliberately keeps Fight rules on `fights` and current/final score fields on `fight_members` until measured complexity requires history tables or projections. Backend responses select only the member-safe subset; a future database view must preserve the same row visibility.
 
-Direct clients never receive `fight_invites.token_hash`; expose invitation summaries through a column-restricted view/grant. The raw token appears only in the incoming Universal Link and Next.js acceptance command.
+API clients never receive `fight_invites.token_hash`; expose only the explicit invitation-summary contract. The raw token appears only in the incoming Universal Link and Next.js acceptance command.
 
 `metric_observations` remains a generic seam for a future Metric or full-fidelity provider path that actually needs canonical records; the aggregate-only Apple Health MVP does not write it. When session-based workout features arrive, add one generic `private.activities` table rather than a table for every sport.
 
@@ -621,16 +623,17 @@ Provider identity stays attached through `data_sources` and Fight score projecti
 
 Use integer minor units for money (`1000` = $10.00), never floating point. FitFight does not maintain a wallet balance. Index membership lookup, active Fight windows, source ownership, Metric time ranges, and provider external identities. Do not add partitioning until measured growth requires it.
 
-## 12. Direct reads and Next.js command handling
+## 12. Backend API and database access
 
-Swift has two explicit network paths. Reviewed reads and a very small set of self-only profile/preference writes use the Supabase Swift SDK against stable `public` tables/views protected by grants and RLS. Sensitive data and authoritative commands use versioned Next.js Route Handlers under `/api/v1`. Do not proxy safe, row-local Supabase access through Next.js merely to repeat the same query.
+Swift uses Supabase directly for Auth and sessions. Every application database read and write goes through versioned Next.js Route Handlers under `/api/v1`. The backend owns validation, authorization, queries, and stable response fields. Database schema changes must preserve the supported API, rather than require Swift to track table columns.
 
 ### Reads and writes
 
-- **Direct reads** cover profiles, friendships, invitations, Fight lists/details, shared scores, source labels, and freshness. The app sends its publishable key and User JWT; it never receives a secret key.
-- **Direct self-service writes** are limited to reviewed fields and operations such as the signed-in User's own display name. Apple Health Steps go through `POST /api/v1/healthkit/steps`. The authenticated TypeScript backend derives ownership from the JWT, validates exact server-issued Fight windows and chart days, and commits the merged aggregates and score projections together. Fight lifecycle and membership remain temporarily client-writable as documented in current status; final results are not.
+- **Reads** use authenticated API endpoints. `GET /api/v1/me` returns the signed-in profile; Fights refresh returns its explicit snapshot contract. The app sends a User JWT and never receives server credentials.
+- **Profile writes** use `PATCH /api/v1/me` for handle and display name. Ownership and handle timestamps come from the server; omitted fields remain unchanged. Apple Health Steps use `POST /api/v1/healthkit/steps`; TypeScript validates server-issued Fight windows and chart days and commits aggregates and score projections together. Direct client grants are removed separately after the compatible native build is installable and required.
 - **Commands** go through authenticated Next.js Route Handlers: create/start/cancel a Fight, create an invite, accept with a source and target, request synchronization, disconnect a provider, and register a device.
 - **Private reads and writes** go through Next.js; Swift never queries or writes `private`. Next.js reaches Postgres through the server-only transaction pooler, while the private schema remains absent from the Data API.
+- **Fights refresh** combines due maintenance and the Fights/members/profiles/series/chart snapshot in one authenticated `POST /api/v1/fights/refresh`. Its read-only snapshot transaction assumes `fitfight_backend_reader` with transaction-local claims for the verified User. This no-login role has explicit reads, no RLS bypass, and no client-role membership; existing SELECT predicates preserve privacy. Role and claims reset on commit and rollback. The server admin Data API remains available for owner-filtered profile operations and reviewed commands.
 - **Provider callbacks/webhooks** use separate unauthenticated endpoints that verify provider state/signatures before any privileged action.
 - **Workers** authenticate service-to-service and never accept a User ID from the body as proof of authority.
 
@@ -649,6 +652,8 @@ GET    /api/v1/me/activity
 POST   /api/v1/sources/{sourceID}/sync
 GET    /api/v1/provider-uploads/context
 POST   /api/v1/healthkit/steps
+GET    /api/v1/me
+PATCH  /api/v1/me
 DELETE /api/v1/me
 POST   /api/v1/provider-connections/{provider}/authorize
 DELETE /api/v1/provider-connections/{provider}
@@ -671,7 +676,13 @@ Invite acceptance contains the member's selected Steps source and Personal targe
 
 ### Contract versioning
 
-Maintain OpenAPI for Next.js routes and generated Supabase database types for reviewed direct-read views. Swift models may initially be hand-written but must pass fixture-based contract tests against both contracts. Additive fields are safe; breaking command semantics require `/api/v2` or an explicit minimum-client version, while a public-view change uses expand/migrate/contract so older TestFlight builds keep working.
+Maintain OpenAPI and Zod schemas for the Next.js API. Swift models may be hand-written but must pass shared fixture-based contract tests for profile and Fight snapshot responses. Generated Supabase types, when used by server queries, describe a backend implementation detail rather than an iOS contract. Additional response fields are compatible only when existing decoders ignore them; old requests must remain valid. Renaming fields, changing types or meaning, adding required inputs, and returning unknown enum values can break installed apps.
+
+**Release policy (7 Sep 2026): the minimum supported app is always the latest installable release for its channel.** Match both marketing version and build; TestFlight builds continue to use `1.0.0`. There is no dismiss option or separately chosen minimum. The app checks at launch, on foregrounding, and every minute while active. Known update requirements survive relaunch and failed checks. An outdated launch hides the app and shows only the update overlay. An unverified or offline check does not.
+
+The public `GET /api/app-release` returns the deployment's release policy. Authenticated API commands require `X-FitFight-Version` and `X-FitFight-Build`, and return `426 update_required` for a mismatch once a build containing the gate is installable. Initial deployment preserves older binaries until then. The registered TestFlight beta-review build and the selected, registered production candidate are also admitted on their respective channels so Apple can review them before release; it does not become the public minimum. See [shipping.md](shipping.md#mandatory-updates-and-database-rollout) for availability tracking and deployment order.
+
+**Database compatibility and Apple availability are separate.** Internal columns may be added, renamed, constrained, or removed when supported app API contracts and running backend versions remain compatible. Use staged backend/database changes where needed; do not tie every internal cleanup to an iOS release. Removing required API behavior or information waits until affected apps are retired, including admitted review candidates. The initial move away from direct profile queries keeps old grants until the backend-only app is installable and required, then revokes them in a separate rollout after old backend instances drain. All migrations still follow staging/production and destructive-SQL authorization rules. Version headers are a compatibility signal, not an authorization boundary.
 
 ## 13. Jobs, retries, and scheduling
 
@@ -707,9 +718,9 @@ It depends on the source:
 
 1. After the User enables Steps collection, register observer queries for that authorized type and enable background delivery.
 2. When notified, fetch the server's current time and exact live/awaiting-final-sync Fight windows. For each Fight, query Apple's cumulative-sum statistic over exactly `starts_at...cutoff_at`, where `cutoff_at` is never later than `ends_at`.
-3. Query Apple-merged daily buckets only for the local days intersecting those active Fight windows when the chart needs them. Never derive the Fight total by summing these buckets.
+3. Query cumulative checkpoints from the same Fight start through each day boundary in the Fight time zone, then the current cutoff. Reuse the last query for the score. Re-read provisional checkpoints on later syncs so corrections reach both charts and totals. Retain relevant merged calendar buckets for installed older clients; never use them to construct the new Fight charts.
 4. Send one strict authenticated JSON request containing `complete_through`, `time_zone`, `merged_days`, and `fight_aggregates` to `POST /api/v1/healthkit/steps`. Do not create an anchor, NDJSON file, Storage object, upload ID, or TUS session.
-5. Next.js validates ownership, accepted membership, server-issued windows/cutoffs, chart-day scope, and values; it writes relevant daily rows, exact Fight snapshots, standings, and freshness in one transaction.
+5. Next.js validates ownership, accepted membership, server-issued windows/cutoffs, checkpoint coverage, and an identical final checkpoint/score; it writes the exact Fight snapshot with its optional history, standings, freshness, and legacy daily rows in one transaction. Missing history stays unavailable rather than being fabricated from calendar totals.
 6. Complete the observer delivery after the synchronization attempt. A failure remains visible and can be retried; there is no raw local archive to resume.
 7. On foreground activation and manual refresh, repeat the aggregate sync.
 
@@ -757,9 +768,21 @@ The scoring engine is pure and versioned:
     -> projections or final results
 ```
 
+### Multiple-objective goals: engine design
+
+Use the existing draft's named Scores, comparison conditions, and `all` condition, with one goal Result. Evaluate the complete condition graph for each member or the explicitly declared group scope. Reuse shared Score calculations and keep each Objective's value, Target, unit, condition state, completeness, and evidence revision alongside the combined outcome.
+
+All required Objectives must pass. Do not average completion percentages, allow surplus on one Objective to offset another, or combine different members' achievements unless the accepted rule explicitly uses group Scores. Objectives can use different approved Measures within the common Fight window; requiring the same day or workout is a separate shared-bucket rule.
+
+Unknown evidence stays unknown. Condition evaluation and coverage are separate: an unmet Objective can make the combined condition false while another Objective still lacks data. Live progress stays provisional; finalization first applies the locked cutoff and incomplete-data policies, then records the final per-Objective and combined outcomes. The UI renders these server explanations as a checklist, including outstanding and unsynchronized Objectives.
+
+See [multiple-objective rules and evaluation cases](fight-rules.md#multiple-objectives-all-are-required). The draft schema already represents independent Objectives; the runtime scoring engine, API, persistence, and native creation flow do not implement them. Shipping requires reviewed presets and Metric evidence, a compatible API/database rollout, and engine regression tests. Preserve existing Most Steps contracts and results during that rollout.
+
 ### Result rules
 
-- **Highest**: the highest Score receives the winning outcome; define a tie rule before launch (recommended: split evenly, with integer remainder handled deterministically). The current Steps-only API value `highest_total` is the v1 name for this rule.
+- **Highest**: the highest Score receives the winning outcome; an optional `count` marks a podium of the top N. Define a tie rule before launch (recommended: split evenly, with integer remainder handled deterministically). The current Steps-only API value `highest_total` is the v1 name for this rule.
+- **Last loses**: the lowest-ranked member (or last N) is on the hook. Higher Scores still rank higher; this only assigns the losing outcome. Use it for a group Fight where only last place pays, such as a Station F _tournée_.
+- **Ranking zones**: named rank bands with `win`, `lose`, or `safe` outcomes, the way a European league table colors qualification and relegation rows. Standings chrome follows these zones.
 - **Proportional**: divide the pot by each member's share of the Score when that Measure and Score combination permits proportional comparison; specify zero-score behavior and integer rounding.
 - **Reach**: succeed by reaching the stated Score. Depending on the Score rule, that can mean total Steps, average Steps per day, five successful days, or every Fight day. Do not compare or rank percentage-of-target unless a future rule explicitly defines and constrains that behavior.
 
@@ -888,16 +911,16 @@ Therefore:
 
 Canonical product history does **not** expire on a timer. A `purge_at` column exists only on temporary transport/cache data that is not the User's product history.
 
-| Class | Default | Notes |
-| --- | --- | --- |
-| OAuth/provider token | Until disconnect/revoke | Delete immediately on disconnect |
-| Webhook envelope | 30 days | Payload hash/IDs may outlive body for dedupe if terms allow |
-| Raw provider cache | Provider-specific, shortest allowed | Strava currently no more than 7 days; WHOOP cache headers/terms apply |
-| Canonical observation | Account lifetime by default | No automatic age-based deletion; keep only supported fields and retract provider edits/deletes |
-| Personal aggregate | Account lifetime by default | Private; used for trends and Goal recommendations |
-| Fight aggregate/result | Account/Fight history by default | No automatic age-based deletion |
-| Audit/security event | 12 months recommended | Must exclude health values and tokens |
-| APNs device token | Until invalid/logout/device removal | Encrypt and revoke on APNs error |
+| Class                  | Default                             | Notes                                                                                          |
+| ---------------------- | ----------------------------------- | ---------------------------------------------------------------------------------------------- |
+| OAuth/provider token   | Until disconnect/revoke             | Delete immediately on disconnect                                                               |
+| Webhook envelope       | 30 days                             | Payload hash/IDs may outlive body for dedupe if terms allow                                    |
+| Raw provider cache     | Provider-specific, shortest allowed | Strava currently no more than 7 days; WHOOP cache headers/terms apply                          |
+| Canonical observation  | Account lifetime by default         | No automatic age-based deletion; keep only supported fields and retract provider edits/deletes |
+| Personal aggregate     | Account lifetime by default         | Private; used for trends and Goal recommendations                                              |
+| Fight aggregate/result | Account/Fight history by default    | No automatic age-based deletion                                                                |
+| Audit/security event   | 12 months recommended               | Must exclude health values and tokens                                                          |
+| APNs device token      | Until invalid/logout/device removal | Encrypt and revoke on APNs error                                                               |
 
 User-requested account deletion and stricter provider terms override the default. Disconnecting a source stops future collection and deletes credentials, but does not silently erase canonical history unless the User requests deletion or the provider contract requires it. Account deletion removes the User from Fights owned by someone else and permanently deletes every Fight the User created, including its shared history for other participants. It also deletes private fitness history, credentials, profile, relationships, invitations, memberships, and scores.
 
@@ -933,6 +956,8 @@ Track:
 
 Use structured correlation IDs from webhook or aggregate sync through score revision. Sentry or another error system may receive stack traces and pseudonymous IDs only; scrub health values and credentials before transmission.
 
+The Steps implementation records permission, HealthKit-query, context, upload, and final refresh durations with a monotonic phone clock. One completed report carries the stage timings to the private diagnostics endpoint after product requests finish; context/upload/refresh responses provide correlated server authentication/database/maintenance timings. Retain at most 100 private attempts per User and prune their rows older than seven days on their next report. No health values or free-form errors enter these timing records. Delivery is best effort; see `docs/backend.md` for timing boundaries and rollout order.
+
 ### Initial service targets
 
 - Direct Supabase and private Next.js reads: 99.9% monthly availability target.
@@ -959,35 +984,35 @@ Every backend change should include:
 - Contract tests against iOS and TypeScript models
 - A local seed that reproduces the current fixture Fights
 
-CI should run independently by path but block merge when a shared contract breaks. Deploy database migrations before compatible Swift/Next.js code; use expand-migrate-contract changes so an older TestFlight build continues working during rollout.
+CI should run independently by path but block merge when a shared API contract breaks. Test supported live and candidate app contracts against backend changes. Internal database cleanup follows running-backend compatibility and existing authorization; API retirement follows app availability and enforcement. For the initial backend-only rollout, test both retained client grants and the separate permission cutoff on disposable cloud Supabase, then deploy the additive role migration and backend before the native build.
 
 Provider integrations require sandbox fixtures and a replay harness. Never make deterministic CI depend on a live User's WHOOP, Strava, or HealthKit connection.
 
 ## 21. Failure cases to design before the happy path
 
-| Failure | Required behavior |
-| --- | --- |
-| Duplicate or out-of-order webhook | Idempotent upsert by provider ID/revision; recompute only newest state |
-| Provider record edited/deleted | Retract prior Observation and recalculate affected Fight/day |
-| Refresh token rotates concurrently | Per-connection lock and atomic newest-token write |
-| User revokes provider | Stop jobs, delete tokens, apply provider deletion policy, mark source unavailable |
-| HealthKit read returns nothing | Say no accessible data; do not assert denial |
-| Companion app has not synced | Show old `completeThrough` and tell User which app may need opening |
-| Multiple copies of same workout | One selected source and provenance-based dedupe |
-| User changes time zone or travels | Fight continues in immutable Fight time zone |
-| Device is offline at Fight end | Await grace, send nudge, finalize by disclosed incomplete rule |
-| APNs push is dropped | Server state still transitions/finalizes; UI catches up on open |
-| Provider API is down/rate-limited | Backoff, reconcile later, show delayed freshness, never zero the score |
-| Old app sends old schema | Contract version/minimum-client response; no corrupt write |
-| Fight creator changes their mind | Rules remain locked; cancel/recreate according to state |
-| Late member lacks full history | Count accessible verified data from `starts_at` and mark the member incomplete |
-| Invitee attempts to inspect standings first | Do not grant Fight-detail/score access until acceptance |
-| New invitation attempted while live | Reject; only invitations created before start may accept late |
-| Staging binary points at production | Compile-time environment assertion and visible non-production marker; fail CI |
-| Public read policy is too broad | Required owner/member/stranger/anonymous pgTAP cases block merge |
-| Tie or zero activity | Deterministic rule stored with Fight |
-| User deletion during a live Fight | Stop collection, remove private personal data as required, and mark member withdrawn |
-| Strava/WHOOP terms change | Provider kill switch, policy review, purge workflow |
+| Failure                                     | Required behavior                                                                    |
+| ------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Duplicate or out-of-order webhook           | Idempotent upsert by provider ID/revision; recompute only newest state               |
+| Provider record edited/deleted              | Retract prior Observation and recalculate affected Fight/day                         |
+| Refresh token rotates concurrently          | Per-connection lock and atomic newest-token write                                    |
+| User revokes provider                       | Stop jobs, delete tokens, apply provider deletion policy, mark source unavailable    |
+| HealthKit read returns nothing              | Say no accessible data; do not assert denial                                         |
+| Companion app has not synced                | Show old `completeThrough` and tell User which app may need opening                  |
+| Multiple copies of same workout             | One selected source and provenance-based dedupe                                      |
+| User changes time zone or travels           | Fight continues in immutable Fight time zone                                         |
+| Device is offline at Fight end              | Await grace, send nudge, finalize by disclosed incomplete rule                       |
+| APNs push is dropped                        | Server state still transitions/finalizes; UI catches up on open                      |
+| Provider API is down/rate-limited           | Backoff, reconcile later, show delayed freshness, never zero the score               |
+| Old app sends old schema                    | Contract version/minimum-client response; no corrupt write                           |
+| Fight creator changes their mind            | Rules remain locked; cancel/recreate according to state                              |
+| Late member lacks full history              | Count accessible verified data from `starts_at` and mark the member incomplete       |
+| Invitee attempts to inspect standings first | Do not grant Fight-detail/score access until acceptance                              |
+| New invitation attempted while live         | Reject; only invitations created before start may accept late                        |
+| Staging binary points at production         | Compile-time environment assertion and visible non-production marker; fail CI        |
+| Public read policy is too broad             | Required owner/member/stranger/anonymous pgTAP cases block merge                     |
+| Tie or zero activity                        | Deterministic rule stored with Fight                                                 |
+| User deletion during a live Fight           | Stop collection, remove private personal data as required, and mark member withdrawn |
+| Strava/WHOOP terms change                   | Provider kill switch, policy review, purge workflow                                  |
 
 ## 22. Build sequence
 
@@ -1002,7 +1027,7 @@ Provider integrations require sandbox fixtures and a replay harness. Never make 
 ### Phase 1 — shared foundation
 
 - Add the local Supabase stack, US East production project, persistent staging branch, GitHub integration, and required migration checks.
-- Implement the two schemas and seven initial product tables; Apple, Google, and email OTP Auth; direct-read RLS/views; migrations; and tests.
+- Implement the two schemas and seven initial product tables; Apple, Google, and email OTP Auth; backend read policies; migrations; and API contract tests.
 - Build the Next.js Node.js marketing/legal/auth/invite shell plus `/api/v1` command, HealthKit, webhook, and worker Route Handlers.
 - Configure Universal Links and typed route handling.
 - Replace fixture people with authenticated profiles and invitations.
@@ -1037,17 +1062,17 @@ Provider integrations require sandbox fixtures and a replay harness. Never make 
 
 - Supabase production is in US East; staging is a persistent isolated branch connected to GitHub; local uses the CLI. Temporary preview branches are optional.
 - Authentication includes native Apple, Google, and email magic link/OTP, with one identity system for native and web.
-- Swift uses Supabase directly for Auth, reviewed RLS-protected public reads, and explicitly whitelisted self-only profile/preference writes. Next.js Node.js Route Handlers own private health access, domain commands, webhooks, queues, scoring, and notifications. Supabase Edge Functions are not used.
+- Swift uses Supabase directly only for Auth. Next.js Node.js Route Handlers own every application database read/write and maintain explicit API contracts. The restricted backend read role preserves RLS independently of client grants. Supabase Edge Functions are not used.
 - The same Next.js project hosts only marketing/legal/auth/invite pages visually; native Fights and friendships have no web equivalent.
 - The Apple Health Steps MVP synchronizes exact active/ending Fight windows and relevant merged daily chart buckets; it does not import unrelated history or keep a speculative raw archive.
 - There is no granular per-Fight health grant; acceptance selects the source and agrees to derived Fight sharing.
 - The selected provider identity is visible in standings. More detailed source provenance appears only in a future integration that deliberately collects and supports it.
-- Steps is the only production Metric; Apple's merged exact Fight-window aggregate is authoritative, relevant merged daily buckets are chart-only, and contributing-source labels are not collected in the MVP. Generic Observation storage remains a future seam rather than a reason to collect raw records now.
+- Steps is the only production Metric; Apple's merged Fight-window aggregate and its saved cumulative checkpoints supply scoring and charts. Legacy merged daily buckets remain only for older clients, and contributing-source labels are not collected in the MVP. Generic Observation storage remains a future seam rather than a reason to collect raw records now.
 - Fight rules compose one versioned Measure, Score rule, and Result rule. A Measure or Score operation is implemented once, clients do not submit formulas, and the server allows only reviewed combinations.
 - The creator's current IANA time zone is captured automatically for the Fight.
 - A Fight may start immediately without waiting or be scheduled. Invitations created before start remain joinable during `live`; late members receive the common full window from accessible history, and their acceptance recomputes lineup-dependent ranks, Proportional shares, and informational stakes. New invitations cannot be created after start.
 - Personal targets lock when an accepted membership or Fight locks; a late member selects and locks theirs at acceptance. Another person never sets a member's final target.
-- Result rules are Highest, Proportional, and Reach. The current Steps-only API represents Highest as `highest_total` and Hit Your Goal as `hit_your_goal` for backward compatibility.
+- Result rules are Highest, Last loses, Ranking zones, Proportional, and Reach. Production still ships only Highest. The current Steps-only API represents Highest as `highest_total` and Hit Your Goal as `hit_your_goal` for backward compatibility. Last loses, ranking zones, and optional `highest.count` stay in [`fight-rules.md`](fight-rules.md) until product moves them up.
 - Final-sync grace is 24 hours, with immediate/end reminders, early completion when all sources are complete, and verified-data-plus-incomplete fallback.
 - Health/activity history lives in `private`; shared Fight products live in RLS-protected `public`. Canonical history has no automatic age-based deletion.
 - The monorepo uses Apache-2.0, with FitFight identity protected separately by trademark.

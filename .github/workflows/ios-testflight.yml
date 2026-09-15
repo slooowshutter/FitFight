@@ -1,146 +1,195 @@
 # Archive + upload to TestFlight on GitHub-hosted macOS.
 # Never use self-hosted runners or a home Mac.
-# Staging TestFlight only: push/merge to develop, or manual workflow_dispatch.
-# Feature-branch pushes and cron must not upload. main never uploads to TestFlight.
+# Staging TestFlight only: push/merge to preview, or manual
+# workflow_dispatch on that branch. Feature-branch, develop, and cron
+# must not upload. main never uploads to TestFlight.
+# After upload, CI assigns Internal testers, every External group, and Friends Beta.
 name: TestFlight
 
 on:
-  push:
-    branches:
-      - develop
-    paths:
-      - "FitFight/**"
-      - "FitFight.xcodeproj/**"
-      - "fastlane/**"
-      - "Gemfile"
-      - "Gemfile.lock"
-      - ".github/workflows/ios-testflight.yml"
-  workflow_dispatch:
+    push:
+        branches:
+            - preview
+        paths:
+            - "FitFight/**"
+            - "FitFight.xcodeproj/**"
+            - "fastlane/**"
+            - "scripts/publish-app-releases.sh"
+            - "Gemfile"
+            - "Gemfile.lock"
+            - ".github/workflows/ios-testflight.yml"
+    workflow_dispatch:
 
 concurrency:
-  group: ios-distribution
-  cancel-in-progress: false
+    group: ios-distribution
+    cancel-in-progress: false
 
 jobs:
-  beta:
-    if: github.ref_type == 'branch' && github.ref_name != 'main' && (github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/develop')
-    name: Upload
-    runs-on: macos-26
-    timeout-minutes: 60
-    permissions:
-      contents: read
-    env:
-      APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-      APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
-      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Require App Store Connect secrets
-        run: |
-          missing=0
-          for name in APP_STORE_CONNECT_KEY_ID APP_STORE_CONNECT_ISSUER_ID APP_STORE_CONNECT_API_KEY APPLE_TEAM_ID; do
-            if [ -z "${!name}" ]; then
-              echo "::error::Missing GitHub secret: $name. Add it under Settings → Secrets and variables → Actions."
-              missing=1
-            fi
-          done
-          exit "$missing"
-
-      - uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: "3.3"
-
-      - name: Install Fastlane
-        run: bundle install
-
-      # Every TestFlight build talks to staging. Production ships through the App Store flow.
-      # Values go into FitFight/Generated/BuildEnv.swift (compiled in). Never print them.
-      - name: Write backend environment
+    beta:
+        if: github.ref_type == 'branch' && github.ref == 'refs/heads/preview'
+        name: Upload
+        runs-on: macos-26
+        timeout-minutes: 60
+        permissions:
+            contents: write
         env:
-          SUPABASE_STAGING_URL: ${{ vars.SUPABASE_STAGING_URL || secrets.SUPABASE_STAGING_URL }}
-          SUPABASE_STAGING_PUBLISHABLE_KEY: ${{ vars.SUPABASE_STAGING_PUBLISHABLE_KEY || secrets.SUPABASE_STAGING_PUBLISHABLE_KEY }}
-          FITFIGHT_API_URL: ${{ vars.FITFIGHT_API_URL || secrets.FITFIGHT_API_URL }}
-        run: |
-          set -euo pipefail
-          mkdir -p FitFight/Generated
-          echo "TestFlight target: staging"
-          echo "staging url set: ${#SUPABASE_STAGING_URL}"
-          echo "staging key set: ${#SUPABASE_STAGING_PUBLISHABLE_KEY}"
-          echo "staging api url set: ${#FITFIGHT_API_URL}"
-          if [ -z "${SUPABASE_STAGING_URL}" ] || [ -z "${SUPABASE_STAGING_PUBLISHABLE_KEY}" ]; then
-            echo "GitHub staging variables empty; using the compiled develop project fallback."
-          fi
-          python3 <<'PY'
-          import os
-          from pathlib import Path
+            APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+            APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+            APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+            APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        steps:
+            - uses: actions/checkout@v4
 
-          def swift_string(value: str) -> str:
-              escaped = (
-                  value.replace("\\", "\\\\")
-                  .replace("\"", "\\\"")
-                  .replace("\n", "\\n")
-                  .replace("\r", "\\r")
-              )
-              return f'"{escaped}"'
+            - name: Require App Store Connect secrets
+              run: |
+                  missing=0
+                  for name in APP_STORE_CONNECT_KEY_ID APP_STORE_CONNECT_ISSUER_ID APP_STORE_CONNECT_API_KEY APPLE_TEAM_ID; do
+                    if [ -z "${!name}" ]; then
+                      echo "::error::Missing GitHub secret: $name. Add it under Settings → Secrets and variables → Actions."
+                      missing=1
+                    fi
+                  done
+                  exit "$missing"
 
-          develop_url = "https://zstzbfocunthczzubggz.supabase.co"
-          develop_key = "sb_publishable_7lCDQ1YbMJVUyKZ6Ezq1LA_I-0rZGig"
+            - uses: ruby/setup-ruby@v1
+              with:
+                  ruby-version: "3.3"
 
-          url = os.environ.get("SUPABASE_STAGING_URL", "").strip() or develop_url
-          api = os.environ.get("FITFIGHT_API_URL", "").strip()
-          import sys
-          import urllib.error
-          import urllib.request
+            - name: Install Fastlane
+              run: bundle install
 
-          def staging_key_works(candidate: str) -> bool:
-              req = urllib.request.Request(
-                  url.rstrip("/") + "/auth/v1/health",
-                  headers={"apikey": candidate, "Authorization": "Bearer " + candidate},
-              )
-              try:
-                  with urllib.request.urlopen(req, timeout=20) as response:
-                      print("staging auth health:", response.status)
-                      return True
-              except urllib.error.HTTPError as error:
-                  body = error.read().decode()[:400]
-                  if "Invalid API key" in body or "another Supabase project" in body:
-                      print("staging key rejected by host")
-                      return False
-                  sys.exit(f"Staging auth health HTTP {error.code}")
-              except Exception as error:
-                  sys.exit(f"Staging host unreachable: {error}")
+            - name: Check TestFlight distribution
+              run: bundle exec ruby fastlane/testflight_test.rb
 
-          seen = []
-          key = ""
-          for candidate in (
-              os.environ.get("SUPABASE_STAGING_PUBLISHABLE_KEY", "").strip(),
-              develop_key,
-          ):
-              if not candidate or candidate in seen:
-                  continue
-              seen.append(candidate)
-              if staging_key_works(candidate):
-                  key = candidate
-                  break
-          if not key:
-              sys.exit(
-                  "No staging publishable key matched "
-                  "https://zstzbfocunthczzubggz.supabase.co"
-              )
+            # Every TestFlight build talks to staging. Production ships through the App Store flow.
+            # Values go into FitFight/Generated/BuildEnv.swift (compiled in). Never print them.
+            - name: Write backend environment
+              env:
+                  SUPABASE_STAGING_URL: ${{ vars.SUPABASE_STAGING_URL || secrets.SUPABASE_STAGING_URL }}
+                  SUPABASE_STAGING_PUBLISHABLE_KEY: ${{ vars.SUPABASE_STAGING_PUBLISHABLE_KEY || secrets.SUPABASE_STAGING_PUBLISHABLE_KEY }}
+                  FITFIGHT_API_URL: ${{ vars.FITFIGHT_API_URL || secrets.FITFIGHT_API_URL }}
+                  POSTHOG_PROJECT_API_KEY: ${{ secrets.POSTHOG_PROJECT_API_KEY }}
+                  POSTHOG_HOST: ${{ vars.POSTHOG_HOST }}
+              run: |
+                  set -euo pipefail
+                  mkdir -p FitFight/Generated
+                  echo "TestFlight target: staging"
+                  echo "staging url set: ${#SUPABASE_STAGING_URL}"
+                  echo "staging key set: ${#SUPABASE_STAGING_PUBLISHABLE_KEY}"
+                  echo "staging api url set: ${#FITFIGHT_API_URL}"
+                  echo "posthog key set: ${#POSTHOG_PROJECT_API_KEY}"
+                  if [ -z "${SUPABASE_STAGING_URL}" ] || [ -z "${SUPABASE_STAGING_PUBLISHABLE_KEY}" ]; then
+                    echo "GitHub staging variables empty; using the compiled develop project fallback."
+                  fi
+                  python3 <<'PY'
+                  import os
+                  from pathlib import Path
 
-          path = Path("FitFight/Generated/BuildEnv.swift")
-          path.write_text(
-              "/// Written by TestFlight CI before archive. Empty strings use fallbacks.\n"
-              "enum BuildEnv {\n"
-              f"    static let supabaseURL = {swift_string(url)}\n"
-              f"    static let supabasePublishableKey = {swift_string(key)}\n"
-              f"    static let apiBaseURL = {swift_string(api)}\n"
-              "}\n"
-          )
-          print("Wrote FitFight/Generated/BuildEnv.swift")
-          PY
+                  def swift_string(value: str) -> str:
+                      escaped = (
+                          value.replace("\\", "\\\\")
+                          .replace("\"", "\\\"")
+                          .replace("\n", "\\n")
+                          .replace("\r", "\\r")
+                      )
+                      return f'"{escaped}"'
 
-      - name: Upload to TestFlight
-        run: bundle exec fastlane beta
+                  develop_url = "https://zstzbfocunthczzubggz.supabase.co"
+                  develop_key = "sb_publishable_7lCDQ1YbMJVUyKZ6Ezq1LA_I-0rZGig"
+
+                  url = os.environ.get("SUPABASE_STAGING_URL", "").strip() or develop_url
+                  api = os.environ.get("FITFIGHT_API_URL", "").strip()
+                  import sys
+                  import urllib.error
+                  import urllib.request
+
+                  def staging_key_works(candidate: str) -> bool:
+                      req = urllib.request.Request(
+                          url.rstrip("/") + "/auth/v1/health",
+                          headers={"apikey": candidate, "Authorization": "Bearer " + candidate},
+                      )
+                      try:
+                          with urllib.request.urlopen(req, timeout=20) as response:
+                              print("staging auth health:", response.status)
+                              return True
+                      except urllib.error.HTTPError as error:
+                          body = error.read().decode()[:400]
+                          if "Invalid API key" in body or "another Supabase project" in body:
+                              print("staging key rejected by host")
+                              return False
+                          sys.exit(f"Staging auth health HTTP {error.code}")
+                      except Exception as error:
+                          sys.exit(f"Staging host unreachable: {error}")
+
+                  seen = []
+                  key = ""
+                  for candidate in (
+                      os.environ.get("SUPABASE_STAGING_PUBLISHABLE_KEY", "").strip(),
+                      develop_key,
+                  ):
+                      if not candidate or candidate in seen:
+                          continue
+                      seen.append(candidate)
+                      if staging_key_works(candidate):
+                          key = candidate
+                          break
+                  if not key:
+                      sys.exit(
+                          "No staging publishable key matched "
+                          "https://zstzbfocunthczzubggz.supabase.co"
+                      )
+
+                  posthog_key = os.environ.get("POSTHOG_PROJECT_API_KEY", "").strip()
+                  posthog_host = os.environ.get("POSTHOG_HOST", "").strip() or "https://us.i.posthog.com"
+                  if not posthog_key.startswith("phc_"):
+                      sys.exit(
+                          "Missing GitHub secret POSTHOG_PROJECT_API_KEY. "
+                          "Add the PostHog project API key (phc_...) under "
+                          "Settings → Secrets and variables → Actions. "
+                          "Do not paste it in chat. Optional variable POSTHOG_HOST: "
+                          "https://us.i.posthog.com or https://eu.i.posthog.com."
+                      )
+                  print("posthog host set:", posthog_host)
+
+                  path = Path("FitFight/Generated/BuildEnv.swift")
+                  path.write_text(
+                      "/// Written by TestFlight CI before archive. Empty strings use fallbacks.\n"
+                      "enum BuildEnv {\n"
+                      f"    static let supabaseURL = {swift_string(url)}\n"
+                      f"    static let supabasePublishableKey = {swift_string(key)}\n"
+                      f"    static let apiBaseURL = {swift_string(api)}\n"
+                      f"    static let posthogProjectAPIKey = {swift_string(posthog_key)}\n"
+                      f"    static let posthogHost = {swift_string(posthog_host)}\n"
+                      "}\n"
+                  )
+                  print("Wrote FitFight/Generated/BuildEnv.swift")
+                  PY
+
+            - name: Initialize release availability before upload
+              run: bash scripts/publish-app-releases.sh
+
+            - name: Require the profile and update backend before distribution
+              run: |
+                  python3 - <<'PY'
+                  import json
+                  import urllib.request
+
+                  with urllib.request.urlopen("https://staging.fitfight.app/api/app-release", timeout=20) as response:
+                      policy = json.load(response)
+                  if not {"latest", "review", "enforced"}.issubset(policy):
+                      raise SystemExit("Deploy the mandatory-update backend before distributing this native build")
+                  with urllib.request.urlopen("https://staging.fitfight.app/api/health", timeout=20) as response:
+                      health = json.load(response)
+                  if not (health.get("ok") is True and health.get("backend") == "staging"
+                          and health.get("schema") == "ready" and health.get("profile_api") is True):
+                      raise SystemExit("Deploy the profile API and backend-reader migration before distributing this native build")
+                  PY
+
+            - name: Upload to TestFlight
+              env:
+                  FITFIGHT_RELEASE_VERSION: "1.1.1"
+              run: bundle exec fastlane beta
+
+            - name: Publish available app releases
+              if: ${{ !cancelled() }}
+              run: bash scripts/publish-app-releases.sh

@@ -2,10 +2,26 @@ import Foundation
 import HealthKit
 
 enum HealthKitStepAggregates {
+    enum ReadError: Error {
+        case noAccessibleSteps
+        case invalidStepCount
+    }
+
+    /// Same cap as `healthKitAggregateSyncSchema`. `Int(Double)` can wrap out-of-range values.
+    static let maxCount = 2_147_483_647
+
+    static func integerCount(from quantity: HKQuantity?) -> Int? {
+        guard let quantity else { return nil }
+        let steps = quantity.doubleValue(for: .count())
+        guard steps.isFinite, steps >= 0, steps <= Double(maxCount) else { return nil }
+        return Int(exactly: steps.rounded())
+    }
+
     static func read(
         store: HKHealthStore,
         type: HKQuantityType,
-        context: FitFightHealthKitContext
+        context: FitFightHealthKitContext,
+        trace: HealthKitSyncTrace
     ) async throws -> FitFightHealthKitStepSync {
         let calendar = Calendar.current
         let earliestDay = context.fightWindows
@@ -13,13 +29,16 @@ enum HealthKitStepAggregates {
             .min()
         let totalsByDay: [String: Int]
         if let earliestDay {
-            totalsByDay = try await dailyTotals(
-                store: store,
-                type: type,
-                start: earliestDay,
-                end: context.serverNow,
-                calendar: calendar
-            )
+            try Task.checkCancellation()
+            totalsByDay = try await trace.measure(.healthKitDaily) {
+                try await dailyTotals(
+                    store: store,
+                    type: type,
+                    start: earliestDay,
+                    end: context.serverNow,
+                    calendar: calendar
+                )
+            }
         } else {
             totalsByDay = [:]
         }
@@ -32,12 +51,12 @@ enum HealthKitStepAggregates {
                 let endsAt = min(nextDay, context.serverNow)
                 if context.fightWindows.contains(where: {
                     cursor < $0.cutoffAt && endsAt > $0.startsAt
-                }) {
+                }), let steps = totalsByDay[day] {
                     mergedDays.append(FitFightHealthKitStepSync.MergedDay(
                         day: day,
                         startsAt: iso8601(cursor),
                         endsAt: iso8601(endsAt),
-                        steps: totalsByDay[day] ?? 0
+                        steps: steps
                     ))
                 }
                 cursor = nextDay
@@ -46,20 +65,58 @@ enum HealthKitStepAggregates {
 
         var fightAggregates: [FitFightHealthKitStepSync.FightAggregate] = []
         fightAggregates.reserveCapacity(context.fightWindows.count)
+        var sawAccessibleSteps = !totalsByDay.isEmpty
         for window in context.fightWindows {
-            let steps = try await total(
-                store: store,
-                type: type,
-                start: window.startsAt,
-                end: window.cutoffAt
-            )
+            try Task.checkCancellation()
+            var checkpoints: [FightStepCheckpoint]? = nil
+            if let timeZone = window.timeZone, let zone = TimeZone(identifier: timeZone) {
+                var fightCalendar = Calendar(identifier: .gregorian)
+                fightCalendar.timeZone = zone
+                checkpoints = []
+                var day = fightCalendar.startOfDay(for: window.startsAt)
+                while let nextDay = fightCalendar.date(byAdding: .day, value: 1, to: day),
+                      nextDay < window.cutoffAt {
+                    try Task.checkCancellation()
+                    let count = try await trace.measure(.healthKitFight) {
+                        try await total(store: store, type: type, start: window.startsAt, end: nextDay)
+                    }
+                    checkpoints?.append(FightStepCheckpoint(
+                        day: dayStamp(day, calendar: fightCalendar), cutoffAt: iso8601(nextDay), steps: count ?? 0
+                    ))
+                    day = nextDay
+                }
+            }
+            let counted = try await trace.measure(.healthKitFight) {
+                try await total(
+                    store: store,
+                    type: type,
+                    start: window.startsAt,
+                    end: window.cutoffAt
+                )
+            }
+            if counted != nil {
+                sawAccessibleSteps = true
+            }
+            if checkpoints != nil, let timeZone = window.timeZone, let zone = TimeZone(identifier: timeZone) {
+                var fightCalendar = Calendar(identifier: .gregorian)
+                fightCalendar.timeZone = zone
+                // The score reuses this final query; separately rounded daily totals cannot define it.
+                checkpoints?.append(FightStepCheckpoint(
+                    day: dayStamp(window.cutoffAt.addingTimeInterval(-0.001), calendar: fightCalendar),
+                    cutoffAt: iso8601(window.cutoffAt), steps: counted ?? 0
+                ))
+            }
             fightAggregates.append(FitFightHealthKitStepSync.FightAggregate(
                 fightId: window.fightId.uuidString.lowercased(),
                 startsAt: iso8601(window.startsAt),
                 endsAt: iso8601(window.endsAt),
                 cutoffAt: iso8601(window.cutoffAt),
-                steps: steps
+                steps: counted ?? 0,
+                stepCheckpoints: checkpoints
             ))
+        }
+        if !context.fightWindows.isEmpty && !sawAccessibleSteps {
+            throw ReadError.noAccessibleSteps
         }
 
         return FitFightHealthKitStepSync(
@@ -97,8 +154,8 @@ enum HealthKitStepAggregates {
                 }
                 var totals: [String: Int] = [:]
                 collection?.enumerateStatistics(from: start, to: end) { statistics, _ in
-                    let steps = statistics.sumQuantity()?.doubleValue(for: .count()) ?? 0
-                    totals[dayStamp(statistics.startDate, calendar: calendar)] = Int(steps.rounded())
+                    guard let count = integerCount(from: statistics.sumQuantity()) else { return }
+                    totals[dayStamp(statistics.startDate, calendar: calendar)] = count
                 }
                 continuation.resume(returning: totals)
             }
@@ -111,19 +168,24 @@ enum HealthKitStepAggregates {
         type: HKQuantityType,
         start: Date,
         end: Date
-    ) async throws -> Int {
-        let predicate = HKQuery.predicateForSamples(
-            withStart: start,
-            end: end,
-            options: [.strictStartDate, .strictEndDate]
-        )
+    ) async throws -> Int? {
+        // NOTE: Do not use strictStartDate/strictEndDate. Apple stores Steps in samples
+        // that often begin before the fight or are still open past "now". Strict options
+        // drop those samples, a brand-new or late-join window can look empty, and that
+        // used to abort every fight in the same upload. Overlapping samples let HealthKit
+        // count the portion inside starts_at...cutoff_at.
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: end)
         let descriptor = HKStatisticsQueryDescriptor(
             predicate: .quantitySample(type: type, predicate: predicate),
             options: [.cumulativeSum]
         )
-        let steps = try await descriptor.result(for: store)?
-            .sumQuantity()?.doubleValue(for: .count()) ?? 0
-        return Int(steps.rounded())
+        guard let quantity = try await descriptor.result(for: store)?.sumQuantity() else {
+            return nil
+        }
+        guard let count = integerCount(from: quantity) else {
+            throw ReadError.invalidStepCount
+        }
+        return count
     }
 
     private static func dayStamp(_ date: Date, calendar: Calendar) -> String {

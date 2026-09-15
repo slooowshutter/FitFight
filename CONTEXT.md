@@ -19,7 +19,7 @@ _Avoid_: Follow, contact
 ## Fights
 
 **Fight**:
-A time-bounded fitness competition with one shared window, Metric, rules, and Stakes. Invited Users may become Fight members after it begins and receive full-window credit from accessible history.
+A time-bounded fitness competition with one shared window, agreed Metrics, rules, and Stakes. Invited Users may become Fight members after it begins and receive full-window credit from accessible history.
 _Avoid_: Challenge, contest, event
 
 **Fight member**:
@@ -31,7 +31,7 @@ The Fight member who created the Fight. Ownership permits limited administration
 _Avoid_: Admin, banker
 
 **Fight acceptance**:
-A User's agreement to join a Fight under its existing rules and full Fight window, use the selected Data source, and share the resulting score and provenance with the other Fight members.
+A User's agreement to join a Fight under its existing rules and full Fight window, use the selected Data source for each Measure, and share the resulting Scores, Objective progress, and provenance with the other Fight members.
 _Avoid_: Data grant, provider permission
 
 **Invite**:
@@ -59,7 +59,7 @@ The activity data selected by a Fight, such as Steps, distance, active minutes, 
 _Avoid_: Score, Result rule
 
 **Fight rule**:
-A Fight's immutable combination of one Measure, one Score rule, and one Result rule.
+A Fight's immutable combination of Measures, Score rules, and one Result rule. A multiple-objective goal requires every agreed Objective to be met.
 _Avoid_: Settings, options
 
 **Score rule**:
@@ -73,6 +73,10 @@ _Avoid_: Observation, raw total, result
 **Target**:
 An accepted goal used by a Score rule or Result rule, such as 10,000 Steps per day or five successful days.
 _Avoid_: Unscoped goal, Score
+
+**Objective**:
+One independently checkable requirement for success, combining a Score with an accepted condition, such as at least 70,000 Steps in the Fight or five days reaching 10,000 Steps. In a multiple-objective goal, exceeding one Objective never compensates for missing another.
+_Avoid_: Metric, Score, optional task
 
 **Goal policy**:
 The Fight rule that decides whether a Target is shared by every member or chosen personally by each member.
@@ -90,8 +94,16 @@ _Avoid_: Medical advice, required target
 The agreed consequence of a Fight, such as bragging rights, money, or an action. A Stake is not money held by FitFight.
 _Avoid_: Balance, wallet, payment
 
+**Stake rule**:
+The agreement that identifies who owes a Stake, under which outcome, and whether an action or amount is owed individually or collectively.
+_Avoid_: Result rule, Allocation rule
+
+**Allocation rule**:
+The agreement that divides a defined prize pool among eligible recipients, equally, by rank, or by a permitted share of their Scores. Receiving a share is distinct from winning the Fight.
+_Avoid_: Result rule, payment execution
+
 **Result rule**:
-The part of a Fight rule that decides what a Score means: highest wins, reaching a value succeeds, or the outcome is proportional.
+The part of a Fight rule that decides what Scores and Objectives mean for the outcome: highest wins, reaching every required Objective succeeds, or the outcome is proportional.
 _Avoid_: Outcome rule, settlement mode, payout type
 
 **Score projection**:

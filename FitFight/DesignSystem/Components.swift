@@ -32,6 +32,32 @@ extension View {
     }
 }
 
+enum FFHaptics {
+    private static let buttonImpact: UIImpactFeedbackGenerator = {
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.prepare()
+        return generator
+    }()
+
+    static func button() {
+        buttonImpact.impactOccurred(intensity: 0.72)
+    }
+
+    static func success() {
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+    }
+}
+
+/// Same as `.plain`, with a tap tick. Use on controls that should not scale.
+struct FFHapticPlainStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .onChange(of: configuration.isPressed) { _, pressed in
+                if pressed { FFHaptics.button() }
+            }
+    }
+}
+
 struct FFPressStyle: ButtonStyle {
     var scale: CGFloat = 0.97
 
@@ -39,6 +65,9 @@ struct FFPressStyle: ButtonStyle {
         configuration.label
             .scaleEffect(configuration.isPressed ? scale : 1)
             .animation(.timingCurve(0.16, 1, 0.3, 1, duration: 0.15), value: configuration.isPressed)
+            .onChange(of: configuration.isPressed) { _, pressed in
+                if pressed { FFHaptics.button() }
+            }
     }
 }
 
@@ -65,6 +94,24 @@ struct FFSectionHeader: View {
                 .fill(theme.track)
                 .frame(height: 1)
         }
+    }
+}
+
+/// Header plus the views that belong to it. Uses the same gap `FFScreen` uses
+/// between cards, so a screen cannot invent a tighter header-to-body stack.
+struct FFSection<Content: View>: View {
+    let title: String
+    var extraTop: Bool = true
+    @ViewBuilder var content: Content
+
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: theme.space.cardGap) {
+            FFSectionHeader(title: title)
+            content
+        }
+        .padding(.top, extraTop ? theme.space.lg : 0)
     }
 }
 
@@ -113,6 +160,7 @@ struct FFButton: View {
     var kind: FFButtonKind = .primary
     var size: FFButtonSize = .medium
     var enabled: Bool = true
+    var busy: Bool = false
     var fullWidth: Bool = false
     let action: () -> Void
 
@@ -120,17 +168,24 @@ struct FFButton: View {
 
     var body: some View {
         Button(action: action) {
-            Text(title)
-                .ffType(size.font)
-                .foregroundStyle(foreground)
-                .padding(.horizontal, size.padding.x)
-                .padding(.vertical, size.padding.y)
-                .frame(maxWidth: fullWidth ? .infinity : nil)
-                .background(background, in: Capsule())
-                .overlay { if let stroke { Capsule().strokeBorder(stroke, lineWidth: 1) } }
+            HStack(spacing: 8) {
+                if busy {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(foreground)
+                }
+                Text(title)
+                    .ffType(size.font)
+            }
+            .foregroundStyle(foreground)
+            .padding(.horizontal, size.padding.x)
+            .padding(.vertical, size.padding.y)
+            .frame(maxWidth: fullWidth ? .infinity : nil)
+            .background(background, in: Capsule())
+            .overlay { if let stroke { Capsule().strokeBorder(stroke, lineWidth: 1) } }
         }
         .buttonStyle(FFPressStyle())
-        .disabled(!enabled)
+        .disabled(!enabled || busy)
     }
 
     private var foreground: Color {
@@ -185,8 +240,7 @@ struct FFIconButton: View {
     }
 }
 
-/// The signature: full width, 60pt tall, label left, filled circle chevron right.
-/// One per screen, pinned above the tab bar.
+/// The full-width tap action. Sliding confirmation uses `FFSlideToConfirm`.
 struct FFScreenCTA: View {
     let title: String
     var kind: FFButtonKind = .primary
@@ -194,11 +248,51 @@ struct FFScreenCTA: View {
     var busy: Bool = false
     let action: () -> Void
 
+    var body: some View {
+        FFButton(
+            title: title,
+            kind: kind,
+            size: .large,
+            enabled: enabled,
+            busy: busy,
+            fullWidth: true,
+            action: action
+        )
+    }
+}
+
+/// Track with a knob on the left. Drag the knob across to confirm.
+struct FFSlideToConfirm: View {
+    let title: String
+    var enabled: Bool = true
+    var busy: Bool = false
+    var recipe: FFSlideHapticRecipe? = nil
+    var resetsAfterSuccess: Bool = false
+    let action: () -> Bool
+
     @Environment(\.ffTheme) private var theme
+    @AppStorage(FFSlideHapticRecipe.storageKey) private var selectedRecipeID = FFSlideHapticRecipe.shippedID
+    @State private var drag: CGFloat = 0
+    @State private var completed = false
+    @State private var slideHaptics = FFSlideHapticEngine()
+
+    private var resolvedRecipe: FFSlideHapticRecipe {
+        recipe ?? FFSlideHapticRecipe.named(selectedRecipeID)
+    }
+
+    private let knobSize: CGFloat = 44
+    private let inset: CGFloat = 8
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
+        GeometryReader { geo in
+            let travel = max(0, geo.size.width - inset * 2 - knobSize)
+            let offset = completed ? travel : min(max(0, drag), travel)
+            let progress = travel == 0 ? 0 : offset / travel
+
+            ZStack {
+                Capsule()
+                    .fill(enabled ? theme.mossFill : theme.disabledBg)
+
                 HStack(spacing: 8) {
                     if busy {
                         ProgressView()
@@ -209,24 +303,88 @@ struct FFScreenCTA: View {
                         .ffType(.buttonLarge)
                 }
                 .foregroundStyle(enabled ? theme.mossOn : theme.disabledText)
-                Spacer(minLength: 0)
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 17, weight: .bold))
-                    .foregroundStyle(enabled ? fill : theme.disabledText)
-                    .frame(width: 44, height: 44)
-                    .background(enabled ? theme.mossOn : theme.disabledBg, in: Circle())
+                .opacity(busy ? 1 : 1 - progress)
+                .allowsHitTesting(false)
+
+                HStack {
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundStyle(enabled ? theme.mossFill : theme.disabledText)
+                        .frame(width: knobSize, height: knobSize)
+                        .background(enabled ? theme.mossOn : theme.disabledBg, in: Circle())
+                        .offset(x: offset)
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, inset)
             }
-            .padding(.leading, 26)
-            .padding(.trailing, 8)
             .frame(height: 60)
-            .frame(maxWidth: .infinity)
-            .background(enabled ? fill : theme.disabledBg, in: Capsule())
+            .contentShape(Capsule())
+            .gesture(slideGesture(travel: travel))
+            .accessibilityElement()
+            .accessibilityLabel(title)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityHint("Double tap to confirm")
+            .accessibilityAction {
+                confirm()
+            }
         }
-        .buttonStyle(FFPressStyle(scale: 0.985))
-        .disabled(!enabled || busy)
+        .frame(height: 60)
+        .onChange(of: busy) { _, isBusy in
+            if !isBusy {
+                reset()
+            }
+        }
+        .onChange(of: enabled) { _, isEnabled in
+            if !isEnabled {
+                reset()
+            }
+        }
+        .onDisappear {
+            slideHaptics.stop()
+        }
     }
 
-    private var fill: Color { kind == .ember ? theme.emberFill : theme.mossFill }
+    private func slideGesture(travel: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 4)
+            .onChanged { value in
+                guard enabled, !busy, !completed else { return }
+                drag = min(max(0, value.translation.width), travel)
+                slideHaptics.drag(progress: travel == 0 ? 0 : drag / travel, recipe: resolvedRecipe)
+            }
+            .onEnded { _ in
+                slideHaptics.stop()
+                guard enabled, !busy, !completed else { return }
+                if travel > 0, drag >= travel * 0.85 {
+                    confirm()
+                } else {
+                    withAnimation(.timingCurve(0.16, 1, 0.3, 1, duration: 0.22)) {
+                        drag = 0
+                    }
+                }
+            }
+    }
+
+    private func confirm() {
+        guard enabled, !busy, !completed else { return }
+        completed = true
+        slideHaptics.stop()
+        if action() {
+            FFHaptics.success()
+            if resetsAfterSuccess {
+                reset()
+            }
+        } else {
+            reset()
+        }
+    }
+
+    private func reset() {
+        completed = false
+        slideHaptics.stop()
+        withAnimation(.timingCurve(0.16, 1, 0.3, 1, duration: 0.22)) {
+            drag = 0
+        }
+    }
 }
 
 /// Dashed affordance — empty slots and "start something" rows.
@@ -369,6 +527,7 @@ enum FFResult: String {
     case win = "W"
     case loss = "L"
     case draw = "–"
+    case pending = "P"
 }
 
 /// 24pt square, glyph radius, for dense rows of past results.
@@ -392,6 +551,7 @@ struct FFResultGlyph: View {
         case .win: return theme.mossFill.opacity(0.24)
         case .loss: return theme.emberFill.opacity(0.22)
         case .draw: return theme.hairline
+        case .pending: return theme.gold.opacity(0.22)
         }
     }
 
@@ -400,6 +560,7 @@ struct FFResultGlyph: View {
         case .win: return theme.mossText
         case .loss: return theme.emberText
         case .draw: return theme.textTertiary
+        case .pending: return theme.goldInk
         }
     }
 }
@@ -414,6 +575,7 @@ struct FFAvatar: View {
     var selected: Bool = false
     /// Asset name, cut from the design mocks. Falls back to the monogram.
     var photo: String?
+    var photoURL: URL?
     var dimmed: Bool = false
 
     @Environment(\.ffTheme) private var theme
@@ -423,6 +585,7 @@ struct FFAvatar: View {
             .frame(width: size, height: size)
             .background(theme.control, in: Circle())
             .clipShape(Circle())
+            .contentShape(Circle())
             .overlay {
                 Circle().strokeBorder(
                     selected ? theme.mossEdge : theme.line,
@@ -434,16 +597,24 @@ struct FFAvatar: View {
 
     @ViewBuilder
     private var face: some View {
-        if let photo, UIImage(named: photo) != nil {
+        if let photoURL {
+            RemotePhoto(url: photoURL, kind: .avatar) {
+                monogramLabel
+            }
+        } else if let photo, UIImage(named: photo) != nil {
             Image(photo)
                 .resizable()
                 .interpolation(.high)
                 .scaledToFill()
         } else {
-            Text(monogram)
-                .font(.ff(fontSize, 800))
-                .foregroundStyle(size >= 54 ? theme.monogram : theme.textDim)
+            monogramLabel
         }
+    }
+
+    private var monogramLabel: some View {
+        Text(monogram)
+            .font(.ff(fontSize, 800))
+            .foregroundStyle(size >= 54 ? theme.monogram : theme.textDim)
     }
 
     /// The kit's five fixed steps: 32/11, 38/13, 44/14, 54/16, 68/20.
@@ -458,27 +629,39 @@ struct FFAvatar: View {
     }
 }
 
-/// Overlapping monograms with a ring in the background colour, then an overflow chip.
+/// Overlapping faces with a ring in the background colour, then an overflow chip.
 struct FFAvatarStack: View {
-    let monograms: [String]
+    let faces: [(monogram: String, photoURL: URL?)]
     var visible: Int = 3
     var size: CGFloat = 36
     var ring: Color?
 
     @Environment(\.ffTheme) private var theme
 
+    init(monograms: [String], visible: Int = 3, size: CGFloat = 36, ring: Color? = nil) {
+        self.init(
+            faces: monograms.map { (monogram: $0, photoURL: nil) },
+            visible: visible,
+            size: size,
+            ring: ring
+        )
+    }
+
+    init(faces: [(monogram: String, photoURL: URL?)], visible: Int = 3, size: CGFloat = 36, ring: Color? = nil) {
+        self.faces = faces
+        self.visible = visible
+        self.size = size
+        self.ring = ring
+    }
+
     var body: some View {
-        let shown = Array(monograms.prefix(visible))
-        let overflow = monograms.count - shown.count
+        let shown = Array(faces.prefix(visible))
+        let overflow = faces.count - shown.count
         HStack(spacing: -12) {
-            ForEach(Array(shown.enumerated()), id: \.offset) { offset, monogram in
-                plate(
-                    monogram,
-                    fill: offset % 2 == 1 ? theme.plateAlt : theme.control,
-                    ink: theme.textDim,
-                    size: 12
-                )
-                .zIndex(Double(shown.count - offset))
+            ForEach(Array(shown.enumerated()), id: \.offset) { offset, face in
+                FFAvatar(monogram: face.monogram, size: size, photoURL: face.photoURL)
+                    .overlay { Circle().strokeBorder(ring ?? theme.bg, lineWidth: 2) }
+                    .zIndex(Double(shown.count - offset))
             }
             if overflow > 0 {
                 plate("+\(overflow)", fill: theme.chip, ink: theme.textTertiary, size: 11)
@@ -661,14 +844,19 @@ struct FFListRow: View {
     let metric: String
     var delta: String?
     var ahead: Bool = true
+    /// When the metric is itself the gap, it carries the moss or ember of `ahead`
+    /// instead of the neutral ink the kit gives a plain total.
+    var metricIsGap: Bool = false
     var selected: Bool = false
+    var photoURL: URL? = nil
+    var avatar: AnyView? = nil
     var action: (() -> Void)?
 
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
         let row = HStack(spacing: 13) {
-            FFAvatar(monogram: monogram, size: 44)
+            if let avatar { avatar } else { FFAvatar(monogram: monogram, size: 44, photoURL: photoURL) }
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .ffType(.heading)
@@ -682,7 +870,12 @@ struct FFListRow: View {
                 Text(metric)
                     .font(.ff(18, 800))
                     .tracking(18 * -0.02)
-                    .foregroundStyle(theme.text)
+                    .foregroundStyle(metricIsGap ? (ahead ? theme.mossText : theme.emberText) : theme.text)
+                if metricIsGap {
+                    Text(ahead ? String(localized: "steps ahead") : String(localized: "steps behind"))
+                        .ffType(.micro)
+                        .foregroundStyle(ahead ? theme.mossText : theme.emberText)
+                }
                 if let delta {
                     Text(delta)
                         .ffType(.caption)
@@ -788,8 +981,11 @@ struct FFGroupedRow: View {
         let row = HStack(spacing: 12) {
             if let systemImage {
                 Image(systemName: systemImage)
-                    .font(.system(size: 15, weight: .medium))
+                    .resizable()
+                    .scaledToFit()
+                    .fontWeight(.medium)
                     .foregroundStyle(enabled ? theme.textDim : theme.textTertiary)
+                    .frame(width: 16, height: 16)
                     .frame(width: 36, height: 36)
                     .background(
                         enabled ? theme.control : theme.chip,

@@ -1,480 +1,1135 @@
 openapi: 3.1.0
 info:
-  title: FitFight iOS API
-  version: 0.9.0
-  description: >
-    Next.js Route Handlers under /api/v1. Swift sends the User JWT.
-    Clients never write fights, scores, sources, or private.metric_observations.
-    Apple Health Steps use merged exact-window aggregates. The older signed
-    Storage-object routes remain temporarily available to legacy clients.
+    title: FitFight iOS API
+    version: 1.0.0
+    description: >
+        Next.js Route Handlers under /api/v1. Swift sends the User JWT.
+        All application database reads and writes use this API; Supabase Auth and private Realtime invalidations stay direct.
+        Database columns are not a client contract. Clients must tolerate additional response fields.
+        Apple Health Steps use merged exact-window aggregates. The older signed
+        Storage-object routes remain temporarily available to legacy clients.
+        TestFlight updates are advisory: staging does not reject version/build mismatches.
+        Production requires X-FitFight-Version and X-FitFight-Build when enforcement is on;
+        a mismatch returns 426 with code update_required before business logic runs unless
+        the build matches latest, review, or internal. The public release endpoint returns
+        503 with code release_unavailable for missing metadata; authenticated commands
+        continue to authentication when release metadata is unavailable.
 servers:
-  - url: /api/v1
+    - url: /api/v1
 paths:
-  /provider-connections/apple-health:
-    post:
-      operationId: connectAppleHealth
-      summary: Create or refresh the Apple Health data_sources row.
-      security: [{ bearerAuth: [] }]
-      responses:
-        "200":
-          description: Existing or created source
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/DataSource" }
-  /provider-uploads:
-    post:
-      operationId: createProviderUpload
-      summary: Authorize one exact private Storage object for an authenticated provider archive.
-      security: [{ bearerAuth: [] }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/CreateProviderUpload" }
-      responses:
-        "201":
-          description: New upload authorization
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/ProviderUploadAuthorization" }
-        "200":
-          description: Replay of the same upload authorization
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/ProviderUploadAuthorization" }
-  /provider-uploads/context:
-    get:
-      operationId: getProviderUploadContext
-      summary: Return server-authoritative Fight windows for Apple Health synchronization.
-      security: [{ bearerAuth: [] }]
-      responses:
-        "200":
-          description: Current server time and relevant Fight windows
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/ProviderUploadContext" }
-  /healthkit/steps:
-    post:
-      operationId: syncHealthKitSteps
-      summary: Store Apple-merged Steps totals for exact Fight windows and relevant chart days.
-      security: [{ bearerAuth: [] }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/HealthKitStepSync" }
-      responses:
-        "200":
-          description: Aggregates stored and standings updated
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/HealthKitStepSyncResult" }
-  /provider-uploads/{uploadID}:
-    get:
-      operationId: getProviderUpload
-      summary: Read current processing state or replay a completed receipt.
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - $ref: "#/components/parameters/UploadID"
-      responses:
-        "200":
-          description: Current state
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/ProviderUploadStatus" }
-  /provider-uploads/{uploadID}/process:
-    post:
-      operationId: processProviderUpload
-      summary: Verify, process, and delete the authorized Storage object.
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - $ref: "#/components/parameters/UploadID"
-      responses:
-        "200":
-          description: Processing completed, or completed receipt replayed
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/ProviderUploadStatus" }
-        "202":
-          description: Database committed; Storage cleanup remains pending
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/ProviderUploadStatus" }
-        "409":
-          description: This upload is already being processed
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/ApiError" }
-  /auth/apple:
-    post:
-      operationId: storeAppleAuthorization
-      summary: Exchange and securely store the native Apple authorization needed for account deletion.
-      security: [{ bearerAuth: [] }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: false
-              required: [authorization_code]
-              properties:
-                authorization_code: { type: string, minLength: 1, maxLength: 2048 }
-      responses:
-        "200":
-          description: Apple authorization stored
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [stored]
-                properties:
-                  stored: { const: true }
-  /me:
-    delete:
-      operationId: deleteAccount
-      summary: Permanently delete the account, its data, memberships, and Fights it owns.
-      security: [{ bearerAuth: [] }]
-      responses:
-        "200":
-          description: Account deleted
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [apple_authorization_revoked, deleted]
-                properties:
-                  apple_authorization_revoked: { type: boolean }
-                  deleted: { const: true }
-  /fights:
-    post:
-      operationId: createFight
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - in: header
-          name: Idempotency-Key
-          required: true
-          schema: { type: string }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/CreateFight" }
-      responses:
-        "201":
-          description: Created fight
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/FightSummary" }
-  /fights/sync-due:
-    post:
-      operationId: syncDueFights
-      summary: Close this user's fights whose clock has run out. Safe to call on every app open.
-      security: [{ bearerAuth: [] }]
-      responses:
-        "200":
-          description: How many due fights were recalculated
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/SyncDue" }
-  /fights/{fightID}/invites:
-    post:
-      operationId: inviteByHandle
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - in: path
-          name: fightID
-          required: true
-          schema: { type: string, format: uuid }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [handle]
-              properties:
-                handle: { type: string }
-      responses:
-        "200":
-          description: Invite created
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/InviteCreated" }
-  /invites/{token}/accept:
-    post:
-      operationId: acceptInvite
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - in: path
-          name: token
-          required: true
-          schema: { type: string }
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                personalTarget: { type: number }
-      responses:
-        "200":
-          description: Accepted
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/FightSummary" }
-  /fights/{fightID}/accept:
-    post:
-      operationId: acceptFight
-      summary: Accept an in-app invite (caller is already an invited member).
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - in: path
-          name: fightID
-          required: true
-          schema: { type: string, format: uuid }
-      responses:
-        "200":
-          description: Accepted
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/FightSummary" }
-  /fights/{fightID}/start:
-    post:
-      operationId: startFight
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - in: path
-          name: fightID
-          required: true
-          schema: { type: string, format: uuid }
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                when:
-                  type: string
-                  enum: [now, scheduled]
-      responses:
-        "200":
-          description: Fight is live or scheduled
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/FightSummary" }
-  /fights/{fightID}/cancel:
-    post:
-      operationId: cancelFight
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - in: path
-          name: fightID
-          required: true
-          schema: { type: string, format: uuid }
-      responses:
-        "200":
-          description: Cancelled
+    /fights/snapshot:
+        post:
+            operationId: readFightSnapshot
+            summary: Read confirmed Fight standings and chart data without maintenance.
+            description: >
+                Private Realtime fights_changed events prompt this read. Uses the same
+                snapshot contract and access rules as /fights/refresh. Response is never cached.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            additionalProperties: false
+                            required: [time_zone]
+                            properties:
+                                time_zone:
+                                    {
+                                        type: string,
+                                        minLength: 1,
+                                        maxLength: 100,
+                                        example: Europe/Paris,
+                                    }
+            responses:
+                "200":
+                    description: One confirmed snapshot under the authenticated User's current access.
+                    content:
+                        application/json:
+                            schema:
+                                { $ref: "#/components/schemas/FightSnapshot" }
+                "401": { description: Invalid session or deleted account }
+                "400": { description: Invalid time zone or request body }
+                "426": { description: App update required }
+    /posts/{postID}/reactions:
+        get:
+            operationId: listFightPostReactionPeople
+            summary: List the people who reacted to a visible post, excluding hidden or deleted people.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+                - name: postID
+                  in: path
+                  required: true
+                  schema: { type: string, format: uuid }
+                - name: cursor
+                  in: query
+                  description: Last user_id from the previous page. Results are ordered by user_id.
+                  schema: { type: string, format: uuid }
+                - name: limit
+                  in: query
+                  schema:
+                      { type: integer, minimum: 1, maximum: 80, default: 40 }
+            responses:
+                "200":
+                    description: Reaction identities. The existing POST reaction summary is unchanged.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties: false
+                                required: [people, next_cursor]
+                                properties:
+                                    people:
+                                        type: array
+                                        items:
+                                            type: object
+                                            additionalProperties: false
+                                            required:
+                                                [
+                                                    user_id,
+                                                    handle,
+                                                    display_name,
+                                                    emoji,
+                                                ]
+                                            properties:
+                                                user_id:
+                                                    {
+                                                        type: string,
+                                                        format: uuid,
+                                                    }
+                                                handle: { type: string }
+                                                display_name: { type: string }
+                                                emoji: { type: string }
+                                    next_cursor:
+                                        { type: [string, "null"], format: uuid }
+                "400":
+                    description: Invalid post ID, cursor, or limit.
+                "401":
+                    description: Authentication required.
+                "403":
+                    description: The viewer cannot access the post.
+                "404":
+                    description: Post not found.
+    /referrals:
+        post:
+            operationId: claimReferral
+            summary: Record the first referrer for the authenticated User.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema: { $ref: "#/components/schemas/ReferralLink" }
+            responses:
+                "200":
+                    description: recorded is false for self-referrals, unavailable codes/accounts, or existing attribution.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties: false
+                                required: [recorded]
+                                properties:
+                                    recorded: { type: boolean }
+    /app-release:
+        servers: [{ url: /api }]
+        get:
+            operationId: getAppReleasePolicy
+            summary: Read the latest installable release and the Apple review candidate for this channel.
+            security: []
+            responses:
+                "200":
+                    description: Public release policy for this backend environment. Cache-Control is no-store.
+                    content:
+                        application/json:
+                            schema:
+                                {
+                                    $ref: "#/components/schemas/AppReleasePolicy",
+                                }
+                "503":
+                    description: Release metadata or environment configuration is unavailable.
+    /provider-connections/apple-health:
+        post:
+            operationId: connectAppleHealth
+            summary: Create or refresh the Apple Health data_sources row.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+            responses:
+                "200":
+                    description: Existing or created source
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/DataSource" }
+    /provider-uploads:
+        post:
+            operationId: createProviderUpload
+            summary: Authorize one exact private Storage object for an authenticated provider archive.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            {
+                                $ref: "#/components/schemas/CreateProviderUpload",
+                            }
+            responses:
+                "201":
+                    description: New upload authorization
+                    content:
+                        application/json:
+                            schema:
+                                {
+                                    $ref: "#/components/schemas/ProviderUploadAuthorization",
+                                }
+                "200":
+                    description: Replay of the same upload authorization
+                    content:
+                        application/json:
+                            schema:
+                                {
+                                    $ref: "#/components/schemas/ProviderUploadAuthorization",
+                                }
+    /provider-uploads/context:
+        get:
+            operationId: getProviderUploadContext
+            summary: Return server-authoritative Fight windows for Apple Health synchronization.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+            responses:
+                "200":
+                    description: Current server time and relevant Fight windows
+                    content:
+                        application/json:
+                            schema:
+                                {
+                                    $ref: "#/components/schemas/ProviderUploadContext",
+                                }
+    /healthkit/steps:
+        post:
+            operationId: syncHealthKitSteps
+            summary: Store Apple-merged Steps totals for exact Fight windows and relevant chart days.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            { $ref: "#/components/schemas/HealthKitStepSync" }
+            responses:
+                "200":
+                    description: Aggregates stored and standings updated
+                    content:
+                        application/json:
+                            schema:
+                                {
+                                    $ref: "#/components/schemas/HealthKitStepSyncResult",
+                                }
+    /healthkit/diagnostics:
+        post:
+            operationId: saveHealthKitDiagnosticSnapshot
+            summary: Overwrite the authenticated User's latest private HealthKit diagnostic snapshot.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            {
+                                $ref: "#/components/schemas/HealthKitDiagnosticSnapshot",
+                            }
+            responses:
+                "200":
+                    description: Latest snapshot stored
+                    content:
+                        application/json:
+                            schema:
+                                {
+                                    $ref: "#/components/schemas/HealthKitDiagnosticSnapshotResult",
+                                }
+    /provider-uploads/{uploadID}:
+        get:
+            operationId: getProviderUpload
+            summary: Read current processing state or replay a completed receipt.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+                - $ref: "#/components/parameters/UploadID"
+            responses:
+                "200":
+                    description: Current state
+                    content:
+                        application/json:
+                            schema:
+                                {
+                                    $ref: "#/components/schemas/ProviderUploadStatus",
+                                }
+    /provider-uploads/{uploadID}/process:
+        post:
+            operationId: processProviderUpload
+            summary: Verify, process, and delete the authorized Storage object.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+                - $ref: "#/components/parameters/UploadID"
+            responses:
+                "200":
+                    description: Processing completed, or completed receipt replayed
+                    content:
+                        application/json:
+                            schema:
+                                {
+                                    $ref: "#/components/schemas/ProviderUploadStatus",
+                                }
+                "202":
+                    description: Database committed; Storage cleanup remains pending
+                    content:
+                        application/json:
+                            schema:
+                                {
+                                    $ref: "#/components/schemas/ProviderUploadStatus",
+                                }
+                "409":
+                    description: This upload is already being processed
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/ApiError" }
+    /auth/apple:
+        post:
+            operationId: storeAppleAuthorization
+            summary: Exchange and securely store the native Apple authorization needed for account deletion.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            additionalProperties: false
+                            required: [authorization_code]
+                            properties:
+                                authorization_code:
+                                    {
+                                        type: string,
+                                        minLength: 1,
+                                        maxLength: 2048,
+                                    }
+            responses:
+                "200":
+                    description: Apple authorization stored
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [stored]
+                                properties:
+                                    stored: { const: true }
+    /me:
+        get:
+            operationId: readProfile
+            summary: Read the authenticated User's profile.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+            responses:
+                "200":
+                    description: Current profile
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/Profile" }
+                "401":
+                    description: unauthorized for an invalid session; profile_missing for a missing or deleted account.
+        patch:
+            operationId: updateProfile
+            summary: Update the authenticated User's handle, display name, or both.
+            description: Omitted fields remain unchanged. The server derives ownership and sets handle_set_at when a handle is supplied.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema: { $ref: "#/components/schemas/UpdateProfile" }
+            responses:
+                "200":
+                    description: Updated profile
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/Profile" }
+                "400":
+                    description: validation for an empty patch, invalid field, or caller-supplied ownership/timestamp.
+                "401":
+                    description: unauthorized for an invalid session; profile_missing for a missing or deleted account.
+                "409":
+                    description: handle_taken when the username already belongs to an account.
+        delete:
+            operationId: deleteAccount
+            summary: Permanently delete the account, its data, memberships, and Fights it owns.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+            responses:
+                "200":
+                    description: Account deleted
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [apple_authorization_revoked, deleted]
+                                properties:
+                                    apple_authorization_revoked:
+                                        { type: boolean }
+                                    deleted: { const: true }
+    /fights:
+        post:
+            operationId: createFight
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+                - in: header
+                  name: Idempotency-Key
+                  required: true
+                  schema: { type: string }
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema: { $ref: "#/components/schemas/CreateFight" }
+            responses:
+                "201":
+                    description: Created fight
+                    content:
+                        application/json:
+                            schema:
+                                { $ref: "#/components/schemas/FightSummary" }
+    /fights/sync-due:
+        post:
+            operationId: syncDueFights
+            summary: Close this user's fights whose clock has run out. Safe to call on every app open.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+            responses:
+                "200":
+                    description: How many due fights were recalculated
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/SyncDue" }
+    /fights/{fightID}/invites:
+        post:
+            operationId: inviteByHandle
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+                - in: path
+                  name: fightID
+                  required: true
+                  schema: { type: string, format: uuid }
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required: [handle]
+                            properties:
+                                handle: { type: string }
+            responses:
+                "200":
+                    description: Invite created
+                    content:
+                        application/json:
+                            schema:
+                                { $ref: "#/components/schemas/InviteCreated" }
+    /invites/{token}/accept:
+        post:
+            operationId: acceptInvite
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+                - in: path
+                  name: token
+                  required: true
+                  schema: { type: string }
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                personalTarget: { type: number }
+            responses:
+                "200":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                { $ref: "#/components/schemas/FightSummary" }
+    /fights/{fightID}/accept:
+        post:
+            operationId: acceptFight
+            summary: Accept an in-app invite (caller is already an invited member).
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+                - in: path
+                  name: fightID
+                  required: true
+                  schema: { type: string, format: uuid }
+            responses:
+                "200":
+                    description: Accepted
+                    content:
+                        application/json:
+                            schema:
+                                { $ref: "#/components/schemas/FightSummary" }
+    /fights/{fightID}/decline:
+        post:
+            operationId: declineFight
+            summary: Decline an in-app invitation belonging to the caller.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+                - in: path
+                  name: fightID
+                  required: true
+                  schema: { type: string, format: uuid }
+            responses:
+                "200":
+                    description: Declined, including an already declined invitation
+                    content:
+                        application/json:
+                            schema:
+                                { $ref: "#/components/schemas/FightSummary" }
+                "403":
+                    description: Caller has no membership in this fight
+                "409":
+                    description: Membership or fight no longer permits declining
+    /fights/{fightID}/start:
+        post:
+            operationId: startFight
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+                - in: path
+                  name: fightID
+                  required: true
+                  schema: { type: string, format: uuid }
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                when:
+                                    type: string
+                                    enum: [now, scheduled]
+            responses:
+                "200":
+                    description: Fight is live or scheduled
+                    content:
+                        application/json:
+                            schema:
+                                { $ref: "#/components/schemas/FightSummary" }
+    /fights/{fightID}/cancel:
+        post:
+            operationId: cancelFight
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+                - in: path
+                  name: fightID
+                  required: true
+                  schema: { type: string, format: uuid }
+            responses:
+                "200":
+                    description: Cancelled
 components:
-  parameters:
-    UploadID:
-      in: path
-      name: uploadID
-      required: true
-      schema: { $ref: "#/components/schemas/UUIDv4" }
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-  schemas:
-    ApiError:
-      type: object
-      additionalProperties: false
-      required: [error, code]
-      properties:
-        error: { type: string }
-        code: { type: string }
-    UUIDv4:
-      type: string
-      format: uuid
-      pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
-    DataSource:
-      type: object
-      required: [id, provider, sourceLabel]
-      properties:
-        id: { type: string, format: uuid }
-        provider: { type: string, enum: [apple_health] }
-        sourceLabel: { type: string }
-        contributingSourceLabels:
-          type: array
-          items: { type: string }
-    CreateProviderUpload:
-      type: object
-      additionalProperties: false
-      required: [upload_id, provider, connection_route, metric, format_version, byte_size, sha256]
-      properties:
-        upload_id: { $ref: "#/components/schemas/UUIDv4" }
-        provider: { const: apple_health }
-        connection_route: { const: healthkit }
-        metric: { const: steps }
-        format_version: { const: 1 }
-        byte_size: { type: integer, minimum: 1, maximum: 536870912 }
-        sha256: { type: string, pattern: "^[0-9a-f]{64}$" }
-    ProviderUploadAuthorization:
-      type: object
-      required: [upload_id, status, object_path, tus_url, tus_headers, tus_metadata]
-      properties:
-        upload_id: { $ref: "#/components/schemas/UUIDv4" }
-        status: { $ref: "#/components/schemas/ProviderUploadState" }
-        object_path: { type: string }
-        tus_url: { type: string, format: uri }
-        tus_headers:
-          type: object
-          required: [x-signature, x-upsert]
-          properties:
-            x-signature: { type: string }
-            x-upsert: { const: "false" }
-        tus_metadata:
-          type: object
-          required: [bucketName, objectName, contentType, cacheControl]
-          properties:
-            bucketName: { const: provider-inbox }
-            objectName: { type: string }
-            contentType: { const: application/x-ndjson }
-            cacheControl: { const: "3600" }
-    ProviderUploadState:
-      type: string
-      enum: [issued, processing, committed, completed, rejected, retryable_failure]
-    ProviderUploadReceipt:
-      type: object
-      required: [upload_id, samples, deletions, merged_days, source_days, fight_aggregates, completed_at]
-      properties:
-        upload_id: { $ref: "#/components/schemas/UUIDv4" }
-        samples: { type: integer, minimum: 0 }
-        deletions: { type: integer, minimum: 0 }
-        merged_days: { type: integer, minimum: 0 }
-        source_days: { type: integer, minimum: 0 }
-        fight_aggregates: { type: integer, minimum: 0 }
-        completed_at: { type: string, format: date-time }
-    ProviderUploadStatus:
-      type: object
-      required: [upload_id, status]
-      properties:
-        upload_id: { $ref: "#/components/schemas/UUIDv4" }
-        status: { $ref: "#/components/schemas/ProviderUploadState" }
-        receipt: { $ref: "#/components/schemas/ProviderUploadReceipt" }
-        error_code: { type: string }
-    ProviderUploadContext:
-      type: object
-      required: [server_now, fight_windows]
-      properties:
-        server_now: { type: string, format: date-time }
-        fight_windows:
-          type: array
-          items: { $ref: "#/components/schemas/FightUploadWindow" }
-    FightUploadWindow:
-      type: object
-      additionalProperties: false
-      required: [fight_id, state, starts_at, ends_at, cutoff_at]
-      properties:
-        fight_id: { $ref: "#/components/schemas/UUIDv4" }
-        state: { type: string, enum: [live, awaiting_final_sync] }
-        starts_at: { type: string, format: date-time }
-        ends_at: { type: string, format: date-time }
-        cutoff_at:
-          type: string
-          format: date-time
-          description: The earlier of server_now and ends_at.
-    HealthKitStepSync:
-      type: object
-      additionalProperties: false
-      required: [complete_through, time_zone, merged_days, fight_aggregates]
-      properties:
-        complete_through: { type: string, format: date-time }
-        time_zone: { type: string, minLength: 1, maxLength: 100 }
-        merged_days:
-          type: array
-          maxItems: 400
-          items: { $ref: "#/components/schemas/HealthKitMergedDay" }
-        fight_aggregates:
-          type: array
-          maxItems: 100
-          items: { $ref: "#/components/schemas/HealthKitFightAggregate" }
-    HealthKitMergedDay:
-      type: object
-      additionalProperties: false
-      required: [day, starts_at, ends_at, steps]
-      properties:
-        day: { type: string, format: date }
-        starts_at: { type: string, format: date-time }
-        ends_at: { type: string, format: date-time }
-        steps: { type: integer, minimum: 0, maximum: 2147483647 }
-    HealthKitFightAggregate:
-      type: object
-      additionalProperties: false
-      required: [fight_id, starts_at, ends_at, cutoff_at, steps]
-      properties:
-        fight_id: { $ref: "#/components/schemas/UUIDv4" }
-        starts_at: { type: string, format: date-time }
-        ends_at: { type: string, format: date-time }
-        cutoff_at: { type: string, format: date-time }
-        steps: { type: integer, minimum: 0, maximum: 2147483647 }
-    HealthKitStepSyncResult:
-      type: object
-      additionalProperties: false
-      required: [complete_through, synced_days, synced_fights]
-      properties:
-        complete_through: { type: string, format: date-time }
-        synced_days: { type: integer, minimum: 0 }
-        synced_fights: { type: integer, minimum: 0 }
-    CreateFight:
-      type: object
-      required: [name, startsAt, endsAt, timeZone, outcomeRule, stakeKind]
-      properties:
-        name: { type: string, minLength: 1, maxLength: 80 }
-        startsAt: { type: string, format: date-time }
-        endsAt: { type: string, format: date-time }
-        timeZone: { type: string }
-        outcomeRule:
-          type: string
-          enum: [highest_total, proportional, hit_your_goal]
-        goalPolicy:
-          type: string
-          enum: [shared, personal]
-          default: shared
-        defaultGoalValue: { type: number }
-        stakeKind:
-          type: string
-          enum: [bragging, money, action]
-        stakeMinor: { type: integer, minimum: 0 }
-        currency: { type: string, default: USD }
-        actionText: { type: string }
-        inviteHandles:
-          type: array
-          items: { type: string }
-        start:
-          type: string
-          enum: [now, scheduled]
-          default: now
-    FightSummary:
-      type: object
-      required: [id, state]
-      properties:
-        id: { type: string, format: uuid }
-        state: { type: string }
-    InviteCreated:
-      type: object
-      required: [token, invitedUserId]
-      properties:
-        token: { type: string }
-        invitedUserId: { type: string, format: uuid }
-    SyncDue:
-      type: object
-      required: [checked, closed]
-      properties:
-        checked: { type: integer }
-        closed: { type: integer }
-        fightIds:
-          type: array
-          items: { type: string, format: uuid }
+    parameters:
+        AppVersion:
+            in: header
+            name: X-FitFight-Version
+            required: true
+            schema: { type: string, pattern: '^\d+\.\d+\.\d+$' }
+        AppBuild:
+            in: header
+            name: X-FitFight-Build
+            required: true
+            schema: { type: string, pattern: '^[1-9]\d*$' }
+        UploadID:
+            in: path
+            name: uploadID
+            required: true
+            schema: { $ref: "#/components/schemas/UUIDv4" }
+    securitySchemes:
+        bearerAuth:
+            type: http
+            scheme: bearer
+            bearerFormat: JWT
+    schemas:
+        FightSnapshot:
+            type: object
+            required: [fights, members, profiles, series, step_days]
+            properties:
+                fights:
+                    type: array
+                    items:
+                        type: object
+                        required:
+                            [
+                                id,
+                                owner_id,
+                                name,
+                                state,
+                                starts_at,
+                                ends_at,
+                                grace_ends_at,
+                                action_text,
+                                series_id,
+                            ]
+                        properties:
+                            id: { type: string, format: uuid }
+                            owner_id: { type: string, format: uuid }
+                            name: { type: string }
+                            state:
+                                {
+                                    type: string,
+                                    enum:
+                                        [
+                                            draft,
+                                            inviting,
+                                            scheduled,
+                                            live,
+                                            awaiting_final_sync,
+                                            final,
+                                            cancelled,
+                                        ],
+                                }
+                            starts_at: { type: string, format: date-time }
+                            ends_at: { type: string, format: date-time }
+                            grace_ends_at: { type: string, format: date-time }
+                            action_text: { type: [string, "null"] }
+                            series_id: { type: [string, "null"], format: uuid }
+                members:
+                    type: array
+                    items:
+                        type: object
+                        required:
+                            [
+                                fight_id,
+                                user_id,
+                                state,
+                                current_value,
+                                rank,
+                                final_value,
+                                last_synced_at,
+                                final_steps_complete,
+                            ]
+                        properties:
+                            fight_id: { type: string, format: uuid }
+                            user_id: { type: string, format: uuid }
+                            state:
+                                {
+                                    type: string,
+                                    enum:
+                                        [
+                                            invited,
+                                            accepted,
+                                            deferred,
+                                            declined,
+                                            withdrawn,
+                                            disqualified,
+                                        ],
+                                }
+                            current_value: { type: [number, "null"] }
+                            rank: { type: [integer, "null"] }
+                            final_value: { type: [number, "null"] }
+                            last_synced_at:
+                                { type: [string, "null"], format: date-time }
+                            final_steps_complete: { type: boolean }
+                            step_checkpoints:
+                                type: [array, "null"]
+                                description: Cumulative history from the same saved revision as current_value. Null for older uploads without history.
+                                items:
+                                    {
+                                        $ref: "#/components/schemas/FightStepCheckpoint",
+                                    }
+                profiles:
+                    type: array
+                    items:
+                        type: object
+                        required:
+                            [
+                                user_id,
+                                handle,
+                                display_name,
+                                avatar,
+                                companion_id,
+                            ]
+                        properties:
+                            user_id: { type: string, format: uuid }
+                            handle: { type: string }
+                            display_name: { type: string }
+                            avatar:
+                                {
+                                    type: [object, "null"],
+                                    description: Shared signed media object when a photo is set.,
+                                }
+                            companion_id: { type: [string, "null"] }
+                series:
+                    type: array
+                    items:
+                        type: object
+                        required:
+                            [id, join_code, visibility, recurring, suggested]
+                        properties:
+                            id: { type: string, format: uuid }
+                            join_code: { type: [string, "null"] }
+                            visibility:
+                                { type: string, enum: [invite_only, joinable] }
+                            recurring: { type: boolean }
+                            suggested: { type: boolean }
+                step_days:
+                    type: array
+                    items:
+                        type: object
+                        required: [user_id, day, steps]
+                        properties:
+                            user_id: { type: string, format: uuid }
+                            day: { type: string, format: date }
+                            steps: { type: integer, minimum: 0 }
+        Profile:
+            type: object
+            required:
+                [user_id, handle, display_name, handle_set_at, referral_code]
+            properties:
+                user_id: { type: string, format: uuid }
+                handle: { type: string }
+                display_name: { type: string }
+                handle_set_at: { type: [string, "null"], format: date-time }
+                referral_code: { type: string, format: uuid }
+        UpdateProfile:
+            type: object
+            additionalProperties: false
+            minProperties: 1
+            properties:
+                handle:
+                    type: string
+                    description: Trimmed, surrounding @ removed, lowercased, then validated as 2–30 letters, numbers, or underscores.
+                display_name:
+                    type: string
+                    minLength: 1
+                    description: Trimmed; must contain at least one non-whitespace character.
+        ReferralLink:
+            type: object
+            additionalProperties: false
+            required: [code]
+            properties:
+                code: { type: string, format: uuid }
+        AppRelease:
+            type: object
+            required: [version, build, update_url]
+            properties:
+                version: { type: string, pattern: '^\d+\.\d+\.\d+$' }
+                build: { type: integer, minimum: 1 }
+                update_url: { type: string, format: uri }
+        AppReleasePolicy:
+            type: object
+            required: [latest, review, enforced]
+            properties:
+                latest:
+                    anyOf:
+                        - { $ref: "#/components/schemas/AppRelease" }
+                        - { type: "null" }
+                review:
+                    description: Registered TestFlight beta review build or the selected registered App Store candidate.
+                    anyOf:
+                        - { $ref: "#/components/schemas/AppRelease" }
+                        - { type: "null" }
+                enforced:
+                    type: boolean
+                    description: Always false on staging, where TestFlight updates are optional. Production follows the published mandatory-update policy.
+        ApiError:
+            type: object
+            additionalProperties: false
+            required: [error, code]
+            properties:
+                error: { type: string }
+                code: { type: string }
+        UUIDv4:
+            type: string
+            format: uuid
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+        DataSource:
+            type: object
+            required: [id, provider, sourceLabel]
+            properties:
+                id: { type: string, format: uuid }
+                provider: { type: string, enum: [apple_health] }
+                sourceLabel: { type: string }
+                contributingSourceLabels:
+                    type: array
+                    items: { type: string }
+        CreateProviderUpload:
+            type: object
+            additionalProperties: false
+            required:
+                [
+                    upload_id,
+                    provider,
+                    connection_route,
+                    metric,
+                    format_version,
+                    byte_size,
+                    sha256,
+                ]
+            properties:
+                upload_id: { $ref: "#/components/schemas/UUIDv4" }
+                provider: { const: apple_health }
+                connection_route: { const: healthkit }
+                metric: { const: steps }
+                format_version: { const: 1 }
+                byte_size: { type: integer, minimum: 1, maximum: 536870912 }
+                sha256: { type: string, pattern: "^[0-9a-f]{64}$" }
+        ProviderUploadAuthorization:
+            type: object
+            required:
+                [
+                    upload_id,
+                    status,
+                    object_path,
+                    tus_url,
+                    tus_headers,
+                    tus_metadata,
+                ]
+            properties:
+                upload_id: { $ref: "#/components/schemas/UUIDv4" }
+                status: { $ref: "#/components/schemas/ProviderUploadState" }
+                object_path: { type: string }
+                tus_url: { type: string, format: uri }
+                tus_headers:
+                    type: object
+                    required: [x-signature, x-upsert]
+                    properties:
+                        x-signature: { type: string }
+                        x-upsert: { const: "false" }
+                tus_metadata:
+                    type: object
+                    required:
+                        [bucketName, objectName, contentType, cacheControl]
+                    properties:
+                        bucketName: { const: provider-inbox }
+                        objectName: { type: string }
+                        contentType: { const: application/x-ndjson }
+                        cacheControl: { const: "3600" }
+        ProviderUploadState:
+            type: string
+            enum:
+                [
+                    issued,
+                    processing,
+                    committed,
+                    completed,
+                    rejected,
+                    retryable_failure,
+                ]
+        ProviderUploadReceipt:
+            type: object
+            required:
+                [
+                    upload_id,
+                    samples,
+                    deletions,
+                    merged_days,
+                    source_days,
+                    fight_aggregates,
+                    completed_at,
+                ]
+            properties:
+                upload_id: { $ref: "#/components/schemas/UUIDv4" }
+                samples: { type: integer, minimum: 0 }
+                deletions: { type: integer, minimum: 0 }
+                merged_days: { type: integer, minimum: 0 }
+                source_days: { type: integer, minimum: 0 }
+                fight_aggregates: { type: integer, minimum: 0 }
+                completed_at: { type: string, format: date-time }
+        ProviderUploadStatus:
+            type: object
+            required: [upload_id, status]
+            properties:
+                upload_id: { $ref: "#/components/schemas/UUIDv4" }
+                status: { $ref: "#/components/schemas/ProviderUploadState" }
+                receipt: { $ref: "#/components/schemas/ProviderUploadReceipt" }
+                error_code: { type: string }
+        ProviderUploadContext:
+            type: object
+            required: [server_now, fight_windows]
+            properties:
+                server_now: { type: string, format: date-time }
+                fight_windows:
+                    type: array
+                    items: { $ref: "#/components/schemas/FightUploadWindow" }
+        FightUploadWindow:
+            type: object
+            additionalProperties: false
+            required: [fight_id, state, starts_at, ends_at, cutoff_at]
+            properties:
+                fight_id: { $ref: "#/components/schemas/UUIDv4" }
+                state: { type: string, enum: [live, awaiting_final_sync] }
+                starts_at: { type: string, format: date-time }
+                ends_at: { type: string, format: date-time }
+                time_zone:
+                    {
+                        type: string,
+                        description: Fight calendar time zone for cumulative checkpoints.,
+                    }
+                cutoff_at:
+                    type: string
+                    format: date-time
+                    description: The earlier of server_now and ends_at.
+        HealthKitStepSync:
+            type: object
+            additionalProperties: false
+            required:
+                [complete_through, time_zone, merged_days, fight_aggregates]
+            properties:
+                complete_through: { type: string, format: date-time }
+                time_zone: { type: string, minLength: 1, maxLength: 100 }
+                merged_days:
+                    type: array
+                    maxItems: 400
+                    items: { $ref: "#/components/schemas/HealthKitMergedDay" }
+                fight_aggregates:
+                    type: array
+                    maxItems: 100
+                    items:
+                        { $ref: "#/components/schemas/HealthKitFightAggregate" }
+                activity_days:
+                    type: array
+                    maxItems: 1000
+                    items: { $ref: "#/components/schemas/HealthKitActivityDay" }
+                workouts:
+                    type: array
+                    maxItems: 200
+                    items: { $ref: "#/components/schemas/HealthKitWorkout" }
+        HealthKitMergedDay:
+            type: object
+            additionalProperties: false
+            required: [day, starts_at, ends_at, steps]
+            properties:
+                day: { type: string, format: date }
+                starts_at: { type: string, format: date-time }
+                ends_at: { type: string, format: date-time }
+                steps: { type: integer, minimum: 0, maximum: 2147483647 }
+        HealthKitFightAggregate:
+            type: object
+            additionalProperties: false
+            required: [fight_id, starts_at, ends_at, cutoff_at, steps]
+            properties:
+                fight_id: { $ref: "#/components/schemas/UUIDv4" }
+                starts_at: { type: string, format: date-time }
+                ends_at: { type: string, format: date-time }
+                cutoff_at: { type: string, format: date-time }
+                steps: { type: integer, minimum: 0, maximum: 2147483647 }
+                step_checkpoints:
+                    type: array
+                    minItems: 1
+                    maxItems: 41
+                    description: Optional for installed clients. Covers each Fight day through cutoff_at; the last point must equal steps and cutoff_at.
+                    items: { $ref: "#/components/schemas/FightStepCheckpoint" }
+        FightStepCheckpoint:
+            type: object
+            additionalProperties: false
+            required: [day, cutoff_at, steps]
+            properties:
+                day:
+                    {
+                        type: string,
+                        format: date,
+                        description: Calendar day in the Fight time zone.,
+                    }
+                cutoff_at: { type: string, format: date-time }
+                steps:
+                    {
+                        type: integer,
+                        minimum: 0,
+                        maximum: 2147483647,
+                        description: Cumulative steps from the Fight start through cutoff_at.,
+                    }
+        HealthKitActivityDay:
+            type: object
+            additionalProperties: false
+            required: [day, starts_at, ends_at, metric, value, unit]
+            properties:
+                day: { type: string, format: date }
+                starts_at: { type: string, format: date-time }
+                ends_at: { type: string, format: date-time }
+                metric: { type: string }
+                value: { type: number, minimum: 0 }
+                unit: { type: string }
+        HealthKitWorkout:
+            type: object
+            additionalProperties: false
+            required:
+                [
+                    healthkit_uuid,
+                    started_at,
+                    ended_at,
+                    activity_type,
+                    duration_seconds,
+                ]
+            properties:
+                healthkit_uuid: { type: string, format: uuid }
+                started_at: { type: string, format: date-time }
+                ended_at: { type: string, format: date-time }
+                activity_type: { type: string }
+                duration_seconds: { type: number, minimum: 0 }
+                active_minutes: { type: [number, "null"], minimum: 0 }
+                distance_m: { type: [number, "null"], minimum: 0 }
+                energy_kcal: { type: [number, "null"], minimum: 0 }
+                effort: { type: [number, "null"], minimum: 0 }
+        HealthKitStepSyncResult:
+            type: object
+            additionalProperties: false
+            required: [complete_through, synced_days, synced_fights]
+            properties:
+                complete_through: { type: string, format: date-time }
+                synced_days: { type: integer, minimum: 0 }
+                synced_fights: { type: integer, minimum: 0 }
+        HealthKitDiagnosticSnapshot:
+            type: object
+            additionalProperties: false
+            required:
+                - background_refresh_status
+                - delivery_registration_status
+                - last_observer_wake
+                - last_sync_attempt
+                - last_automatic_sync
+                - last_manual_sync
+                - last_trigger_context
+                - error_code
+                - app_version
+                - app_build
+            properties:
+                background_refresh_status:
+                    { type: string, enum: [available, denied, restricted] }
+                delivery_registration_status:
+                    { type: string, enum: [enabled, unavailable] }
+                last_observer_wake:
+                    { type: [string, "null"], format: date-time }
+                last_sync_attempt: { type: [string, "null"], format: date-time }
+                last_automatic_sync:
+                    { type: [string, "null"], format: date-time }
+                last_manual_sync: { type: [string, "null"], format: date-time }
+                last_trigger_context:
+                    {
+                        type: [string, "null"],
+                        enum: [observer, foreground, manual, null],
+                    }
+                error_code:
+                    type: [string, "null"]
+                    enum:
+                        - authentication_unavailable
+                        - network_unavailable
+                        - protected_data_unavailable
+                        - attempt_expired
+                        - healthkit_unavailable
+                        - background_delivery_unavailable
+                        - sync_failed
+                        - null
+                app_version: { type: string, minLength: 1, maxLength: 40 }
+                app_build: { type: string, minLength: 1, maxLength: 40 }
+        HealthKitDiagnosticSnapshotResult:
+            type: object
+            additionalProperties: false
+            required: [updated_at]
+            properties:
+                updated_at: { type: string, format: date-time }
+        CreateFight:
+            type: object
+            required: [name, startsAt, endsAt, timeZone, outcomeRule, stakeKind]
+            properties:
+                name: { type: string, minLength: 1, maxLength: 80 }
+                startsAt: { type: string, format: date-time }
+                endsAt: { type: string, format: date-time }
+                timeZone: { type: string }
+                outcomeRule:
+                    type: string
+                    enum: [highest_total, proportional, hit_your_goal]
+                goalPolicy:
+                    type: string
+                    enum: [shared, personal]
+                    default: shared
+                defaultGoalValue: { type: number }
+                stakeKind:
+                    type: string
+                    enum: [bragging, money, action]
+                stakeMinor: { type: integer, minimum: 0 }
+                currency: { type: string, default: USD }
+                actionText: { type: string }
+                inviteHandles:
+                    type: array
+                    items: { type: string }
+                start:
+                    type: string
+                    enum: [now, scheduled]
+                    default: now
+        FightSummary:
+            type: object
+            required: [id, state]
+            properties:
+                id: { type: string, format: uuid }
+                state: { type: string }
+        InviteCreated:
+            type: object
+            required: [token, invitedUserId]
+            properties:
+                token: { type: string }
+                invitedUserId: { type: string, format: uuid }
+        SyncDue:
+            type: object
+            required: [checked, closed]
+            properties:
+                checked: { type: integer }
+                closed: { type: integer }
+                fightIds:
+                    type: array
+                    items: { type: string, format: uuid }

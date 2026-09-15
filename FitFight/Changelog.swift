@@ -1,14 +1,14 @@
 import Foundation
 
-struct ReleaseNote: Identifiable, Hashable {
+struct ReleaseNote: Identifiable {
     let version: String
     let year: Int
     let month: Int
     let day: Int
-    let notes: String
+    let notes: LocalizedStringResource
 
     /// Several notes may share one marketing version (TestFlight does not bump it).
-    var id: String { "\(version)-\(year)-\(month)-\(day)-\(notes)" }
+    var id: String { "\(version)-\(year)-\(month)-\(day)-\(notes.key)" }
 
     var date: Date {
         var components = DateComponents()
@@ -24,6 +24,832 @@ struct ReleaseNote: Identifiable, Hashable {
 enum Changelog {
     /// Newest first. Add a row here whenever we ship a user-facing change.
     static let releases: [ReleaseNote] = [
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "Fight charts and standings now use the same confirmed steps. Charts exclude activity outside the Fight, update with late corrections, and show missing history clearly."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "Feedback has one ranked list with compact Top, Features, and Bugs tabs. The extra tab row is gone, and plus opens New request directly."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "Standings refresh automatically when another participant syncs. Rankings use confirmed scores for everyone."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "TestFlight updates no longer block the app. Cancel to keep using FitFight, and the same update will stay dismissed."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "Reopening the app no longer waits for profile loading after your saved session refreshes."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "See who reacted to a post. Posts with comments now open their comments automatically."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "Reactions update immediately and recover if saving fails. Refresh uses one spinner, New opens faster, and restoring your session no longer flashes sign-in. Photos and sign-out are more reliable."
+        ),
+        ReleaseNote(
+            version: "1.1.0",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "Tap a Feed or fight photo to open it. A tall photo no longer covers the caption field, so you can type after you add one."
+        ),
+        ReleaseNote(
+            version: "1.1.0",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "The version line is only on You. Fights, New, Feed, and Feedback no longer show it at the top."
+        ),
+        ReleaseNote(
+            version: "1.1.0",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "The Update screen no longer appears from a leftover version check while TestFlight is still publishing."
+        ),
+        ReleaseNote(
+            version: "1.1.0",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "Tabs are Fights, New, Feed, Feedback, You. Fight-feed lock-screen alerts name the person, never scores. Turn posts, comments, replies, and reactions on or off under You → Settings."
+        ),
+        ReleaseNote(
+            version: "1.0.1",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "Tabs are Fights, New, Feed, Feedback, You. Fight-feed lock-screen alerts name the person, never scores. Turn posts, comments, replies, and reactions on or off under You → Settings."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "The version line is only on You. Fights, New, Feed, and Feedback no longer show it at the top."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "You can get alerts when someone posts, comments, replies, or reacts in a fight. Turn each one on or off under You → Settings → Notifications."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "You is now the last tab: Fights, New, Feed, Feedback, You."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "Invited on Fights now shows how many invitations are waiting. The number hides when there are none."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "Edit fight now keeps the version and header tight at the top, and the recap names your opponents instead of showing join instructions."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "Feed and Feedback now have separate tabs: Fights, New, You, Feed, Feedback."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "FitFight has a new green and beige double-F app icon."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "Choose a companion from a grid of animals, or Custom. Custom is one description: species, breed, accessories, colors."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "Editing a fight now opens the same summary as creating one. Change jumps to that part, then back. If you created it, Delete at the bottom ends the fight."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "Feedback is the last tab: Fights, New, You, Feedback. Feed is the same fight posts list, with the fight picker when you post."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "Tapping an animal keeps that character on screen with its own poses. Other animals no longer show the hiking goat pictures."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "A fight you just created stays on your list even if the refresh failed."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "Take Photo and Photo Library now open after you tap Media."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "A failed Apple Health sync now shows why, in ember, with a Retry pill instead of Connected."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "Choosing a companion now shows five effort poses. Weekly movement changes the pose; you can set sport, breed, and mood."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "Posting to several fights now shows once on Feed, with those fight names or Public."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "New can start a fight, join one, or post. Suggested fights sit under those choices."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "Bugs & requests can include a photo, a video, or any file."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "You can take a photo with the camera when you add Media, not only pick one from the library."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "Posting from a fight’s Feed starts on that fight. You can still add other channels."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "Every day so far opens on the oval. Bars show a small companion next to each name. Heat, stack, and rings are gone."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "Tap a photo in Feed to see it full screen."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "Tapping an animal saves that companion for everyone. If you have not chosen one yet, FitFight will ask you to pick."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "Two-word companion names now capitalize both words, like Red Panda."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "If you created a fight, Edit lets you change private or public, the title, the loser action, the duration, whether it repeats, who is in it, and kick people out."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "You can post from a fight’s Feed, not only from the main Feed tab."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "You can still use FitFight when you’re offline. The update screen only appears when an update is actually required, not when the version check can’t reach the internet."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "Crashes are now reported so we can fix them. Reports do not include Apple Health or Steps."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "Slide to start now ticks like a switch as you drag, instead of buzzing the whole time."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "Apple Health Steps still syncs even if extra workout details fail. You shows the real server or network error instead of only Sync failed, and no longer labels a failed sync as Connected."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "Photos and profile pictures now show up much faster. They stay on the phone after the first load, so Feed, Fights and You don’t sit on empty boxes."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 13,
+            notes: "Feed photos keep their original shape and fill the post width. A wide photo stays short, a tall one stays tall — nothing is cropped to a fixed frame."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 13,
+            notes: "Send to Cursor includes the phone details from your device. Bugs & requests still hides them on the board."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 13,
+            notes: "Your selected companion now appears as your avatar across You, fights and Feed. Apple Health details stay behind More settings. Choose Custom when creating a fight to set exact start and end dates and times."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 13,
+            notes: "Posting is simpler: choose one or more channels from Feed and add photos or a video with Media. Post headers pair the time with a plain channel label, fight links are always available, and the bottom tabs have more breathing room. Charts show scales and exact daily steps, with tap and slide inspection, corrected avatars and rounded stacks. Invitations separate the rules and round choices, with clear tap buttons."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 13,
+            notes: "Fights takes less space: a smaller companion, today’s steps, and Current, Invited and Past filters. Fight details bring standings below your score, put the loser’s action under the title, and keep codes and links in Share. Countdowns stay simple until the finish is close."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 13,
+            notes: "Meet your walking companion. Fights shows today’s Apple Health steps, fight details use a clearer score layout, and New and You share the Companion look. Try the stock animals in You; this design-preview choice lasts for the current session."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 13,
+            notes: "Feed lists posts from fights you’re in, not Public. Plus posts to those fights. Bugs & requests no longer shows device details."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 13,
+            notes: "The website now uses the centered FitFight logo with a transparent background in browser tabs."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 13,
+            notes: "Internal TestFlight build so the update overlay can be checked from 188."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 13,
+            notes: "The update screen is the full overlay again. Internal TestFlight latest no longer asks you to update; Friends stay on the public build."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 12,
+            notes: "Plus starts with no destination — pick Public or a fight. Public posts and fight posts look different. You can edit or delete your own posts. Tags are people you’ve already finished a fight with."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 12,
+            notes: "You can file Bugs & requests again. Creating one no longer fails with an internal error."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 12,
+            notes: "Send to Cursor now shows a real error if the agent can’t start, instead of a blank 502."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 12,
+            notes: "Fights, the challenge page, and stats now show everyone’s photo when they have one — not just initials."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 12,
+            notes: "Bugs & requests posts and comments now include the app version, phone, and settings so we can debug faster."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 12,
+            notes: "Feed is one list. Plus: write a note, tag people, and pick fights next to photo or video. Everything selects every fight. Each post shows a badge for where it went. Inside a fight, posting goes there without asking."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 12,
+            notes: "Setup now ends with a last screen: go to Settings to submit a feature you want or a bug you see. Those will be fixed rapidly."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 12,
+            notes: "New fights start private. People can still join with the code or invite link; only public fights show on Join."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 12,
+            notes: "Fight detail corners now follow one scaled family: the header, standings, and chart share the outer card radius, with tighter nested corners on inner rows and chart-type chips."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 12,
+            notes: "Opening FitFight shows your last Fights right away. Update checks run in the background; if a new build is ready you’ll get a small popup. Challenge reminders are asked once, not every launch. Offline still shows your last Fights."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 12,
+            notes: "Joining or starting a fight now counts Apple Health Steps from the fight start, not from join time, and uploads them right away."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 11,
+            notes: "You can update Apple Health access under You, so existing accounts can allow extra Health types without deleting the account. Fights still use steps only."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 11,
+            notes: "The required-update screen now fills Night and Day correctly, without leftover bands or a muddy overlay."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 11,
+            notes: "New accounts are asked about challenge reminders during setup, before iPhone’s permission sheet. Lock-screen alerts never include step counts. Versions stays under You → Settings."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 11,
+            notes: "Live fights can send a once-a-day status nudge. Tap it to open the fight and read a short in-app recap."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 11,
+            notes: "FitFight can remind you when a fight ends and when to sync before the 24-hour window closes. Allow notifications only when the server can send them."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 11,
+            notes: "Repeating fights stay on one page. A History tab lists earlier windows with their standings and result. The Fights list shows one row per series. Standings put the leader in a winner band, then everyone else below."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 11,
+            notes: "Bugs & requests now has Report and Hide this person on other people’s posts, the same way Feed does."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 10,
+            notes: "After a fight ends, Finished shows P until everyone syncs or 24 hours pass. Miss the window and you lose. Opening it shows a tentative result, not a win."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 10,
+            notes: "Create and Join on New now use the same icon size."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 10,
+            notes: "On a Bugs & requests post, Marc can tap Send to Cursor to start a cloud agent with the post and comments."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 10,
+            notes: "Join shows a spinner while public fights load. Opening one stays on Join with a Join button, not the live fight and its step refresh."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 10,
+            notes: "Pull to refresh shows the sync steps from Fights, a fight, Feed, and You, not only when you open the app."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 10,
+            notes: "The Fights list shows how much time is left as months, weeks, days, hours, and minutes, without the end date. Under two days you see the days and the hours. Inside a fight, the exact end time is still there."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 10,
+            notes: "Fights are public or private. Anyone can join with the code or link. Only public fights show on Join."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 10,
+            notes: "Apple Health can also sync energy, distance, exercise, stand, flights, and workouts. Fights still use steps only. Other activity stays private on your account."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 10,
+            notes: "Each fight now shows the exact date and time it stops, not only how many days are left."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 10,
+            notes: "Pull to refresh stays open with a spinner and tells you when FitFight is syncing your steps, updating the database, and counting the gap to your friend. Opening the app shows the same."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 9,
+            notes: "Slide to start keeps vibrating until you let go, and the pulses speed up as you drag farther."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 9,
+            notes: "Feed now has swipeable Main and fight tabs. Plus opens one composer where you add a photo, video, or note, tag people, and pick more than one place to post. Posts can get any emoji and nested comments. Inside a fight, Stats and Feed are tabs."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 9,
+            notes: "Every day so far has ten chart styles. Tap a badge to switch between line, histogram, bars, pace, heat, track, oval, rings, stack, and dots."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 9,
+            notes: "An outdated beta only shows an update dialog. You can’t use FitFight until you install the latest version."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 9,
+            notes: "Bugs & requests now lets you post as soon as the title and details each have at least one character."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 9,
+            notes: "Fight standings update as soon as your Steps sync, instead of waiting about 30 seconds."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 9,
+            notes: "A Feed tab collects photos, videos, and notes from every fight you’re in. Tap + to post to a fight. Recurring fights keep their posts when a new round starts. You can add a profile photo when you pick a username. New accounts are asked to connect Apple Health during setup."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 9,
+            notes: "New fights now repeat when they end. You can still turn that off while creating."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 9,
+            notes: "Your profile and username now use the FitFight API, keeping the app compatible as the database evolves."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 9,
+            notes: "Buttons now tap with haptic feedback, and Slide to start ticks harder as you drag the thumb toward the end."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 7,
+            notes: "FitFight now requires the latest available app version. An update screen stays until you install it, with a direct link to TestFlight or the App Store."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 7,
+            notes: "Refer a friend from You or share a fight directly. Links help friends install FitFight through TestFlight, and reopening the link after installation keeps the referral and challenge together."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 6,
+            notes: "On a repeating fight, after the start day you can join this round or wait for the next one. People waiting for the next round show up on the fight without counting in this round’s standings."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 6,
+            notes: "A tap anywhere on a Bugs & requests card opens it, not only the title."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 5,
+            notes: "Bugs & requests now sits on its own on You, above Settings."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 5,
+            notes: "Create and Join on New now use the same gray captions, and they no longer mention codes or inviting people."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 5,
+            notes: "Apple Health sync failures now include an error reference on You and diagnostic details to help investigate."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 5,
+            notes: "Fights refresh with fewer network requests, and private Apple Health timing logs help diagnose slow syncs."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 5,
+            notes: "Apple Health on You shows today’s step count correctly."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 5,
+            notes: "Invitation responses are secured, and unavailable Apple Health data no longer replaces saved Steps with zero."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 4,
+            notes: "Share on a fight uses the same space under the section title as Action and Standings."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 4,
+            notes: "You can name a fight. Title and action are both optional; if you skip a title, the action is the name on Fights."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 4,
+            notes: "You → Settings now has Bugs & requests: post a bug or a feature request, see what other people submitted, upvote, and comment with your username."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 4,
+            notes: "New now starts with Create or Join. Joinable fights use a 4-character code and a live list; share the code or link from the fight. Recurring fights roll into the next window when the current one ends. Leave from the fight if you do not want the next one."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 4,
+            notes: "Every fight in the list is now titled by the action the loser owes, because that is the only name a fight has. The number on the right is how far ahead or behind you are, the days left sit underneath, and every live fight is the same size instead of one large card on top."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 4,
+            notes: "The TestFlight update notice sits under the version line at the top of the screen and uses a solid card instead of a see-through toast over the tab bar."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 4,
+            notes: "FitFight now follows your iPhone language in English or French, including fights, Apple Health access, settings, errors, accessibility labels, and the Versions history."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 4,
+            notes: "Apple Health background sync now starts at launch, preserves interrupted work for the next foreground refresh, and shows private sync status under You. Fight standings show relative freshness and whether ended fights include complete final Steps."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 3,
+            notes: "Fight setup uses a normal Next button on the first steps, then a real slide-to-start control on review so creating a fight cannot be mistaken for a swipe."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 3,
+            notes: "Tapping Fights again while a fight is open returns you to the list. You can also swipe from the left edge to go back, like in other iOS apps."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 3,
+            notes: "Fight setup now shows New fight beside the first-step progress, then replaces it with Back as you move through the remaining steps."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 3,
+            notes: "Fight setup now opens directly on the current step, without a repeated New Fight heading above the progress and Back controls."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 3,
+            notes: "Fight setup now starts with the Steps metric, then duration, opponents, loser action, and review. Next stays at the bottom on short steps, and Return closes every setup keyboard."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 3,
+            notes: "Creating a Fight is now a clear four-step flow: enter opponents with Return, choose the duration, agree on the loser action, then review every detail before starting."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 3,
+            notes: "Opening the app now shows an in-app notice when a newer TestFlight build is available, so you can open TestFlight and tap Update."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 3,
+            notes: "Inside a fight, the Total and Today tiles under the main card are gone. The head-to-head card, action, standings, and daily breakdown stay."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 3,
+            notes: "Standings now show each person's last Apple Health sync date and time, so you can see whether a score is current or someone has not uploaded yet."
+        ),
         ReleaseNote(
             version: "1.0.0",
             year: 2026,

@@ -4,28 +4,33 @@ One line: challenge friends to a private Steps fight; most steps wins, and the l
 
 ## Names (they’re different)
 
-| What | Value |
-| --- | --- |
-| On-device display name | **FitFight** |
+| What                           | Value                                                        |
+| ------------------------------ | ------------------------------------------------------------ |
+| On-device display name         | **FitFight**                                                 |
 | App Store Connect listing name | **FitFight MVP** (`FitFight` / `Fitfight` was already taken) |
-| SKU | `fitfight` |
-| Bundle ID | `com.fitfight.mvp` |
-| Team | Marc Lamy, Team ID `C92DPD8ME2` |
-| Xcode target / scheme | `FitFight` |
+| SKU                            | `fitfight`                                                   |
+| Bundle ID                      | `com.fitfight.mvp`                                           |
+| Team                           | Marc Lamy, Team ID `C92DPD8ME2`                              |
+| Xcode target / scheme          | `FitFight`                                                   |
 
 Do not rename the bundle ID without Apple + CI updates.
 
-## Current 1.0 scope — 2 Sep 2026
+## Current 1.0 scope — 9 Sep 2026
 
-- Three tabs: **Fights**, **New**, **You**.
+- Four tabs: **Fights**, **New**, **You**, **Feedback**.
+- Feedback has one ranked board with compact **Top**, **Features**, and **Bugs** tabs. Top shows both kinds together, ordered by votes. Plus and New request open the request form directly. There is no separate Report tab or second tab row. You still has a shortcut into Bugs & requests. Fight posts stay on Feed, where plus opens a new post.
+- Feed is one list of posts from every fight you’re in. Each post has a badge for the fight, or Public if it went to every fight you chose. Tap + to write a note and pick one or more fights next to photo or video. **All fights** selects every fight and shows as Public. Inside a fight, posting starts on that fight and you can add other channels. There is no Main destination. A tag does not add someone to a fight they are not in. Posts can take any emoji and nested comments. Other people in that fight can get a notification when you post in that fight’s Feed; comments and reactions notify the post author; a reply notifies the person you replied to, not everyone else on the thread.
+- Each fight has posts on a Feed tab next to Stats.
+- New accounts pick an optional photo with their username, then connect Apple Health, then allow challenge reminders, then a last screen that the Feedback tab can take a feature or a bug.
 - Every fight is **Steps × highest total**. There are no other metrics or scoring modes.
-- Add participants directly by exact username. There is no friends list or friend-request flow.
-- Type the action the loser must do; it is required. There is no money or bragging-rights option.
+- New fights start private. Every fight has a code and a share link; people join with that code or invite link. Public fights are listed on Join; private fights are not. Exact usernames are optional. There is no friends list or friend-request flow.
+- Type an optional title and an optional action the loser must do. If there is no title, the action is the fight name. There is no money or bragging-rights option.
 - Choose **1 hour**, **6 hours**, or **1 day** for testing, or **3 days**, **1 week**, **2 weeks**, or **1 month**.
-- Apple Health sends only merged Steps aggregates needed for active fights.
-- Settings keeps Privacy, Support, Versions, Sign out, and Delete account. Look is Night or Day.
-- Delete account removes the full account, uploaded Steps, memberships, and owned fights; a stored Sign in with Apple authorization is revoked when available.
-- Requests, money, unsupported metrics, and dead settings are removed.
+- Apple Health sends merged Steps aggregates needed for active fights. It may also store private energy, distance, exercise, stand, flights, and workout summaries. Those extras are not fight options yet.
+- Settings keeps Privacy, Support, Notifications, Versions, Sign out, and Delete account. Bugs & requests lives on the Feedback tab, with a shortcut on You. Look is Night or Day.
+- Companion: pick from a grid of animals, or Custom with one description (species, breed, accessories, colors). That text is stored on the account for later image generation. Generation is not built. Pose and generation controls are not shown.
+- Delete account removes the full account, uploaded Steps, memberships, owned fights, and bugs or requests the User posted; a stored Sign in with Apple authorization is revoked when available.
+- The old Requests tab, money, unsupported metrics, and dead settings are removed.
 
 ## v0.3 (approved design) — historical
 
@@ -36,7 +41,7 @@ The web kit in [`docs/design/source/`](design/source/README.md) is the look. Swi
 - Live fight cards carry their own leaderboard and money line
 - Version label at the top; Versions under You → Settings
 
-That was the original port, not the current product. Marketing version is now `1.0.0`; CI bumps only the **build number** for TestFlight. Do **not** bump marketing version for a TestFlight ship. See [`shipping.md`](shipping.md#versions-vs-builds-why-friends-wait).
+That was the original port, not the current product. Marketing version is now `1.0.1`; CI bumps only the **build number** for TestFlight. Do **not** upload 1.0.0. Apple closed that train. See [`shipping.md`](shipping.md#versions-vs-builds-why-friends-wait).
 
 ## v0.6 (design exploration) — retired 25 Aug 2026
 
@@ -102,4 +107,4 @@ required. Friends, Requests, money, and alternate metrics are not part of the ap
 
 ## Next product work
 
-Honest works / doesn’t / next: [`status.md`](status.md). The living list is [`backlog.md`](backlog.md). Sign-in, username, direct-username Steps fights, HealthKit upload, and standings work on the phone against staging Supabase. The golden guide is [`system-design.md`](system-design.md) — follow it, do not implement all of it. The current product is **Steps only**. Don’t restore retired surfaces or invent the gaps listed in [`design/source/INVENTORY.md`](design/source/INVENTORY.md).
+Honest works / doesn’t / next: [`status.md`](status.md). The living list is the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) (FitFight rows only). Sign-in, username, direct-username Steps fights, HealthKit upload, and standings work on the phone against staging Supabase. The golden guide is [`system-design.md`](system-design.md) — follow it, do not implement all of it. The current product is **Steps only**. Don’t restore retired surfaces or invent the gaps listed in [`design/source/INVENTORY.md`](design/source/INVENTORY.md).

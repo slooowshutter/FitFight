@@ -1,23 +1,51 @@
 import Foundation
-import Supabase
 import SwiftUI
 
 enum MetricKind: String, Codable, Hashable {
     case steps
 
     var eyebrow: String {
-        "Steps total"
-    }
-
-    var title: String {
-        "Steps Total"
+        String(localized: "Steps total")
     }
 }
 
 enum FightStatus: String, Codable, Hashable {
     case live
     case invited
+    case pending
     case finished
+}
+
+enum FightRefreshPhase: Equatable {
+    case idle
+    case readingHealth
+    case uploading
+    case updatingFights
+
+    func statusText(line: Int) -> String {
+        let lines: [String]
+        switch self {
+        case .idle:
+            return ""
+        case .readingHealth:
+            lines = [
+                String(localized: "Syncing your step activity…"),
+                String(localized: "Asking Apple Health how far you walked…"),
+            ]
+        case .uploading:
+            lines = [
+                String(localized: "Updating the database…"),
+                String(localized: "Filing your steps where they belong…"),
+            ]
+        case .updatingFights:
+            lines = [
+                String(localized: "Updating the challenges…"),
+                String(localized: "Counting how far you are from your friend…"),
+                String(localized: "Checking whether you’re still ahead…"),
+            ]
+        }
+        return lines[line % lines.count]
+    }
 }
 
 struct Person: Codable, Identifiable, Hashable {
@@ -26,6 +54,8 @@ struct Person: Codable, Identifiable, Hashable {
     var handle: String
     var initials: String
     var isYou: Bool = false
+    var photoURL: URL? = nil
+    var companionId: String? = nil
 
     /// The design's cast photographs, cut out of the mocks into the asset catalogue.
     var photo: String { "Avatar-\(isYou ? "maya" : id)" }
@@ -38,6 +68,7 @@ extension FFAvatar {
             size: size,
             selected: selected,
             photo: person?.photo,
+            photoURL: person?.photoURL,
             dimmed: pending
         )
     }
@@ -46,8 +77,11 @@ extension FFAvatar {
 struct Standing: Codable, Identifiable, Hashable {
     var person: Person
     var score: Double
-    var today: Double
     var invited: Bool = false
+    var deferred: Bool = false
+    var lastSyncedAt: Date? = nil
+    var finalStepsComplete: Bool? = nil
+    var rank: Int? = nil
 
     var id: String { person.id }
 }
@@ -55,6 +89,7 @@ struct Standing: Codable, Identifiable, Hashable {
 struct DayScore: Codable, Identifiable, Hashable {
     var person: Person
     var value: Double
+    var hasData: Bool = true
 
     var id: String { person.id }
 }
@@ -92,13 +127,94 @@ struct Fight: Codable, Identifiable, Hashable {
     var days: [FightDay] = []
     var windowStart: Date = Date()
     var windowEnd: Date = Date().addingTimeInterval(86400)
+    var graceEndsAt: Date? = nil
+    var serverState: String? = nil
+    var joinCode: String? = nil
+    var seriesId: String? = nil
+    var recurring: Bool = false
+    var visibility: String = "invite_only"
+    var suggested: Bool = false
+    var pendingJoin: Bool = false
+    var offersJoinNext: Bool = false
+
+    var hasAction: Bool {
+        !actionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// Title shown on Fights. A typed name wins; otherwise the action; otherwise the stored name.
+    var listTitle: String {
+        Self.displayTitle(name: name, actionText: actionText)
+    }
+
+    static func displayTitle(name: String, actionText: String?) -> String {
+        let stored = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let action = actionText?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if stored.isEmpty || stored == "Steps Fight" || stored == "Défi de pas" {
+            return action.isEmpty ? (stored.isEmpty ? String(localized: "Steps Fight") : stored) : action
+        }
+        return stored
+    }
+
+    var isTiedForFirst: Bool {
+        standings.filter { !$0.invited && !$0.deferred && $0.rank == 1 }.count > 1
+    }
 
     var durationLabel: String {
         let hours = max(1, Int((windowEnd.timeIntervalSince(windowStart) / 3_600).rounded()))
-        if hours <= 6 {
-            return "\(hours) \(hours == 1 ? "hour" : "hours")"
+        return localizedDuration(hours: hours, days: lengthDays)
+    }
+
+    var timeLeftLabel: String {
+        if isUpcoming {
+            return String(localized: "fight.starts-at", defaultValue: "Starts \(Self.deadlineStamp(windowStart))")
         }
-        return "\(lengthDays) \(lengthDays == 1 ? "day" : "days")"
+        if hasPassedDeadline {
+            return deadlineLabel
+        }
+        let remaining = RemainingTime.phrase(until: windowEnd)
+        return String(
+            localized: "fight.time-left",
+            defaultValue: "\(remaining) left"
+        )
+    }
+
+    var isUpcoming: Bool { serverState == "scheduled" && windowStart > Date() }
+
+    var canOwnerEdit: Bool {
+        inviter?.isYou == true && (status == .live || isUpcoming)
+    }
+
+    /// Exact stored cutoff, in the phone’s local date and time.
+    var deadlineLabel: String {
+        let stamp = Self.deadlineStamp(windowEnd)
+        if hasPassedDeadline {
+            return endedLabel ?? String(
+                localized: "fight.ended-on",
+                defaultValue: "Ended \(stamp)"
+            )
+        }
+        return String(
+            localized: "fight.ends-at",
+            defaultValue: "Ends \(stamp)"
+        )
+    }
+
+    var timeAndDeadlineLabel: String {
+        if hasPassedDeadline {
+            return deadlineLabel
+        }
+        return String(
+            localized: "fight.duration-end",
+            defaultValue: "\(timeLeftLabel) · ends \(Self.deadlineStamp(windowEnd))"
+        )
+    }
+
+    private var hasPassedDeadline: Bool {
+        daysLeft == nil || status == .finished || status == .pending || windowEnd <= Date()
+    }
+
+    static func deadlineStamp(_ date: Date) -> String {
+        date.formatted(date: .abbreviated, time: .shortened)
     }
 }
 
@@ -113,21 +229,73 @@ final class AppModel: ObservableObject {
     }
 
     @Published var openFightID: String?
+    @Published var dailyStatusRecap: DailyStatusRecap?
     @Published var showingVersions = false
+    @Published var showingDebugMenu = false
+    @Published var feedbackRequestFilter: RequestFilter = .top
+    @Published var companionPreviewNotice: String?
     @Published var joined: Set<String> = []
     @Published var createError: String?
+    @Published var pendingJoinable: Fight?
+    @Published var pendingReferralError: String?
     @Published private(set) var isCreatingFight = false
+    @Published private(set) var isUpdatingFight = false
+    @Published private(set) var isDeletingFight = false
+    @Published private(set) var isJoiningFight = false
     @Published private(set) var isRefreshingFights = false
+    @Published private(set) var refreshPhase: FightRefreshPhase = .idle
+    @Published private(set) var refreshLine = 0
+
+    var refreshStatusText: String {
+        refreshPhase.statusText(line: refreshLine)
+    }
 
     @Published var you: Person
     @Published var fights: [Fight]
+    @Published private(set) var joinableFights: [FitFightJoinableFight] = []
+    @Published private(set) var suggestedFights: [FitFightJoinableFight] = []
+    @Published private(set) var isLoadingDiscovery = false
+    @Published private(set) var discoveryError: String?
 
     private var session: SessionStore?
     private let api = FitFightAPI()
     private var inviteTokens: [String: String] = [:]
     private var cachedUserID: UUID?
+    private var snapshotGeneration = 0
+    private var discoveryUserID: UUID?
+    private var discoveryLoadedAt: Date?
+    private var discoveryTask: Task<Void, Never>?
+    private var discoveryGeneration = 0
+    private var refreshTask: Task<Void, Never>?
+    private var refreshLineTask: Task<Void, Never>?
+    private var refreshUserID: UUID?
+    private var pendingRefresh: (
+        session: SessionStore,
+        steps: HealthKitStepsStore,
+        trigger: HealthKitStepsStore.SyncTrigger,
+        requestAccess: Bool
+    )?
+    private static let pendingJoinCodeKey = "fitfight.pendingJoinCode"
+    private static let pendingReferralCodeKey = "fitfight.pendingReferralCode"
+    private static let pendingReferralUserKey = "fitfight.pendingReferralUser"
+    private static let pendingFightRouteKey = "fitfight.pendingFightRoute"
+    private static let pendingDailyStatusKey = "fitfight.pendingDailyStatus"
 
-    private static let fightsCachePrefix = "fitfight.fights."
+    static func storePendingFightRoute(_ route: String, dailyStatus: Bool = false) {
+        let trimmed = route.trimmingCharacters(in: .whitespacesAndNewlines)
+        let withSlash = trimmed.hasPrefix("/") ? trimmed : "/\(trimmed)"
+        let components = URLComponents(string: "https://fitfight.app\(withSlash)")
+        let path = (components?.path.isEmpty == false) ? components!.path : withSlash
+        let queryDailyStatus = components?.queryItems?.contains { item in
+            item.name == "daily_status" && (item.value == "1" || item.value?.lowercased() == "true")
+        } ?? false
+        UserDefaults.standard.set(path, forKey: pendingFightRouteKey)
+        UserDefaults.standard.set(dailyStatus || queryDailyStatus, forKey: pendingDailyStatusKey)
+    }
+
+    private static var fightsCachePrefix: String {
+        "fitfight.fights.\(Bundle.main.preferredLocalizations.first ?? "en")."
+    }
 
     static var preview: AppModel { AppModel(fixtures: true) }
 
@@ -144,6 +312,22 @@ final class AppModel: ObservableObject {
         self.init(fixtures: true)
     }
 
+    #if DEBUG && targetEnvironment(simulator)
+    func showCompanionPreviewState(_ state: CompanionPreview.DisplayState) {
+        guard CompanionPreview.isEnabled else { return }
+        let fixture = CompanionPreview.model(state: state)
+        you = fixture.you
+        fights = fixture.fights
+        tab = .fights
+        openFightID = nil
+        createError = nil
+        isRefreshingFights = state == .loading
+        refreshPhase = state == .loading ? .updatingFights : .idle
+        companionPreviewNotice = state == .offline
+            ? String(localized: "Offline preview. These are the last cached sample fights.") : nil
+    }
+    #endif
+
     init(fixtures: Bool) {
         let bundle = AppModelFixtures.load()
         you = bundle.you
@@ -155,29 +339,129 @@ final class AppModel: ObservableObject {
     }
 
     func fight(id: String) -> Fight? {
-        fights.first { $0.id == id }
+        fights.first { $0.id.caseInsensitiveCompare(id) == .orderedSame }
+            ?? pendingJoinable.flatMap { $0.id.caseInsensitiveCompare(id) == .orderedSame ? $0 : nil }
     }
 
-    var live: [Fight] { fights.filter { $0.status == .live } }
-    var invitations: [Fight] { fights.filter { $0.status == .invited } }
-    var finished: [Fight] { fights.filter { $0.status == .finished } }
+    func canonicalFight(for id: String) -> Fight? {
+        guard let fight = fight(id: id) else { return nil }
+        guard let seriesId = fight.seriesId else { return fight }
+        return fights
+            .filter { $0.seriesId == seriesId }
+            .reduce(fight) { Self.preferredCanonicalFight($0, $1) }
+    }
+
+    func seriesHistory(for fight: Fight) -> [Fight] {
+        guard let seriesId = fight.seriesId else { return [] }
+        return fights
+            .filter { $0.seriesId == seriesId && $0.id != fight.id }
+            .sorted { $0.windowStart > $1.windowStart }
+    }
+
+    func fightResult(for fight: Fight) -> FFResult {
+        if fight.standings.contains(where: { $0.person.isYou && $0.deferred }) {
+            return .draw
+        }
+        if fight.status == .pending {
+            return .pending
+        }
+        if let state = fight.serverState, state != "final", state != "cancelled" {
+            return .pending
+        }
+        if fight.isTiedForFirst {
+            return .draw
+        }
+        return fight.rank == 1 ? .win : .loss
+    }
+
+    private var canonicalFights: [Fight] {
+        var chosen: [String: Fight] = [:]
+        for fight in fights {
+            let key = fight.seriesId ?? fight.id
+            if let existing = chosen[key] {
+                chosen[key] = Self.preferredCanonicalFight(existing, fight)
+            } else {
+                chosen[key] = fight
+            }
+        }
+        return Array(chosen.values)
+    }
+
+    var live: [Fight] {
+        canonicalFights
+            .filter { $0.status == .live }
+            .sorted { $0.windowStart > $1.windowStart }
+    }
+    var invitations: [Fight] {
+        canonicalFights
+            .filter { $0.status == .invited }
+            .sorted { $0.windowStart > $1.windowStart }
+    }
+    var finished: [Fight] {
+        canonicalFights
+            .filter { $0.status == .pending || $0.status == .finished }
+            .sorted { $0.windowStart > $1.windowStart }
+    }
 
     func youStanding(in fight: Fight) -> Standing? {
         fight.standings.first { $0.person.isYou }
     }
 
     func formatScore(_ value: Double, metric _: MetricKind) -> String {
-        if value >= 1000 {
-            return String(format: "%.1fk", value / 1000)
-        }
-        return String(format: "%.0f", value)
+        value.formatted(
+            .number
+                .notation(.compactName)
+                .precision(.fractionLength(value >= 1_000 ? 0...1 : 0...0))
+        )
     }
 
-    func formatDelta(_ value: Double, metric: MetricKind) -> String {
-        let body = formatScore(value, metric: metric)
-        if value > 0 { return "+\(body)" }
-        if value < 0 { return "−\(body)" }
-        return body
+    func formatLastSync(_ date: Date?, now: Date = Date()) -> String {
+        guard let date else { return String(localized: "Not synced yet") }
+        let elapsed = max(0, now.timeIntervalSince(date))
+        if elapsed < 60 { return String(localized: "Just now") }
+        if elapsed < 3_600 {
+            let minutes = Int(elapsed / 60)
+            return String(localized: "health.minutes-ago", defaultValue: "\(minutes) minutes ago")
+        }
+        if elapsed < 86_400 {
+            let hours = Int(elapsed / 3_600)
+            return String(localized: "health.hours-ago", defaultValue: "\(hours) hours ago")
+        }
+        let days = Int(elapsed / 86_400)
+        return String(localized: "health.days-ago", defaultValue: "\(days) days ago")
+    }
+
+    func formatStandingFreshness(_ standing: Standing, fight: Fight, now: Date) -> String {
+        guard fight.windowEnd <= now else { return formatLastSync(standing.lastSyncedAt, now: now) }
+        if standing.finalStepsComplete == true {
+            guard let lastSyncedAt = standing.lastSyncedAt else {
+                return String(localized: "Final steps synced")
+            }
+            let freshness = formatLastSync(lastSyncedAt, now: now)
+            return String(
+                localized: "health.final-steps-synced-at",
+                defaultValue: "Final steps synced · \(freshness)"
+            )
+        }
+        if fight.serverState == "final", !standing.invited, !standing.deferred {
+            return String(localized: "Did not sync · forfeited")
+        }
+        let finalized = fight.serverState == "final" || fight.serverState == "cancelled"
+        if let lastSyncedAt = standing.lastSyncedAt {
+            let freshness = formatLastSync(lastSyncedAt, now: now)
+            return finalized
+                ? String(
+                    localized: "health.finalized-last-steps-at",
+                    defaultValue: "Finalized from last available steps · \(freshness)"
+                )
+                : String(
+                    localized: "health.waiting-final-steps-at",
+                    defaultValue: "Waiting for final steps · \(freshness)"
+                )
+        }
+        return finalized
+            ? String(localized: "Finalized without synced steps")
+            : String(localized: "Waiting for first sync")
     }
 
     func refreshFromServer() async {
@@ -186,12 +470,15 @@ final class AppModel: ObservableObject {
     }
 
     func restoreCachedFights(session: SessionStore) {
+        guard !CompanionPreview.isEnabled else { return }
         guard let userID = session.authSession?.user.id ?? session.client.auth.currentUser?.id else {
+            snapshotGeneration += 1
             cachedUserID = nil
             fights = []
             return
         }
         guard cachedUserID != userID else { return }
+        snapshotGeneration += 1
         cachedUserID = userID
         guard
             let data = UserDefaults.standard.data(forKey: Self.fightsCachePrefix + userID.uuidString),
@@ -203,19 +490,109 @@ final class AppModel: ObservableObject {
         fights = cached
     }
 
-    func refreshFights(session: SessionStore, steps: HealthKitStepsStore) async {
-        guard !isRefreshingFights else { return }
-        isRefreshingFights = true
-        defer { isRefreshingFights = false }
-
-        await steps.refresh(requestAccess: false)
-        if session.authSession != nil {
-            await steps.syncToBackend(session: session)
+    func refreshFights(
+        session: SessionStore,
+        steps: HealthKitStepsStore,
+        trigger: HealthKitStepsStore.SyncTrigger = .foreground,
+        requestAccess: Bool = false
+    ) async {
+        if CompanionPreview.isEnabled {
+            if requestAccess || trigger == .manual { companionPreviewNotice = CompanionPreview.writeUnavailable }
+            return
         }
-        await refreshFromServer(session: session)
+        if let refreshTask {
+            if trigger != .foreground || requestAccess
+                || (session.authSession?.user.id ?? session.client.auth.currentUser?.id) != refreshUserID {
+                pendingRefresh = (session, steps, trigger, requestAccess || (pendingRefresh?.requestAccess ?? false))
+            }
+            await refreshTask.value
+            return
+        }
+        isRefreshingFights = true
+        refreshPhase = .readingHealth
+        refreshUserID = session.authSession?.user.id ?? session.client.auth.currentUser?.id
+        let work = Task { @MainActor in
+            defer {
+                self.refreshLineTask?.cancel()
+                self.refreshLineTask = nil
+                self.refreshTask = nil
+                self.refreshUserID = nil
+                self.isRefreshingFights = false
+                self.refreshPhase = .idle
+                self.refreshLine = 0
+            }
+            var current = (session: session, steps: steps, trigger: trigger, requestAccess: requestAccess)
+            repeat {
+                self.pendingRefresh = nil
+                self.refreshUserID = current.session.authSession?.user.id ?? current.session.client.auth.currentUser?.id
+                await self.performRefreshFights(
+                    session: current.session,
+                    steps: current.steps,
+                    trigger: current.trigger,
+                    requestAccess: current.requestAccess
+                )
+                if let pending = self.pendingRefresh {
+                    current = pending
+                }
+            } while self.pendingRefresh != nil
+        }
+        refreshTask = work
+        guard !Task.isCancelled else { return }
+        await work.value
+    }
+
+    private func performRefreshFights(
+        session: SessionStore,
+        steps: HealthKitStepsStore,
+        trigger: HealthKitStepsStore.SyncTrigger,
+        requestAccess: Bool
+    ) async {
+        let userID = session.authSession?.user.id ?? session.client.auth.currentUser?.id
+        let trace = HealthKitSyncTrace(trigger: trigger)
+
+        await holdRefreshPhase(.readingHealth) {
+            await steps.refresh(requestAccess: requestAccess, trace: trace)
+        }
+        guard (session.authSession?.user.id ?? session.client.auth.currentUser?.id) == userID else {
+            trace.fail(.attemptExpired)
+            steps.completeAttempt(trace, session: session, userID: userID)
+            return
+        }
+        if session.authSession != nil {
+            await holdRefreshPhase(.uploading) {
+                await steps.syncToBackend(session: session, trigger: trigger, trace: trace)
+            }
+        }
+        guard (session.authSession?.user.id ?? session.client.auth.currentUser?.id) == userID else {
+            trace.fail(.attemptExpired)
+            steps.completeAttempt(trace, session: session, userID: userID)
+            return
+        }
+        await holdRefreshPhase(.updatingFights) {
+            await refreshFromServer(session: session, trace: trace)
+        }
+        steps.completeAttempt(trace, session: session, userID: userID)
+    }
+
+    private func holdRefreshPhase(_ phase: FightRefreshPhase, work: () async -> Void) async {
+        refreshPhase = phase
+        refreshLine = 0
+        refreshLineTask?.cancel()
+        refreshLineTask = Task { @MainActor in
+            var line = 0
+            while !Task.isCancelled {
+                do { try await Task.sleep(for: .seconds(1.15)) } catch { return }
+                line += 1
+                self.refreshLine = line
+            }
+        }
+        await work()
+        refreshLineTask?.cancel()
+        refreshLineTask = nil
     }
 
     func removeCachedFights(for userID: UUID) {
+        snapshotGeneration += 1
         UserDefaults.standard.removeObject(forKey: Self.fightsCachePrefix + userID.uuidString)
         if cachedUserID == userID {
             cachedUserID = nil
@@ -223,35 +600,75 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func refreshFromServer(session: SessionStore) async {
+    func refreshFromServer(
+        session: SessionStore, trace: HealthKitSyncTrace? = nil, performMaintenance: Bool = true
+    ) async {
+        guard !CompanionPreview.isEnabled else { return }
         self.session = session
         guard let userId = session.authSession?.user.id ?? session.client.auth.currentUser?.id else {
             return
         }
+        snapshotGeneration += 1
+        let generation = snapshotGeneration
         if let profile = session.profile {
             you = Self.person(from: profile, isYou: true)
         }
-
-        if let token = session.authSession?.accessToken, api.isConfigured {
-            _ = try? await api.syncDueFights(accessToken: token)
+        let attempt = trace ?? HealthKitSyncTrace(trigger: .foreground)
+        defer {
+            if trace == nil && performMaintenance {
+                HealthKitStepsStore.shared.completeAttempt(attempt, session: session, userID: userId)
+            }
         }
 
         do {
-            var loaded = try await loadFights(client: session.client, userId: userId)
-            loaded = try await populateStepDays(loaded, client: session.client)
-            guard session.authSession?.user.id == userId else { return }
+            let token = try await attempt.measure(.session) { try await session.freshAccessToken() }
+            guard session.authSession?.user.id == userId else { throw CancellationError() }
+            let snapshot = try await api.fightsSnapshot(
+                accessToken: token, trace: attempt, performMaintenance: performMaintenance
+            )
+            try Task.checkCancellation()
+            guard session.authSession?.user.id == userId else {
+                throw CancellationError()
+            }
+            // A newer read owns publication; superseding this response is not a sync failure.
+            guard generation == snapshotGeneration else { return }
+            let profiles = Dictionary(snapshot.profiles.map { ($0.userId, $0) }, uniquingKeysWith: { _, last in last })
+            let members = Dictionary(grouping: snapshot.members, by: \.fightId)
+            let mine = Dictionary(
+                snapshot.members.filter { $0.userId == userId }.map { ($0.fightId, $0) },
+                uniquingKeysWith: { _, last in last }
+            )
+            let series = Dictionary(snapshot.series.map { ($0.id, $0) }, uniquingKeysWith: { _, last in last })
+            let loaded = snapshot.fights.compactMap { row -> Fight? in
+                guard var fight = Self.mapFight(
+                    row, members: members[row.id] ?? [], mine: mine[row.id], profiles: profiles,
+                    series: row.seriesId.flatMap { series[$0] }, userId: userId, formatScore: formatScore
+                ) else { return nil }
+                fight.days = Self.dayCards(
+                    from: members[row.id] ?? [], standings: fight.standings
+                )
+                return fight
+            }
+            guard session.authSession?.user.id == userId else { throw CancellationError() }
             fights = loaded
             cachedUserID = userId
             if let data = try? JSONEncoder().encode(loaded) {
                 UserDefaults.standard.set(data, forKey: Self.fightsCachePrefix + userId.uuidString)
             }
+            RemoteImageLoader.shared.prefetch(
+                (loaded.flatMap { $0.standings.map(\.person.photoURL) } + [session.profile?.avatar?.url])
+                    .compactMap { $0 },
+                kind: .avatar
+            )
         } catch {
+            attempt.fail(HealthKitStepsStore.errorCode(for: error))
             // Keep the last successful result visible while the phone is offline.
         }
     }
 
     /// Locks Start fight immediately so extra taps cannot insert another row.
     func beginCreateFight() -> Bool {
+        guard !CompanionPreview.isEnabled else { createError = CompanionPreview.writeUnavailable; return false }
         guard !isCreatingFight else { return false }
         isCreatingFight = true
         createError = nil
@@ -259,120 +676,46 @@ final class AppModel: ObservableObject {
     }
 
     func createAndStartFight(
-        name: String = "Steps Fight",
+        name: String = "",
         startsAt: Date,
         endsAt: Date,
         actionText: String,
-        inviteHandles: [String]
+        inviteHandles: [String],
+        visibility: String = "invite_only",
+        recurring: Bool = true,
+        scheduled: Bool = false
     ) async {
+        guard !CompanionPreview.isEnabled else { createError = CompanionPreview.writeUnavailable; return }
         if !isCreatingFight {
             isCreatingFight = true
         }
         defer { isCreatingFight = false }
         createError = nil
-        guard session?.authSession?.accessToken != nil else {
-            createError = "Sign in to start a fight."
+        guard let access = session?.authSession?.accessToken, api.isConfigured else {
+            createError = String(localized: "Sign in to start a fight.")
             return
         }
+        let title = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let action = actionText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !action.isEmpty else {
-            createError = "Add the action the loser will do."
+        guard title.count <= 120 else {
+            createError = String(localized: "Keep the title to 120 characters.")
             return
         }
         guard action.count <= 120 else {
-            createError = "Keep the action to 120 characters."
+            createError = String(localized: "Keep the action to 120 characters.")
             return
         }
-
-        let payload = FitFightCreateFight(
-            name: name,
-            startsAt: startsAt,
-            endsAt: max(endsAt, startsAt.addingTimeInterval(60)),
-            timeZone: TimeZone.current.identifier,
-            outcomeRule: "highest_total",
-            goalPolicy: "shared",
-            defaultGoalValue: nil,
-            stakeKind: "action",
-            stakeMinor: nil,
-            currency: nil,
-            actionText: action,
-            inviteHandles: inviteHandles,
-            start: "now"
-        )
-
-        do {
-            try await createFightOnClient(
-                payload,
-                inviteHandles: inviteHandles
-            )
-            await refreshFromServer()
-        } catch {
-            createError = (error as? LocalizedError)?.errorDescription ?? "Couldn’t start the fight."
-        }
-    }
-
-    func acceptInvite(token: String) async throws {
-        createError = nil
-        guard let access = session?.authSession?.accessToken else {
-            throw FitFightAPIError.notConfigured
-        }
-        let summary = try await api.accept(token: token, accessToken: access)
-        inviteTokens[summary.id.uuidString] = token
-        await refreshFromServer()
-    }
-
-    func acceptFight(id: String) async {
-        createError = nil
-        if let token = inviteTokens[id], api.isConfigured {
-            do {
-                try await acceptInvite(token: token)
-            } catch {
-                createError = (error as? LocalizedError)?.errorDescription ?? "Couldn’t accept."
-            }
+        guard endsAt > startsAt else {
+            createError = String(localized: "The end must be after the start.")
             return
         }
-        guard let session, let userId = session.authSession?.user.id, let fightID = UUID(uuidString: id) else {
-            createError = "Sign in to accept this fight."
+        guard !scheduled || startsAt > Date() else {
+            createError = String(localized: "Choose a start time in the future.")
             return
         }
-        do {
-            try await session.client.from("fight_members")
-                .update(MemberAcceptUpdate(state: "accepted", acceptedAt: Self.isoNow()))
-                .eq("fight_id", value: fightID)
-                .eq("user_id", value: userId)
-                .execute()
-            joined.insert(id)
-            await refreshFromServer()
-        } catch {
-            createError = (error as? LocalizedError)?.errorDescription ?? "Couldn’t accept."
-        }
-    }
-
-    func declineFight(id: String) async {
-        createError = nil
-        guard let session, let userId = session.authSession?.user.id, let fightID = UUID(uuidString: id) else {
-            createError = "Sign in to decline this fight."
-            return
-        }
-        do {
-            try await session.client.from("fight_members")
-                .update(MemberDeclineUpdate(state: "declined"))
-                .eq("fight_id", value: fightID)
-                .eq("user_id", value: userId)
-                .execute()
-            await refreshFromServer()
-        } catch {
-            createError = (error as? LocalizedError)?.errorDescription ?? "Couldn’t decline."
-        }
-    }
-
-    private func createFightOnClient(
-        _ payload: FitFightCreateFight,
-        inviteHandles: [String]
-    ) async throws {
-        guard let session, let userId = session.authSession?.user.id else {
-            throw LiveFightError.notSignedIn
-        }
+        let storedName = title.isEmpty
+            ? (action.isEmpty ? String(localized: "Steps Fight") : action)
+            : title
 
         let handles = inviteHandles.reduce(into: [String]()) { result, raw in
             let handle = SessionStore.strippedHandle(raw)
@@ -380,216 +723,683 @@ final class AppModel: ObservableObject {
                 result.append(handle)
             }
         }
-        guard !handles.isEmpty else { throw LiveFightError.noOpponents }
+        let payload = FitFightCreateFight(
+            name: storedName,
+            startsAt: startsAt,
+            endsAt: endsAt,
+            timeZone: TimeZone.current.identifier,
+            outcomeRule: "highest_total",
+            goalPolicy: "shared",
+            defaultGoalValue: nil,
+            stakeKind: "action",
+            stakeMinor: nil,
+            currency: nil,
+            actionText: action.isEmpty ? nil : action,
+            inviteHandles: handles.isEmpty ? nil : handles,
+            start: scheduled ? "scheduled" : "now",
+            visibility: visibility,
+            recurring: recurring
+        )
 
-        let found: [FitFightProfile] = try await session.client.from("profiles")
-            .select("user_id, handle, display_name")
-            .in("handle", values: handles)
-            .execute()
-            .value
-        if let missing = handles.first(where: { want in !found.contains { $0.handle == want } }) {
-            throw LiveFightError.unknownHandle(missing)
-        }
-        let inviteIds = found.map(\.userId).filter { $0 != userId }
-        guard !inviteIds.isEmpty else { throw LiveFightError.noOpponents }
-
-        let inserted: FightIDRow = try await session.client.from("fights")
-            .insert(
-                FightInsert(
-                    ownerId: userId,
-                    name: payload.name,
-                    state: "live",
-                    startsAt: Self.isoString(payload.startsAt),
-                    endsAt: Self.isoString(payload.endsAt),
-                    timeZone: payload.timeZone,
-                    metric: "steps",
-                    outcomeRule: payload.outcomeRule,
-                    goalPolicy: payload.goalPolicy ?? "shared",
-                    defaultGoalValue: payload.defaultGoalValue,
-                    stakeKind: payload.stakeKind,
-                    stakeMinor: payload.stakeMinor,
-                    currency: payload.currency,
-                    actionText: payload.actionText
-                )
-            )
-            .select("id")
-            .single()
-            .execute()
-            .value
-
-        var members = [
-            MemberInsert(
-                fightId: inserted.id,
-                userId: userId,
-                state: "accepted",
-                acceptedAt: Self.isoNow()
-            )
-        ]
-        members += inviteIds.map {
-            MemberInsert(fightId: inserted.id, userId: $0, state: "invited", acceptedAt: nil)
-        }
-        try await session.client.from("fight_members").insert(members).execute()
-    }
-
-    private func populateStepDays(
-        _ fights: [Fight],
-        client: SupabaseClient
-    ) async throws -> [Fight] {
-        let ids = fights.flatMap { fight in
-            fight.standings.compactMap { UUID(uuidString: $0.person.id) }
-        }
-        guard !ids.isEmpty else { return fights }
-        let requestedDays = fights.flatMap { Self.fightDayWindow($0) }
-        guard let firstDay = requestedDays.min(), let lastDay = requestedDays.max() else {
-            return fights
-        }
-
-        let days: [StepDayRow]
         do {
-            days = try await client.from("step_days")
-                .select("user_id, day, steps")
-                .in("user_id", values: ids.map(\.uuidString))
-                .gte("day", value: firstDay)
-                .lte("day", value: lastDay)
-                .execute()
-                .value
+            let created = try await api.createFight(
+                payload,
+                accessToken: access,
+                idempotencyKey: UUID().uuidString
+            )
+            await syncStepsAfterMembershipChange()
+            keepCreatedFight(created, payload: payload)
+            tab = .fights
+            openFightID = created.id.uuidString
         } catch {
-            return fights
+            createError = (error as? LiveFightError)?.errorDescription
+                ?? (error as? FitFightAPIError)?.errorDescription
+                ?? String(localized: "Couldn’t start the fight.")
         }
+    }
 
-        let today = Self.dayStamp(Date())
-        var updated: [Fight] = []
-        updated.reserveCapacity(fights.count)
-        for fight in fights {
-            var next = fight
-            let window = Self.fightDayWindow(fight)
-            let people = fight.standings.map { row -> Standing in
-                var standing = row
-                guard let personID = UUID(uuidString: row.person.id) else { return row }
-                let mine = days.filter { $0.userId == personID && window.contains($0.day) }
-                standing.today = Double(mine.first { $0.day == today }?.steps ?? 0)
-                return standing
+    func updateFight(
+        id: String,
+        name: String,
+        actionText: String,
+        visibility: String,
+        recurring: Bool,
+        startsAt: Date?,
+        endsAt: Date,
+        inviteHandles: [String],
+        removeUserIds: [String]
+    ) async -> Bool {
+        guard !CompanionPreview.isEnabled else {
+            createError = CompanionPreview.writeUnavailable
+            return false
+        }
+        guard !isUpdatingFight else { return false }
+        isUpdatingFight = true
+        defer { isUpdatingFight = false }
+        createError = nil
+        guard let access = session?.authSession?.accessToken, api.isConfigured else {
+            createError = String(localized: "Sign in to edit this fight.")
+            return false
+        }
+        guard let fightID = UUID(uuidString: id) else {
+            createError = String(localized: "Couldn’t save the fight.")
+            return false
+        }
+        let title = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let action = actionText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard title.count <= 120 else {
+            createError = String(localized: "Keep the title to 120 characters.")
+            return false
+        }
+        guard action.count <= 120 else {
+            createError = String(localized: "Keep the action to 120 characters.")
+            return false
+        }
+        if let startsAt, startsAt <= Date() {
+            createError = String(localized: "Choose a start time in the future.")
+            return false
+        }
+        guard endsAt > (startsAt ?? Date.distantPast) else {
+            createError = String(localized: "The end must be after the start.")
+            return false
+        }
+        guard endsAt > Date() else {
+            createError = String(localized: "The end must be in the future.")
+            return false
+        }
+        let handles = inviteHandles.reduce(into: [String]()) { result, raw in
+            let handle = SessionStore.strippedHandle(raw)
+            if SessionStore.isValidHandle(handle), !result.contains(handle) {
+                result.append(handle)
             }
-            next.standings = people
-            next.days = Self.dayCards(from: days, standings: people, window: window)
-            updated.append(next)
         }
-        return updated
+        let removals = removeUserIds.compactMap(UUID.init(uuidString:))
+        do {
+            _ = try await api.updateFight(
+                fightID: fightID,
+                payload: FitFightUpdateFight(
+                    name: title,
+                    actionText: action,
+                    visibility: visibility,
+                    recurring: recurring,
+                    startsAt: startsAt,
+                    endsAt: endsAt,
+                    inviteHandles: handles.isEmpty ? nil : handles,
+                    removeUserIds: removals.isEmpty ? nil : removals
+                ),
+                accessToken: access
+            )
+            invalidateFightDiscovery()
+            await refreshFromServer()
+            return true
+        } catch {
+            createError = (error as? LiveFightError)?.errorDescription
+                ?? (error as? FitFightAPIError)?.errorDescription
+                ?? String(localized: "Couldn’t save the fight.")
+            return false
+        }
     }
 
-    private static func fightDayWindow(_ fight: Fight) -> Set<String> {
-        let calendar = Calendar.current
-        var days: [String] = []
-        var cursor = calendar.startOfDay(for: fight.windowStart)
-        while cursor < fight.windowEnd && days.count <= 40 {
-            days.append(dayStamp(cursor))
-            guard let next = calendar.date(byAdding: .day, value: 1, to: cursor) else { break }
-            cursor = next
+    func deleteFight(id: String) async -> Bool {
+        guard !CompanionPreview.isEnabled else {
+            createError = CompanionPreview.writeUnavailable
+            return false
         }
-        return Set(days)
+        guard !isDeletingFight, !isUpdatingFight else { return false }
+        isDeletingFight = true
+        defer { isDeletingFight = false }
+        createError = nil
+        guard let access = session?.authSession?.accessToken, api.isConfigured else {
+            createError = String(localized: "Sign in to delete this fight.")
+            return false
+        }
+        guard let fightID = UUID(uuidString: id) else {
+            createError = String(localized: "Couldn’t delete the fight.")
+            return false
+        }
+        do {
+            try await api.cancel(fightID: fightID, accessToken: access)
+            invalidateFightDiscovery()
+            openFightID = nil
+            await refreshFromServer()
+            return true
+        } catch {
+            createError = (error as? LiveFightError)?.errorDescription
+                ?? (error as? FitFightAPIError)?.errorDescription
+                ?? String(localized: "Couldn’t delete the fight.")
+            return false
+        }
     }
 
-    private static func isoString(_ date: Date) -> String {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return formatter.string(from: date)
+    func acceptInvite(token: String, start: String = "now") async throws {
+        guard !CompanionPreview.isEnabled else { throw CompanionPreview.WriteUnavailable() }
+        createError = nil
+        guard let access = session?.authSession?.accessToken else {
+            throw FitFightAPIError.notConfigured
+        }
+        let summary = try await api.accept(token: token, accessToken: access, start: start)
+        inviteTokens[summary.id.uuidString] = token
+        await syncStepsAfterMembershipChange()
+    }
+
+    func acceptFight(id: String, start: String = "now") async {
+        guard !CompanionPreview.isEnabled else { createError = CompanionPreview.writeUnavailable; return }
+        guard !isJoiningFight else { return }
+        isJoiningFight = true
+        defer { isJoiningFight = false }
+        createError = nil
+        if let pending = pendingJoinable, pending.id == id, pending.pendingJoin {
+            await joinPendingFight(pending, start: start)
+            return
+        }
+        if let token = inviteTokens[id], api.isConfigured {
+            do {
+                try await acceptInvite(token: token, start: start)
+            } catch {
+                createError = (error as? FitFightAPIError)?.errorDescription
+                    ?? String(localized: "Couldn’t accept.")
+            }
+            return
+        }
+        guard let session, session.authSession != nil, let fightID = UUID(uuidString: id) else {
+            createError = String(localized: "Sign in to accept this fight.")
+            return
+        }
+        do {
+            let token = try await session.freshAccessToken()
+            _ = try await api.acceptFight(fightID: fightID, accessToken: token, start: start)
+            joined.insert(id)
+            await syncStepsAfterMembershipChange()
+        } catch {
+            createError = String(localized: "Couldn’t accept.")
+        }
+    }
+
+    func declineFight(id: String) async {
+        guard !CompanionPreview.isEnabled else { createError = CompanionPreview.writeUnavailable; return }
+        createError = nil
+        if pendingJoinable?.id == id {
+            pendingJoinable = nil
+            openFightID = nil
+            return
+        }
+        guard let session, session.authSession != nil, let fightID = UUID(uuidString: id) else {
+            createError = String(localized: "Sign in to decline this fight.")
+            return
+        }
+        do {
+            let token = try await session.freshAccessToken()
+            _ = try await api.declineFight(fightID: fightID, accessToken: token)
+            await refreshFromServer()
+        } catch {
+            createError = String(localized: "Couldn’t decline.")
+        }
+    }
+
+    private func invalidateFightDiscovery() {
+        discoveryGeneration += 1
+        discoveryLoadedAt = nil
+        discoveryTask?.cancel()
+        discoveryTask = nil
+        isLoadingDiscovery = false
+    }
+
+    func loadFightDiscovery(session: SessionStore, force: Bool = false) async {
+        #if DEBUG && targetEnvironment(simulator)
+        if CompanionPreview.isEnabled {
+            joinableFights = fights.filter { $0.status == .live }.map { fight in
+                FitFightJoinableFight(
+                    fightId: UUID(uuidString: fight.id)!,
+                    seriesId: UUID(uuidString: fight.seriesId ?? fight.id)!,
+                    name: fight.name, joinCode: fight.joinCode!, ownerHandle: "lea",
+                    actionText: fight.actionText, startsAt: fight.windowStart.ISO8601Format(),
+                    endsAt: fight.windowEnd.ISO8601Format(), memberCount: fight.of,
+                    recurring: fight.recurring, alreadyMember: true, canJoinNext: false
+                )
+            }
+            suggestedFights = Array(joinableFights.prefix(2))
+            return
+        }
+        #endif
+        self.session = session
+        let userID = session.authSession?.user.id
+        if discoveryUserID != userID {
+            invalidateFightDiscovery()
+            discoveryUserID = userID
+            joinableFights = []
+            suggestedFights = []
+            discoveryError = nil
+        }
+        guard let userID, api.isConfigured else { return }
+        if let discoveryTask {
+            await discoveryTask.value
+            return
+        }
+        if !force, let discoveryLoadedAt, Date().timeIntervalSince(discoveryLoadedAt) < 60 {
+            return
+        }
+        isLoadingDiscovery = true
+        let generation = discoveryGeneration
+        let task = Task { @MainActor in
+            defer {
+                if !Task.isCancelled, discoveryUserID == userID, discoveryGeneration == generation {
+                    isLoadingDiscovery = false
+                    discoveryTask = nil
+                }
+            }
+            do {
+                let access = try await session.freshAccessToken()
+                guard !Task.isCancelled, discoveryUserID == userID, discoveryGeneration == generation,
+                      session.authSession?.user.id == userID else { return }
+                let complete = await withTaskGroup(of: (Bool, Result<[FitFightJoinableFight], Error>).self) { group in
+                    for suggested in [false, true] {
+                        group.addTask { @MainActor in
+                            do {
+                                let rows = try await suggested
+                                    ? self.api.listSuggestedFights(accessToken: access)
+                                    : self.api.listJoinableFights(accessToken: access)
+                                return (suggested, .success(rows))
+                            } catch {
+                                return (suggested, .failure(error))
+                            }
+                        }
+                    }
+                    var loaded = 0
+                    for await (suggested, result) in group {
+                        guard !Task.isCancelled, discoveryUserID == userID, discoveryGeneration == generation,
+                              session.authSession?.user.id == userID else {
+                            group.cancelAll()
+                            return false
+                        }
+                        switch result {
+                        case .success(let rows):
+                            if suggested { suggestedFights = rows } else { joinableFights = rows }
+                            loaded += 1
+                        case .failure(let error):
+                            if !(error is CancellationError) {
+                                discoveryError = (error as? FitFightAPIError)?.errorDescription
+                                    ?? String(localized: "Couldn’t load joinable fights.")
+                            }
+                        }
+                    }
+                    return loaded == 2
+                }
+                guard !Task.isCancelled, discoveryUserID == userID, discoveryGeneration == generation,
+                      session.authSession?.user.id == userID else { return }
+                discoveryLoadedAt = complete ? Date() : nil
+                if complete { discoveryError = nil }
+            } catch {
+                guard !Task.isCancelled, !(error is CancellationError),
+                      discoveryUserID == userID, discoveryGeneration == generation,
+                      session.authSession?.user.id == userID else { return }
+                discoveryLoadedAt = nil
+                discoveryError = (error as? FitFightAPIError)?.errorDescription
+                    ?? String(localized: "Couldn’t load joinable fights.")
+            }
+        }
+        discoveryTask = task
+        await task.value
+    }
+
+    func setFightSuggested(id: String, suggested: Bool) async {
+        createError = nil
+        guard let session, session.authSession != nil, let fightID = UUID(uuidString: id) else {
+            createError = String(localized: "Sign in to suggest this fight.")
+            return
+        }
+        if let index = fights.firstIndex(where: { $0.id == id }) {
+            fights[index].suggested = suggested
+        }
+        do {
+            let token = try await session.freshAccessToken()
+            _ = try await api.setFightSuggested(fightID: fightID, suggested: suggested, accessToken: token)
+            invalidateFightDiscovery()
+            await refreshFromServer()
+        } catch {
+            if let index = fights.firstIndex(where: { $0.id == id }) {
+                fights[index].suggested = !suggested
+            }
+            createError = (error as? FitFightAPIError)?.errorDescription
+                ?? String(localized: "Couldn’t update that suggestion.")
+        }
+    }
+
+    func openJoinable(_ summary: FitFightJoinableFight, session: SessionStore) async {
+        self.session = session
+        createError = nil
+        if summary.alreadyMember {
+            pendingJoinable = nil
+            tab = .fights
+            openFightID = summary.fightId.uuidString
+            await refreshFromServer()
+            return
+        }
+        pendingJoinable = Self.fight(from: summary, you: you)
+        if tab != .newFight {
+            tab = .newFight
+        }
+    }
+
+    func openJoinCode(_ raw: String, session: SessionStore) async {
+        #if DEBUG && targetEnvironment(simulator)
+        if CompanionPreview.isEnabled {
+            if let match = fights.first(where: { $0.joinCode == raw.uppercased() }) {
+                tab = .fights
+                openFightID = match.id
+            } else {
+                createError = String(localized: "Preview codes: K7M2, H8P4, B4K9.")
+            }
+            return
+        }
+        #endif
+        self.session = session
+        createError = nil
+        let code = raw.replacingOccurrences(of: "[\\s-]", with: "", options: .regularExpression).uppercased()
+        guard code.count == 4 else {
+            createError = String(localized: "Enter the 4-character code.")
+            return
+        }
+        guard let userID = session.authSession?.user.id,
+              let access = session.authSession?.accessToken, api.isConfigured,
+              session.profile != nil, !session.needsOnboarding else {
+            UserDefaults.standard.set(code, forKey: Self.pendingJoinCodeKey)
+            createError = String(localized: "Sign in to join this fight.")
+            return
+        }
+        do {
+            let summary = try await api.joinableFight(code: code, accessToken: access)
+            guard session.authSession?.user.id == userID else { return }
+            if UserDefaults.standard.string(forKey: Self.pendingJoinCodeKey) == code {
+                UserDefaults.standard.removeObject(forKey: Self.pendingJoinCodeKey)
+            }
+            await openJoinable(summary, session: session)
+        } catch {
+            guard session.authSession?.user.id == userID else { return }
+            createError = (error as? FitFightAPIError)?.errorDescription
+                ?? String(localized: "Couldn’t find that fight.")
+        }
+    }
+
+    func handleOpenURL(_ url: URL, session: SessionStore) async {
+        guard url.scheme == "https", url.host == APIConfig.publicOrigin.host,
+              url.user == nil, url.password == nil, url.port == nil || url.port == 443 else { return }
+        let parts = url.path.split(separator: "/")
+        guard parts.count == 2 else { return }
+        if parts[0] == "fights", let fightID = UUID(uuidString: String(parts[1])) {
+            let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+            let dailyStatus = items.contains { item in
+                item.name == "daily_status" && (item.value == "1" || item.value?.lowercased() == "true")
+            }
+            Self.storePendingFightRoute(
+                "/fights/\(fightID.uuidString.lowercased())",
+                dailyStatus: dailyStatus
+            )
+            await consumePendingLinks(session: session)
+            return
+        }
+        let referral: UUID?
+        if parts[0] == "r", let code = UUID(uuidString: String(parts[1])) {
+            referral = code
+        } else if let code = Self.joinCode(from: url) {
+            UserDefaults.standard.set(code, forKey: Self.pendingJoinCodeKey)
+            let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+            referral = items.first(where: { $0.name == "ref" })
+                .flatMap { $0.value }.flatMap { UUID(uuidString: $0) }
+        } else {
+            return
+        }
+        if let referral {
+            UserDefaults.standard.set(referral.uuidString, forKey: Self.pendingReferralCodeKey)
+            UserDefaults.standard.set(session.authSession?.user.id.uuidString, forKey: Self.pendingReferralUserKey)
+        }
+        await consumePendingLinks(session: session)
+    }
+
+    func consumePendingLinks(session: SessionStore) async {
+        guard !session.needsOnboarding, let profile = session.profile,
+              session.authSession?.user.id == profile.userId else { return }
+        let pendingDailyStatus = UserDefaults.standard.bool(forKey: Self.pendingDailyStatusKey)
+        consumePendingFightRoute(showDailyStatusRecap: pendingDailyStatus)
+        if let code = UserDefaults.standard.string(forKey: Self.pendingJoinCodeKey) {
+            await openJoinCode(code, session: session)
+            guard session.authSession?.user.id == profile.userId else { return }
+            if createError != nil { tab = .newFight }
+        }
+        guard let raw = UserDefaults.standard.string(forKey: Self.pendingReferralCodeKey),
+              let code = UUID(uuidString: raw) else { return }
+        if let owner = UserDefaults.standard.string(forKey: Self.pendingReferralUserKey),
+           owner != profile.userId.uuidString {
+            UserDefaults.standard.removeObject(forKey: Self.pendingReferralCodeKey)
+            UserDefaults.standard.removeObject(forKey: Self.pendingReferralUserKey)
+            return
+        }
+        UserDefaults.standard.set(profile.userId.uuidString, forKey: Self.pendingReferralUserKey)
+        pendingReferralError = nil
+        do {
+            let access = try await session.freshAccessToken()
+            guard session.authSession?.user.id == profile.userId else { return }
+            _ = try await api.claimReferral(code: code, accessToken: access)
+            guard session.authSession?.user.id == profile.userId else { return }
+            if UserDefaults.standard.string(forKey: Self.pendingReferralCodeKey) == raw {
+                UserDefaults.standard.removeObject(forKey: Self.pendingReferralCodeKey)
+                UserDefaults.standard.removeObject(forKey: Self.pendingReferralUserKey)
+            }
+        } catch {
+            guard session.authSession?.user.id == profile.userId else { return }
+            pendingReferralError = String(localized: "Your referral hasn’t been saved yet. Check your connection and try again.")
+        }
+    }
+
+    private func keepCreatedFight(_ created: FitFightSummary, payload: FitFightCreateFight) {
+        invalidateFightDiscovery()
+        let id = created.id.uuidString
+        guard fight(id: id) == nil else { return }
+        fights.insert(Self.fight(created: created, payload: payload, you: you), at: 0)
+        let userId = cachedUserID ?? session?.authSession?.user.id
+        if let userId, let data = try? JSONEncoder().encode(fights) {
+            UserDefaults.standard.set(data, forKey: Self.fightsCachePrefix + userId.uuidString)
+            cachedUserID = userId
+        }
+    }
+
+    private func syncStepsAfterMembershipChange() async {
+        invalidateFightDiscovery()
+        guard let session else {
+            await refreshFromServer()
+            return
+        }
+        let steps = HealthKitStepsStore.shared
+        let trace = HealthKitSyncTrace(trigger: .manual)
+        _ = await steps.syncToBackend(
+            session: session,
+            trigger: .manual,
+            trace: trace,
+            coalesceInFlight: false
+        )
+        steps.completeAttempt(trace, session: session, userID: session.authSession?.user.id)
+        await refreshFromServer(session: session)
+    }
+
+    private func joinPendingFight(_ fight: Fight, start: String = "now") async {
+        guard let access = session?.authSession?.accessToken, api.isConfigured else {
+            createError = String(localized: "Sign in to join this fight.")
+            return
+        }
+        guard let fightID = UUID(uuidString: fight.id) else {
+            createError = String(localized: "Couldn’t join.")
+            return
+        }
+        do {
+            _ = try await api.joinFight(code: fight.joinCode, fightID: fightID, accessToken: access, start: start)
+            joined.insert(fight.id)
+            await syncStepsAfterMembershipChange()
+            pendingJoinable = nil
+            tab = .fights
+            openFightID = fight.id
+        } catch {
+            createError = (error as? FitFightAPIError)?.errorDescription
+                ?? String(localized: "Couldn’t join.")
+        }
+    }
+
+    func leaveFight(id: String) async {
+        guard !CompanionPreview.isEnabled else { createError = CompanionPreview.writeUnavailable; return }
+        createError = nil
+        guard let access = session?.authSession?.accessToken, api.isConfigured else {
+            createError = String(localized: "Sign in to leave this fight.")
+            return
+        }
+        guard let fightID = UUID(uuidString: id) else {
+            createError = String(localized: "Couldn’t leave.")
+            return
+        }
+        do {
+            _ = try await api.leaveFight(fightID: fightID, accessToken: access)
+            invalidateFightDiscovery()
+            openFightID = nil
+            joined.remove(id)
+            await refreshFromServer()
+        } catch {
+            createError = (error as? FitFightAPIError)?.errorDescription
+                ?? String(localized: "Couldn’t leave.")
+        }
+    }
+
+    static func joinCode(from url: URL) -> String? {
+        let parts = url.path.split(separator: "/").map(String.init)
+        guard parts.count == 2, parts[0] == "j" else {
+            return nil
+        }
+        let code = parts[1]
+            .replacingOccurrences(of: "-", with: "")
+            .uppercased()
+        let alphabet = CharacterSet(charactersIn: "23456789ABCDEFGHJKMNPQRSTVWXYZ")
+        guard code.count == 4, code.unicodeScalars.allSatisfy({ alphabet.contains($0) }) else {
+            return nil
+        }
+        return code
+    }
+
+    private static func fight(
+        created: FitFightSummary,
+        payload: FitFightCreateFight,
+        you: Person
+    ) -> Fight {
+        let starts = payload.startsAt
+        let ends = payload.endsAt
+        let lengthDays = max(1, Calendar.current.dateComponents([.day], from: starts, to: ends).day ?? 1)
+        let lengthHours = max(1, Int((ends.timeIntervalSince(starts) / 3_600).rounded()))
+        let remaining = RemainingTime.phrase(until: ends)
+        return Fight(
+            id: created.id.uuidString,
+            code: "",
+            name: payload.name,
+            metric: .steps,
+            lengthDays: lengthDays,
+            daysLeft: max(1, Calendar.current.dateComponents([.day], from: Date(), to: ends).day ?? 1),
+            actionText: payload.actionText ?? "",
+            status: .live,
+            rank: 1,
+            of: 1,
+            pending: payload.inviteHandles?.count ?? 0,
+            kickerEmphasis: String(
+                localized: "fight.time-left",
+                defaultValue: "\(remaining) left"
+            ),
+            listSubtitle: localizedDuration(hours: lengthHours, days: lengthDays),
+            standings: [Standing(person: you, score: 0, rank: 1)],
+            windowStart: starts,
+            windowEnd: ends,
+            serverState: created.state,
+            recurring: payload.recurring ?? false,
+            visibility: payload.visibility ?? "invite_only"
+        )
+    }
+
+    private static func fight(from summary: FitFightJoinableFight, you: Person) -> Fight {
+        let starts = FightRow.parse(summary.startsAt) ?? Date()
+        let ends = FightRow.parse(summary.endsAt) ?? starts.addingTimeInterval(86400)
+        let lengthDays = max(1, Calendar.current.dateComponents([.day], from: starts, to: ends).day ?? 1)
+        let owner = Person(
+            id: summary.ownerHandle,
+            name: "@\(summary.ownerHandle)",
+            handle: "@\(summary.ownerHandle)",
+            initials: String(summary.ownerHandle.prefix(2)).uppercased()
+        )
+        let action = summary.actionText?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let offersJoinNext = summary.canJoinNext ?? (summary.recurring && Self.isAfterFightStartDay(starts) && !summary.alreadyMember)
+        return Fight(
+            id: summary.fightId.uuidString,
+            code: summary.joinCode,
+            name: summary.name,
+            metric: .steps,
+            lengthDays: lengthDays,
+            daysLeft: max(1, Calendar.current.dateComponents([.day], from: Date(), to: ends).day ?? 1),
+            actionText: (action?.isEmpty == false ? action : nil) ?? "",
+            status: .invited,
+            rank: 0,
+            of: max(summary.memberCount, 1),
+            pending: 0,
+            kickerEmphasis: String(
+                localized: "fight.challenged-you",
+                defaultValue: "@\(summary.ownerHandle) challenged you"
+            ),
+            listSubtitle: "@\(summary.ownerHandle) · \(summary.memberCount)",
+            inviter: owner,
+            invitePitch: String(
+                localized: "fight.challenged-you",
+                defaultValue: "@\(summary.ownerHandle) challenged you"
+            ),
+            inviteAction: String(localized: "Join fight"),
+            standings: [
+                Standing(person: you, score: 0),
+                Standing(person: owner, score: 0),
+            ],
+            windowStart: starts,
+            windowEnd: ends,
+            joinCode: summary.joinCode,
+            recurring: summary.recurring,
+            visibility: "joinable",
+            pendingJoin: true,
+            offersJoinNext: offersJoinNext
+        )
     }
 
     private static func dayCards(
-        from days: [StepDayRow],
-        standings: [Standing],
-        window: Set<String>
+        from members: [MemberRow],
+        standings: [Standing]
     ) -> [FightDay] {
+        let racers = standings.filter { !$0.invited && !$0.deferred }
+        var histories: [String: [FightStepCheckpoint]] = [:]
+        for row in racers {
+            guard let points = members.first(where: { $0.userId.uuidString == row.person.id })?.stepCheckpoints,
+                  let last = points.last, Double(last.steps) == row.score else { return [] }
+            histories[row.person.id] = points
+        }
+        let days = Set(histories.values.flatMap { $0.map(\.day) }).sorted()
         let formatter = DateFormatter()
-        formatter.calendar = Calendar.current
+        formatter.calendar = Calendar(identifier: .gregorian)
         formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
         formatter.dateFormat = "yyyy-MM-dd"
         let label = DateFormatter()
-        label.dateFormat = "EEE d MMM"
-        return window.sorted().map { day in
-            let scores = standings.map { row in
-                let personID = UUID(uuidString: row.person.id)
-                let value = days.first { $0.userId == personID && $0.day == day }?.steps ?? 0
+        label.calendar = formatter.calendar
+        label.timeZone = formatter.timeZone
+        label.locale = .autoupdatingCurrent
+        label.setLocalizedDateFormatFromTemplate("EEEdMMM")
+        var previous: [String: Int] = [:]
+        return days.map { day in
+            let scores = racers.map { row in
+                guard let point = histories[row.person.id]?.first(where: { $0.day == day }) else {
+                    return DayScore(person: row.person, value: 0, hasData: false)
+                }
+                let value = point.steps - (previous[row.person.id] ?? 0)
+                previous[row.person.id] = point.steps
                 return DayScore(person: row.person, value: Double(value))
             }
             let date = formatter.date(from: day) ?? Date()
             return FightDay(label: label.string(from: date), scores: scores)
         }
-    }
-
-    private static func dayStamp(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.calendar = Calendar.current
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone.current
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: date)
-    }
-
-    private static func isoNow() -> String {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return formatter.string(from: Date())
-    }
-
-    private func loadFights(client: SupabaseClient, userId: UUID) async throws -> [Fight] {
-        let memberSelect = "fight_id, user_id, state, current_value, rank, final_value"
-        let fightSelect = "id, owner_id, name, state, starts_at, ends_at, action_text"
-
-        let myRows: [MemberRow] = try await client.from("fight_members")
-            .select(memberSelect)
-            .eq("user_id", value: userId)
-            .execute()
-            .value
-        var fightIDs = Set(myRows.map(\.fightId))
-
-        let owned: [FightRow] = try await client.from("fights")
-            .select(fightSelect)
-            .eq("owner_id", value: userId)
-            .execute()
-            .value
-        owned.forEach { fightIDs.insert($0.id) }
-
-        guard !fightIDs.isEmpty else { return [] }
-
-        let fightRows: [FightRow] = try await client.from("fights")
-            .select(fightSelect)
-            .in("id", values: fightIDs.map(\.uuidString))
-            .execute()
-            .value
-
-        let memberRows: [MemberRow] = try await client.from("fight_members")
-            .select(memberSelect)
-            .in("fight_id", values: fightIDs.map(\.uuidString))
-            .execute()
-            .value
-
-        var profileIDs = Set(memberRows.map(\.userId))
-        fightRows.forEach { profileIDs.insert($0.ownerId) }
-        let profiles = try await Self.fetchProfiles(client: client, ids: Array(profileIDs))
-        let byProfile = Dictionary(uniqueKeysWithValues: profiles.map { ($0.userId, $0) })
-        let membersByFight = Dictionary(grouping: memberRows, by: \.fightId)
-        let myByFight = Dictionary(uniqueKeysWithValues: myRows.map { ($0.fightId, $0) })
-
-        return fightRows.compactMap { row in
-            Self.mapFight(
-                row,
-                members: membersByFight[row.id] ?? [],
-                mine: myByFight[row.id],
-                profiles: byProfile,
-                userId: userId,
-                formatScore: formatScore
-            )
-        }
-    }
-
-    private static func fetchProfiles(client: SupabaseClient, ids: [UUID]) async throws -> [FitFightProfile] {
-        guard !ids.isEmpty else { return [] }
-        return try await client.from("profiles")
-            .select("user_id, handle, display_name")
-            .in("user_id", values: ids.map(\.uuidString))
-            .execute()
-            .value
     }
 
     private static func person(from profile: FitFightProfile, isYou: Bool) -> Person {
@@ -598,8 +1408,42 @@ final class AppModel: ObservableObject {
             name: profile.atHandle,
             handle: profile.atHandle,
             initials: profile.initials,
-            isYou: isYou
+            isYou: isYou,
+            photoURL: profile.avatar?.url,
+            companionId: profile.companionId
         )
+    }
+
+    func openFightFromFeed(id: String) {
+        guard let fight = canonicalFight(for: id) else { return }
+        tab = .fights
+        Task { @MainActor in
+            self.openFightID = fight.id
+        }
+    }
+
+    func presentDailyStatusRecap(for fightID: String) async {
+        guard let access = session?.authSession?.accessToken,
+              api.isConfigured,
+              let id = UUID(uuidString: fightID) else { return }
+        do {
+            let recap = try await api.dailyStatusRecap(fightID: id, accessToken: access)
+            dailyStatusRecap = DailyStatusRecap(fightID: fightID, body: recap.recap)
+        } catch {
+            dailyStatusRecap = nil
+        }
+    }
+
+    private func consumePendingFightRoute(showDailyStatusRecap: Bool) {
+        guard let route = UserDefaults.standard.string(forKey: Self.pendingFightRouteKey) else { return }
+        UserDefaults.standard.removeObject(forKey: Self.pendingFightRouteKey)
+        UserDefaults.standard.removeObject(forKey: Self.pendingDailyStatusKey)
+        let parts = route.split(separator: "/").map(String.init)
+        guard parts.count == 2, parts[0] == "fights", UUID(uuidString: parts[1]) != nil else { return }
+        openFightFromFeed(id: parts[1])
+        if showDailyStatusRecap {
+            Task { await presentDailyStatusRecap(for: parts[1]) }
+        }
     }
 
     private static func mapFight(
@@ -607,10 +1451,11 @@ final class AppModel: ObservableObject {
         members: [MemberRow],
         mine: MemberRow?,
         profiles: [UUID: FitFightProfile],
+        series: SeriesRow?,
         userId: UUID,
         formatScore: (Double, MetricKind) -> String
     ) -> Fight? {
-        if row.state == "draft" || mine?.state == "declined" { return nil }
+        if row.state == "draft" || mine?.state == "declined" || mine?.state == "withdrawn" { return nil }
 
         let pendingMembers = members.filter { $0.state == "invited" }
 
@@ -618,15 +1463,15 @@ final class AppModel: ObservableObject {
         let ends = row.endsAtDate
         let lengthDays = max(1, Calendar.current.dateComponents([.day], from: starts, to: ends).day ?? 1)
         let lengthHours = max(1, Int((ends.timeIntervalSince(starts) / 3_600).rounded()))
-        let durationLabel = lengthHours <= 6
-            ? "\(lengthHours) \(lengthHours == 1 ? "hour" : "hours")"
-            : "\(lengthDays) \(lengthDays == 1 ? "day" : "days")"
+        let durationLabel = localizedDuration(hours: lengthHours, days: lengthDays)
 
         let status: FightStatus
         if mine?.state == "invited" && row.state != "final" && row.state != "cancelled" {
             status = .invited
-        } else if row.state == "final" || row.state == "cancelled" || ends < Date() {
+        } else if row.state == "final" || row.state == "cancelled" {
             status = .finished
+        } else if row.state == "awaiting_final_sync" || (row.state == "live" && ends < Date()) {
+            status = .pending
         } else {
             status = .live
         }
@@ -643,11 +1488,15 @@ final class AppModel: ObservableObject {
                 || (remaining.second ?? 0) > 0
             daysLeft = max(1, (remaining.day ?? 0) + (hasPartialDay ? 1 : 0))
         }
-        let remainingLabel = lengthHours <= 6
-            ? "\(max(1, Int(ceil(ends.timeIntervalSinceNow / 3_600))))h"
-            : "\(daysLeft ?? 0)d"
+        let remainingLabel = RemainingTime.phrase(until: ends)
 
-        let people = members.map { member -> Standing in
+        let peopleUnsorted = members.compactMap { member -> Standing? in
+            switch member.state {
+            case "invited", "accepted", "deferred":
+                break
+            default:
+                return nil
+            }
             let profile = profiles[member.userId]
             let person: Person
             if let profile {
@@ -655,7 +1504,7 @@ final class AppModel: ObservableObject {
             } else {
                 person = Person(
                     id: member.userId.uuidString,
-                    name: member.userId == userId ? "You" : "@user",
+                    name: member.userId == userId ? String(localized: "You") : "@user",
                     handle: "@user",
                     initials: "FF",
                     isYou: member.userId == userId
@@ -664,28 +1513,30 @@ final class AppModel: ObservableObject {
             let score = member.currentValue ?? member.finalValue ?? 0
             return Standing(
                 person: person,
-                score: score,
-                today: 0,
-                invited: member.state == "invited"
+                score: member.state == "deferred" ? 0 : score,
+                invited: member.state == "invited",
+                deferred: member.state == "deferred",
+                lastSyncedAt: member.lastSyncedAt,
+                finalStepsComplete: member.finalStepsComplete,
+                rank: member.rank
             )
         }
-        .sorted { lhs, rhs in
-            if lhs.invited != rhs.invited { return !lhs.invited && rhs.invited }
-            if lhs.score == rhs.score { return lhs.person.name < rhs.person.name }
-            return lhs.score > rhs.score
-        }
+        let people = orderedStandings(peopleUnsorted, status: status)
 
-        let joined = people.filter { !$0.invited }
+        let joined = people.filter { !$0.invited && !$0.deferred }
+        let waiting = people.filter(\.deferred)
         let youRow = people.first { $0.person.isYou }
-        let rank = youRow.flatMap { row in joined.firstIndex { $0.person.id == row.person.id }.map { $0 + 1 } }
+        let listRank = youRow.flatMap { row in joined.firstIndex { $0.person.id == row.person.id }.map { $0 + 1 } }
             ?? mine?.rank
             ?? 0
+        let rank = (status == .finished ? mine?.rank : nil) ?? listRank
+        let tiedForFirst = people.filter { !$0.invited && !$0.deferred && $0.rank == 1 }.count > 1
         let of = max(joined.count, 1)
         let owner = profiles[row.ownerId].map { Self.person(from: $0, isYou: $0.userId == userId) }
-        let ownerName = owner?.name ?? "Someone"
+        let ownerName = owner?.name ?? String(localized: "Someone")
 
         let actionText = row.actionText?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let action = actionText?.isEmpty == false ? (actionText ?? "") : "No action was set for this older fight."
+        let action = actionText?.isEmpty == false ? (actionText ?? "") : ""
 
         var kickerPrefix = ""
         var kickerEmphasis = ""
@@ -697,47 +1548,129 @@ final class AppModel: ObservableObject {
 
         switch status {
         case .invited:
-            invitePitch = "\(ownerName) challenged you"
-            inviteAction = "Accept"
+            invitePitch = String(
+                localized: "fight.challenged-you",
+                defaultValue: "\(ownerName) challenged you"
+            )
+            inviteAction = String(localized: "Accept")
             kickerEmphasis = invitePitch ?? ""
             listSubtitle = "\(ownerName) · \(durationLabel)"
         case .finished:
-            let formatter = DateFormatter()
-            formatter.dateFormat = "MMM d"
-            endedLabel = "Ended \(formatter.string(from: ends))"
-            listSubtitle = "\(endedLabel ?? "Ended") · \(Self.ordinal(rank)) of \(of)"
-            kickerPrefix = rank == 1 ? "Won by" : "Finished"
-            kickerEmphasis = Self.ordinal(rank)
+            endedLabel = String(
+                localized: "fight.ended-on",
+                defaultValue: "Ended \(Fight.deadlineStamp(ends))"
+            )
+            if youRow?.deferred == true {
+                listSubtitle = endedLabel ?? String(localized: "Ended")
+                kickerEmphasis = String(localized: "Started next round")
+            } else if row.state == "final" && tiedForFirst {
+                listSubtitle = String(
+                    localized: "fight.finished-tied",
+                    defaultValue: "\(endedLabel ?? String(localized: "Ended")) · Tied"
+                )
+                kickerEmphasis = String(localized: "Tied")
+            } else {
+                listSubtitle = String(
+                    localized: "fight.finished-position",
+                    defaultValue: "\(endedLabel ?? String(localized: "Ended")) · \(Self.ordinal(rank)) of \(of)"
+                )
+                if row.state == "final" {
+                    kickerPrefix = rank == 1 ? String(localized: "Won by") : String(localized: "Finished")
+                } else {
+                    kickerPrefix = String(localized: "Finished")
+                }
+                kickerEmphasis = Self.ordinal(rank)
+            }
+        case .pending:
+            endedLabel = String(
+                localized: "fight.ended-on",
+                defaultValue: "Ended \(Fight.deadlineStamp(ends))"
+            )
+            listSubtitle = String(
+                localized: "fight.pending-ended-on",
+                defaultValue: "Pending · Ended \(Fight.deadlineStamp(ends))"
+            )
+            if youRow?.deferred == true {
+                kickerEmphasis = String(localized: "Started next round")
+            } else if youRow?.finalStepsComplete == true {
+                let submitted = people.filter { !$0.invited && !$0.deferred && $0.finalStepsComplete == true }
+                let submittedRank = youRow.flatMap { you in
+                    submitted.firstIndex { $0.person.id == you.person.id }.map { $0 + 1 }
+                } ?? 0
+                kickerEmphasis = submittedRank == 1
+                    ? String(localized: "Tentative lead")
+                    : String(localized: "Tentative loss")
+            } else {
+                kickerEmphasis = String(localized: "Pending. Open the app")
+            }
         case .live:
             if row.state == "awaiting_final_sync" {
-                kickerEmphasis = "Syncing final steps"
-                listSubtitle = "0d left"
+                kickerEmphasis = String(localized: "Syncing final steps")
+                listSubtitle = kickerEmphasis
+            } else if youRow?.deferred == true {
+                kickerEmphasis = String(localized: "Starts next round")
+                listSubtitle = kickerEmphasis
             } else if let youRow, let leader = joined.first, !youRow.invited {
                 if youRow.person.id == leader.person.id, let runnerUp = joined.dropFirst().first {
                     let gap = leader.score - runnerUp.score
-                    kickerPrefix = gap == 0 ? "" : "Leading by"
-                    kickerEmphasis = gap == 0 ? "Tied" : "\(formatScore(gap, .steps)) steps"
-                    kickerRest = "with \(remainingLabel) to go"
+                    kickerPrefix = gap == 0 ? "" : String(localized: "Leading by")
+                    kickerEmphasis = gap == 0
+                        ? String(localized: "Tied")
+                        : String(
+                            localized: "fight.steps-value",
+                            defaultValue: "\(formatScore(gap, .steps)) steps"
+                        )
+                    kickerRest = String(
+                        localized: "fight.time-to-go",
+                        defaultValue: "with \(remainingLabel) to go"
+                    )
                     listSubtitle = gap == 0
-                        ? "Tied with \(remainingLabel) to go"
-                        : "Leading by \(kickerEmphasis) with \(remainingLabel) to go"
+                        ? String(
+                            localized: "fight.tied-time-to-go",
+                            defaultValue: "Tied with \(remainingLabel) to go"
+                        )
+                        : String(
+                            localized: "fight.leading-time-to-go",
+                            defaultValue: "Leading by \(kickerEmphasis) with \(remainingLabel) to go"
+                        )
                 } else if youRow.person.id == leader.person.id {
-                    kickerEmphasis = "\(remainingLabel) left"
+                    kickerEmphasis = String(
+                        localized: "fight.time-left",
+                        defaultValue: "\(remainingLabel) left"
+                    )
                     listSubtitle = kickerEmphasis
                 } else {
                     let gap = leader.score - youRow.score
-                    kickerEmphasis = gap == 0 ? "Tied" : "\(formatScore(gap, .steps)) steps"
-                    kickerRest = gap == 0 ? "" : "behind \(leader.person.name)"
-                    listSubtitle = gap == 0 ? "Tied" : "\(kickerEmphasis) behind \(leader.person.name)"
+                    kickerEmphasis = gap == 0
+                        ? String(localized: "Tied")
+                        : String(
+                            localized: "fight.steps-value",
+                            defaultValue: "\(formatScore(gap, .steps)) steps"
+                        )
+                    kickerRest = gap == 0
+                        ? ""
+                        : String(
+                            localized: "fight.behind-person",
+                            defaultValue: "behind \(leader.person.name)"
+                        )
+                    listSubtitle = gap == 0
+                        ? String(localized: "Tied")
+                        : String(
+                            localized: "fight.steps-behind-person",
+                            defaultValue: "\(kickerEmphasis) behind \(leader.person.name)"
+                        )
                 }
             } else {
-                kickerEmphasis = "\(remainingLabel) left"
+                kickerEmphasis = String(
+                    localized: "fight.time-left",
+                    defaultValue: "\(remainingLabel) left"
+                )
                 listSubtitle = kickerEmphasis
             }
         }
 
         let short = row.id.uuidString.replacingOccurrences(of: "-", with: "")
-        let code = "FIGHT-" + String(short.prefix(3)).uppercased()
+        let code = series?.joinCode ?? ("FIGHT-" + String(short.prefix(3)).uppercased())
 
         return Fight(
             id: row.id.uuidString,
@@ -759,182 +1692,103 @@ final class AppModel: ObservableObject {
             inviter: owner,
             invitePitch: invitePitch,
             inviteAction: inviteAction,
-            standingsMeta: nil,
+            standingsMeta: waiting.isEmpty
+                ? nil
+                : String(
+                    localized: "fight.standings-next",
+                    defaultValue: "\(joined.count) racing · \(waiting.count) start next"
+                ),
             standings: people,
             windowStart: starts,
-            windowEnd: ends
+            windowEnd: ends,
+            graceEndsAt: row.graceEndsAtDate,
+            serverState: row.state,
+            joinCode: series?.joinCode,
+            seriesId: series?.id.uuidString,
+            recurring: series?.recurring ?? false,
+            visibility: series?.visibility ?? "invite_only",
+            suggested: series?.suggested ?? false,
+            offersJoinNext: (series?.recurring ?? false)
+                && Self.isAfterFightStartDay(starts)
+                && mine?.state == "invited"
         )
     }
 
+    private static func isAfterFightStartDay(_ start: Date, now: Date = Date()) -> Bool {
+        let calendar = Calendar.current
+        return calendar.startOfDay(for: now) > calendar.startOfDay(for: start)
+    }
+
+    private static func fightStatusPriority(_ status: FightStatus) -> Int {
+        switch status {
+        case .live: return 4
+        case .pending: return 3
+        case .invited: return 2
+        case .finished: return 1
+        }
+    }
+
+    static func preferredCanonicalFight(_ a: Fight, _ b: Fight) -> Fight {
+        let left = fightStatusPriority(a.status)
+        let right = fightStatusPriority(b.status)
+        if left != right { return left > right ? a : b }
+        if a.windowStart != b.windowStart { return a.windowStart > b.windowStart ? a : b }
+        return a
+    }
+
     private static func ordinal(_ value: Int) -> String {
-        switch value {
-        case 1: return "1st"
-        case 2: return "2nd"
-        case 3: return "3rd"
-        default: return "\(value)th"
+        let formatter = NumberFormatter()
+        formatter.locale = .autoupdatingCurrent
+        formatter.numberStyle = .ordinal
+        return formatter.string(from: NSNumber(value: value)) ?? value.formatted()
+    }
+
+    private static func orderedStandings(_ standings: [Standing], status: FightStatus) -> [Standing] {
+        standings.sorted { lhs, rhs in
+            if status == .pending {
+                let lhsOpen = !lhs.invited && !lhs.deferred && lhs.finalStepsComplete != true
+                let rhsOpen = !rhs.invited && !rhs.deferred && rhs.finalStepsComplete != true
+                if lhsOpen != rhsOpen { return lhsOpen && !rhsOpen }
+            }
+            if lhs.invited != rhs.invited { return !lhs.invited && rhs.invited }
+            if lhs.deferred != rhs.deferred { return !lhs.deferred && rhs.deferred }
+            if status == .finished, let lhsRank = lhs.rank, let rhsRank = rhs.rank, lhsRank != rhsRank {
+                return lhsRank < rhsRank
+            }
+            if lhs.score == rhs.score { return lhs.person.name < rhs.person.name }
+            return lhs.score > rhs.score
         }
     }
 }
 
 enum LiveFightError: LocalizedError {
     case notSignedIn
-    case noOpponents
     case unknownHandle(String)
 
     var errorDescription: String? {
         switch self {
         case .notSignedIn:
-            return "Sign in to start a fight."
-        case .noOpponents:
-            return "Add at least one other username."
+            return String(localized: "Sign in to start a fight.")
         case .unknownHandle(let handle):
-            return "No one with @\(handle). They need to open the app and pick a username first."
+            return String(
+                localized: "fight.unknown-handle",
+                defaultValue: "No one with @\(handle). They need to open the app and pick a username first."
+            )
         }
     }
 }
 
-private struct FightIDRow: Decodable {
-    let id: UUID
-}
-
-private struct FightInsert: Encodable {
-    let ownerId: UUID
-    let name: String
-    let state: String
-    let startsAt: String
-    let endsAt: String
-    let timeZone: String
-    let metric: String
-    let outcomeRule: String
-    let goalPolicy: String
-    let defaultGoalValue: Double?
-    let stakeKind: String
-    let stakeMinor: Int?
-    let currency: String?
-    let actionText: String?
-
-    enum CodingKeys: String, CodingKey {
-        case ownerId = "owner_id"
-        case name
-        case state
-        case startsAt = "starts_at"
-        case endsAt = "ends_at"
-        case timeZone = "time_zone"
-        case metric
-        case outcomeRule = "outcome_rule"
-        case goalPolicy = "goal_policy"
-        case defaultGoalValue = "default_goal_value"
-        case stakeKind = "stake_kind"
-        case stakeMinor = "stake_minor"
-        case currency
-        case actionText = "action_text"
+private func localizedDuration(hours: Int, days: Int) -> String {
+    if hours <= 6 {
+        return String(
+            localized: "duration.hours",
+            defaultValue: "\(hours) hours"
+        )
     }
-}
-
-private struct MemberInsert: Encodable {
-    let fightId: UUID
-    let userId: UUID
-    let state: String
-    let acceptedAt: String?
-
-    enum CodingKeys: String, CodingKey {
-        case fightId = "fight_id"
-        case userId = "user_id"
-        case state
-        case acceptedAt = "accepted_at"
-    }
-}
-
-private struct MemberAcceptUpdate: Encodable {
-    let state: String
-    let acceptedAt: String
-
-    enum CodingKeys: String, CodingKey {
-        case state
-        case acceptedAt = "accepted_at"
-    }
-}
-
-private struct MemberDeclineUpdate: Encodable {
-    let state: String
-}
-
-private struct StepDayRow: Decodable {
-    let userId: UUID
-    let day: String
-    let steps: Int
-
-    enum CodingKeys: String, CodingKey {
-        case userId = "user_id"
-        case day
-        case steps
-    }
-}
-
-private struct FightRow: Decodable {
-    let id: UUID
-    let ownerId: UUID
-    let name: String
-    let state: String
-    let startsAt: String
-    let endsAt: String
-    let actionText: String?
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case ownerId = "owner_id"
-        case name
-        case state
-        case startsAt = "starts_at"
-        case endsAt = "ends_at"
-        case actionText = "action_text"
-    }
-
-    var startsAtDate: Date { Self.parse(startsAt) ?? Date() }
-    var endsAtDate: Date { Self.parse(endsAt) ?? Date().addingTimeInterval(86400) }
-
-    private static func parse(_ raw: String) -> Date? {
-        let iso = ISO8601DateFormatter()
-        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let date = iso.date(from: raw) { return date }
-        iso.formatOptions = [.withInternetDateTime]
-        return iso.date(from: raw)
-    }
-}
-
-private struct MemberRow: Decodable {
-    let fightId: UUID
-    let userId: UUID
-    let state: String
-    let currentValue: Double?
-    let rank: Int?
-    let finalValue: Double?
-
-    enum CodingKeys: String, CodingKey {
-        case fightId = "fight_id"
-        case userId = "user_id"
-        case state
-        case currentValue = "current_value"
-        case rank
-        case finalValue = "final_value"
-    }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        fightId = try container.decode(UUID.self, forKey: .fightId)
-        userId = try container.decode(UUID.self, forKey: .userId)
-        state = try container.decode(String.self, forKey: .state)
-        rank = try container.decodeIfPresent(Int.self, forKey: .rank)
-        currentValue = Self.number(container, .currentValue)
-        finalValue = Self.number(container, .finalValue)
-    }
-
-    private static func number(_ container: KeyedDecodingContainer<CodingKeys>, _ key: CodingKeys) -> Double? {
-        if let value = try? container.decode(Double.self, forKey: key) { return value }
-        if let value = try? container.decode(Int.self, forKey: key) { return Double(value) }
-        if let value = try? container.decode(String.self, forKey: key) { return Double(value) }
-        return nil
-    }
+    return String(
+        localized: "duration.days",
+        defaultValue: "\(days) days"
+    )
 }
 
 private enum AppModelFixtures {
@@ -944,162 +1798,170 @@ private enum AppModelFixtures {
     }
 
     static func load() -> Bundle {
+        let isFrench = Foundation.Bundle.main.preferredLocalizations.first?.hasPrefix("fr") == true
         let leo = Person(id: "leo", name: "@leo_runs", handle: "@leo_runs", initials: "L")
         let sam = Person(id: "sam", name: "@sam_sweats", handle: "@sam_sweats", initials: "S")
         let ivy = Person(id: "ivy", name: "@ivy_climbs", handle: "@ivy_climbs", initials: "I")
         let theo = Person(id: "theo", name: "@theo_rows", handle: "@theo_rows", initials: "T")
         let nina = Person(id: "nina", name: "@nina_lifts", handle: "@nina_lifts", initials: "N")
         let you = Person(id: "you", name: "@maya_moves", handle: "@maya_moves", initials: "MM", isYou: true)
+        let syncedJustNow = Date().addingTimeInterval(-4 * 60)
+        let syncedToday = Date().addingTimeInterval(-2 * 3_600)
+        let syncedYesterday = Date().addingTimeInterval(-22 * 3_600)
 
         let fights = [
             Fight(
                 id: "sweat",
                 code: "FIGHT-742",
-                name: "7-Day Sweat Ladder",
+                name: isFrench ? "Défi transpiration 7 jours" : "7-Day Sweat Ladder",
                 metric: .steps,
                 lengthDays: 7,
                 daysLeft: 4,
-                actionText: "Loser plans the next walk",
+                actionText: isFrench ? "Le perdant organise la prochaine balade" : "Loser plans the next walk",
                 status: .live,
                 rank: 2,
                 of: 3,
                 pending: 0,
                 kickerEmphasis: "12.0k",
-                kickerRest: "behind @leo_runs",
-                listSubtitle: "12.0k behind @leo_runs",
+                kickerRest: String(localized: "behind @leo_runs"),
+                listSubtitle: String(localized: "12.0k behind @leo_runs"),
+                inviter: you,
                 standings: [
-                    Standing(person: leo, score: 54_000, today: 16_000),
-                    Standing(person: you, score: 42_000, today: 14_000),
-                    Standing(person: sam, score: 37_000, today: 12_000)
+                    Standing(person: leo, score: 54_000, lastSyncedAt: syncedJustNow),
+                    Standing(person: you, score: 42_000, lastSyncedAt: syncedToday),
+                    Standing(person: sam, score: 37_000, lastSyncedAt: syncedYesterday)
                 ],
                 days: [
-                    FightDay(label: "Day 1", scores: [
+                    FightDay(label: String(localized: "Day 1"), scores: [
                         DayScore(person: leo, value: 20_000),
                         DayScore(person: you, value: 12_000),
                         DayScore(person: sam, value: 15_000)
                     ]),
-                    FightDay(label: "Day 2", scores: [
+                    FightDay(label: String(localized: "Day 2"), scores: [
                         DayScore(person: leo, value: 18_000),
                         DayScore(person: you, value: 16_000),
                         DayScore(person: sam, value: 10_000)
                     ]),
-                    FightDay(label: "Day 3", scores: [
+                    FightDay(label: String(localized: "Day 3"), scores: [
                         DayScore(person: leo, value: 16_000),
                         DayScore(person: you, value: 14_000),
                         DayScore(person: sam, value: 12_000)
                     ])
-                ]
+                ],
+                windowEnd: Date().addingTimeInterval(4 * 24 * 60 * 60)
             ),
             Fight(
                 id: "derby",
                 code: "FIGHT-118",
-                name: "Step Derby",
+                name: isFrench ? "Derby des pas" : "Step Derby",
                 metric: .steps,
                 lengthDays: 7,
                 daysLeft: 2,
-                actionText: "Losers cook Sunday dinner",
+                actionText: isFrench ? "Les perdants préparent le dîner dimanche" : "Losers cook Sunday dinner",
                 status: .live,
                 rank: 1,
                 of: 5,
                 pending: 1,
-                kickerPrefix: "Holding",
-                kickerEmphasis: "1st",
-                kickerRest: "with 2d to go",
-                listSubtitle: "Holding 1st with 2d to go",
+                kickerPrefix: String(localized: "Holding"),
+                kickerEmphasis: String(localized: "1st"),
+                kickerRest: String(localized: "with 2d to go"),
+                listSubtitle: String(localized: "Holding 1st with 2d to go"),
                 standings: [
-                    Standing(person: you, score: 61400, today: 8200),
-                    Standing(person: ivy, score: 59800, today: 6100),
-                    Standing(person: theo, score: 55200, today: 5200),
-                    Standing(person: leo, score: 40100, today: 4800),
-                    Standing(person: nina, score: 22000, today: 0, invited: true)
-                ]
+                    Standing(person: you, score: 61400, lastSyncedAt: syncedJustNow),
+                    Standing(person: ivy, score: 59800, lastSyncedAt: syncedToday),
+                    Standing(person: theo, score: 55200, lastSyncedAt: syncedYesterday),
+                    Standing(person: leo, score: 40100, lastSyncedAt: syncedYesterday),
+                    Standing(person: nina, score: 22000, invited: true)
+                ],
+                windowEnd: Date().addingTimeInterval(1 * 24 * 60 * 60 + 8 * 60 * 60)
             ),
             Fight(
                 id: "club",
                 code: "FIGHT-655",
-                name: "10K Club",
+                name: isFrench ? "Club des 10 000" : "10K Club",
                 metric: .steps,
                 lengthDays: 7,
                 daysLeft: 3,
-                actionText: "Losers organize the next hike",
+                actionText: isFrench ? "Les perdants organisent la prochaine randonnée" : "Losers organize the next hike",
                 status: .live,
                 rank: 2,
                 of: 4,
                 pending: 2,
-                kickerEmphasis: "3.2k steps",
-                kickerRest: "behind @sam_sweats",
-                listSubtitle: "3.2k steps behind @sam_sweats",
+                kickerEmphasis: String(localized: "3.2k steps"),
+                kickerRest: String(localized: "behind @sam_sweats"),
+                listSubtitle: String(localized: "3.2k steps behind @sam_sweats"),
                 standings: [
-                    Standing(person: sam, score: 44800, today: 12100),
-                    Standing(person: you, score: 41600, today: 8240),
-                    Standing(person: nina, score: 31900, today: 4100),
-                    Standing(person: ivy, score: 28100, today: 3900)
-                ]
+                    Standing(person: sam, score: 44800, lastSyncedAt: syncedToday),
+                    Standing(person: you, score: 41600, lastSyncedAt: syncedJustNow),
+                    Standing(person: nina, score: 31900, lastSyncedAt: syncedYesterday),
+                    Standing(person: ivy, score: 28100, lastSyncedAt: syncedYesterday)
+                ],
+                windowEnd: Date().addingTimeInterval(3 * 24 * 60 * 60)
             ),
             Fight(
                 id: "desk",
                 code: "FIGHT-556",
-                name: "Desk Job Revenge",
+                name: isFrench ? "Revanche du bureau" : "Desk Job Revenge",
                 metric: .steps,
                 lengthDays: 3,
                 daysLeft: 3,
-                actionText: "Losers take the stairs all day",
+                actionText: isFrench ? "Les perdants prennent les escaliers toute la journée" : "Losers take the stairs all day",
                 status: .invited,
                 rank: 0,
                 of: 4,
                 pending: 2,
-                kickerEmphasis: "@theo_rows challenged you",
-                listSubtitle: "@theo_rows · 3 days",
+                kickerEmphasis: String(localized: "@theo_rows challenged you"),
+                listSubtitle: String(localized: "@theo_rows · 3 days"),
                 inviter: theo,
-                invitePitch: "@theo_rows challenged you",
-                inviteAction: "Accept",
-                standingsMeta: "2 in · 2 not replied",
+                invitePitch: String(localized: "@theo_rows challenged you"),
+                inviteAction: String(localized: "Accept"),
+                standingsMeta: String(localized: "2 in · 2 not replied"),
                 standings: [
-                    Standing(person: theo, score: 0, today: 0),
-                    Standing(person: nina, score: 0, today: 0),
-                    Standing(person: ivy, score: 0, today: 0, invited: true)
+                    Standing(person: theo, score: 0),
+                    Standing(person: nina, score: 0),
+                    Standing(person: ivy, score: 0, invited: true)
                 ]
             ),
             Fight(
                 id: "sprint",
                 code: "FIGHT-221",
-                name: "City Sprint",
+                name: isFrench ? "Sprint en ville" : "City Sprint",
                 metric: .steps,
                 lengthDays: 7,
                 daysLeft: 7,
-                actionText: "Losers plan a park walk",
+                actionText: isFrench ? "Les perdants organisent une balade au parc" : "Losers plan a park walk",
                 status: .invited,
                 rank: 0,
                 of: 3,
                 pending: 0,
-                kickerEmphasis: "@ivy_climbs challenged you",
-                listSubtitle: "@ivy_climbs · 7 days",
+                kickerEmphasis: String(localized: "@ivy_climbs challenged you"),
+                listSubtitle: String(localized: "@ivy_climbs · 7 days"),
                 inviter: ivy,
-                invitePitch: "@ivy_climbs challenged you",
-                inviteAction: "Join",
+                invitePitch: String(localized: "@ivy_climbs challenged you"),
+                inviteAction: String(localized: "Join"),
                 standings: [
-                    Standing(person: ivy, score: 0, today: 0)
+                    Standing(person: ivy, score: 0)
                 ]
             ),
             Fight(
                 id: "weekend",
                 code: "FIGHT-088",
-                name: "Weekend Step Duel",
+                name: isFrench ? "Duel de pas du week-end" : "Weekend Step Duel",
                 metric: .steps,
                 lengthDays: 2,
-                endedLabel: "Ended Jul 13",
-                actionText: "Loser plans the next route",
+                endedLabel: String(localized: "Ended Jul 13"),
+                actionText: isFrench ? "Le perdant choisit le prochain parcours" : "Loser plans the next route",
                 status: .finished,
                 rank: 1,
                 of: 2,
                 pending: 0,
-                kickerPrefix: "Leading by",
-                kickerEmphasis: "2.2k steps",
-                listSubtitle: "Ended Jul 13 · 1st of 2",
-                standingsMeta: "2 in",
+                kickerPrefix: String(localized: "Leading by"),
+                kickerEmphasis: String(localized: "2.2k steps"),
+                listSubtitle: String(localized: "Ended Jul 13 · 1st of 2"),
+                standingsMeta: String(localized: "2 in"),
                 standings: [
-                    Standing(person: you, score: 24100, today: 0),
-                    Standing(person: leo, score: 21900, today: 0)
+                    Standing(person: you, score: 24100, lastSyncedAt: syncedYesterday),
+                    Standing(person: leo, score: 21900, lastSyncedAt: syncedYesterday)
                 ]
             )
         ]

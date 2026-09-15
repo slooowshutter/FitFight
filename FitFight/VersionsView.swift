@@ -19,7 +19,12 @@ struct VersionsView: View {
             .padding(.horizontal, theme.space.screenPadding)
             .padding(.vertical, 12)
 
-            Text("You're on \(AppVersion.label)")
+            Text(
+                String(
+                    localized: "version.current",
+                    defaultValue: "You're on \(AppVersion.label)"
+                )
+            )
                 .ffType(.caption)
                 .foregroundStyle(theme.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -56,7 +61,7 @@ private struct ReleaseNoteRow: View {
                         .ffType(.heading)
                         .foregroundStyle(isCurrent ? theme.mossText : theme.text)
                     if isCurrent {
-                        FFPill("this build")
+                        FFPill(String(localized: "this build"))
                     }
                     Spacer()
                     Text(release.date, format: .dateTime.month(.abbreviated).day().year())

@@ -6,9 +6,11 @@ Cloud-only iOS app: Marc talks from his phone, a Cursor cloud agent codes, GitHu
 
 **v0.3** ports the approved design: four tabs, dark/light, 10 accents. Spec in [`docs/design/source/`](docs/design/source/README.md).
 
+The native Companion work is in `FitFight/`. See the [Companion README](docs/design/source/companion/README.md#planned-generation-apis--p0-requested-13-sep-2026) for the three planned P0 generation APIs: custom identity/avatar, five activity forms, and group challenge artwork.
+
 ## Agents
 
-Read [`AGENTS.md`](AGENTS.md) and [`docs/`](docs/README.md) before changing anything. That’s the project memory for parallel chats. Ideas live in [`docs/backlog.md`](docs/backlog.md). The production architecture is [`docs/system-design.md`](docs/system-design.md); follow it, don’t build all of it. First real Metric is Steps.
+Read [`AGENTS.md`](AGENTS.md) and [`docs/`](docs/README.md) before changing anything. That’s the project memory for parallel chats. Ideas live in the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) (FitFight rows only). The production architecture is [`docs/system-design.md`](docs/system-design.md); follow it, don’t build all of it. First real Metric is Steps.
 
 ## Marc
 

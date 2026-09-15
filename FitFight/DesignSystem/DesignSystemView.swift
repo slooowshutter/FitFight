@@ -229,8 +229,8 @@ struct DesignSystemView: View {
             }
             FFCard {
                 VStack(alignment: .leading, spacing: 12) {
-                    FFEyebrow("Screen CTA — the signature")
-                    Text("Full-width, 60pt tall, label left and a filled circle chevron right. One per screen, pinned above the tab bar.")
+                    FFEyebrow("Screen CTA — tap to continue")
+                    Text("A full-width button with a centered label. Sliding confirmation is reserved for creating a fight.")
                         .ffType(.body)
                         .foregroundStyle(theme.textSecondary)
                         .lineSpacing(3)
@@ -270,6 +270,7 @@ struct DesignSystemView: View {
                         FFResultGlyph(.win)
                         FFResultGlyph(.loss)
                         FFResultGlyph(.draw)
+                        FFResultGlyph(.pending)
                         Spacer(minLength: 0)
                     }
                 }
@@ -623,8 +624,8 @@ struct DesignSystemView: View {
             FFSectionHeader(title: "09 · Comparison & ranking")
             FFEyebrow("VS block — the head-to-head")
             FFVSBlock(
-                you: ("AM", "You", "26,410", 1),
-                them: ("MB", "Marc", "22,100", 0.84),
+                you: ("AM", "You", "26,410", 1, nil),
+                them: ("MB", "Marc", "22,100", 0.84, nil),
                 delta: "+4,310",
                 footnote: "Steps · 7 day fight",
                 timeLeft: "3 days left"
@@ -636,7 +637,7 @@ struct DesignSystemView: View {
                 FFLeaderboardRow(rank: 1, monogram: "NK", name: "Nina", value: "412", move: .up)
                 FFLeaderboardRow(rank: 2, monogram: "MB", name: "Marc", value: "388", move: .same)
                 FFLeaderboardRow(rank: 3, monogram: "MR", name: "Maya", value: "341", move: .up)
-                FFLeaderboardRow(rank: 4, monogram: "AM", name: "You", value: "312", move: .down, isYou: true)
+                FFLeaderboardRow(rank: 4, monogram: "AM", name: "You", value: "312", move: .down, isYou: true, caption: "Synced 3 Sep, 12:41")
                 FFLeaderboardRow(rank: 5, monogram: "TD", name: "Theo", value: "204", move: .same)
             }
             Text("Rank 1 takes gold ink. Movement arrows are moss up, ember down, ash-faint dash for no change. The row never names its own metric — the screen header does.")

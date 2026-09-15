@@ -68,13 +68,103 @@ enum ScreenshotExport {
             }
         }
 
-        try? Data("ok".utf8).write(to: folder.appendingPathComponent("done.txt"))
+        let localization = Bundle.main.preferredLocalizations.first ?? "unknown"
+        try? Data(localization.utf8).write(to: folder.appendingPathComponent("done.txt"))
     }
 
     private struct Shot {
         let name: String
         let view: (ThemeStore, AppModel) -> AnyView
     }
+
+    #if DEBUG && targetEnvironment(simulator)
+    static func exportCompanion() {
+        guard CompanionPreview.isEnabled else { return }
+        let folder = URL.documentsDirectory.appending(path: "companion-shots")
+        do { try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true) }
+        catch { print("Companion capture directory could not be created."); return }
+
+        for mode in Mode.allCases {
+            let store = ThemeStore(transient: mode)
+            let model = CompanionPreview.model()
+            let session = SessionStore(companionPreview: ())
+            let steps = HealthKitStepsStore()
+            steps.setCompanionPreviewStatus(.steps(count: 8_432))
+            let feed = FeedStore()
+            feed.posts = CompanionPreview.posts()
+            let companions = CompanionStore()
+            let wrap: (AnyView, FFTab?) -> AnyView = { content, tab in
+                AnyView(
+                    VStack(spacing: 0) {
+                        Color.clear.frame(height: 44)
+                        content.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top).clipped()
+                        if let tab { FFTabBar(tab: .constant(tab)) }
+                        Color.clear.frame(height: 24)
+                    }
+                    .background(store.theme.bg)
+                    .environmentObject(store)
+                    .environmentObject(model)
+                    .environmentObject(session)
+                    .environmentObject(steps)
+                    .environmentObject(feed)
+                    .environmentObject(companions)
+                    .environment(\.ffTheme, store.theme)
+                    .environment(\.colorScheme, store.theme.colorScheme)
+                    .environment(\.ffStaticRender, true)
+                )
+            }
+            let group = model.fight(id: CompanionPreview.groupID)!
+            let duel = model.fight(id: CompanionPreview.duelID)!
+            let invite = model.fight(id: CompanionPreview.invitationID)!
+            let shots: [(String, AnyView, FFTab)] = [
+                ("fights", AnyView(FightsListView()), .fights),
+                ("fights-invited", AnyView(FightsListView(filter: .invited)), .fights),
+                ("fights-past", AnyView(FightsListView(filter: .past)), .fights),
+                ("duel", AnyView(FightDetailView(fight: duel)), .fights),
+                ("group", AnyView(FightDetailView(fight: group)), .fights),
+                ("edit", AnyView(EditFightView(fight: group)), .fights),
+                ("invitation", AnyView(FightDetailView(fight: invite)), .fights),
+                ("history", AnyView(FightDetailView(fight: group, pane: .history)), .fights),
+                ("share", AnyView(FightDetailView(fight: group, pane: .share)), .fights),
+                ("fight-feed", AnyView(FightDetailView(fight: group, pane: .feed)), .fights),
+                ("new", AnyView(NewFightView()), .newFight),
+                ("review", AnyView(NewFightView(opening: .create, initialStep: 4)), .newFight),
+                ("you", AnyView(YouView()), .you),
+                ("picker", AnyView(CompanionPicker(selection: .badger)), .you),
+                ("feed", AnyView(FeedView()), .feed),
+                ("compose", AnyView(FeedComposeSheet()), .feed),
+            ]
+            for (name, view, tab) in shots {
+                write(wrap(view, name == "compose" ? nil : tab), name: "\(mode.rawValue)-\(name)", height: canvas.height, to: folder, scale: 1)
+            }
+            for kind in FightDayChartKind.allCases {
+                let view = AnyView(FFScreen {
+                    FFSection(title: String(localized: "Every day so far")) {
+                        FFCard {
+                            FightDayChartsView(days: group.days, standings: group.standings, initialKind: kind) { value in
+                                model.formatScore(value, metric: group.metric)
+                            }
+                        }
+                    }
+                })
+                write(wrap(view, .fights), name: "\(mode.rawValue)-chart-\(kind.rawValue)", height: canvas.height, to: folder, scale: 1)
+            }
+            for (name, view, tab) in shots where ["fights", "group", "new", "you", "picker"].contains(name) {
+                write(
+                    AnyView(wrap(view, tab).environment(\.dynamicTypeSize, .accessibility3)),
+                    name: "\(mode.rawValue)-\(name)-large-text", height: canvas.height, to: folder, scale: 1
+                )
+            }
+            for state in CompanionPreview.DisplayState.allCases where state != .populated && state != .offline {
+                model.showCompanionPreviewState(state)
+                steps.setCompanionPreviewStatus(state == .loading ? .reading : .empty)
+                let content = model.fights.first.map { AnyView(FightDetailView(fight: $0)) } ?? AnyView(FightsListView())
+                write(wrap(content, .fights), name: "\(mode.rawValue)-\(state.rawValue)", height: canvas.height, to: folder, scale: 1)
+            }
+        }
+        try? Data("393 × 852 points; SwiftUI ImageRenderer; sample data".utf8).write(to: folder.appending(path: "done.txt"))
+    }
+    #endif
 
     private static func shots(model: AppModel) -> [Shot] {
         let fight = model.fights.first { $0.id == "sweat" }
@@ -83,10 +173,7 @@ enum ScreenshotExport {
             Shot(name: "00-welcome") { store, _ in
                 let theme = store.theme
                 return AnyView(
-                    VStack(spacing: 0) {
-                        VersionBanner()
-                        WelcomeView()
-                    }
+                    WelcomeView()
                     .background(theme.bg)
                     .environmentObject(store)
                     .environmentObject(model)
@@ -103,15 +190,36 @@ enum ScreenshotExport {
             Shot(name: "02-fight-detail") { store, model in
                 frame(detail(fight), tab: .fights, themeStore: store, model: model)
             },
+            Shot(name: "02-edit-fight") { store, model in
+                if let fight {
+                    return sheet(EditFightView(fight: fight), themeStore: store, model: model)
+                }
+                return sheet(Color.clear, themeStore: store, model: model)
+            },
             Shot(name: "03-fight-invited") { store, model in
                 frame(detail(invited), tab: .fights, themeStore: store, model: model)
             },
             Shot(name: "04-new") { store, model in
-                frame(NewFightView(), tab: .newFight, themeStore: store, model: model)
+                frame(NewFightView(opening: .choose), tab: .newFight, themeStore: store, model: model)
+            },
+            Shot(name: "04-new-join") { store, model in
+                frame(NewFightView(opening: .join), tab: .newFight, themeStore: store, model: model)
             },
             Shot(name: "05-you") { store, model in
                 frame(YouView(), tab: .you, themeStore: store, model: model)
-            }
+            },
+            Shot(name: "05-feed") { store, model in
+                frame(FeedView(), tab: .feed, themeStore: store, model: model)
+            },
+            Shot(name: "06-requests") { store, model in
+                sheet(RequestsScreenshot.board(), themeStore: store, model: model)
+            },
+            Shot(name: "07-request-detail") { store, model in
+                sheet(RequestsScreenshot.detail(), themeStore: store, model: model)
+            },
+            Shot(name: "08-request-compose") { store, model in
+                sheet(RequestsScreenshot.compose(), themeStore: store, model: model)
+            },
         ]
     }
 
@@ -128,7 +236,7 @@ enum ScreenshotExport {
                 frame(detail(fight), tab: .fights, themeStore: store, model: model)
             },
             Shot(name: "appstore-03-new") { store, model in
-                frame(NewFightView(), tab: .newFight, themeStore: store, model: model)
+                frame(NewFightView(opening: .choose), tab: .newFight, themeStore: store, model: model)
             },
             Shot(name: "appstore-04-invitation") { store, model in
                 frame(detail(invited), tab: .fights, themeStore: store, model: model)
@@ -166,6 +274,30 @@ enum ScreenshotExport {
         }
     }
 
+    private static func sheet<Content: View>(
+        _ content: Content,
+        themeStore: ThemeStore,
+        model: AppModel
+    ) -> AnyView {
+        let theme = themeStore.theme
+        return AnyView(
+            Color.clear
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .overlay(alignment: .top) {
+                    content
+                }
+                .background(theme.bg)
+                .environmentObject(themeStore)
+                .environmentObject(model)
+                .environmentObject(CompanionStore())
+                .environmentObject(SessionStore(screenshot: ()))
+                .environmentObject(HealthKitStepsStore())
+                .environment(\.ffTheme, theme)
+                .environment(\.colorScheme, theme.colorScheme)
+                .environment(\.ffStaticRender, true)
+        )
+    }
+
     private static func frame<Content: View>(
         _ content: Content,
         tab: FFTab,
@@ -176,8 +308,6 @@ enum ScreenshotExport {
         let session = SessionStore(screenshot: ())
         return AnyView(
             VStack(spacing: 0) {
-                VersionBanner()
-                    .fixedSize(horizontal: false, vertical: true)
                 content
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     .clipped()
@@ -186,8 +316,10 @@ enum ScreenshotExport {
             .background(theme.bg)
             .environmentObject(themeStore)
             .environmentObject(model)
+            .environmentObject(CompanionStore())
             .environmentObject(session)
             .environmentObject(HealthKitStepsStore())
+            .environmentObject(FeedStore())
             .environment(\.ffTheme, theme)
             .environment(\.colorScheme, theme.colorScheme)
             .environment(\.ffStaticRender, true)

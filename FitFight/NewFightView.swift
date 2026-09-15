@@ -1,225 +1,511 @@
 import SwiftUI
 
+enum NewFightOpening {
+    case choose
+    case create
+    case join
+}
+
 struct NewFightView: View {
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var steps: HealthKitStepsStore
+    @EnvironmentObject private var feed: FeedStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
 
+    @State private var opening: NewFightOpening
+    @State private var step = 0
     @State private var username = ""
     @State private var inviteHandles: [String] = []
     @State private var usernameError: String?
-    @State private var duration = "1 week"
+    @State private var durationDays = 7
+    @State private var customSchedule = false
+    @State private var customStart = Date(timeIntervalSince1970: ceil(Date().timeIntervalSince1970 / 60) * 60 + 3_600)
+    @State private var customEnd = Date(timeIntervalSince1970: ceil(Date().timeIntervalSince1970 / 60) * 60 + 7 * 86_400 + 3_600)
+    @State private var fightTitle = ""
     @State private var actionText = ""
+    @State private var visibilityJoinable = false
+    @State private var recurring = true
+    @State private var joinCode = ""
+    @State private var lookingUp = false
+    @State private var composing = false
+    @FocusState private var usernameFocused: Bool
+    @FocusState private var titleFocused: Bool
+    @FocusState private var actionFocused: Bool
+    @FocusState private var joinCodeFocused: Bool
+
+    init(opening: NewFightOpening = .choose, initialStep: Int = 0) {
+        let capturing = CompanionPreview.isEnabled && ScreenshotExport.isEnabled
+        _opening = State(initialValue: capturing ? .create : opening)
+        _step = State(initialValue: initialStep)
+    }
+
+    private var duration: String {
+        FightComposer.durationLabel(days: durationDays, customSchedule: customSchedule)
+    }
+
+    private var scheduleError: String? {
+        guard customSchedule else { return nil }
+        if customStart <= Date() { return String(localized: "Choose a start time in the future.") }
+        if customEnd <= customStart { return String(localized: "The end must be after the start.") }
+        return nil
+    }
 
     private var canStart: Bool {
+        let title = fightTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         let action = actionText.trimmingCharacters(in: .whitespacesAndNewlines)
         return session.isSignedIn
-            && steps.hasAsked
-            && !inviteHandles.isEmpty
-            && !action.isEmpty
+            && (steps.hasAsked || CompanionPreview.isEnabled)
+            && title.count <= 120
             && action.count <= 120
+            && scheduleError == nil
             && !model.isCreatingFight
     }
 
     var body: some View {
-        FFScreen {
-            FFScreenTitle(
-                title: "New fight",
-                subtitle: "Challenge friends. Most steps wins."
-            )
-            .padding(.bottom, 6)
-
-            stepsSection
-            peopleSection.padding(.top, theme.space.lg)
-            lengthSection.padding(.top, theme.space.lg)
-            actionSection.padding(.top, theme.space.lg)
-            if !staticRender {
-                summary.padding(.top, theme.space.lg)
+        GeometryReader { proxy in
+            FFScreen(clearance: false) {
+                VStack(alignment: .leading, spacing: theme.space.cardGap) {
+                    flowProgress
+                    currentScreen
+                    Spacer(minLength: theme.space.lg)
+                    flowAction
+                }
+                .frame(
+                    minHeight: max(0, proxy.size.height - theme.space.base - theme.space.lg),
+                    alignment: .top
+                )
             }
+        }
+        .task(id: opening) {
+            guard opening != .create, !staticRender else { return }
+            await model.loadFightDiscovery(session: session)
+        }
+        .sheet(isPresented: $composing) {
+            FeedComposeSheet()
+                .environmentObject(model)
+                .environmentObject(session)
+                .environmentObject(feed)
+                .fitFightTheme(theme)
+                .presentationBackground(theme.bg)
+        }
+        .task {
+            if model.pendingJoinable != nil, opening != .create {
+                opening = .join
+            }
+        }
+        .onChange(of: model.pendingJoinable?.id) { _, id in
+            if id != nil, opening != .create {
+                opening = .join
+            }
+        }
+    }
 
-            FFScreenCTA(
-                title: model.isCreatingFight ? "Starting…" : "Start fight",
+    private var showingJoinPreview: Bool {
+        model.pendingJoinable != nil && opening != .create
+    }
+
+    private var effectiveOpening: NewFightOpening {
+        showingJoinPreview ? .join : opening
+    }
+
+    @ViewBuilder
+    private var flowAction: some View {
+        if effectiveOpening == .choose || showingJoinPreview {
+            EmptyView()
+        } else if effectiveOpening == .join {
+            FFButton(
+                title: lookingUp ? String(localized: "Looking up…") : String(localized: "Open fight"),
+                size: .large,
+                enabled: joinCode.count == 4,
+                busy: lookingUp,
+                fullWidth: true
+            ) {
+                lookupCode()
+            }
+            if let error = model.createError, !error.isEmpty {
+                FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
+            }
+        } else if step == 4 {
+            FFSlideToConfirm(
+                title: model.isCreatingFight
+                    ? String(localized: "Starting…")
+                    : customSchedule ? String(localized: "Slide to schedule") : String(localized: "Slide to start"),
                 enabled: canStart,
                 busy: model.isCreatingFight
             ) {
                 startFight()
             }
-            .padding(.top, 6)
+
+            if CompanionPreview.isEnabled {
+                Text(CompanionPreview.writeUnavailable)
+                    .ffType(.caption)
+                    .foregroundStyle(theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if !steps.hasAsked {
+                Text("Connect Apple Health above to start this fight.")
+                    .ffType(.caption)
+                    .foregroundStyle(theme.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+            }
 
             if let error = model.createError, !error.isEmpty {
                 FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
             }
+            if let scheduleError {
+                FFNotice(text: scheduleError, tone: .ember, systemImage: "calendar")
+            }
+        } else {
+            FFButton(title: String(localized: "Next"), size: .large, enabled: step != 1 || scheduleError == nil, fullWidth: true) {
+                step += 1
+            }
         }
     }
 
-    private var stepsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            FFSectionHeader(title: "Challenge")
-            FFGroupedRows {
-                FFGroupedRow(
-                    title: "Most steps wins",
-                    subtitle: "FitFight uploads your Fight total and relevant daily totals. Accepted players see both and your rank.",
-                    systemImage: "figure.walk",
-                    subtitleTone: .moss,
-                    trailing: AnyView(
-                        FFPill(
-                            steps.hasAsked ? "Steps on" : "Connect",
-                            style: steps.hasAsked ? .softMoss : .solidMoss
+    private var flowProgress: some View {
+        VStack(spacing: 10) {
+            HStack {
+                if effectiveOpening == .choose {
+                    Text("New")
+                        .ffType(.title)
+                        .foregroundStyle(theme.text)
+                        .frame(minHeight: 44)
+                } else {
+                    Button {
+                        goBack()
+                    } label: {
+                        Label("Back", systemImage: "chevron.left")
+                            .ffType(.buttonSmall)
+                            .foregroundStyle(theme.text)
+                            .frame(minHeight: 44)
+                    }
+                    .buttonStyle(FFHapticPlainStyle())
+                }
+
+                Spacer()
+
+                if opening == .create {
+                    Text(
+                        String(
+                            localized: "fight.step-progress",
+                            defaultValue: "Step \(step + 1) of 5"
                         )
-                    ),
-                    action: connectAppleHealth
-                )
-            }
-            if !steps.hasAsked {
-                Text("Connect Apple Health to score and start a fight.")
+                    )
                     .ffType(.caption)
                     .foregroundStyle(theme.textSecondary)
+                    .frame(minHeight: 44)
+                }
+            }
+
+            if opening == .create {
+                HStack(spacing: 6) {
+                    ForEach(0..<5, id: \.self) { index in
+                        Capsule()
+                            .fill(index <= step ? theme.mossFill : theme.disabledBg)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 4)
+                    }
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(
+                    String(
+                        localized: "fight.step-progress",
+                        defaultValue: "Step \(step + 1) of 5"
+                    )
+                )
             }
         }
     }
 
-    private var peopleSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                FFSectionHeader(title: "Friends")
-                FFPill(
-                    "\(inviteHandles.count + 1) \(inviteHandles.isEmpty ? "player" : "players")",
-                    style: .softMoss
+    @ViewBuilder
+    private var currentScreen: some View {
+        if let fight = model.pendingJoinable, opening != .create {
+            JoinFightPreview(
+                fight: fight,
+                joining: model.isJoiningFight,
+                onJoinNow: { Task { await model.acceptFight(id: fight.id, start: "now") } },
+                onJoinNext: { Task { await model.acceptFight(id: fight.id, start: "next") } },
+                onDismiss: {
+                    Task { await model.declineFight(id: fight.id) }
+                }
+            )
+        } else {
+            switch opening {
+            case .choose:
+                chooseStep
+            case .join:
+                joinStep
+            case .create:
+                currentStep
+            }
+        }
+    }
+
+    private var chooseStep: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            CompanionIntroduction(surface: .newFight)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Create, join, or post?")
+                    .ffType(.heading)
+                    .foregroundStyle(theme.text)
+                Text("Start a new fight, join one that's already going, or post to the Feed.")
+                    .ffType(.body)
+                    .foregroundStyle(theme.textSecondary)
+                    .lineSpacing(2)
+            }
+
+            FFGroupedRows {
+                FFGroupedRow(
+                    title: String(localized: "Create"),
+                    subtitle: String(localized: "Start a new fight"),
+                    systemImage: "plus",
+                    subtitleTone: .neutral,
+                    action: { opening = .create }
+                )
+                FFDivider()
+                FFGroupedRow(
+                    title: String(localized: "Join"),
+                    subtitle: String(localized: "Code, invite link, or a public fight"),
+                    systemImage: "person.badge.plus",
+                    subtitleTone: .neutral,
+                    action: { opening = .join }
+                )
+                FFDivider()
+                FFGroupedRow(
+                    title: String(localized: "Post"),
+                    subtitle: String(localized: "Share a note, photo, or video on the Feed"),
+                    systemImage: "square.and.pencil",
+                    subtitleTone: .neutral,
+                    action: { composing = true }
                 )
             }
-            Text("Add at least one exact username. They must have opened FitFight and chosen one.")
-                .ffType(.caption)
-                .foregroundStyle(theme.textSecondary)
-                .lineSpacing(2)
-            HStack(spacing: 8) {
+
+            suggestedSection
+        }
+    }
+
+    private var suggestedSection: some View {
+        let rows = staticRender ? Array(Self.screenshotJoinable.prefix(2)) : model.suggestedFights
+        return VStack(alignment: .leading, spacing: 12) {
+            FFSectionHeader(title: String(localized: "Suggested"))
+            if let error = model.discoveryError {
+                FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
+            }
+            if model.isLoadingDiscovery && rows.isEmpty && !staticRender {
+                FFLoadingBlock()
+            } else if rows.isEmpty && model.discoveryError == nil {
+                Text(String(localized: "No suggested fights right now."))
+                    .ffType(.body)
+                    .foregroundStyle(theme.textSecondary)
+            } else if !rows.isEmpty {
+                FFGroupedRows {
+                    ForEach(Array(rows.enumerated()), id: \.element.id) { index, item in
+                        if index > 0 { FFDivider() }
+                        FFGroupedRow(
+                            title: Fight.displayTitle(name: item.name, actionText: item.actionText),
+                            subtitle: item.recurring
+                                ? String(
+                                    localized: "fight.joinable-row-repeats",
+                                    defaultValue: "@\(item.ownerHandle) · \(item.memberCount) in · repeats"
+                                )
+                                : String(
+                                    localized: "fight.joinable-row",
+                                    defaultValue: "@\(item.ownerHandle) · \(item.memberCount) in"
+                                ),
+                            systemImage: "figure.walk",
+                            subtitleTone: .neutral,
+                            trailing: AnyView(Text(item.joinCode).ffType(.caption).foregroundStyle(theme.textSecondary)),
+                            action: {
+                                Task { await model.openJoinable(item, session: session) }
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    private var joinStep: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Join a fight")
+                    .ffType(.heading)
+                    .foregroundStyle(theme.text)
+                Text("Private fights join with a code or invite link. Public fights also show below.")
+                    .ffType(.body)
+                    .foregroundStyle(theme.textSecondary)
+                    .lineSpacing(2)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Code")
+                    .ffType(.rowTitle)
+                    .foregroundStyle(theme.text)
                 Group {
                     if staticRender {
-                        Text(username.isEmpty ? "@username" : username)
-                            .foregroundStyle(username.isEmpty ? theme.textFaint : theme.text)
+                        Text(verbatim: joinCode.isEmpty ? "K7M2" : joinCode)
+                            .foregroundStyle(joinCode.isEmpty ? theme.textFaint : theme.text)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     } else {
-                        TextField("@username", text: $username)
+                        TextField("K7M2", text: $joinCode)
+                            .focused($joinCodeFocused)
                             .foregroundStyle(theme.text)
-                            .textInputAutocapitalization(.never)
+                            .textInputAutocapitalization(.characters)
                             .autocorrectionDisabled()
-                            .submitLabel(.join)
-                            .onSubmit { addUsername() }
+                            .submitLabel(.go)
+                            .onSubmit { lookupCode() }
+                            .onChange(of: joinCode) { _, value in
+                                let allowed = CharacterSet(charactersIn: "23456789ABCDEFGHJKMNPQRSTVWXYZ")
+                                let cleaned = value.uppercased().unicodeScalars
+                                    .filter { allowed.contains($0) }
+                                joinCode = String(String.UnicodeScalarView(cleaned).prefix(4))
+                            }
                     }
                 }
                 .font(.ff(15, 700))
                 .padding(.horizontal, 15)
                 .padding(.vertical, 13)
                 .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
-                .ffBorder(usernameError == nil ? theme.line : theme.emberText, radius: theme.radius.field)
-                FFButton(
-                    title: "Add",
-                    size: .small,
-                    enabled: !username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                ) {
-                    addUsername()
-                }
+                .ffBorder(theme.line, radius: theme.radius.field)
             }
-            if let usernameError {
-                Text(usernameError)
-                    .ffType(.caption)
-                    .foregroundStyle(theme.emberText)
-            }
-            if !inviteHandles.isEmpty {
-                FFGroupedRows {
-                    ForEach(Array(inviteHandles.enumerated()), id: \.element) { index, handle in
-                        if index > 0 { FFDivider() }
-                        HStack(spacing: 12) {
-                            FFAvatar(monogram: String(handle.prefix(2)).uppercased(), size: 36)
-                            Text("@\(handle)")
-                                .ffType(.rowTitle)
-                                .foregroundStyle(theme.text)
-                            Spacer(minLength: 8)
-                            Button {
-                                inviteHandles.removeAll { $0 == handle }
-                            } label: {
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundStyle(theme.textSecondary)
-                                    .frame(width: 32, height: 32)
-                                    .background(theme.control, in: Circle())
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel("Remove @\(handle)")
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 11)
-                    }
-                }
-            }
-        }
-    }
 
-    private var lengthSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                FFSectionHeader(title: "Duration")
-                FFPill(duration, style: .softMoss)
+            FFSectionHeader(title: String(localized: "Live public fights"))
+            let rows = staticRender ? Self.screenshotJoinable : model.joinableFights
+            if let error = model.discoveryError {
+                FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
             }
-            FFDurationPicker(
-                options: ["1 hour", "6 hours", "1 day"],
-                selection: $duration
-            )
-            FFDurationPicker(
-                options: ["3 days", "1 week", "2 weeks", "1 month"],
-                selection: $duration
-            )
-            Text("The fight starts now. Steps after the end time do not count.")
-                .ffType(.caption)
-                .foregroundStyle(theme.textFaint)
-        }
-    }
-
-    private var actionSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            FFSectionHeader(title: "Action")
-            Text("What does the loser have to do?")
-                .ffType(.caption)
-                .foregroundStyle(theme.textSecondary)
-            Group {
-                if staticRender {
-                    Text(actionText.isEmpty ? "Loser cooks dinner" : actionText)
-                        .foregroundStyle(actionText.isEmpty ? theme.textFaint : theme.text)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                } else {
-                    TextField("Loser cooks dinner", text: $actionText)
-                        .foregroundStyle(theme.text)
-                        .onChange(of: actionText) { _, value in
-                            if value.count > 120 {
-                                actionText = String(value.prefix(120))
-                            }
-                        }
-                    }
-            }
-            .font(.ff(15, 700))
-            .padding(.horizontal, 15)
-            .padding(.vertical, 13)
-            .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
-            .ffBorder(theme.line, radius: theme.radius.field)
-        }
-    }
-
-    private var summary: some View {
-        let action = actionText.trimmingCharacters(in: .whitespacesAndNewlines)
-        return FFCard(fill: theme.mossWash, stroke: theme.mossText.opacity(0.18)) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Steps · \(duration)")
-                    .ffType(.rowTitle)
-                    .foregroundStyle(theme.text)
-                Text(inviteHandles.isEmpty ? "Add a username to start." : "You vs \(inviteHandles.map { "@\($0)" }.joined(separator: ", ")).")
+            if model.isLoadingDiscovery && rows.isEmpty && !staticRender {
+                FFLoadingBlock()
+            } else if rows.isEmpty && model.discoveryError == nil {
+                Text("No live public fights right now. Use a code or invite link.")
                     .ffType(.body)
                     .foregroundStyle(theme.textSecondary)
-                Text(action.isEmpty ? "Add the action the loser will do." : action)
-                    .ffType(.body)
-                    .foregroundStyle(action.isEmpty ? theme.textFaint : theme.text)
-                    .lineLimit(3)
+            } else if !rows.isEmpty {
+                FFGroupedRows {
+                    ForEach(Array(rows.enumerated()), id: \.element.id) { index, item in
+                        if index > 0 { FFDivider() }
+                        FFGroupedRow(
+                            title: Fight.displayTitle(name: item.name, actionText: item.actionText),
+                            subtitle: item.recurring
+                                ? String(
+                                    localized: "fight.joinable-row-repeats",
+                                    defaultValue: "@\(item.ownerHandle) · \(item.memberCount) in · repeats"
+                                )
+                                : String(
+                                    localized: "fight.joinable-row",
+                                    defaultValue: "@\(item.ownerHandle) · \(item.memberCount) in"
+                                ),
+                            systemImage: "figure.walk",
+                            subtitleTone: .neutral,
+                            trailing: AnyView(Text(item.joinCode).ffType(.caption).foregroundStyle(theme.textSecondary)),
+                            action: {
+                                Task { await model.openJoinable(item, session: session) }
+                            }
+                        )
+                    }
+                }
             }
+        }
+    }
+
+    @ViewBuilder
+    private var currentStep: some View {
+        switch FightComposerStep(rawValue: step) ?? .review {
+        case .metric:
+            FightComposerMetricPage()
+        case .duration:
+            FightComposerDurationPage(
+                durationDays: $durationDays,
+                customSchedule: $customSchedule,
+                customStart: $customStart,
+                customEnd: $customEnd,
+                recurring: $recurring,
+                canEditStart: true,
+                startsImmediately: true,
+                constrainEnd: false,
+                scheduleError: scheduleError
+            )
+        case .people:
+            FightComposerPeoplePage(
+                visibilityJoinable: $visibilityJoinable,
+                username: $username,
+                usernameError: $usernameError,
+                people: peopleBinding,
+                usernameFocused: $usernameFocused,
+                createMode: true,
+                onAdd: addUsername
+            )
+        case .details:
+            FightComposerDetailsPage(
+                fightTitle: $fightTitle,
+                actionText: $actionText,
+                titleFocused: $titleFocused,
+                actionFocused: $actionFocused
+            )
+        case .review:
+            FightComposerReviewPage(
+                isEditing: false,
+                fightTitle: fightTitle,
+                actionText: actionText,
+                duration: duration,
+                customSchedule: customSchedule,
+                customStart: customStart,
+                customEnd: customEnd,
+                durationStart: Date(),
+                durationDays: durationDays,
+                visibilityJoinable: visibilityJoinable,
+                opponentHandles: inviteHandles,
+                recurring: recurring,
+                healthConnected: steps.hasAsked,
+                healthBusy: model.isRefreshingFights,
+                onChange: { step = $0.rawValue },
+                onConnectHealth: connectAppleHealth
+            )
+        }
+    }
+
+    private var peopleBinding: Binding<[FightComposerPerson]> {
+        Binding(
+            get: {
+                inviteHandles.map { handle in
+                    FightComposerPerson(
+                        id: handle,
+                        handle: handle,
+                        name: "@\(handle)",
+                        photoURL: nil,
+                        isOwner: false,
+                        invited: true,
+                        deferred: false,
+                        pendingAdd: true
+                    )
+                }
+            },
+            set: { inviteHandles = $0.map(\.handle) }
+        )
+    }
+
+    private func goBack() {
+        if let pending = model.pendingJoinable, opening != .create {
+            Task { await model.declineFight(id: pending.id) }
+            return
+        }
+        if opening == .join || (opening == .create && step == 0) {
+            opening = .choose
+            model.createError = nil
+            return
+        }
+        if opening == .create {
+            step -= 1
+        }
+    }
+
+    private func lookupCode() {
+        guard joinCode.count == 4, !lookingUp else { return }
+        lookingUp = true
+        Task {
+            await model.openJoinCode(joinCode, session: session)
+            lookingUp = false
         }
     }
 
@@ -228,15 +514,18 @@ struct NewFightView: View {
         usernameError = nil
 
         guard SessionStore.isValidHandle(handle) else {
-            usernameError = "Use 2–30 letters, numbers, or underscores."
+            usernameError = String(localized: "Use 2–30 letters, numbers, or underscores.")
             return
         }
         if handle == session.profile?.handle {
-            usernameError = "Add someone else’s username."
+            usernameError = String(localized: "Add someone else’s username.")
             return
         }
         guard !inviteHandles.contains(handle) else {
-            usernameError = "@\(handle) is already in this fight."
+            usernameError = String(
+                localized: "fight.handle-already-added",
+                defaultValue: "@\(handle) is already in this fight."
+            )
             return
         }
 
@@ -244,47 +533,62 @@ struct NewFightView: View {
         username = ""
     }
 
-    private func startFight() {
-        guard canStart else { return }
-        guard model.beginCreateFight() else { return }
+    private func endDate(from startsAt: Date) -> Date {
+        FightComposer.endDate(from: startsAt, days: durationDays)
+    }
 
-        let startsAt = Date()
-        let durationParts: (component: Calendar.Component, value: Int, seconds: TimeInterval) = switch duration {
-        case "1 hour": (.hour, 1, 3_600)
-        case "6 hours": (.hour, 6, 21_600)
-        case "1 day": (.day, 1, 86_400)
-        case "3 days": (.day, 3, 259_200)
-        case "1 week": (.day, 7, 604_800)
-        case "2 weeks": (.day, 14, 1_209_600)
-        case "1 month": (.day, 30, 2_592_000)
-        default: (.day, 7, 604_800)
-        }
-        let endsAt = Calendar.current.date(
-            byAdding: durationParts.component,
-            value: durationParts.value,
-            to: startsAt
-        ) ?? startsAt.addingTimeInterval(durationParts.seconds)
+    private func startFight() -> Bool {
+        guard canStart else { return false }
+        guard model.beginCreateFight() else { return false }
+
+        let startsAt = customSchedule ? customStart : Date()
+        let endsAt = customSchedule ? customEnd : endDate(from: startsAt)
+        let title = fightTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         let action = actionText.trimmingCharacters(in: .whitespacesAndNewlines)
 
         Task {
             await model.createAndStartFight(
+                name: title,
                 startsAt: startsAt,
                 endsAt: endsAt,
                 actionText: action,
-                inviteHandles: inviteHandles
+                inviteHandles: inviteHandles,
+                visibility: visibilityJoinable ? "joinable" : "invite_only",
+                recurring: recurring,
+                scheduled: customSchedule
             )
             if (model.createError ?? "").isEmpty {
+                opening = .choose
+                step = 0
+                visibilityJoinable = false
                 model.tab = .fights
             }
         }
+        return true
     }
 
     private func connectAppleHealth() {
         Task {
-            await steps.refresh(requestAccess: true)
-            if session.authSession != nil {
-                await steps.syncToBackend(session: session)
-            }
+            await model.refreshFights(session: session, steps: steps, trigger: .manual, requestAccess: true)
         }
+    }
+
+    private static var screenshotJoinable: [FitFightJoinableFight] {
+        [
+            FitFightJoinableFight(
+                fightId: UUID(uuidString: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")!,
+                seriesId: UUID(uuidString: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb")!,
+                name: "Office steps",
+                joinCode: "K7M2",
+                ownerHandle: "maya",
+                actionText: "Cook dinner",
+                startsAt: "2026-09-04T12:00:00Z",
+                endsAt: "2026-09-11T12:00:00Z",
+                memberCount: 8,
+                recurring: true,
+                alreadyMember: false,
+                canJoinNext: true
+            ),
+        ]
     }
 }

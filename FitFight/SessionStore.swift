@@ -2,53 +2,31 @@ import Combine
 import Foundation
 import Supabase
 
-struct FitFightProfile: Codable, Equatable {
-    let userId: UUID
-    let handle: String
-    let displayName: String
-    let handleSetAt: String?
-
-    var atHandle: String { "@\(handle)" }
-
-    var looksGenerated: Bool {
-        handle.hasPrefix("user_") && handle.count == 17
-    }
-
-    var initials: String {
-        let parts = displayName.split(separator: " ").filter { !$0.isEmpty }
-        if parts.count >= 2 {
-            return String(parts[0].prefix(1) + parts[1].prefix(1)).uppercased()
-        }
-        if let first = parts.first, !first.isEmpty {
-            return String(first.prefix(2)).uppercased()
-        }
-        return String(handle.prefix(2)).uppercased()
-    }
-
-    enum CodingKeys: String, CodingKey {
-        case userId = "user_id"
-        case handle
-        case displayName = "display_name"
-        case handleSetAt = "handle_set_at"
-    }
-}
-
 @MainActor
 final class SessionStore: ObservableObject {
     @Published private(set) var authSession: Session?
+    @Published private(set) var isRestoringSession = true
     @Published private(set) var profile: FitFightProfile?
     @Published var authError: String?
     @Published private(set) var isBusy = false
-    /// Set when every attempt to read the profile failed. A deleted account is
-    /// invisible to its own owner (`profiles_select_visible` hides `deleted_at`
-    /// rows), which would otherwise leave the app waiting forever.
+    /// A missing account or failed profile load must not leave onboarding waiting forever.
     @Published private(set) var profileUnavailable = false
     private var screenshotSignedIn = false
 
-    let client: SupabaseClient
+    // Construct Auth only when needed; a fixture session never opens Keychain or refreshes tokens.
+    lazy var client = SupabaseClient(
+        supabaseURL: SupabaseConfig.projectURL,
+        supabaseKey: SupabaseConfig.publishableKey.isEmpty
+            ? "sb_publishable_missing"
+            : SupabaseConfig.publishableKey
+    )
     private let api = FitFightAPI()
     private static let handleChosenKey = "ff.handle.chosen"
+    private static let needsHealthKey = "ff.onboarding.needsHealth"
+    private static let needsNotificationKey = "ff.onboarding.needsNotifications"
+    private static let needsRequestsKey = "ff.onboarding.needsRequests"
     private static let profileCachePrefix = "fitfight.profile."
+    private static let adminHandle = "marc"
 
     var isSignedIn: Bool { authSession != nil || screenshotSignedIn }
 
@@ -59,20 +37,68 @@ final class SessionStore: ObservableObject {
         return profile.looksGenerated
     }
 
+    var needsHealthOnboarding: Bool {
+        !screenshotSignedIn && !needsOnboarding && UserDefaults.standard.bool(forKey: Self.needsHealthKey)
+    }
+
+    var needsNotificationOnboarding: Bool {
+        !screenshotSignedIn && !needsOnboarding && !needsHealthOnboarding
+            && UserDefaults.standard.bool(forKey: Self.needsNotificationKey)
+    }
+
+    var needsRequestsOnboarding: Bool {
+        !screenshotSignedIn && !needsOnboarding && !needsHealthOnboarding && !needsNotificationOnboarding
+            && UserDefaults.standard.bool(forKey: Self.needsRequestsKey)
+    }
+
+    var needsCompanionSelection: Bool {
+        guard isSignedIn, profile != nil else { return false }
+        if screenshotSignedIn || CompanionPreview.isEnabled || ScreenshotExport.isEnabled { return false }
+        guard !needsOnboarding, !needsHealthOnboarding, !needsNotificationOnboarding, !needsRequestsOnboarding else {
+            return false
+        }
+        return profile?.companionId == nil && !CompanionStore.hasPendingChoice(for: profile?.userId)
+    }
+
+    var isFitFightAdmin: Bool {
+        guard !screenshotSignedIn else { return false }
+        guard let handle = profile?.handle else { return false }
+        return handle.caseInsensitiveCompare(Self.adminHandle) == .orderedSame
+    }
+
+    func finishHealthOnboarding() {
+        UserDefaults.standard.set(false, forKey: Self.needsHealthKey)
+        objectWillChange.send()
+    }
+
+    func finishNotificationOnboarding() {
+        UserDefaults.standard.set(false, forKey: Self.needsNotificationKey)
+        objectWillChange.send()
+    }
+
+    func finishRequestsOnboarding() {
+        UserDefaults.standard.set(false, forKey: Self.needsRequestsKey)
+        objectWillChange.send()
+    }
+
     func freshAccessToken() async throws -> String {
-        let session = try await client.auth.refreshSession()
+        guard !screenshotSignedIn else { throw CompanionPreview.WriteUnavailable() }
+        let userID = authSession?.user.id ?? client.auth.currentUser?.id
+        let session = try await client.auth.session
+        try Task.checkCancellation()
+        guard session.user.id == userID, client.auth.currentUser?.id == userID,
+              (authSession?.user.id ?? client.auth.currentUser?.id) == userID else {
+            throw CancellationError()
+        }
         authSession = session
         return session.accessToken
     }
 
     init(listenForSession: Bool = true) {
-        client = SupabaseClient(
-            supabaseURL: SupabaseConfig.projectURL,
-            supabaseKey: SupabaseConfig.publishableKey.isEmpty
-                ? "sb_publishable_missing"
-                : SupabaseConfig.publishableKey
-        )
-        guard listenForSession else { return }
+        guard listenForSession, !CompanionPreview.isEnabled else {
+            isRestoringSession = false
+            return
+        }
         Task { await listen() }
     }
 
@@ -89,9 +115,22 @@ final class SessionStore: ObservableObject {
             userId: UUID(uuidString: "00CBEF0E-6851-4AAB-B47A-88B0D7946738")!,
             handle: "maya_moves",
             displayName: "Maya",
-            handleSetAt: "2026-09-02T00:00:00Z"
+            handleSetAt: "2026-09-02T00:00:00Z",
+            referralCode: nil,
+            avatar: nil
         )
     }
+
+    #if DEBUG && targetEnvironment(simulator)
+    convenience init(companionPreview: Void) {
+        self.init(screenshot: ())
+        profile = FitFightProfile(
+            userId: UUID(uuidString: CompanionPreview.people[0].id)!,
+            handle: "marc", displayName: "Marc", handleSetAt: "2026-09-13T00:00:00Z",
+            referralCode: nil, avatar: nil
+        )
+    }
+    #endif
 
     func signInWithApple(
         idToken: String,
@@ -99,7 +138,9 @@ final class SessionStore: ObservableObject {
         nonce: String,
         fullName: String?
     ) async {
+        guard !CompanionPreview.isEnabled else { authError = CompanionPreview.writeUnavailable; return }
         authError = nil
+        guard await AppUpdateChecker.shared.permitsRequests() else { return }
         isBusy = true
         defer { isBusy = false }
         do {
@@ -116,11 +157,8 @@ final class SessionStore: ObservableObject {
                         data: ["full_name": .string(fullName)]
                     )
                 )
-                if let userId = client.auth.currentUser?.id {
-                    try? await client.from("profiles")
-                        .update(["display_name": fullName])
-                        .eq("user_id", value: userId)
-                        .execute()
+                if client.auth.currentUser?.id == signedIn.user.id {
+                    _ = try? await api.updateProfile(displayName: fullName, accessToken: signedIn.accessToken)
                 }
             }
             try? await api.storeAppleAuthorizationCode(
@@ -149,7 +187,10 @@ final class SessionStore: ObservableObject {
             _ = try await client.auth.setSession(accessToken: access, refreshToken: refresh)
             await loadProfile()
         } catch {
-            authError = "Dev session rejected: \(error.localizedDescription)"
+            authError = String(
+                localized: "session.dev-rejected",
+                defaultValue: "Dev session rejected: \(error.localizedDescription)"
+            )
         }
         #endif
     }
@@ -157,32 +198,38 @@ final class SessionStore: ObservableObject {
     #endif
 
     func signOut() async {
+        guard !screenshotSignedIn else { authError = CompanionPreview.writeUnavailable; return }
         authError = nil
+        await PushNotificationService.shared.revokeLocalRegistration()
         try? await client.auth.signOut()
         authSession = nil
         profile = nil
         profileUnavailable = false
+        CrashReporting.reset()
         UserDefaults.standard.removeObject(forKey: Self.handleChosenKey)
+        UserDefaults.standard.removeObject(forKey: Self.needsHealthKey)
+        UserDefaults.standard.removeObject(forKey: Self.needsNotificationKey)
+        UserDefaults.standard.removeObject(forKey: Self.needsRequestsKey)
     }
 
     static func signInFailureMessage(_ error: Error) -> String {
         let text = error.localizedDescription.lowercased()
         if text.contains("invalid api key") || text.contains("another supabase project") {
-            return "This build’s key doesn’t match the staging database."
+            return String(localized: "This build’s key doesn’t match the staging database.")
         }
         if text.contains("provider is not enabled")
             || text.contains("unsupported provider")
             || text.contains("provider not enabled") {
-            return "Apple Sign In is off on this database."
+            return String(localized: "Apple Sign In is off on this database.")
         }
         if text.contains("nscurlerror")
             || text.contains("nsurlerrordomain")
             || text.contains("could not connect")
             || text.contains("hostname could not be found")
             || text.contains("not known") {
-            return "Can’t reach the staging database."
+            return String(localized: "Can’t reach the staging database.")
         }
-        return "Couldn’t sign in. Try again."
+        return String(localized: "Couldn’t sign in. Try again.")
     }
 
     static func isValidHandle(_ raw: String) -> Bool {
@@ -196,7 +243,15 @@ final class SessionStore: ObservableObject {
             .lowercased()
     }
 
-    func setHandle(_ raw: String) async throws {
+    func setHandle(_ raw: String, avatarMediaId: UUID? = nil) async throws {
+        guard !screenshotSignedIn else { throw CompanionPreview.WriteUnavailable() }
+        guard await AppUpdateChecker.shared.permitsRequests() else {
+            throw FitFightAPIError.http(
+                status: 426,
+                code: "update_required",
+                message: nil
+            )
+        }
         guard let userId = authSession?.user.id ?? client.auth.currentUser?.id else {
             throw HandleError.notSignedIn
         }
@@ -205,51 +260,124 @@ final class SessionStore: ObservableObject {
             throw HandleError.invalid
         }
         do {
-            try await client.from("profiles")
-                .update(ProfileHandleUpdate(handle: handle, handleSetAt: ISO8601DateFormatter().string(from: Date())))
-                .eq("user_id", value: userId)
-                .execute()
+            let token = try await freshAccessToken()
+            let updated = try await api.updateProfile(
+                handle: handle,
+                avatarMediaId: avatarMediaId,
+                accessToken: token
+            )
+            UserDefaults.standard.set(true, forKey: Self.handleChosenKey)
+            UserDefaults.standard.set(true, forKey: Self.needsHealthKey)
+            UserDefaults.standard.set(true, forKey: Self.needsNotificationKey)
+            UserDefaults.standard.set(true, forKey: Self.needsRequestsKey)
+            try Task.checkCancellation()
+            guard authSession?.user.id == userId, client.auth.currentUser?.id == userId else {
+                throw CancellationError()
+            }
+            profile = updated
+            if let data = try? JSONEncoder().encode(updated) {
+                UserDefaults.standard.set(data, forKey: Self.profileCachePrefix + userId.uuidString)
+            }
+        } catch is CancellationError {
+            throw CancellationError()
         } catch {
-            let text = error.localizedDescription.lowercased()
-            if text.contains("23505") || text.contains("duplicate") || text.contains("unique") {
-                throw HandleError.taken
+            if case FitFightAPIError.http(_, let code, _) = error {
+                if code == "handle_taken" { throw HandleError.taken }
+                if code == "validation" { throw HandleError.invalid }
+                if code == "profile_missing" {
+                    markProfileMissing(for: userId)
+                    throw HandleError.notSignedIn
+                }
             }
             throw HandleError.failed
         }
-        UserDefaults.standard.set(true, forKey: Self.handleChosenKey)
-        await loadProfile()
+    }
+
+    func setAvatar(_ media: FitFightMedia) async throws {
+        guard !screenshotSignedIn else { throw CompanionPreview.WriteUnavailable() }
+        guard let userId = authSession?.user.id ?? client.auth.currentUser?.id else {
+            throw HandleError.notSignedIn
+        }
+        let token = try await freshAccessToken()
+        let updated = try await api.updateProfile(avatarMediaId: media.id, accessToken: token)
+        try Task.checkCancellation()
+        guard authSession?.user.id == userId else { throw CancellationError() }
+        profile = updated
+        if let data = try? JSONEncoder().encode(updated) {
+            UserDefaults.standard.set(data, forKey: Self.profileCachePrefix + userId.uuidString)
+        }
+    }
+
+    func setCompanion(id: String, prompt: String?) async throws {
+        guard !screenshotSignedIn else { throw CompanionPreview.WriteUnavailable() }
+        guard let userId = authSession?.user.id ?? client.auth.currentUser?.id else {
+            throw HandleError.notSignedIn
+        }
+        let token = try await freshAccessToken()
+        let updated = try await api.updateProfile(
+            companionId: id,
+            companionPrompt: prompt,
+            accessToken: token
+        )
+        try Task.checkCancellation()
+        guard authSession?.user.id == userId else { throw CancellationError() }
+        profile = updated
+        if let data = try? JSONEncoder().encode(updated) {
+            UserDefaults.standard.set(data, forKey: Self.profileCachePrefix + userId.uuidString)
+        }
     }
 
     @discardableResult
     func deleteAccount() async -> Bool {
+        guard !screenshotSignedIn else { authError = CompanionPreview.writeUnavailable; return false }
         authError = nil
         isBusy = true
         defer { isBusy = false }
         do {
             let userID = authSession?.user.id ?? client.auth.currentUser?.id
-            let accessToken = try await freshAccessToken()
-            let deletion = try await api.deleteAccount(accessToken: accessToken)
+            let renewedSession = try await client.auth.refreshSession()
+            try Task.checkCancellation()
+            guard renewedSession.user.id == userID, client.auth.currentUser?.id == userID,
+                  (authSession?.user.id ?? client.auth.currentUser?.id) == userID else {
+                throw CancellationError()
+            }
+            authSession = renewedSession
+            let deletion = try await api.deleteAccount(accessToken: renewedSession.accessToken)
             try? await client.auth.signOut()
             authSession = nil
             profile = nil
             profileUnavailable = false
+            CrashReporting.reset()
             UserDefaults.standard.removeObject(forKey: Self.handleChosenKey)
+            UserDefaults.standard.removeObject(forKey: Self.needsHealthKey)
+            UserDefaults.standard.removeObject(forKey: Self.needsNotificationKey)
+            UserDefaults.standard.removeObject(forKey: Self.needsRequestsKey)
             if let userID {
                 UserDefaults.standard.removeObject(forKey: Self.profileCachePrefix + userID.uuidString)
             }
             if !deletion.appleAuthorizationRevoked {
-                authError = "Account deleted. To disconnect Apple too, open iPhone Settings, tap your name, then Sign in with Apple → FitFight → Stop Using Apple ID."
+                authError = String(localized: "Account deleted. To disconnect Apple too, open iPhone Settings, tap your name, then Sign in with Apple → FitFight → Stop Using Apple ID.")
             }
             return true
         } catch {
-            authError = "Couldn’t delete account. Try again."
+            authError = String(localized: "Couldn’t delete account. Try again.")
             return false
         }
     }
 
     private func listen() async {
-        for await (_, session) in client.auth.authStateChanges {
+        for await (event, session) in client.auth.authStateChanges {
+            // A token refresh can restore a saved session before the initial-session event.
+            if event == .initialSession || session != nil { isRestoringSession = false }
             if let session {
+                if event == .tokenRefreshed, authSession?.user.id == session.user.id,
+                   profile?.userId == session.user.id {
+                    authSession = session
+                    continue
+                }
+                if let previousId = authSession?.user.id, previousId != session.user.id {
+                    CrashReporting.reset()
+                }
                 profileUnavailable = false
                 if let data = UserDefaults.standard.data(
                     forKey: Self.profileCachePrefix + session.user.id.uuidString
@@ -264,13 +392,19 @@ final class SessionStore: ObservableObject {
                 authSession = session
                 await loadProfile()
             } else {
+                // A nil initial session is signed out; reset crash identity only after a real session is dropped.
+                if authSession != nil {
+                    CrashReporting.reset()
+                }
                 authSession = nil
                 profile = nil
             }
         }
     }
 
-    private func loadProfile() async {
+    func loadProfile() async {
+        guard !screenshotSignedIn else { return }
+        guard await AppUpdateChecker.shared.permitsRequests() else { return }
         guard let userId = authSession?.user.id ?? client.auth.currentUser?.id else {
             profile = nil
             return
@@ -278,50 +412,26 @@ final class SessionStore: ObservableObject {
         profileUnavailable = false
         for attempt in 0..<3 {
             do {
-                let row: FitFightProfile? = try await client.from("profiles")
-                    .select("user_id, handle, display_name, handle_set_at")
-                    .eq("user_id", value: userId)
-                    .maybeSingle()
-                    .execute()
-                    .value
-                guard authSession?.user.id == userId else { return }
-                guard let row else {
-                    markProfileMissing(for: userId)
-                    return
-                }
+                let token = try await freshAccessToken()
+                let row = try await api.profile(accessToken: token)
+                try Task.checkCancellation()
+                guard authSession?.user.id == userId, client.auth.currentUser?.id == userId else { return }
                 profile = row
                 if let data = try? JSONEncoder().encode(row) {
                     UserDefaults.standard.set(data, forKey: Self.profileCachePrefix + userId.uuidString)
                 }
                 return
             } catch {
+                guard !Task.isCancelled, !(error is CancellationError),
+                      authSession?.user.id == userId, client.auth.currentUser?.id == userId else { return }
+                if case FitFightAPIError.http(_, let code, _) = error, code == "profile_missing" {
+                    markProfileMissing(for: userId)
+                    return
+                }
                 if attempt == 2 {
-                    do {
-                        let fallback: FitFightProfile? = try await client.from("profiles")
-                            .select("user_id, handle, display_name")
-                            .eq("user_id", value: userId)
-                            .maybeSingle()
-                            .execute()
-                            .value
-                        guard authSession?.user.id == userId else { return }
-                        guard let fallback else {
-                            markProfileMissing(for: userId)
-                            return
-                        }
-                        profile = fallback
-                        if let data = try? JSONEncoder().encode(fallback) {
-                            UserDefaults.standard.set(
-                                data,
-                                forKey: Self.profileCachePrefix + userId.uuidString
-                            )
-                        }
-                        return
-                    } catch {
-                        guard authSession?.user.id == userId else { return }
-                        if profile?.userId != userId {
-                            profile = nil
-                            profileUnavailable = true
-                        }
+                    if profile?.userId != userId {
+                        profile = nil
+                        profileUnavailable = true
                     }
                 } else {
                     try? await Task.sleep(nanoseconds: 400_000_000)
@@ -338,16 +448,6 @@ final class SessionStore: ObservableObject {
     }
 }
 
-private struct ProfileHandleUpdate: Encodable {
-    let handle: String
-    let handleSetAt: String
-
-    enum CodingKeys: String, CodingKey {
-        case handle
-        case handleSetAt = "handle_set_at"
-    }
-}
-
 enum HandleError: LocalizedError {
     case notSignedIn
     case invalid
@@ -356,10 +456,10 @@ enum HandleError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .notSignedIn: return "Sign in first."
-        case .invalid: return "Use 2–30 letters, numbers, or underscore."
-        case .taken: return "That username is taken."
-        case .failed: return "Couldn’t save that username."
+        case .notSignedIn: return String(localized: "Sign in first.")
+        case .invalid: return String(localized: "Use 2–30 letters, numbers, or underscore.")
+        case .taken: return String(localized: "That username is taken.")
+        case .failed: return String(localized: "Couldn’t save that username.")
         }
     }
 }

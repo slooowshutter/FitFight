@@ -1,116 +1,161 @@
 import SwiftUI
 
+enum FightsListFilter: CaseIterable {
+    case current, invited, past
+
+    var title: String {
+        switch self {
+        case .current: String(localized: "Current")
+        case .invited: String(localized: "fights.filter-invited", defaultValue: "Invited")
+        case .past: String(localized: "Past")
+        }
+    }
+}
+
 struct FightsListView: View {
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var steps: HealthKitStepsStore
     @Environment(\.ffTheme) private var theme
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @State private var filter: FightsListFilter
+
+    init(filter: FightsListFilter = .current) {
+        _filter = State(initialValue: filter)
+    }
 
     var body: some View {
-        FFScreen {
-            FFScreenTitle(title: "Fights", subtitle: subtitle)
-                .padding(.bottom, 6)
+        FFScreen(refresh: fightsRefresh) {
+            CompanionIntroduction(surface: .fights)
 
-            if isEmpty {
+            let layout = typeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+                : AnyLayout(HStackLayout(alignment: .center, spacing: 4))
+            layout {
+                Text("Challenges")
+                    .font(.custom("Nunito-ExtraBold", size: 14, relativeTo: .headline))
+                    .foregroundStyle(theme.text)
+                if !typeSize.isAccessibilitySize { Spacer(minLength: 0) }
+                FFSegmented(
+                    items: FightsListFilter.allCases,
+                    selection: $filter,
+                    count: { item in
+                        item == .invited ? model.invitations.count : nil
+                    }
+                ) { item in
+                    item.title
+                }
+            }
+
+            if isEmpty, model.isRefreshingFights {
+                ForEach(0..<3, id: \.self) { _ in
+                    RoundedRectangle(cornerRadius: theme.radius.card)
+                        .fill(theme.skeleton)
+                        .frame(height: 76)
+                        .accessibilityLabel(String(localized: "Loading"))
+                }
+            }
+
+            if isEmpty, !model.isRefreshingFights {
                 FFEmptyState(
                     systemImage: "trophy",
-                    title: "No fights yet",
-                    message: "Start one under New. Add people with their username — they must have signed in once.",
-                    actionTitle: "Start one",
+                    title: String(localized: "No fights yet"),
+                    message: String(localized: "Start one under New. Add people with their username. They must have signed in once."),
+                    actionTitle: String(localized: "Start one"),
                     action: { model.tab = .newFight }
                 )
             }
 
-            if !model.invitations.isEmpty {
-                FFSectionHeader(title: "Invitations")
+            if !isEmpty, selectedFights.isEmpty {
+                Text(filter == .current ? String(localized: "No current fights")
+                     : filter == .invited ? String(localized: "No invitations")
+                     : String(localized: "No past fights"))
+                    .ffType(.body)
+                    .foregroundStyle(theme.textSecondary)
+                    .frame(maxWidth: .infinity, minHeight: 100)
+            }
+
+            if filter == .invited {
                 ForEach(model.invitations) { fight in
                     InvitationRow(fight: fight)
                 }
             }
 
-            // The kit allows one moss hero per screen: the fight you are closest to.
-            if let lead = model.live.first {
-                Button {
-                    model.openFightID = lead.id
-                } label: {
-                    heroCard(lead)
+            if filter == .current {
+                ForEach(model.live) { fight in
+                    let standing = difference(in: fight)
+                    let opponent = opponent(in: fight)
+                    FFListRow(
+                        monogram: opponent?.initials ?? "?",
+                        title: fight.listTitle,
+                        subtitle: fight.timeLeftLabel,
+                        metric: fight.isUpcoming ? String(localized: "Scheduled") : standing.text,
+                        ahead: standing.ahead,
+                        metricIsGap: !fight.isUpcoming && standing.isGap,
+                        photoURL: opponent?.photoURL,
+                        avatar: AnyView(CompanionAvatar(opponent)),
+                        action: { model.openFightID = fight.id }
+                    )
                 }
-                .buttonStyle(FFPressStyle(scale: 0.985))
             }
 
-            ForEach(model.live.dropFirst()) { fight in
-                FFListRow(
-                    monogram: initials(fight),
-                    title: fight.name,
-                    subtitle: fight.listSubtitle,
-                    metric: leadScore(fight),
-                    delta: fight.kickerEmphasis,
-                    ahead: fight.rank == 1,
-                    action: { model.openFightID = fight.id }
-                )
-            }
-
-            if !model.finished.isEmpty {
-                FFSectionHeader(title: "Finished")
-                    .padding(.top, theme.space.lg)
+            if filter == .past {
                 ForEach(model.finished) { fight in
                     FinishedRow(fight: fight)
                 }
             }
         }
-        .refreshable {
-            await model.refreshFights(session: session, steps: steps)
-        }
+    }
+
+    private var fightsRefresh: FFRefreshConfig {
+        FFRefreshConfig(
+            isRefreshing: model.isRefreshingFights,
+            message: model.refreshStatusText,
+            action: {
+                await model.refreshFights(session: session, steps: steps, trigger: .manual)
+            }
+        )
     }
 
     private var isEmpty: Bool {
         model.live.isEmpty && model.invitations.isEmpty && model.finished.isEmpty
     }
 
-    private var subtitle: String {
-        var parts: [String] = ["\(model.live.count) live"]
-        if !model.invitations.isEmpty { parts.append("\(model.invitations.count) waiting") }
-        return parts.joined(separator: " · ")
+    private var selectedFights: [Fight] {
+        switch filter {
+        case .current: model.live
+        case .invited: model.invitations
+        case .past: model.finished
+        }
     }
 
-    private func heroCard(_ fight: Fight) -> some View {
-        FFHeroCard(
-            eyebrow: fight.daysLeft.map { "Ends in \($0) \($0 == 1 ? "day" : "days")" } ?? fight.metric.eyebrow,
-            tag: fight.of == 2 ? "Head to head" : "\(fight.of) in this fight",
-            title: fight.name,
-            metric: leadScore(fight),
-            caption: caption(fight),
-            monogram: initials(fight),
-            progress: progress(fight)
-        )
+    /// The number on the right is your distance from whoever you are actually
+    /// racing: the leader when you are behind, the runner-up when you are ahead.
+    /// Nobody else has a score yet in a fresh fight, so that row shows your total.
+    private func difference(in fight: Fight) -> (text: String, ahead: Bool, isGap: Bool) {
+        if model.youStanding(in: fight)?.deferred == true {
+            return (String(localized: "Next round"), true, false)
+        }
+        let rivals = fight.standings.filter { !$0.person.isYou && !$0.invited && !$0.deferred }.map(\.score)
+        guard let mine = model.youStanding(in: fight)?.score else {
+            guard let leader = rivals.max() else { return ("-", true, false) }
+            return (stepCount(leader), true, false)
+        }
+        guard let best = rivals.max() else { return (stepCount(mine), true, false) }
+        let gap = mine - best
+        guard gap != 0 else { return (String(localized: "Tied"), true, false) }
+        return ("\(gap < 0 ? "−" : "+")\(stepCount(abs(gap)))", gap > 0, true)
     }
 
-    private func caption(_ fight: Fight) -> String {
-        let unit = fight.metric.eyebrow.lowercased()
-        let kicker = [fight.kickerPrefix, fight.kickerEmphasis, fight.kickerRest]
-            .filter { !$0.isEmpty }
-            .joined(separator: " ")
-        return kicker.isEmpty ? unit : "\(unit) · \(kicker)"
+    /// Whole steps with the locale's grouping. A gap of 840 must not read "0.8k".
+    private func stepCount(_ value: Double) -> String {
+        value.formatted(.number.precision(.fractionLength(0)))
     }
 
-    /// The hero's number is your own score, or the leader's if you are not in it.
-    private func leadScore(_ fight: Fight) -> String {
-        let standing = model.youStanding(in: fight) ?? fight.standings.first
-        guard let standing else { return "—" }
-        return model.formatScore(standing.score, metric: fight.metric)
-    }
-
-    private func progress(_ fight: Fight) -> Double {
-        let scores = fight.standings.filter { !$0.invited }.map(\.score)
-        guard let peak = scores.max(), peak > 0 else { return 0 }
-        let mine = model.youStanding(in: fight)?.score ?? scores.first ?? 0
-        return min(mine / peak, 1)
-    }
-
-    /// The other side of a head-to-head, so the hero avatar is who you are up against.
-    private func initials(_ fight: Fight) -> String {
-        let other = fight.standings.first { !$0.person.isYou && !$0.invited }
-        return other?.person.initials ?? fight.standings.first?.person.initials ?? "?"
+    /// The other side of a head-to-head, so the avatar is who you are up against.
+    private func opponent(in fight: Fight) -> Person? {
+        fight.standings.first { !$0.person.isYou && !$0.invited && !$0.deferred }?.person
+            ?? fight.standings.first?.person
     }
 }
 
@@ -121,9 +166,10 @@ struct InvitationRow: View {
 
     var body: some View {
         HStack(spacing: 13) {
-            FFAvatar(fight.inviter ?? fight.standings.first?.person, size: 44)
+            let inviter = fight.inviter ?? fight.standings.first?.person
+            CompanionAvatar(inviter)
             VStack(alignment: .leading, spacing: 2) {
-                Text(fight.name)
+                Text(fight.listTitle)
                     .ffType(.heading)
                     .foregroundStyle(theme.text)
                 Text(fight.listSubtitle)
@@ -134,7 +180,7 @@ struct InvitationRow: View {
             Button {
                 model.openFightID = fight.id
             } label: {
-                FFPill(fight.inviteAction ?? "Join", style: .solidMoss)
+                FFPill(String(localized: "Join"), style: .solidMoss)
             }
             .buttonStyle(FFPressStyle())
         }
@@ -157,18 +203,18 @@ struct FinishedRow: View {
             model.openFightID = fight.id
         } label: {
             HStack(spacing: 13) {
-                FFResultGlyph(fight.rank == 1 ? .win : .loss)
+                FFResultGlyph(result)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(fight.name)
+                    Text(fight.listTitle)
                         .ffType(.rowTitle)
                         .foregroundStyle(theme.text)
-                    Text(fight.endedLabel ?? fight.listSubtitle)
+                    Text(result == .pending ? fight.listSubtitle : (fight.endedLabel ?? fight.listSubtitle))
                         .ffType(.caption)
                         .foregroundStyle(theme.textSecondary)
                 }
                 Spacer(minLength: 8)
-                FFAvatarStack(
-                    monograms: fight.standings.map(\.person.initials),
+                CompanionAvatarStack(
+                    people: fight.standings.map(\.person),
                     visible: 2,
                     size: 26,
                     ring: theme.card
@@ -181,5 +227,9 @@ struct FinishedRow: View {
             .ffBorder(theme.hairline, radius: theme.radius.card)
         }
         .buttonStyle(FFPressStyle())
+    }
+
+    private var result: FFResult {
+        model.fightResult(for: fight)
     }
 }

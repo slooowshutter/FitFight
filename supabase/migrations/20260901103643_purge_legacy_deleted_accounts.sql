@@ -2,7 +2,7 @@
 -- One-time hard purge for accounts deleted by the retired soft-delete flow.
 
 create temporary table legacy_deleted_accounts (
-  user_id uuid primary key
+    user_id uuid primary key
 ) on commit drop;
 
 insert into legacy_deleted_accounts (user_id)
@@ -12,176 +12,176 @@ where deleted_at is not null;
 
 do $$
 declare
-  account_count bigint;
-  owned_fight_count bigint;
-  other_membership_count bigint;
+    account_count bigint;
+    owned_fight_count bigint;
+    other_membership_count bigint;
 begin
-  select count(*) into account_count
-  from legacy_deleted_accounts;
+    select count(*) into account_count
+    from legacy_deleted_accounts;
 
-  select count(*) into owned_fight_count
-  from public.fights as fight
-  join legacy_deleted_accounts as account
-    on account.user_id = fight.owner_id;
-
-  select count(*) into other_membership_count
-  from public.fight_members as member
-  join public.fights as fight
-    on fight.id = member.fight_id
-  join legacy_deleted_accounts as account
-    on account.user_id = fight.owner_id
-  where member.user_id <> account.user_id;
-
-  raise notice
-    'Purging % legacy deleted account(s), % owned Fight(s), and % other membership(s) in those Fights',
-    account_count,
-    owned_fight_count,
-    other_membership_count;
-
-  if exists (
-    select 1
-    from storage.objects as stored_object
+    select count(*) into owned_fight_count
+    from public.fights as fight
     join legacy_deleted_accounts as account
-      on stored_object.owner_id = account.user_id::text
-      or (
-        stored_object.bucket_id = 'provider-inbox'
-        and stored_object.name like account.user_id::text || '/%'
-      )
-  ) then
-    raise exception
-      'Legacy deleted account cleanup blocked: remove target-owned Storage objects through the Storage API first';
-  end if;
+        on account.user_id = fight.owner_id;
 
-  if exists (
-    select 1
-    from public.data_sources as source
+    select count(*) into other_membership_count
+    from public.fight_members as member
+    join public.fights as fight
+        on fight.id = member.fight_id
     join legacy_deleted_accounts as account
-      on account.user_id = source.user_id
-    where exists (
-      select 1
-      from public.fight_members as member
-      where member.selected_source_id = source.id
-        and not exists (
-          select 1
-          from legacy_deleted_accounts as member_account
-          where member_account.user_id = member.user_id
-        )
-        and not exists (
-          select 1
-          from public.fights as owned_fight
-          join legacy_deleted_accounts as owner_account
-            on owner_account.user_id = owned_fight.owner_id
-          where owned_fight.id = member.fight_id
-        )
-    )
-      or exists (
+        on account.user_id = fight.owner_id
+    where member.user_id <> account.user_id;
+
+    raise notice
+        'Purging % legacy deleted account(s), % owned Fight(s), and % other membership(s) in those Fights',
+        account_count,
+        owned_fight_count,
+        other_membership_count;
+
+    if exists (
         select 1
-        from private.metric_observations as observation
-        where observation.source_id = source.id
-          and not exists (
+        from storage.objects as stored_object
+        join legacy_deleted_accounts as account
+            on stored_object.owner_id = account.user_id::text
+            or (
+                stored_object.bucket_id = 'provider-inbox'
+                and stored_object.name like account.user_id::text || '/%'
+            )
+    ) then
+        raise exception
+            'Legacy deleted account cleanup blocked: remove target-owned Storage objects through the Storage API first';
+    end if;
+
+    if exists (
+        select 1
+        from public.data_sources as source
+        join legacy_deleted_accounts as account
+            on account.user_id = source.user_id
+        where exists (
             select 1
-            from legacy_deleted_accounts as observation_account
-            where observation_account.user_id = observation.user_id
-          )
-      )
-      or exists (
+            from public.fight_members as member
+            where member.selected_source_id = source.id
+                and not exists (
+                    select 1
+                    from legacy_deleted_accounts as member_account
+                    where member_account.user_id = member.user_id
+                )
+                and not exists (
+                    select 1
+                    from public.fights as owned_fight
+                    join legacy_deleted_accounts as owner_account
+                        on owner_account.user_id = owned_fight.owner_id
+                    where owned_fight.id = member.fight_id
+                )
+        )
+            or exists (
+                select 1
+                from private.metric_observations as observation
+                where observation.source_id = source.id
+                    and not exists (
+                        select 1
+                        from legacy_deleted_accounts as observation_account
+                        where observation_account.user_id = observation.user_id
+                    )
+            )
+            or exists (
+                select 1
+                from private.provider_uploads as upload
+                where upload.source_id = source.id
+                    and not exists (
+                        select 1
+                        from legacy_deleted_accounts as upload_account
+                        where upload_account.user_id = upload.user_id
+                    )
+            )
+            or exists (
+                select 1
+                from private.provider_events as event
+                where event.source_id = source.id
+                    and not exists (
+                        select 1
+                        from legacy_deleted_accounts as event_account
+                        where event_account.user_id = event.user_id
+                    )
+            )
+            or exists (
+                select 1
+                from public.metric_days as metric_day
+                where metric_day.source_id = source.id
+                    and not exists (
+                        select 1
+                        from legacy_deleted_accounts as metric_day_account
+                        where metric_day_account.user_id = metric_day.user_id
+                    )
+            )
+            or exists (
+                select 1
+                from private.fight_score_snapshots as snapshot
+                where snapshot.source_id = source.id
+                    and not exists (
+                        select 1
+                        from legacy_deleted_accounts as snapshot_account
+                        where snapshot_account.user_id = snapshot.user_id
+                    )
+                    and not exists (
+                        select 1
+                        from public.fights as owned_fight
+                        join legacy_deleted_accounts as owner_account
+                            on owner_account.user_id = owned_fight.owner_id
+                        where owned_fight.id = snapshot.fight_id
+                    )
+            )
+    ) then
+        raise exception
+            'Legacy deleted account cleanup blocked: an active account references a target-owned data source';
+    end if;
+
+    if exists (
         select 1
         from private.provider_uploads as upload
-        where upload.source_id = source.id
-          and not exists (
+        join legacy_deleted_accounts as account
+            on account.user_id = upload.user_id
+        where exists (
             select 1
-            from legacy_deleted_accounts as upload_account
-            where upload_account.user_id = upload.user_id
-          )
-      )
-      or exists (
-        select 1
-        from private.provider_events as event
-        where event.source_id = source.id
-          and not exists (
-            select 1
-            from legacy_deleted_accounts as event_account
-            where event_account.user_id = event.user_id
-          )
-      )
-      or exists (
-        select 1
-        from public.metric_days as metric_day
-        where metric_day.source_id = source.id
-          and not exists (
-            select 1
-            from legacy_deleted_accounts as metric_day_account
-            where metric_day_account.user_id = metric_day.user_id
-          )
-      )
-      or exists (
-        select 1
-        from private.fight_score_snapshots as snapshot
-        where snapshot.source_id = source.id
-          and not exists (
-            select 1
-            from legacy_deleted_accounts as snapshot_account
-            where snapshot_account.user_id = snapshot.user_id
-          )
-          and not exists (
-            select 1
-            from public.fights as owned_fight
-            join legacy_deleted_accounts as owner_account
-              on owner_account.user_id = owned_fight.owner_id
-            where owned_fight.id = snapshot.fight_id
-          )
-      )
-  ) then
-    raise exception
-      'Legacy deleted account cleanup blocked: an active account references a target-owned data source';
-  end if;
-
-  if exists (
-    select 1
-    from private.provider_uploads as upload
-    join legacy_deleted_accounts as account
-      on account.user_id = upload.user_id
-    where exists (
-      select 1
-      from private.provider_events as event
-      where event.upload_id = upload.upload_id
-        and not exists (
-          select 1
-          from legacy_deleted_accounts as event_account
-          where event_account.user_id = event.user_id
+            from private.provider_events as event
+            where event.upload_id = upload.upload_id
+                and not exists (
+                    select 1
+                    from legacy_deleted_accounts as event_account
+                    where event_account.user_id = event.user_id
+                )
         )
-    )
-      or exists (
-        select 1
-        from private.metric_observations as observation
-        where observation.upload_id = upload.upload_id
-          and not exists (
-            select 1
-            from legacy_deleted_accounts as observation_account
-            where observation_account.user_id = observation.user_id
-          )
-      )
-      or exists (
-        select 1
-        from private.fight_score_snapshots as snapshot
-        where snapshot.upload_id = upload.upload_id
-          and not exists (
-            select 1
-            from legacy_deleted_accounts as snapshot_account
-            where snapshot_account.user_id = snapshot.user_id
-          )
-          and not exists (
-            select 1
-            from public.fights as owned_fight
-            join legacy_deleted_accounts as owner_account
-              on owner_account.user_id = owned_fight.owner_id
-            where owned_fight.id = snapshot.fight_id
-          )
-      )
-  ) then
-    raise exception
-      'Legacy deleted account cleanup blocked: an active account references a target-owned provider upload';
-  end if;
+            or exists (
+                select 1
+                from private.metric_observations as observation
+                where observation.upload_id = upload.upload_id
+                    and not exists (
+                        select 1
+                        from legacy_deleted_accounts as observation_account
+                        where observation_account.user_id = observation.user_id
+                    )
+            )
+            or exists (
+                select 1
+                from private.fight_score_snapshots as snapshot
+                where snapshot.upload_id = upload.upload_id
+                    and not exists (
+                        select 1
+                        from legacy_deleted_accounts as snapshot_account
+                        where snapshot_account.user_id = snapshot.user_id
+                    )
+                    and not exists (
+                        select 1
+                        from public.fights as owned_fight
+                        join legacy_deleted_accounts as owner_account
+                            on owner_account.user_id = owned_fight.owner_id
+                        where owned_fight.id = snapshot.fight_id
+                    )
+            )
+    ) then
+        raise exception
+            'Legacy deleted account cleanup blocked: an active account references a target-owned provider upload';
+    end if;
 end;
 $$;
 
@@ -240,7 +240,7 @@ where invite.invited_user_id = account.user_id;
 delete from public.friendships as friendship
 using legacy_deleted_accounts as account
 where friendship.requester_id = account.user_id
-   or friendship.addressee_id = account.user_id;
+      or friendship.addressee_id = account.user_id;
 
 delete from public.data_sources as source
 using legacy_deleted_accounts as account

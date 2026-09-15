@@ -7,8 +7,8 @@ drop function if exists public.delete_own_account();
 revoke all on function public.handle_new_user() from public, anon, authenticated;
 
 revoke all
-  on private.healthkit_step_samples,
-     private.healthkit_step_sample_deletions,
-     private.healthkit_step_source_days,
-     private.healthkit_step_syncs
-  from public, anon, authenticated;
+    on private.healthkit_step_samples,
+          private.healthkit_step_sample_deletions,
+          private.healthkit_step_source_days,
+          private.healthkit_step_syncs
+    from public, anon, authenticated;

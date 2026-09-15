@@ -1,0 +1,225 @@
+{
+    "source": "../kit/companion-app-proposal.html#artwork",
+    "atlas": {
+        "file": "originals/atlas.png",
+        "pixels": [1402, 1122],
+        "transparent": true
+    },
+    "extraction": "Connected alpha >= 96 from the face, expanded 4 px to retain original antialiasing. Detached atlas noise and adjacent characters excluded. Full body and ground fit within a padded 352 x 400 canvas; no rescaling.",
+    "animals": [
+        {
+            "id": "badger",
+            "source": "originals/atlas.png",
+            "source_bounds": [58, 31, 325, 385],
+            "body_pixels": [352, 400],
+            "avatar_source_bounds": [131, 36, 281, 186],
+            "avatar_pixels": [150, 150],
+            "transparent": true,
+            "surfaces": [
+                "personal hero",
+                "duel preview",
+                "stock picker",
+                "preview avatar"
+            ]
+        },
+        {
+            "id": "raccoon",
+            "source": "originals/atlas.png",
+            "source_bounds": [411, 23, 691, 385],
+            "body_pixels": [352, 400],
+            "avatar_source_bounds": [479, 38, 629, 188],
+            "avatar_pixels": [150, 150],
+            "transparent": true,
+            "surfaces": [
+                "personal hero",
+                "duel preview",
+                "stock picker",
+                "preview avatar"
+            ]
+        },
+        {
+            "id": "red-panda",
+            "source": "originals/atlas.png",
+            "source_bounds": [735, 22, 1001, 386],
+            "body_pixels": [352, 400],
+            "avatar_source_bounds": [790, 33, 940, 183],
+            "avatar_pixels": [150, 150],
+            "transparent": true,
+            "surfaces": [
+                "personal hero",
+                "duel preview",
+                "stock picker",
+                "preview avatar"
+            ]
+        },
+        {
+            "id": "otter",
+            "source": "originals/atlas.png",
+            "source_bounds": [1056, 24, 1328, 387],
+            "body_pixels": [352, 400],
+            "avatar_source_bounds": [1117, 22, 1267, 172],
+            "avatar_pixels": [150, 150],
+            "transparent": true,
+            "surfaces": [
+                "personal hero",
+                "duel preview",
+                "stock picker",
+                "preview avatar"
+            ]
+        },
+        {
+            "id": "rabbit",
+            "source": "originals/atlas.png",
+            "source_bounds": [75, 380, 316, 753],
+            "body_pixels": [352, 400],
+            "avatar_source_bounds": [127, 410, 277, 560],
+            "avatar_pixels": [150, 150],
+            "transparent": true,
+            "surfaces": [
+                "personal hero",
+                "duel preview",
+                "stock picker",
+                "preview avatar"
+            ]
+        },
+        {
+            "id": "fox",
+            "source": "originals/atlas.png",
+            "source_bounds": [417, 395, 682, 753],
+            "body_pixels": [352, 400],
+            "avatar_source_bounds": [471, 402, 621, 552],
+            "avatar_pixels": [150, 150],
+            "transparent": true,
+            "surfaces": [
+                "personal hero",
+                "duel preview",
+                "stock picker",
+                "preview avatar"
+            ]
+        },
+        {
+            "id": "bear",
+            "source": "originals/atlas.png",
+            "source_bounds": [723, 393, 986, 753],
+            "body_pixels": [352, 400],
+            "avatar_source_bounds": [785, 406, 935, 556],
+            "avatar_pixels": [150, 150],
+            "transparent": true,
+            "surfaces": [
+                "personal hero",
+                "duel preview",
+                "stock picker",
+                "preview avatar"
+            ]
+        },
+        {
+            "id": "boar",
+            "source": "originals/atlas.png",
+            "source_bounds": [1044, 398, 1310, 756],
+            "body_pixels": [352, 400],
+            "avatar_source_bounds": [1120, 418, 1270, 568],
+            "avatar_pixels": [150, 150],
+            "transparent": true,
+            "surfaces": [
+                "personal hero",
+                "duel preview",
+                "stock picker",
+                "preview avatar"
+            ]
+        },
+        {
+            "id": "sloth",
+            "source": "originals/atlas.png",
+            "source_bounds": [54, 766, 323, 1101],
+            "body_pixels": [352, 400],
+            "avatar_source_bounds": [129, 774, 279, 924],
+            "avatar_pixels": [150, 150],
+            "transparent": true,
+            "surfaces": [
+                "personal hero",
+                "duel preview",
+                "stock picker",
+                "preview avatar"
+            ]
+        },
+        {
+            "id": "dog",
+            "source": "originals/atlas.png",
+            "source_bounds": [414, 756, 643, 1102],
+            "body_pixels": [352, 400],
+            "avatar_source_bounds": [464, 751, 614, 901],
+            "avatar_pixels": [150, 150],
+            "transparent": true,
+            "surfaces": [
+                "personal hero",
+                "duel preview",
+                "stock picker",
+                "preview avatar"
+            ]
+        },
+        {
+            "id": "goat",
+            "source": "originals/atlas.png",
+            "source_bounds": [735, 745, 983, 1103],
+            "body_pixels": [352, 400],
+            "avatar_source_bounds": [793, 782, 943, 932],
+            "avatar_pixels": [150, 150],
+            "transparent": true,
+            "surfaces": [
+                "personal hero",
+                "duel preview",
+                "stock picker",
+                "preview avatar"
+            ]
+        },
+        {
+            "id": "turtle",
+            "source": "originals/atlas.png",
+            "source_bounds": [1040, 777, 1314, 1103],
+            "body_pixels": [352, 400],
+            "avatar_source_bounds": [1110, 775, 1260, 925],
+            "avatar_pixels": [150, 150],
+            "transparent": true,
+            "surfaces": [
+                "personal hero",
+                "duel preview",
+                "stock picker",
+                "preview avatar"
+            ]
+        }
+    ],
+    "scenes": [
+        {
+            "id": "race-day",
+            "source": "originals/raceDay.png",
+            "pixels": [1448, 1086],
+            "transparent": false,
+            "crop": "none; aspect fit",
+            "surfaces": ["demo fight"]
+        },
+        {
+            "id": "race-night",
+            "source": "originals/raceNight.png",
+            "pixels": [1448, 1086],
+            "transparent": false,
+            "crop": "none; aspect fit",
+            "surfaces": ["demo fight"]
+        },
+        {
+            "id": "tennis-day",
+            "source": "originals/tennisDay.png",
+            "pixels": [1448, 1086],
+            "transparent": false,
+            "crop": "none; aspect fit",
+            "surfaces": ["artwork preview only; never a Feed post"]
+        },
+        {
+            "id": "tennis-night",
+            "source": "originals/tennisNight.png",
+            "pixels": [1448, 1086],
+            "transparent": false,
+            "crop": "none; aspect fit",
+            "surfaces": ["artwork preview only; never a Feed post"]
+        }
+    ]
+}

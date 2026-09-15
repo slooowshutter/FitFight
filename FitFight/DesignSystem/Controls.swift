@@ -108,7 +108,7 @@ struct FFSwitch: View {
             .padding(3)
             .frame(width: 50, height: 30)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(FFHapticPlainStyle())
         .animation(.timingCurve(0.16, 1, 0.3, 1, duration: 0.15), value: isOn)
     }
 }
@@ -116,6 +116,7 @@ struct FFSwitch: View {
 struct FFSegmented<Item: Hashable>: View {
     let items: [Item]
     @Binding var selection: Item
+    var count: ((Item) -> Int?)? = nil
     let title: (Item) -> String
 
     @Environment(\.ffTheme) private var theme
@@ -124,18 +125,31 @@ struct FFSegmented<Item: Hashable>: View {
         HStack(spacing: 3) {
             ForEach(items, id: \.self) { item in
                 let on = item == selection
+                let name = title(item)
+                let raw = count?(item)
+                let badge: Int? = (raw ?? 0) > 0 ? raw : nil
                 Button {
                     selection = item
                 } label: {
-                    Text(title(item))
-                        .ffType(.caption)
-                        .fontWeight(.heavy)
-                        .foregroundStyle(on ? theme.mossOn : theme.textSecondary)
-                        .padding(.horizontal, 15)
-                        .padding(.vertical, 6)
-                        .background(on ? theme.mossFill : .clear, in: Capsule())
+                    HStack(spacing: 3) {
+                        Text(name)
+                            .ffType(.caption)
+                            .fontWeight(.heavy)
+                        if let badge {
+                            Text("\(badge)")
+                                .ffType(.micro)
+                                .fontWeight(.heavy)
+                                .opacity(0.7)
+                                .accessibilityHidden(true)
+                        }
+                    }
+                    .foregroundStyle(on ? theme.mossOn : theme.textSecondary)
+                    .padding(.horizontal, 15)
+                    .padding(.vertical, 6)
+                    .background(on ? theme.mossFill : .clear, in: Capsule())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(FFHapticPlainStyle())
+                .accessibilityLabel(badge.map { "\(name), \($0)" } ?? name)
             }
         }
         .padding(3)
@@ -173,7 +187,7 @@ struct FFChip: View {
                 )
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(FFHapticPlainStyle())
     }
 }
 
@@ -299,7 +313,7 @@ struct FFCombo: View {
             .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
             .ffBorder(open ? theme.mossEdge : theme.line, radius: theme.radius.field)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(FFHapticPlainStyle())
         .overlay(alignment: .topLeading) {
             if open { menu.offset(y: 60) }
         }
@@ -334,7 +348,7 @@ struct FFCombo: View {
                         in: RoundedRectangle(cornerRadius: theme.radius.glyph, style: .continuous)
                     )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(FFHapticPlainStyle())
             }
         }
         .padding(6)
@@ -370,7 +384,7 @@ struct FFTabs<Item: Hashable>: View {
                             in: RoundedRectangle(cornerRadius: theme.radius.glyph, style: .continuous)
                         )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(FFHapticPlainStyle())
             }
         }
         .padding(4)
@@ -506,6 +520,8 @@ struct FFToast: View {
     let message: String
     var tone: FFTone = .moss
     var onClose: (() -> Void)?
+    /// Floating overlays keep the kit drop shadow; in-flow banners do not.
+    var raised: Bool = true
 
     @Environment(\.ffTheme) private var theme
 
@@ -533,14 +549,15 @@ struct FFToast: View {
                         .frame(width: 28, height: 28)
                         .background(theme.hairline, in: Circle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(FFHapticPlainStyle())
             }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
         .background(wash, in: RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
+        .background(theme.overlay, in: RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
         .ffBorder(edge, radius: theme.radius.card)
-        .shadow(color: .black.opacity(0.8), radius: 20, y: 14)
+        .shadow(color: .black.opacity(raised ? 0.8 : 0), radius: raised ? 20 : 0, y: raised ? 14 : 0)
     }
 
     private var wash: Color {
@@ -722,8 +739,8 @@ struct FFNavDetail: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
-        .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
-        .ffBorder(theme.hairline, radius: theme.radius.field)
+        .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
+        .ffBorder(theme.hairline, radius: theme.radius.card)
     }
 }
 
@@ -757,7 +774,7 @@ struct FFNavFlow: View {
                         .ffType(.label)
                         .foregroundStyle(theme.mossText)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(FFHapticPlainStyle())
             }
         }
         .padding(.horizontal, 14)
@@ -858,7 +875,7 @@ struct FFDurationPicker: View {
                         )
                         .ffBorder(on ? theme.mossEdge : theme.hairline, radius: theme.radius.field)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(FFHapticPlainStyle())
             }
         }
     }

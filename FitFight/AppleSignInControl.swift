@@ -40,7 +40,7 @@ struct AppleSignInControl: View {
             if (error as? ASAuthorizationError)?.code == .canceled {
                 return
             }
-            session.authError = "Apple sign-in didn’t finish. Try again."
+            session.authError = String(localized: "Apple sign-in didn’t finish. Try again.")
         case .success(let authorization):
             guard
                 let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
@@ -50,7 +50,7 @@ struct AppleSignInControl: View {
                 let authorizationCode = String(data: codeData, encoding: .utf8),
                 let nonce
             else {
-                session.authError = "Couldn’t sign in. Try again."
+                session.authError = String(localized: "Couldn’t sign in. Try again.")
                 return
             }
             await session.signInWithApple(

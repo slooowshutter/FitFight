@@ -117,6 +117,40 @@ for `/api/app-release`; its health response lacks `profile_api`. These live resu
 take precedence over older availability descriptions below. Preview was at
 `025f55c` at that check; the new upload is tracked by #243.
 
+## Multiple-objective Fight rules: specified 16 Sep 2026
+
+The [Fight rules](fight-rules.md#multiple-objectives-all-are-required),
+[engine design](system-design.md#multiple-objective-goals-engine-design), and
+domain glossary now define goals requiring **every Objective** to pass. Each
+Objective retains its own progress, unit, source completeness, and explanation;
+extra progress cannot compensate for a missed Objective. Independent Objectives
+may share a Measure or use different approved Measures in the common window.
+
+**Implementation:** documentation only. The isolated Zod draft already represents
+this through named conditions and `all`; it does not evaluate activity. Runtime
+scoring, APIs, database schema, and the native app are unchanged. No cloud checks
+or deployment were performed. Shipping still requires approved presets, evidence
+for every Metric, engine tests, and the normal compatibility rollout.
+
+## Release workspace reconciliation, 15 Sep 2026 evening
+
+Latest merged application code is 1.1.1 at `685507d`. The release workspace now
+includes those fixes plus the English/French screenshot package and the legacy
+App Store build 113 database compatibility repair. Earlier screenshot labels and
+the 1.1.0 App Store draft need to be refreshed for 1.1.1.
+
+The earlier disposable production-copy rehearsal applied 28 pending migrations
+and preserved 3 accounts, 14 Fights, and 14 memberships. Legacy SQL request and
+permission checks passed. That rehearsal predates the latest 1.1.1 migrations;
+those still require validation. No beta history/media import or production
+rollout has been performed by this workspace.
+
+Read-only live check at 21:38 UTC: staging advertises public 1.0.0 (190) and
+review/internal 1.1.0 (200), with enforcement off. Production still returns 404
+for `/api/app-release`; its health response lacks `profile_api`. These live results
+take precedence over older availability descriptions below. Preview is still at
+`025f55c`; the newest develop fixes have not been uploaded to TestFlight yet.
+
 ## Fight charts and standings: prepared 15 Sep 2026
 
 **Code:** all Fight charts now use the same confirmed score revision as standings.

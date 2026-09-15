@@ -10,10 +10,27 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ## Release workspace reconciliation, 15 Sep 2026 evening
 
-Latest merged application code is 1.1.1 at `685507d`. The release workspace now
-includes those fixes plus the English/French screenshot package and the legacy
-App Store build 113 database compatibility repair. Earlier screenshot labels and
-the 1.1.0 App Store draft need to be refreshed for 1.1.1.
+Release preparation is merged into develop at `25f8ac8` through [#241](https://github.com/slooowshutter/FitFight/pull/241).
+The 1.1.1 app, 237 backend unit tests, build 113 Auth/PostgREST compatibility,
+migration/RLS and transaction tests, native build, and English/French cloud
+screenshots passed. Fresh gallery captures use that native source, with the 1.1.1
+version label on You only. The App Store Connect 1.1.1 draft has saved English and
+French listing text and updated review instructions; production build selection,
+privacy answers, final screenshots, and submission remain pending.
+
+The direct develop-to-preview PR conflicted with prior snapshot history.
+[#243](https://github.com/slooowshutter/FitFight/pull/243) resolves both histories
+to the exact tested develop tree, `8f49dc4a3e3d5548e2c2b0c055a99d85d35d2f6e`.
+It replaced #242 and merged to preview as `d97145a` at 22:05 UTC on 15 September.
+The [TestFlight upload](https://github.com/slooowshutter/FitFight/actions/runs/35029178930)
+is running. Main and the production data transfer remain on hold.
+
+Staging now has the three previously missing migrations: notification preferences
+and social outbox kinds, Fight Realtime invalidations, and chart checkpoints.
+Their tables, columns, function, and four triggers were verified live. Six older
+migration timestamps were corrected only after the recorded SQL matched repository
+SQL apart from whitespace. All 40 migration versions now match; a subsequent
+`migration up` applied nothing. Staging health returns 200 with `profile_api: true`.
 
 The earlier disposable production-copy rehearsal applied 28 pending migrations
 and preserved 3 accounts, 14 Fights, and 14 memberships. Legacy SQL request and
@@ -24,8 +41,8 @@ rollout has been performed by this workspace.
 Read-only live check at 21:38 UTC: staging advertises public 1.0.0 (190) and
 review/internal 1.1.0 (200), with enforcement off. Production still returns 404
 for `/api/app-release`; its health response lacks `profile_api`. These live results
-take precedence over older availability descriptions below. Preview is still at
-`025f55c`; the newest develop fixes have not been uploaded to TestFlight yet.
+take precedence over older availability descriptions below. Preview was at
+`025f55c` at that check; the new upload is tracked by #243.
 
 ## Fight charts and standings: prepared 15 Sep 2026
 

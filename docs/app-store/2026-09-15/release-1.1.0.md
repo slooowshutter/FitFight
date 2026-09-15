@@ -12,8 +12,9 @@ The latest merged fixes select **1.1.1**. Earlier 1.1.0 preparation below is his
 - Six screenshots per language and an [HTML gallery](index.html).
 - Updated [store copy](../metadata.md), [review notes](../review-notes.md), English/French
   privacy pages, and the native Photos or Videos privacy declaration.
-- App Store Connect has a `1.1.0` draft. Screenshot upload, saved localized copy,
-  candidate selection, privacy questionnaire, and submission remain pending.
+- App Store Connect has a `1.1.1` draft with saved English/French listing text and
+  updated App Review instructions. Screenshot upload, production candidate
+  selection, privacy questionnaire, and submission remain pending.
 
 ## Public build compatibility
 
@@ -38,7 +39,8 @@ full client-access cutoff also revokes these separately granted columns.
 At 21:38 UTC, staging advertises `1.0.0 (190)` for Friends and `1.1.0 (200)` for
 review/internal, with enforcement off. Existing `/api/v1` fixtures and all 237
 backend unit tests pass after merging develop `685507d`. No API version changes.
-The new Auth/PostgREST test and native compile still need PR CI.
+The Auth/PostgREST test, native compile, database security/transaction tests, and
+English/French cloud screenshots passed in release PR #241, merged as `25f8ac8`.
 
 ## Earlier cloud rehearsal evidence, 15 September
 
@@ -71,17 +73,21 @@ Do not copy sessions, APNs device registrations, pending jobs, or encrypted Appl
 refresh credentials under a different environment's key.
 
 The source import and storage transfer are not implemented or executed yet.
-The earlier staging migration audit found manually assigned timestamps that
-differed from repository filenames and an absent social-notification migration.
-Recheck the live schema and ledger after the latest fixes before deployment.
-The evening refresh was unavailable during Supabase maintenance.
+After maintenance, the live audit confirmed three missing migrations. Notification
+preferences/social kinds, Fight Realtime invalidations, and chart checkpoints were
+applied and verified before the preview promotion. Six old timestamps were
+corrected after verifying that their recorded SQL matched repository SQL apart
+from whitespace. All 40 migration versions now match, and a subsequent migration-up
+run applied nothing. This changed schema/history metadata in staging, not user
+identities or beta data in production.
 
 ## Required order
 
-1. Open the release PR into `develop` when explicitly authorized; pass database,
-   native, and web CI. Review the current Health collection/privacy disclosures.
-2. Reconcile staging schema, deploy the compatible backend, and merge to `preview`
-   for the staging TestFlight candidate. Verify the installed candidate.
+1. Release PR #241 is merged into `develop` with database, native, and web checks
+   passing. Current Health collection/privacy disclosures still need final review.
+2. Staging schema is reconciled and #243 is merged into `preview` at `d97145a`.
+   TestFlight upload run `35029178930` is in progress. Verify its distribution and
+   the installed candidate before promoting production.
 3. Rehearse account/history/media import and verify a recoverable backup.
 4. Merge `preview` into `main`; apply compatible production migrations before the
    backend needs them, verify production settings, and complete the verified import.

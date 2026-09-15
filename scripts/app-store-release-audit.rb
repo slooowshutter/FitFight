@@ -42,6 +42,8 @@ if ARGV == ["prepare"]
         key: raw.include?("BEGIN PRIVATE KEY") ? raw.gsub('\\n', "\n") : Base64.decode64(raw),
         duration: 1200
     )
+    # Deliver treats this environment name as a JSON hash; CI stores the raw key.
+    ENV.delete("APP_STORE_CONNECT_API_KEY")
     options = FastlaneCore::Configuration.create(Deliver::Options.available_options, {
         app_identifier: "com.fitfight.mvp", app_version: "1.1.1",
         skip_binary_upload: true, skip_app_version_update: true,

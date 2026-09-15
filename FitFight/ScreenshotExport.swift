@@ -97,7 +97,6 @@ enum ScreenshotExport {
                 AnyView(
                     VStack(spacing: 0) {
                         Color.clear.frame(height: 44)
-                        if tab != nil { VersionBanner() }
                         content.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top).clipped()
                         if let tab { FFTabBar(tab: .constant(tab)) }
                         Color.clear.frame(height: 24)
@@ -174,10 +173,7 @@ enum ScreenshotExport {
             Shot(name: "00-welcome") { store, _ in
                 let theme = store.theme
                 return AnyView(
-                    VStack(spacing: 0) {
-                        VersionBanner()
-                        WelcomeView()
-                    }
+                    WelcomeView()
                     .background(theme.bg)
                     .environmentObject(store)
                     .environmentObject(model)
@@ -312,8 +308,6 @@ enum ScreenshotExport {
         let session = SessionStore(screenshot: ())
         return AnyView(
             VStack(spacing: 0) {
-                VersionBanner()
-                    .fixedSize(horizontal: false, vertical: true)
                 content
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     .clipped()

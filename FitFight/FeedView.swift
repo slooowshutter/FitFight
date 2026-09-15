@@ -280,7 +280,7 @@ struct FeedComposeSheet: View {
     }
 
     var body: some View {
-        FFScreen(top: AnyView(VersionBanner()), clearance: false) {
+        FFScreen(clearance: false) {
             HStack {
                 Text(String(localized: "New post"))
                     .ffType(.title)
@@ -841,7 +841,7 @@ private struct FightPostEditSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        FFScreen(top: AnyView(VersionBanner()), clearance: false) {
+        FFScreen(clearance: false) {
             HStack {
                 Text(String(localized: "Edit post"))
                     .ffType(.title)

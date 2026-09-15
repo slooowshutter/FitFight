@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 15,
+            notes: "The version line is only on You. Fights, New, Feed, and Feedback no longer show it at the top."
+        ),
+        ReleaseNote(
+            version: "1.1.0",
+            year: 2026,
+            month: 9,
+            day: 15,
             notes: "The Update screen no longer appears from a leftover version check while TestFlight is still publishing."
         ),
         ReleaseNote(
@@ -44,6 +51,13 @@ enum Changelog {
             month: 9,
             day: 15,
             notes: "Tabs are Fights, New, Feed, Feedback, You. Fight-feed lock-screen alerts name the person, never scores. Turn posts, comments, replies, and reactions on or off under You → Settings."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "The version line is only on You. Fights, New, Feed, and Feedback no longer show it at the top."
         ),
         ReleaseNote(
             version: "1.0.0",

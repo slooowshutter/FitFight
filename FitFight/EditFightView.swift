@@ -106,7 +106,6 @@ struct EditFightView: View {
 
     private var header: some View {
         VStack(spacing: 0) {
-            VersionBanner()
             ZStack {
                 Text(String(localized: "Edit fight"))
                     .ffType(.rowTitle)

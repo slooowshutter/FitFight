@@ -6,13 +6,13 @@
       "update_url": "itms-beta://"
     },
     "review": {
-      "version": "1.0.1",
-      "build": 199,
+      "version": "1.1.0",
+      "build": 200,
       "update_url": "itms-beta://"
     },
     "internal": {
-      "version": "1.0.1",
-      "build": 199,
+      "version": "1.1.0",
+      "build": 200,
       "update_url": "itms-beta://"
     },
     "enforced": true

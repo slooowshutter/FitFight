@@ -229,6 +229,7 @@ class TestFlightTest < Minitest::Test
     @lane = TestFlightLane.new
     @groups = [
       OpenStruct.new(id: "internal", name: "Tester", is_internal_group: true),
+      OpenStruct.new(id: "external", name: "External Testers", is_internal_group: false),
       OpenStruct.new(id: "friends", name: "Friends Beta", is_internal_group: false)
     ]
     @app = OpenStruct.new(id: "app", get_beta_groups: @groups)
@@ -244,9 +245,9 @@ class TestFlightTest < Minitest::Test
     end
   end
 
-  def test_upload_waits_for_processing_and_stays_internal
+  def test_upload_waits_for_processing_then_assigns_every_external_group
     with_apple { @lane.run_beta }
-    assert_equal 1, @lane.uploads.length
+    assert_equal 2, @lane.uploads.length
     upload = @lane.uploads.first
     assert_equal false, upload[:skip_waiting_for_build_processing]
     assert_equal true, upload[:skip_submission]
@@ -255,20 +256,56 @@ class TestFlightTest < Minitest::Test
     refute upload.key?(:groups)
     refute_equal true, upload[:distribute_only]
     refute_equal true, upload[:submit_beta_review]
+    everyone = @lane.uploads.last
+    assert_equal true, everyone[:distribute_only]
+    assert_equal true, everyone[:distribute_external]
+    assert_equal ["external", "friends"], everyone[:groups]
+    assert_equal true, everyone[:submit_beta_review]
+    assert_equal true, everyone[:notify_external_testers]
+    assert_equal false, everyone[:skip_submission]
     assert_equal [["staging", "1.0.0", 154]], @lane.pointers
   end
 
-  def test_external_groups_are_not_submitted_or_notified
+  def test_external_submission_failure_fails_the_lane
     @lane.distribution_error = "Apple rejected the beta submission"
-    with_apple { @lane.run_beta }
-    assert_nil @lane.uploads.find { |options| options[:distribute_external] }
+    error = assert_raises(RuntimeError) { with_apple { @lane.run_beta } }
+    assert_equal "Apple rejected the beta submission", error.message
+    assert_equal 2, @lane.uploads.length
+    assert_equal true, @lane.uploads.last[:distribute_external]
     assert_equal [["staging", "1.0.0", 154]], @lane.pointers
   end
 
-  def test_missing_external_group_does_not_fail_upload
-    @groups.reject! { |group| !group.is_internal_group }
-    with_apple { @lane.run_beta }
+  def test_missing_friends_group_fails_after_internal_upload
+    @groups.reject! { |group| group.name == "Friends Beta" }
+    error = assert_raises(RuntimeError) { with_apple { @lane.run_beta } }
+    assert_match(/Friends Beta/, error.message)
+    assert_equal 1, @lane.uploads.length
+    assert_equal false, @lane.uploads.first[:distribute_external]
+    assert_equal [["staging", "1.0.0", 154]], @lane.pointers
+  end
+
+  def test_missing_internal_group_fails_after_internal_upload
+    @groups.reject!(&:is_internal_group)
+    error = assert_raises(RuntimeError) { with_apple { @lane.run_beta } }
+    assert_match(/No Internal TestFlight group/, error.message)
     assert_equal 1, @lane.uploads.length
     assert_equal [["staging", "1.0.0", 154]], @lane.pointers
+  end
+
+  def test_missing_all_external_groups_fails_after_internal_upload
+    @groups.reject! { |group| !group.is_internal_group }
+    error = assert_raises(RuntimeError) { with_apple { @lane.run_beta } }
+    assert_match(/No External TestFlight groups/, error.message)
+    assert_equal 1, @lane.uploads.length
+    assert_equal [["staging", "1.0.0", 154]], @lane.pointers
+  end
+
+  def test_release_version_mismatch_fails_before_upload
+    ENV["FITFIGHT_RELEASE_VERSION"] = "1.0.1"
+    error = assert_raises(RuntimeError) { with_apple { @lane.run_beta } }
+    assert_match(/does not match release version 1.0.1/, error.message)
+    assert_empty @lane.uploads
+  ensure
+    ENV.delete("FITFIGHT_RELEASE_VERSION")
   end
 end

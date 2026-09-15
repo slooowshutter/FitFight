@@ -41,7 +41,7 @@ The web kit in [`docs/design/source/`](design/source/README.md) is the look. Swi
 - Live fight cards carry their own leaderboard and money line
 - Version label at the top; Versions under You → Settings
 
-That was the original port, not the current product. Marketing version is now `1.0.0`; CI bumps only the **build number** for TestFlight. Do **not** bump marketing version for a TestFlight ship. See [`shipping.md`](shipping.md#versions-vs-builds-why-friends-wait).
+That was the original port, not the current product. Marketing version is now `1.0.1`; CI bumps only the **build number** for TestFlight. Do **not** upload 1.0.0. Apple closed that train. See [`shipping.md`](shipping.md#versions-vs-builds-why-friends-wait).
 
 ## v0.6 (design exploration) — retired 25 Aug 2026
 

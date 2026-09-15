@@ -6,6 +6,8 @@ This document defines how FitFight can support different Metrics and different w
 
 **Review, 15 Sep 2026:** the existing Measure / Score / Result model is a useful foundation. The [proposed extensions](#proposed-extensions-15-sep-2026) below add precise conditions, Stake rules, and Allocation rules. They are design proposals, not approved features, API contracts, or a payment implementation. The three-part core and its existing examples remain below for reference.
 
+**Multiple objectives, 16 Sep 2026:** a goal Fight can require several Objectives, and **all of them must be met**. The [rules below](#multiple-objectives-all-are-required) define that engine design without enabling a new live app mode.
+
 The central recommendation is to compose a small set of well-defined operations. A complete Fight must explain **what counts, over which time window, how it is scored, who succeeds or loses, who owes what, and who receives what**. A catalog of named presets can make that model approachable without exposing all its combinations in the app.
 
 ## The model
@@ -23,6 +25,8 @@ Every Fight rule has three independent parts:
 - **Measure**: what activity data to use, such as Steps, distance, active minutes, or workouts.
 - **Score**: how to calculate the number shown for each member, such as total, average per day, or number of days reaching a goal.
 - **Result**: what that number means for winning and losing: first wins, last loses, a goal everyone can hit, a ranked band, or proportional sharing.
+
+The singular Measure and Score above describe the simplest Fight. A multiple-objective goal uses named Measures and Scores under one Result. An **Objective** is a checkable condition on a Score; several Objectives can share one Measure without inventing another Metric.
 
 Score and Result stay independent. “10,000 Steps every day” vs “10,000 Steps on average” is Score plus Reach. “Only last place pays” vs “first place wins” is Result. Do not invent a new Measure for those.
 
@@ -254,13 +258,13 @@ This avoids both extremes:
 
 ## Rules that apply to every combination
 
-- A Fight locks its Measure, Score, Result, versions, values, time zone, and tie rule before competition starts.
+- A Fight locks every Measure, Score, Objective, their combination, Result, versions, values, time zone, and tie rule under the existing acceptance/start locking rules.
 - The UI states the rule in plain language before anyone accepts.
 - Standings chrome follows the Result. Do not let the client invent a different winner or loser than the server Result.
 - Every Score includes its unit: Steps, Steps per day, successful days, workouts, or another explicit unit.
 - A daily average divides by every scheduled Fight day, never only days containing activity.
 - Missing or unsynchronized data is not silently treated as confirmed zero activity while the Fight is live.
-- One member uses one selected Data source for the Fight's Measure so duplicate provider data is not added together.
+- One member uses one selected Data source per Measure in the Fight so duplicate provider data is not added together. Objectives sharing that Measure use the same selected source.
 - Raw activity may appear as supporting detail but never acts as an undisclosed tie-breaker.
 - Workout rules reduce casual gaming but cannot prove that someone truly exercised. Provenance and verification remain visible.
 - Rules and calculations are versioned so completed Fights remain reproducible.
@@ -279,6 +283,7 @@ The Result decides the standings treatment. Do not invent a separate UI-only rul
 | `last_loses`                              | A labeled separator between last and second-to-last, such as “Last one loses.” Ember on the last row. The Station F tournée uses this.                            |
 | `ranking_zones`                           | One band or separator per zone, using that zone's `label`. Top win bands read like European qualification rows. A bottom lose band uses the last-loses separator. |
 | `reach`                                   | Succeeded or failed per member. It is not a race table.                                                                                                           |
+| Multiple-objective goal                    | One checklist per member with progress and data status for every Objective. All must pass; a completed count is progress, not a ranking or a partial win.          |
 | `proportional`                            | Share of the pot, not podium colors.                                                                                                                              |
 
 Moss is winning / you. Ember is urgency / losing. Gold stays progress only. Do not invent a new accent family for league bands.
@@ -340,6 +345,60 @@ Comparisons are `>`, `>=`, `<`, `<=`, and inclusive `between(lower, upper)`. Val
 
 Compound goals may need several summaries of one Measure, such as its average and its best day. The proposed Result would evaluate those named summaries while the UI explains each condition. This extends the existing single-Score sketch; do not force unrelated conditions into an unexplained number. Reject incompatible units, impossible counts, and contradictory bounds before acceptance.
 
+### Multiple objectives: all are required
+
+A multiple-objective Fight has one common window and one goal Result. Each Objective identifies its Measure, Score calculation, comparison, Target, and unit. The Result combines the required Objectives with **AND**, represented by the draft's existing `all` condition. `any` and `at_least` describe different agreements and must not replace this rule.
+
+For example, over seven full Fight days, each member must:
+
+1. Reach at least 70,000 total Steps.
+2. Reach 10,000 Steps on at least five days.
+3. Reach 15,000 Steps on at least one day.
+
+These are three Objectives over one Steps Measure, using total Steps, successful-day count, and best-day Scores. Completing two out of three is not success, and extra Steps on one Objective cannot buy completion of another. Every Objective remains visible even after one fails.
+
+The same composition can combine different approved Measures, for example 70,000 Steps **and** three qualified workouts within the Fight window. Each retains its own unit, qualification rules, selected source, and completeness. This defines how to combine them; it does not enable Workout Count or establish a provider's ability to supply it. Independent Objectives may be completed on different days. Requiring them on the same day or in the same workout needs an explicit shared-bucket rule, which the current draft does not represent.
+
+The existing draft shape is sufficient for the independent Objectives:
+
+```ts
+// Excerpt: each referenced Objective is a named comparison in conditions.
+{
+    conditions: [
+        // total_met, five_days_met, and big_day_met comparisons precede this entry.
+        {
+            id: "all_objectives_met",
+            type: "all",
+            conditionIds: ["total_met", "five_days_met", "big_day_met"],
+        },
+    ],
+    result: {
+        type: "goal",
+        conditionId: "all_objectives_met",
+        scope: "each_member",
+    },
+}
+```
+
+`each_member` evaluates the complete checklist separately for each member. Alice completing Steps and Bob completing workouts does not make either member successful. Requiring every member to complete their own checklist uses `every_member`; pooling activity uses explicit group Scores and a `group` Result. These scopes must be stated before acceptance.
+
+#### Engine evaluation and incomplete data
+
+Evaluate each named Score from its qualified evidence, then evaluate every Objective, then combine the condition states. Scores shared by several Objectives reuse the same calculation and input revision. Keep progress and completeness for each Objective, with its current value, Target, unit, and explanation. Do not sum Steps, workouts, or completion percentages into a synthetic winning Score.
+
+| Objective states at the evaluation revision | Combined condition | Completeness |
+| ------------------------------------------ | ------------------ | ------------ |
+| Every Objective met                        | Met                | Complete     |
+| At least one not met, all data complete     | Not met            | Complete     |
+| None known to be unmet, at least one unknown | Unresolved        | Incomplete   |
+| One known to be unmet and another unknown   | Not met            | Incomplete   |
+
+These are condition states, not permission to finalize early. During the Fight, show provisional progress such as "2 of 3 objectives met" and "Awaiting workout data". A ceiling can stop passing as activity arrives, and corrections can change any Objective. A missing source never counts as zero, a passed Objective, or permission to drop that Objective.
+
+After the window and grace period close, apply the locked incomplete-data and all-incomplete policies before assigning final outcomes or obligations. With complete evidence, every required Objective passing produces success; any unmet Objective produces failure. Incomplete evidence follows the disclosed forfeit/void policy, even if another Objective already fails. Store the per-Objective evidence revision and outcome with the combined Result so it can be explained and reproduced.
+
+The Objective list, Targets, Measures, source policies, member/group scope, and AND combination lock with the agreement. Reject empty or repeated Objective references, unknown references, cycles, incompatible units, and mixed member/group scope. Validate every Measure's approved operations and required evidence before accepting a Fight; parsing the draft alone cannot prove these capabilities.
+
 #### Minimum and maximum need careful wording
 
 For a fully observed, non-empty set of scheduled days:
@@ -371,7 +430,7 @@ any_day(all(steps >= 10_000, workout_count >= 1))
 all(any_day(steps >= 10_000), any_day(workout_count >= 1))
 ```
 
-The first requires both activities on the same day; the second allows different days. The inner values refer to that day's aggregates. This multi-Measure example exceeds today's one-Measure Fight rule and remains a separate extension to review, not a hidden exception to the current architecture.
+The first requires both activities on the same day; the second allows different days. The inner values refer to that day's aggregates. The second follows the independent multiple-objective model above; the first still needs a shared-bucket extension. Both remain outside today's Steps-only production mode.
 
 ### Score operations and their evidence
 
@@ -547,6 +606,10 @@ For example, if only two members remain eligible and do not tie, they receive EU
 | Daily Steps [8,000, 12,000]                           | Average 10,000 succeeds; every day at least 10,000 fails; one qualifying day              |
 | Daily Steps [0, 20,000]                               | Average 10,000 succeeds; daily floor fails; best day is 20,000                            |
 | Daily Steps [unknown, 20,000]                         | Daily average/floor/ceiling cannot be declared final from these inputs                    |
+| Seven days [10,000, 10,000, 10,000, 10,000, 10,000, 10,000, 10,000] | Total and five-day Objectives pass; the 15,000-Step day Objective fails, so the complete goal fails |
+| Seven days [15,000, 10,000, 10,000, 10,000, 10,000, 10,000, 5,000] | All three Steps Objectives pass, so the complete goal succeeds |
+| Steps Objective met, workout evidence unknown        | Combined goal unresolved; apply the agreed incomplete-data policy at finalization        |
+| Alice meets only Steps, Bob meets only workouts       | Neither completes an `each_member` checklist; their Objectives cannot be pooled            |
 | Days [8,000, 8,000, 0, 8,000] with target 8,000       | Three successful days; longest streak two                                                 |
 | Three valid workouts on one day                       | Workout count three; successful workout days one                                          |
 | No workouts                                           | A rule requiring at least one qualifying workout fails; unknown coverage stays unresolved |
@@ -563,7 +626,7 @@ Offer named presets first, with one sentence explaining the agreement and a work
 
 Keep a small scoring-module interface: locked terms plus eligible activity evidence and lineup produce Scores, outcomes, obligations, allocations, completeness, and explanations. Payment execution and action fulfillment stay separate from that calculation. Store enough rule/version/input-revision evidence to reproduce the result, within the existing data-retention and deletion rules.
 
-Before implementing each preset, settle its metric/source definition, schedule, predicates, qualifying population, tie behavior, incomplete-data policy, and any Stake/Allocation exceptions. Add only the evidence and operations needed for that preset. Money, teams, multiple Measures, stages, and series each need their own reviewed specification when prioritized.
+Before implementing each preset, settle its metric/source definition, schedule, predicates, qualifying population, tie behavior, incomplete-data policy, and any Stake/Allocation exceptions. Add only the evidence and operations needed for that preset. Multiple-objective composition is defined above; every additional Measure still needs its own approved Metric/source specification. Money, teams, shared-bucket conditions, stages, and series each need their own reviewed specification when prioritized.
 
 ## Executable Zod draft
 
@@ -663,6 +726,7 @@ const goal: Pick<FightRulesDraft, "scores" | "conditions" | "result"> = {
 ### Explicit semantics
 
 - Metric definition identifiers in the examples are illustrative references. A future approved-definition registry must resolve them; naming one does not implement that Metric or prove provider support.
+- A multiple-objective goal references all required Objective conditions through one `all` condition. This is a use of the existing `conditions` and `result` fields, not a second list of rules in action text or a new API field. Per-Objective evaluation and progress remain future engine work.
 - A `group` Score combines eligible group activity before bucketing. A `members` condition lifts a per-member condition into a group condition, such as everyone contributing at least 10,000 Steps. This allows a group total and an every-member minimum to be combined without mixing their scopes.
 - `withinBucket.count`, written as `{ type: "aggregate", operation: "count" }`, counts canonical observations, not arbitrary provider records. Workout count normally uses a qualified-workout Metric whose values total to a number of workouts.
 - `time_matching` requires interval coverage in the chosen Metric definition. No interpolation across unknown gaps, conversion from peak intensity, or assumption about a provider's intensity scale is implied.

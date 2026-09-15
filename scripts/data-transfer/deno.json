@@ -1,0 +1,10 @@
+{
+    "imports": {
+        "zod": "npm:zod@3.25.76",
+        "postgres": "npm:postgres@3.4.7",
+        "@supabase/supabase-js": "npm:@supabase/supabase-js@2.112.4",
+        "@/lib/types/releases/data-transfer": "../../web/lib/types/releases/data-transfer.ts",
+        "@/lib/releases/data-transfer": "../../web/lib/releases/data-transfer.ts",
+        "@/lib/supabase/queries/data-transfer-supabase-query": "../../web/lib/supabase/queries/data-transfer-supabase-query.ts"
+    }
+}

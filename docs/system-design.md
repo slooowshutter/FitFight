@@ -201,7 +201,7 @@ Starting before every invitee answers means every accepted member agrees that th
 
 Fight-level terms become immutable when the first invite is accepted or the Fight becomes `scheduled`/`live`, whichever happens first:
 
-- Measure, Score rule, Result rule, their versions, and all of their values
+- Every Measure, Score rule, required Objective and its combination, Result rule, their versions, and all of their values
 - Fight start and end instants
 - Fight time zone
 - Stake and currency/action text
@@ -444,6 +444,8 @@ A Fight rule has three independent, readable parts:
 - **Score**: total, average per day, days reaching a value, or another reviewed calculation
 - **Result**: highest wins, last loses, reach a value, ranking zones, or proportional sharing
 
+For the multiple-objective design, a Fight may use several named Measures and Scores under one Result. Each **Objective** is a condition on a Score, and a goal succeeds only when **all required Objectives pass** for the stated member or group. Extra progress on one never compensates for another. This extends the composition model; the live product remains Steps-only.
+
 This avoids a separate `daily_steps`, `daily_distance`, `average_daily_steps`, and `average_daily_distance` implementation. It also avoids an arbitrary formula language: the server owns a compatibility list of approved Measure and Score combinations.
 
 [`fight-rules.md`](fight-rules.md) is the detailed specification, with every worked example, the 8,000-plus-12,000 case, workout-gaming limits, invariants, and a draft Zod shape.
@@ -476,9 +478,9 @@ Future running, swimming, volleyball, and similar records are **Activities**, no
 
 ### Invariants
 
-- A Fight has exactly one Metric definition version.
-- A Fight has exactly one Measure, Score rule, and Result rule with immutable validated values and versions.
-- A Fight member has at most one active Data source for that Metric.
+- Each Measure references exactly one Metric definition version. Current production Fights have one Steps Measure.
+- A Fight has one Result rule over immutable validated Measures, Score rules, and, for a goal, required Objectives. Current production uses one Measure and one Score; the multiple-objective design combines its Objectives with `all`.
+- A Fight member has at most one active Data source per Measure. Objectives sharing that Measure share its selected source and qualified evidence.
 - Every Observation has event time, received time, source, external identity, revision, and provenance.
 - The same provider record revision is idempotent.
 - A provider deletion retracts the corresponding Observation and triggers recomputation.
@@ -765,6 +767,16 @@ The scoring engine is pure and versioned:
 (fight rules, accepted members, canonical aggregates, cutoff revision)
     -> projections or final results
 ```
+
+### Multiple-objective goals: engine design
+
+Use the existing draft's named Scores, comparison conditions, and `all` condition, with one goal Result. Evaluate the complete condition graph for each member or the explicitly declared group scope. Reuse shared Score calculations and keep each Objective's value, Target, unit, condition state, completeness, and evidence revision alongside the combined outcome.
+
+All required Objectives must pass. Do not average completion percentages, allow surplus on one Objective to offset another, or combine different members' achievements unless the accepted rule explicitly uses group Scores. Objectives can use different approved Measures within the common Fight window; requiring the same day or workout is a separate shared-bucket rule.
+
+Unknown evidence stays unknown. Condition evaluation and coverage are separate: an unmet Objective can make the combined condition false while another Objective still lacks data. Live progress stays provisional; finalization first applies the locked cutoff and incomplete-data policies, then records the final per-Objective and combined outcomes. The UI renders these server explanations as a checklist, including outstanding and unsynchronized Objectives.
+
+See [multiple-objective rules and evaluation cases](fight-rules.md#multiple-objectives-all-are-required). The draft schema already represents independent Objectives; the runtime scoring engine, API, persistence, and native creation flow do not implement them. Shipping requires reviewed presets and Metric evidence, a compatible API/database rollout, and engine regression tests. Preserve existing Most Steps contracts and results during that rollout.
 
 ### Result rules
 

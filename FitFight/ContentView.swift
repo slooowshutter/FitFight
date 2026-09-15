@@ -278,12 +278,12 @@ struct ContentView: View {
             fightsStack
         case .newFight:
             NewFightView()
-        case .you:
-            YouView()
         case .feed:
             FeedView()
         case .feedback:
             FeedbackTabView()
+        case .you:
+            YouView()
         }
     }
 

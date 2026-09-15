@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 14,
+            notes: "Take Photo and Photo Library now open after you tap Media."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
             notes: "A failed Apple Health sync now shows why, in ember, with a Retry pill instead of Connected."
         ),
         ReleaseNote(

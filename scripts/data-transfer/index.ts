@@ -1,4 +1,4 @@
-/** Temporary cloud maintenance endpoint. Its allowlist deliberately excludes production. */
+/** Temporary cloud maintenance endpoint for the authorized 1.1.1 production transfer. */
 import { Buffer } from "node:buffer";
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import postgres from "postgres";

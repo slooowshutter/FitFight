@@ -204,7 +204,10 @@ export const transferEnvironmentSchema = z.object({
     SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
     FF_RELEASE_TRANSFER_TOKEN: z.string().regex(/^[0-9a-f]{64}$/),
     FF_RELEASE_TRANSFER_EXPIRES_AT: z.string().datetime(),
-    FF_RELEASE_TRANSFER_TARGET: z.literal("qkkhkfepjhdgowmhhpyf"),
+    FF_RELEASE_TRANSFER_TARGET: z.enum([
+        "qkkhkfepjhdgowmhhpyf",
+        "pvqntpteehdvhqyctwum",
+    ]),
 });
 
 export const transferFailureMetadataSchema = z.object({

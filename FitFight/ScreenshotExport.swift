@@ -130,10 +130,10 @@ enum ScreenshotExport {
                 ("fight-feed", AnyView(FightDetailView(fight: group, pane: .feed)), .fights),
                 ("new", AnyView(NewFightView()), .newFight),
                 ("review", AnyView(NewFightView(opening: .create, initialStep: 4)), .newFight),
-                ("feed", AnyView(FeedbackTabView()), .feedback),
-                ("compose", AnyView(FeedComposeSheet()), .feedback),
                 ("you", AnyView(YouView()), .you),
                 ("picker", AnyView(CompanionPicker(selection: .badger)), .you),
+                ("feed", AnyView(FeedbackTabView()), .feedback),
+                ("compose", AnyView(FeedComposeSheet()), .feedback),
             ]
             for (name, view, tab) in shots {
                 write(wrap(view, name == "compose" ? nil : tab), name: "\(mode.rawValue)-\(name)", height: canvas.height, to: folder, scale: 1)

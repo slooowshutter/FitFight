@@ -191,9 +191,10 @@ fight is still `scheduled`), extra usernames, and kicking anyone except the owne
 `final`, and `cancelled` stay frozen. Old apps never call this route.
 
 `POST /api/v1/fights/{fightID}/cancel` is owner-only. The app’s Edit summary Delete
-uses it. It marks the fight `cancelled` and pauses its series so a repeating fight does
-not mint the next window. `final` fights stay frozen. Old apps never called this from
-the Edit screen.
+uses it. It pauses the series first, then marks the fight `cancelled`, so a repeating
+fight does not mint the next window. A failed pause leaves the fight live so the owner
+can retry from Edit. A retry on an already-cancelled fight still pauses. `final` fights
+stay frozen. Old apps never called this from the Edit screen.
 
 Recalculation locks the Fight, then accepted memberships, before reading the latest
 selected-source exact-window snapshots. It freezes scores, completeness, selected

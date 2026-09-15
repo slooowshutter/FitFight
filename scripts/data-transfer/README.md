@@ -10,9 +10,9 @@ Marc authorizes the production rollout.
 
 The planner matches Apple provider identities, keeps existing production account
 and identity IDs, and remaps declared account/source foreign keys and media paths.
-Existing production referral codes remain unchanged. The operator must choose
-whether the two shared profiles use beta or production details. Unrelated
-production history remains present.
+Existing production referral codes remain unchanged. Beta usernames, names,
+avatars, and companions always win for shared profiles, including catch-up runs.
+There is no production-profile option. Unrelated production history remains present.
 
 New Auth rows use the required zero instance ID and empty confirmation/recovery/
 email-change fields. These are neutral defaults, not copied credentials. Supabase
@@ -30,7 +30,8 @@ that still references an operational upload stops preparation.
 Row conflicts, identity/email/username collisions, deletions, schema drift, and
 revoked shared activity connections stop the import. Daily Steps are never added
 together. Catch-up runs compare the new source, the previously imported value,
-and the current target; a production edit remains protected on later runs.
+and the current target; production edits outside profile details remain protected
+on later runs.
 
 ## Cloud deployment
 
@@ -64,9 +65,10 @@ invoke the source's `snapshot` or `media` actions from a workstation.
 
 POST JSON to the target function with the temporary bearer token:
 
-1. `{"action":"prepare","profile_policy":"beta"}` freezes the source and target
+1. `{"action":"prepare"}` freezes the source and target
    into a private checkpoint and returns `run_id`, counts, and expected digests.
-   Use `"production"` when that profile policy is chosen. A conflict returns 409.
+   Beta profile details are fixed. Existing requests that explicitly pass
+   `"profile_policy":"beta"` remain valid; `"production"` is rejected. A conflict returns 409.
 2. `{"action":"copy-media","run_id":"..."}` copies up to five files. Repeat
    until `files_remaining` is zero. Each file is checked against the source
    checksum and downloaded from the target for independent byte verification.
@@ -79,9 +81,9 @@ POST JSON to the target function with the temporary bearer token:
 5. `{"action":"verify","run_id":"..."}` checks the full database digest and
    reads every account through Supabase Auth, including its Apple identity.
    Run `verify-access.sql` on the linked target for both client/backend read roles.
-6. For a catch-up, prepare with the applied run's `previous_run_id`, keep the same
-   profile policy, and repeat the sequence. The new checkpoint covers later beta
-   activity. It must not overwrite a row edited independently in production.
+6. For a catch-up, prepare with the applied run's `previous_run_id` and repeat
+   the sequence. The new checkpoint covers later beta activity. Beta profile
+   details win again; other independently edited production rows stay protected.
 
 Historical restoration suppresses signup, scoring, and broadcast triggers inside
 the transaction. Foreign keys are checked explicitly before commit. Unique and
@@ -102,6 +104,6 @@ cloud checkpoint with the paused disposable project until release verification
 is complete, then delete that rehearsal project through the normal cleanup flow.
 
 Live production additionally requires Marc's rollout authorization, compatible
-production schema/backend deployment, a fresh recoverable backup, the shared
-profile choice, and an agreed final beta cutoff. The rehearsal alone does not
+production schema/backend deployment, a fresh recoverable backup, and an agreed
+final beta cutoff. The rehearsal alone does not
 authorize any of those live changes.

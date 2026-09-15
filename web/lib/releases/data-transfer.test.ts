@@ -3,6 +3,7 @@ import test from "node:test";
 import { planDataTransfer, transferDigest } from "@/lib/releases/data-transfer";
 import {
     transferSnapshotSchema,
+    transferRequestSchema,
     transferTableValues,
     type TransferRow,
 } from "@/lib/types/releases/data-transfer";
@@ -200,8 +201,19 @@ function transferFixtures() {
 
 test("a shared Apple account keeps production identity, referrals, and history while importing beta references", () => {
     const { ids, source, target } = transferFixtures();
+    assert.deepEqual(transferRequestSchema.parse({ action: "prepare" }), {
+        action: "prepare",
+        profile_policy: "beta",
+    });
+    assert.equal(
+        transferRequestSchema.safeParse({
+            action: "prepare",
+            profile_policy: "production",
+        }).success,
+        false,
+    );
     const before = structuredClone(target);
-    const plan = planDataTransfer(source, target, "beta", null);
+    const plan = planDataTransfer(source, target, null);
     assert.deepEqual(plan.conflicts, []);
     assert.equal(plan.total_accounts, 2);
     assert.equal(plan.shared_accounts, 1);
@@ -242,46 +254,52 @@ test("a shared Apple account keeps production identity, referrals, and history w
     assert.deepEqual(target, before);
 });
 
-test("production profile preference survives later imports while new accounts can receive beta changes", () => {
-    const { ids, source, target } = transferFixtures();
-    const first = planDataTransfer(source, target, "production", null);
-    source.rows["public.profiles"][1].display_name = "Updated new person";
-    const next = planDataTransfer(
-        source,
-        { ...target, rows: first.after },
-        "production",
-        first,
-    );
-    assert.deepEqual(next.conflicts, []);
-    assert.deepEqual(
-        next.after["public.profiles"].find((row) => row.user_id === ids.prod),
-        target.rows["public.profiles"][0],
-    );
-    assert.equal(
-        next.after["public.profiles"].find((row) => row.user_id === ids.added)
-            ?.display_name,
-        "Updated new person",
-    );
-    assert.throws(
-        () =>
-            planDataTransfer(
-                source,
-                { ...target, rows: first.after },
-                "beta",
-                first,
+test("beta profile details win on catch-up even when production also changed them", () => {
+    for (const betaChanged of [false, true]) {
+        const { ids, source, target } = transferFixtures();
+        const first = planDataTransfer(source, target, null);
+        const live = structuredClone({ ...target, rows: first.after });
+        const shared = live.rows["public.profiles"].find(
+            (row) => row.user_id === ids.prod,
+        );
+        assert.ok(shared);
+        shared.handle = "prod-changed";
+        shared.display_name = "Changed in production";
+        shared.avatar_media_id = null;
+        if (betaChanged) {
+            source.rows["public.profiles"][0].handle = "beta-latest";
+            source.rows["public.profiles"][0].display_name = "Latest beta name";
+        }
+        source.rows["public.profiles"][1].display_name = "Updated new person";
+        const next = planDataTransfer(source, live, first);
+        assert.deepEqual(next.conflicts, []);
+        assert.equal(next.writes["public.profiles"].length, 2);
+        assert.deepEqual(
+            next.after["public.profiles"].find(
+                (row) => row.user_id === ids.prod,
             ),
-        /Profile policy changed/,
-    );
+            {
+                ...source.rows["public.profiles"][0],
+                user_id: ids.prod,
+                referral_code: "PROD1",
+            },
+        );
+        assert.equal(
+            next.after["public.profiles"].find(
+                (row) => row.user_id === ids.added,
+            )?.display_name,
+            "Updated new person",
+        );
+    }
 });
 
 test("a catch-up import updates its own untouched rows and preserves unrelated production records", () => {
     const { ids, source, target } = transferFixtures();
-    const first = planDataTransfer(source, target, "beta", null);
+    const first = planDataTransfer(source, target, null);
     source.rows["public.fight_posts"][0].body = "Beta edited the post";
     const next = planDataTransfer(
         source,
         { ...target, rows: first.after },
-        "beta",
         first,
     );
     assert.deepEqual(next.conflicts, []);
@@ -298,16 +316,16 @@ test("a catch-up import updates its own untouched rows and preserves unrelated p
 
 test("a production edit remains protected across repeated catch-up runs", () => {
     const { source, target } = transferFixtures();
-    const first = planDataTransfer(source, target, "beta", null);
+    const first = planDataTransfer(source, target, null);
     const live = structuredClone({ ...target, rows: first.after });
     live.rows["public.fight_posts"][0].body = "Edited in production";
-    const second = planDataTransfer(source, live, "beta", first);
+    const second = planDataTransfer(source, live, first);
     assert.deepEqual(second.conflicts, []);
     assert.equal(second.writes["public.fight_posts"].length, 0);
-    const third = planDataTransfer(source, live, "beta", second);
+    const third = planDataTransfer(source, live, second);
     assert.equal(third.writes["public.fight_posts"].length, 0);
     source.rows["public.fight_posts"][0].body = "A different beta edit";
-    const conflict = planDataTransfer(source, live, "beta", third);
+    const conflict = planDataTransfer(source, live, third);
     assert.deepEqual(conflict.conflicts, [
         {
             table: "public.fight_posts",
@@ -319,12 +337,11 @@ test("a production edit remains protected across repeated catch-up runs", () => 
 
 test("source deletions are reported instead of deleting imported history", () => {
     const { source, target } = transferFixtures();
-    const first = planDataTransfer(source, target, "beta", null);
+    const first = planDataTransfer(source, target, null);
     source.rows["public.fight_posts"] = [];
     const next = planDataTransfer(
         source,
         { ...target, rows: first.after },
-        "beta",
         first,
     );
     assert.deepEqual(next.conflicts, [
@@ -339,10 +356,10 @@ test("source deletions are reported instead of deleting imported history", () =>
 
 test("an imported record deleted in production is never resurrected", () => {
     const { source, target } = transferFixtures();
-    const first = planDataTransfer(source, target, "beta", null);
+    const first = planDataTransfer(source, target, null);
     const live = structuredClone({ ...target, rows: first.after });
     live.rows["public.fight_posts"] = [];
-    const next = planDataTransfer(source, live, "beta", first);
+    const next = planDataTransfer(source, live, first);
     assert.deepEqual(next.conflicts, [
         {
             table: "public.fight_posts",
@@ -361,7 +378,7 @@ test("an unrelated production record with the same primary key blocks the import
             body: "Independent production content",
         },
     ];
-    const plan = planDataTransfer(source, target, "beta", null);
+    const plan = planDataTransfer(source, target, null);
     assert.deepEqual(plan.conflicts, [
         {
             table: "public.fight_posts",
@@ -379,7 +396,7 @@ test("identity, email, and username collisions fail before preparing writes", ()
             source.rows["auth.users"][1].email = "shared@example.invalid";
         if (collision === "username")
             source.rows["public.profiles"][1].handle = "prod-shared";
-        assert.throws(() => planDataTransfer(source, target, "beta", null));
+        assert.throws(() => planDataTransfer(source, target, null));
     }
 });
 
@@ -387,14 +404,14 @@ test("schema drift and unexpected media ownership fail before preparing writes",
     const { source, target } = transferFixtures();
     source.definitions["public.profiles"].columns.push("unexpected_column");
     assert.throws(
-        () => planDataTransfer(source, target, "beta", null),
+        () => planDataTransfer(source, target, null),
         /Schema differs/,
     );
     const fresh = transferFixtures();
     fresh.source.rows["public.media_objects"][0].object_path =
         "another-person/profile/image";
     assert.throws(
-        () => planDataTransfer(fresh.source, fresh.target, "beta", null),
+        () => planDataTransfer(fresh.source, fresh.target, null),
         /Unexpected media path/,
     );
 });

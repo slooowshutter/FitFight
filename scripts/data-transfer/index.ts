@@ -146,12 +146,7 @@ Deno.serve(async (request) => {
                 previous = archive.plan;
             }
             phase = "plan";
-            const plan = planDataTransfer(
-                source,
-                target,
-                input.profile_policy,
-                previous,
-            );
+            const plan = planDataTransfer(source, target, previous);
             if (plan.conflicts.length > 0)
                 return Response.json(
                     { status: "conflicts", conflicts: plan.conflicts },

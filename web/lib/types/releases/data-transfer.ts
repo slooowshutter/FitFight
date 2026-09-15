@@ -53,8 +53,6 @@ export const transferUserColumnValues = [
     "deleted_at",
 ] as const;
 export const transferRowSchema = z.record(z.unknown());
-export const transferProfilePolicyValues = ["beta", "production"] as const;
-export const transferProfilePolicySchema = z.enum(transferProfilePolicyValues);
 
 export const transferTableDefinitionSchema = z.object({
     columns: z.string().array().min(1),
@@ -149,7 +147,7 @@ export const transferConflictSchema = z.object({
 });
 
 export const transferPlanSchema = z.object({
-    profile_policy: transferProfilePolicySchema,
+    profile_policy: z.literal("beta"),
     user_ids: z.record(z.string().uuid()),
     source_ids: z.record(z.string().uuid()),
     identity_ids: z.record(z.string().uuid()),
@@ -161,7 +159,6 @@ export const transferPlanSchema = z.object({
     conflicts: transferConflictSchema.array(),
     shared_accounts: z.number().int().nonnegative(),
     total_accounts: z.number().int().nonnegative(),
-    preserved_profile_ids: z.string().uuid().array(),
 });
 
 export const transferArchiveSchema = z.object({
@@ -183,7 +180,7 @@ export const transferRequestSchema = z.discriminatedUnion("action", [
     z
         .object({
             action: z.literal("prepare"),
-            profile_policy: transferProfilePolicySchema,
+            profile_policy: z.literal("beta").default("beta"),
             previous_run_id: z.string().uuid().optional(),
         })
         .strict(),
@@ -236,7 +233,6 @@ export const transferReceiptSchema = z.object({
 
 export type TransferTable = z.infer<typeof transferTableSchema>;
 export type TransferRow = z.infer<typeof transferRowSchema>;
-export type TransferProfilePolicy = z.infer<typeof transferProfilePolicySchema>;
 export type TransferTableDefinition = z.infer<
     typeof transferTableDefinitionSchema
 >;

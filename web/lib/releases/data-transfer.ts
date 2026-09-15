@@ -9,7 +9,6 @@ import {
     transferTableValues,
     transferUserSchema,
     type TransferPlan,
-    type TransferProfilePolicy,
     type TransferRow,
     type TransferSnapshot,
 } from "@/lib/types/releases/data-transfer";
@@ -29,15 +28,12 @@ export function transferDigest(value: unknown): string {
     return createHash("sha256").update(canonical).digest("hex");
 }
 
-/** Conflicts block the whole import. A later run only replaces rows its previous run still owns. */
+/** Beta profile details win; other records retain three-way conflict protection. */
 export function planDataTransfer(
     source: TransferSnapshot,
     target: TransferSnapshot,
-    profilePolicy: TransferProfilePolicy,
     previous: TransferPlan | null,
 ): TransferPlan {
-    if (previous && previous.profile_policy !== profilePolicy)
-        throw new Error("Profile policy changed between transfer runs");
     const conflictCounts = new Map<string, number>();
     const sourceUsers = transferUserSchema
         .array()
@@ -137,13 +133,6 @@ export function planDataTransfer(
     const targetProfiles = transferProfileSchema
         .array()
         .parse(target.rows["public.profiles"]);
-    const preservedProfileIds = previous
-        ? previous.preserved_profile_ids
-        : targetProfiles
-              .filter((profile) =>
-                  Object.values(userIds).includes(profile.user_id),
-              )
-              .map((profile) => profile.user_id);
     for (const profile of sourceProfiles) {
         if (profile.deleted_at !== null)
             throw new Error("A deleted source profile cannot be imported");
@@ -263,14 +252,7 @@ export function planDataTransfer(
             ) {
                 row = existing;
             } else if (existing && table === "public.profiles") {
-                if (
-                    profilePolicy === "production" &&
-                    preservedProfileIds.includes(z.string().parse(row.user_id))
-                ) {
-                    row = existing;
-                } else {
-                    row.referral_code = existing.referral_code;
-                }
+                row.referral_code = existing.referral_code;
             } else if (existing && table === "public.data_sources" && !prior) {
                 const currentSource = transferSourceSchema.parse(existing);
                 const betaSource = transferSourceSchema.parse(row);
@@ -300,9 +282,8 @@ export function planDataTransfer(
                 }
             } else if (transferDigest(existing) !== transferDigest(row)) {
                 const explicitlyMerged =
-                    !previous &&
-                    (table === "public.profiles" ||
-                        table === "public.data_sources");
+                    table === "public.profiles" ||
+                    (!previous && table === "public.data_sources");
                 if (
                     explicitlyMerged ||
                     (prior &&
@@ -354,7 +335,7 @@ export function planDataTransfer(
 
     // 3. One transaction must produce this exact snapshot; a changed target requires a fresh plan.
     return transferPlanSchema.parse({
-        profile_policy: profilePolicy,
+        profile_policy: "beta",
         user_ids: userIds,
         source_ids: sourceIds,
         identity_ids: identityIds,
@@ -371,6 +352,5 @@ export function planDataTransfer(
             targetUsers.some((existing) => existing.id === userIds[user.id]),
         ).length,
         total_accounts: after["auth.users"].length,
-        preserved_profile_ids: preservedProfileIds,
     });
 }

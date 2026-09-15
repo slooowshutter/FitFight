@@ -85,8 +85,9 @@ The completed rehearsal combined 23 beta accounts and 3 production accounts into
 proved rollback and repeat-run safety, and applied a later 86-row catch-up. Auth
 reads passed for all users and a fresh importer-created fixture. Both read roles,
 the build 113 SQL fixture, TypeScript/Deno checks, and 247 unit tests passed.
-The two shared profiles used beta details on the disposable copy only; the live
-choice remains pending. A fresh production backup and installed-client Apple
+Marc confirmed **beta always** for the two shared profiles, including catch-ups.
+Production account IDs, referral codes, and unrelated history remain preserved.
+A fresh production backup and installed-client Apple
 sign-in/API checks are still required for the live rollout.
 
 ### Proposed transfer sequence

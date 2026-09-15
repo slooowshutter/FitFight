@@ -58,12 +58,18 @@ returns 200 without `profile_api`; its release endpoint still returns 404. The
 public build 113 remains supported. No physical-device Apple sign-in or candidate
 HTTP smoke test against the imported copy was performed.
 
-Before production: Marc must choose beta or production details for the 2 shared
-profiles, authorize the held main/live rollout, and agree the final beta cutoff.
+Marc chose **beta always** for the shared profiles. Beta usernames, names, avatars,
+and companions win on both the initial import and catch-ups. Production account
+IDs, referral codes, and unrelated history stay intact. The operator's production-
+profile option is removed; existing beta checkpoints remain readable.
+
+Before production: Marc must authorize the held main/live rollout and agree the
+final beta cutoff.
 Apply compatible production schema/backend first, preserve a fresh recoverable
 backup, repeat the verified transfer, then check installed-client login and the
-production API. The rehearsal used beta profile details only on the disposable
-copy; it does not decide the live profile choice.
+production API. The completed cloud rehearsal used the now-approved beta details.
+The fixed preference and profile catch-up precedence were checked with TypeScript,
+Deno, and the 247 backend tests; no new cloud import was run for this policy change.
 
 ## Release workspace reconciliation, 15 Sep 2026 evening
 

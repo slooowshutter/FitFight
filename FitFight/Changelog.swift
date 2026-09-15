@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 15,
+            notes: "Invited on Fights now shows how many invitations are waiting. The number hides when there are none."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 15,
             notes: "Edit fight now keeps the version and header tight at the top, and the recap names your opponents instead of showing join instructions."
         ),
         ReleaseNote(

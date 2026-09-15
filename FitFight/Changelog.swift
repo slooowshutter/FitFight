@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 15,
+            notes: "You is now the last tab: Fights, New, Feed, Feedback, You."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 15,
             notes: "Invited on Fights now shows how many invitations are waiting. The number hides when there are none."
         ),
         ReleaseNote(

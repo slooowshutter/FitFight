@@ -1,12 +1,12 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **15 Sep 2026**. Next prepared app: **1.1.1**.
+Read this before building. Last updated **16 Sep 2026**. Next prepared app: **1.1.1**.
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
 ---
 
-**Last TestFlight:** 15 Sep 2026. **1.1.0 (200)** from [#234](https://github.com/slooowshutter/FitFight/pull/234). Internal Tester and Friends Beta, same IPA. Friends wait Apple beta review (`WAITING_FOR_BETA_REVIEW`). Overlay: `latest` 190, `review`/`internal` 200.
+**Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
 
 ## Release workspace reconciliation, 15 Sep 2026 evening
 
@@ -23,7 +23,18 @@ The direct develop-to-preview PR conflicted with prior snapshot history.
 to the exact tested develop tree, `8f49dc4a3e3d5548e2c2b0c055a99d85d35d2f6e`.
 It replaced #242 and merged to preview as `d97145a` at 22:05 UTC on 15 September.
 The [TestFlight upload](https://github.com/slooowshutter/FitFight/actions/runs/35029178930)
-is running. Main and the production data transfer remain on hold.
+succeeded, including processing and assignment to both tester groups. Database,
+Web API, and simulator checks on the preview merge also passed. Main and the
+production data transfer remain on hold.
+
+At 22:17 UTC, the published release manifest contains internal build 201, while
+the live staging endpoint still returns internal build 200 with enforcement off.
+The endpoint's refresh remains to be observed; this does not prevent build 201
+from using staging. No physical-device login or HealthKit check was performed.
+Safari's screenshot picker stopped responding to Computer Use. The twelve new
+gallery images are verified, but none is uploaded to the 1.1.1 draft yet; its
+English 6.9-inch screenshot set is empty pending replacement. Saved listing text
+was verified before the picker failure. Privacy answers and submission are pending.
 
 Staging now has the three previously missing migrations: notification preferences
 and social outbox kinds, Fight Realtime invalidations, and chart checkpoints.

@@ -1,7 +1,8 @@
 # FitFight release preparation: now 1.1.1
 
-Marc authorized the production update and one-time beta data migration on
-15 September 2026. PR creation still requires an explicit PR request under AGENTS.md.
+On 15 September 2026, Marc authorized the release PR and preview promotion, plus
+App Store listing preparation. He deferred the data transfer and main promotion
+until after reviewing the transfer plan. Production remains on hold.
 
 The latest merged fixes select **1.1.1**. Earlier 1.1.0 preparation below is historical; refresh the draft and screenshots for the final 1.1.1 candidate.
 
@@ -73,6 +74,36 @@ Do not copy sessions, APNs device registrations, pending jobs, or encrypted Appl
 refresh credentials under a different environment's key.
 
 The source import and storage transfer are not implemented or executed yet.
+
+### Proposed transfer sequence
+
+1. Refresh the read-only inventory, then create and verify a restorable production
+   backup. Rehearse on a disposable cloud copy with the final schema and backend.
+2. Match accounts by Apple identity. The earlier audit implies 20 new accounts
+   plus the 3 existing production accounts. Keep production account IDs for the
+   2 overlapping people and map their beta-owned records to those IDs.
+3. Check profile, email, daily Health, source, and record-ID collisions before
+   importing. Preserve production history. Do not add together two copies of the
+   same person's daily Steps or silently overwrite conflicting records.
+4. Transfer related profiles, Fights, memberships, activity history, posts, and
+   media using the same account/source mapping. Copy the actual stored files and
+   update owner-dependent paths; database rows alone do not transfer file bytes.
+5. Verify account and record counts, references, permissions, stored results, and
+   file hashes. Test login and the changed API against the rehearsed data.
+6. After Marc authorizes production, repeat the verified import with a fresh
+   backup. Capture later beta writes through an agreed cutoff near public release;
+   an early snapshot alone would miss activity during Apple's review.
+
+Users should expect to sign in with the same Apple ID in the production app.
+Existing beta sessions are not transferred. After the agreed cutoff, production
+holds real history and staging remains independent for testing. This is a one-time
+transition, not ongoing synchronization between the two environments.
+
+Supabase documents [Auth migration and session validity](https://supabase.com/docs/guides/troubleshooting/migrating-auth-users-between-projects)
+and [database and Storage transfer](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore).
+The account merge and conflict handling above are FitFight-specific work that
+still needs implementation and rehearsal.
+
 After maintenance, the live audit confirmed three missing migrations. Notification
 preferences/social kinds, Fight Realtime invalidations, and chart checkpoints were
 applied and verified before the preview promotion. Six old timestamps were
@@ -86,8 +117,9 @@ identities or beta data in production.
 1. Release PR #241 is merged into `develop` with database, native, and web checks
    passing. Current Health collection/privacy disclosures still need final review.
 2. Staging schema is reconciled and #243 is merged into `preview` at `d97145a`.
-   TestFlight upload run `35029178930` is in progress. Verify its distribution and
-   the installed candidate before promoting production.
+   TestFlight upload run `35029178930` passed. Build `1.1.1 (201)` finished Apple
+   processing and is assigned to Internal Tester and Friends Beta. Friends wait
+   for beta review; verify the installed candidate before promoting production.
 3. Rehearse account/history/media import and verify a recoverable backup.
 4. Merge `preview` into `main`; apply compatible production migrations before the
    backend needs them, verify production settings, and complete the verified import.

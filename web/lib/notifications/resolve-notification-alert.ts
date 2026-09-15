@@ -40,6 +40,22 @@ const staticCopy: Record<
     fr: { title: "FitFight", body: "Le résultat est tombé. Ouvrez FitFight." },
   },
   daily_status: fallbackCopy,
+  feed_post: {
+    en: { title: "FitFight", body: "Someone posted in the feed." },
+    fr: { title: "FitFight", body: "Quelqu’un a publié dans le fil." },
+  },
+  post_comment: {
+    en: { title: "FitFight", body: "Someone commented on your post." },
+    fr: { title: "FitFight", body: "Quelqu’un a commenté ta publication." },
+  },
+  comment_reply: {
+    en: { title: "FitFight", body: "Someone replied to your comment." },
+    fr: { title: "FitFight", body: "Quelqu’un a répondu à ton commentaire." },
+  },
+  post_reaction: {
+    en: { title: "FitFight", body: "Someone reacted to your post." },
+    fr: { title: "FitFight", body: "Quelqu’un a réagi à ta publication." },
+  },
 };
 
 export function resolveNotificationAlert(input: {
@@ -49,7 +65,7 @@ export function resolveNotificationAlert(input: {
   locale: "en" | "fr" | null | undefined;
 }): { title: string; body: string } {
   const language = input.locale === "fr" ? "fr" : "en";
-  if (input.kind === "daily_status" && input.alertBody) {
+  if (input.alertBody) {
     return { title: "FitFight", body: input.alertBody };
   }
   const key = notificationCopyKeySchema.parse(input.copyKey);

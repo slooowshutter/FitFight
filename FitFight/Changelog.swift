@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 15,
+            notes: "You can get alerts when someone posts, comments, replies, or reacts in a fight. Turn each one on or off under You → Settings → Notifications."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 15,
             notes: "You is now the last tab: Fights, New, Feed, Feedback, You."
         ),
         ReleaseNote(

@@ -22,8 +22,10 @@ test("public build 113 can name its profile, create, invite, accept, decline, an
     const accounts = [];
     const userIds: string[] = [];
     t.after(async () => {
-        await database`delete from public.fights where owner_id = any(${database.array(userIds)}::uuid[])`;
-        await database`delete from auth.users where id = any(${database.array(userIds)}::uuid[])`;
+        for (const userId of userIds) {
+            await database`delete from public.fights where owner_id = ${userId}`;
+            await database`delete from auth.users where id = ${userId}`;
+        }
     });
     for (let index = 0; index < 3; index++) {
         const email = `legacy-${randomUUID()}@example.com`;

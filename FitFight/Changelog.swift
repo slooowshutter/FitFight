@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.0.0",
             year: 2026,
             month: 9,
+            day: 15,
+            notes: "A fight you just created stays on your list even if the refresh failed."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
             day: 14,
             notes: "Take Photo and Photo Library now open after you tap Media."
         ),

@@ -99,6 +99,68 @@ test("media uploads accept short fight-post videos and reject invalid ones", () 
   }
 });
 
+test("media uploads accept request files and videos, and reject unsafe types", () => {
+  const file = createMediaUploadRequestSchema.parse({
+    purpose: "feedback",
+    kind: "file",
+    original_filename: "console.log",
+    content_type: "text/plain",
+    byte_size: 2048,
+    width: 1,
+    height: 1,
+    sha256: "a".repeat(64),
+  });
+  assert.equal(file.kind, "file");
+  assert.equal(file.purpose, "feedback");
+  const video = createMediaUploadRequestSchema.parse({
+    purpose: "feedback",
+    kind: "video",
+    original_filename: "repro.mov",
+    content_type: "video/quicktime",
+    byte_size: 4_000_000,
+    width: 1080,
+    height: 1920,
+    duration_ms: 8_000,
+    sha256: "a".repeat(64),
+  });
+  assert.equal(video.purpose, "feedback");
+  for (const input of [
+    {
+      purpose: "fight_post",
+      kind: "file",
+      original_filename: "notes.txt",
+      content_type: "text/plain",
+      byte_size: 20,
+      width: 1,
+      height: 1,
+      sha256: "a".repeat(64),
+    },
+    {
+      purpose: "feedback",
+      kind: "file",
+      original_filename: "page.html",
+      content_type: "text/html",
+      byte_size: 20,
+      width: 1,
+      height: 1,
+      sha256: "a".repeat(64),
+    },
+    {
+      purpose: "feedback",
+      kind: "file",
+      original_filename: "clip.mp4",
+      content_type: "text/plain",
+      byte_size: 20,
+      width: 1,
+      height: 1,
+      duration_ms: 1_000,
+      sha256: "a".repeat(64),
+    },
+  ]) {
+    assert.equal(createMediaUploadRequestSchema.safeParse(input).success, false);
+  }
+});
+
 test("batch signed URLs keep one URL per object path and ignore failed rows", () => {
   const urls = signedUrlsFromBatch(
     ["a/photo", "b/photo", "c/photo"],

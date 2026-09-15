@@ -52,6 +52,10 @@ test("Auth, profile commands, and deletion work before and after direct client a
   assert.equal(updated.handle, handle);
   assert.equal(updated.display_name, "Apple Name");
   assert.equal(updated.referral_code, initial.referral_code);
+  assert.equal(updated.companion_id, null);
+  const withCompanion = await updateProfile(userId, { companion_id: "fox" }, admin);
+  assert.equal(withCompanion.companion_id, "fox");
+  assert.equal(withCompanion.handle, handle);
   assert.ok(updated.handle_set_at && Date.parse(updated.handle_set_at) >= before);
   await assert.rejects(updateProfile(peerId, { handle }, admin),
     (error: unknown) => error instanceof ApiError && error.code === "handle_taken");

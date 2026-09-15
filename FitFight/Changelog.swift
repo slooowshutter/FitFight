@@ -35,8 +35,113 @@ enum Changelog {
             version: "1.0.0",
             year: 2026,
             month: 9,
+            day: 15,
+            notes: "Editing a fight now opens the same summary as creating one. Change jumps to that part, then back. If you created it, Delete at the bottom ends the fight."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "Feedback is the last tab: Fights, New, You, Feedback. Feed is the same fight posts list, with the fight picker when you post."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "Tapping an animal keeps that character on screen with its own poses. Other animals no longer show the hiking goat pictures."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "A fight you just created stays on your list even if the refresh failed."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "Take Photo and Photo Library now open after you tap Media."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "A failed Apple Health sync now shows why, in ember, with a Retry pill instead of Connected."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "Choosing a companion now shows five effort poses. Weekly movement changes the pose; you can set sport, breed, and mood."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "Posting to several fights now shows once on Feed, with those fight names or Public."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "New can start a fight, join one, or post. Suggested fights sit under those choices."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "Bugs & requests can include a photo, a video, or any file."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
             day: 14,
             notes: "You can take a photo with the camera when you add Media, not only pick one from the library."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "Posting from a fight’s Feed starts on that fight. You can still add other channels."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "Every day so far opens on the oval. Bars show a small companion next to each name. Heat, stack, and rings are gone."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "Tap a photo in Feed to see it full screen."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "Tapping an animal saves that companion for everyone. If you have not chosen one yet, FitFight will ask you to pick."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "Two-word companion names now capitalize both words, like Red Panda."
         ),
         ReleaseNote(
             version: "1.0.0",

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Last onboarding step: Settings can take a bug or a feature request.
+/// Last onboarding step: the Feedback tab can take a bug or a feature request.
 struct RequestsOnboardingView: View {
     var onFinished: (() -> Void)? = nil
 
@@ -13,7 +13,7 @@ struct RequestsOnboardingView: View {
             Text("Bugs & requests")
                 .ffType(.title)
                 .foregroundStyle(theme.text)
-            Text("You can go to Settings to submit a feature you want or a bug you see. Those will be fixed rapidly.")
+            Text("You can go to the Feedback tab to submit a feature you want or a bug you see. Those will be fixed rapidly.")
                 .ffType(.body)
                 .foregroundStyle(theme.textSecondary)
                 .lineSpacing(3)

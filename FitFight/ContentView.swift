@@ -39,7 +39,6 @@ struct ContentView: View {
             if status == .updateRequired {
                 model.showingVersions = false
                 model.showingDebugMenu = false
-                model.showingRequests = false
             } else if status == .current, session.isSignedIn, session.profile == nil {
                 Task { await session.loadProfile() }
             }
@@ -55,10 +54,33 @@ struct ContentView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .sheet(isPresented: $companions.showingPicker) {
-            CompanionPicker(selection: companions.selection)
+        .sheet(isPresented: Binding(
+            get: { companions.showingPicker || session.needsCompanionSelection },
+            set: { presented in
+                if session.needsCompanionSelection {
+                    companions.showingPicker = true
+                } else {
+                    companions.showingPicker = presented
+                }
+            }
+        )) {
+            CompanionPicker(selection: companions.selection, required: session.needsCompanionSelection)
                 .fitFightTheme(themeStore.theme)
                 .presentationBackground(themeStore.theme.bg)
+                .interactiveDismissDisabled(session.needsCompanionSelection)
+        }
+        .onChange(of: session.profile?.companionId) { _, _ in
+            companions.apply(session.profile)
+            Task { await companions.publishPending(session: session) }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            companions.apply(session.profile)
+            Task { await companions.publishPending(session: session) }
+        }
+        .onAppear {
+            companions.apply(session.profile)
+            Task { await companions.publishPending(session: session) }
         }
         .alert(String(localized: "Companion preview"), isPresented: Binding(
             get: { model.companionPreviewNotice != nil },
@@ -82,12 +104,6 @@ struct ContentView: View {
         }
         .onChange(of: session.isFitFightAdmin) { _, isAdmin in
             if !isAdmin { model.showingDebugMenu = false }
-        }
-        .sheet(isPresented: $model.showingRequests) {
-            RequestsView()
-                .environmentObject(session)
-                .fitFightTheme(themeStore.theme)
-                .presentationBackground(themeStore.theme.bg)
         }
         .sheet(item: $model.dailyStatusRecap) { recap in
             DailyStatusRecapView(recap: recap) {
@@ -117,6 +133,7 @@ struct ContentView: View {
                         && !session.needsHealthOnboarding
                         && !session.needsNotificationOnboarding
                         && !session.needsRequestsOnboarding
+                        && !session.needsCompanionSelection
                 },
                 set: { if !$0 { push.declinePrePrompt() } }
             )
@@ -241,6 +258,9 @@ struct ContentView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             FFTabBar(tab: $model.tab, onReselect: {
+                if model.tab == .feedback {
+                    model.feedbackPane = .feed
+                }
                 model.openFightID = nil
             })
         }
@@ -253,10 +273,10 @@ struct ContentView: View {
             fightsStack
         case .newFight:
             NewFightView()
-        case .feed:
-            FeedView()
         case .you:
             YouView()
+        case .feedback:
+            FeedbackTabView()
         }
     }
 

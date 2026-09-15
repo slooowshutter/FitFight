@@ -1,0 +1,8 @@
+---
+description: Never use em dashes or en dashes
+alwaysApply: true
+---
+
+# No long dashes
+
+Never write U+2014 em dashes or U+2013 en dashes. Use ASCII hyphen-minus `-`, a comma, or a colon. Do not use them in user-facing copy, docs, comments, or commit messages.

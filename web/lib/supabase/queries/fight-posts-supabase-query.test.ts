@@ -14,6 +14,7 @@ import {
   createFeedPostsRequestSchema,
   createFightPostCommentRequestSchema,
   createFightPostRequestSchema,
+  fightPostAuthorSchema,
   listFightPostsQuerySchema,
   reportFightPostRequestSchema,
   setFightPostReactionRequestSchema,
@@ -78,6 +79,29 @@ test("fight posts need a note or a photo and reject extra fields", () => {
   assert.equal(updateFightPostRequestSchema.safeParse({ body: "", media_ids: [] }).success, false);
 });
 
+test("feed authors keep decoding when companion_id is omitted and accept a stock animal", () => {
+  assert.equal(fightPostAuthorSchema.parse({
+    user_id: userId,
+    handle: "marc",
+    display_name: "Marc",
+    avatar: null,
+  }).companion_id, null);
+  assert.equal(fightPostAuthorSchema.parse({
+    user_id: userId,
+    handle: "marc",
+    display_name: "Marc",
+    avatar: null,
+    companion_id: "fox",
+  }).companion_id, "fox");
+  assert.equal(fightPostAuthorSchema.safeParse({
+    user_id: userId,
+    handle: "marc",
+    display_name: "Marc",
+    avatar: null,
+    companion_id: "dragon",
+  }).success, false);
+});
+
 test("listing fight posts requires roster membership before reading rows", async () => {
   const queries: string[] = [];
   const query = ((first: TemplateStringsArray) => {
@@ -105,6 +129,23 @@ test("main feed listing skips the fight roster gate", async () => {
   assert.deepEqual(result, { posts: [], next_cursor: null });
   assert.equal(queries.some((sql) => sql.includes("from public.fight_members") && !sql.includes("fight_posts")), false);
   assert.match(queries[0] ?? "", /audience = 'main'/);
+  assert.match(queries[0] ?? "", /companion_id/);
+});
+
+test("root and fight listings look up post channels", async () => {
+  const queries: string[] = [];
+  const query = ((first: TemplateStringsArray) => {
+    const sql = first.join("?").replace(/\s+/g, " ").trim();
+    queries.push(sql);
+    if (sql.includes("from public.fight_members") && !sql.includes("fight_posts")) {
+      return Promise.resolve([{ state: "accepted" }]);
+    }
+    return Promise.resolve([]);
+  }) as unknown as Sql;
+  await listFightPosts(userId, undefined, { limit: 30, scope: "all" }, query);
+  await listFightPosts(userId, fightId, { limit: 30 }, query);
+  assert.ok(queries.some((sql) => sql.includes("fight_post_channels") && sql.includes("audience = 'main'")));
+  assert.ok(queries.some((sql) => sql.includes("fight_post_channels") && sql.includes("from public.fight_members")));
 });
 
 test("one feed listing includes main and fight posts", async () => {
@@ -147,6 +188,7 @@ test("feed people listing only includes opponents from finished fights", async (
   const result = await listFeedPeople(userId, { main: "true" }, query);
   assert.deepEqual(result, { people: [] });
   assert.ok(queries.some((sql) => /done_fight.state = 'final'/.test(sql)));
+  assert.ok(queries.some((sql) => /profile.companion_id/.test(sql)));
 });
 
 test("feed and fight post routes authenticate before reading or writing", async () => {

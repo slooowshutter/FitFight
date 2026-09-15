@@ -307,6 +307,14 @@ private struct FitFightJoinableList: Decodable {
     var fights: [FitFightJoinableFight]
 }
 
+struct FitFightSuggested: Decodable {
+    var suggested: Bool
+}
+
+private struct FitFightSuggestBody: Encodable {
+    var suggested: Bool
+}
+
 struct FitFightSummary: Codable, Equatable {
     var id: UUID
     var state: String
@@ -349,6 +357,7 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
     var mine: Bool
     var createdAt: Date
     var metadata: FitFightFeedbackMetadata
+    var media: [FitFightMedia]
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -363,6 +372,7 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
         case mine
         case createdAt = "created_at"
         case metadata
+        case media
     }
 
     init(
@@ -377,7 +387,8 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
         authorHandle: String,
         mine: Bool,
         createdAt: Date,
-        metadata: FitFightFeedbackMetadata = FitFightFeedbackMetadata()
+        metadata: FitFightFeedbackMetadata = FitFightFeedbackMetadata(),
+        media: [FitFightMedia] = []
     ) {
         self.id = id
         self.kind = kind
@@ -391,6 +402,7 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
         self.mine = mine
         self.createdAt = createdAt
         self.metadata = metadata
+        self.media = media
     }
 
     init(from decoder: Decoder) throws {
@@ -408,6 +420,7 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         metadata = try container.decodeIfPresent(FitFightFeedbackMetadata.self, forKey: .metadata)
             ?? FitFightFeedbackMetadata()
+        media = try container.decodeIfPresent([FitFightMedia].self, forKey: .media) ?? []
     }
 }
 
@@ -506,7 +519,24 @@ struct FitFightCreateFeedback: Encodable, Equatable {
     var kind: String
     var title: String
     var body: String
+    var mediaIds: [UUID] = []
     var metadata: FitFightFeedbackMetadata
+
+    enum CodingKeys: String, CodingKey {
+        case kind, title, body, metadata
+        case mediaIds = "media_ids"
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(kind, forKey: .kind)
+        try container.encode(title, forKey: .title)
+        try container.encode(body, forKey: .body)
+        try container.encode(metadata, forKey: .metadata)
+        if !mediaIds.isEmpty {
+            try container.encode(mediaIds, forKey: .mediaIds)
+        }
+    }
 }
 
 struct FitFightReferralLink: Encodable {
@@ -647,6 +677,7 @@ struct FitFightAPI {
         handle: String? = nil,
         displayName: String? = nil,
         avatarMediaId: UUID? = nil,
+        companionId: String? = nil,
         accessToken: String
     ) async throws -> FitFightProfile {
         try await request(
@@ -656,7 +687,8 @@ struct FitFightAPI {
             body: Self.encoder.encode(ProfileUpdate(
                 handle: handle,
                 displayName: displayName,
-                avatarMediaId: avatarMediaId
+                avatarMediaId: avatarMediaId,
+                companionId: companionId
             )),
             idempotencyKey: nil,
             expected: [200]
@@ -916,6 +948,30 @@ struct FitFightAPI {
             expected: [200]
         )
         return list.fights
+    }
+
+    func listSuggestedFights(accessToken: String) async throws -> [FitFightJoinableFight] {
+        let list: FitFightJoinableList = try await get(
+            path: "fights/suggested",
+            accessToken: accessToken,
+            expected: [200]
+        )
+        return list.fights
+    }
+
+    func setFightSuggested(
+        fightID: UUID,
+        suggested: Bool,
+        accessToken: String
+    ) async throws -> FitFightSuggested {
+        try await request(
+            path: "fights/\(fightID.uuidString.lowercased())/suggested",
+            method: "PATCH",
+            accessToken: accessToken,
+            body: Self.encoder.encode(FitFightSuggestBody(suggested: suggested)),
+            idempotencyKey: nil,
+            expected: [200]
+        )
     }
 
     func joinableFight(code: String, accessToken: String) async throws -> FitFightJoinableFight {
@@ -1291,11 +1347,13 @@ private struct ProfileUpdate: Encodable {
     let handle: String?
     let displayName: String?
     let avatarMediaId: UUID?
+    let companionId: String?
 
     enum CodingKeys: String, CodingKey {
         case handle
         case displayName = "display_name"
         case avatarMediaId = "avatar_media_id"
+        case companionId = "companion_id"
     }
 
     func encode(to encoder: Encoder) throws {
@@ -1303,6 +1361,7 @@ private struct ProfileUpdate: Encodable {
         try container.encodeIfPresent(handle, forKey: .handle)
         try container.encodeIfPresent(displayName, forKey: .displayName)
         try container.encodeIfPresent(avatarMediaId, forKey: .avatarMediaId)
+        try container.encodeIfPresent(companionId, forKey: .companionId)
     }
 }
 

@@ -17,16 +17,18 @@ Do not rename the bundle ID without Apple + CI updates.
 
 ## Current 1.0 scope — 9 Sep 2026
 
-- Four tabs: **Fights**, **New**, **Feed**, **You**.
-- Feed is one list of posts from every fight you’re in. Each post has a badge for the fight. Tap + to write a note, tag people, and pick one or more fights next to photo or video. **All fights** selects every fight. Inside a fight, posting goes to that fight — it does not ask where to post. There is no Public or Main destination. A tag does not add someone to a fight they are not in. Posts can take any emoji and nested comments.
+- Four tabs: **Fights**, **New**, **You**, **Feedback**.
+- Feedback holds the same fight Feed (posts from fights you’re in, fight picker when you post), Bugs & requests, Top ranking, and a Report form. Plus on that tab opens a new post or a new request. You still has a shortcut into Bugs & requests.
+- Feed is one list of posts from every fight you’re in. Each post has a badge for the fight, or Public if it went to every fight you chose. Tap + to write a note and pick one or more fights next to photo or video. **All fights** selects every fight and shows as Public. Inside a fight, posting starts on that fight and you can add other channels. There is no Main destination. A tag does not add someone to a fight they are not in. Posts can take any emoji and nested comments.
 - Each fight has posts on a Feed tab next to Stats.
-- New accounts pick an optional photo with their username, then connect Apple Health, then allow challenge reminders, then a last screen that Settings can take a feature or a bug.
+- New accounts pick an optional photo with their username, then connect Apple Health, then allow challenge reminders, then a last screen that the Feedback tab can take a feature or a bug.
 - Every fight is **Steps × highest total**. There are no other metrics or scoring modes.
 - New fights start private. Every fight has a code and a share link; people join with that code or invite link. Public fights are listed on Join; private fights are not. Exact usernames are optional. There is no friends list or friend-request flow.
 - Type an optional title and an optional action the loser must do. If there is no title, the action is the fight name. There is no money or bragging-rights option.
 - Choose **1 hour**, **6 hours**, or **1 day** for testing, or **3 days**, **1 week**, **2 weeks**, or **1 month**.
 - Apple Health sends merged Steps aggregates needed for active fights. It may also store private energy, distance, exercise, stand, flights, and workout summaries. Those extras are not fight options yet.
-- Settings keeps Privacy, Support, Bugs & requests, Versions, Sign out, and Delete account. Look is Night or Day.
+- Settings keeps Privacy, Support, Versions, Sign out, and Delete account. Bugs & requests lives on the Feedback tab, with a shortcut on You. Look is Night or Day.
+- Companion: pick a stock animal, then sport, breed, mood, and accessories. Five effort poses follow weekly movement. Hiking goat has real art; other animals keep that same character with labeled stages until generation exists. The animal is saved on the account. Sport, breed, mood, and accessories stay on this iPhone.
 - Delete account removes the full account, uploaded Steps, memberships, owned fights, and bugs or requests the User posted; a stored Sign in with Apple authorization is revoked when available.
 - The old Requests tab, money, unsupported metrics, and dead settings are removed.
 

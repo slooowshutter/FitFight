@@ -126,6 +126,7 @@ struct FightDetailView: View {
             EditFightView(fight: fight)
                 .environmentObject(model)
                 .environmentObject(session)
+                .environmentObject(steps)
                 .fitFightTheme(theme)
                 .presentationBackground(theme.bg)
         }
@@ -350,6 +351,17 @@ struct FightDetailView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                if session.isFitFightAdmin, !pendingJoin {
+                    Button {
+                        Task { await model.setFightSuggested(id: fight.id, suggested: !fight.suggested) }
+                    } label: {
+                        Text(fight.suggested ? String(localized: "Suggested") : String(localized: "Suggest"))
+                            .ffType(.label)
+                            .foregroundStyle(theme.mossText)
+                            .frame(height: 44)
+                    }
+                    .buttonStyle(FFHapticPlainStyle())
+                }
                 if fight.canOwnerEdit, !pendingJoin {
                     Button {
                         model.createError = nil
@@ -512,8 +524,7 @@ struct FightDetailView: View {
                         .ffType(.button)
                         .foregroundStyle(theme.textFaint)
                         .frame(width: 22)
-                    CompanionAvatar(personID: row.person.id, isYou: row.person.isYou,
-                                    monogram: row.person.initials, photoURL: row.person.photoURL, size: 38, pending: true)
+                    CompanionAvatar(row.person, size: 38, pending: true)
                     Text(row.person.name)
                         .ffType(.rowTitle)
                         .foregroundStyle(theme.textSecondary)
@@ -542,10 +553,7 @@ struct FightDetailView: View {
                     move: .same,
                     isYou: row.person.isYou,
                     photoURL: row.person.photoURL,
-                    avatar: AnyView(CompanionAvatar(
-                        personID: row.person.id, isYou: row.person.isYou,
-                        monogram: row.person.initials, photoURL: row.person.photoURL, size: 38
-                    )),
+                    avatar: AnyView(CompanionAvatar(row.person, size: 38)),
                     captionUrgent: !inWinnerBand && row.person.isYou && contextFight.status == .live,
                     captionAt: { now in
                         model.formatStandingFreshness(row, fight: contextFight, now: now)
@@ -565,8 +573,7 @@ struct FightDetailView: View {
                 .ffType(.button)
                 .foregroundStyle(needsSync ? theme.textFaint : (rank == 1 ? theme.gold : theme.textTertiary))
                 .frame(width: 22)
-            CompanionAvatar(personID: row.person.id, isYou: row.person.isYou,
-                            monogram: row.person.initials, photoURL: row.person.photoURL, size: 38, pending: needsSync)
+            CompanionAvatar(row.person, size: 38, pending: needsSync)
             VStack(alignment: .leading, spacing: 2) {
                 Text(row.person.name)
                     .ffType(.rowTitle)

@@ -24,9 +24,13 @@ struct YouView: View {
         FFScreen(refresh: fightsRefresh) {
             profile
             CompanionIntroduction(surface: .you)
-            Text("Companion design preview · this session only")
-                .ffType(.micro)
-                .foregroundStyle(theme.textSecondary)
+            #if DEBUG && targetEnvironment(simulator)
+            if CompanionPreview.isEnabled {
+                Text("Companion design preview · this session only")
+                    .ffType(.micro)
+                    .foregroundStyle(theme.textSecondary)
+            }
+            #endif
             if session.isSignedIn, let authError = session.authError {
                 FFNotice(text: authError, tone: .ember, systemImage: "exclamationmark.triangle")
             }
@@ -127,9 +131,15 @@ struct YouView: View {
     private var profile: some View {
         if session.isSignedIn {
             HStack(spacing: 14) {
-                if companions.animal(for: session.profile?.userId.uuidString, isYou: true) != nil {
+                if companions.animal(for: session.profile?.userId.uuidString, companionID: session.profile?.companionId, isYou: true) != nil {
                     Button { companions.showingPicker = true } label: {
-                        CompanionAvatar(isYou: true, size: 68)
+                        CompanionAvatar(
+                            personID: session.profile?.userId.uuidString,
+                            companionID: session.profile?.companionId,
+                            isYou: true,
+                            monogram: session.profile?.initials ?? "FF",
+                            size: 68
+                        )
                             .overlay { Circle().strokeBorder(theme.mossEdge, lineWidth: 3) }
                     }
                     .buttonStyle(FFHapticPlainStyle())
@@ -187,8 +197,7 @@ struct YouView: View {
     }
 
     private var health: some View {
-        let syncFailed = steps.connection == .syncFailed
-        return FFGroupedRows {
+        FFGroupedRows {
             Button {
                 Task {
                     await model.refreshFights(session: session, steps: steps, trigger: .manual, requestAccess: !steps.hasAsked)
@@ -199,15 +208,8 @@ struct YouView: View {
                     subtitle: steps.connection == .upToDate ? String(localized: "Up to date") : steps.detailText,
                     systemImage: "heart",
                     enabled: steps.status != .reading && !model.isRefreshingFights,
-                    subtitleTone: syncFailed ? .ember : (steps.isConnected ? .moss : .neutral),
-                    trailing: AnyView(
-                        FFPill(
-                            syncFailed
-                                ? String(localized: "Retry")
-                                : (steps.isConnected ? String(localized: "Connected") : String(localized: "Connect")),
-                            style: syncFailed ? .softEmber : (steps.isConnected ? .softMoss : .solidMoss)
-                        )
-                    )
+                    subtitleTone: healthSubtitleTone,
+                    trailing: AnyView(healthPill)
                 )
             }
             .buttonStyle(FFHapticPlainStyle())
@@ -306,6 +308,27 @@ struct YouView: View {
         }
     }
 
+    private var healthSubtitleTone: FFTone {
+        switch steps.connection {
+        case .syncFailed, .noAccessibleSteps: return .ember
+        case .upToDate: return .moss
+        case .syncing, .notConnected: return .neutral
+        }
+    }
+
+    private var healthPill: FFPill {
+        switch steps.connection {
+        case .syncFailed:
+            return FFPill(String(localized: "Retry"), style: .softEmber)
+        case .syncing:
+            return FFPill(String(localized: "Syncing"), style: .neutral)
+        case .upToDate, .noAccessibleSteps:
+            return FFPill(String(localized: "Connected"), style: .softMoss)
+        case .notConnected:
+            return FFPill(String(localized: "Connect"), style: .solidMoss)
+        }
+    }
+
     private func uploadPhoto(_ item: PhotosPickerItem?) async {
         defer { pickerItem = nil }
         guard let item else { return }
@@ -342,7 +365,11 @@ struct YouView: View {
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(theme.textFaint)
                 ),
-                action: { model.showingRequests = true }
+                action: {
+                    model.feedbackRequestFilter = .bugs
+                    model.feedbackPane = .bugs
+                    model.tab = .feedback
+                }
             )
             .disabled(session.isBusy)
         }

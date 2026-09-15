@@ -179,6 +179,8 @@ private func postableFights(_ fights: [Fight]) -> [Fight] {
 }
 
 struct FeedView: View {
+    var showsChrome: Bool = true
+
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var steps: HealthKitStepsStore
@@ -189,11 +191,13 @@ struct FeedView: View {
 
     var body: some View {
         FFScreen(refresh: feedRefresh) {
-            FFScreenTitle(
-                title: String(localized: "Feed"),
-                subtitle: String(localized: "Posts from fights you’re in."),
-                trailing: AnyView(composeButton)
-            )
+            if showsChrome {
+                FFScreenTitle(
+                    title: String(localized: "Feed"),
+                    subtitle: String(localized: "Posts from fights you’re in."),
+                    trailing: AnyView(composeButton)
+                )
+            }
             if let error = feed.error, !error.isEmpty {
                 FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
             }
@@ -248,22 +252,13 @@ struct FeedView: View {
     }
 
     private var composeButton: some View {
-        Button {
-            composing = true
-        } label: {
-            Image(systemName: "plus")
-                .font(.system(size: 16, weight: .bold))
-                .foregroundStyle(theme.mossOn)
-                .frame(width: 36, height: 36)
-                .background(theme.mossFill, in: Circle())
-        }
-        .buttonStyle(FFHapticPlainStyle())
-        .accessibilityLabel(String(localized: "New post"))
+        FeedComposeButton { composing = true }
     }
 }
 
 struct FeedComposeSheet: View {
-    var lockedFightID: UUID? = nil
+    var defaultFightID: UUID? = nil
+    var onPosted: (() -> Void)? = nil
 
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var session: SessionStore
@@ -272,10 +267,11 @@ struct FeedComposeSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var destinations: Set<FeedPostDestination>
 
-    init(lockedFightID: UUID? = nil) {
-        self.lockedFightID = lockedFightID
+    init(defaultFightID: UUID? = nil, onPosted: (() -> Void)? = nil) {
+        self.defaultFightID = defaultFightID
+        self.onPosted = onPosted
         _destinations = State(
-            initialValue: lockedFightID.map { Set([FeedPostDestination.fight($0)]) } ?? []
+            initialValue: defaultFightID.map { Set([FeedPostDestination.fight($0)]) } ?? []
         )
     }
 
@@ -294,13 +290,11 @@ struct FeedComposeSheet: View {
                     .ffType(.label)
                     .foregroundStyle(theme.mossText)
             }
-            if lockedFightID == nil {
-                Text("Your post will only appear in the channels you select. You can choose more than one.")
-                    .ffType(.caption)
-                    .foregroundStyle(theme.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            if lockedFightID == nil && fights.isEmpty {
+            Text("Your post will only appear in the channels you select. You can choose more than one.")
+                .ffType(.caption)
+                .foregroundStyle(theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if fights.isEmpty && defaultFightID == nil {
                 FFCard {
                     Text(String(localized: "Join a fight first, then post from here."))
                         .ffType(.body)
@@ -310,10 +304,9 @@ struct FeedComposeSheet: View {
             } else {
                 FightPostComposer(
                     destinations: Array(destinations),
-                    destination: lockedFightID == nil
-                        ? AnyView(FeedDestinationMenu(fights: fights, destinations: $destinations))
-                        : nil
+                    destination: AnyView(FeedDestinationMenu(fights: fights, destinations: $destinations))
                 ) {
+                    onPosted?()
                     dismiss()
                 }
             }
@@ -337,7 +330,9 @@ struct FeedDestinationMenu: View {
     }
 
     private var everythingSelected: Bool {
-        !allFightDestinations.isEmpty && allFightDestinations.isSubset(of: destinations)
+        destinations.contains(.main)
+            && !allFightDestinations.isEmpty
+            && allFightDestinations.isSubset(of: destinations)
     }
 
     private var label: String {
@@ -363,7 +358,7 @@ struct FeedDestinationMenu: View {
                     if everythingSelected {
                         destinations.removeAll()
                     } else {
-                        destinations = allFightDestinations
+                        destinations = allFightDestinations.union([.main])
                     }
                 } label: {
                     destinationLabel(String(localized: "All fights"), selected: everythingSelected)
@@ -410,9 +405,28 @@ struct FeedDestinationMenu: View {
     private func toggle(_ destination: FeedPostDestination) {
         if destinations.contains(destination) {
             destinations.remove(destination)
+            destinations.remove(.main)
         } else {
             destinations.insert(destination)
         }
+    }
+}
+
+private struct FeedComposeButton: View {
+    let action: () -> Void
+
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "plus")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(theme.mossOn)
+                .frame(width: 36, height: 36)
+                .background(theme.mossFill, in: Circle())
+        }
+        .buttonStyle(FFHapticPlainStyle())
+        .accessibilityLabel(String(localized: "New post"))
     }
 }
 
@@ -421,51 +435,44 @@ struct FightPostsSection: View {
 
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var session: SessionStore
+    @EnvironmentObject private var feed: FeedStore
     @Environment(\.ffTheme) private var theme
     @StateObject private var fightFeed = FeedStore()
     @State private var composing = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: theme.space.cardGap) {
-            HStack {
-                Spacer()
-                Button {
-                    composing = true
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(theme.mossOn)
-                        .frame(width: 36, height: 36)
-                        .background(theme.mossFill, in: Circle())
+            HStack(alignment: .center, spacing: 12) {
+                if fightFeed.posts.isEmpty && !fightFeed.isLoading {
+                    Text(String(localized: "Tap + to post to this fight."))
+                        .ffType(.caption)
+                        .foregroundStyle(theme.textSecondary)
                 }
-                .buttonStyle(FFHapticPlainStyle())
-                .accessibilityLabel(String(localized: "New post"))
+                Spacer(minLength: 0)
+                FeedComposeButton { composing = true }
             }
             if let error = fightFeed.error, !error.isEmpty {
                 Text(error)
                     .ffType(.caption)
                     .foregroundStyle(theme.emberText)
             }
-            if fightFeed.posts.isEmpty && !fightFeed.isLoading {
-                Text(String(localized: "Nothing here yet. Tap + to post."))
-                    .ffType(.caption)
-                    .foregroundStyle(theme.textSecondary)
-            }
             ForEach(fightFeed.posts) { post in
                 FightPostCard(post: post, onOpen: nil)
             }
         }
         .environmentObject(fightFeed)
-        .task {
+        .task(id: fightID) {
             await fightFeed.load(session: session, fightID: fightID)
         }
         .sheet(isPresented: $composing) {
-            FeedComposeSheet(lockedFightID: fightID)
-                .environmentObject(model)
-                .environmentObject(session)
-                .environmentObject(fightFeed)
-                .fitFightTheme(theme)
-                .presentationBackground(theme.bg)
+            FeedComposeSheet(defaultFightID: fightID) {
+                Task { await fightFeed.load(session: session, fightID: fightID) }
+            }
+            .environmentObject(model)
+            .environmentObject(session)
+            .environmentObject(feed)
+            .fitFightTheme(theme)
+            .presentationBackground(theme.bg)
         }
     }
 }
@@ -554,10 +561,12 @@ struct FightPostComposer: View {
                 }
                 HStack(alignment: .center, spacing: 10) {
                     Button {
+                        showCamera = false
+                        showLibrary = false
                         if CameraPhotoPicker.isAvailable {
                             showMediaSource = true
                         } else {
-                            showLibrary = true
+                            presentMedia(.library, waitForSourceDialog: false)
                         }
                     } label: {
                         Label(String(localized: "Media"), systemImage: "photo.on.rectangle.angled")
@@ -590,15 +599,10 @@ struct FightPostComposer: View {
         }
         .onChange(of: showMediaSource) { _, presented in
             guard !presented else { return }
-            if let pendingMedia {
-                switch pendingMedia {
-                case .camera:
-                    showCamera = true
-                case .library:
-                    showLibrary = true
-                }
-            }
+            let next = pendingMedia
             pendingMedia = nil
+            guard let next else { return }
+            presentMedia(next, waitForSourceDialog: true)
         }
         .photosPicker(
             isPresented: $showLibrary,
@@ -629,6 +633,26 @@ struct FightPostComposer: View {
     private var canPost: Bool {
         let note = bodyText.trimmingCharacters(in: .whitespacesAndNewlines)
         return !feed.isSaving && !isLoadingMedia && !destinations.isEmpty && (!note.isEmpty || !images.isEmpty || videoURL != nil)
+    }
+
+    private func presentMedia(_ source: MediaSource, waitForSourceDialog: Bool) {
+        Task { @MainActor in
+            showCamera = false
+            showLibrary = false
+            if waitForSourceDialog {
+                // NOTE: the composer is already a sheet; presenting camera/library while Add media is still dismissing never appears.
+                try? await Task.sleep(for: .milliseconds(450))
+            } else {
+                await Task.yield()
+            }
+            guard !Task.isCancelled else { return }
+            switch source {
+            case .camera:
+                showCamera = true
+            case .library:
+                showLibrary = true
+            }
+        }
     }
 
     private func loadMedia(_ items: [PhotosPickerItem]) async {
@@ -707,6 +731,7 @@ struct FightPostCard: View {
                 HStack(alignment: .top, spacing: 10) {
                     CompanionAvatar(
                         personID: post.author.userId.uuidString,
+                        companionID: post.author.companionId,
                         isYou: post.mine,
                         monogram: post.author.initials,
                         photoURL: post.author.avatar?.url,
@@ -718,7 +743,7 @@ struct FightPostCard: View {
                             .foregroundStyle(theme.text)
                             .lineLimit(1)
                         HStack(spacing: 5) {
-                            Text(post.isMain ? String(localized: "Public") : post.fightName)
+                            Text(post.channelLabel)
                                 .lineLimit(1)
                             Text("·")
                             Text(post.createdDate, format: .relative(presentation: .named, unitsStyle: .abbreviated))
@@ -858,22 +883,63 @@ private struct FightPostPhoto: View {
     let height: Int
 
     @Environment(\.ffTheme) private var theme
+    @State private var opened = false
 
     var body: some View {
-        Color.clear
-            .aspectRatio(ratio, contentMode: .fit)
-            .frame(maxWidth: .infinity)
-            .fixedSize(horizontal: false, vertical: true)
-            .overlay {
-                RemotePhoto(url: url, kind: .photo) {
-                    theme.control
+        Button {
+            opened = true
+        } label: {
+            Color.clear
+                .aspectRatio(ratio, contentMode: .fit)
+                .frame(maxWidth: .infinity)
+                .fixedSize(horizontal: false, vertical: true)
+                .overlay {
+                    RemotePhoto(url: url, kind: .photo) {
+                        theme.control
+                    }
                 }
-            }
-            .clipShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
+        }
+        .buttonStyle(FFHapticPlainStyle())
+        .accessibilityLabel(String(localized: "View photo"))
+        .fullScreenCover(isPresented: $opened) {
+            FightPostPhotoViewer(url: url)
+                .fitFightTheme(theme)
+                .presentationBackground(theme.bg)
+        }
     }
 
     private var ratio: CGFloat {
         CGFloat(max(width, 1)) / CGFloat(max(height, 1))
+    }
+}
+
+private struct FightPostPhotoViewer: View {
+    let url: URL
+    @Environment(\.ffTheme) private var theme
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ZStack {
+            theme.bg.ignoresSafeArea()
+            RemotePhoto(url: url, kind: .photo, contentMode: .fit) {
+                theme.control
+            }
+            .ignoresSafeArea()
+            .accessibilityHidden(true)
+            VStack {
+                HStack {
+                    Spacer()
+                    Button(String(localized: "Close")) { dismiss() }
+                        .ffType(.label)
+                        .foregroundStyle(theme.mossText)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .buttonStyle(FFHapticPlainStyle())
+                }
+                Spacer()
+            }
+            .padding(.horizontal, theme.space.screenPadding)
+        }
     }
 }
 

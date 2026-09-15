@@ -1,6 +1,7 @@
 import type { Sql } from "postgres";
 import { ApiError, ERROR_CODES } from "@/lib/http";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
+import { stockCompanionIdSchema } from "@/lib/types/companions/companion";
 import type {
   CreateFightPostCommentRequest,
   FightPostAuthor,
@@ -26,6 +27,7 @@ type CommentRow = {
   author_id: string;
   author_handle: string;
   author_display_name: string;
+  author_companion_id: string | null;
   avatar_id: string | null;
   avatar_kind: MediaRow["kind"] | null;
   avatar_purpose: MediaRow["purpose"] | null;
@@ -73,6 +75,7 @@ function authorFromRow(row: CommentRow, url: string | null): FightPostAuthor {
       handle: row.author_handle,
       display_name: row.author_display_name,
       avatar: null,
+      companion_id: stockCompanionIdSchema.nullable().parse(row.author_companion_id),
     };
   }
   return {
@@ -95,6 +98,7 @@ function authorFromRow(row: CommentRow, url: string | null): FightPostAuthor {
       sha256: row.avatar_sha256,
       created_at: row.avatar_created_at,
     }, url),
+    companion_id: stockCompanionIdSchema.nullable().parse(row.author_companion_id),
   };
 }
 
@@ -126,6 +130,7 @@ export async function listFightPostComments(
         select
           comment.id, comment.post_id, comment.parent_id, comment.body, comment.created_at,
           comment.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
+          profile.companion_id as author_companion_id,
           avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
           avatar.status::text as avatar_status, avatar.object_path as avatar_object_path,
           avatar.original_filename as avatar_original_filename, avatar.content_type as avatar_content_type,
@@ -150,6 +155,7 @@ export async function listFightPostComments(
         select
           comment.id, comment.post_id, comment.parent_id, comment.body, comment.created_at,
           comment.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
+          profile.companion_id as author_companion_id,
           avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
           avatar.status::text as avatar_status, avatar.object_path as avatar_object_path,
           avatar.original_filename as avatar_original_filename, avatar.content_type as avatar_content_type,
@@ -217,6 +223,7 @@ export async function createFightPostComment(
     select
       comment.id, comment.post_id, comment.parent_id, comment.body, comment.created_at,
       comment.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
+      profile.companion_id as author_companion_id,
       avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
       avatar.status::text as avatar_status, avatar.object_path as avatar_object_path,
       avatar.original_filename as avatar_original_filename, avatar.content_type as avatar_content_type,

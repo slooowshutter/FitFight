@@ -131,7 +131,9 @@ Vercel holds `DATABASE_URL`, using Supavisor transaction mode on port `6543`, se
 
 Vercel also holds the server-only Supabase URL and secret used to authenticate requests and perform reviewed admin operations. Neither value belongs in iOS or chat.
 
-`POST /api/v1/feedback` still writes the Bugs & requests post first. After that it
+`POST /api/v1/feedback` still writes the Bugs & requests post first. Optional
+`media_ids` attach up to eight already-uploaded photos, videos, or files (`purpose:
+feedback`). Older clients omit the field. After that it
 creates a P0 Inbox row in the Blend HQ Product Backlog (Product FitFight, Source
 App feedback). Vercel holds `NOTION_TOKEN`. A missing token or a Notion failure
 does not fail the in-app post. The token never belongs in iOS, git, or chat.
@@ -141,9 +143,10 @@ That flag is true only for the FitFight admin: email `marc@marclamy.com`, userna
 `marc`, or extras in `FITFIGHT_ADMIN_EMAILS` / `FITFIGHT_ADMIN_HANDLES`. Apple Sign
 In may store no email, so the username match is required on staging. List, detail,
 create, and comment responses keep a `metadata` object for older clients and always
-send `{}` so the board never shows device details. Posts and comments still store the
+send `{}` so the board never shows device details. List, detail, and create include
+`media` with signed URLs. Posts and comments still store the
 client snapshot. Admin-only `POST /api/v1/feedback/{postID}/fix-agent` starts a Cursor
-cloud agent on `develop` with the post, comments, stored snapshots, and optional
+cloud agent on `develop` with the post, comments, stored snapshots, attachment URLs, and optional
 request `metadata` (plus `X-FitFight-Version` / `X-FitFight-Build` when the body omits
 them) via `https://api.cursor.com/v1/agents` and returns `{ agent_id, agent_url }`.
 Old clients may still POST `{}`. After a successful start it best-effort moves
@@ -186,6 +189,11 @@ private/public, whether the series repeats, the end time (and the start only whi
 fight is still `scheduled`), extra usernames, and kicking anyone except the owner.
 `draft`, `inviting`, `scheduled`, and `live` fights can be edited; `awaiting_final_sync`,
 `final`, and `cancelled` stay frozen. Old apps never call this route.
+
+`POST /api/v1/fights/{fightID}/cancel` is owner-only. The app’s Edit summary Delete
+uses it. It marks the fight `cancelled` and pauses its series so a repeating fight does
+not mint the next window. `final` fights stay frozen. Old apps never called this from
+the Edit screen.
 
 Recalculation locks the Fight, then accepted memberships, before reading the latest
 selected-source exact-window snapshots. It freezes scores, completeness, selected

@@ -831,7 +831,17 @@
     "Suggest" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Suggérer"}}}},
     "Suggested" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Suggéré"}}}},
     "Tap + to post to this fight." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Touche + pour publier dans ce défi."}}}},
-    "No suggested fights right now." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Aucun défi suggéré pour le moment."}}}}
+    "No suggested fights right now." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Aucun défi suggéré pour le moment."}}}},
+    "Editing a fight now opens the same summary as creating one. Change jumps to that part, then back. If you created it, Delete at the bottom ends the fight." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Modifier un défi ouvre le même récapitulatif qu’à la création. Modifier va à cette étape, puis revient. Si tu l’as créé, Supprimer en bas met fin au défi."}}}},
+    "This fight" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Ce défi"}}}},
+    "Change a row, then save." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Modifie une ligne, puis enregistre."}}}},
+    "Delete fight?" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Supprimer le défi ?"}}}},
+    "This ends the fight for everyone in it. If it repeats, the next windows stop too. This can’t be undone." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Cela met fin au défi pour tout le monde. S’il se répète, les prochaines fenêtres s’arrêtent aussi. C’est définitif."}}}},
+    "Deleting…" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Suppression…"}}}},
+    "Sign in to delete this fight." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Connecte-toi pour supprimer ce défi."}}}},
+    "Couldn’t delete the fight." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Impossible de supprimer le défi."}}}},
+    "Done" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Terminé"}}}},
+    "Steps after the exact end time do not count." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Les pas après l’heure de fin exacte ne comptent pas."}}}}
   },
   "version" : "1.0"
 }

@@ -301,9 +301,9 @@ class TestFlightTest < Minitest::Test
   end
 
   def test_release_version_mismatch_fails_before_upload
-    ENV["FITFIGHT_RELEASE_VERSION"] = "1.0.1"
+    ENV["FITFIGHT_RELEASE_VERSION"] = "1.1.0"
     error = assert_raises(RuntimeError) { with_apple { @lane.run_beta } }
-    assert_match(/does not match release version 1.0.1/, error.message)
+    assert_match(/does not match release version 1.1.0/, error.message)
     assert_empty @lane.uploads
   ensure
     ENV.delete("FITFIGHT_RELEASE_VERSION")

@@ -7,7 +7,10 @@ import {
 } from "@/lib/apns/apns-token-crypto";
 import { isApnsConfigured } from "@/lib/apns/apns-config";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
-import type { RegisterDeviceInstallationRequest } from "@/lib/types/notifications/device-installation";
+import type {
+  RegisterDeviceInstallationRequest,
+  RevokeDeviceInstallationRequest,
+} from "@/lib/types/notifications/device-installation";
 
 export async function registerDeviceInstallation(
   userId: string,
@@ -60,16 +63,19 @@ export async function registerDeviceInstallation(
   return { registered: true };
 }
 
-export async function revokeDeviceInstallationsForUser(
+/** Signing out one installation preserves notifications on the user's other devices. */
+export async function revokeDeviceInstallationForToken(
   userId: string,
-  reason: string,
-  database: Sql,
+  input: RevokeDeviceInstallationRequest,
+  database: Sql = createDatabaseClient(),
 ): Promise<void> {
+  const fingerprint = fingerprintApnsDeviceToken(input.token);
   await database`
     update private.device_installations
     set revoked_at = now(),
-      revoke_reason = ${reason}
+      revoke_reason = 'signed_out'
     where user_id = ${userId}
+      and token_fingerprint = ${fingerprint}
       and revoked_at is null
   `;
 }

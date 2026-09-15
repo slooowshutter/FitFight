@@ -14,6 +14,13 @@ struct AppRelease: Codable, Equatable {
     func matches(version: String, build: String) -> Bool {
         self.version == version && String(self.build) == build
     }
+
+    func isNewer(thanVersion version: String, build: String) -> Bool {
+        guard let installedBuild = Int(build) else { return false }
+        let versionOrder = self.version.compare(version, options: .numeric)
+        return versionOrder == .orderedDescending
+            || (versionOrder == .orderedSame && self.build > installedBuild)
+    }
 }
 
 struct AppReleasePolicy: Codable, Equatable {
@@ -78,13 +85,16 @@ extension AppRelease {
 
 @MainActor
 final class AppUpdateChecker: ObservableObject {
-    enum Status: Equatable { case checking, current, updateRequired, unavailable }
+    enum Status: Equatable { case checking, current, updateAvailable, updateRequired, unavailable }
 
     @Published private(set) var status: Status = .checking
     @Published private(set) var policy: AppReleasePolicy?
     @Published private(set) var isChecking = false
 
     var allowsUse: Bool { status != .updateRequired }
+    var showsUpdate: Bool { status == .updateAvailable || status == .updateRequired }
+    var offeredRelease: AppRelease? { isTestFlight ? policy?.latest : policy?.offeredRelease }
+    let isTestFlight: Bool
 
     private let version: String
     private let build: String
@@ -93,22 +103,33 @@ final class AppUpdateChecker: ObservableObject {
     private let session: URLSession
     private let cacheKey: String
     private let requiredKey: String
+    private let dismissedKey: String
+    private var dismissedRelease: AppRelease?
     private var inFlight: Task<Bool, Never>?
 
-    init(version: String, build: String, releaseURL: URL, defaults: UserDefaults = .standard,
+    init(version: String, build: String, releaseURL: URL, isTestFlight: Bool = false,
+         defaults: UserDefaults = .standard,
          session: URLSession = .shared) {
         self.version = version
         self.build = build
         self.releaseURL = releaseURL
+        self.isTestFlight = isTestFlight
         self.defaults = defaults
         self.session = session
         cacheKey = "fitfight.release-policy.\(releaseURL.absoluteString)"
         requiredKey = "fitfight.release-required.\(releaseURL.absoluteString).\(version).\(build)"
+        dismissedKey = "fitfight.release-dismissed.\(releaseURL.absoluteString).\(version).\(build)"
         if let data = defaults.data(forKey: cacheKey),
            let cached = try? JSONDecoder().decode(AppReleasePolicy.self, from: data) {
             policy = cached
         }
-        if defaults.bool(forKey: requiredKey) {
+        if isTestFlight {
+            defaults.removeObject(forKey: requiredKey)
+            if let data = defaults.data(forKey: dismissedKey) {
+                dismissedRelease = try? JSONDecoder().decode(AppRelease.self, from: data)
+            }
+        }
+        if !isTestFlight && defaults.bool(forKey: requiredKey) {
             status = .updateRequired
         } else if let policy, policy.allows(version: version, build: build) {
             status = .current
@@ -134,7 +155,23 @@ final class AppUpdateChecker: ObservableObject {
                     throw URLError(.badServerResponse)
                 }
                 let policy = try JSONDecoder().decode(AppReleasePolicy.self, from: data)
-                if policy.allows(version: self.version, build: self.build) {
+                if self.isTestFlight {
+                    self.policy = policy
+                    self.defaults.set(data, forKey: self.cacheKey)
+                    self.defaults.removeObject(forKey: self.requiredKey)
+                    if policy.allows(version: self.version, build: self.build) {
+                        self.status = .current
+                    } else if let latest = policy.latest {
+                        // Internal/review membership does not prove what this tester can install.
+                        let isNewer = latest.isNewer(thanVersion: self.version, build: self.build)
+                        let isDismissed = self.dismissedRelease.map {
+                            !latest.isNewer(thanVersion: $0.version, build: String($0.build))
+                        } ?? false
+                        self.status = isNewer && !isDismissed ? .updateAvailable : .current
+                    } else {
+                        self.status = .unavailable
+                    }
+                } else if policy.allows(version: self.version, build: self.build) {
                     self.policy = policy
                     self.defaults.set(data, forKey: self.cacheKey)
                     self.defaults.removeObject(forKey: self.requiredKey)
@@ -152,9 +189,9 @@ final class AppUpdateChecker: ObservableObject {
                     self.status = .unavailable
                 }
             } catch {
-                if self.status != .updateRequired { self.status = .unavailable }
+                if self.isTestFlight || self.status != .updateRequired { self.status = .unavailable }
             }
-            return self.status != .updateRequired
+            return self.allowsUse
         }
         inFlight = task
         return await task.value
@@ -164,8 +201,19 @@ final class AppUpdateChecker: ObservableObject {
         allowsUse
     }
 
+    func dismissUpdate() {
+        guard isTestFlight, let release = offeredRelease else { return }
+        dismissedRelease = release
+        defaults.set(try? JSONEncoder().encode(release), forKey: dismissedKey)
+        status = .current
+    }
+
     func rejectRequest(updateRequired: Bool) {
-        if updateRequired {
+        if isTestFlight {
+            // An older backend may still send 426 during deployment; it must not lock the app.
+            status = .unavailable
+            defaults.removeObject(forKey: requiredKey)
+        } else if updateRequired {
             status = .updateRequired
             defaults.set(true, forKey: requiredKey)
         } else if status != .updateRequired {

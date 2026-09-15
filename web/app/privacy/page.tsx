@@ -24,7 +24,7 @@ export default function PrivacyPage() {
       <article className="legal-content">
         <p className="eyebrow">YOUR DATA, IN PLAIN LANGUAGE</p>
         <h1>Privacy Policy</h1>
-          <p className="legal-updated">Effective 13 September 2026</p>
+        <p className="legal-updated">Effective 15 September 2026</p>
         <p className="legal-intro">
           FitFight lets named participants compete on who records the most Steps during
           a private Fight. This policy explains the data used by the FitFight iPhone app
@@ -37,7 +37,8 @@ export default function PrivacyPage() {
             <li>
               <strong>Account data:</strong> your Sign in with Apple identifier, email
               address (which may be an Apple private relay address), name when Apple
-              supplies it, the FitFight username you choose, and an encrypted server-only
+              supplies it, your FitFight username, chosen companion and optional custom
+              description, and an encrypted server-only
               Apple credential used to disconnect Sign in with Apple when you delete your
               account.
             </li>
@@ -60,9 +61,23 @@ export default function PrivacyPage() {
               participants.
             </li>
             <li>
+              <strong>Photos, videos, and posts:</strong> your optional profile photo,
+              Fight posts, photos and videos, comments, and emoji reactions. Posts are
+              shared with members of the Fights you select. The Public label on a post
+              means all selected Fights, not an open internet page. Public Fights have
+              join details visible to other signed-in users before they join.
+            </li>
+            <li>
               <strong>Bugs and feature requests:</strong> the title, details, votes, and
-              comments you post on the in-app board, shown to other signed-in FitFight
-              Users with your username.
+              comments, optional photos, videos, and files you post on the in-app board,
+              shown to other signed-in FitFight Users with your username. Reports also
+              include app and device information to help investigate a problem.
+            </li>
+            <li>
+              <strong>Notifications:</strong> when you allow push notifications, an
+              encrypted Apple push device token, language, permission status, and your
+              notification preferences. Apple delivers enabled Fight reminders and
+              post, comment, reaction, and daily-status alerts to your device.
             </li>
             <li>
               <strong>Support and operations:</strong> messages you send to support and
@@ -101,6 +116,8 @@ export default function PrivacyPage() {
             <li>create and secure your account;</li>
             <li>create, invite participants to, score, and finish private Fights;</li>
             <li>show standings and shared Fight history;</li>
+            <li>share posts and media with the selected Fight participants;</li>
+            <li>deliver enabled notifications;</li>
             <li>run the in-app bugs and feature-request board;</li>
             <li>answer support requests; and</li>
             <li>detect errors, abuse, and security problems.</li>
@@ -114,10 +131,29 @@ export default function PrivacyPage() {
         <section>
           <h2>Who processes data</h2>
           <p>
-            FitFight uses Supabase for authentication and database services, and Vercel
+            FitFight uses Supabase for authentication, database, and uploaded-file storage, and Vercel
             to host server APIs and scheduled processing. These providers process data
             for FitFight under their service and security terms. We do not make private
             Fight or Health data public.
+          </p>
+          <p>
+            When configured, PostHog receives crash reports linked to your FitFight
+            account identifier. FitFight disables session replay and screen and interaction
+            capture; its crash integration sends crash reports and account identification.
+            It does not intentionally include Health values in those reports.
+          </p>
+          <p>
+            When configured, bugs and feature requests are copied to our Notion backlog
+            with your username, report text, and attachment links. The FitFight administrator
+            can send a report, its comments, device information, and attachment links to
+            Cursor to investigate and prepare a fix.
+          </p>
+          <p>
+            When daily-status generation is configured and enabled for your account,
+            OpenRouter and its model provider receive a limited summary: whether you
+            are ahead, behind, or tied, participant count, days remaining, whether a sync
+            is needed, and language. This request does not include your account identifier,
+            username, Fight title, exact Steps totals, or raw Health samples.
           </p>
           <p>
             We may also disclose information when required by law, to protect users or
@@ -133,7 +169,11 @@ export default function PrivacyPage() {
             future reads but does not change data already used to score a Fight.
           </p>
           <p>
-            We keep account, Fight, bugs and feature-request, and uploaded Steps data while
+            You can manage notification categories under You → Settings → Notifications
+            and remove push permission in iOS Settings.
+          </p>
+          <p>
+            We keep account, Fight, posts, media, bugs and feature-request, and uploaded Health data while
             your account exists.
             Support emails are kept only as long as needed to answer the request. Limited
             security and request logs follow Supabase&apos;s and Vercel&apos;s configured retention
@@ -152,10 +192,17 @@ export default function PrivacyPage() {
           <p>
             You can permanently delete your account under <strong>You → Settings → Delete
             account</strong>. You do not need to contact support. Deletion removes your
-            profile and username, uploaded Apple Health Fight, daily, and activity totals, legacy
+            profile, username, uploaded photos, videos, files, Fight posts and comments,
+            uploaded Apple Health Fight, daily, and activity totals and workout summaries, legacy
             friendships, invitations, Fight memberships, scores, bugs and feature requests
             you posted, and every Fight you
             created. It also removes your participation from Fights created by someone else.
+          </p>
+          <p>
+            In-app deletion does not automatically remove report copies already sent
+            to Notion or Cursor, or crash records already sent to PostHog. Contact{" "}
+            <a href="mailto:marc@marclamy.com">marc@marclamy.com</a> to request a review
+            of those copies and their retention.
           </p>
           <p>
             When FitFight has a revocable Sign in with Apple credential, it asks Apple to

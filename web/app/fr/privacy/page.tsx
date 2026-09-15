@@ -25,7 +25,7 @@ export default function PrivacyPage() {
       <article className="legal-content">
         <p className="eyebrow">VOS DONNÉES, EN TOUTE CLARTÉ</p>
         <h1>Politique de confidentialité</h1>
-        <p className="legal-updated">En vigueur le 7 septembre 2026</p>
+        <p className="legal-updated">En vigueur le 15 septembre 2026</p>
         <p className="legal-intro">
           FitFight permet à des participants identifiés de comparer le nombre de pas
           enregistrés pendant un défi privé. Cette politique décrit les données utilisées
@@ -38,7 +38,8 @@ export default function PrivacyPage() {
             <li>
               <strong>Données du compte :</strong> votre identifiant Connexion avec Apple,
               votre adresse e-mail, qui peut être une adresse relais privée Apple, votre nom
-              lorsqu’Apple le fournit, le nom d’utilisateur FitFight que vous choisissez et
+              lorsqu’Apple le fournit, votre nom d’utilisateur FitFight, votre compagnon
+              choisi et sa description personnalisée facultative, ainsi qu’
               un identifiant Apple chiffré, réservé au serveur, permettant de déconnecter
               Connexion avec Apple lorsque vous supprimez votre compte.
             </li>
@@ -54,14 +55,31 @@ export default function PrivacyPage() {
               horodatages.
             </li>
             <li>
-              <strong>Pas de Santé d’Apple :</strong> avec votre autorisation, FitFight lit
-              le nombre de pas et envoie le total fusionné pour la période exacte de chaque
-              défi, ainsi que les totaux quotidiens nécessaires aux graphiques.
+              <strong>Santé d’Apple :</strong> avec votre autorisation, FitFight lit les pas,
+              l’énergie active et au repos, les distances, l’exercice, les périodes debout,
+              les étages montés et les entraînements. Les défis de pas envoient le total
+              fusionné pour leur période exacte et les totaux quotidiens nécessaires aux
+              graphiques. Les autres mesures restent privées sur votre compte.
+            </li>
+            <li>
+              <strong>Photos, vidéos et publications :</strong> votre photo de profil
+              facultative, vos publications, photos, vidéos, commentaires et réactions.
+              Les publications sont visibles des membres des défis sélectionnés. Le libellé
+              Public signifie tous les défis sélectionnés, pas une page ouverte sur internet.
+              Les informations permettant de rejoindre un défi public sont visibles des
+              utilisateurs connectés avant leur participation.
             </li>
             <li>
               <strong>Bugs et demandes :</strong> le titre, le détail, les votes et les
-              commentaires que vous publiez sur le tableau dans l’app, visibles des autres
-              utilisateurs FitFight connectés avec votre nom d’utilisateur.
+              commentaires, photos, vidéos et fichiers facultatifs que vous publiez dans
+              l’app, visibles des autres utilisateurs connectés avec votre nom d’utilisateur.
+              Les signalements incluent aussi des informations sur l’app et l’appareil.
+            </li>
+            <li>
+              <strong>Notifications :</strong> si vous autorisez les notifications, un
+              jeton d’appareil Apple chiffré, la langue, l’état de l’autorisation et vos
+              préférences. Apple transmet les alertes activées pour les défis, publications,
+              commentaires, réactions et bilans quotidiens.
             </li>
             <li>
               <strong>Assistance et fonctionnement :</strong> les messages envoyés à
@@ -79,10 +97,13 @@ export default function PrivacyPage() {
         <section>
           <h2>Santé d’Apple</h2>
           <p>
-            L’accès à Santé d’Apple est en lecture seule et limité au nombre de pas. FitFight
-            n’écrit aucune donnée dans Santé d’Apple. L’app actuelle n’envoie pas aux serveurs
-            FitFight les échantillons Santé bruts, entraînements, itinéraires, fréquences
-            cardiaques ni métadonnées d’appareil ou de source.
+            L’accès à Santé d’Apple est en lecture seule. FitFight n’écrit aucune donnée
+            dans Santé d’Apple et n’envoie pas les échantillons bruts, itinéraires GPS,
+            fréquences cardiaques ni métadonnées d’appareil ou de source. L’app peut envoyer
+            des totaux d’activité quotidiens et des résumés d’entraînement : type, horaires,
+            minutes actives lorsqu’elles sont disponibles, distance, énergie et effort.
+            Ces mesures préparent de futurs types de défis, sans compter pour les défis
+            de pas actuels ni être montrées aux autres participants.
           </p>
           <p>
             Les participants d’un même défi privé peuvent voir les noms d’utilisateur, le
@@ -99,6 +120,8 @@ export default function PrivacyPage() {
             <li>créer et sécuriser votre compte ;</li>
             <li>créer, gérer, comptabiliser et terminer les défis privés ;</li>
             <li>afficher les classements et l’historique partagé des défis ;</li>
+            <li>partager les publications et médias avec les participants sélectionnés ;</li>
+            <li>transmettre les notifications activées ;</li>
             <li>faire fonctionner le tableau de bugs et de demandes dans l’app ;</li>
             <li>répondre aux demandes d’assistance ;</li>
             <li>détecter les erreurs, abus et problèmes de sécurité.</li>
@@ -113,10 +136,30 @@ export default function PrivacyPage() {
         <section>
           <h2>Prestataires traitant les données</h2>
           <p>
-            FitFight utilise Supabase pour l’authentification et la base de données, et Vercel
+            FitFight utilise Supabase pour l’authentification, la base de données et les fichiers, et Vercel
             pour héberger les API serveur et les traitements planifiés. Ces prestataires
             traitent les données pour FitFight selon leurs conditions de service et de
             sécurité. Nous ne rendons publiques aucune donnée privée de défi ou de Santé.
+          </p>
+          <p>
+            Lorsque l’intégration est configurée, PostHog reçoit des rapports de plantage
+            liés à votre identifiant de compte FitFight. L’app désactive l’enregistrement
+            des sessions, des écrans et des interactions. Les rapports et l’identification
+            du compte ne contiennent pas intentionnellement de valeurs de Santé.
+          </p>
+          <p>
+            Lorsque l’intégration est configurée, les bugs et demandes sont copiés dans
+            notre backlog Notion avec le nom d’utilisateur, le texte et les liens des pièces
+            jointes. L’administrateur FitFight peut envoyer un signalement, ses commentaires,
+            les informations d’appareil et les liens des pièces jointes à Cursor pour
+            examiner le problème et préparer une correction.
+          </p>
+          <p>
+            Lorsque les bilans quotidiens sont configurés et activés pour votre compte,
+            OpenRouter et son fournisseur de modèle reçoivent un résumé limité : avance,
+            retard ou égalité, nombre de participants, jours restants, besoin de synchroniser
+            et langue. Aucun identifiant de compte, nom d’utilisateur, titre de défi, total
+            exact de pas ou échantillon Santé brut ne figure dans cette requête.
           </p>
           <p>
             Nous pouvons également communiquer des informations lorsque la loi l’exige,
@@ -134,8 +177,12 @@ export default function PrivacyPage() {
             utilisées pour comptabiliser un défi.
           </p>
           <p>
-            Nous conservons les données du compte, des défis, des bugs et demandes, et des pas
-            envoyés tant que
+            Vous pouvez gérer les catégories de notifications sous Vous → Réglages →
+            Notifications, et retirer l’autorisation dans les Réglages iOS.
+          </p>
+          <p>
+            Nous conservons les données du compte, des défis, des publications, des médias,
+            des bugs et demandes, et les données de Santé envoyées tant que
             votre compte existe. Les e-mails d’assistance sont conservés le temps nécessaire
             au traitement de la demande. Les journaux limités de sécurité et de requêtes
             suivent les durées de conservation configurées chez Supabase et Vercel. Des
@@ -155,11 +202,19 @@ export default function PrivacyPage() {
           <p>
             Vous pouvez supprimer définitivement votre compte sous <strong>Vous → Réglages
             → Supprimer le compte</strong>, sans contacter l’assistance. La suppression efface
-            votre profil et votre nom d’utilisateur, les totaux de pas envoyés, les anciennes
+            votre profil et votre nom d’utilisateur, les photos, vidéos et fichiers envoyés,
+            les publications et commentaires, les totaux de pas et d’activité et les résumés
+            d’entraînement, les anciennes
             relations d’amitié, les invitations, participations et scores, les bugs et
             demandes que vous avez publiés, ainsi que tous les
             défis que vous avez créés. Elle vous retire également des défis créés par une
             autre personne.
+          </p>
+          <p>
+            La suppression dans l’app n’efface pas automatiquement les copies déjà envoyées
+            à Notion ou Cursor, ni les rapports de plantage envoyés à PostHog. Contactez{" "}
+            <a href="mailto:marc@marclamy.com">marc@marclamy.com</a> pour demander un
+            examen de ces copies et de leur conservation.
           </p>
           <p>
             Lorsque FitFight possède un identifiant Connexion avec Apple révocable, l’app

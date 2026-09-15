@@ -4,6 +4,8 @@ import { after, test, type TestContext } from "node:test";
 import postgres from "postgres";
 import { readFightSnapshot } from "./fight-snapshot-supabase-query";
 import { closeDueFightsForUser } from "./close-due-fights-supabase-query";
+import { syncHealthKitAggregates } from "./healthkit-aggregates-supabase-query";
+import { healthKitAggregateSyncSchema } from "@/lib/types/healthkit/healthkit-aggregate";
 
 const databaseURL = process.env.DATABASE_URL;
 if (process.env.CI !== "true" || !databaseURL
@@ -140,4 +142,77 @@ test("refresh maintenance closes only the caller's accepted fights", async (t) =
   assert.equal(rows.find((row) => row.id === f.shared)?.state, "final");
   assert.equal(rows.find((row) => row.id === f.ownerOnly)?.state, "live");
   assert.equal(rows.find((row) => row.id === f.unrelated)?.state, "live");
+});
+
+test("Fight chart and score share a revision through corrections, legacy uploads, and finalization", async (t) => {
+  const f = await fixture(t);
+  await database`delete from public.fights where id = any(${database.array([f.ownerOnly, f.unrelated])}::uuid[])`;
+  await database`update public.fights set starts_at = '2026-03-29T10:00:00Z', ends_at = '2026-04-01T10:00:00Z'
+    where id = ${f.shared}`;
+  const upload = {
+    complete_through: "2026-03-30T12:00:00Z", time_zone: "America/New_York", merged_days: [],
+    fight_aggregates: [{
+      fight_id: f.shared, starts_at: "2026-03-29T10:00:00Z", ends_at: "2026-04-01T10:00:00Z",
+      cutoff_at: "2026-03-30T12:00:00Z", steps: 6000,
+      step_checkpoints: [
+        { day: "2026-03-29", cutoff_at: "2026-03-29T22:00:00Z", steps: 4000 },
+        { day: "2026-03-30", cutoff_at: "2026-03-30T12:00:00Z", steps: 6000 },
+      ],
+    }],
+  };
+  await syncHealthKitAggregates(f.owner, healthKitAggregateSyncSchema.parse(upload), database);
+  const peerUpload = structuredClone(upload);
+  peerUpload.fight_aggregates[0].steps = 9000;
+  peerUpload.fight_aggregates[0].step_checkpoints[1].steps = 9000;
+  await syncHealthKitAggregates(f.peer, healthKitAggregateSyncSchema.parse(peerUpload), database);
+  const owner = await readFightSnapshot(f.owner, "Pacific/Auckland", database);
+  const peer = await readFightSnapshot(f.peer, "America/New_York", database);
+  assert.deepEqual(owner.members, peer.members);
+  for (const member of owner.members.filter((row) => row.state === "accepted")) {
+    assert.equal(member.step_checkpoints?.at(-1)?.steps, member.current_value);
+  }
+  assert.equal(owner.members.find((row) => row.user_id === f.peer)?.rank, 1);
+  assert.equal(owner.members.find((row) => row.user_id === f.owner)?.step_checkpoints?.[0].steps, 4000);
+  assert.ok(owner.step_days.every((day) => day.steps === 123), "Legacy calendar days cannot determine Fight history");
+  const deferred = await readFightSnapshot(f.deferred, "UTC", database);
+  assert.deepEqual(deferred.members, owner.members);
+  for (const userId of [f.invited, f.declined, f.outsider]) {
+    const hidden = await readFightSnapshot(userId, "UTC", database);
+    assert.ok(hidden.members.every((member) => member.step_checkpoints == null));
+  }
+  await assert.rejects(database.begin(async (sql) => {
+    await sql`set local role authenticated`;
+    await sql`select step_checkpoints from private.fight_score_snapshots`;
+  }), /permission denied/);
+
+  const corrected = structuredClone(upload);
+  corrected.fight_aggregates[0].steps = 5000;
+  corrected.fight_aggregates[0].step_checkpoints[0].steps = 3000;
+  corrected.fight_aggregates[0].step_checkpoints[1].steps = 5000;
+  await syncHealthKitAggregates(f.owner, healthKitAggregateSyncSchema.parse(corrected), database);
+  await syncHealthKitAggregates(f.owner, healthKitAggregateSyncSchema.parse(upload), database);
+  const afterCorrection = await readFightSnapshot(f.owner, "UTC", database);
+  const correctedMember = afterCorrection.members.find((member) => member.user_id === f.owner);
+  assert.equal(correctedMember?.current_value, 5000, "Replay cannot replace a newer correction");
+  assert.deepEqual(correctedMember?.step_checkpoints, corrected.fight_aggregates[0].step_checkpoints);
+
+  const legacy = {
+    complete_through: "2026-03-30T13:00:00Z", time_zone: "UTC", merged_days: [],
+    fight_aggregates: [{
+      fight_id: f.shared, starts_at: upload.fight_aggregates[0].starts_at,
+      ends_at: upload.fight_aggregates[0].ends_at, cutoff_at: "2026-03-30T13:00:00Z", steps: 6500,
+    }],
+  };
+  await syncHealthKitAggregates(f.owner, healthKitAggregateSyncSchema.parse(legacy), database);
+  const afterLegacy = await readFightSnapshot(f.owner, "UTC", database);
+  assert.equal(afterLegacy.members.find((member) => member.user_id === f.owner)?.current_value, 6500);
+  assert.equal(afterLegacy.members.find((member) => member.user_id === f.owner)?.step_checkpoints, null,
+    "Older clients keep scoring without attaching stale chart history");
+
+  await database`update public.fights set state = 'final' where id = ${f.shared}`;
+  await database`update private.fight_score_snapshots set step_checkpoints = '[]'::jsonb
+    where fight_id = ${f.shared} and is_final`;
+  const final = await readFightSnapshot(f.peer, "UTC", database);
+  assert.deepEqual(final.members.find((member) => member.user_id === f.peer)?.step_checkpoints,
+    peerUpload.fight_aggregates[0].step_checkpoints, "Final chart history freezes with its total");
 });

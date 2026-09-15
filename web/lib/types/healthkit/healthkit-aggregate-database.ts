@@ -15,7 +15,7 @@ export const healthKitAggregateFightSchema = fightCalculationRowSchema.pick({
   outcome_rule: true,
   stake_minor: true,
   default_goal_value: true,
-}).extend({ fight_id: z.string().uuid() });
+}).extend({ fight_id: z.string().uuid(), time_zone: z.string() });
 
 export const healthKitAggregateMemberSchema = z.object({
   fight_id: z.string().uuid(),

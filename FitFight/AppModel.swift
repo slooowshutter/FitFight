@@ -89,6 +89,7 @@ struct Standing: Codable, Identifiable, Hashable {
 struct DayScore: Codable, Identifiable, Hashable {
     var person: Person
     var value: Double
+    var hasData: Bool = true
 
     var id: String { person.id }
 }
@@ -231,8 +232,7 @@ final class AppModel: ObservableObject {
     @Published var dailyStatusRecap: DailyStatusRecap?
     @Published var showingVersions = false
     @Published var showingDebugMenu = false
-    @Published var feedbackPane: FeedbackPane = .bugs
-    @Published var feedbackRequestFilter: RequestFilter = .bugs
+    @Published var feedbackRequestFilter: RequestFilter = .top
     @Published var companionPreviewNotice: String?
     @Published var joined: Set<String> = []
     @Published var createError: String?
@@ -252,13 +252,23 @@ final class AppModel: ObservableObject {
 
     @Published var you: Person
     @Published var fights: [Fight]
+    @Published private(set) var joinableFights: [FitFightJoinableFight] = []
+    @Published private(set) var suggestedFights: [FitFightJoinableFight] = []
+    @Published private(set) var isLoadingDiscovery = false
+    @Published private(set) var discoveryError: String?
 
     private var session: SessionStore?
     private let api = FitFightAPI()
     private var inviteTokens: [String: String] = [:]
     private var cachedUserID: UUID?
+    private var snapshotGeneration = 0
+    private var discoveryUserID: UUID?
+    private var discoveryLoadedAt: Date?
+    private var discoveryTask: Task<Void, Never>?
+    private var discoveryGeneration = 0
     private var refreshTask: Task<Void, Never>?
     private var refreshLineTask: Task<Void, Never>?
+    private var refreshUserID: UUID?
     private var pendingRefresh: (
         session: SessionStore,
         steps: HealthKitStepsStore,
@@ -462,11 +472,13 @@ final class AppModel: ObservableObject {
     func restoreCachedFights(session: SessionStore) {
         guard !CompanionPreview.isEnabled else { return }
         guard let userID = session.authSession?.user.id ?? session.client.auth.currentUser?.id else {
+            snapshotGeneration += 1
             cachedUserID = nil
             fights = []
             return
         }
         guard cachedUserID != userID else { return }
+        snapshotGeneration += 1
         cachedUserID = userID
         guard
             let data = UserDefaults.standard.data(forKey: Self.fightsCachePrefix + userID.uuidString),
@@ -488,17 +500,23 @@ final class AppModel: ObservableObject {
             if requestAccess || trigger == .manual { companionPreviewNotice = CompanionPreview.writeUnavailable }
             return
         }
-        if refreshTask != nil {
-            pendingRefresh = (session, steps, trigger, requestAccess)
+        if let refreshTask {
+            if trigger != .foreground || requestAccess
+                || (session.authSession?.user.id ?? session.client.auth.currentUser?.id) != refreshUserID {
+                pendingRefresh = (session, steps, trigger, requestAccess || (pendingRefresh?.requestAccess ?? false))
+            }
+            await refreshTask.value
             return
         }
         isRefreshingFights = true
         refreshPhase = .readingHealth
+        refreshUserID = session.authSession?.user.id ?? session.client.auth.currentUser?.id
         let work = Task { @MainActor in
             defer {
                 self.refreshLineTask?.cancel()
                 self.refreshLineTask = nil
                 self.refreshTask = nil
+                self.refreshUserID = nil
                 self.isRefreshingFights = false
                 self.refreshPhase = .idle
                 self.refreshLine = 0
@@ -506,6 +524,7 @@ final class AppModel: ObservableObject {
             var current = (session: session, steps: steps, trigger: trigger, requestAccess: requestAccess)
             repeat {
                 self.pendingRefresh = nil
+                self.refreshUserID = current.session.authSession?.user.id ?? current.session.client.auth.currentUser?.id
                 await self.performRefreshFights(
                     session: current.session,
                     steps: current.steps,
@@ -567,45 +586,13 @@ final class AppModel: ObservableObject {
                 self.refreshLine = line
             }
         }
-        let start = ContinuousClock.now
         await work()
         refreshLineTask?.cancel()
         refreshLineTask = nil
-        let elapsed = start.duration(to: .now)
-        let minimum = Duration.milliseconds(480)
-        if elapsed < minimum {
-            try? await Task.sleep(for: minimum - elapsed)
-        }
-    }
-
-    func applyLocalHealthKitScores(_ sync: FitFightHealthKitStepSync) {
-        let totals = Dictionary(uniqueKeysWithValues: sync.fightAggregates.map {
-            ($0.fightId.lowercased(), Double($0.steps))
-        })
-        guard !totals.isEmpty else { return }
-        let now = Date()
-        fights = fights.map { fight in
-            guard fight.status == .live || fight.status == .pending,
-                  let score = totals[fight.id.lowercased()],
-                  let index = fight.standings.firstIndex(where: {
-                      $0.person.isYou && !$0.invited && !$0.deferred
-                  })
-            else { return fight }
-            var next = fight
-            next.standings[index].score = score
-            next.standings[index].lastSyncedAt = now
-            if next.status == .pending {
-                next.standings[index].finalStepsComplete = true
-            }
-            next.standings = Self.orderedStandings(next.standings, status: next.status)
-            let joined = next.standings.filter { !$0.invited && !$0.deferred }
-            next.rank = joined.firstIndex { $0.person.isYou }.map { $0 + 1 } ?? next.rank
-            next.of = max(joined.count, 1)
-            return next
-        }
     }
 
     func removeCachedFights(for userID: UUID) {
+        snapshotGeneration += 1
         UserDefaults.standard.removeObject(forKey: Self.fightsCachePrefix + userID.uuidString)
         if cachedUserID == userID {
             cachedUserID = nil
@@ -613,18 +600,22 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func refreshFromServer(session: SessionStore, trace: HealthKitSyncTrace? = nil) async {
+    func refreshFromServer(
+        session: SessionStore, trace: HealthKitSyncTrace? = nil, performMaintenance: Bool = true
+    ) async {
         guard !CompanionPreview.isEnabled else { return }
         self.session = session
         guard let userId = session.authSession?.user.id ?? session.client.auth.currentUser?.id else {
             return
         }
+        snapshotGeneration += 1
+        let generation = snapshotGeneration
         if let profile = session.profile {
             you = Self.person(from: profile, isYou: true)
         }
         let attempt = trace ?? HealthKitSyncTrace(trigger: .foreground)
         defer {
-            if trace == nil {
+            if trace == nil && performMaintenance {
                 HealthKitStepsStore.shared.completeAttempt(attempt, session: session, userID: userId)
             }
         }
@@ -632,8 +623,15 @@ final class AppModel: ObservableObject {
         do {
             let token = try await attempt.measure(.session) { try await session.freshAccessToken() }
             guard session.authSession?.user.id == userId else { throw CancellationError() }
-            let snapshot = try await api.fightsSnapshot(accessToken: token, trace: attempt)
+            let snapshot = try await api.fightsSnapshot(
+                accessToken: token, trace: attempt, performMaintenance: performMaintenance
+            )
             try Task.checkCancellation()
+            guard session.authSession?.user.id == userId else {
+                throw CancellationError()
+            }
+            // A newer read owns publication; superseding this response is not a sync failure.
+            guard generation == snapshotGeneration else { return }
             let profiles = Dictionary(snapshot.profiles.map { ($0.userId, $0) }, uniquingKeysWith: { _, last in last })
             let members = Dictionary(grouping: snapshot.members, by: \.fightId)
             let mine = Dictionary(
@@ -647,7 +645,7 @@ final class AppModel: ObservableObject {
                     series: row.seriesId.flatMap { series[$0] }, userId: userId, formatScore: formatScore
                 ) else { return nil }
                 fight.days = Self.dayCards(
-                    from: snapshot.stepDays, standings: fight.standings, window: Self.fightDayWindow(fight)
+                    from: members[row.id] ?? [], standings: fight.standings
                 )
                 return fight
             }
@@ -831,6 +829,7 @@ final class AppModel: ObservableObject {
                 ),
                 accessToken: access
             )
+            invalidateFightDiscovery()
             await refreshFromServer()
             return true
         } catch {
@@ -860,6 +859,7 @@ final class AppModel: ObservableObject {
         }
         do {
             try await api.cancel(fightID: fightID, accessToken: access)
+            invalidateFightDiscovery()
             openFightID = nil
             await refreshFromServer()
             return true
@@ -936,10 +936,18 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func listJoinableFights(session: SessionStore) async -> [FitFightJoinableFight] {
+    private func invalidateFightDiscovery() {
+        discoveryGeneration += 1
+        discoveryLoadedAt = nil
+        discoveryTask?.cancel()
+        discoveryTask = nil
+        isLoadingDiscovery = false
+    }
+
+    func loadFightDiscovery(session: SessionStore, force: Bool = false) async {
         #if DEBUG && targetEnvironment(simulator)
         if CompanionPreview.isEnabled {
-            return fights.filter { $0.status == .live }.map { fight in
+            joinableFights = fights.filter { $0.status == .live }.map { fight in
                 FitFightJoinableFight(
                     fightId: UUID(uuidString: fight.id)!,
                     seriesId: UUID(uuidString: fight.seriesId ?? fight.id)!,
@@ -949,36 +957,88 @@ final class AppModel: ObservableObject {
                     recurring: fight.recurring, alreadyMember: true, canJoinNext: false
                 )
             }
+            suggestedFights = Array(joinableFights.prefix(2))
+            return
         }
         #endif
         self.session = session
-        guard let access = session.authSession?.accessToken, api.isConfigured else {
-            return []
+        let userID = session.authSession?.user.id
+        if discoveryUserID != userID {
+            invalidateFightDiscovery()
+            discoveryUserID = userID
+            joinableFights = []
+            suggestedFights = []
+            discoveryError = nil
         }
-        do {
-            return try await api.listJoinableFights(accessToken: access)
-        } catch {
-            createError = (error as? FitFightAPIError)?.errorDescription
-                ?? String(localized: "Couldn’t load joinable fights.")
-            return []
+        guard let userID, api.isConfigured else { return }
+        if let discoveryTask {
+            await discoveryTask.value
+            return
         }
-    }
-
-    func listSuggestedFights(session: SessionStore) async -> [FitFightJoinableFight] {
-        #if DEBUG && targetEnvironment(simulator)
-        if CompanionPreview.isEnabled {
-            return await listJoinableFights(session: session)
+        if !force, let discoveryLoadedAt, Date().timeIntervalSince(discoveryLoadedAt) < 60 {
+            return
         }
-        #endif
-        self.session = session
-        guard let access = session.authSession?.accessToken, api.isConfigured else {
-            return []
+        isLoadingDiscovery = true
+        let generation = discoveryGeneration
+        let task = Task { @MainActor in
+            defer {
+                if !Task.isCancelled, discoveryUserID == userID, discoveryGeneration == generation {
+                    isLoadingDiscovery = false
+                    discoveryTask = nil
+                }
+            }
+            do {
+                let access = try await session.freshAccessToken()
+                guard !Task.isCancelled, discoveryUserID == userID, discoveryGeneration == generation,
+                      session.authSession?.user.id == userID else { return }
+                let complete = await withTaskGroup(of: (Bool, Result<[FitFightJoinableFight], Error>).self) { group in
+                    for suggested in [false, true] {
+                        group.addTask { @MainActor in
+                            do {
+                                let rows = try await suggested
+                                    ? self.api.listSuggestedFights(accessToken: access)
+                                    : self.api.listJoinableFights(accessToken: access)
+                                return (suggested, .success(rows))
+                            } catch {
+                                return (suggested, .failure(error))
+                            }
+                        }
+                    }
+                    var loaded = 0
+                    for await (suggested, result) in group {
+                        guard !Task.isCancelled, discoveryUserID == userID, discoveryGeneration == generation,
+                              session.authSession?.user.id == userID else {
+                            group.cancelAll()
+                            return false
+                        }
+                        switch result {
+                        case .success(let rows):
+                            if suggested { suggestedFights = rows } else { joinableFights = rows }
+                            loaded += 1
+                        case .failure(let error):
+                            if !(error is CancellationError) {
+                                discoveryError = (error as? FitFightAPIError)?.errorDescription
+                                    ?? String(localized: "Couldn’t load joinable fights.")
+                            }
+                        }
+                    }
+                    return loaded == 2
+                }
+                guard !Task.isCancelled, discoveryUserID == userID, discoveryGeneration == generation,
+                      session.authSession?.user.id == userID else { return }
+                discoveryLoadedAt = complete ? Date() : nil
+                if complete { discoveryError = nil }
+            } catch {
+                guard !Task.isCancelled, !(error is CancellationError),
+                      discoveryUserID == userID, discoveryGeneration == generation,
+                      session.authSession?.user.id == userID else { return }
+                discoveryLoadedAt = nil
+                discoveryError = (error as? FitFightAPIError)?.errorDescription
+                    ?? String(localized: "Couldn’t load joinable fights.")
+            }
         }
-        do {
-            return try await api.listSuggestedFights(accessToken: access)
-        } catch {
-            return []
-        }
+        discoveryTask = task
+        await task.value
     }
 
     func setFightSuggested(id: String, suggested: Bool) async {
@@ -993,6 +1053,7 @@ final class AppModel: ObservableObject {
         do {
             let token = try await session.freshAccessToken()
             _ = try await api.setFightSuggested(fightID: fightID, suggested: suggested, accessToken: token)
+            invalidateFightDiscovery()
             await refreshFromServer()
         } catch {
             if let index = fights.firstIndex(where: { $0.id == id }) {
@@ -1130,6 +1191,7 @@ final class AppModel: ObservableObject {
     }
 
     private func keepCreatedFight(_ created: FitFightSummary, payload: FitFightCreateFight) {
+        invalidateFightDiscovery()
         let id = created.id.uuidString
         guard fight(id: id) == nil else { return }
         fights.insert(Self.fight(created: created, payload: payload, you: you), at: 0)
@@ -1141,6 +1203,7 @@ final class AppModel: ObservableObject {
     }
 
     private func syncStepsAfterMembershipChange() async {
+        invalidateFightDiscovery()
         guard let session else {
             await refreshFromServer()
             return
@@ -1192,6 +1255,7 @@ final class AppModel: ObservableObject {
         }
         do {
             _ = try await api.leaveFight(fightID: fightID, accessToken: access)
+            invalidateFightDiscovery()
             openFightID = nil
             joined.remove(id)
             await refreshFromServer()
@@ -1301,48 +1365,41 @@ final class AppModel: ObservableObject {
         )
     }
 
-    private static func fightDayWindow(_ fight: Fight) -> Set<String> {
-        let calendar = Calendar.current
-        var days: [String] = []
-        var cursor = calendar.startOfDay(for: fight.windowStart)
-        while cursor < fight.windowEnd && days.count <= 40 {
-            days.append(dayStamp(cursor))
-            guard let next = calendar.date(byAdding: .day, value: 1, to: cursor) else { break }
-            cursor = next
-        }
-        return Set(days)
-    }
-
     private static func dayCards(
-        from days: [StepDayRow],
-        standings: [Standing],
-        window: Set<String>
+        from members: [MemberRow],
+        standings: [Standing]
     ) -> [FightDay] {
+        let racers = standings.filter { !$0.invited && !$0.deferred }
+        var histories: [String: [FightStepCheckpoint]] = [:]
+        for row in racers {
+            guard let points = members.first(where: { $0.userId.uuidString == row.person.id })?.stepCheckpoints,
+                  let last = points.last, Double(last.steps) == row.score else { return [] }
+            histories[row.person.id] = points
+        }
+        let days = Set(histories.values.flatMap { $0.map(\.day) }).sorted()
         let formatter = DateFormatter()
-        formatter.calendar = Calendar.current
+        formatter.calendar = Calendar(identifier: .gregorian)
         formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
         formatter.dateFormat = "yyyy-MM-dd"
         let label = DateFormatter()
+        label.calendar = formatter.calendar
+        label.timeZone = formatter.timeZone
         label.locale = .autoupdatingCurrent
         label.setLocalizedDateFormatFromTemplate("EEEdMMM")
-        return window.sorted().map { day in
-            let scores = standings.filter { !$0.invited && !$0.deferred }.map { row in
-                let personID = UUID(uuidString: row.person.id)
-                let value = days.first { $0.userId == personID && $0.day == day }?.steps ?? 0
+        var previous: [String: Int] = [:]
+        return days.map { day in
+            let scores = racers.map { row in
+                guard let point = histories[row.person.id]?.first(where: { $0.day == day }) else {
+                    return DayScore(person: row.person, value: 0, hasData: false)
+                }
+                let value = point.steps - (previous[row.person.id] ?? 0)
+                previous[row.person.id] = point.steps
                 return DayScore(person: row.person, value: Double(value))
             }
             let date = formatter.date(from: day) ?? Date()
             return FightDay(label: label.string(from: date), scores: scores)
         }
-    }
-
-    private static func dayStamp(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.calendar = Calendar.current
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone.current
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: date)
     }
 
     private static func person(from profile: FitFightProfile, isYou: Bool) -> Person {

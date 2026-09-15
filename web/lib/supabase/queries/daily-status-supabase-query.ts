@@ -8,7 +8,6 @@ import {
 } from "@/lib/types/notifications/daily-status";
 
 const DAY_MS = 86_400_000;
-const BATCH = 40;
 
 type LiveMemberRow = {
   fight_id: string;
@@ -74,21 +73,25 @@ async function readLiveMemberRows(database: Sql): Promise<LiveMemberRow[]> {
     join public.fight_members as member
       on member.fight_id = fight.id
       and member.state = 'accepted'
+    left join private.notification_preferences as preferences
+      on preferences.user_id = member.user_id
     join lateral (
       select count(*)::int as participant_count
       from public.fight_members as accepted
       where accepted.fight_id = fight.id
         and accepted.state = 'accepted'
     ) as counts on true
-    left join lateral (
+    join lateral (
       select locale
       from private.device_installations as device
       where device.user_id = member.user_id
         and device.revoked_at is null
+        and device.permission_status = 'authorized'
       order by device.last_registered_at desc
       limit 1
     ) as installation on true
     where fight.state = 'live'
+      and coalesce(preferences.daily_status, true)
     order by fight.id, member.user_id
   `;
 }

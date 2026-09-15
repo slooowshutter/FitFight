@@ -15,6 +15,8 @@ export const registerDeviceInstallationRequestSchema = z.object({
   permission_status: notificationPermissionStatusSchema,
 }).strict();
 
+export const revokeDeviceInstallationRequestSchema = registerDeviceInstallationRequestSchema.pick({ token: true });
+
 export const notificationDeliveryStatusSchema = z.object({
   apns_configured: z.boolean(),
 });
@@ -23,4 +25,5 @@ export type ApnsEnvironment = z.infer<typeof apnsEnvironmentSchema>;
 export type NotificationLocale = z.infer<typeof notificationLocaleSchema>;
 export type NotificationPermissionStatus = z.infer<typeof notificationPermissionStatusSchema>;
 export type RegisterDeviceInstallationRequest = z.infer<typeof registerDeviceInstallationRequestSchema>;
+export type RevokeDeviceInstallationRequest = z.infer<typeof revokeDeviceInstallationRequestSchema>;
 export type NotificationDeliveryStatus = z.infer<typeof notificationDeliveryStatusSchema>;

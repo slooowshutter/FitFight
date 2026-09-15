@@ -2,6 +2,7 @@ import type { Sql } from "postgres";
 import { ApiError, ERROR_CODES } from "@/lib/http";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import { companionIdSchema } from "@/lib/types/companions/companion";
+import { fightPostCommentResponseSchema, fightPostReactionPersonSchema, type DeleteFightPostCommentResponse } from "@/lib/types/feed/fight-post";
 import type {
   CreateFightPostCommentRequest,
   FightPostAuthor,
@@ -9,7 +10,9 @@ import type {
   FightPostCommentListResponse,
   FightPostCommentResponse,
   FightPostReactionResponse,
+  FightPostReactionPeopleResponse,
   ListFightPostCommentsQuery,
+  ListFightPostReactionPeopleQuery,
   ReportFightPostCommentRequest,
   ReportFightPostCommentResponse,
 } from "@/lib/types/feed/fight-post";
@@ -19,7 +22,6 @@ import {
   enqueueFightFeedCommentNotifications,
   enqueueFightFeedReactionNotifications,
 } from "./feed-social-notifications-supabase-query";
-import { processNotificationOutbox } from "./process-notification-outbox-supabase-query";
 
 const COMMENT_LIMIT_PER_DAY = 40;
 
@@ -120,6 +122,19 @@ async function mapComments(userId: string, rows: CommentRow[]): Promise<FightPos
     mine: row.author_id === userId,
     author: authorFromRow(row, row.avatar_object_path ? urls.get(row.avatar_object_path) ?? null : null),
   }));
+}
+
+async function readVisibleCommentCount(userId: string, postId: string, database: Sql): Promise<number> {
+  const [row] = await database`
+    select count(*)::int as comment_count
+    from public.fight_post_comments as comment
+    where comment.post_id = ${postId}
+      and not exists (
+        select 1 from private.feed_blocks as blocked
+        where blocked.blocker_id = ${userId} and blocked.blocked_id = comment.author_id
+      )
+  `;
+  return fightPostCommentResponseSchema.shape.comment_count.parse(row.comment_count);
 }
 
 export async function listFightPostComments(
@@ -230,7 +245,6 @@ export async function createFightPostComment(
     parentId: input.parent_id ?? null,
     actorId: userId,
   });
-  await processNotificationOutbox(new Date(), database);
   const [row] = await database<CommentRow[]>`
     select
       comment.id, comment.post_id, comment.parent_id, comment.body, comment.created_at,
@@ -256,7 +270,7 @@ export async function createFightPostComment(
   if (!comment) {
     throw new ApiError(500, ERROR_CODES.db_error, "Could not load that comment");
   }
-  return { comment };
+  return { comment, comment_count: await readVisibleCommentCount(userId, postId, database) };
 }
 
 export async function deleteFightPostComment(
@@ -264,7 +278,7 @@ export async function deleteFightPostComment(
   postId: string,
   commentId: string,
   database: Sql = createDatabaseClient(),
-): Promise<void> {
+): Promise<DeleteFightPostCommentResponse> {
   await loadVisiblePost(userId, postId, database);
   const [deleted] = await database<{ id: string }[]>`
     delete from public.fight_post_comments
@@ -276,6 +290,7 @@ export async function deleteFightPostComment(
   if (!deleted) {
     throw new ApiError(404, ERROR_CODES.not_found, "Comment not found");
   }
+  return { deleted: true, comment_count: await readVisibleCommentCount(userId, postId, database) };
 }
 
 export async function reportFightPostComment(
@@ -305,6 +320,37 @@ export async function reportFightPostComment(
   return { reported: true };
 }
 
+/** Requires post access and omits hidden or deleted people from the reaction list. */
+export async function listFightPostReactionPeople(
+  userId: string,
+  postId: string,
+  query: ListFightPostReactionPeopleQuery,
+  database: Sql = createDatabaseClient(),
+): Promise<FightPostReactionPeopleResponse> {
+  const post = await loadVisiblePost(userId, postId, database);
+  const rows = await database`
+    select reaction.user_id, reaction.emoji, profile.handle, profile.display_name
+    from public.fight_post_reactions as reaction
+    join public.profiles as profile
+      on profile.user_id = reaction.user_id and profile.deleted_at is null
+    where reaction.post_id = ${postId}
+      and (${query.cursor ?? null}::uuid is null or reaction.user_id > ${query.cursor ?? null}::uuid)
+      and not exists (
+        select 1 from private.feed_blocks as blocked
+        where blocked.blocker_id = ${userId}
+          and blocked.blocked_id in (reaction.user_id, ${post.author_id}::uuid)
+      )
+    order by reaction.user_id
+    limit ${query.limit + 1}
+  `;
+  const people = rows.slice(0, query.limit).map((row) => fightPostReactionPersonSchema.parse(row));
+  const last = people.at(-1);
+  return {
+    people,
+    next_cursor: rows.length > query.limit && last ? last.user_id : null,
+  };
+}
+
 export async function setFightPostReaction(
   userId: string,
   postId: string,
@@ -330,7 +376,6 @@ export async function setFightPostReaction(
         set emoji = excluded.emoji, created_at = now()
     `;
     await enqueueFightFeedReactionNotifications(database, { postId, actorId: userId });
-    await processNotificationOutbox(new Date(), database);
   }
   return { reactions: await listPostReactions(userId, postId, database) };
 }

@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import { scoreFight } from "@/lib/scoring/score-fight";
 import { asNumber, type OutcomeRule } from "@/lib/types/database";
+import { providerFightWindowRowSchema } from "@/lib/types/provider-uploads/provider-upload";
 import type {
   CreateProviderUpload,
   ProviderArchiveRecord,
@@ -136,21 +137,16 @@ export async function getProviderUploadContext(
   database: Sql = createDatabaseClient(),
   now = new Date(),
 ) {
-  const rows = await database<{
-    fight_id: string;
-    state: "live" | "awaiting_final_sync";
-    starts_at: string;
-    ends_at: string;
-  }[]>`
+  const rows = providerFightWindowRowSchema.array().parse(await database`
     select fight.id as fight_id, fight.state::text as state,
-      fight.starts_at::text as starts_at, fight.ends_at::text as ends_at
+      fight.starts_at::text as starts_at, fight.ends_at::text as ends_at, fight.time_zone
     from public.fights as fight
     join public.fight_members as member on member.fight_id = fight.id
     where member.user_id = ${userId}
       and member.state = 'accepted'
       and fight.state in ('live', 'awaiting_final_sync')
     order by fight.starts_at, fight.id
-  `;
+  `);
   return {
     server_now: now.toISOString(),
     fight_windows: rows.map((row) => ({

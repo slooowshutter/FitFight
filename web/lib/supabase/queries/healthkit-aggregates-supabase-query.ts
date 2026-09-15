@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { Sql } from "postgres";
 import { ApiError, ERROR_CODES } from "@/lib/http";
-import { civilDayStamp } from "@/lib/scoring/civil-day";
+import { civilDayBounds, civilDayStamp } from "@/lib/scoring/civil-day";
 import { scoreFight } from "@/lib/scoring/score-fight";
 import { MAX_ACTIVITY_LOOKBACK_MS } from "@/lib/types/healthkit/healthkit-activity";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
@@ -67,7 +67,7 @@ export async function syncHealthKitAggregates(
     const fightIds = input.fight_aggregates.map((aggregate) => aggregate.fight_id);
     const fights = healthKitAggregateFightSchema.array().parse(await sql`
       select fight.id as fight_id, fight.starts_at::text as starts_at,
-        fight.ends_at::text as ends_at,
+        fight.ends_at::text as ends_at, fight.time_zone,
         fight.outcome_rule::text as outcome_rule,
         fight.stake_minor,
         fight.default_goal_value::text as default_goal_value
@@ -104,10 +104,22 @@ export async function syncHealthKitAggregates(
           "Fight aggregate does not match sync context",
         );
       }
+      if (aggregate.step_checkpoints) {
+        let cursor = Date.parse(fight.starts_at);
+        for (const point of aggregate.step_checkpoints) {
+          const day = civilDayStamp(new Date(cursor), fight.time_zone);
+          const cutoff = Math.min(civilDayBounds(day, fight.time_zone).endsAt.getTime(), expectedCutoff);
+          if (point.day !== day || Date.parse(point.cutoff_at) !== cutoff) {
+            throw new ApiError(400, ERROR_CODES.validation, "Fight checkpoints must cover each Fight day");
+          }
+          cursor = cutoff;
+        }
+      }
       return {
         fight_id: aggregate.fight_id,
         cutoff_at: aggregate.cutoff_at,
         value: aggregate.steps,
+        step_checkpoints: aggregate.step_checkpoints ?? null,
         // A later read can return to an earlier value at the same Fight-end cutoff.
         input_hash: createHash("sha256").update(JSON.stringify({
           ...aggregate, complete_through: input.complete_through,
@@ -196,12 +208,12 @@ export async function syncHealthKitAggregates(
       await sql`
         insert into private.fight_score_snapshots (
           fight_id, user_id, source_id, cutoff_at, value,
-          input_hash, calculation_version, is_final, created_at
+          input_hash, calculation_version, is_final, created_at, step_checkpoints
         )
         select aggregate.fight_id, ${userId}, ${source.id}, aggregate.cutoff_at,
-          aggregate.value, aggregate.input_hash, 1, false, clock_timestamp()
+          aggregate.value, aggregate.input_hash, 1, false, clock_timestamp(), aggregate.step_checkpoints
         from jsonb_to_recordset(${sql.json(aggregateFights)}::jsonb) as aggregate (
-          fight_id uuid, cutoff_at timestamptz, value numeric, input_hash text
+          fight_id uuid, cutoff_at timestamptz, value numeric, input_hash text, step_checkpoints jsonb
         )
         where true
         on conflict (fight_id, user_id, cutoff_at, input_hash) do nothing

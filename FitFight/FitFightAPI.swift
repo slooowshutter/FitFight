@@ -70,6 +70,7 @@ struct FitFightHealthKitContext: Decodable, Equatable {
         var startsAt: Date
         var endsAt: Date
         var cutoffAt: Date
+        var timeZone: String? = nil
 
         enum CodingKeys: String, CodingKey {
             case fightId = "fight_id"
@@ -77,6 +78,7 @@ struct FitFightHealthKitContext: Decodable, Equatable {
             case startsAt = "starts_at"
             case endsAt = "ends_at"
             case cutoffAt = "cutoff_at"
+            case timeZone = "time_zone"
         }
     }
 
@@ -110,6 +112,7 @@ struct FitFightHealthKitStepSync: Encodable, Equatable {
         var endsAt: String
         var cutoffAt: String
         var steps: Int
+        var stepCheckpoints: [FightStepCheckpoint]? = nil
 
         enum CodingKeys: String, CodingKey {
             case fightId = "fight_id"
@@ -117,6 +120,7 @@ struct FitFightHealthKitStepSync: Encodable, Equatable {
             case endsAt = "ends_at"
             case cutoffAt = "cutoff_at"
             case steps
+            case stepCheckpoints = "step_checkpoints"
         }
     }
 
@@ -636,9 +640,11 @@ struct FitFightAPI {
         )
     }
 
-    func fightsSnapshot(accessToken: String, trace: HealthKitSyncTrace) async throws -> FitFightSnapshot {
+    func fightsSnapshot(
+        accessToken: String, trace: HealthKitSyncTrace, performMaintenance: Bool = true
+    ) async throws -> FitFightSnapshot {
         try await request(
-            path: "fights/refresh",
+            path: performMaintenance ? "fights/refresh" : "fights/snapshot",
             method: "POST",
             accessToken: accessToken,
             body: Self.encoder.encode(["time_zone": Calendar.current.timeZone.identifier]),
@@ -791,8 +797,8 @@ struct FitFightAPI {
         )
     }
 
-    func deleteFightPostComment(postID: UUID, commentID: UUID, accessToken: String) async throws {
-        let _: DiscardBody = try await delete(
+    func deleteFightPostComment(postID: UUID, commentID: UUID, accessToken: String) async throws -> FitFightFightPostCommentDeletion {
+        try await delete(
             path: "posts/\(postID.uuidString.lowercased())/comments/\(commentID.uuidString.lowercased())",
             accessToken: accessToken,
             expected: [200]
@@ -806,6 +812,14 @@ struct FitFightAPI {
             body: FightPostReportBody(reason: "other"),
             expected: [200]
         )
+    }
+
+    func fightPostReactionPeople(postID: UUID, cursor: String?, accessToken: String) async throws -> FitFightFightPostReactionPeople {
+        var path = "posts/\(postID.uuidString.lowercased())/reactions"
+        if let cursor, let encoded = cursor.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
+            path += "?cursor=\(encoded)"
+        }
+        return try await get(path: path, accessToken: accessToken, expected: [200])
     }
 
     func reactToFightPost(postID: UUID, emoji: String, accessToken: String) async throws -> FitFightFightPostReactionList {
@@ -928,6 +942,17 @@ struct FitFightAPI {
                 locale: locale,
                 permissionStatus: permissionStatus
             ),
+            expected: [200]
+        )
+    }
+
+    func revokeDeviceInstallation(token: String, accessToken: String) async throws {
+        let _: DiscardBody = try await request(
+            path: "device-installations",
+            method: "DELETE",
+            accessToken: accessToken,
+            body: Self.encoder.encode(["token": token]),
+            idempotencyKey: nil,
             expected: [200]
         )
     }

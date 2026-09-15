@@ -37,10 +37,21 @@ export async function readFightSnapshot(
         where owner_id = ${userId}
           or id in (select fight_id from public.fight_members where user_id = ${userId})
       ), visible_members as materialized (
-        select fight_id, user_id, state, current_value, rank, final_value,
-          last_synced_at, final_steps_complete
-        from public.fight_members
-        where fight_id in (select id from visible_fights)
+        select member.fight_id, member.user_id, member.state, member.current_value,
+          member.rank, member.final_value, member.last_synced_at, member.final_steps_complete,
+          case when history.value = coalesce(member.current_value, member.final_value)
+            then history.step_checkpoints end as step_checkpoints
+        from public.fight_members as member
+        left join lateral (
+          select snapshot.value, snapshot.step_checkpoints
+          from private.fight_score_snapshots as snapshot
+          where snapshot.fight_id = member.fight_id and snapshot.user_id = member.user_id
+            and snapshot.source_id = member.selected_source_id
+            and (member.finalized_at is null or snapshot.is_final)
+          order by snapshot.cutoff_at desc, snapshot.created_at desc, snapshot.id desc
+          limit 1
+        ) as history on member.state = 'accepted'
+        where member.fight_id in (select id from visible_fights)
       ), visible_profiles as (
         select user_id, handle, display_name, avatar_media_id, companion_id
         from public.profiles

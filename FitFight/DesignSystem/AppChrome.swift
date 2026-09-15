@@ -39,16 +39,16 @@ struct FFLoadingBlock: View {
 /// Spinner plus the current sync sentence. Gold is progress.
 struct FFRefreshStatus: View {
     let message: String
-    var spinning: Bool = true
+    var showsSpinner = true
 
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
         VStack(spacing: 8) {
-            ProgressView()
-                .tint(theme.gold)
-                .opacity(spinning ? 1 : 0.55)
-                .scaleEffect(spinning ? 1 : 0.86)
+            if showsSpinner {
+                ProgressView()
+                    .tint(theme.gold)
+            }
             if !message.isEmpty {
                 Text(message)
                     .ffType(.caption)
@@ -116,7 +116,7 @@ struct FFScreen<Content: View>: View {
                 .containerRelativeFrame(.horizontal)
                 .background(alignment: .top) {
                     if refresh != nil {
-                        FFAlwaysBounceVertical()
+                        FFAlwaysBounceVertical(tintColor: UIColor(theme.gold))
                     }
                 }
         }
@@ -130,9 +130,10 @@ struct FFScreen<Content: View>: View {
                 if showLockedHeader {
                     FFRefreshStatus(
                         message: displayedMessage,
-                        spinning: true
+                        // SwiftUI already supplies the spinner for a pull gesture.
+                        showsSpinner: !holdOpen
                     )
-                    .frame(height: restingHeight)
+                    .frame(height: holdOpen ? 44 : restingHeight)
                     .transition(.opacity)
                 }
             }
@@ -193,8 +194,10 @@ private extension View {
 // `alwaysBounceVertical` is set on the underlying UIScrollView. That is what lets a
 // short Fights / Feed / fight screen still pull to refresh.
 private struct FFAlwaysBounceVertical: UIViewRepresentable {
+    let tintColor: UIColor
+
     func makeCoordinator() -> Coordinator {
-        Coordinator()
+        Coordinator(tintColor: tintColor)
     }
 
     func makeUIView(context: Context) -> SentinelView {
@@ -206,6 +209,7 @@ private struct FFAlwaysBounceVertical: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: SentinelView, context: Context) {
+        context.coordinator.tintColor = tintColor
         uiView.coordinator = context.coordinator
         context.coordinator.sync(from: uiView)
     }
@@ -225,12 +229,19 @@ private struct FFAlwaysBounceVertical: UIViewRepresentable {
     }
 
     final class Coordinator {
+        var tintColor: UIColor
+
+        init(tintColor: UIColor) {
+            self.tintColor = tintColor
+        }
+
         func sync(from view: UIView) {
             var current: UIView? = view
             while let node = current {
                 if let scroll = node as? UIScrollView {
                     scroll.alwaysBounceVertical = true
                     scroll.bounces = true
+                    scroll.refreshControl?.tintColor = tintColor
                     return
                 }
                 current = node.superview

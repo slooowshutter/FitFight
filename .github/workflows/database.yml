@@ -27,8 +27,8 @@ jobs:
         with:
           version: 2.115.0
 
-      - name: Start disposable database, Auth, and Data API
-        run: supabase start -x studio,meta,analytics,vector,imgproxy,realtime,storage,edge-runtime
+      - name: Start disposable database, Auth, Realtime, and Data API
+        run: supabase start -x studio,meta,analytics,vector,imgproxy,storage,edge-runtime
 
       - name: Lint schema
         run: supabase db lint --local --schema public,private --fail-on error

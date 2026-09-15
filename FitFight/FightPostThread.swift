@@ -10,16 +10,24 @@ struct FightPostEngagement: View {
     @State private var comments: [FitFightFightPostComment] = []
     @State private var nextCursor: String?
     @State private var open = false
+    @State private var showingReactions = false
     @State private var replyTo: FitFightFightPostComment?
     @State private var draft = ""
     @State private var customEmoji = ""
     @State private var loading = false
+    @State private var loadingComments = false
 
     private let quickEmoji = ["🔥", "💪", "😂", "❤️", "👏", "😮"]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             reactions
+            if !post.reactions.isEmpty {
+                Button(String(localized: "View reactions")) { showingReactions = true }
+                    .ffType(.caption)
+                    .foregroundStyle(theme.mossText)
+                    .buttonStyle(FFHapticPlainStyle())
+            }
             Button {
                 open.toggle()
                 if open && comments.isEmpty {
@@ -38,6 +46,10 @@ struct FightPostEngagement: View {
             }
             .buttonStyle(FFHapticPlainStyle())
             if open {
+                if loadingComments {
+                    ProgressView()
+                        .tint(theme.mossText)
+                }
                 ForEach(displayedComments) { row in
                     commentRow(row.comment)
                         .padding(.leading, CGFloat(min(row.depth, 4)) * 14)
@@ -49,6 +61,7 @@ struct FightPostEngagement: View {
                     .ffType(.caption)
                     .foregroundStyle(theme.mossText)
                     .buttonStyle(FFHapticPlainStyle())
+                    .disabled(loadingComments || loading)
                 }
                 if let replyTo {
                     HStack {
@@ -74,9 +87,29 @@ struct FightPostEngagement: View {
                     ) {
                         Task { await sendComment() }
                     }
-                    .disabled(loading || draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(loading || loadingComments || draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
+        }
+        .task {
+            if post.commentCount > 0 {
+                open = true
+                await loadComments()
+            }
+        }
+        .onChange(of: post.commentCount) { previous, count in
+            if previous == 0 && count > 0 {
+                open = true
+                if comments.isEmpty {
+                    Task { await loadComments() }
+                }
+            }
+        }
+        .sheet(isPresented: $showingReactions) {
+            FightPostReactionsSheet(post: post)
+                .environmentObject(session)
+                .fitFightTheme(theme)
+                .presentationBackground(theme.bg)
         }
     }
 
@@ -120,18 +153,21 @@ struct FightPostEngagement: View {
                     }
             }
         }
+        .disabled(feed.reactingPostIDs.contains(post.id))
+        .accessibilityValue(feed.reactingPostIDs.contains(post.id) ? String(localized: "Saving…") : "")
     }
 
     private var displayedComments: [DisplayedFightComment] {
+        let commentIDs = Set(comments.map(\.id))
+        let children = Dictionary(grouping: comments, by: \.parentId)
         var rows: [DisplayedFightComment] = []
         var stack: [(FitFightFightPostComment, Int)] = comments
-            .filter { $0.parentId == nil }
+            .filter { comment in comment.parentId.map { !commentIDs.contains($0) } ?? true }
             .reversed()
             .map { ($0, 0) }
         while let (comment, depth) = stack.popLast() {
             rows.append(DisplayedFightComment(comment: comment, depth: depth))
-            let children = comments.filter { $0.parentId == comment.id }
-            for child in children.reversed() {
+            for child in (children[comment.id] ?? []).reversed() {
                 stack.append((child, depth + 1))
             }
         }
@@ -197,66 +233,95 @@ struct FightPostEngagement: View {
             return
         }
         #endif
-        loading = true
-        defer { loading = false }
+        guard !loadingComments, let userID = session.authSession?.user.id else { return }
+        loadingComments = true
+        defer { if session.authSession?.user.id == userID { loadingComments = false } }
         do {
             let token = try await session.freshAccessToken()
+            guard session.authSession?.user.id == userID else { return }
             let result = try await FitFightAPI().fightPostComments(
                 postID: post.id,
                 cursor: more ? nextCursor : nil,
                 accessToken: token
             )
+            guard session.authSession?.user.id == userID else { return }
             comments = more
                 ? comments + result.comments.filter { comment in !comments.contains(where: { $0.id == comment.id }) }
                 : result.comments
             nextCursor = result.nextCursor
         } catch {
             if Task.isCancelled || error is CancellationError { return }
+            guard session.authSession?.user.id == userID else { return }
             feed.error = error.localizedDescription
         }
     }
 
     private func sendComment() async {
         let note = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !note.isEmpty else { return }
+        guard !note.isEmpty, let userID = session.authSession?.user.id else { return }
+        let parentID = replyTo?.id
         loading = true
-        defer { loading = false }
+        defer { if session.authSession?.user.id == userID { loading = false } }
         do {
             let token = try await session.freshAccessToken()
+            guard session.authSession?.user.id == userID else { return }
             let created = try await FitFightAPI().createFightPostComment(
                 postID: post.id,
                 body: note,
-                parentID: replyTo?.id,
+                parentID: parentID,
                 accessToken: token
             )
-            comments.append(created.comment)
+            guard session.authSession?.user.id == userID else { return }
+            if !comments.contains(where: { $0.id == created.comment.id }) {
+                comments.append(created.comment)
+            }
             draft = ""
             replyTo = nil
-            feed.replace(post.updating(commentCount: post.commentCount + 1))
+            if let current = feed.posts.first(where: { $0.id == post.id }) {
+                feed.replace(current.updating(commentCount: created.commentCount ?? current.commentCount + 1))
+            }
         } catch {
             if Task.isCancelled || error is CancellationError { return }
+            guard session.authSession?.user.id == userID else { return }
             feed.error = error.localizedDescription
         }
     }
 
     private func deleteComment(_ comment: FitFightFightPostComment) async {
+        guard let userID = session.authSession?.user.id else { return }
         do {
             let token = try await session.freshAccessToken()
-            try await FitFightAPI().deleteFightPostComment(postID: post.id, commentID: comment.id, accessToken: token)
-            comments.removeAll { $0.id == comment.id || $0.parentId == comment.id }
-            feed.replace(post.updating(commentCount: max(0, post.commentCount - 1)))
+            guard session.authSession?.user.id == userID else { return }
+            let result = try await FitFightAPI().deleteFightPostComment(postID: post.id, commentID: comment.id, accessToken: token)
+            guard session.authSession?.user.id == userID else { return }
+            let children = Dictionary(grouping: comments, by: \.parentId)
+            var removed = Set<UUID>()
+            var pending = [comment.id]
+            while let id = pending.popLast() {
+                guard removed.insert(id).inserted else { continue }
+                pending.append(contentsOf: (children[id] ?? []).map(\.id))
+            }
+            comments.removeAll { removed.contains($0.id) }
+            if let replyTo, removed.contains(replyTo.id) { self.replyTo = nil }
+            if let current = feed.posts.first(where: { $0.id == post.id }) {
+                feed.replace(current.updating(commentCount: result.commentCount ?? max(0, current.commentCount - removed.count)))
+            }
         } catch {
             if Task.isCancelled || error is CancellationError { return }
+            guard session.authSession?.user.id == userID else { return }
             feed.error = error.localizedDescription
         }
     }
 
     private func reportComment(_ comment: FitFightFightPostComment) async {
+        guard let userID = session.authSession?.user.id else { return }
         do {
             let token = try await session.freshAccessToken()
+            guard session.authSession?.user.id == userID else { return }
             try await FitFightAPI().reportFightPostComment(postID: post.id, commentID: comment.id, accessToken: token)
         } catch {
             if Task.isCancelled || error is CancellationError { return }
+            guard session.authSession?.user.id == userID else { return }
             feed.error = error.localizedDescription
         }
     }
@@ -265,6 +330,116 @@ struct FightPostEngagement: View {
         guard let segment = value.precomposedStringWithCanonicalMapping.first else { return nil }
         let candidate = String(segment)
         return candidate.unicodeScalars.contains(where: { $0.properties.isEmoji }) ? candidate : nil
+    }
+}
+
+private struct FightPostReactionsSheet: View {
+    let post: FitFightFightPost
+
+    @EnvironmentObject private var session: SessionStore
+    @Environment(\.ffTheme) private var theme
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var people: [FitFightFightPostReactionPerson] = []
+    @State private var nextCursor: String?
+    @State private var loading = true
+    @State private var error: String?
+
+    var body: some View {
+        FFScreen(clearance: false) {
+            HStack {
+                Text(String(localized: "Reactions"))
+                    .ffType(.title)
+                    .foregroundStyle(theme.text)
+                Spacer()
+                Button(String(localized: "Close")) { dismiss() }
+                    .ffType(.label)
+                    .foregroundStyle(theme.mossText)
+                    .buttonStyle(FFHapticPlainStyle())
+            }
+            if !people.isEmpty {
+                FFCard {
+                    ForEach(people) { person in
+                        HStack(spacing: 12) {
+                            Text(person.emoji)
+                                .ffType(.title)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("@\(person.handle)")
+                                    .ffType(.label)
+                                    .foregroundStyle(theme.text)
+                                Text(person.displayName)
+                                    .ffType(.caption)
+                                    .foregroundStyle(theme.textSecondary)
+                            }
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+            } else if !loading && error == nil {
+                Text(String(localized: "No reactions yet"))
+                    .ffType(.body)
+                    .foregroundStyle(theme.textSecondary)
+            }
+            if loading {
+                ProgressView()
+                    .tint(theme.mossText)
+            }
+            if let error {
+                FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
+                FFButton(title: String(localized: "Retry"), kind: .ghost) {
+                    Task { await loadPeople(more: !people.isEmpty) }
+                }
+                .disabled(loading)
+            } else if nextCursor != nil {
+                FFButton(title: String(localized: "More reactions"), kind: .ghost) {
+                    Task { await loadPeople(more: true) }
+                }
+                .disabled(loading)
+            }
+        }
+        .task { await loadPeople() }
+    }
+
+    private func loadPeople(more: Bool = false) async {
+        #if DEBUG && targetEnvironment(simulator)
+        if CompanionPreview.isEnabled {
+            if let reaction = post.reactions.first {
+                people = CompanionPreview.people.dropFirst().prefix(reaction.count).map { person in
+                    FitFightFightPostReactionPerson(
+                        userId: UUID(uuidString: person.id)!,
+                        handle: String(person.handle.dropFirst()),
+                        displayName: person.name,
+                        emoji: reaction.emoji
+                    )
+                }
+            }
+            loading = false
+            return
+        }
+        #endif
+        guard let userID = session.authSession?.user.id else { return }
+        loading = true
+        error = nil
+        defer { if session.authSession?.user.id == userID { loading = false } }
+        do {
+            let token = try await session.freshAccessToken()
+            guard session.authSession?.user.id == userID else { return }
+            let result = try await FitFightAPI().fightPostReactionPeople(
+                postID: post.id,
+                cursor: more ? nextCursor : nil,
+                accessToken: token
+            )
+            guard !Task.isCancelled, session.authSession?.user.id == userID else { return }
+            people = more
+                ? people + result.people.filter { person in !people.contains(where: { $0.id == person.id }) }
+                : result.people
+            nextCursor = result.nextCursor
+        } catch {
+            if Task.isCancelled || error is CancellationError { return }
+            guard session.authSession?.user.id == userID else { return }
+            self.error = error.localizedDescription
+        }
     }
 }
 

@@ -57,6 +57,61 @@ const sourceRow = {
   server_now: "2026-08-30T14:00:00.000Z",
 };
 
+const checkpointAggregate = {
+  ...validAggregate,
+  fight_aggregates: [{
+    ...validAggregate.fight_aggregates[0],
+    step_checkpoints: [
+      { day: "2026-08-27", cutoff_at: "2026-08-27T22:00:00Z", steps: 5000 },
+      { day: "2026-08-28", cutoff_at: "2026-08-28T22:00:00Z", steps: 17000 },
+      { day: "2026-08-29", cutoff_at: "2026-08-29T22:00:00Z", steps: 33000 },
+      { day: "2026-08-30", cutoff_at: validAggregate.complete_through, steps: 42000 },
+    ],
+  }],
+};
+
+test("Fight history must finish at the ranked total and cutoff", () => {
+  const input = healthKitAggregateSyncSchema.parse(checkpointAggregate);
+  assert.equal(input.fight_aggregates[0].step_checkpoints?.at(-1)?.steps, 42000);
+  for (const point of [
+    { steps: 42001 }, { cutoff_at: "2026-08-30T13:00:00Z" }, { steps: 100 },
+  ]) {
+    const invalid = structuredClone(checkpointAggregate);
+    Object.assign(invalid.fight_aggregates[0].step_checkpoints[3], point);
+    assert.equal(healthKitAggregateSyncSchema.safeParse(invalid).success, false);
+  }
+  const decreasing = structuredClone(checkpointAggregate);
+  decreasing.fight_aggregates[0].step_checkpoints[1].steps = 100;
+  assert.equal(healthKitAggregateSyncSchema.safeParse(decreasing).success, false);
+  const duplicate = structuredClone(checkpointAggregate);
+  duplicate.fight_aggregates[0].step_checkpoints[1] = duplicate.fight_aggregates[0].step_checkpoints[0];
+  assert.equal(healthKitAggregateSyncSchema.safeParse(duplicate).success, false);
+});
+
+test("Fight history rejects skipped days and the wrong Fight time zone before writing scores", async () => {
+  const { database, queries } = createDatabaseStub((query) => {
+    if (query.includes("returning id")) return [sourceRow];
+    if (query.includes("from public.fights as fight")) return [{
+      fight_id: validAggregate.fight_aggregates[0].fight_id.toLowerCase(),
+      starts_at: validAggregate.fight_aggregates[0].starts_at,
+      ends_at: validAggregate.fight_aggregates[0].ends_at,
+      time_zone: "Europe/Paris", outcome_rule: "highest_total", stake_minor: null, default_goal_value: null,
+    }];
+    return [];
+  });
+  const skipped = structuredClone(checkpointAggregate);
+  skipped.fight_aggregates[0].step_checkpoints.splice(1, 1);
+  await assert.rejects(syncHealthKitAggregates(
+    "5b2216f4-762d-4890-a516-63046a01df31", healthKitAggregateSyncSchema.parse(skipped), database,
+  ), /each Fight day/);
+  const wrongZone = structuredClone(checkpointAggregate);
+  wrongZone.fight_aggregates[0].step_checkpoints[0].cutoff_at = "2026-08-28T00:00:00Z";
+  await assert.rejects(syncHealthKitAggregates(
+    "5b2216f4-762d-4890-a516-63046a01df31", healthKitAggregateSyncSchema.parse(wrongZone), database,
+  ), /each Fight day/);
+  assert.ok(queries.every(({ query }) => !query.includes("insert into private.fight_score_snapshots")));
+});
+
 test("Apple Health aggregate sync accepts one merged total per Fight", () => {
   const parsed = healthKitAggregateSyncSchema.parse(validAggregate);
 
@@ -246,6 +301,7 @@ test("Apple Health aggregate upload query count stays bounded across fights and 
       starts_at: aggregate.starts_at,
       ends_at: aggregate.ends_at,
       outcome_rule: "highest_total",
+        time_zone: "Europe/Paris",
       stake_minor: null,
       default_goal_value: null,
     }));
@@ -366,6 +422,7 @@ test("Apple Health aggregate sync requires every server-context Fight", async ()
         starts_at: "2026-08-27 16:06:36.729+00",
         ends_at: "2026-09-03 16:06:35.093+00",
         outcome_rule: "highest_total",
+        time_zone: "Europe/Paris",
         stake_minor: null,
         default_goal_value: null,
       }];
@@ -395,6 +452,7 @@ test("Apple Health aggregate sync rejects a Fight window that differs from the s
         starts_at: "2026-08-27 15:06:36.729+00",
         ends_at: "2026-09-03 16:06:35.093+00",
         outcome_rule: "highest_total",
+        time_zone: "Europe/Paris",
         stake_minor: null,
         default_goal_value: null,
       }];
@@ -423,6 +481,7 @@ test("Apple Health aggregate sync rejects merged days outside submitted Fights",
         starts_at: "2026-08-27 16:06:36.729+00",
         ends_at: "2026-09-03 16:06:35.093+00",
         outcome_rule: "highest_total",
+        time_zone: "Europe/Paris",
         stake_minor: null,
         default_goal_value: null,
       }];
@@ -456,6 +515,7 @@ test("Apple Health aggregate sync writes merged days without raw observations", 
         starts_at: "2026-08-27 16:06:36.729+00",
         ends_at: "2026-09-03 16:06:35.093+00",
         outcome_rule: "highest_total",
+        time_zone: "Europe/Paris",
         stake_minor: null,
         default_goal_value: null,
       }];
@@ -503,6 +563,7 @@ test("Apple Health aggregate sync stores private activity without changing Steps
         starts_at: "2026-08-27 16:06:36.729+00",
         ends_at: "2026-09-03 16:06:35.093+00",
         outcome_rule: "highest_total",
+        time_zone: "Europe/Paris",
         stake_minor: null,
         default_goal_value: null,
       }];
@@ -569,6 +630,7 @@ test("Apple Health Steps sync succeeds when private activity writes fail", async
         starts_at: "2026-08-27 16:06:36.729+00",
         ends_at: "2026-09-03 16:06:35.093+00",
         outcome_rule: "highest_total",
+        time_zone: "Europe/Paris",
         stake_minor: null,
         default_goal_value: null,
       }];
@@ -628,6 +690,7 @@ test("Apple Health aggregate sync makes the newest Fight snapshot authoritative 
         starts_at: "2026-08-27 16:06:36.729+00",
         ends_at: "2026-09-03 16:06:35.093+00",
         outcome_rule: "highest_total",
+        time_zone: "Europe/Paris",
         stake_minor: null,
         default_goal_value: null,
       }];
@@ -683,6 +746,7 @@ test("Apple Health aggregate sync marks exact Fight-end coverage complete", asyn
         starts_at: "2026-08-27 16:06:36.729+00",
         ends_at: "2026-09-03 16:06:35.093+00",
         outcome_rule: "highest_total",
+        time_zone: "Europe/Paris",
         stake_minor: null,
         default_goal_value: null,
       }];

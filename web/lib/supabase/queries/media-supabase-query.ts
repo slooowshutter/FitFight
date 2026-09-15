@@ -256,18 +256,11 @@ export async function loadReadyMedia(
 export async function removeStoragePaths(paths: string[]): Promise<void> {
   if (paths.length === 0) return;
   const admin = createAdminClient();
-  const { error } = await admin.storage.from(BUCKET).remove(paths);
-  if (error && error.status !== 404 && error.statusCode !== "404") {
-    throw new ApiError(503, ERROR_CODES.storage_error, "Could not remove uploaded photos");
+  // Storage accepts at most 1000 object paths per removal request.
+  for (let index = 0; index < paths.length; index += 1000) {
+    const { error } = await admin.storage.from(BUCKET).remove(paths.slice(index, index + 1000));
+    if (error && error.status !== 404 && error.statusCode !== "404") {
+      throw new ApiError(503, ERROR_CODES.storage_error, "Could not remove uploaded photos");
+    }
   }
-}
-
-export async function removeUserMediaObjects(
-  userId: string,
-  database: Sql = createDatabaseClient(),
-): Promise<void> {
-  const rows = await database<{ object_path: string }[]>`
-    select object_path from public.media_objects where owner_id = ${userId}
-  `;
-  await removeStoragePaths(rows.map((entry) => entry.object_path));
 }

@@ -150,6 +150,12 @@ export const fightPostCommentListResponseSchema = z.object({
 
 export const fightPostCommentResponseSchema = z.object({
   comment: fightPostCommentSchema,
+  comment_count: z.number().int().nonnegative(),
+}).strict();
+
+export const deleteFightPostCommentResponseSchema = z.object({
+  deleted: z.literal(true),
+  comment_count: z.number().int().nonnegative(),
 }).strict();
 
 export const createFightPostCommentRequestSchema = z.object({
@@ -181,6 +187,20 @@ export const fightPostReactionResponseSchema = z.object({
   reactions: z.array(fightPostReactionSchema),
 }).strict();
 
+export const fightPostReactionPersonSchema = fightPostTagSchema.extend({
+  emoji: z.string(),
+});
+
+export const fightPostReactionPeopleResponseSchema = z.object({
+  people: z.array(fightPostReactionPersonSchema),
+  next_cursor: z.string().uuid().nullable(),
+}).strict();
+
+export const listFightPostReactionPeopleQuerySchema = z.object({
+  cursor: z.string().uuid().optional(),
+  limit: z.coerce.number().int().min(1).max(80).default(40),
+}).strict();
+
 export type FeedAudience = z.infer<typeof feedAudienceSchema>;
 export type FeedScope = z.infer<typeof feedScopeSchema>;
 export type FightPostAuthor = z.infer<typeof fightPostAuthorSchema>;
@@ -207,9 +227,13 @@ export type FeedPeopleResponse = z.infer<typeof feedPeopleResponseSchema>;
 export type FightPostComment = z.infer<typeof fightPostCommentSchema>;
 export type FightPostCommentListResponse = z.infer<typeof fightPostCommentListResponseSchema>;
 export type FightPostCommentResponse = z.infer<typeof fightPostCommentResponseSchema>;
+export type DeleteFightPostCommentResponse = z.infer<typeof deleteFightPostCommentResponseSchema>;
 export type CreateFightPostCommentRequest = z.infer<typeof createFightPostCommentRequestSchema>;
 export type ListFightPostCommentsQuery = z.infer<typeof listFightPostCommentsQuerySchema>;
 export type ReportFightPostCommentRequest = z.infer<typeof reportFightPostCommentRequestSchema>;
 export type ReportFightPostCommentResponse = z.infer<typeof reportFightPostCommentResponseSchema>;
 export type SetFightPostReactionRequest = z.infer<typeof setFightPostReactionRequestSchema>;
 export type FightPostReactionResponse = z.infer<typeof fightPostReactionResponseSchema>;
+export type FightPostReactionPerson = z.infer<typeof fightPostReactionPersonSchema>;
+export type FightPostReactionPeopleResponse = z.infer<typeof fightPostReactionPeopleResponseSchema>;
+export type ListFightPostReactionPeopleQuery = z.infer<typeof listFightPostReactionPeopleQuerySchema>;

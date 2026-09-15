@@ -68,6 +68,24 @@ enum HealthKitStepAggregates {
         var sawAccessibleSteps = !totalsByDay.isEmpty
         for window in context.fightWindows {
             try Task.checkCancellation()
+            var checkpoints: [FightStepCheckpoint]? = nil
+            if let timeZone = window.timeZone, let zone = TimeZone(identifier: timeZone) {
+                var fightCalendar = Calendar(identifier: .gregorian)
+                fightCalendar.timeZone = zone
+                checkpoints = []
+                var day = fightCalendar.startOfDay(for: window.startsAt)
+                while let nextDay = fightCalendar.date(byAdding: .day, value: 1, to: day),
+                      nextDay < window.cutoffAt {
+                    try Task.checkCancellation()
+                    let count = try await trace.measure(.healthKitFight) {
+                        try await total(store: store, type: type, start: window.startsAt, end: nextDay)
+                    }
+                    checkpoints?.append(FightStepCheckpoint(
+                        day: dayStamp(day, calendar: fightCalendar), cutoffAt: iso8601(nextDay), steps: count ?? 0
+                    ))
+                    day = nextDay
+                }
+            }
             let counted = try await trace.measure(.healthKitFight) {
                 try await total(
                     store: store,
@@ -79,12 +97,22 @@ enum HealthKitStepAggregates {
             if counted != nil {
                 sawAccessibleSteps = true
             }
+            if checkpoints != nil, let timeZone = window.timeZone, let zone = TimeZone(identifier: timeZone) {
+                var fightCalendar = Calendar(identifier: .gregorian)
+                fightCalendar.timeZone = zone
+                // The score reuses this final query; separately rounded daily totals cannot define it.
+                checkpoints?.append(FightStepCheckpoint(
+                    day: dayStamp(window.cutoffAt.addingTimeInterval(-0.001), calendar: fightCalendar),
+                    cutoffAt: iso8601(window.cutoffAt), steps: counted ?? 0
+                ))
+            }
             fightAggregates.append(FitFightHealthKitStepSync.FightAggregate(
                 fightId: window.fightId.uuidString.lowercased(),
                 startsAt: iso8601(window.startsAt),
                 endsAt: iso8601(window.endsAt),
                 cutoffAt: iso8601(window.cutoffAt),
-                steps: counted ?? 0
+                steps: counted ?? 0,
+                stepCheckpoints: checkpoints
             ))
         }
         if !context.fightWindows.isEmpty && !sawAccessibleSteps {

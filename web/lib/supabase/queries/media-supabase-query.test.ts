@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { z } from "zod";
 import { POST as createMedia } from "@/app/api/v1/media/route";
 import { POST as commitMedia } from "@/app/api/v1/media/[mediaID]/commit/route";
 import {
@@ -8,10 +9,31 @@ import {
 } from "@/lib/types/media/media";
 import {
   mapMedia,
+  removeStoragePaths,
   signedUrlsFromBatch,
 } from "./media-supabase-query";
 
 const mediaId = "55555555-5555-4555-8555-555555555555";
+
+process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+process.env.SUPABASE_SECRET_KEY = "test-secret-key";
+
+test("media removal respects Storage's 1000-object limit without skipping paths", async (t) => {
+  const paths = Array.from({ length: 2001 }, (_, index) => `user-id/fight_post/${index}`);
+  const batches: string[][] = [];
+  t.mock.method(globalThis, "fetch", async (...[, request]: Parameters<typeof fetch>) => {
+    const { prefixes } = z.object({ prefixes: z.array(z.string()) }).parse(JSON.parse(String(request?.body)));
+    batches.push(prefixes);
+    return new Response(JSON.stringify(prefixes.length > 1000
+      ? { message: "Too many prefixes", statusCode: "400" }
+      : []), { status: prefixes.length > 1000 ? 400 : 200 });
+  });
+
+  await removeStoragePaths(paths);
+
+  assert.deepEqual(batches.map((batch) => batch.length), [1000, 1000, 1]);
+  assert.deepEqual(batches.flat(), paths);
+});
 
 test("media uploads accept only bounded photo metadata", () => {
   const parsed = createMediaUploadRequestSchema.parse({

@@ -19,9 +19,9 @@ jobs:
               with:
                   ruby-version: "3.3"
                   bundler-cache: true
-            - name: Inspect App Store release metadata
+            - name: Prepare screenshots and verify release metadata
               env:
                   APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
                   APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
                   APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
-              run: bundle exec ruby scripts/app-store-release-audit.rb
+              run: bundle exec ruby scripts/app-store-release-audit.rb prepare

@@ -132,8 +132,8 @@ enum ScreenshotExport {
                 ("review", AnyView(NewFightView(opening: .create, initialStep: 4)), .newFight),
                 ("you", AnyView(YouView()), .you),
                 ("picker", AnyView(CompanionPicker(selection: .badger)), .you),
-                ("feed", AnyView(FeedbackTabView()), .feedback),
-                ("compose", AnyView(FeedComposeSheet()), .feedback),
+                ("feed", AnyView(FeedView()), .feed),
+                ("compose", AnyView(FeedComposeSheet()), .feed),
             ]
             for (name, view, tab) in shots {
                 write(wrap(view, name == "compose" ? nil : tab), name: "\(mode.rawValue)-\(name)", height: canvas.height, to: folder, scale: 1)
@@ -213,7 +213,7 @@ enum ScreenshotExport {
                 frame(YouView(), tab: .you, themeStore: store, model: model)
             },
             Shot(name: "05-feed") { store, model in
-                frame(FeedbackTabView(), tab: .feedback, themeStore: store, model: model)
+                frame(FeedView(), tab: .feed, themeStore: store, model: model)
             },
             Shot(name: "06-requests") { store, model in
                 sheet(RequestsScreenshot.board(), themeStore: store, model: model)

@@ -267,6 +267,7 @@
     "Every fight tracks one metric. Steps is the only metric available right now." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Chaque défi suit une mesure. Les pas sont la seule mesure disponible pour le moment."}}}},
     "Feed" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Fil"}}}},
     "Feedback" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Retours"}}}},
+    "Feed and Feedback now have separate tabs: Fights, New, You, Feed, Feedback." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Fil et Retours ont maintenant des onglets séparés : Défis, Nouveau, Vous, Fil, Retours."}}}},
     "Posts, bugs, and reports." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Publications, bugs et signalements."}}}},
     "Feedback is the last tab: Fights, New, You, Feedback. Feed is the same fight posts list, with the fight picker when you post." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Retours est le dernier onglet : Défis, Nouveau, Vous, Retours. Le Fil est la même liste de publications des défis, avec le choix des combats quand tu publies."}}}},
     "You can go to the Feedback tab to submit a feature you want or a bug you see. Those will be fixed rapidly." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Tu peux aller dans l’onglet Retours pour proposer une fonctionnalité que tu veux ou un bug que tu vois. On les corrige rapidement."}}}},

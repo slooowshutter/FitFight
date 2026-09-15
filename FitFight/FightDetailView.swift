@@ -126,6 +126,7 @@ struct FightDetailView: View {
             EditFightView(fight: fight)
                 .environmentObject(model)
                 .environmentObject(session)
+                .environmentObject(steps)
                 .fitFightTheme(theme)
                 .presentationBackground(theme.bg)
         }

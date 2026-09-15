@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 15,
+            notes: "Editing a fight now opens the same summary as creating one. Change jumps to that part, then back. If you created it, Delete at the bottom ends the fight."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 15,
             notes: "Feedback is now a tab, just before You: fight posts, Bugs & requests, Top ranking, and a Report form. Plus opens a new post or a new request without going through Settings."
         ),
         ReleaseNote(

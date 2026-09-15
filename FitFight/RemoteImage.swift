@@ -202,6 +202,7 @@ struct RemotePhoto<Placeholder: View>: View {
                     .clipped()
             }
         }
+        .contentShape(Rectangle())
         .onAppear {
             if let url, let cached = RemoteImageLoader.shared.cached(url: url, kind: kind) {
                 image = cached

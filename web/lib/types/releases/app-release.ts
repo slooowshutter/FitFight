@@ -1,7 +1,12 @@
 import { z } from "zod";
 
+const marketingVersionSchema = z.preprocess(
+  (value) => (typeof value === "string" && /^\d+\.\d+$/.test(value) ? `${value}.0` : value),
+  z.string().regex(/^\d+\.\d+\.\d+$/),
+);
+
 export const appReleaseSchema = z.object({
-  version: z.string().regex(/^\d+\.\d+\.\d+$/),
+  version: marketingVersionSchema,
   build: z.number().int().positive().safe(),
   update_url: z.union([
     z.literal("itms-beta://"),
@@ -16,23 +21,26 @@ export const appReleasePolicySchema = z.object({
   enforced: z.boolean(),
 });
 
+const stagingReleaseSchema = appReleaseSchema.extend({ update_url: z.literal("itms-beta://") });
+const prodReleaseSchema = appReleaseSchema.extend({
+  update_url: z.string().regex(/^https:\/\/apps\.apple\.com\/app\/id\d+$/),
+});
+
+export const stagingAppReleasePolicySchema = appReleasePolicySchema.extend({
+  latest: stagingReleaseSchema.nullable(),
+  review: stagingReleaseSchema.nullable(),
+  internal: stagingReleaseSchema.nullable().optional(),
+});
+
+export const prodAppReleasePolicySchema = appReleasePolicySchema.extend({
+  latest: prodReleaseSchema.nullable(),
+  review: prodReleaseSchema.nullable(),
+  internal: prodReleaseSchema.nullable().optional(),
+});
+
 export const appReleaseManifestSchema = z.object({
-  staging: appReleasePolicySchema.extend({
-    latest: appReleaseSchema.extend({ update_url: z.literal("itms-beta://") }).nullable(),
-    review: appReleaseSchema.extend({ update_url: z.literal("itms-beta://") }).nullable(),
-    internal: appReleaseSchema.extend({ update_url: z.literal("itms-beta://") }).nullable().optional(),
-  }),
-  prod: appReleasePolicySchema.extend({
-    latest: appReleaseSchema.extend({
-      update_url: z.string().regex(/^https:\/\/apps\.apple\.com\/app\/id\d+$/),
-    }).nullable(),
-    review: appReleaseSchema.extend({
-      update_url: z.string().regex(/^https:\/\/apps\.apple\.com\/app\/id\d+$/),
-    }).nullable(),
-    internal: appReleaseSchema.extend({
-      update_url: z.string().regex(/^https:\/\/apps\.apple\.com\/app\/id\d+$/),
-    }).nullable().optional(),
-  }),
+  staging: stagingAppReleasePolicySchema,
+  prod: prodAppReleasePolicySchema,
 });
 
 export const appReleaseProjectValues = [

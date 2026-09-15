@@ -127,6 +127,16 @@ def record_uploaded_release(channel, version, build_number)
   UI.message("Registered #{channel} candidate #{version} (#{build_number}); it is not yet mandatory")
 end
 
+# Apple App Store versions are often "1.0"; the app and /api/app-release require 1.0.0.
+def marketing_version(version)
+  return if version.nil?
+
+  text = version.to_s.strip
+  return "#{text}.0" if text.match?(/\A\d+\.\d+\z/)
+
+  text
+end
+
 # Only public-group installable builds become mandatory. Registered internal
 # TestFlight latest and review candidates are admitted separately so Internal
 # testers and Apple review are not blocked by the Friends Beta minimum.
@@ -164,7 +174,7 @@ def available_app_releases(app, registered, previous)
   candidate = app.get_latest_app_store_version(platform: "IOS", includes: "build")
   manifest = {}
   { "staging" => staging, "prod" => live&.build }.each do |channel, build|
-    version = channel == "staging" ? build&.app_version : live&.version_string
+    version = marketing_version(channel == "staging" ? build&.app_version : live&.version_string)
     update_url = channel == "staging" ? "itms-beta://" : "https://apps.apple.com/app/id#{app.id}"
     latest = build && { "version" => version, "build" => Integer(build.version), "update_url" => update_url }
     known = registered.any? do |entry|
@@ -176,7 +186,9 @@ def available_app_releases(app, registered, previous)
     end
     review = nil
     review_build = channel == "staging" ? staging_candidate : candidate&.build
-    review_version = channel == "staging" ? staging_candidate&.app_version : candidate&.version_string
+    review_version = marketing_version(
+      channel == "staging" ? staging_candidate&.app_version : candidate&.version_string
+    )
     if review_build && registered.any? { |entry|
       entry["channel"] == channel && entry["version"] == review_version &&
         entry["build"] == Integer(review_build.version)
@@ -190,7 +202,7 @@ def available_app_releases(app, registered, previous)
     internal = nil
     if channel == "staging" && staging_internal
       internal_release = {
-        "version" => staging_internal.app_version,
+        "version" => marketing_version(staging_internal.app_version),
         "build" => Integer(staging_internal.version),
         "update_url" => update_url
       }

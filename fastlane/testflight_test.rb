@@ -148,6 +148,14 @@ class ReleaseAvailabilityTest < Minitest::Test
     assert_equal true, policy.fetch("enforced")
   end
 
+  def test_two_part_app_store_version_is_written_as_marketing_version
+    @app.live = OpenStruct.new(version_string: "1.0", build: OpenStruct.new(version: "113"))
+    policy = manifest.fetch("prod")
+    assert_equal "1.0.0", policy.fetch("latest").fetch("version")
+    assert_equal 113, policy.fetch("latest").fetch("build")
+    assert_equal false, policy.fetch("enforced")
+  end
+
   def test_first_app_store_review_can_run_before_a_public_release_exists
     @app.candidate = OpenStruct.new(version_string: "1.0.0", build: OpenStruct.new(version: "170"))
     @registered << { "channel" => "prod", "version" => "1.0.0", "build" => 170 }

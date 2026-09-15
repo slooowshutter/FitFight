@@ -130,3 +130,41 @@ test("a cancelled fight still pauses its series on retry", async (t) => {
   assert.deepEqual(result, { id: fightId, state: "cancelled" });
   assert.equal(seriesPatches, 1);
 });
+
+test("a failed series pause does not cancel the fight", async (t) => {
+  withSupabaseEnv(t);
+  let fightPatches = 0;
+  t.mock.method(globalThis, "fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    const url = new URL(request.url);
+    switch (url.pathname) {
+      case "/rest/v1/fights":
+        if (request.method === "GET") {
+          return Response.json([{
+            id: fightId,
+            owner_id: owner,
+            name: "Office steps",
+            state: "live",
+            starts_at: startsAt,
+            ends_at: endsAt,
+            action_text: "Cook dinner",
+            series_id: seriesId,
+          }]);
+        }
+        fightPatches += 1;
+        throw new Error("fight must stay live when pause fails");
+      case "/rest/v1/fight_series":
+        assert.equal(request.method, "PATCH");
+        return Response.json({ message: "pause failed" }, { status: 500 });
+      default:
+        throw new Error(`Unexpected query: ${url.pathname}`);
+    }
+  });
+
+  const { cancelFight } = await import("./cancel-fight-supabase-query");
+  await assert.rejects(
+    () => cancelFight(owner, fightId, createAdminClient(), now),
+    (error: unknown) => error instanceof ApiError && error.status === 500,
+  );
+  assert.equal(fightPatches, 0);
+});

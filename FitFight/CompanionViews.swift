@@ -10,7 +10,7 @@ enum StockCompanion: String, CaseIterable, Identifiable {
         switch self {
         case .badger: String(localized: "Badger")
         case .raccoon: String(localized: "Raccoon")
-        case .redPanda: String(localized: "Red panda")
+        case .redPanda: String(localized: "Red Panda")
         case .otter: String(localized: "Otter")
         case .rabbit: String(localized: "Rabbit")
         case .fox: String(localized: "Fox")
@@ -41,17 +41,88 @@ enum StockCompanion: String, CaseIterable, Identifiable {
     }
 }
 
-/// A local choice until account-backed companion identity is available.
+/// Account-backed stock companion. Preview keeps a local choice.
 @MainActor
 final class CompanionStore: ObservableObject {
-    @Published var selection: StockCompanion = .badger {
-        didSet { hasChosen = true }
-    }
+    @Published var selection: StockCompanion = .badger
     @Published private(set) var hasChosen = false
     @Published var showingPicker = false
 
-    func animal(for personID: String?, isYou: Bool = false) -> StockCompanion? {
+    private static let pendingPrefix = "ff.companion.pending."
+
+    static func hasPendingChoice(for userId: UUID?) -> Bool {
+        guard let userId else { return false }
+        return UserDefaults.standard.string(forKey: pendingPrefix + userId.uuidString) != nil
+    }
+
+    func apply(_ profile: FitFightProfile?) {
+        guard !CompanionPreview.isEnabled else { return }
+        if let userId = profile?.userId,
+           let pending = UserDefaults.standard.string(forKey: Self.pendingPrefix + userId.uuidString),
+           let animal = StockCompanion(rawValue: pending) {
+            selection = animal
+            hasChosen = true
+            if profile?.companionId == pending {
+                UserDefaults.standard.removeObject(forKey: Self.pendingPrefix + userId.uuidString)
+            }
+        } else if let id = profile?.companionId, let animal = StockCompanion(rawValue: id) {
+            selection = animal
+            hasChosen = true
+        } else {
+            hasChosen = false
+            if profile == nil {
+                selection = .badger
+                showingPicker = false
+            }
+        }
+    }
+
+    func choose(_ animal: StockCompanion, session: SessionStore) async throws {
+        #if DEBUG && targetEnvironment(simulator)
+        if CompanionPreview.isEnabled {
+            selection = animal
+            hasChosen = true
+            showingPicker = false
+            return
+        }
+        #endif
+        selection = animal
+        hasChosen = true
+        showingPicker = false
+        if let userId = session.profile?.userId {
+            UserDefaults.standard.set(animal.rawValue, forKey: Self.pendingPrefix + userId.uuidString)
+        }
+        do {
+            try await session.setCompanion(animal)
+            if let userId = session.profile?.userId {
+                UserDefaults.standard.removeObject(forKey: Self.pendingPrefix + userId.uuidString)
+            }
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            // Keep the local pick and the pending key until the server confirms.
+        }
+    }
+
+    func publishPending(session: SessionStore) async {
+        guard let userId = session.profile?.userId,
+              let pending = UserDefaults.standard.string(forKey: Self.pendingPrefix + userId.uuidString),
+              let animal = StockCompanion(rawValue: pending) else { return }
+        do {
+            try await session.setCompanion(animal)
+            if session.profile?.companionId == pending {
+                UserDefaults.standard.removeObject(forKey: Self.pendingPrefix + userId.uuidString)
+            }
+        } catch {
+            return
+        }
+    }
+
+    func animal(for personID: String?, companionID: String? = nil, isYou: Bool = false) -> StockCompanion? {
         if isYou && hasChosen { return selection }
+        if let companionID, let animal = StockCompanion(rawValue: companionID) {
+            return animal
+        }
         #if DEBUG && targetEnvironment(simulator)
         guard CompanionPreview.isEnabled else { return nil }
         if isYou || personID?.lowercased() == CompanionPreview.people[0].id.lowercased() {
@@ -92,9 +163,10 @@ struct CompanionCharacter: View {
     }
 }
 
-/// Prefer the selected companion; other accounts keep their existing identity until synchronization ships.
+/// Prefer a saved companion; fall back to the existing photo or initials.
 struct CompanionAvatar: View {
     var personID: String?
+    var companionID: String?
     var isYou = false
     var monogram = "?"
     var photoURL: URL?
@@ -103,8 +175,38 @@ struct CompanionAvatar: View {
     @EnvironmentObject private var companions: CompanionStore
     @Environment(\.ffTheme) private var theme
 
+    init(
+        personID: String? = nil,
+        companionID: String? = nil,
+        isYou: Bool = false,
+        monogram: String = "?",
+        photoURL: URL? = nil,
+        size: CGFloat = 44,
+        pending: Bool = false
+    ) {
+        self.personID = personID
+        self.companionID = companionID
+        self.isYou = isYou
+        self.monogram = monogram
+        self.photoURL = photoURL
+        self.size = size
+        self.pending = pending
+    }
+
+    init(_ person: Person?, size: CGFloat = 44, pending: Bool = false) {
+        self.init(
+            personID: person?.id,
+            companionID: person?.companionId,
+            isYou: person?.isYou ?? false,
+            monogram: person?.initials ?? "?",
+            photoURL: person?.photoURL,
+            size: size,
+            pending: pending
+        )
+    }
+
     var body: some View {
-        if let animal = companions.animal(for: personID, isYou: isYou) {
+        if let animal = companions.animal(for: personID, companionID: companionID, isYou: isYou) {
             Image("\(animal.image)-avatar")
                 .resizable()
                 .scaledToFit()
@@ -129,8 +231,7 @@ struct CompanionAvatarStack: View {
     var body: some View {
         HStack(spacing: -12) {
             ForEach(Array(people.prefix(visible).enumerated()), id: \.element.id) { offset, person in
-                CompanionAvatar(personID: person.id, isYou: person.isYou,
-                                monogram: person.initials, photoURL: person.photoURL, size: size)
+                CompanionAvatar(person, size: size)
                     .overlay { Circle().strokeBorder(ring ?? theme.bg, lineWidth: 2) }
                     .zIndex(Double(visible - offset))
             }
@@ -317,7 +418,7 @@ struct CompanionFightSummary: View {
                     if mine != nil {
                         CompanionCharacter(animal: companions.selection)
                     }
-                    if let rival, let animal = companions.animal(for: rival.person.id) {
+                    if let rival, let animal = companions.animal(for: rival.person.id, companionID: rival.person.companionId) {
                         CompanionCharacter(animal: animal)
                     }
                 }
@@ -328,8 +429,7 @@ struct CompanionFightSummary: View {
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 12) {
                         ForEach(racing.prefix(6)) { row in
-                            CompanionAvatar(personID: row.person.id, isYou: row.person.isYou,
-                                            monogram: row.person.initials, photoURL: row.person.photoURL, size: 52)
+                            CompanionAvatar(row.person, size: 52)
                         }
                     }
                     CompanionAvatarStack(
@@ -391,13 +491,18 @@ struct CompanionFightSummary: View {
 
 struct CompanionPicker: View {
     @EnvironmentObject private var companions: CompanionStore
+    @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var typeSize
-    @State private var draft: StockCompanion
+    @State private var draft: StockCompanion?
+    @State private var isSaving = false
+    @State private var error = ""
+    var required: Bool
 
-    init(selection: StockCompanion) {
-        _draft = State(initialValue: selection)
+    init(selection: StockCompanion, required: Bool = false) {
+        self.required = required
+        _draft = State(initialValue: required ? nil : selection)
     }
 
     var body: some View {
@@ -407,18 +512,28 @@ struct CompanionPicker: View {
                     .font(.custom("Nunito-ExtraBold", size: 26, relativeTo: .title))
                     .foregroundStyle(theme.text)
                 Spacer()
-                Button(String(localized: "Close")) { dismiss() }
-                    .ffType(.label)
-                    .foregroundStyle(theme.mossText)
-                    .frame(minHeight: 44)
+                if !required {
+                    Button(String(localized: "Close")) { dismiss() }
+                        .ffType(.label)
+                        .foregroundStyle(theme.mossText)
+                        .frame(minHeight: 44)
+                }
             }
-            Text("Design preview. This choice lasts for this session and isn’t shared with other people.")
+            Text("This is how other people see you in fights and Feed.")
                 .font(.custom("Nunito-Bold", size: 13, relativeTo: .body))
                 .foregroundStyle(theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
+            if !error.isEmpty {
+                Text(error)
+                    .ffType(.caption)
+                    .foregroundStyle(theme.emberText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 150 : 96), spacing: 10)], spacing: 10) {
                 ForEach(StockCompanion.allCases) { animal in
-                    Button { draft = animal } label: {
+                    Button {
+                        Task { await save(animal) }
+                    } label: {
                         VStack(spacing: 3) {
                             Image(animal.image)
                                 .resizable()
@@ -436,16 +551,15 @@ struct CompanionPicker: View {
                         .ffBorder(draft == animal ? theme.mossEdge : theme.hairline, radius: theme.radius.card)
                     }
                     .buttonStyle(FFHapticPlainStyle())
+                    .disabled(isSaving)
                     .accessibilityAddTraits(draft == animal ? .isSelected : [])
                 }
             }
-            Text(draft.caption)
-                .ffType(.body)
-                .foregroundStyle(theme.textSecondary)
-                .frame(maxWidth: .infinity)
-            FFButton(title: String(localized: "Use this companion"), size: .large, fullWidth: true) {
-                companions.selection = draft
-                dismiss()
+            if let draft {
+                Text(isSaving ? String(localized: "Saving…") : draft.caption)
+                    .ffType(.body)
+                    .foregroundStyle(theme.textSecondary)
+                    .frame(maxWidth: .infinity)
             }
             #if DEBUG && targetEnvironment(simulator)
             if CompanionPreview.isEnabled {
@@ -457,6 +571,22 @@ struct CompanionPicker: View {
                 }
             }
             #endif
+        }
+        .interactiveDismissDisabled(required)
+    }
+
+    private func save(_ animal: StockCompanion) async {
+        error = ""
+        draft = animal
+        isSaving = true
+        defer { isSaving = false }
+        do {
+            try await companions.choose(animal, session: session)
+            dismiss()
+        } catch is CancellationError {
+            return
+        } catch {
+            self.error = String(localized: "Couldn’t save your companion. Try again.")
         }
     }
 }

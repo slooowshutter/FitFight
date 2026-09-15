@@ -24,9 +24,13 @@ struct YouView: View {
         FFScreen(refresh: fightsRefresh) {
             profile
             CompanionIntroduction(surface: .you)
-            Text("Companion design preview · this session only")
-                .ffType(.micro)
-                .foregroundStyle(theme.textSecondary)
+            #if DEBUG && targetEnvironment(simulator)
+            if CompanionPreview.isEnabled {
+                Text("Companion design preview · this session only")
+                    .ffType(.micro)
+                    .foregroundStyle(theme.textSecondary)
+            }
+            #endif
             if session.isSignedIn, let authError = session.authError {
                 FFNotice(text: authError, tone: .ember, systemImage: "exclamationmark.triangle")
             }
@@ -127,9 +131,15 @@ struct YouView: View {
     private var profile: some View {
         if session.isSignedIn {
             HStack(spacing: 14) {
-                if companions.animal(for: session.profile?.userId.uuidString, isYou: true) != nil {
+                if companions.animal(for: session.profile?.userId.uuidString, companionID: session.profile?.companionId, isYou: true) != nil {
                     Button { companions.showingPicker = true } label: {
-                        CompanionAvatar(isYou: true, size: 68)
+                        CompanionAvatar(
+                            personID: session.profile?.userId.uuidString,
+                            companionID: session.profile?.companionId,
+                            isYou: true,
+                            monogram: session.profile?.initials ?? "FF",
+                            size: 68
+                        )
                             .overlay { Circle().strokeBorder(theme.mossEdge, lineWidth: 3) }
                     }
                     .buttonStyle(FFHapticPlainStyle())

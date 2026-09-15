@@ -13,6 +13,13 @@ struct APIContractTests {
         precondition(profile.atHandle == "@marc" && profile.initials == "ML")
         precondition(profile.handleSetAt == "2026-09-01T10:00:00Z")
         precondition(profile.referralCode?.uuidString.lowercased() == "22222222-2222-4222-8222-222222222222")
+        precondition(profile.companionId == nil)
+
+        var withCompanionJSON = try JSONSerialization.jsonObject(with: profileData) as! [String: Any]
+        withCompanionJSON["companion_id"] = "fox"
+        let withCompanion = try decoder.decode(FitFightProfile.self,
+            from: JSONSerialization.data(withJSONObject: withCompanionJSON))
+        precondition(withCompanion.companionId == "fox")
 
         guard var extendedProfile = try JSONSerialization.jsonObject(with: profileData) as? [String: Any] else {
             preconditionFailure("Profile fixture must be a JSON object")
@@ -46,7 +53,8 @@ struct APIContractTests {
         precondition(snapshot.members[1].state == "deferred" && snapshot.members[1].rank == nil)
         precondition(snapshot.profiles[0].handle == "marc" && snapshot.profiles[0].handleSetAt == nil)
         precondition(snapshot.profiles[0].avatar?.url?.absoluteString == "https://example.com/marc.jpg")
-        precondition(snapshot.profiles[1].avatar == nil)
+        precondition(snapshot.profiles[0].companionId == "fox")
+        precondition(snapshot.profiles[1].avatar == nil && snapshot.profiles[1].companionId == nil)
         precondition(snapshot.series[0].joinCode == "ABCD" && snapshot.series[0].recurring)
         precondition(snapshot.stepDays[0].day == "2026-09-02" && snapshot.stepDays[0].steps == 8500)
         print("API contracts: profile, onboarding, cached profiles, extra fields, Fight snapshot passed")

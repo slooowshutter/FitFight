@@ -57,6 +57,41 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 14,
+            notes: "Posting from a fight’s Feed starts on that fight. You can still add other channels."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "Every day so far opens on the oval. Bars show a small companion next to each name. Heat, stack, and rings are gone."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "Tap a photo in Feed to see it full screen."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "Tapping an animal saves that companion for everyone. If you have not chosen one yet, FitFight will ask you to pick."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
+            notes: "Two-word companion names now capitalize both words, like Red Panda."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 14,
             notes: "If you created a fight, Edit lets you change private or public, the title, the loser action, the duration, whether it repeats, who is in it, and kick people out."
         ),
         ReleaseNote(

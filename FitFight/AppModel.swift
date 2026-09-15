@@ -55,6 +55,7 @@ struct Person: Codable, Identifiable, Hashable {
     var initials: String
     var isYou: Bool = false
     var photoURL: URL? = nil
+    var companionId: String? = nil
 
     /// The design's cast photographs, cut out of the mocks into the asset catalogue.
     var photo: String { "Avatar-\(isYou ? "maya" : id)" }
@@ -1231,7 +1232,8 @@ final class AppModel: ObservableObject {
             handle: profile.atHandle,
             initials: profile.initials,
             isYou: isYou,
-            photoURL: profile.avatar?.url
+            photoURL: profile.avatar?.url,
+            companionId: profile.companionId
         )
     }
 

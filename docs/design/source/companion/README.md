@@ -12,13 +12,13 @@ Native full-body assets are padded 352 × 400 PNGs. Avatars use 150 × 150 face 
 python3 docs/design/source/companion/prepare-assets.py
 ```
 
-Native artwork is bundled in named `Companion-*.imageset` assets. The app contains no HTML, base64 images, or web view. Animal selection is in memory for this session. Once selected, its portrait replaces your profile photo throughout the local app. Other accounts still need saved companion identity from the API. Account synchronization, custom generation, and saved group artwork belong to later plan stages.
+Native artwork is bundled in named `Companion-*.imageset` assets. The app contains no HTML, base64 images, or web view. A chosen stock animal is stored on the account and shown as that person’s avatar to everyone in fights, standings, Feed, and comments. Custom generation and saved group artwork belong to later plan stages.
 
 See [the Simulator handoff](../../companion-simulator-handoff.md) and [captures](screenshots/README.md).
 
 ## Planned generation APIs — P0, requested 13 Sep 2026
 
-These are future backend features, not implemented endpoints. The native screens and stock artwork are already in `FitFight/`; they do not require another HTML-to-SwiftUI port. Stock selection is still local to the current app session. Persisted identity is the prerequisite for other people and devices to see the same companion.
+These are future backend features, not implemented endpoints. The native screens and stock artwork are already in `FitFight/`; they do not require another HTML-to-SwiftUI port. Stock selection is saved on the account so other people and devices see the same companion. Custom generation is still later.
 
 A selected companion becomes the person's app avatar on You, fights, standings, Feed and comments. Profile-photo controls must not compete with that choice. The account keeps its real user ID, username and display name; changing an animal never changes membership or scores.
 

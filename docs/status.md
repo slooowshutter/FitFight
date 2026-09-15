@@ -1,12 +1,12 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **15 Sep 2026**. App: **1.0.1**.
+Read this before building. Last updated **15 Sep 2026**. App: **1.1.0**.
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
 ---
 
-**Last TestFlight:** 15 Sep 2026. **1.0.1 (199)** from [#231](https://github.com/slooowshutter/FitFight/pull/231). Internal Tester and Friends Beta, same IPA. Friends wait Apple beta review (`WAITING_FOR_BETA_REVIEW`). Overlay: `latest` 190, `review`/`internal` 199.
+**Last TestFlight:** 15 Sep 2026. **1.1.0 (200)** from [#234](https://github.com/slooowshutter/FitFight/pull/234). Internal Tester and Friends Beta, same IPA. Friends wait Apple beta review (`WAITING_FOR_BETA_REVIEW`). Overlay: `latest` 190, `review`/`internal` 200.
 
 ## API and update rollout (verified 13 Sep 2026)
 

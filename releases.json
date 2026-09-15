@@ -18,7 +18,11 @@
     "enforced": true
   },
   "prod": {
-    "latest": null,
+    "latest": {
+      "version": "1.0",
+      "build": 113,
+      "update_url": "https://apps.apple.com/app/id6804230516"
+    },
     "review": null,
     "internal": null,
     "enforced": false

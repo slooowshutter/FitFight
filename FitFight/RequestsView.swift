@@ -394,24 +394,29 @@ struct RequestsView: View {
     @ObservedObject var store: FeedbackStore
     var chrome: RequestsChrome
     var lockedFilter: RequestFilter?
+    var initialFilter: RequestFilter?
     var onCompose: (() -> Void)?
     @State private var filter: RequestFilter
     @State private var composing = false
     @State private var openPostID: UUID?
 
     init(
-        store: FeedbackStore = FeedbackStore(),
+        store: FeedbackStore,
         chrome: RequestsChrome = .sheet,
         lockedFilter: RequestFilter? = nil,
+        initialFilter: RequestFilter? = nil,
         onCompose: (() -> Void)? = nil
     ) {
         _store = ObservedObject(wrappedValue: store)
         self.chrome = chrome
         self.lockedFilter = lockedFilter
+        self.initialFilter = initialFilter
         self.onCompose = onCompose
         let start: RequestFilter
         if let lockedFilter {
             start = lockedFilter
+        } else if let initialFilter {
+            start = initialFilter
         } else if chrome == .tab {
             start = .bugs
         } else {
@@ -1011,7 +1016,7 @@ struct ComposeRequestView: View {
     @ObservedObject var store: FeedbackStore
     var heading: String = String(localized: "New request")
     var embedded: Bool = false
-    var onPosted: (() -> Void)? = nil
+    var onPosted: ((RequestFilter) -> Void)? = nil
     @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
@@ -1338,7 +1343,7 @@ struct ComposeRequestView: View {
             videos = []
             files = []
             if let onPosted {
-                onPosted()
+                onPosted(kind == .feature ? .features : .bugs)
             } else {
                 dismiss()
             }

@@ -366,6 +366,7 @@ struct YouView: View {
                         .foregroundStyle(theme.textFaint)
                 ),
                 action: {
+                    model.feedbackRequestFilter = .bugs
                     model.feedbackPane = .bugs
                     model.tab = .feedback
                 }

@@ -32,9 +32,10 @@ struct FeedbackTabView: View {
                 RequestsView(
                     store: requests,
                     chrome: .tab,
+                    initialFilter: model.feedbackRequestFilter,
                     onCompose: { model.feedbackPane = .report }
                 )
-                .id(FeedbackPane.bugs)
+                .id("bugs-\(model.feedbackRequestFilter)")
             case .top:
                 RequestsView(
                     store: requests,
@@ -48,7 +49,10 @@ struct FeedbackTabView: View {
                     store: requests,
                     heading: String(localized: "Report"),
                     embedded: true,
-                    onPosted: { model.feedbackPane = .bugs }
+                    onPosted: { filter in
+                        model.feedbackRequestFilter = filter
+                        model.feedbackPane = .bugs
+                    }
                 )
                 .environmentObject(session)
                 .id(FeedbackPane.report)

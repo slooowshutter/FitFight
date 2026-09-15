@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 15,
+            notes: "FitFight has a new green and beige double-F app icon."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 15,
             notes: "Choose a companion from a grid of animals, or Custom. Custom is one description: species, breed, accessories, colors."
         ),
         ReleaseNote(

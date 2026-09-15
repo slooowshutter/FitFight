@@ -748,6 +748,7 @@ final class AppModel: ObservableObject {
                 idempotencyKey: UUID().uuidString
             )
             await syncStepsAfterMembershipChange()
+            keepCreatedFight(created, payload: payload)
             tab = .fights
             openFightID = created.id.uuidString
         } catch {
@@ -1096,6 +1097,17 @@ final class AppModel: ObservableObject {
         }
     }
 
+    private func keepCreatedFight(_ created: FitFightSummary, payload: FitFightCreateFight) {
+        let id = created.id.uuidString
+        guard fight(id: id) == nil else { return }
+        fights.insert(Self.fight(created: created, payload: payload, you: you), at: 0)
+        let userId = cachedUserID ?? session?.authSession?.user.id
+        if let userId, let data = try? JSONEncoder().encode(fights) {
+            UserDefaults.standard.set(data, forKey: Self.fightsCachePrefix + userId.uuidString)
+            cachedUserID = userId
+        }
+    }
+
     private func syncStepsAfterMembershipChange() async {
         guard let session else {
             await refreshFromServer()
@@ -1170,6 +1182,42 @@ final class AppModel: ObservableObject {
             return nil
         }
         return code
+    }
+
+    private static func fight(
+        created: FitFightSummary,
+        payload: FitFightCreateFight,
+        you: Person
+    ) -> Fight {
+        let starts = payload.startsAt
+        let ends = payload.endsAt
+        let lengthDays = max(1, Calendar.current.dateComponents([.day], from: starts, to: ends).day ?? 1)
+        let lengthHours = max(1, Int((ends.timeIntervalSince(starts) / 3_600).rounded()))
+        let remaining = RemainingTime.phrase(until: ends)
+        return Fight(
+            id: created.id.uuidString,
+            code: "",
+            name: payload.name,
+            metric: .steps,
+            lengthDays: lengthDays,
+            daysLeft: max(1, Calendar.current.dateComponents([.day], from: Date(), to: ends).day ?? 1),
+            actionText: payload.actionText ?? "",
+            status: .live,
+            rank: 1,
+            of: 1,
+            pending: payload.inviteHandles?.count ?? 0,
+            kickerEmphasis: String(
+                localized: "fight.time-left",
+                defaultValue: "\(remaining) left"
+            ),
+            listSubtitle: localizedDuration(hours: lengthHours, days: lengthDays),
+            standings: [Standing(person: you, score: 0, rank: 1)],
+            windowStart: starts,
+            windowEnd: ends,
+            serverState: created.state,
+            recurring: payload.recurring ?? false,
+            visibility: payload.visibility ?? "invite_only"
+        )
     }
 
     private static func fight(from summary: FitFightJoinableFight, you: Person) -> Fight {

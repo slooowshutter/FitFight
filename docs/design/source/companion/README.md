@@ -2,7 +2,7 @@
 
 The selected [Companion HTML](../kit/companion-app-proposal.html) supplies the visual direction. The [native design kit](../kit/FitFight%20Design%20System.dc.html) and [tokens](../tokens.json) remain the foundation. The running native/backend behavior wins over simplified prototype interactions.
 
-`originals/` preserves the five images embedded in the selected HTML, byte-for-byte. `manifest.json` records stable animal IDs, image dimensions, crop bounds, real transparency, and intended surfaces. No temporary image-generation paths are required.
+`originals/` preserves the five images embedded in the selected HTML, byte-for-byte, plus Marc’s hiking-goat effort strip (`originals/goat-hiking-effort.png`). `manifest.json` records stable animal IDs, image dimensions, crop bounds, real transparency, and intended surfaces. No temporary image-generation paths are required. The five hiking poses are opaque cream canvases, not transparent cutouts.
 
 The solo atlas has an alpha channel. Race and tennis are **opaque** images with separate Night/Day backgrounds; they are never described as transparent cutouts. Both compositions use aspect fit and retain the complete cast and ground. Race is shown only for the four-person Simulator demo cast. Tennis is available as an artwork study below the picker, never as a fabricated Feed post.
 
@@ -10,6 +10,7 @@ Native full-body assets are padded 352 × 400 PNGs. Avatars use 150 × 150 face 
 
 ```sh
 python3 docs/design/source/companion/prepare-assets.py
+python3 docs/design/source/companion/slice-goat-hiking.py
 ```
 
 Native artwork is bundled in named `Companion-*.imageset` assets. The app contains no HTML, base64 images, or web view. A chosen stock animal is stored on the account and shown as that person’s avatar to everyone in fights, standings, Feed, and comments. Custom generation and saved group artwork belong to later plan stages.
@@ -18,7 +19,7 @@ See [the Simulator handoff](../../companion-simulator-handoff.md) and [captures]
 
 ## Planned generation APIs — P0, requested 13 Sep 2026
 
-These are future backend features, not implemented endpoints. The native screens and stock artwork are already in `FitFight/`; they do not require another HTML-to-SwiftUI port. Stock selection is saved on the account so other people and devices see the same companion. Custom generation is still later.
+These are future backend features, not implemented endpoints. The native screens and stock artwork are already in `FitFight/`; they do not require another HTML-to-SwiftUI port. Stock selection is saved on the account so other people and devices see the same companion. Sport, breed, mood, and accessories stay on this iPhone. Custom generation is still later.
 
 A selected companion becomes the person's app avatar on You, fights, standings, Feed and comments. Profile-photo controls must not compete with that choice. The account keeps its real user ID, username and display name; changing an animal never changes membership or scores.
 
@@ -32,7 +33,7 @@ Before implementation: select the workflow/provider and server credentials, appr
 
 ### 2. Five activity forms of the same companion
 
-A separate generation operation takes the saved identity, customization and reference artwork and creates **five consistent forms**. Form 1 sits on a couch with a blanket and a cup of tea; form 5 is tall and very muscular. Forms 2–4 and the activity thresholds/window still need a product decision.
+The native picker already shows **five effort poses** and explains that weekly movement changes the scene. Hiking goat has real artwork (resting with tea → peak). Other animals and sports reuse the stock body with sport-specific labels, plus the hiking-goat strip as the example. Today’s step count picks the live pose (under 2k resting, 8k+ peak). A later generation operation should take the saved identity, sport, mood, breed, accessories and reference artwork and create five consistent sport scenes. Activity changes must select an already saved form; they do not generate another image every time the screen opens.
 
 Store each form against the same companion revision. Activity changes select an already saved form; they do not generate another image every time the screen opens. Preserve the animal, breed, face, clothes and accessories across the set. Partial generation must not replace a complete usable set. These forms are presentation only and do not change Steps scoring.
 

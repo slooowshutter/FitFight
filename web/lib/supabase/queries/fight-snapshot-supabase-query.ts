@@ -48,7 +48,7 @@ export async function readFightSnapshot(
           select user_id from visible_members union select owner_id from visible_fights
         )
       ), visible_series as (
-        select id, join_code, visibility, recurring
+        select id, join_code, visibility, recurring, suggested
         from public.fight_series
         where id in (select series_id from visible_fights)
       ), chart_bounds as (

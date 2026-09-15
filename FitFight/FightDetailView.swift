@@ -350,6 +350,17 @@ struct FightDetailView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                if session.isFitFightAdmin, !pendingJoin {
+                    Button {
+                        Task { await model.setFightSuggested(id: fight.id, suggested: !fight.suggested) }
+                    } label: {
+                        Text(fight.suggested ? String(localized: "Suggested") : String(localized: "Suggest"))
+                            .ffType(.label)
+                            .foregroundStyle(theme.mossText)
+                            .frame(height: 44)
+                    }
+                    .buttonStyle(FFHapticPlainStyle())
+                }
                 if fight.canOwnerEdit, !pendingJoin {
                     Button {
                         model.createError = nil

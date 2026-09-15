@@ -326,7 +326,9 @@ struct FeedDestinationMenu: View {
     }
 
     private var everythingSelected: Bool {
-        !allFightDestinations.isEmpty && allFightDestinations.isSubset(of: destinations)
+        destinations.contains(.main)
+            && !allFightDestinations.isEmpty
+            && allFightDestinations.isSubset(of: destinations)
     }
 
     private var label: String {
@@ -352,7 +354,7 @@ struct FeedDestinationMenu: View {
                     if everythingSelected {
                         destinations.removeAll()
                     } else {
-                        destinations = allFightDestinations
+                        destinations = allFightDestinations.union([.main])
                     }
                 } label: {
                     destinationLabel(String(localized: "All fights"), selected: everythingSelected)
@@ -399,6 +401,7 @@ struct FeedDestinationMenu: View {
     private func toggle(_ destination: FeedPostDestination) {
         if destinations.contains(destination) {
             destinations.remove(destination)
+            destinations.remove(.main)
         } else {
             destinations.insert(destination)
         }
@@ -736,7 +739,7 @@ struct FightPostCard: View {
                             .foregroundStyle(theme.text)
                             .lineLimit(1)
                         HStack(spacing: 5) {
-                            Text(post.isMain ? String(localized: "Public") : post.fightName)
+                            Text(post.channelLabel)
                                 .lineLimit(1)
                             Text("·")
                             Text(post.createdDate, format: .relative(presentation: .named, unitsStyle: .abbreviated))

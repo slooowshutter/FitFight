@@ -132,6 +132,22 @@ test("main feed listing skips the fight roster gate", async () => {
   assert.match(queries[0] ?? "", /companion_id/);
 });
 
+test("root and fight listings look up post channels", async () => {
+  const queries: string[] = [];
+  const query = ((first: TemplateStringsArray) => {
+    const sql = first.join("?").replace(/\s+/g, " ").trim();
+    queries.push(sql);
+    if (sql.includes("from public.fight_members") && !sql.includes("fight_posts")) {
+      return Promise.resolve([{ state: "accepted" }]);
+    }
+    return Promise.resolve([]);
+  }) as unknown as Sql;
+  await listFightPosts(userId, undefined, { limit: 30, scope: "all" }, query);
+  await listFightPosts(userId, fightId, { limit: 30 }, query);
+  assert.ok(queries.some((sql) => sql.includes("fight_post_channels") && sql.includes("audience = 'main'")));
+  assert.ok(queries.some((sql) => sql.includes("fight_post_channels") && sql.includes("from public.fight_members")));
+});
+
 test("one feed listing includes main and fight posts", async () => {
   const queries: string[] = [];
   const query = ((first: TemplateStringsArray) => {

@@ -1,0 +1,18 @@
+{
+    "fights": [
+        {
+            "fightId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            "seriesId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+            "name": "Fight 0",
+            "joinCode": "K7M2",
+            "ownerHandle": "owner0",
+            "actionText": "Cook dinner",
+            "startsAt": "2026-09-14T12:00:00Z",
+            "endsAt": "2026-09-21T12:00:00Z",
+            "memberCount": 3,
+            "recurring": true,
+            "alreadyMember": true,
+            "canJoinNext": false
+        }
+    ]
+}

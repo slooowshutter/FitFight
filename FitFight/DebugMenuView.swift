@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 
-/// Hidden admin/debug sheet. Opened only by username `marc` from the version label.
+/// Hidden admin/debug sheet. Opened only by username `marc` from the version label on You.
 struct DebugMenuView: View {
     @EnvironmentObject private var steps: HealthKitStepsStore
     @Environment(\.ffTheme) private var theme

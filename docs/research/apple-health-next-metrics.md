@@ -16,16 +16,16 @@ Marc chose collect-first on 10 Sep 2026: ask Health for the agreed movement type
 
 Apple does not publish a public “percent of users with this type on.” Coverage here is from how the iPhone and Watch write Health, plus what WHOOP / Garmin / Strava already export.
 
-| What people say | HealthKit type | Who has real numbers | Fight-ready now? |
-|---|---|---|---|
-| Steps | `stepCount` | Almost every iPhone. The phone writes this itself. | **Already shipping.** |
-| Distance | `distanceWalkingRunning` | Same sensor as Steps. Nearly everyone who has Steps. | High coverage, **low new game** — it is Steps in metres. |
-| Flights | `flightsClimbed` | Most iPhones with a barometer. | Type is common; many days are **0**. Weak fight. |
-| Activity / Move | `activeEnergyBurned` | Apple Watch: this **is** the red Move ring. WHOOP, Garmin, Strava, Oura write it when the user turns that Health export on. Phone-only: some estimated calories, often thin. | **Best next Measure.** Same cumulative query as Steps. |
-| Exercise minutes | `appleExerciseTime` | **Watch only.** Phone-only friends show 0. | Skip. This was the old “Active Minutes” mock. |
-| Stand | `appleStandHour` / `appleStandTime` | **Watch only.** | Skip. |
-| Workouts | `HKWorkout` | Only people who record a session (Watch, Fitness+, Strava, …). Casual step-fighters often have few or none. | Second wave. Needs the workout rules in `fight-rules.md`. |
-| Heart rate, HRV, sleep, weight | matching quantity / category types | Watch, band, or scale. | Different product. Heavier privacy. Not a first extra fight. |
+| What people say                | HealthKit type                      | Who has real numbers                                                                                                                                                         | Fight-ready now?                                             |
+| ------------------------------ | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| Steps                          | `stepCount`                         | Almost every iPhone. The phone writes this itself.                                                                                                                           | **Already shipping.**                                        |
+| Distance                       | `distanceWalkingRunning`            | Same sensor as Steps. Nearly everyone who has Steps.                                                                                                                         | High coverage, **low new game** — it is Steps in metres.     |
+| Flights                        | `flightsClimbed`                    | Most iPhones with a barometer.                                                                                                                                               | Type is common; many days are **0**. Weak fight.             |
+| Activity / Move                | `activeEnergyBurned`                | Apple Watch: this **is** the red Move ring. WHOOP, Garmin, Strava, Oura write it when the user turns that Health export on. Phone-only: some estimated calories, often thin. | **Best next Measure.** Same cumulative query as Steps.       |
+| Exercise minutes               | `appleExerciseTime`                 | **Watch only.** Phone-only friends show 0.                                                                                                                                   | Skip. This was the old “Active Minutes” mock.                |
+| Stand                          | `appleStandHour` / `appleStandTime` | **Watch only.**                                                                                                                                                              | Skip.                                                        |
+| Workouts                       | `HKWorkout`                         | Only people who record a session (Watch, Fitness+, Strava, …). Casual step-fighters often have few or none.                                                                  | Second wave. Needs the workout rules in `fight-rules.md`.    |
+| Heart rate, HRV, sleep, weight | matching quantity / category types  | Watch, band, or scale.                                                                                                                                                       | Different product. Heavier privacy. Not a first extra fight. |
 
 The three Fitness rings (Move / Exercise / Stand) are **Watch-first**. Phone-only users do not get a fair Exercise or Stand fight. Move calories still reach more people than those two rings because wearables write Active Energy into Health even without a Watch workout.
 

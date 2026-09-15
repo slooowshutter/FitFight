@@ -7,6 +7,15 @@ struct APIContractTests {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
 
+        let reactionPeopleData = try Data(contentsOf: fixtures.appendingPathComponent("post-reaction-people-response.json"))
+        let reactionPeople = try decoder.decode(FitFightFightPostReactionPeople.self, from: reactionPeopleData)
+        precondition(reactionPeople.people.count == 2)
+        precondition(reactionPeople.people[0].handle == "marc" && reactionPeople.people[0].emoji == "❤️")
+        precondition(reactionPeople.people[0].displayName == "Marc Lamy")
+        precondition(reactionPeople.nextCursor == reactionPeople.people[1].id.uuidString.lowercased())
+        let emptyReactions = try decoder.decode(FitFightFightPostReactionPeople.self, from: Data("{\"people\":[],\"next_cursor\":null}".utf8))
+        precondition(emptyReactions.people.isEmpty && emptyReactions.nextCursor == nil)
+
         let profileData = try Data(contentsOf: fixtures.appendingPathComponent("profile.json"))
         let profile = try decoder.decode(FitFightProfile.self, from: profileData)
         precondition(profile.userId.uuidString.lowercased() == "11111111-1111-4111-8111-111111111111")
@@ -65,6 +74,11 @@ struct APIContractTests {
         precondition(snapshot.profiles[1].avatar == nil && snapshot.profiles[1].companionId == nil)
         precondition(snapshot.series[0].joinCode == "ABCD" && snapshot.series[0].recurring)
         precondition(snapshot.stepDays[0].day == "2026-09-02" && snapshot.stepDays[0].steps == 8500)
+        precondition(snapshot.members[0].stepCheckpoints == nil, "Older snapshot responses remain decodable")
+        let checkpointData = try Data(contentsOf: fixtures.appendingPathComponent("fight-snapshot-checkpoints.json"))
+        let checkpoints = try decoder.decode(FitFightSnapshot.self, from: checkpointData)
+        precondition(checkpoints.members[0].stepCheckpoints?.last?.steps == 8500)
+        precondition(checkpoints.members[1].stepCheckpoints == nil)
         print("API contracts: profile, onboarding, cached profiles, extra fields, Fight snapshot passed")
     }
 }

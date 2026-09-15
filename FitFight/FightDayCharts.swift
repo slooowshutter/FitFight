@@ -22,6 +22,7 @@ enum FightDayChartKind: String, CaseIterable, Identifiable {
 
 struct FightDayChartsView: View {
     let days: [FightDay]
+    let standings: [Standing]
     var initialKind: FightDayChartKind? = nil
     let formatScore: (Double) -> String
 
@@ -35,7 +36,7 @@ struct FightDayChartsView: View {
     }
 
     var body: some View {
-        let model = FightDayChartModel(days: days, theme: theme)
+        let model = FightDayChartModel(days: days, standings: standings, theme: theme)
         VStack(alignment: .leading, spacing: 16) {
             FFFlow(spacing: 8) {
                 ForEach(FightDayChartKind.allCases) { item in
@@ -44,11 +45,17 @@ struct FightDayChartsView: View {
             }
             if !model.series.isEmpty {
                 if kind == .oval {
-                    Text("Totals across the days shown")
+                    Text("Confirmed Fight totals")
                         .ffType(.micro)
                         .foregroundStyle(theme.textSecondary)
                 }
-                chart(model)
+                if kind == .oval || model.dayCount > 0 {
+                    chart(model)
+                } else {
+                    Text("Daily history isn't available yet. Confirmed totals are shown in Oval and standings.")
+                        .ffType(.caption)
+                        .foregroundStyle(theme.textSecondary)
+                }
                 if [.line, .histogram, .pace].contains(kind), model.dayCount > 0 {
                     let day = min(selectedDay ?? model.dayCount - 1, model.dayCount - 1)
                     VStack(alignment: .leading, spacing: 10) {
@@ -66,7 +73,8 @@ struct FightDayChartsView: View {
                                 HStack(spacing: 6) {
                                     Circle().fill(series.color).frame(width: 7, height: 7)
                                     Text(series.person.isYou ? String(localized: "You") : series.person.name)
-                                    Text((kind == .pace ? series.cumulative[day] : series.daily[day]).formatted(.number.precision(.fractionLength(0))))
+                                    Text((kind == .pace ? series.cumulative[day] : series.daily[day])?
+                                        .formatted(.number.precision(.fractionLength(0))) ?? "-")
                                         .fontWeight(.heavy)
                                         .monospacedDigit()
                                 }
@@ -86,6 +94,9 @@ struct FightDayChartsView: View {
                     Text(kind == .line || kind == .pace
                          ? String(localized: "Touch or slide to inspect a day.")
                          : String(localized: "Tap a day to see its steps."))
+                        .ffType(.micro)
+                        .foregroundStyle(theme.textFaint)
+                    Text("Only synced steps are shown. Missing daily data is marked with a dash.")
                         .ffType(.micro)
                         .foregroundStyle(theme.textFaint)
                 } else if showsLegend {
@@ -165,7 +176,7 @@ struct FightDayChartsView: View {
 private struct FightDayChartSeries: Identifiable {
     var person: Person
     var color: Color
-    var daily: [Double]
+    var daily: [Double?]
     var cumulative: [Double]
     var total: Double
 
@@ -181,30 +192,21 @@ private struct FightDayChartModel {
     var peakCumulative: Double { peakTotal }
     var dayCount: Int { labels.count }
 
-    init(days: [FightDay], theme: Theme) {
+    init(days: [FightDay], standings: [Standing], theme: Theme) {
         labels = days.map(\.label)
-        var totals: [String: Double] = [:]
-        var people: [String: Person] = [:]
-        for day in days {
-            for score in day.scores {
-                people[score.person.id] = score.person
-                totals[score.person.id, default: 0] += score.value
-            }
-        }
-        let ordered = people.values.sorted { lhs, rhs in
-            let left = totals[lhs.id] ?? 0
-            let right = totals[rhs.id] ?? 0
-            if left != right { return left > right }
-            return lhs.name < rhs.name
-        }
+        let ordered = standings.filter { !$0.invited && !$0.deferred }
         var otherIndex = 0
-        series = ordered.map { person in
-            let daily = days.map { day in
-                day.scores.first { $0.person.id == person.id }?.value ?? 0
+        series = ordered.map { standing in
+            let person = standing.person
+            let daily: [Double?] = days.map { day in
+                guard let score = day.scores.first(where: { $0.person.id == person.id }), score.hasData else {
+                    return nil
+                }
+                return score.value
             }
             var running = 0.0
             let cumulative = daily.map { value -> Double in
-                running += value
+                if let value { running += value }
                 return running
             }
             let color: Color
@@ -219,10 +221,18 @@ private struct FightDayChartModel {
                 color: color,
                 daily: daily,
                 cumulative: cumulative,
-                total: totals[person.id] ?? 0
+                total: standing.score
             )
         }
-        peakDaily = max(series.flatMap(\.daily).max() ?? 0, 0)
+        // Cached or older-server data must never produce a curve for another score revision.
+        if series.contains(where: { $0.cumulative.last != $0.total }) {
+            labels = []
+            for index in series.indices {
+                series[index].daily = []
+                series[index].cumulative = []
+            }
+        }
+        peakDaily = max(series.flatMap(\.daily).compactMap { $0 }.max() ?? 0, 0)
         peakTotal = max(series.map(\.total).max() ?? 0, 0)
     }
 
@@ -236,8 +246,8 @@ private struct FightDayChartModel {
         }
     }
 
-    func values(_ series: FightDayChartSeries, cumulative: Bool) -> [Double] {
-        cumulative ? series.cumulative : series.daily
+    func values(_ series: FightDayChartSeries, cumulative: Bool) -> [Double?] {
+        cumulative ? series.cumulative.map(Optional.some) : series.daily
     }
 
     func peak(cumulative: Bool) -> Double {
@@ -261,14 +271,16 @@ private func fightDayPlotY(value: Double, peak: Double, height: CGFloat) -> CGFl
     return height - CGFloat(min(max(value / peak, 0), 1)) * height
 }
 
-private func fightDayPolyline(values: [Double], peak: Double, in size: CGSize) -> [CGPoint] {
+private func fightDayPolyline(values: [Double?], peak: Double, in size: CGSize) -> [CGPoint?] {
     guard !values.isEmpty else { return [] }
     if values.count == 1 {
-        let y = fightDayPlotY(value: values[0], peak: peak, height: size.height)
+        guard let value = values[0] else { return [nil, nil] }
+        let y = fightDayPlotY(value: value, peak: peak, height: size.height)
         return [CGPoint(x: 0, y: y), CGPoint(x: size.width, y: y)]
     }
     return values.enumerated().map { index, value in
-        CGPoint(
+        guard let value else { return nil }
+        return CGPoint(
             x: CGFloat(index) / CGFloat(values.count - 1) * size.width,
             y: fightDayPlotY(value: value, peak: peak, height: size.height)
         )
@@ -317,28 +329,34 @@ private struct FightDayLineChart: View {
                         ForEach(model.series) { series in
                             let values = model.values(series, cumulative: cumulative)
                             let points = fightDayPolyline(values: values, peak: peak, in: geo.size)
-                            if series.person.isYou, let first = points.first, let last = points.last {
+                            if series.person.isYou, points.allSatisfy({ $0 != nil }),
+                               let first = points.first ?? nil, let last = points.last ?? nil {
                                 Path { path in
                                     path.move(to: CGPoint(x: first.x, y: geo.size.height))
-                                    for point in points { path.addLine(to: point) }
+                                    for point in points.compactMap({ $0 }) { path.addLine(to: point) }
                                     path.addLine(to: CGPoint(x: last.x, y: geo.size.height))
                                     path.closeSubpath()
                                 }
                                 .fill(series.color.opacity(0.12))
                             }
                             Path { path in
-                                guard let first = points.first else { return }
-                                path.move(to: first)
-                                for point in points.dropFirst() { path.addLine(to: point) }
+                                var started = false
+                                for point in points {
+                                    guard let point else { started = false; continue }
+                                    if started { path.addLine(to: point) } else { path.move(to: point) }
+                                    started = true
+                                }
                             }
                             .stroke(series.color, style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
                             let day = min(selectedDay ?? model.dayCount - 1, model.dayCount - 1)
                             let x = model.dayCount == 1 ? geo.size.width / 2
                                 : CGFloat(day) / CGFloat(model.dayCount - 1) * geo.size.width
-                            Circle()
-                                .fill(series.color)
-                                .frame(width: 7, height: 7)
-                                .position(x: x, y: fightDayPlotY(value: values[day], peak: peak, height: geo.size.height))
+                            if let value = values[day] {
+                                Circle()
+                                    .fill(series.color)
+                                    .frame(width: 7, height: 7)
+                                    .position(x: x, y: fightDayPlotY(value: value, peak: peak, height: geo.size.height))
+                            }
                         }
                     }
                     .contentShape(Rectangle())
@@ -386,7 +404,7 @@ private struct FightDayHistogramChart: View {
                                         let value = series.daily[day]
                                         let height = model.peakDaily == 0
                                             ? 0
-                                            : CGFloat(value / model.peakDaily) * 140
+                                            : CGFloat((value ?? 0) / model.peakDaily) * 140
                                         RoundedRectangle(cornerRadius: theme.radius.glyph, style: .continuous)
                                             .fill(series.color)
                                             .frame(width: barWidth, height: height)
@@ -435,10 +453,10 @@ private struct FightDayBarsChart: View {
                                 .lineLimit(1)
                                 .frame(width: 52, alignment: .leading)
                             FFProgressBar(
-                                value: model.peakDaily == 0 ? 0 : value / model.peakDaily,
+                                value: model.peakDaily == 0 ? 0 : (value ?? 0) / model.peakDaily,
                                 fill: series.color
                             )
-                            Text(formatScore(value))
+                            Text(value.map(formatScore) ?? "-")
                                 .ffType(.micro)
                                 .foregroundStyle(theme.textSecondary)
                                 .frame(width: 52, alignment: .trailing)

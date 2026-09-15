@@ -274,10 +274,51 @@ struct FitFightFightPostCommentList: Decodable {
 
 struct FitFightFightPostCommentResponse: Decodable {
     let comment: FitFightFightPostComment
+    let commentCount: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case comment
+        case commentCount = "comment_count"
+    }
+}
+
+struct FitFightFightPostCommentDeletion: Decodable {
+    let deleted: Bool
+    let commentCount: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case deleted
+        case commentCount = "comment_count"
+    }
 }
 
 struct FitFightFightPostReactionList: Decodable {
     let reactions: [FitFightFightPost.Reaction]
+}
+
+struct FitFightFightPostReactionPerson: Decodable, Identifiable {
+    let userId: UUID
+    let handle: String
+    let displayName: String
+    let emoji: String
+
+    var id: UUID { userId }
+
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case displayName = "display_name"
+        case handle, emoji
+    }
+}
+
+struct FitFightFightPostReactionPeople: Decodable {
+    let people: [FitFightFightPostReactionPerson]
+    let nextCursor: String?
+
+    enum CodingKeys: String, CodingKey {
+        case people
+        case nextCursor = "next_cursor"
+    }
 }
 
 struct FitFightFightPostList: Decodable {

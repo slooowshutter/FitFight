@@ -1,34 +1,68 @@
 {
-  "sourceLanguage" : "en",
-  "strings" : {
-    "CFBundleDisplayName" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {"stringUnit":{"state":"translated","value":"FitFight"}},
-        "fr" : {"stringUnit":{"state":"translated","value":"FitFight"}}
-      }
+    "sourceLanguage": "en",
+    "strings": {
+        "CFBundleDisplayName": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": { "state": "translated", "value": "FitFight" }
+                },
+                "fr": {
+                    "stringUnit": { "state": "translated", "value": "FitFight" }
+                }
+            }
+        },
+        "NSHealthShareUsageDescription": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "FitFight reads your Apple Health steps and other movement—energy, distance, exercise, stand, flights, and workouts. Steps fights share only your step totals with accepted participants. Other activity stays on your account until a future challenge type uses it."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "FitFight lit tes pas Santé d’Apple et d’autres mouvements : énergie, distance, exercice, debout, étages et entraînements. Les défis de pas partagent seulement tes totaux de pas avec les participants acceptés. Le reste reste sur ton compte jusqu’à un futur type de défi."
+                    }
+                }
+            }
+        },
+        "NSHealthUpdateUsageDescription": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "FitFight does not add to or change Apple Health. It only requests read-only access to the activity types in the read description."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "FitFight n’ajoute ni ne modifie aucune donnée dans Santé d’Apple. L’app demande uniquement un accès en lecture aux types d’activité indiqués dans la description de lecture."
+                    }
+                }
+            }
+        },
+        "NSCameraUsageDescription": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "FitFight uses the camera so you can take a photo and attach it to a fight post."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "FitFight utilise l’appareil photo pour que tu puisses prendre une photo et la joindre à une publication."
+                    }
+                }
+            }
+        }
     },
-    "NSHealthShareUsageDescription" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {"stringUnit":{"state":"translated","value":"FitFight reads your Apple Health steps and other movement—energy, distance, exercise, stand, flights, and workouts. Steps fights share only your step totals with accepted participants. Other activity stays on your account until a future challenge type uses it."}},
-        "fr" : {"stringUnit":{"state":"translated","value":"FitFight lit tes pas Santé d’Apple et d’autres mouvements : énergie, distance, exercice, debout, étages et entraînements. Les défis de pas partagent seulement tes totaux de pas avec les participants acceptés. Le reste reste sur ton compte jusqu’à un futur type de défi."}}
-      }
-    },
-    "NSHealthUpdateUsageDescription" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {"stringUnit":{"state":"translated","value":"FitFight does not add to or change Apple Health. It only requests read-only access to the activity types in the read description."}},
-        "fr" : {"stringUnit":{"state":"translated","value":"FitFight n’ajoute ni ne modifie aucune donnée dans Santé d’Apple. L’app demande uniquement un accès en lecture aux types d’activité indiqués dans la description de lecture."}}
-      }
-    },
-    "NSCameraUsageDescription" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {"stringUnit":{"state":"translated","value":"FitFight uses the camera so you can take a photo and attach it to a fight post."}},
-        "fr" : {"stringUnit":{"state":"translated","value":"FitFight utilise l’appareil photo pour que tu puisses prendre une photo et la joindre à une publication."}}
-      }
-    }
-  },
-  "version" : "1.0"
+    "version": "1.0"
 }

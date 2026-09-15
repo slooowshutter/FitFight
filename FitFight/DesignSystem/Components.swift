@@ -585,6 +585,7 @@ struct FFAvatar: View {
             .frame(width: size, height: size)
             .background(theme.control, in: Circle())
             .clipShape(Circle())
+            .contentShape(Circle())
             .overlay {
                 Circle().strokeBorder(
                     selected ? theme.mossEdge : theme.line,

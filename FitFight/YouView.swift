@@ -22,11 +22,11 @@ struct YouView: View {
     @State private var showingCompanionPreviewControls = false
 
     var body: some View {
-        FFScreen(refresh: fightsRefresh) {
+        FFScreen(top: AnyView(VersionBanner(onTap: versionBannerTap)), refresh: fightsRefresh) {
             profile
             CompanionIntroduction(surface: .you)
             #if DEBUG && targetEnvironment(simulator)
-            if CompanionPreview.isEnabled {
+            if CompanionPreview.isEnabled && !ScreenshotExport.isEnabled {
                 Text("Companion design preview · this session only")
                     .ffType(.micro)
                     .foregroundStyle(theme.textSecondary)
@@ -56,7 +56,7 @@ struct YouView: View {
             }
 
             #if DEBUG && targetEnvironment(simulator)
-            if CompanionPreview.isEnabled {
+            if CompanionPreview.isEnabled && !ScreenshotExport.isEnabled {
                 FFButton(title: String(localized: "Companion preview"), kind: .ghost, fullWidth: true) {
                     showingCompanionPreviewControls = true
                 }
@@ -124,6 +124,12 @@ struct YouView: View {
         }
     }
 
+    private var versionBannerTap: (() -> Void)? {
+        guard !CompanionPreview.isEnabled else { return nil }
+        guard session.isFitFightAdmin else { return nil }
+        return { model.showingDebugMenu = true }
+    }
+
     private var fightsRefresh: FFRefreshConfig {
         FFRefreshConfig(
             isRefreshing: model.isRefreshingFights,
@@ -148,6 +154,7 @@ struct YouView: View {
                             size: 68
                         )
                             .overlay { Circle().strokeBorder(theme.mossEdge, lineWidth: 3) }
+                            .contentShape(Circle())
                     }
                     .buttonStyle(FFHapticPlainStyle())
                     .accessibilityLabel(String(localized: "Choose your companion"))
@@ -159,6 +166,7 @@ struct YouView: View {
                             selected: true,
                             photoURL: session.profile?.avatar?.url
                         )
+                        .contentShape(Circle())
                         .overlay {
                             if isUploadingPhoto {
                                 ZStack {
@@ -373,8 +381,7 @@ struct YouView: View {
                         .foregroundStyle(theme.textFaint)
                 ),
                 action: {
-                    model.feedbackRequestFilter = .bugs
-                    model.feedbackPane = .bugs
+                    model.feedbackRequestFilter = .top
                     model.tab = .feedback
                 }
             )

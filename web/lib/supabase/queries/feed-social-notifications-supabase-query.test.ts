@@ -292,7 +292,7 @@ test("reacting to your own post does not enqueue", async () => {
 });
 
 test("a comment routes to a fight the recipient can open", async () => {
-  const { database, inserted } = createSql({
+  const { database, inserted, queries } = createSql({
     post: { fight_id: fightId, author_id: otherId },
     members: [{ user_id: otherId, fight_id: siblingFightId }],
     actor: { handle: "alex", display_name: "Alex" },
@@ -315,4 +315,8 @@ test("a comment routes to a fight the recipient can open", async () => {
   const row = inserted[0] as { fight_id: string; route: string };
   assert.equal(row.fight_id, siblingFightId);
   assert.equal(row.route, `/fights/${siblingFightId}`);
+  const access = queries.find((sql) => sql.includes("from public.fight_members") && sql.includes("fight_post_channels"));
+  assert.ok(access);
+  assert.match(access ?? "", /series_id/);
+  assert.match(access ?? "", /fight_post_channels/);
 });

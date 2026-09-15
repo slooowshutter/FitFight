@@ -114,9 +114,17 @@ async function accessibleFightByUser(
           from public.fights as posted
           join public.fights as sibling
             on sibling.series_id = posted.series_id
-          where posted.id = ${preferredFightId}
-            and posted.series_id is not null
+          where posted.series_id is not null
             and sibling.id = member.fight_id
+            and (
+              posted.id = ${preferredFightId}
+              or exists (
+                select 1
+                from public.fight_post_channels as channel
+                where channel.post_id = ${postId}
+                  and channel.fight_id = posted.id
+              )
+            )
         )
       )
     order by member.user_id, (member.fight_id = ${preferredFightId}) desc nulls last, member.fight_id

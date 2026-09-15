@@ -116,6 +116,7 @@ struct FFSwitch: View {
 struct FFSegmented<Item: Hashable>: View {
     let items: [Item]
     @Binding var selection: Item
+    var count: ((Item) -> Int?)? = nil
     let title: (Item) -> String
 
     @Environment(\.ffTheme) private var theme
@@ -124,18 +125,31 @@ struct FFSegmented<Item: Hashable>: View {
         HStack(spacing: 3) {
             ForEach(items, id: \.self) { item in
                 let on = item == selection
+                let name = title(item)
+                let raw = count?(item)
+                let badge: Int? = (raw ?? 0) > 0 ? raw : nil
                 Button {
                     selection = item
                 } label: {
-                    Text(title(item))
-                        .ffType(.caption)
-                        .fontWeight(.heavy)
-                        .foregroundStyle(on ? theme.mossOn : theme.textSecondary)
-                        .padding(.horizontal, 15)
-                        .padding(.vertical, 6)
-                        .background(on ? theme.mossFill : .clear, in: Capsule())
+                    HStack(spacing: 3) {
+                        Text(name)
+                            .ffType(.caption)
+                            .fontWeight(.heavy)
+                        if let badge {
+                            Text("\(badge)")
+                                .ffType(.micro)
+                                .fontWeight(.heavy)
+                                .opacity(0.7)
+                                .accessibilityHidden(true)
+                        }
+                    }
+                    .foregroundStyle(on ? theme.mossOn : theme.textSecondary)
+                    .padding(.horizontal, 15)
+                    .padding(.vertical, 6)
+                    .background(on ? theme.mossFill : .clear, in: Capsule())
                 }
                 .buttonStyle(FFHapticPlainStyle())
+                .accessibilityLabel(badge.map { "\(name), \($0)" } ?? name)
             }
         }
         .padding(3)

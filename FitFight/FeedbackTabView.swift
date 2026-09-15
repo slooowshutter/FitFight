@@ -1,11 +1,10 @@
 import SwiftUI
 
 enum FeedbackPane: Hashable, CaseIterable {
-    case feed, bugs, top, report
+    case bugs, top, report
 
     var title: String {
         switch self {
-        case .feed: return String(localized: "Feed")
         case .bugs: return String(localized: "Bugs")
         case .top: return String(localized: "Top")
         case .report: return String(localized: "Report")
@@ -26,8 +25,6 @@ struct FeedbackTabView: View {
             hubBar
             ZStack {
                 switch model.feedbackPane {
-                case .feed:
-                    FeedView(showsChrome: false)
                 case .bugs:
                     RequestsView(
                         store: requests,

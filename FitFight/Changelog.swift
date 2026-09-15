@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 15,
+            notes: "Feed and Feedback now have separate tabs: Fights, New, You, Feed, Feedback."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 15,
             notes: "FitFight has a new green and beige double-F app icon."
         ),
         ReleaseNote(

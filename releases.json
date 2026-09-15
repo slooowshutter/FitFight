@@ -23,7 +23,11 @@
       "build": 113,
       "update_url": "https://apps.apple.com/app/id6804230516"
     },
-    "review": null,
+    "review": {
+      "version": "1.1.1",
+      "build": 202,
+      "update_url": "https://apps.apple.com/app/id6804230516"
+    },
     "internal": null,
     "enforced": false
   }

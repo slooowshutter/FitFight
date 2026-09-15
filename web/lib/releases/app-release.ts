@@ -2,6 +2,8 @@ import { ApiError } from "@/lib/http";
 import {
   appReleaseManifestSchema,
   appReleaseProjectSchema,
+  prodAppReleasePolicySchema,
+  stagingAppReleasePolicySchema,
   type AppReleasePolicy,
 } from "@/lib/types/releases/app-release";
 
@@ -11,10 +13,9 @@ export async function appReleasePolicy(): Promise<AppReleasePolicy> {
     throw new ApiError(503, "config", "App release environment is not configured");
   }
 
-  let response: Response;
   let payload: unknown;
   try {
-    response = await fetch(
+    const response = await fetch(
       `https://raw.githubusercontent.com/slooowshutter/FitFight/testflight-latest/releases.json?check=${Date.now()}`,
       { cache: "no-store", signal: AbortSignal.timeout(8_000) },
     );
@@ -26,16 +27,32 @@ export async function appReleasePolicy(): Promise<AppReleasePolicy> {
     throw new ApiError(503, "release_unavailable", "Could not check the latest app release");
   }
 
+  const channel = project.data === "https://zstzbfocunthczzubggz.supabase.co" ? "staging" : "prod";
   const parsed = appReleaseManifestSchema.safeParse(payload);
-  if (!parsed.success) {
+  if (parsed.success) {
+    return parsed.data[channel];
+  }
+  const selected = payload && typeof payload === "object" && !Array.isArray(payload) && channel in payload
+    ? Reflect.get(payload, channel)
+    : undefined;
+  const salvaged = (channel === "staging" ? stagingAppReleasePolicySchema : prodAppReleasePolicySchema)
+    .safeParse(selected);
+  if (!salvaged.success) {
     throw new ApiError(503, "release_unavailable", "Could not read the latest app release");
   }
-  return project.data === "https://zstzbfocunthczzubggz.supabase.co" ? parsed.data.staging : parsed.data.prod;
+  return salvaged.data;
 }
 
 export async function requireLatestAppRelease(request: Request): Promise<void> {
-  const policy = await appReleasePolicy();
-  // Existing binaries cannot send these headers until the first gated release is installable.
+  let policy: AppReleasePolicy;
+  try {
+    policy = await appReleasePolicy();
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 503) {
+      return;
+    }
+    throw error;
+  }
   if (!policy.enforced) return;
   const version = request.headers.get("x-fitfight-version");
   const build = request.headers.get("x-fitfight-build");

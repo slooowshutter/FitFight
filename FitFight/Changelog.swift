@@ -25,6 +25,20 @@ enum Changelog {
     /// Newest first. Add a row here whenever we ship a user-facing change.
     static let releases: [ReleaseNote] = [
         ReleaseNote(
+            version: "1.0.1",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "Tabs are Fights, New, Feed, Feedback, You. Fight-feed lock-screen alerts name the person, never scores. Turn posts, comments, replies, and reactions on or off under You → Settings."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "You can get alerts when someone posts, comments, replies, or reacts in a fight. Turn each one on or off under You → Settings → Notifications."
+        ),
+        ReleaseNote(
             version: "1.0.0",
             year: 2026,
             month: 9,

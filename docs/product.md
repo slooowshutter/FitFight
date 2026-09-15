@@ -19,7 +19,7 @@ Do not rename the bundle ID without Apple + CI updates.
 
 - Four tabs: **Fights**, **New**, **You**, **Feedback**.
 - Feedback holds the same fight Feed (posts from fights you’re in, fight picker when you post), Bugs & requests, Top ranking, and a Report form. Plus on that tab opens a new post or a new request. You still has a shortcut into Bugs & requests.
-- Feed is one list of posts from every fight you’re in. Each post has a badge for the fight, or Public if it went to every fight you chose. Tap + to write a note and pick one or more fights next to photo or video. **All fights** selects every fight and shows as Public. Inside a fight, posting starts on that fight and you can add other channels. There is no Main destination. A tag does not add someone to a fight they are not in. Posts can take any emoji and nested comments.
+- Feed is one list of posts from every fight you’re in. Each post has a badge for the fight, or Public if it went to every fight you chose. Tap + to write a note and pick one or more fights next to photo or video. **All fights** selects every fight and shows as Public. Inside a fight, posting starts on that fight and you can add other channels. There is no Main destination. A tag does not add someone to a fight they are not in. Posts can take any emoji and nested comments. Other people in that fight can get a notification when you post in that fight’s Feed; comments and reactions notify the post author; a reply notifies the person you replied to, not everyone else on the thread.
 - Each fight has posts on a Feed tab next to Stats.
 - New accounts pick an optional photo with their username, then connect Apple Health, then allow challenge reminders, then a last screen that the Feedback tab can take a feature or a bug.
 - Every fight is **Steps × highest total**. There are no other metrics or scoring modes.
@@ -27,7 +27,7 @@ Do not rename the bundle ID without Apple + CI updates.
 - Type an optional title and an optional action the loser must do. If there is no title, the action is the fight name. There is no money or bragging-rights option.
 - Choose **1 hour**, **6 hours**, or **1 day** for testing, or **3 days**, **1 week**, **2 weeks**, or **1 month**.
 - Apple Health sends merged Steps aggregates needed for active fights. It may also store private energy, distance, exercise, stand, flights, and workout summaries. Those extras are not fight options yet.
-- Settings keeps Privacy, Support, Versions, Sign out, and Delete account. Bugs & requests lives on the Feedback tab, with a shortcut on You. Look is Night or Day.
+- Settings keeps Privacy, Support, Notifications, Versions, Sign out, and Delete account. Bugs & requests lives on the Feedback tab, with a shortcut on You. Look is Night or Day.
 - Companion: pick from a grid of animals, or Custom with one description (species, breed, accessories, colors). That text is stored on the account for later image generation. Generation is not built. Pose and generation controls are not shown.
 - Delete account removes the full account, uploaded Steps, memberships, owned fights, and bugs or requests the User posted; a stored Sign in with Apple authorization is revoked when available.
 - The old Requests tab, money, unsupported metrics, and dead settings are removed.
@@ -41,7 +41,7 @@ The web kit in [`docs/design/source/`](design/source/README.md) is the look. Swi
 - Live fight cards carry their own leaderboard and money line
 - Version label at the top; Versions under You → Settings
 
-That was the original port, not the current product. Marketing version is now `1.0.0`; CI bumps only the **build number** for TestFlight. Do **not** bump marketing version for a TestFlight ship. See [`shipping.md`](shipping.md#versions-vs-builds-why-friends-wait).
+That was the original port, not the current product. Marketing version is now `1.0.1`; CI bumps only the **build number** for TestFlight. Do **not** upload 1.0.0. Apple closed that train. See [`shipping.md`](shipping.md#versions-vs-builds-why-friends-wait).
 
 ## v0.6 (design exploration) — retired 25 Aug 2026
 

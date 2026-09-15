@@ -3,8 +3,7 @@
 # Staging TestFlight only: push/merge to preview, or manual
 # workflow_dispatch on that branch. Feature-branch, develop, and cron
 # must not upload. main never uploads to TestFlight.
-# Uploads are App Store Connect Internal testers only. CI does not
-# add the public join link or any other external group.
+# After upload, CI assigns Internal testers, every External group, and Friends Beta.
 name: TestFlight
 
 on:
@@ -187,6 +186,8 @@ jobs:
           PY
 
       - name: Upload to TestFlight
+        env:
+          FITFIGHT_RELEASE_VERSION: "1.0.1"
         run: bundle exec fastlane beta
 
       - name: Publish available app releases

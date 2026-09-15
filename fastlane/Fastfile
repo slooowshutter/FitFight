@@ -56,9 +56,9 @@ rescue StandardError => e
   UI.important("Skipping certificate cleanup: #{e.message}")
 end
 
-# App Store Connect Internal testers get every processed build automatically.
-# Do not assign the public join link or any other external group from CI.
-def report_internal_only(version, build_number)
+# After the IPA is on App Store Connect, put this build on every TestFlight
+# group: Internal testers (automatic), every External group, and Friends Beta.
+def report_testflight_groups(version, build_number)
   require "spaceship"
 
   app = Spaceship::ConnectAPI::App.find(BUNDLE_ID)
@@ -77,29 +77,86 @@ def report_internal_only(version, build_number)
     return
   end
 
-  UI.message("Build #{version} (#{build_number}): processing=#{build.processing_state} expired=#{build.expired}")
+  UI.message(
+    "Build #{version} (#{build_number}): processing=#{build.processing_state} " \
+    "expired=#{build.expired} external=#{build.build_beta_detail&.external_build_state}"
+  )
 
   groups = app.get_beta_groups
   internals = groups.select(&:is_internal_group)
   externals = groups.reject(&:is_internal_group)
   internals.each do |group|
-    UI.message("Internal group '#{group.name}' receives this build after processing.")
+    UI.message("Internal group '#{group.name}' has this build after processing.")
   end
-  if internals.empty?
-    UI.important(
-      "No App Store Connect Internal tester group. Add Marc (and any internals) " \
-      "under Users and Access → TestFlight Internal Testing."
-    )
+  externals.each do |group|
+    UI.message("External group '#{group.name}' was submitted for this build.")
   end
-  unless externals.empty?
-    UI.message(
-      "External groups left untouched: #{externals.map(&:name).join(', ')}. " \
-      "Promote this build in App Store Connect when Marc asks."
-    )
-  end
-  UI.success("TestFlight upload is internal-only; the public join link was not updated.")
+  UI.success(
+    "TestFlight #{version} (#{build_number}) is on Internal " \
+    "(#{internals.map(&:name).join(', ')}) and External " \
+    "(#{externals.map(&:name).join(', ')})."
+  )
 rescue StandardError => e
   UI.important("Skipping TestFlight group report: #{e.message}")
+end
+
+def assign_all_testflight_groups(version, build_number, api_key:)
+  require "spaceship"
+
+  app = Spaceship::ConnectAPI::App.find(BUNDLE_ID)
+  UI.user_error!("No App Store Connect app for #{BUNDLE_ID}") if app.nil?
+
+  groups = app.get_beta_groups
+  UI.user_error!("This app has no TestFlight groups") if groups.nil? || groups.empty?
+
+  internals = groups.select(&:is_internal_group)
+  externals = groups.reject(&:is_internal_group)
+  if internals.empty?
+    UI.user_error!(
+      "No Internal TestFlight group. Add testers under Users and Access → " \
+      "TestFlight Internal Testing."
+    )
+  end
+  if externals.empty?
+    UI.user_error!("No External TestFlight groups. Create Friends Beta and any other external groups.")
+  end
+  friends = externals.find { |group| group.name == "Friends Beta" }
+  UI.user_error!("No external TestFlight group named 'Friends Beta'") if friends.nil?
+
+  UI.message(
+    "TestFlight groups: " + groups.map { |group|
+      "#{group.name} (#{group.is_internal_group ? 'internal' : 'external'})"
+    }.join(", ")
+  )
+  internals.each do |group|
+    UI.message(
+      "Internal group '#{group.name}' auto-receives #{version} (#{build_number}) " \
+      "after processing. Apple rejects assigning an internal group by hand."
+    )
+  end
+  UI.message(
+    "Adding #{version} (#{build_number}) to every external group: #{externals.map(&:name).join(', ')}"
+  )
+  upload_to_testflight(
+    api_key: api_key,
+    app_identifier: BUNDLE_ID,
+    app_platform: "ios",
+    app_version: version,
+    build_number: build_number.to_s,
+    distribute_only: true,
+    distribute_external: true,
+    groups: externals.map(&:id),
+    skip_waiting_for_build_processing: false,
+    skip_submission: false,
+    submit_beta_review: true,
+    notify_external_testers: true,
+    changelog: "FitFight #{version} (#{build_number})"
+  )
+  UI.success(
+    "Build #{version} (#{build_number}) is assigned to Internal " \
+    "(#{internals.map(&:name).join(', ')}) and External " \
+    "(#{externals.map(&:name).join(', ')})"
+  )
 end
 
 def cloud_signing_flags(key_path, key_id, issuer_id, team_id)
@@ -125,6 +182,16 @@ def record_uploaded_release(channel, version, build_number)
     ) + "\n"
   )
   UI.message("Registered #{channel} candidate #{version} (#{build_number}); it is not yet mandatory")
+end
+
+# Apple App Store versions are often "1.0"; the app and /api/app-release require 1.0.0.
+def marketing_version(version)
+  return if version.nil?
+
+  text = version.to_s.strip
+  return "#{text}.0" if text.match?(/\A\d+\.\d+\z/)
+
+  text
 end
 
 # Only public-group installable builds become mandatory. Registered internal
@@ -164,7 +231,7 @@ def available_app_releases(app, registered, previous)
   candidate = app.get_latest_app_store_version(platform: "IOS", includes: "build")
   manifest = {}
   { "staging" => staging, "prod" => live&.build }.each do |channel, build|
-    version = channel == "staging" ? build&.app_version : live&.version_string
+    version = marketing_version(channel == "staging" ? build&.app_version : live&.version_string)
     update_url = channel == "staging" ? "itms-beta://" : "https://apps.apple.com/app/id#{app.id}"
     latest = build && { "version" => version, "build" => Integer(build.version), "update_url" => update_url }
     known = registered.any? do |entry|
@@ -176,7 +243,9 @@ def available_app_releases(app, registered, previous)
     end
     review = nil
     review_build = channel == "staging" ? staging_candidate : candidate&.build
-    review_version = channel == "staging" ? staging_candidate&.app_version : candidate&.version_string
+    review_version = marketing_version(
+      channel == "staging" ? staging_candidate&.app_version : candidate&.version_string
+    )
     if review_build && registered.any? { |entry|
       entry["channel"] == channel && entry["version"] == review_version &&
         entry["build"] == Integer(review_build.version)
@@ -190,7 +259,7 @@ def available_app_releases(app, registered, previous)
     internal = nil
     if channel == "staging" && staging_internal
       internal_release = {
-        "version" => staging_internal.app_version,
+        "version" => marketing_version(staging_internal.app_version),
         "build" => Integer(staging_internal.version),
         "update_url" => update_url
       }
@@ -303,6 +372,18 @@ platform :ios do
     end
 
     version = get_version_number(xcodeproj: XCODEPROJ, target: SCHEME)
+    release_version = ENV["FITFIGHT_RELEASE_VERSION"].to_s
+    unless release_version.empty?
+      unless version == release_version
+        UI.user_error!(
+          "Project marketing version #{version} does not match release version #{release_version}"
+        )
+      end
+      changelog = File.read(File.expand_path("../FitFight/Changelog.swift", __dir__))
+      unless changelog.match?(/version:\s*"#{Regexp.escape(release_version)}"/)
+        UI.user_error!("Changelog is missing the #{release_version} release note")
+      end
+    end
     UI.message("Shipping #{version} (#{build_number})")
 
     revoke_stale_certificates(key_id, issuer_id, key_path)
@@ -336,7 +417,8 @@ platform :ios do
     )
 
     record_uploaded_release("staging", version, build_number)
-    report_internal_only(version, build_number)
+    assign_all_testflight_groups(version, build_number, api_key: api_key)
+    report_testflight_groups(version, build_number)
   ensure
     FileUtils.rm_f(key_path) if defined?(key_path) && key_path
   end

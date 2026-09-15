@@ -231,7 +231,7 @@ final class AppModel: ObservableObject {
     @Published var dailyStatusRecap: DailyStatusRecap?
     @Published var showingVersions = false
     @Published var showingDebugMenu = false
-    @Published var feedbackPane: FeedbackPane = .feed
+    @Published var feedbackPane: FeedbackPane = .bugs
     @Published var feedbackRequestFilter: RequestFilter = .bugs
     @Published var companionPreviewNotice: String?
     @Published var joined: Set<String> = []

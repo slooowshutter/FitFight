@@ -439,9 +439,11 @@ struct FightComposerReviewPage: View {
         let listing = visibilityJoinable
             ? String(localized: "Listed on Join")
             : String(localized: "Join with code or invite link")
-        let opponents = opponentHandles.isEmpty
+        let opponents = opponentHandles.map { "@\($0)" }.formatted(.list(type: .and))
+        let matchup = opponents.isEmpty ? String(localized: "people who join") : opponents
+        let privacy = opponents.isEmpty
             ? listing
-            : "\(listing) · \(opponentHandles.map { "@\($0)" }.formatted(.list(type: .and)))"
+            : "\(listing) · \(opponents)"
         let windowEnd = customSchedule
             ? customEnd
             : FightComposer.endDate(from: durationStart, days: durationDays)
@@ -485,7 +487,7 @@ struct FightComposerReviewPage: View {
                 FFDivider()
                 FFGroupedRow(
                     title: visibilityJoinable ? String(localized: "Public") : String(localized: "Private"),
-                    subtitle: opponents,
+                    subtitle: privacy,
                     systemImage: visibilityJoinable ? "link" : "lock",
                     subtitleTone: .neutral,
                     trailing: AnyView(Text("Change").ffType(.caption).foregroundStyle(theme.mossText)),
@@ -536,7 +538,7 @@ struct FightComposerReviewPage: View {
                     Text(
                         String(
                             localized: "fight.you-versus",
-                            defaultValue: "You vs \(opponents)"
+                            defaultValue: "You vs \(matchup)"
                         )
                     )
                         .ffType(.rowTitle)

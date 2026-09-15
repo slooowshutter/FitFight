@@ -1,12 +1,27 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **15 Sep 2026**. Next prepared app: **1.1.1**.
+Read this before building. Last updated **16 Sep 2026**. Next prepared app: **1.1.1**.
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
 ---
 
 **Last TestFlight:** 15 Sep 2026. **1.1.0 (200)** from [#234](https://github.com/slooowshutter/FitFight/pull/234). Internal Tester and Friends Beta, same IPA. Friends wait Apple beta review (`WAITING_FOR_BETA_REVIEW`). Overlay: `latest` 190, `review`/`internal` 200.
+
+## Multiple-objective Fight rules: specified 16 Sep 2026
+
+The [Fight rules](fight-rules.md#multiple-objectives-all-are-required),
+[engine design](system-design.md#multiple-objective-goals-engine-design), and
+domain glossary now define goals requiring **every Objective** to pass. Each
+Objective retains its own progress, unit, source completeness, and explanation;
+extra progress cannot compensate for a missed Objective. Independent Objectives
+may share a Measure or use different approved Measures in the common window.
+
+**Implementation:** documentation only. The isolated Zod draft already represents
+this through named conditions and `all`; it does not evaluate activity. Runtime
+scoring, APIs, database schema, and the native app are unchanged. No cloud checks
+or deployment were performed. Shipping still requires approved presets, evidence
+for every Metric, engine tests, and the normal compatibility rollout.
 
 ## Release workspace reconciliation, 15 Sep 2026 evening
 

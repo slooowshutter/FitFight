@@ -180,11 +180,9 @@ final class CompanionStore: ObservableObject {
         guard !CompanionPreview.isEnabled else { return }
         if let userId = profile?.userId,
            let pending = UserDefaults.standard.string(forKey: Self.pendingPrefix + userId.uuidString) {
-            applyChoice(
-                id: pending,
-                prompt: UserDefaults.standard.string(forKey: Self.pendingPromptPrefix + userId.uuidString)
-            )
-            if profile?.companionId == pending {
+            let pendingPrompt = UserDefaults.standard.string(forKey: Self.pendingPromptPrefix + userId.uuidString)
+            applyChoice(id: pending, prompt: pendingPrompt)
+            if pendingSaveLanded(on: profile, id: pending, prompt: pendingPrompt) {
                 clearPending(for: userId)
             }
         } else if let id = profile?.companionId {
@@ -233,7 +231,7 @@ final class CompanionStore: ObservableObject {
         let prompt = UserDefaults.standard.string(forKey: Self.pendingPromptPrefix + userId.uuidString)
         do {
             try await session.setCompanion(id: pending, prompt: pending == Self.customId ? prompt : nil)
-            if session.profile?.companionId == pending {
+            if pendingSaveLanded(on: session.profile, id: pending, prompt: prompt) {
                 clearPending(for: userId)
             }
         } catch {
@@ -255,6 +253,15 @@ final class CompanionStore: ObservableObject {
         #else
         return nil
         #endif
+    }
+
+    /// Custom always uses companion_id `custom`, so an id match is not proof a prompt edit landed.
+    private func pendingSaveLanded(on profile: FitFightProfile?, id: String, prompt: String?) -> Bool {
+        guard profile?.companionId == id else { return false }
+        guard id == Self.customId else { return true }
+        let server = profile?.companionPrompt?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let local = prompt?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return !local.isEmpty && server == local
     }
 
     private func applyChoice(id: String, prompt: String?) {

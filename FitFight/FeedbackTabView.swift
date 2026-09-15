@@ -49,6 +49,7 @@ struct FeedbackTabView: View {
                     store: requests,
                     heading: String(localized: "Report"),
                     embedded: true,
+                    isActive: model.feedbackPane == .report,
                     onPosted: { filter in
                         model.feedbackRequestFilter = filter
                         model.feedbackPane = .bugs

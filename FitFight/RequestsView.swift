@@ -1027,6 +1027,7 @@ struct ComposeRequestView: View {
     @ObservedObject var store: FeedbackStore
     var heading: String = String(localized: "New request")
     var embedded: Bool = false
+    var isActive: Bool = true
     var onPosted: ((RequestFilter) -> Void)? = nil
     @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
@@ -1104,6 +1105,12 @@ struct ComposeRequestView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(theme.bg.ignoresSafeArea())
+        .onChange(of: isActive) { _, active in
+            if !active {
+                titleFocused = false
+                detailsFocused = false
+            }
+        }
         .onChange(of: mediaItems) { _, items in
             Task { await loadPickedMedia(items) }
         }

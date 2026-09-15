@@ -36,7 +36,13 @@ struct FightsListView: View {
                     .font(.custom("Nunito-ExtraBold", size: 14, relativeTo: .headline))
                     .foregroundStyle(theme.text)
                 if !typeSize.isAccessibilitySize { Spacer(minLength: 0) }
-                FFSegmented(items: FightsListFilter.allCases, selection: $filter) { item in
+                FFSegmented(
+                    items: FightsListFilter.allCases,
+                    selection: $filter,
+                    count: { item in
+                        item == .invited ? model.invitations.count : nil
+                    }
+                ) { item in
                     item.title
                 }
             }

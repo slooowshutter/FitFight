@@ -64,7 +64,12 @@ struct ContentView: View {
                 }
             }
         )) {
-            CompanionPicker(selection: companions.selection, required: session.needsCompanionSelection)
+            CompanionPicker(
+                selection: companions.selection,
+                required: session.needsCompanionSelection,
+                isCustom: companions.isCustom,
+                prompt: companions.customPrompt
+            )
                 .fitFightTheme(themeStore.theme)
                 .presentationBackground(themeStore.theme.bg)
                 .interactiveDismissDisabled(session.needsCompanionSelection)

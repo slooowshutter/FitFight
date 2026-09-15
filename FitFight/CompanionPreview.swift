@@ -181,7 +181,8 @@ extension CompanionPreview {
                 body: bodies[index], createdAt: Date().addingTimeInterval(-Double(index + 1) * 1_200).ISO8601Format(),
                 author: .init(userId: UUID(uuidString: person.id)!, handle: String(person.handle.dropFirst()), displayName: person.name, avatar: nil),
                 media: [], tags: [], reactions: [.init(emoji: "👏", count: 3 - index, mine: false)],
-                commentCount: index == 0 ? 2 : 0, mine: person.isYou
+                commentCount: index == 0 ? 2 : 0, mine: person.isYou,
+                broadcast: false, channels: [.init(fightId: postFightID, name: fightName)]
             )
         }
     }

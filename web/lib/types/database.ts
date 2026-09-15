@@ -123,6 +123,8 @@ export type FightSeriesRow = {
   paused_at: string | null;
   current_fight_id: string | null;
   created_at: string;
+  suggested: boolean;
+  suggested_at: string | null;
 };
 
 export function asNumber(value: number | string | null | undefined): number | null {

@@ -55,10 +55,33 @@ struct ContentView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .sheet(isPresented: $companions.showingPicker) {
-            CompanionPicker(selection: companions.selection)
+        .sheet(isPresented: Binding(
+            get: { companions.showingPicker || session.needsCompanionSelection },
+            set: { presented in
+                if session.needsCompanionSelection {
+                    companions.showingPicker = true
+                } else {
+                    companions.showingPicker = presented
+                }
+            }
+        )) {
+            CompanionPicker(selection: companions.selection, required: session.needsCompanionSelection)
                 .fitFightTheme(themeStore.theme)
                 .presentationBackground(themeStore.theme.bg)
+                .interactiveDismissDisabled(session.needsCompanionSelection)
+        }
+        .onChange(of: session.profile?.companionId) { _, _ in
+            companions.apply(session.profile)
+            Task { await companions.publishPending(session: session) }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            companions.apply(session.profile)
+            Task { await companions.publishPending(session: session) }
+        }
+        .onAppear {
+            companions.apply(session.profile)
+            Task { await companions.publishPending(session: session) }
         }
         .alert(String(localized: "Companion preview"), isPresented: Binding(
             get: { model.companionPreviewNotice != nil },
@@ -117,6 +140,7 @@ struct ContentView: View {
                         && !session.needsHealthOnboarding
                         && !session.needsNotificationOnboarding
                         && !session.needsRequestsOnboarding
+                        && !session.needsCompanionSelection
                 },
                 set: { if !$0 { push.declinePrePrompt() } }
             )

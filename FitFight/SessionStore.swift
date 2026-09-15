@@ -50,6 +50,15 @@ final class SessionStore: ObservableObject {
             && UserDefaults.standard.bool(forKey: Self.needsRequestsKey)
     }
 
+    var needsCompanionSelection: Bool {
+        guard isSignedIn, profile != nil else { return false }
+        if screenshotSignedIn || CompanionPreview.isEnabled || ScreenshotExport.isEnabled { return false }
+        guard !needsOnboarding, !needsHealthOnboarding, !needsNotificationOnboarding, !needsRequestsOnboarding else {
+            return false
+        }
+        return profile?.companionId == nil && !CompanionStore.hasPendingChoice(for: profile?.userId)
+    }
+
     var isFitFightAdmin: Bool {
         guard !screenshotSignedIn else { return false }
         guard let handle = profile?.handle else { return false }
@@ -286,6 +295,21 @@ final class SessionStore: ObservableObject {
         }
         let token = try await freshAccessToken()
         let updated = try await api.updateProfile(avatarMediaId: media.id, accessToken: token)
+        try Task.checkCancellation()
+        guard authSession?.user.id == userId else { throw CancellationError() }
+        profile = updated
+        if let data = try? JSONEncoder().encode(updated) {
+            UserDefaults.standard.set(data, forKey: Self.profileCachePrefix + userId.uuidString)
+        }
+    }
+
+    func setCompanion(_ companion: StockCompanion) async throws {
+        guard !screenshotSignedIn else { throw CompanionPreview.WriteUnavailable() }
+        guard let userId = authSession?.user.id ?? client.auth.currentUser?.id else {
+            throw HandleError.notSignedIn
+        }
+        let token = try await freshAccessToken()
+        let updated = try await api.updateProfile(companionId: companion.rawValue, accessToken: token)
         try Task.checkCancellation()
         guard authSession?.user.id == userId else { throw CancellationError() }
         profile = updated

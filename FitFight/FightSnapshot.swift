@@ -18,12 +18,23 @@ struct SeriesRow: Decodable {
     let joinCode: String?
     let visibility: String
     let recurring: Bool
+    let suggested: Bool
 
     enum CodingKeys: String, CodingKey {
         case id
         case joinCode = "join_code"
         case visibility
         case recurring
+        case suggested
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        joinCode = try container.decodeIfPresent(String.self, forKey: .joinCode)
+        visibility = try container.decode(String.self, forKey: .visibility)
+        recurring = try container.decode(Bool.self, forKey: .recurring)
+        suggested = try container.decodeIfPresent(Bool.self, forKey: .suggested) ?? false
     }
 }
 

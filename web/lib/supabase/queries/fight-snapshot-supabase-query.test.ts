@@ -17,6 +17,8 @@ test("the shared native snapshot fixture preserves the API contract and strips i
   assert.equal(fixture.fights[0].grace_ends_at, "2026-09-09T00:00:00Z");
   assert.equal(fixture.members[1].state, "deferred");
   assert.equal(fixture.members[0].current_value, 8500);
+  assert.equal(fixture.profiles[0].companion_id, "fox");
+  assert.equal(fixture.profiles[1].companion_id, null);
 });
 
 test("snapshot validates the requested timezone and returns five empty arrays", () => {
@@ -50,6 +52,7 @@ test("snapshot establishes transaction-local caller permissions before its singl
   assert.ok(calls[2].values.includes("Europe/Paris"));
   assert.match(calls[2].query, /as grace_ends_at/);
   assert.match(calls[2].query, /avatar_media_id/);
+  assert.match(calls[2].query, /companion_id/);
   assert.doesNotMatch(calls[2].query, /as final_sync_grace_seconds/);
 });
 
@@ -72,7 +75,7 @@ test("snapshot profiles without a photo come back with a null avatar", async () 
   };
   assert.deepEqual(await readFightSnapshot(userId, "Europe/Paris", database as never), {
     ...snapshot,
-    profiles: [{ user_id: userId, handle: "marc", display_name: "Marc Lamy", avatar: null }],
+    profiles: [{ user_id: userId, handle: "marc", display_name: "Marc Lamy", avatar: null, companion_id: null }],
   });
 });
 

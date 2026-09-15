@@ -144,9 +144,11 @@ private struct CompanionIdentityRecord: Codable {
     var emotion: String
     var breed: String
     var accessories: String
+    var isCustom: Bool?
+    var customPrompt: String?
 }
 
-/// Account-backed stock companion. Sport, breed, mood, and accessories stay on this iPhone.
+/// Account-backed companion. Custom descriptions are stored on the profile for later generation.
 @MainActor
 final class CompanionStore: ObservableObject {
     @Published var selection: StockCompanion = .badger
@@ -154,12 +156,16 @@ final class CompanionStore: ObservableObject {
     @Published var emotion: CompanionEmotion = .calm { didSet { persist() } }
     @Published var breed = "" { didSet { persist() } }
     @Published var accessories = "" { didSet { persist() } }
+    @Published var isCustom = false
+    @Published var customPrompt = ""
     @Published private(set) var hasChosen = false
     @Published var showingPicker = false
 
     private var isRestoring = false
     private static let pendingPrefix = "ff.companion.pending."
+    private static let pendingPromptPrefix = "ff.companion.pendingPrompt."
     private static let storageKey = "ff.companion.identity"
+    static let customId = "custom"
 
     init() {
         restore()
@@ -173,18 +179,18 @@ final class CompanionStore: ObservableObject {
     func apply(_ profile: FitFightProfile?) {
         guard !CompanionPreview.isEnabled else { return }
         if let userId = profile?.userId,
-           let pending = UserDefaults.standard.string(forKey: Self.pendingPrefix + userId.uuidString),
-           let animal = StockCompanion(rawValue: pending) {
-            selection = animal
-            hasChosen = true
-            if profile?.companionId == pending {
-                UserDefaults.standard.removeObject(forKey: Self.pendingPrefix + userId.uuidString)
+           let pending = UserDefaults.standard.string(forKey: Self.pendingPrefix + userId.uuidString) {
+            let pendingPrompt = UserDefaults.standard.string(forKey: Self.pendingPromptPrefix + userId.uuidString)
+            applyChoice(id: pending, prompt: pendingPrompt)
+            if pendingSaveLanded(on: profile, id: pending, prompt: pendingPrompt) {
+                clearPending(for: userId)
             }
-        } else if let id = profile?.companionId, let animal = StockCompanion(rawValue: id) {
-            selection = animal
-            hasChosen = true
+        } else if let id = profile?.companionId {
+            applyChoice(id: id, prompt: profile?.companionPrompt)
         } else {
             hasChosen = false
+            isCustom = false
+            customPrompt = ""
             if profile == nil {
                 selection = .badger
                 showingPicker = false
@@ -192,25 +198,24 @@ final class CompanionStore: ObservableObject {
         }
     }
 
-    func choose(_ animal: StockCompanion, session: SessionStore) async throws {
-        #if DEBUG && targetEnvironment(simulator)
-        if CompanionPreview.isEnabled {
-            selection = animal
-            hasChosen = true
-            persist()
-            return
-        }
-        #endif
-        selection = animal
-        hasChosen = true
+    func choose(id: String, prompt: String?, session: SessionStore) async throws {
+        applyChoice(id: id, prompt: prompt)
         persist()
+        #if DEBUG && targetEnvironment(simulator)
+        if CompanionPreview.isEnabled { return }
+        #endif
         if let userId = session.profile?.userId {
-            UserDefaults.standard.set(animal.rawValue, forKey: Self.pendingPrefix + userId.uuidString)
+            UserDefaults.standard.set(id, forKey: Self.pendingPrefix + userId.uuidString)
+            if id == Self.customId {
+                UserDefaults.standard.set(customPrompt, forKey: Self.pendingPromptPrefix + userId.uuidString)
+            } else {
+                UserDefaults.standard.removeObject(forKey: Self.pendingPromptPrefix + userId.uuidString)
+            }
         }
         do {
-            try await session.setCompanion(animal)
+            try await session.setCompanion(id: id, prompt: isCustom ? customPrompt : nil)
             if let userId = session.profile?.userId {
-                UserDefaults.standard.removeObject(forKey: Self.pendingPrefix + userId.uuidString)
+                clearPending(for: userId)
             }
         } catch is CancellationError {
             throw CancellationError()
@@ -221,12 +226,13 @@ final class CompanionStore: ObservableObject {
 
     func publishPending(session: SessionStore) async {
         guard let userId = session.profile?.userId,
-              let pending = UserDefaults.standard.string(forKey: Self.pendingPrefix + userId.uuidString),
-              let animal = StockCompanion(rawValue: pending) else { return }
+              let pending = UserDefaults.standard.string(forKey: Self.pendingPrefix + userId.uuidString)
+        else { return }
+        let prompt = UserDefaults.standard.string(forKey: Self.pendingPromptPrefix + userId.uuidString)
         do {
-            try await session.setCompanion(animal)
-            if session.profile?.companionId == pending {
-                UserDefaults.standard.removeObject(forKey: Self.pendingPrefix + userId.uuidString)
+            try await session.setCompanion(id: pending, prompt: pending == Self.customId ? prompt : nil)
+            if pendingSaveLanded(on: session.profile, id: pending, prompt: prompt) {
+                clearPending(for: userId)
             }
         } catch {
             return
@@ -234,7 +240,7 @@ final class CompanionStore: ObservableObject {
     }
 
     func animal(for personID: String?, companionID: String? = nil, isYou: Bool = false) -> StockCompanion? {
-        if isYou && hasChosen { return selection }
+        if isYou && hasChosen { return isCustom ? nil : selection }
         if let companionID, let animal = StockCompanion(rawValue: companionID) {
             return animal
         }
@@ -249,37 +255,53 @@ final class CompanionStore: ObservableObject {
         #endif
     }
 
-    func choose(
-        animal: StockCompanion,
-        sport: CompanionSport,
-        emotion: CompanionEmotion,
-        breed: String,
-        accessories: String
-    ) {
-        isRestoring = true
+    /// Custom always uses companion_id `custom`, so an id match is not proof a prompt edit landed.
+    private func pendingSaveLanded(on profile: FitFightProfile?, id: String, prompt: String?) -> Bool {
+        guard profile?.companionId == id else { return false }
+        guard id == Self.customId else { return true }
+        let server = profile?.companionPrompt?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let local = prompt?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return !local.isEmpty && server == local
+    }
+
+    private func applyChoice(id: String, prompt: String?) {
+        if id == Self.customId {
+            isCustom = true
+            customPrompt = (prompt ?? customPrompt).trimmingCharacters(in: .whitespacesAndNewlines)
+            hasChosen = true
+            return
+        }
+        guard let animal = StockCompanion(rawValue: id) else {
+            hasChosen = false
+            isCustom = false
+            return
+        }
         selection = animal
-        self.sport = sport
-        self.emotion = emotion
-        self.breed = breed.trimmingCharacters(in: .whitespacesAndNewlines)
-        self.accessories = accessories.trimmingCharacters(in: .whitespacesAndNewlines)
+        isCustom = false
+        customPrompt = ""
         hasChosen = true
-        isRestoring = false
-        persist()
+    }
+
+    private func clearPending(for userId: UUID) {
+        UserDefaults.standard.removeObject(forKey: Self.pendingPrefix + userId.uuidString)
+        UserDefaults.standard.removeObject(forKey: Self.pendingPromptPrefix + userId.uuidString)
     }
 
     private func restore() {
         if CompanionPreview.isEnabled || ScreenshotExport.isEnabled { return }
         guard let data = UserDefaults.standard.data(forKey: Self.storageKey),
-              let saved = try? JSONDecoder().decode(CompanionIdentityRecord.self, from: data),
-              let animal = StockCompanion(rawValue: saved.animal)
+              let saved = try? JSONDecoder().decode(CompanionIdentityRecord.self, from: data)
         else { return }
         isRestoring = true
-        selection = animal
         sport = CompanionSport(rawValue: saved.sport) ?? .hiking
         emotion = CompanionEmotion(rawValue: saved.emotion) ?? .calm
         breed = saved.breed
         accessories = saved.accessories
-        hasChosen = true
+        if saved.isCustom == true {
+            applyChoice(id: Self.customId, prompt: saved.customPrompt)
+        } else if let animal = StockCompanion(rawValue: saved.animal) {
+            applyChoice(id: animal.rawValue, prompt: nil)
+        }
         isRestoring = false
     }
 
@@ -290,7 +312,9 @@ final class CompanionStore: ObservableObject {
             sport: sport.rawValue,
             emotion: emotion.rawValue,
             breed: breed,
-            accessories: accessories
+            accessories: accessories,
+            isCustom: isCustom,
+            customPrompt: isCustom ? customPrompt : nil
         )
         UserDefaults.standard.set(try? JSONEncoder().encode(record), forKey: Self.storageKey)
     }
@@ -488,15 +512,21 @@ struct CompanionIntroduction: View {
                     .font(.custom("Nunito-ExtraBold", size: 24, relativeTo: .title2))
                     .foregroundStyle(theme.mossText)
             } else {
-                Text(companions.selection.name)
-                    .font(.custom("Nunito-ExtraBold", size: 22, relativeTo: .title2))
-                    .foregroundStyle(theme.text)
-                Text(companions.selection.caption)
-                    .font(.custom("Nunito-Bold", size: 12, relativeTo: .caption))
-                    .foregroundStyle(theme.textSecondary)
-                Text("\(youEffort.label(for: companions.sport)) · \(companions.sport.name)")
-                    .font(.custom("Nunito-Bold", size: 12, relativeTo: .caption))
-                    .foregroundStyle(theme.mossText)
+                if companions.isCustom {
+                    Text("Custom")
+                        .font(.custom("Nunito-ExtraBold", size: 22, relativeTo: .title2))
+                        .foregroundStyle(theme.text)
+                    Text("Your own animal.")
+                        .font(.custom("Nunito-Bold", size: 12, relativeTo: .caption))
+                        .foregroundStyle(theme.textSecondary)
+                } else {
+                    Text(companions.selection.name)
+                        .font(.custom("Nunito-ExtraBold", size: 22, relativeTo: .title2))
+                        .foregroundStyle(theme.text)
+                    Text(companions.selection.caption)
+                        .font(.custom("Nunito-Bold", size: 12, relativeTo: .caption))
+                        .foregroundStyle(theme.textSecondary)
+                }
                 Button(String(localized: "Try another companion")) {
                     companions.showingPicker = true
                 }
@@ -514,8 +544,13 @@ struct CompanionIntroduction: View {
         CompanionEffortStage.matchingDaily(steps.status)
     }
 
+    @ViewBuilder
     private var youCharacter: some View {
-        CompanionCharacter(animal: companions.selection, sport: companions.sport, effort: youEffort)
+        if companions.isCustom {
+            Color.clear
+        } else {
+            CompanionCharacter(animal: companions.selection, sport: companions.sport, effort: youEffort)
+        }
     }
 
     private var dailySteps: some View {
@@ -671,26 +706,29 @@ struct CompanionFightSummary: View {
 struct CompanionPicker: View {
     @EnvironmentObject private var companions: CompanionStore
     @EnvironmentObject private var session: SessionStore
-    @EnvironmentObject private var steps: HealthKitStepsStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.ffStaticRender) private var staticRender
     @State private var draft: StockCompanion?
+    @State private var pickingCustom: Bool
+    @State private var customPrompt: String
     @State private var isSaving = false
     @State private var error = ""
-    @State private var sport: CompanionSport
-    @State private var emotion: CompanionEmotion
-    @State private var breed: String
-    @State private var accessories: String
-    @State private var previewStage: CompanionEffortStage
+    @FocusState private var promptFocused: Bool
 
-    init(selection: StockCompanion, required: Bool = false) {
-        _draft = State(initialValue: required ? nil : selection)
-        _sport = State(initialValue: .hiking)
-        _emotion = State(initialValue: .calm)
-        _breed = State(initialValue: "")
-        _accessories = State(initialValue: "")
-        _previewStage = State(initialValue: .rest)
+    private let promptLimit = 1000
+
+    init(selection: StockCompanion, required: Bool = false, isCustom: Bool = false, prompt: String = "") {
+        if isCustom {
+            _draft = State(initialValue: nil)
+            _pickingCustom = State(initialValue: true)
+            _customPrompt = State(initialValue: prompt)
+        } else {
+            _draft = State(initialValue: required ? nil : selection)
+            _pickingCustom = State(initialValue: false)
+            _customPrompt = State(initialValue: prompt)
+        }
     }
 
     var body: some View {
@@ -720,7 +758,7 @@ struct CompanionPicker: View {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 150 : 96), spacing: 10)], spacing: 10) {
                 ForEach(StockCompanion.allCases) { animal in
                     Button {
-                        Task { await save(animal) }
+                        Task { await saveStock(animal) }
                     } label: {
                         VStack(spacing: 3) {
                             Image(animal.image)
@@ -729,27 +767,76 @@ struct CompanionPicker: View {
                                 .frame(height: 104)
                             Text(animal.name)
                                 .font(.custom("Nunito-ExtraBold", size: 12, relativeTo: .caption))
-                                .foregroundStyle(draft == animal ? theme.mossText : theme.text)
+                                .foregroundStyle(draft == animal && !pickingCustom ? theme.mossText : theme.text)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         .padding(8)
                         .frame(maxWidth: .infinity)
-                        .background(draft == animal ? theme.mossWash : theme.card,
+                        .background(draft == animal && !pickingCustom ? theme.mossWash : theme.card,
                                     in: RoundedRectangle(cornerRadius: theme.radius.card))
-                        .ffBorder(draft == animal ? theme.mossEdge : theme.hairline, radius: theme.radius.card)
+                        .ffBorder(draft == animal && !pickingCustom ? theme.mossEdge : theme.hairline, radius: theme.radius.card)
                     }
                     .buttonStyle(FFHapticPlainStyle())
                     .disabled(isSaving)
-                    .accessibilityAddTraits(draft == animal ? .isSelected : [])
+                    .accessibilityAddTraits(draft == animal && !pickingCustom ? .isSelected : [])
                 }
             }
-            if let draft {
+            Button {
+                pickingCustom = true
+                draft = nil
+                error = ""
+            } label: {
+                Text("Custom")
+                    .font(.custom("Nunito-ExtraBold", size: 16, relativeTo: .body))
+                    .foregroundStyle(pickingCustom ? theme.mossText : theme.text)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .padding(.vertical, 10)
+                    .background(pickingCustom ? theme.mossWash : theme.card,
+                                in: RoundedRectangle(cornerRadius: theme.radius.card))
+                    .ffBorder(pickingCustom ? theme.mossEdge : theme.hairline, radius: theme.radius.card)
+            }
+            .buttonStyle(FFHapticPlainStyle())
+            .disabled(isSaving)
+            .accessibilityAddTraits(pickingCustom ? .isSelected : [])
+            if pickingCustom {
+                FFField(
+                    label: String(localized: "Your animal"),
+                    state: promptFocused ? .focused : .normal,
+                    help: String(localized: "Write the species, breed or race, accessories, colors, and anything else that should appear."),
+                    counter: "\(customPrompt.count)/\(promptLimit)",
+                    minHeight: 140
+                ) {
+                    if staticRender {
+                        Text("Species, breed, accessories, colors…")
+                            .foregroundStyle(theme.textFaint)
+                            .frame(maxWidth: .infinity, minHeight: 88, alignment: .topLeading)
+                    } else {
+                        TextField(
+                            String(localized: "Species, breed, accessories, colors…"),
+                            text: $customPrompt,
+                            axis: .vertical
+                        )
+                        .focused($promptFocused)
+                        .lineLimit(5...12)
+                        .textInputAutocapitalization(.sentences)
+                        .onChange(of: customPrompt) { _, value in
+                            if value.count > promptLimit { customPrompt = String(value.prefix(promptLimit)) }
+                        }
+                    }
+                }
+                FFButton(
+                    title: String(localized: "Save companion"),
+                    kind: .primary,
+                    enabled: canSaveCustom,
+                    busy: isSaving,
+                    fullWidth: true,
+                    action: { Task { await saveCustom() } }
+                )
+            } else if let draft {
                 Text(isSaving ? String(localized: "Saving…") : draft.caption)
                     .ffType(.body)
                     .foregroundStyle(theme.textSecondary)
                     .frame(maxWidth: .infinity)
-                effortSection(for: draft)
-                identitySection(for: draft)
             }
             #if DEBUG && targetEnvironment(simulator)
             if CompanionPreview.isEnabled {
@@ -764,38 +851,31 @@ struct CompanionPicker: View {
         }
         .interactiveDismissDisabled(session.needsCompanionSelection)
         .onAppear {
-            sport = companions.sport
-            emotion = companions.emotion
-            breed = companions.breed
-            accessories = companions.accessories
-            previewStage = liveEffort
+            if companions.isCustom {
+                pickingCustom = true
+                draft = nil
+                customPrompt = companions.customPrompt
+            } else if companions.hasChosen {
+                pickingCustom = false
+                draft = companions.selection
+            }
         }
-        .onChange(of: sport) { _, _ in persistDraftIdentity() }
-        .onChange(of: emotion) { _, _ in persistDraftIdentity() }
-        .onChange(of: breed) { _, _ in persistDraftIdentity() }
-        .onChange(of: accessories) { _, _ in persistDraftIdentity() }
     }
 
-    private func persistDraftIdentity(_ animal: StockCompanion? = nil) {
-        guard let animal = animal ?? draft else { return }
-        companions.choose(
-            animal: animal,
-            sport: sport,
-            emotion: emotion,
-            breed: breed,
-            accessories: accessories
-        )
+    private var canSaveCustom: Bool {
+        !customPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    private func save(_ animal: StockCompanion) async {
+    private func saveStock(_ animal: StockCompanion) async {
         error = ""
+        pickingCustom = false
         draft = animal
-        companions.showingPicker = true
         isSaving = true
         defer { isSaving = false }
-        persistDraftIdentity(animal)
         do {
-            try await companions.choose(animal, session: session)
+            try await companions.choose(id: animal.rawValue, prompt: nil, session: session)
+            companions.showingPicker = false
+            dismiss()
         } catch is CancellationError {
             return
         } catch {
@@ -803,123 +883,22 @@ struct CompanionPicker: View {
         }
     }
 
-    private var liveEffort: CompanionEffortStage {
-        CompanionEffortStage.matchingDaily(steps.status)
-    }
-
-    private func effortSection(for draft: StockCompanion) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("How effort changes this companion")
-                .ffType(.heading)
-                .foregroundStyle(theme.text)
-            Text("Depending on how much you move during the week, this character’s pose changes. Resting on a quiet week; furthest along when you’ve gone the hardest. The five scenes follow the sport.")
-                .ffType(.body)
-                .foregroundStyle(theme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-            Image(draft.effortImage(sport: sport, stage: previewStage))
-                .resizable()
-                .scaledToFit()
-                .frame(height: typeSize.isAccessibilitySize ? 200 : 168)
-                .frame(maxWidth: .infinity)
-                .accessibilityHidden(true)
-            Text(previewStage.label(for: sport))
-                .font(.custom("Nunito-ExtraBold", size: 14, relativeTo: .body))
-                .foregroundStyle(theme.mossText)
-                .frame(maxWidth: .infinity)
-            if previewStage == liveEffort {
-                Text("This is today’s effort.")
-                    .ffType(.caption)
-                    .foregroundStyle(theme.textSecondary)
-                    .frame(maxWidth: .infinity)
-            }
-            HStack(alignment: .top, spacing: 6) {
-                ForEach(CompanionEffortStage.allCases) { stage in
-                    Button { previewStage = stage } label: {
-                        VStack(spacing: 4) {
-                            Image(draft.effortImage(sport: sport, stage: stage))
-                                .resizable()
-                                .scaledToFit()
-                                .frame(height: typeSize.isAccessibilitySize ? 72 : 64)
-                            Text(stage.label(for: sport))
-                                .font(.custom("Nunito-Bold", size: 10, relativeTo: .caption2))
-                                .foregroundStyle(previewStage == stage ? theme.mossText : theme.textSecondary)
-                                .multilineTextAlignment(.center)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .padding(6)
-                        .frame(maxWidth: .infinity)
-                        .background(previewStage == stage ? theme.mossWash : theme.card,
-                                    in: RoundedRectangle(cornerRadius: theme.radius.card))
-                        .ffBorder(
-                            previewStage == stage ? theme.mossEdge : theme.hairline,
-                            radius: theme.radius.card
-                        )
-                    }
-                    .buttonStyle(FFHapticPlainStyle())
-                    .accessibilityLabel(stage.label(for: sport))
-                    .accessibilityAddTraits(previewStage == stage ? .isSelected : [])
-                }
-            }
-            if !draft.hasEffortSet(for: sport) {
-                Text("This companion stays in every pose until this sport has its own scenes.")
-                    .ffType(.caption)
-                    .foregroundStyle(theme.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+    private func saveCustom() async {
+        let prompt = customPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !prompt.isEmpty else { return }
+        error = ""
+        pickingCustom = true
+        draft = nil
+        isSaving = true
+        defer { isSaving = false }
+        do {
+            try await companions.choose(id: CompanionStore.customId, prompt: prompt, session: session)
+            companions.showingPicker = false
+            dismiss()
+        } catch is CancellationError {
+            return
+        } catch {
+            self.error = String(localized: "Couldn’t save your companion. Try again.")
         }
-        .padding(.top, 8)
-    }
-
-    private func identitySection(for draft: StockCompanion) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Species")
-                    .ffType(.label)
-                    .foregroundStyle(theme.text)
-                Text(draft.name)
-                    .ffType(.body)
-                    .foregroundStyle(theme.text)
-            }
-            FFField(
-                label: String(localized: "Breed"),
-                help: String(localized: "Optional. Alpine, border collie…")
-            ) {
-                TextField(String(localized: "Breed"), text: $breed)
-                    .textInputAutocapitalization(.words)
-                    .autocorrectionDisabled()
-            }
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Mood")
-                    .ffType(.label)
-                    .foregroundStyle(theme.text)
-                FFFlow(spacing: 8) {
-                    ForEach(CompanionEmotion.allCases) { option in
-                        FFChip(title: option.name, selected: emotion == option) { emotion = option }
-                    }
-                }
-            }
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Sport")
-                    .ffType(.label)
-                    .foregroundStyle(theme.text)
-                Text("The five poses use this sport’s scenes — hiking, running, football, ski, or walking.")
-                    .ffType(.caption)
-                    .foregroundStyle(theme.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                FFFlow(spacing: 8) {
-                    ForEach(CompanionSport.allCases) { option in
-                        FFChip(title: option.name, selected: sport == option) { sport = option }
-                    }
-                }
-            }
-            FFField(
-                label: String(localized: "Accessories"),
-                help: String(localized: "Optional. Sunglasses, a hat, colours…")
-            ) {
-                TextField(String(localized: "Accessories"), text: $accessories)
-                    .textInputAutocapitalization(.sentences)
-            }
-        }
-        .padding(.top, 8)
     }
 }

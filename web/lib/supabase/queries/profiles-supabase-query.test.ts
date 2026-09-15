@@ -16,6 +16,7 @@ test("profile patches normalize handles and reject caller-owned IDs, timestamps,
   for (const input of [
     {}, { handle: "x" }, { handle: "bad-name" }, { handle: "x".repeat(31) }, { handle: null },
     { display_name: " " }, { display_name: null }, { companion_id: "dragon" },
+    { companion_id: "custom" }, { companion_id: "custom", companion_prompt: "   " },
     { handle: "marc", user_id: profile.user_id },
     { handle: "marc", handle_set_at: profile.handle_set_at },
     { display_name: "Marc", referral_code: profile.referral_code },
@@ -23,7 +24,12 @@ test("profile patches normalize handles and reject caller-owned IDs, timestamps,
     assert.equal(updateProfileRequestSchema.safeParse(input).success, false);
   }
   assert.deepEqual(updateProfileRequestSchema.parse({ companion_id: "fox" }), { companion_id: "fox" });
+  assert.deepEqual(
+    updateProfileRequestSchema.parse({ companion_id: "custom", companion_prompt: "  cream frenchie, gold sunglasses  " }),
+    { companion_id: "custom", companion_prompt: "cream frenchie, gold sunglasses" },
+  );
   assert.equal(profile.companion_id, null);
+  assert.equal(profile.companion_prompt, null);
   assert.deepEqual(profileSchema.parse({
     user_id: profile.user_id,
     handle: profile.handle,
@@ -40,14 +46,40 @@ test("profile updates persist a stock companion without touching other fields", 
     global: { fetch: async (input, init) => {
       const request = new Request(input, init);
       assert.equal(request.method, "PATCH");
-      assert.deepEqual(await request.json(), { companion_id: "fox" });
-      return Response.json({ ...profile, companion_id: "fox" });
+      assert.deepEqual(await request.json(), { companion_id: "fox", companion_prompt: null });
+      return Response.json({ ...profile, companion_id: "fox", companion_prompt: null });
     } },
   });
   const updated = await updateProfile(profile.user_id, { companion_id: "fox" }, admin);
   assert.equal(updated.companion_id, "fox");
+  assert.equal(updated.companion_prompt, null);
   assert.equal(updated.handle, profile.handle);
   assert.equal(updated.display_name, profile.display_name);
+});
+
+test("profile updates persist a custom companion description", async () => {
+  const admin = createClient("https://profiles.example", "test-only-key", {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { fetch: async (input, init) => {
+      const request = new Request(input, init);
+      assert.equal(request.method, "PATCH");
+      assert.deepEqual(await request.json(), {
+        companion_id: "custom",
+        companion_prompt: "a cream frenchie with gold sunglasses",
+      });
+      return Response.json({
+        ...profile,
+        companion_id: "custom",
+        companion_prompt: "a cream frenchie with gold sunglasses",
+      });
+    } },
+  });
+  const updated = await updateProfile(profile.user_id, {
+    companion_id: "custom",
+    companion_prompt: "a cream frenchie with gold sunglasses",
+  }, admin);
+  assert.equal(updated.companion_id, "custom");
+  assert.equal(updated.companion_prompt, "a cream frenchie with gold sunglasses");
 });
 
 test("profile reads filter by the authenticated owner and expose only the API fields", async () => {
@@ -59,7 +91,7 @@ test("profile reads filter by the authenticated owner and expose only the API fi
       assert.equal(request.method, "GET");
       assert.equal(url.searchParams.get("user_id"), `eq.${profile.user_id}`);
       assert.equal(url.searchParams.get("deleted_at"), "is.null");
-      assert.equal(url.searchParams.get("select"), "user_id,handle,display_name,handle_set_at,referral_code,avatar_media_id,companion_id");
+      assert.equal(url.searchParams.get("select"), "user_id,handle,display_name,handle_set_at,referral_code,avatar_media_id,companion_id,companion_prompt");
       return Response.json([{ ...profile, deleted_at: null, internal_column: "private" }]);
     } },
   });
@@ -187,18 +219,31 @@ test("profile HTTP routes use the verified owner, validate patches, and reject d
   }), context);
   assert.equal(companion.status, 200);
   assert.deepEqual(await companion.json(), { ...profile, display_name: "New Name", companion_id: "fox" });
+  const custom = await PATCH(new Request("https://fitfight.app/api/v1/me", {
+    method: "PATCH", headers, body: JSON.stringify({
+      companion_id: "custom", companion_prompt: "a cream frenchie with gold sunglasses",
+    }),
+  }), context);
+  assert.equal(custom.status, 200);
+  assert.deepEqual(await custom.json(), {
+    ...profile,
+    display_name: "New Name",
+    companion_id: "custom",
+    companion_prompt: "a cream frenchie with gold sunglasses",
+  });
 
   for (const body of [
     { user_id: "33333333-3333-4333-8333-333333333333", handle: "other" },
     { handle: "bad-name" },
     { companion_id: "dragon" },
+    { companion_id: "custom" },
   ]) {
     const rejected = await PATCH(new Request("https://fitfight.app/api/v1/me", {
       method: "PATCH", headers, body: JSON.stringify(body),
     }), context);
     assert.equal(rejected.status, 400);
   }
-  assert.equal(writes, 2);
+  assert.equal(writes, 3);
   deleted = true;
   const missing = await GET(new Request("https://fitfight.app/api/v1/me", { headers }), context);
   assert.equal(missing.status, 401);

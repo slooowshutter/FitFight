@@ -1,7 +1,7 @@
 import type { Sql } from "postgres";
 import { ApiError, ERROR_CODES } from "@/lib/http";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
-import { stockCompanionIdSchema } from "@/lib/types/companions/companion";
+import { companionIdSchema } from "@/lib/types/companions/companion";
 import type {
   CreateFightPostCommentRequest,
   FightPostAuthor,
@@ -75,7 +75,7 @@ function authorFromRow(row: CommentRow, url: string | null): FightPostAuthor {
       handle: row.author_handle,
       display_name: row.author_display_name,
       avatar: null,
-      companion_id: stockCompanionIdSchema.nullable().parse(row.author_companion_id),
+      companion_id: companionIdSchema.nullable().parse(row.author_companion_id),
     };
   }
   return {
@@ -98,7 +98,7 @@ function authorFromRow(row: CommentRow, url: string | null): FightPostAuthor {
       sha256: row.avatar_sha256,
       created_at: row.avatar_created_at,
     }, url),
-    companion_id: stockCompanionIdSchema.nullable().parse(row.author_companion_id),
+    companion_id: companionIdSchema.nullable().parse(row.author_companion_id),
   };
 }
 

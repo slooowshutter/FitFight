@@ -303,13 +303,17 @@ final class SessionStore: ObservableObject {
         }
     }
 
-    func setCompanion(_ companion: StockCompanion) async throws {
+    func setCompanion(id: String, prompt: String?) async throws {
         guard !screenshotSignedIn else { throw CompanionPreview.WriteUnavailable() }
         guard let userId = authSession?.user.id ?? client.auth.currentUser?.id else {
             throw HandleError.notSignedIn
         }
         let token = try await freshAccessToken()
-        let updated = try await api.updateProfile(companionId: companion.rawValue, accessToken: token)
+        let updated = try await api.updateProfile(
+            companionId: id,
+            companionPrompt: prompt,
+            accessToken: token
+        )
         try Task.checkCancellation()
         guard authSession?.user.id == userId else { throw CancellationError() }
         profile = updated

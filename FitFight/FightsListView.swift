@@ -87,10 +87,7 @@ struct FightsListView: View {
                         ahead: standing.ahead,
                         metricIsGap: !fight.isUpcoming && standing.isGap,
                         photoURL: opponent?.photoURL,
-                        avatar: AnyView(CompanionAvatar(
-                            personID: opponent?.id, isYou: opponent?.isYou ?? false,
-                            monogram: opponent?.initials ?? "?", photoURL: opponent?.photoURL
-                        )),
+                        avatar: AnyView(CompanionAvatar(opponent)),
                         action: { model.openFightID = fight.id }
                     )
                 }
@@ -164,7 +161,7 @@ struct InvitationRow: View {
     var body: some View {
         HStack(spacing: 13) {
             let inviter = fight.inviter ?? fight.standings.first?.person
-            CompanionAvatar(personID: inviter?.id, monogram: inviter?.initials ?? "?", photoURL: inviter?.photoURL)
+            CompanionAvatar(inviter)
             VStack(alignment: .leading, spacing: 2) {
                 Text(fight.listTitle)
                     .ffType(.heading)

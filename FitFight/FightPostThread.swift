@@ -143,6 +143,7 @@ struct FightPostEngagement: View {
             HStack(alignment: .top, spacing: 8) {
                 CompanionAvatar(
                     personID: comment.author.userId.uuidString,
+                    companionID: comment.author.companionId,
                     isYou: comment.mine,
                     monogram: comment.author.initials,
                     photoURL: comment.author.avatar?.url,

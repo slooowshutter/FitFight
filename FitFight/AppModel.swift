@@ -55,6 +55,7 @@ struct Person: Codable, Identifiable, Hashable {
     var initials: String
     var isYou: Bool = false
     var photoURL: URL? = nil
+    var companionId: String? = nil
 
     /// The design's cast photographs, cut out of the mocks into the asset catalogue.
     var photo: String { "Avatar-\(isYou ? "maya" : id)" }
@@ -131,6 +132,7 @@ struct Fight: Codable, Identifiable, Hashable {
     var seriesId: String? = nil
     var recurring: Bool = false
     var visibility: String = "invite_only"
+    var suggested: Bool = false
     var pendingJoin: Bool = false
     var offersJoinNext: Bool = false
 
@@ -746,6 +748,7 @@ final class AppModel: ObservableObject {
                 idempotencyKey: UUID().uuidString
             )
             await syncStepsAfterMembershipChange()
+            keepCreatedFight(created, payload: payload)
             tab = .fights
             openFightID = created.id.uuidString
         } catch {
@@ -929,6 +932,45 @@ final class AppModel: ObservableObject {
         }
     }
 
+    func listSuggestedFights(session: SessionStore) async -> [FitFightJoinableFight] {
+        #if DEBUG && targetEnvironment(simulator)
+        if CompanionPreview.isEnabled {
+            return await listJoinableFights(session: session)
+        }
+        #endif
+        self.session = session
+        guard let access = session.authSession?.accessToken, api.isConfigured else {
+            return []
+        }
+        do {
+            return try await api.listSuggestedFights(accessToken: access)
+        } catch {
+            return []
+        }
+    }
+
+    func setFightSuggested(id: String, suggested: Bool) async {
+        createError = nil
+        guard let session, session.authSession != nil, let fightID = UUID(uuidString: id) else {
+            createError = String(localized: "Sign in to suggest this fight.")
+            return
+        }
+        if let index = fights.firstIndex(where: { $0.id == id }) {
+            fights[index].suggested = suggested
+        }
+        do {
+            let token = try await session.freshAccessToken()
+            _ = try await api.setFightSuggested(fightID: fightID, suggested: suggested, accessToken: token)
+            await refreshFromServer()
+        } catch {
+            if let index = fights.firstIndex(where: { $0.id == id }) {
+                fights[index].suggested = !suggested
+            }
+            createError = (error as? FitFightAPIError)?.errorDescription
+                ?? String(localized: "Couldn’t update that suggestion.")
+        }
+    }
+
     func openJoinable(_ summary: FitFightJoinableFight, session: SessionStore) async {
         self.session = session
         createError = nil
@@ -1055,6 +1097,17 @@ final class AppModel: ObservableObject {
         }
     }
 
+    private func keepCreatedFight(_ created: FitFightSummary, payload: FitFightCreateFight) {
+        let id = created.id.uuidString
+        guard fight(id: id) == nil else { return }
+        fights.insert(Self.fight(created: created, payload: payload, you: you), at: 0)
+        let userId = cachedUserID ?? session?.authSession?.user.id
+        if let userId, let data = try? JSONEncoder().encode(fights) {
+            UserDefaults.standard.set(data, forKey: Self.fightsCachePrefix + userId.uuidString)
+            cachedUserID = userId
+        }
+    }
+
     private func syncStepsAfterMembershipChange() async {
         guard let session else {
             await refreshFromServer()
@@ -1129,6 +1182,42 @@ final class AppModel: ObservableObject {
             return nil
         }
         return code
+    }
+
+    private static func fight(
+        created: FitFightSummary,
+        payload: FitFightCreateFight,
+        you: Person
+    ) -> Fight {
+        let starts = payload.startsAt
+        let ends = payload.endsAt
+        let lengthDays = max(1, Calendar.current.dateComponents([.day], from: starts, to: ends).day ?? 1)
+        let lengthHours = max(1, Int((ends.timeIntervalSince(starts) / 3_600).rounded()))
+        let remaining = RemainingTime.phrase(until: ends)
+        return Fight(
+            id: created.id.uuidString,
+            code: "",
+            name: payload.name,
+            metric: .steps,
+            lengthDays: lengthDays,
+            daysLeft: max(1, Calendar.current.dateComponents([.day], from: Date(), to: ends).day ?? 1),
+            actionText: payload.actionText ?? "",
+            status: .live,
+            rank: 1,
+            of: 1,
+            pending: payload.inviteHandles?.count ?? 0,
+            kickerEmphasis: String(
+                localized: "fight.time-left",
+                defaultValue: "\(remaining) left"
+            ),
+            listSubtitle: localizedDuration(hours: lengthHours, days: lengthDays),
+            standings: [Standing(person: you, score: 0, rank: 1)],
+            windowStart: starts,
+            windowEnd: ends,
+            serverState: created.state,
+            recurring: payload.recurring ?? false,
+            visibility: payload.visibility ?? "invite_only"
+        )
     }
 
     private static func fight(from summary: FitFightJoinableFight, you: Person) -> Fight {
@@ -1231,7 +1320,8 @@ final class AppModel: ObservableObject {
             handle: profile.atHandle,
             initials: profile.initials,
             isYou: isYou,
-            photoURL: profile.avatar?.url
+            photoURL: profile.avatar?.url,
+            companionId: profile.companionId
         )
     }
 
@@ -1528,6 +1618,7 @@ final class AppModel: ObservableObject {
             seriesId: series?.id.uuidString,
             recurring: series?.recurring ?? false,
             visibility: series?.visibility ?? "invite_only",
+            suggested: series?.suggested ?? false,
             offersJoinNext: (series?.recurring ?? false)
                 && Self.isAfterFightStartDay(starts)
                 && mine?.state == "invited"

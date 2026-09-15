@@ -15,13 +15,39 @@ test("profile patches normalize handles and reject caller-owned IDs, timestamps,
   assert.deepEqual(updateProfileRequestSchema.parse({ display_name: " Marc " }), { display_name: "Marc" });
   for (const input of [
     {}, { handle: "x" }, { handle: "bad-name" }, { handle: "x".repeat(31) }, { handle: null },
-    { display_name: " " }, { display_name: null },
+    { display_name: " " }, { display_name: null }, { companion_id: "dragon" },
     { handle: "marc", user_id: profile.user_id },
     { handle: "marc", handle_set_at: profile.handle_set_at },
     { display_name: "Marc", referral_code: profile.referral_code },
   ]) {
     assert.equal(updateProfileRequestSchema.safeParse(input).success, false);
   }
+  assert.deepEqual(updateProfileRequestSchema.parse({ companion_id: "fox" }), { companion_id: "fox" });
+  assert.equal(profile.companion_id, null);
+  assert.deepEqual(profileSchema.parse({
+    user_id: profile.user_id,
+    handle: profile.handle,
+    display_name: profile.display_name,
+    handle_set_at: profile.handle_set_at,
+    referral_code: profile.referral_code,
+    avatar: profile.avatar,
+  }), profile);
+});
+
+test("profile updates persist a stock companion without touching other fields", async () => {
+  const admin = createClient("https://profiles.example", "test-only-key", {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { fetch: async (input, init) => {
+      const request = new Request(input, init);
+      assert.equal(request.method, "PATCH");
+      assert.deepEqual(await request.json(), { companion_id: "fox" });
+      return Response.json({ ...profile, companion_id: "fox" });
+    } },
+  });
+  const updated = await updateProfile(profile.user_id, { companion_id: "fox" }, admin);
+  assert.equal(updated.companion_id, "fox");
+  assert.equal(updated.handle, profile.handle);
+  assert.equal(updated.display_name, profile.display_name);
 });
 
 test("profile reads filter by the authenticated owner and expose only the API fields", async () => {
@@ -33,7 +59,7 @@ test("profile reads filter by the authenticated owner and expose only the API fi
       assert.equal(request.method, "GET");
       assert.equal(url.searchParams.get("user_id"), `eq.${profile.user_id}`);
       assert.equal(url.searchParams.get("deleted_at"), "is.null");
-      assert.equal(url.searchParams.get("select"), "user_id,handle,display_name,handle_set_at,referral_code,avatar_media_id");
+      assert.equal(url.searchParams.get("select"), "user_id,handle,display_name,handle_set_at,referral_code,avatar_media_id,companion_id");
       return Response.json([{ ...profile, deleted_at: null, internal_column: "private" }]);
     } },
   });
@@ -156,14 +182,23 @@ test("profile HTTP routes use the verified owner, validate patches, and reject d
   }), context);
   assert.equal(patch.status, 200);
   assert.deepEqual(await patch.json(), { ...profile, display_name: "New Name" });
+  const companion = await PATCH(new Request("https://fitfight.app/api/v1/me", {
+    method: "PATCH", headers, body: JSON.stringify({ companion_id: "fox" }),
+  }), context);
+  assert.equal(companion.status, 200);
+  assert.deepEqual(await companion.json(), { ...profile, display_name: "New Name", companion_id: "fox" });
 
-  for (const body of [{ user_id: "33333333-3333-4333-8333-333333333333", handle: "other" }, { handle: "bad-name" }]) {
+  for (const body of [
+    { user_id: "33333333-3333-4333-8333-333333333333", handle: "other" },
+    { handle: "bad-name" },
+    { companion_id: "dragon" },
+  ]) {
     const rejected = await PATCH(new Request("https://fitfight.app/api/v1/me", {
       method: "PATCH", headers, body: JSON.stringify(body),
     }), context);
     assert.equal(rejected.status, 400);
   }
-  assert.equal(writes, 1);
+  assert.equal(writes, 2);
   deleted = true;
   const missing = await GET(new Request("https://fitfight.app/api/v1/me", { headers }), context);
   assert.equal(missing.status, 401);

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { stockCompanionIdSchema } from "@/lib/types/companions/companion";
 import { mediaObjectSchema } from "@/lib/types/media/media";
 
 export const feedAudienceValues = ["fight", "main"] as const;
@@ -12,6 +13,7 @@ export const fightPostAuthorSchema = z.object({
   handle: z.string(),
   display_name: z.string(),
   avatar: mediaObjectSchema.nullable(),
+  companion_id: stockCompanionIdSchema.nullable().default(null),
 }).strict();
 
 export const fightPostTagSchema = z.object({
@@ -26,11 +28,18 @@ export const fightPostReactionSchema = z.object({
   mine: z.boolean(),
 }).strict();
 
+export const fightPostChannelSchema = z.object({
+  fight_id: z.string().uuid(),
+  name: z.string(),
+}).strict();
+
 export const fightPostSchema = z.object({
   id: z.string().uuid(),
   audience: feedAudienceSchema,
   fight_id: z.string().uuid().nullable(),
   fight_name: z.string(),
+  broadcast: z.boolean(),
+  channels: z.array(fightPostChannelSchema),
   body: z.string(),
   created_at: z.string().datetime({ offset: true }),
   author: fightPostAuthorSchema,
@@ -117,6 +126,7 @@ export const feedPersonSchema = z.object({
   handle: z.string(),
   display_name: z.string(),
   avatar: mediaObjectSchema.nullable(),
+  companion_id: stockCompanionIdSchema.nullable().default(null),
 }).strict();
 
 export const feedPeopleResponseSchema = z.object({
@@ -176,6 +186,7 @@ export type FeedScope = z.infer<typeof feedScopeSchema>;
 export type FightPostAuthor = z.infer<typeof fightPostAuthorSchema>;
 export type FightPostTag = z.infer<typeof fightPostTagSchema>;
 export type FightPostReaction = z.infer<typeof fightPostReactionSchema>;
+export type FightPostChannel = z.infer<typeof fightPostChannelSchema>;
 export type FightPost = z.infer<typeof fightPostSchema>;
 export type FightPostListResponse = z.infer<typeof fightPostListResponseSchema>;
 export type FightPostResponse = z.infer<typeof fightPostResponseSchema>;

@@ -39,7 +39,6 @@ struct ContentView: View {
             if status == .updateRequired {
                 model.showingVersions = false
                 model.showingDebugMenu = false
-                model.showingRequests = false
             } else if status == .current, session.isSignedIn, session.profile == nil {
                 Task { await session.loadProfile() }
             }
@@ -105,12 +104,6 @@ struct ContentView: View {
         }
         .onChange(of: session.isFitFightAdmin) { _, isAdmin in
             if !isAdmin { model.showingDebugMenu = false }
-        }
-        .sheet(isPresented: $model.showingRequests) {
-            RequestsView()
-                .environmentObject(session)
-                .fitFightTheme(themeStore.theme)
-                .presentationBackground(themeStore.theme.bg)
         }
         .sheet(item: $model.dailyStatusRecap) { recap in
             DailyStatusRecapView(recap: recap) {
@@ -265,6 +258,9 @@ struct ContentView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             FFTabBar(tab: $model.tab, onReselect: {
+                if model.tab == .feedback {
+                    model.feedbackPane = .feed
+                }
                 model.openFightID = nil
             })
         }
@@ -277,8 +273,8 @@ struct ContentView: View {
             fightsStack
         case .newFight:
             NewFightView()
-        case .feed:
-            FeedView()
+        case .feedback:
+            FeedbackTabView()
         case .you:
             YouView()
         }

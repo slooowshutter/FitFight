@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 15,
+            notes: "Feedback is now a tab, just before You: fight posts, Bugs & requests, Top ranking, and a Report form. Plus opens a new post or a new request without going through Settings."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 15,
             notes: "Tapping an animal keeps that character on screen with its own poses. Other animals no longer show the hiking goat pictures."
         ),
         ReleaseNote(

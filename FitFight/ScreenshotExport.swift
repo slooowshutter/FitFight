@@ -130,8 +130,8 @@ enum ScreenshotExport {
                 ("fight-feed", AnyView(FightDetailView(fight: group, pane: .feed)), .fights),
                 ("new", AnyView(NewFightView()), .newFight),
                 ("review", AnyView(NewFightView(opening: .create, initialStep: 4)), .newFight),
-                ("feed", AnyView(FeedView()), .feed),
-                ("compose", AnyView(FeedComposeSheet()), .feed),
+                ("feed", AnyView(FeedbackTabView()), .feedback),
+                ("compose", AnyView(FeedComposeSheet()), .feedback),
                 ("you", AnyView(YouView()), .you),
                 ("picker", AnyView(CompanionPicker(selection: .badger)), .you),
             ]
@@ -213,7 +213,7 @@ enum ScreenshotExport {
                 frame(YouView(), tab: .you, themeStore: store, model: model)
             },
             Shot(name: "05-feed") { store, model in
-                frame(FeedView(), tab: .feed, themeStore: store, model: model)
+                frame(FeedbackTabView(), tab: .feedback, themeStore: store, model: model)
             },
             Shot(name: "06-requests") { store, model in
                 sheet(RequestsScreenshot.board(), themeStore: store, model: model)

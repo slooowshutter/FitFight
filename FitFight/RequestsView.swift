@@ -361,42 +361,68 @@ enum RequestsScreenshot {
     }
 }
 
+enum RequestFilter: Hashable, CaseIterable {
+    case top, features, bugs
+
+    var title: String {
+        switch self {
+        case .top: return String(localized: "Top")
+        case .features: return String(localized: "Features")
+        case .bugs: return String(localized: "Bugs")
+        }
+    }
+
+    var kind: String? {
+        switch self {
+        case .top: return nil
+        case .features: return "feature"
+        case .bugs: return "bug"
+        }
+    }
+}
+
+enum RequestsChrome {
+    case sheet
+    case tab
+}
+
 struct RequestsView: View {
     @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var store: FeedbackStore
-    @State private var filter: RequestFilter = .top
+    @ObservedObject var store: FeedbackStore
+    var chrome: RequestsChrome
+    var lockedFilter: RequestFilter?
+    var filterSource: Binding<RequestFilter>?
+    var onCompose: (() -> Void)?
+    @State private var filter: RequestFilter
     @State private var composing = false
     @State private var openPostID: UUID?
 
-    init() {
-        _store = StateObject(wrappedValue: FeedbackStore())
-    }
-
-    init(store: FeedbackStore) {
-        _store = StateObject(wrappedValue: store)
-    }
-
-    private enum RequestFilter: Hashable, CaseIterable {
-        case top, features, bugs
-
-        var title: String {
-            switch self {
-            case .top: return String(localized: "Top")
-            case .features: return String(localized: "Features")
-            case .bugs: return String(localized: "Bugs")
-            }
+    init(
+        store: FeedbackStore,
+        chrome: RequestsChrome = .sheet,
+        lockedFilter: RequestFilter? = nil,
+        filter: Binding<RequestFilter>? = nil,
+        onCompose: (() -> Void)? = nil
+    ) {
+        _store = ObservedObject(wrappedValue: store)
+        self.chrome = chrome
+        self.lockedFilter = lockedFilter
+        self.filterSource = filter
+        self.onCompose = onCompose
+        let start: RequestFilter
+        if let lockedFilter {
+            start = lockedFilter
+        } else if let filter {
+            start = filter.wrappedValue
+        } else if chrome == .tab {
+            start = .bugs
+        } else {
+            start = .top
         }
-
-        var kind: String? {
-            switch self {
-            case .top: return nil
-            case .features: return "feature"
-            case .bugs: return "bug"
-            }
-        }
+        _filter = State(initialValue: start)
     }
 
     var body: some View {
@@ -407,7 +433,11 @@ struct RequestsView: View {
                 NavigationStack {
                     list
                         .navigationDestination(item: $openPostID) { postID in
-                            RequestDetailView(postID: postID, store: store)
+                            RequestDetailView(
+                                postID: postID,
+                                store: store,
+                                showsVersionBanner: chrome == .sheet
+                            )
                                 .toolbar(.hidden, for: .navigationBar)
                         }
                 }
@@ -415,13 +445,13 @@ struct RequestsView: View {
             }
         }
         .background(theme.bg.ignoresSafeArea())
-        .task(id: filter) {
+        .task(id: activeFilter) {
             guard !staticRender else { return }
-            await store.load(session: session, kind: filter.kind)
+            await store.load(session: session, kind: activeFilter.kind)
         }
         .sheet(isPresented: $composing, onDismiss: {
             guard !staticRender else { return }
-            Task { await store.load(session: session, kind: filter.kind) }
+            Task { await store.load(session: session, kind: activeFilter.kind) }
         }) {
             ComposeRequestView(store: store)
                 .environmentObject(session)
@@ -430,24 +460,42 @@ struct RequestsView: View {
         }
     }
 
+    private var activeFilter: RequestFilter {
+        lockedFilter ?? filterSource?.wrappedValue ?? filter
+    }
+
+    private var filterSelection: Binding<RequestFilter> {
+        filterSource ?? $filter
+    }
+
+    private var filterItems: [RequestFilter] {
+        if lockedFilter != nil { return [] }
+        if chrome == .tab { return [.features, .bugs] }
+        return RequestFilter.allCases
+    }
+
     private var list: some View {
         VStack(spacing: 0) {
-            VersionBanner()
-            HStack {
-                Text("Bugs & requests")
-                    .ffType(.title)
-                    .foregroundStyle(theme.text)
-                Spacer()
-                Button("Close") { dismiss() }
-                    .ffType(.label)
-                    .foregroundStyle(theme.mossText)
-            }
-            .padding(.horizontal, theme.space.screenPadding)
-            .padding(.vertical, 12)
-
-            FFSegmented(items: RequestFilter.allCases, selection: $filter) { $0.title }
+            if chrome == .sheet {
+                VersionBanner()
+                HStack {
+                    Text("Bugs & requests")
+                        .ffType(.title)
+                        .foregroundStyle(theme.text)
+                    Spacer()
+                    Button("Close") { dismiss() }
+                        .ffType(.label)
+                        .foregroundStyle(theme.mossText)
+                }
                 .padding(.horizontal, theme.space.screenPadding)
-                .padding(.bottom, 12)
+                .padding(.vertical, 12)
+            }
+
+            if !filterItems.isEmpty {
+                FFSegmented(items: filterItems, selection: filterSelection) { $0.title }
+                    .padding(.horizontal, theme.space.screenPadding)
+                    .padding(.bottom, 12)
+            }
 
             if let error = store.error {
                 FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
@@ -463,18 +511,23 @@ struct RequestsView: View {
                         postsStack
                     }
                     .refreshable {
-                        await store.load(session: session, kind: filter.kind)
+                        await store.load(session: session, kind: activeFilter.kind)
                     }
                 }
             }
 
             FFScreenCTA(title: String(localized: "New request")) {
                 store.error = nil
-                composing = true
+                if let onCompose {
+                    onCompose()
+                } else {
+                    composing = true
+                }
             }
             .padding(.horizontal, theme.space.screenPadding)
             .padding(.bottom, 16)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(theme.bg)
     }
 
@@ -720,6 +773,7 @@ private struct RequestRow: View {
 private struct RequestDetailView: View {
     let postID: UUID
     @ObservedObject var store: FeedbackStore
+    var showsVersionBanner: Bool = true
     @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
@@ -735,7 +789,9 @@ private struct RequestDetailView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            VersionBanner()
+            if showsVersionBanner {
+                VersionBanner()
+            }
             HStack(alignment: .top, spacing: 10) {
                 FFNavDetail(
                     title: post?.title ?? String(localized: "Request"),
@@ -967,8 +1023,12 @@ private struct RequestPostMenu: View {
     }
 }
 
-private struct ComposeRequestView: View {
+struct ComposeRequestView: View {
     @ObservedObject var store: FeedbackStore
+    var heading: String = String(localized: "New request")
+    var embedded: Bool = false
+    var isActive: Bool = true
+    var onPosted: ((RequestFilter) -> Void)? = nil
     @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
@@ -1005,15 +1065,19 @@ private struct ComposeRequestView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            VersionBanner()
+            if !embedded {
+                VersionBanner()
+            }
             HStack {
-                Text("New request")
+                Text(heading)
                     .ffType(.title)
                     .foregroundStyle(theme.text)
                 Spacer()
-                Button("Close") { dismiss() }
-                    .ffType(.label)
-                    .foregroundStyle(theme.mossText)
+                if !embedded {
+                    Button("Close") { dismiss() }
+                        .ffType(.label)
+                        .foregroundStyle(theme.mossText)
+                }
             }
             .padding(.horizontal, theme.space.screenPadding)
             .padding(.vertical, 12)
@@ -1039,7 +1103,14 @@ private struct ComposeRequestView: View {
             .padding(.horizontal, theme.space.screenPadding)
             .padding(.bottom, 16)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(theme.bg.ignoresSafeArea())
+        .onChange(of: isActive) { _, active in
+            if !active {
+                titleFocused = false
+                detailsFocused = false
+            }
+        }
         .onChange(of: mediaItems) { _, items in
             Task { await loadPickedMedia(items) }
         }
@@ -1284,7 +1355,16 @@ private struct ComposeRequestView: View {
             videos: videos,
             files: files
         ) {
-            dismiss()
+            title = ""
+            details = ""
+            images = []
+            videos = []
+            files = []
+            if let onPosted {
+                onPosted(kind == .feature ? .features : .bugs)
+            } else {
+                dismiss()
+            }
         }
     }
 }

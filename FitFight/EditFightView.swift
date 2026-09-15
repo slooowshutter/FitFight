@@ -85,7 +85,7 @@ struct EditFightView: View {
     private var isOwner: Bool { fight.inviter?.isYou == true }
 
     var body: some View {
-        FFScreen(top: AnyView(nav), clearance: false) {
+        FFScreen(top: AnyView(header), clearance: false) {
             currentStep
             Spacer(minLength: theme.space.lg)
             flowAction
@@ -104,15 +104,26 @@ struct EditFightView: View {
         }
     }
 
-    private var nav: some View {
-        FFNavFlow(
-            title: String(localized: "Edit fight"),
-            onClose: { dismiss() },
-            skipTitle: step == .review ? nil : String(localized: "Done"),
-            onSkip: step == .review ? nil : { returnToSummary() }
-        )
-        .padding(.horizontal, theme.space.screenPadding)
-        .padding(.bottom, 12)
+    private var header: some View {
+        VStack(spacing: 0) {
+            VersionBanner()
+            ZStack {
+                Text(String(localized: "Edit fight"))
+                    .ffType(.rowTitle)
+                    .foregroundStyle(theme.text)
+                HStack {
+                    FFNavGlyph(systemName: "xmark") { dismiss() }
+                    Spacer()
+                    if step != .review {
+                        Button(String(localized: "Done")) { returnToSummary() }
+                            .ffType(.label)
+                            .foregroundStyle(theme.mossText)
+                            .buttonStyle(FFHapticPlainStyle())
+                    }
+                }
+            }
+            .padding(.horizontal, theme.space.screenPadding)
+        }
         .background(theme.bg)
     }
 

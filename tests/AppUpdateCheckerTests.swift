@@ -169,6 +169,25 @@ private struct AppUpdateCheckerTests {
         await offline.check()
         precondition(offline.status == .unavailable, "An offline check is recorded as unavailable")
         precondition(offline.allowsUse, "No internet must not lock the app after a failed check")
+
+        let publishSuite = "fitfight-release-tests-publish.\(UUID().uuidString)"
+        let publishDefaults = UserDefaults(suiteName: publishSuite)!
+        defer { publishDefaults.removePersistentDomain(forName: publishSuite) }
+        publishDefaults.set(try JSONEncoder().encode(policy), forKey: "fitfight.release-policy.\(url.absoluteString)")
+        ReleaseProtocol.responseStatus = 503
+        let justInstalled = AppUpdateChecker(version: "1.1.0", build: "200", releaseURL: url,
+                                             defaults: publishDefaults, session: session)
+        precondition(justInstalled.status == .checking,
+                     "A cached older policy must not lock a newly installed build before a fresh check")
+        precondition(justInstalled.allowsUse, "The Fastlane publish gap must remain usable")
+        await justInstalled.check()
+        precondition(justInstalled.status == .unavailable, "A failed refresh during publish is unavailable")
+        precondition(justInstalled.allowsUse, "A 503 during publish must not stick the Update overlay")
+        ReleaseProtocol.responseStatus = 200
+        ReleaseProtocol.responseData = try JSONEncoder().encode(policy)
+        await justInstalled.check()
+        precondition(justInstalled.status == .updateRequired,
+                     "A readable policy that does not admit the build still requires an update")
         print("App update checks passed: overlay gate, public vs internal, persistence, review, concurrency and offline use")
     }
 }

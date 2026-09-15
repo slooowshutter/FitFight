@@ -194,6 +194,53 @@ def marketing_version(version)
   text
 end
 
+def registered_release?(registered, channel, version, build)
+  return false if version.nil? || build.nil?
+
+  padded = marketing_version(version)
+  build_number = Integer(build)
+  registered.any? { |entry|
+    entry["channel"] == channel &&
+      marketing_version(entry["version"]) == padded &&
+      entry["build"] == build_number
+  }
+end
+
+def same_release?(left, right)
+  return left.nil? && right.nil? if left.nil? || right.nil?
+
+  marketing_version(left["version"]) == marketing_version(right["version"]) &&
+    left["build"] == right["build"]
+end
+
+def newer_release?(left, right)
+  return !left.nil? if right.nil?
+  return false if left.nil?
+
+  ([Gem::Version.new(marketing_version(left["version"])), left["build"]] <=>
+   [Gem::Version.new(marketing_version(right["version"])), right["build"]]) > 0
+end
+
+# Testers install a processed IPA before the next refresh rewrites both review
+# and internal to that build. Keep the last admitted tester IPA in review so
+# existing binaries stay allowed until Friends latest actually moves.
+def retain_previous_tester_releases(channel, latest, review, internal, previous)
+  return [review, internal] unless channel == "staging"
+
+  previous_tester = (previous.dig(channel, "internal") || previous.dig(channel, "review"))&.dup
+  return [review, internal] if previous_tester.nil?
+  return [review, internal] unless same_release?(latest, previous.dig(channel, "latest"))
+  return [review, internal] unless newer_release?(previous_tester, latest)
+
+  if internal && !same_release?(internal, previous_tester)
+    review = previous_tester if review.nil? || same_release?(review, internal)
+  elsif internal.nil?
+    internal = previous_tester
+    review = previous.dig(channel, "review")&.dup || previous_tester if review.nil?
+  end
+  [review, internal]
+end
+
 # Only public-group installable builds become mandatory. Registered internal
 # TestFlight latest and review candidates are admitted separately so Internal
 # testers and Apple review are not blocked by the Friends Beta minimum.
@@ -205,24 +252,18 @@ def available_app_releases(app, registered, previous)
     build.processing_state == "VALID" && !build.expired &&
       build.build_beta_detail.external_build_state == "IN_BETA_TESTING" &&
       !group_build_ids.empty? && group_build_ids.all? { |ids| ids.include?(build.id) }
-  end.max_by { |build| [Gem::Version.new(build.app_version), Integer(build.version)] }
+  end.max_by { |build| [Gem::Version.new(marketing_version(build.app_version)), Integer(build.version)] }
   staging_candidate = builds.select do |build|
     build.processing_state == "VALID" && !build.expired &&
       %w[WAITING_FOR_BETA_REVIEW IN_BETA_REVIEW].include?(build.build_beta_detail.external_build_state) &&
-      registered.any? { |entry|
-        entry["channel"] == "staging" && entry["version"] == build.app_version &&
-          entry["build"] == Integer(build.version)
-      }
-  end.max_by { |build| [Gem::Version.new(build.app_version), Integer(build.version)] }
+      registered_release?(registered, "staging", build.app_version, build.version)
+  end.max_by { |build| [Gem::Version.new(marketing_version(build.app_version)), Integer(build.version)] }
   # Internal testers receive every processed build. The newest registered VALID
   # staging binary is installable for them even when Friends Beta still has an older one.
   staging_internal = builds.select do |build|
     build.processing_state == "VALID" && !build.expired &&
-      registered.any? { |entry|
-        entry["channel"] == "staging" && entry["version"] == build.app_version &&
-          entry["build"] == Integer(build.version)
-      }
-  end.max_by { |build| [Gem::Version.new(build.app_version), Integer(build.version)] }
+      registered_release?(registered, "staging", build.app_version, build.version)
+  end.max_by { |build| [Gem::Version.new(marketing_version(build.app_version)), Integer(build.version)] }
 
   # Fastlane's get_live_app_store_version also includes PROCESSING_FOR_DISTRIBUTION.
   live = app.get_app_store_versions(
@@ -234,9 +275,7 @@ def available_app_releases(app, registered, previous)
     version = marketing_version(channel == "staging" ? build&.app_version : live&.version_string)
     update_url = channel == "staging" ? "itms-beta://" : "https://apps.apple.com/app/id#{app.id}"
     latest = build && { "version" => version, "build" => Integer(build.version), "update_url" => update_url }
-    known = registered.any? do |entry|
-      entry["channel"] == channel && entry["version"] == version && entry["build"] == latest&.fetch("build")
-    end
+    known = registered_release?(registered, channel, version, latest&.fetch("build"))
     was_enforced = previous.dig(channel, "enforced") == true
     if was_enforced && latest && !known
       UI.user_error!("#{channel} latest build lacks the required-update implementation; refusing to require it")
@@ -246,10 +285,7 @@ def available_app_releases(app, registered, previous)
     review_version = marketing_version(
       channel == "staging" ? staging_candidate&.app_version : candidate&.version_string
     )
-    if review_build && registered.any? { |entry|
-      entry["channel"] == channel && entry["version"] == review_version &&
-        entry["build"] == Integer(review_build.version)
-    }
+    if review_build && registered_release?(registered, channel, review_version, review_build.version)
       review = { "version" => review_version, "build" => Integer(review_build.version), "update_url" => update_url }
       if latest && ([Gem::Version.new(review["version"]), review["build"]] <=>
                     [Gem::Version.new(latest["version"]), latest["build"]]) <= 0
@@ -273,6 +309,7 @@ def available_app_releases(app, registered, previous)
         review = internal if review.nil?
       end
     end
+    review, internal = retain_previous_tester_releases(channel, latest, review, internal, previous)
     manifest[channel] = {
       "latest" => latest, "review" => review, "internal" => internal, "enforced" => was_enforced || known
     }

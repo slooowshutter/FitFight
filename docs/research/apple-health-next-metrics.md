@@ -105,6 +105,7 @@ After ingest is real on two phones:
 - Exercise Minutes / Stand: only if we accept Watch-only fights
 - Distance: only if someone wants a running-specific fight; it is not the next general metric
 - Direct WHOOP / Strava: only for scores Health cannot see (Recovery, Strain, Readiness). Ordinary energy and workouts stay on Health
+- FitFight recorder / Watch app: no, unless the product becomes a live session. Apple already converts sensors into sports numbers. Users record in Apple Workout, Strava, or Runna; we read Health. [`recording-vs-apple-health.md`](recording-vs-apple-health.md)
 
 ## Decision for Marc
 

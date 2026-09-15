@@ -93,6 +93,13 @@ test("feed authors keep decoding when companion_id is omitted and accept a stock
     avatar: null,
     companion_id: "fox",
   }).companion_id, "fox");
+  assert.equal(fightPostAuthorSchema.parse({
+    user_id: userId,
+    handle: "marc",
+    display_name: "Marc",
+    avatar: null,
+    companion_id: "custom",
+  }).companion_id, "custom");
   assert.equal(fightPostAuthorSchema.safeParse({
     user_id: userId,
     handle: "marc",

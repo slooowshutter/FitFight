@@ -36,7 +36,7 @@ When archived material conflicts with the current HTML or `tokens.json`, the cur
 
 ## Native rules
 
-- Four fixed tabs: Fights, New, Feedback, You.
+- Four fixed tabs: Fights, New, You, Feedback.
 - The version label stays at the top of the screen.
 - Versions remains permanently available under You → Settings.
 - Every number uses tabular figures.

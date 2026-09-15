@@ -1,4 +1,7 @@
+import AVKit
+import PhotosUI
 import SwiftUI
+import UniformTypeIdentifiers
 
 @MainActor
 final class FeedbackStore: ObservableObject {
@@ -47,6 +50,12 @@ final class FeedbackStore: ObservableObject {
                 }
                 return post
             }
+            RemoteImageLoader.shared.prefetch(
+                self.posts.flatMap(\.media).compactMap { media in
+                    RequestAttachment.showsPhoto(media) ? media.url : nil
+                },
+                kind: .photo
+            )
             error = nil
         } catch {
             if Task.isCancelled || error is CancellationError { return }
@@ -91,6 +100,12 @@ final class FeedbackStore: ObservableObject {
             self.comments = comments
             commentsFor = post.id
             canLaunchFix = result.canLaunchFix
+            RemoteImageLoader.shared.prefetch(
+                post.media.compactMap { media in
+                    RequestAttachment.showsPhoto(media) ? media.url : nil
+                },
+                kind: .photo
+            )
             if let index = posts.firstIndex(where: { $0.id == post.id }) {
                 posts[index] = post
             }
@@ -128,17 +143,31 @@ final class FeedbackStore: ObservableObject {
         session: SessionStore,
         kind: String,
         title: String,
-        body: String
+        body: String,
+        images: [UIImage],
+        videos: [URL],
+        files: [URL]
     ) async -> Bool {
         isSaving = true
         defer { isSaving = false }
         do {
+            var mediaIDs: [UUID] = []
+            for image in images {
+                mediaIDs.append(try await MediaUploader.upload(image, purpose: "feedback", session: session, api: api).id)
+            }
+            for videoURL in videos {
+                mediaIDs.append(try await MediaUploader.uploadVideo(videoURL, purpose: "feedback", session: session, api: api).id)
+            }
+            for fileURL in files {
+                mediaIDs.append(try await MediaUploader.uploadFile(fileURL, purpose: "feedback", session: session, api: api).id)
+            }
             let token = try await session.freshAccessToken()
             _ = try await api.createFeedback(
                 FitFightCreateFeedback(
                     kind: kind,
                     title: title,
                     body: body,
+                    mediaIds: mediaIDs,
                     metadata: .current()
                 ),
                 accessToken: token
@@ -498,6 +527,118 @@ struct RequestsView: View {
     }
 }
 
+private enum RequestAttachment {
+    static func showsPhoto(_ media: FitFightMedia) -> Bool {
+        media.kind == "photo" || ["image/jpeg", "image/png", "image/webp"].contains(media.contentType)
+    }
+
+    static func showsVideo(_ media: FitFightMedia) -> Bool {
+        media.kind == "video" || media.contentType == "video/mp4" || media.contentType == "video/quicktime"
+    }
+}
+
+private struct RequestMediaStack: View {
+    let media: [FitFightMedia]
+    var compact: Bool = false
+
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        if !media.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                if compact {
+                    compactRow
+                } else {
+                    ForEach(media) { item in
+                        RequestMediaItem(media: item)
+                    }
+                }
+            }
+        }
+    }
+
+    private var compactRow: some View {
+        let photos = media.filter { RequestAttachment.showsPhoto($0) && $0.url != nil }
+        return HStack(spacing: 6) {
+            ForEach(Array(photos.prefix(4))) { item in
+                if let url = item.url {
+                    RemotePhoto(url: url, kind: .photo) { theme.control }
+                        .frame(width: 44, height: 44)
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                }
+            }
+            if media.contains(where: { RequestAttachment.showsVideo($0) }) {
+                Image(systemName: "video.fill")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(theme.mossText)
+                    .frame(width: 44, height: 44)
+                    .background(theme.control, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            }
+            let files = media.filter { !RequestAttachment.showsPhoto($0) && !RequestAttachment.showsVideo($0) }
+            if !files.isEmpty {
+                Image(systemName: "doc.fill")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(theme.textSecondary)
+                    .frame(width: 44, height: 44)
+                    .background(theme.control, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            }
+        }
+    }
+}
+
+private struct RequestMediaItem: View {
+    let media: FitFightMedia
+    @Environment(\.ffTheme) private var theme
+    @State private var player: AVPlayer?
+
+    var body: some View {
+        if let url = media.url, RequestAttachment.showsPhoto(media) {
+            Color.clear
+                .aspectRatio(ratio, contentMode: .fit)
+                .frame(maxWidth: .infinity)
+                .fixedSize(horizontal: false, vertical: true)
+                .overlay {
+                    RemotePhoto(url: url, kind: .photo) { theme.control }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
+        } else if let url = media.url, RequestAttachment.showsVideo(media) {
+            VideoPlayer(player: player)
+                .frame(maxWidth: .infinity)
+                .frame(height: 220)
+                .clipShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
+                .onAppear {
+                    if player == nil { player = AVPlayer(url: url) }
+                }
+                .onDisappear {
+                    player?.pause()
+                    player = nil
+                }
+        } else if let url = media.url {
+            Link(destination: url) {
+                HStack(spacing: 8) {
+                    Image(systemName: "doc.fill")
+                        .foregroundStyle(theme.mossText)
+                    Text(media.originalFilename)
+                        .ffType(.caption)
+                        .foregroundStyle(theme.text)
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                }
+                .padding(12)
+                .background(
+                    theme.card,
+                    in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous)
+                )
+                .ffBorder(theme.hairline, radius: theme.radius.field)
+            }
+        }
+    }
+
+    private var ratio: CGFloat {
+        CGFloat(max(media.width, 1)) / CGFloat(max(media.height, 1))
+    }
+}
+
 private struct RequestRow: View {
     let post: FitFightFeedbackPost
     let onOpen: () -> Void
@@ -535,6 +676,7 @@ private struct RequestRow: View {
                             .foregroundStyle(theme.textSecondary)
                             .lineLimit(2)
                             .multilineTextAlignment(.leading)
+                        RequestMediaStack(media: post.media, compact: true)
                         Text(
                             String(
                                 localized: "feedback.meta",
@@ -713,6 +855,8 @@ private struct RequestDetailView: View {
                     .lineSpacing(3)
                     .fixedSize(horizontal: false, vertical: true)
 
+                RequestMediaStack(media: post.media)
+
                 if store.canLaunchFix {
                     if launchedAgentURL != nil {
                         FFNotice(
@@ -832,6 +976,12 @@ private struct ComposeRequestView: View {
     @State private var kind: ComposeKind = .bug
     @State private var title = ""
     @State private var details = ""
+    @State private var mediaItems: [PhotosPickerItem] = []
+    @State private var isLoadingMedia = false
+    @State private var images: [UIImage] = []
+    @State private var videos: [URL] = []
+    @State private var files: [URL] = []
+    @State private var showingFileImporter = false
     @FocusState private var titleFocused: Bool
     @FocusState private var detailsFocused: Bool
 
@@ -890,6 +1040,16 @@ private struct ComposeRequestView: View {
             .padding(.bottom, 16)
         }
         .background(theme.bg.ignoresSafeArea())
+        .onChange(of: mediaItems) { _, items in
+            Task { await loadPickedMedia(items) }
+        }
+        .fileImporter(
+            isPresented: $showingFileImporter,
+            allowedContentTypes: [.item],
+            allowsMultipleSelection: true
+        ) { result in
+            loadPickedFiles(result)
+        }
     }
 
     private var composeStack: some View {
@@ -942,10 +1102,79 @@ private struct ComposeRequestView: View {
                         }
                 }
             }
+
+            if !images.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(Array(images.enumerated()), id: \.offset) { index, image in
+                            Image(uiImage: image)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 72, height: 72)
+                                .clipShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
+                                .onTapGesture { images.remove(at: index) }
+                        }
+                    }
+                }
+            }
+            ForEach(Array(videos.enumerated()), id: \.offset) { index, _ in
+                HStack(spacing: 8) {
+                    Image(systemName: "video.fill")
+                        .foregroundStyle(theme.mossText)
+                    Text(String(localized: "Video"))
+                        .ffType(.caption)
+                        .foregroundStyle(theme.textSecondary)
+                }
+                .onTapGesture { removeVideo(at: index) }
+            }
+            ForEach(Array(files.enumerated()), id: \.offset) { index, url in
+                HStack(spacing: 8) {
+                    Image(systemName: "doc.fill")
+                        .foregroundStyle(theme.mossText)
+                    Text(url.lastPathComponent)
+                        .ffType(.caption)
+                        .foregroundStyle(theme.textSecondary)
+                        .lineLimit(1)
+                }
+                .onTapGesture { removeFile(at: index) }
+            }
+
+            Text("Add a photo, a video, or any file.")
+                .ffType(.caption)
+                .foregroundStyle(theme.textSecondary)
+
+            HStack(spacing: 16) {
+                PhotosPicker(
+                    selection: $mediaItems,
+                    maxSelectionCount: max(1, remainingSlots),
+                    matching: .any(of: [.images, .videos])
+                ) {
+                    Label(String(localized: "Media"), systemImage: "photo.on.rectangle.angled")
+                        .ffType(.label)
+                        .foregroundStyle(theme.mossText)
+                }
+                .buttonStyle(FFHapticPlainStyle())
+                .disabled(remainingSlots == 0 || isLoadingMedia || store.isSaving)
+                Button {
+                    showingFileImporter = true
+                } label: {
+                    Label(String(localized: "File"), systemImage: "paperclip")
+                        .ffType(.label)
+                        .foregroundStyle(theme.mossText)
+                }
+                .buttonStyle(FFHapticPlainStyle())
+                .disabled(remainingSlots == 0 || isLoadingMedia || store.isSaving)
+                if isLoadingMedia { ProgressView().tint(theme.mossText) }
+                Spacer(minLength: 0)
+            }
         }
         .padding(.horizontal, theme.space.screenPadding)
         .padding(.bottom, 24)
         .fixedSize(horizontal: false, vertical: staticRender)
+    }
+
+    private var remainingSlots: Int {
+        max(0, 8 - images.count - videos.count - files.count)
     }
 
     private var canPost: Bool {
@@ -954,6 +1183,93 @@ private struct ComposeRequestView: View {
         return trimmedTitle.count >= 1
             && trimmedDetails.count >= 1
             && !store.isSaving
+            && !isLoadingMedia
+    }
+
+    private func loadPickedMedia(_ items: [PhotosPickerItem]) async {
+        guard !items.isEmpty else { return }
+        isLoadingMedia = true
+        defer { isLoadingMedia = false; mediaItems = [] }
+        var remaining = remainingSlots
+        do {
+            for item in items {
+                guard remaining > 0 else { break }
+                if item.supportedContentTypes.contains(where: { $0.conforms(to: .movie) }) {
+                    guard let picked = try await item.loadTransferable(type: PickedVideo.self) else {
+                        throw MediaUploader.UploadError.invalidVideo
+                    }
+                    videos.append(picked.url)
+                } else {
+                    guard let data = try await item.loadTransferable(type: Data.self),
+                          let image = UIImage(data: data) else {
+                        throw MediaUploader.UploadError.invalidImage
+                    }
+                    images.append(image)
+                }
+                remaining -= 1
+            }
+            store.error = nil
+        } catch {
+            store.error = error.localizedDescription
+        }
+    }
+
+    private func loadPickedFiles(_ result: Result<[URL], Error>) {
+        switch result {
+        case .failure(let error):
+            store.error = error.localizedDescription
+        case .success(let urls):
+            var remaining = remainingSlots
+            do {
+                for url in urls {
+                    guard remaining > 0 else { break }
+                    let dest = try copyImportedFile(url)
+                    let type = UTType(filenameExtension: dest.pathExtension)
+                    if type?.conforms(to: .image) == true, let image = UIImage(contentsOfFile: dest.path) {
+                        images.append(image)
+                        try? FileManager.default.removeItem(at: dest)
+                    } else if type?.conforms(to: .movie) == true {
+                        videos.append(dest)
+                    } else {
+                        files.append(dest)
+                    }
+                    remaining -= 1
+                }
+                store.error = nil
+            } catch {
+                store.error = error.localizedDescription
+            }
+        }
+    }
+
+    private func copyImportedFile(_ url: URL) throws -> URL {
+        let accessing = url.startAccessingSecurityScopedResource()
+        defer {
+            if accessing { url.stopAccessingSecurityScopedResource() }
+        }
+        let ext = url.pathExtension
+        let dest = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: false)
+            .appendingPathExtension(ext)
+        if FileManager.default.fileExists(atPath: dest.path) {
+            try FileManager.default.removeItem(at: dest)
+        }
+        try FileManager.default.copyItem(at: url, to: dest)
+        return dest
+    }
+
+    private func removeVideo(at index: Int) {
+        let url = videos.remove(at: index)
+        if url.path.hasPrefix(FileManager.default.temporaryDirectory.path) {
+            try? FileManager.default.removeItem(at: url)
+        }
+    }
+
+    private func removeFile(at index: Int) {
+        let url = files.remove(at: index)
+        if url.path.hasPrefix(FileManager.default.temporaryDirectory.path) {
+            try? FileManager.default.removeItem(at: url)
+        }
     }
 
     private func submit() async {
@@ -963,7 +1279,10 @@ private struct ComposeRequestView: View {
             session: session,
             kind: kind.value,
             title: trimmedTitle,
-            body: trimmedDetails
+            body: trimmedDetails,
+            images: images,
+            videos: videos,
+            files: files
         ) {
             dismiss()
         }

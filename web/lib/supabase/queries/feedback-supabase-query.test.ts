@@ -50,6 +50,9 @@ function createDatabaseStub(respond: (query: string) => unknown[]) {
   const queries: string[] = [];
   const bound: unknown[][] = [];
   const query = ((first: TemplateStringsArray, ...values: unknown[]) => {
+    if (!("raw" in first)) {
+      return first;
+    }
     const sql = first.join("?").replace(/\s+/g, " ").trim();
     queries.push(sql);
     bound.push(values);
@@ -71,6 +74,7 @@ test("feedback schemas accept a one-character title and details", () => {
   assert.equal(created.kind, "feature");
   assert.equal(created.title, "H");
   assert.equal(created.body, "A");
+  assert.deepEqual(created.media_ids, []);
   assert.throws(() => createFeedbackPostRequestSchema.parse({
     kind: "feature",
     title: " ",
@@ -133,6 +137,7 @@ test("feedback schemas accept a one-character title and details", () => {
       mine: false,
       created_at: "2026-09-04T12:00:00Z",
       metadata: postRow.metadata,
+      media: [],
     },
     comments: [],
     can_launch_fix: true,
@@ -147,6 +152,28 @@ test("feedback schemas accept a one-character title and details", () => {
     { app_version: "1.0.0", device_model: "iPhone18,1" },
   );
   assert.throws(() => launchFeedbackFixRequestSchema.parse({ extra: true }));
+  assert.throws(() => createFeedbackPostRequestSchema.parse({ extra: true }));
+  assert.equal(createFeedbackPostRequestSchema.safeParse({
+    kind: "bug",
+    title: "H",
+    body: "A",
+    media_ids: ["not-a-uuid"],
+  }).success, false);
+  assert.equal(createFeedbackPostRequestSchema.safeParse({
+    kind: "bug",
+    title: "H",
+    body: "A",
+    media_ids: Array.from({ length: 9 }, () => postId),
+  }).success, false);
+  assert.deepEqual(
+    createFeedbackPostRequestSchema.parse({
+      kind: "bug",
+      title: "H",
+      body: "A",
+      media_ids: [postId],
+    }).media_ids,
+    [postId],
+  );
   assert.deepEqual(
     createFeedbackPostRequestSchema.parse({
       kind: "bug",
@@ -190,12 +217,18 @@ test("feedback schemas accept a one-character title and details", () => {
 });
 
 test("listing feedback posts maps vote counts and the viewer vote", async () => {
-  const { database, queries } = createDatabaseStub(() => [postRow]);
+  const { database, queries } = createDatabaseStub((sql) => {
+    if (sql.includes("feedback_post_media")) {
+      return [];
+    }
+    return [postRow];
+  });
 
   const result = await listFeedbackPosts(userId, { kind: "bug" }, database);
 
   assert.match(queries[0] ?? "", /from public.feedback_posts as post/);
   assert.match(queries[0] ?? "", /private.feedback_blocks/);
+  assert.ok(queries.some((query) => query.includes("feedback_post_media")));
   assert.deepEqual(feedbackListResponseSchema.parse(result), {
     posts: [{
       id: postId,
@@ -210,6 +243,7 @@ test("listing feedback posts maps vote counts and the viewer vote", async () => 
       mine: false,
       created_at: "2026-09-04T12:00:00Z",
       metadata: postRow.metadata,
+      media: [],
     }],
   });
 });
@@ -227,6 +261,7 @@ test("creating a feedback post is refused after the daily cap", async () => {
       kind: "bug",
       title: postRow.title,
       body: postRow.body,
+      media_ids: [],
     }, database),
     (error: unknown) => error instanceof ApiError && error.code === "rate_limited",
   );
@@ -245,6 +280,7 @@ test("creating a feedback post inserts the trimmed write-up", async () => {
     kind: "bug",
     title: postRow.title,
     body: postRow.body,
+    media_ids: [],
     metadata: {
       app_version: "1.0.0",
       os: "iOS",
@@ -268,6 +304,7 @@ test("creating a feedback post inserts the trimmed write-up", async () => {
   assert.equal(result.post.vote_count, 0);
   assert.equal(result.post.voted, false);
   assert.equal(result.post.author_handle, "maya_moves");
+  assert.deepEqual(result.post.media, []);
   assert.deepEqual(result.post.metadata, postRow.metadata);
 });
 

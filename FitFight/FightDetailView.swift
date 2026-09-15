@@ -33,6 +33,7 @@ struct FightDetailView: View {
     @State private var copiedLink = false
     @State private var fightsRevision = 0
     @State private var pane: FightDetailPane = .stats
+    @State private var showingEdit = false
 
     init(fight: Fight, pane: FightDetailPane = .stats) {
         initialFight = fight
@@ -120,6 +121,13 @@ struct FightDetailView: View {
             if pane == .history && !hasHistory {
                 pane = .stats
             }
+        }
+        .sheet(isPresented: $showingEdit) {
+            EditFightView(fight: fight)
+                .environmentObject(model)
+                .environmentObject(session)
+                .fitFightTheme(theme)
+                .presentationBackground(theme.bg)
         }
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
@@ -342,6 +350,18 @@ struct FightDetailView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                if fight.canOwnerEdit, !pendingJoin {
+                    Button {
+                        model.createError = nil
+                        showingEdit = true
+                    } label: {
+                        Text(String(localized: "Edit"))
+                            .ffType(.label)
+                            .foregroundStyle(theme.mossText)
+                            .frame(height: 44)
+                    }
+                    .buttonStyle(FFHapticPlainStyle())
+                }
             }
         }
         .fixedSize(horizontal: false, vertical: true)

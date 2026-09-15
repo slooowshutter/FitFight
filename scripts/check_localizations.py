@@ -31,6 +31,7 @@ if missing_references:
 
 for key in (
     "CFBundleDisplayName",
+    "NSCameraUsageDescription",
     "NSHealthShareUsageDescription",
     "NSHealthUpdateUsageDescription",
 ):

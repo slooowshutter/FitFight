@@ -1,9 +1,10 @@
 begin;
-select plan(16);
+select plan(18);
 
 select has_table('public', 'media_objects', 'media objects exist');
 select has_table('public', 'fight_posts', 'fight posts exist');
 select has_table('public', 'fight_post_media', 'fight post media exist');
+select has_table('public', 'feedback_post_media', 'feedback attachments exist');
 select has_table('public', 'fight_post_tags', 'fight post tags exist');
 select has_table('public', 'fight_post_reactions', 'fight post reactions exist');
 select has_table('public', 'fight_post_comments', 'fight post comments exist');
@@ -28,6 +29,10 @@ select is(
   (select file_size_limit from storage.buckets where id = 'user-media'),
   52428800::bigint,
   'user-media allows photos and short videos'
+);
+select ok(
+  (select allowed_mime_types is null from storage.buckets where id = 'user-media'),
+  'user-media accepts any file type for request attachments'
 );
 
 select is(

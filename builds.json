@@ -138,5 +138,10 @@
     "channel": "staging",
     "version": "1.0.0",
     "build": 197
+  },
+  {
+    "channel": "staging",
+    "version": "1.0.0",
+    "build": 198
   }
 ]

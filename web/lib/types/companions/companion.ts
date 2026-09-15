@@ -1,18 +1,18 @@
 import { z } from "zod";
 
 export const stockCompanionIdValues = [
-  "badger",
-  "raccoon",
-  "red-panda",
-  "otter",
-  "rabbit",
-  "fox",
-  "bear",
-  "boar",
-  "sloth",
-  "dog",
-  "goat",
-  "turtle",
+    "badger",
+    "raccoon",
+    "red-panda",
+    "otter",
+    "rabbit",
+    "fox",
+    "bear",
+    "boar",
+    "sloth",
+    "dog",
+    "goat",
+    "turtle",
 ] as const;
 
 export const companionIdValues = [...stockCompanionIdValues, "custom"] as const;

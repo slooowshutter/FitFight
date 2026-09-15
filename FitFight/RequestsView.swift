@@ -393,7 +393,6 @@ struct RequestsView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var store: FeedbackStore
     var chrome: RequestsChrome
-    var lockedFilter: RequestFilter?
     var filterSource: Binding<RequestFilter>?
     var onCompose: (() -> Void)?
     @State private var filter: RequestFilter
@@ -403,26 +402,14 @@ struct RequestsView: View {
     init(
         store: FeedbackStore,
         chrome: RequestsChrome = .sheet,
-        lockedFilter: RequestFilter? = nil,
         filter: Binding<RequestFilter>? = nil,
         onCompose: (() -> Void)? = nil
     ) {
         _store = ObservedObject(wrappedValue: store)
         self.chrome = chrome
-        self.lockedFilter = lockedFilter
         self.filterSource = filter
         self.onCompose = onCompose
-        let start: RequestFilter
-        if let lockedFilter {
-            start = lockedFilter
-        } else if let filter {
-            start = filter.wrappedValue
-        } else if chrome == .tab {
-            start = .bugs
-        } else {
-            start = .top
-        }
-        _filter = State(initialValue: start)
+        _filter = State(initialValue: filter?.wrappedValue ?? .top)
     }
 
     var body: some View {
@@ -461,17 +448,11 @@ struct RequestsView: View {
     }
 
     private var activeFilter: RequestFilter {
-        lockedFilter ?? filterSource?.wrappedValue ?? filter
+        filterSource?.wrappedValue ?? filter
     }
 
     private var filterSelection: Binding<RequestFilter> {
         filterSource ?? $filter
-    }
-
-    private var filterItems: [RequestFilter] {
-        if lockedFilter != nil { return [] }
-        if chrome == .tab { return [.features, .bugs] }
-        return RequestFilter.allCases
     }
 
     private var list: some View {
@@ -491,11 +472,9 @@ struct RequestsView: View {
                 .padding(.vertical, 12)
             }
 
-            if !filterItems.isEmpty {
-                FFSegmented(items: filterItems, selection: filterSelection) { $0.title }
-                    .padding(.horizontal, theme.space.screenPadding)
-                    .padding(.bottom, 12)
-            }
+            FFSegmented(items: RequestFilter.allCases, selection: filterSelection) { $0.title }
+                .padding(.horizontal, theme.space.screenPadding)
+                .padding(.bottom, 12)
 
             if let error = store.error {
                 FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
@@ -1026,8 +1005,6 @@ private struct RequestPostMenu: View {
 struct ComposeRequestView: View {
     @ObservedObject var store: FeedbackStore
     var heading: String = String(localized: "New request")
-    var embedded: Bool = false
-    var isActive: Bool = true
     var onPosted: ((RequestFilter) -> Void)? = nil
     @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
@@ -1065,19 +1042,14 @@ struct ComposeRequestView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if !embedded {
-                VersionBanner()
-            }
             HStack {
                 Text(heading)
                     .ffType(.title)
                     .foregroundStyle(theme.text)
                 Spacer()
-                if !embedded {
-                    Button("Close") { dismiss() }
-                        .ffType(.label)
-                        .foregroundStyle(theme.mossText)
-                }
+                Button("Close") { dismiss() }
+                    .ffType(.label)
+                    .foregroundStyle(theme.mossText)
             }
             .padding(.horizontal, theme.space.screenPadding)
             .padding(.vertical, 12)
@@ -1105,12 +1077,6 @@ struct ComposeRequestView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(theme.bg.ignoresSafeArea())
-        .onChange(of: isActive) { _, active in
-            if !active {
-                titleFocused = false
-                detailsFocused = false
-            }
-        }
         .onChange(of: mediaItems) { _, items in
             Task { await loadPickedMedia(items) }
         }

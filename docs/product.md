@@ -4,21 +4,21 @@ One line: challenge friends to a private Steps fight; most steps wins, and the l
 
 ## Names (they’re different)
 
-| What | Value |
-| --- | --- |
-| On-device display name | **FitFight** |
+| What                           | Value                                                        |
+| ------------------------------ | ------------------------------------------------------------ |
+| On-device display name         | **FitFight**                                                 |
 | App Store Connect listing name | **FitFight MVP** (`FitFight` / `Fitfight` was already taken) |
-| SKU | `fitfight` |
-| Bundle ID | `com.fitfight.mvp` |
-| Team | Marc Lamy, Team ID `C92DPD8ME2` |
-| Xcode target / scheme | `FitFight` |
+| SKU                            | `fitfight`                                                   |
+| Bundle ID                      | `com.fitfight.mvp`                                           |
+| Team                           | Marc Lamy, Team ID `C92DPD8ME2`                              |
+| Xcode target / scheme          | `FitFight`                                                   |
 
 Do not rename the bundle ID without Apple + CI updates.
 
 ## Current 1.0 scope — 9 Sep 2026
 
 - Four tabs: **Fights**, **New**, **You**, **Feedback**.
-- Feedback holds the same fight Feed (posts from fights you’re in, fight picker when you post), Bugs & requests, Top ranking, and a Report form. Plus on that tab opens a new post or a new request. You still has a shortcut into Bugs & requests.
+- Feedback has one ranked board with compact **Top**, **Features**, and **Bugs** tabs. Top shows both kinds together, ordered by votes. Plus and New request open the request form directly. There is no separate Report tab or second tab row. You still has a shortcut into Bugs & requests. Fight posts stay on Feed, where plus opens a new post.
 - Feed is one list of posts from every fight you’re in. Each post has a badge for the fight, or Public if it went to every fight you chose. Tap + to write a note and pick one or more fights next to photo or video. **All fights** selects every fight and shows as Public. Inside a fight, posting starts on that fight and you can add other channels. There is no Main destination. A tag does not add someone to a fight they are not in. Posts can take any emoji and nested comments. Other people in that fight can get a notification when you post in that fight’s Feed; comments and reactions notify the post author; a reply notifies the person you replied to, not everyone else on the thread.
 - Each fight has posts on a Feed tab next to Stats.
 - New accounts pick an optional photo with their username, then connect Apple Health, then allow challenge reminders, then a last screen that the Feedback tab can take a feature or a bug.

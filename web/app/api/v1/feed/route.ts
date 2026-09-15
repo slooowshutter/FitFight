@@ -7,19 +7,19 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export const GET = apiRoute(async (request) => {
-  const { userId } = await verifyUser(request);
-  const search = new URL(request.url).searchParams;
-  const parsed = listFightPostsQuerySchema.safeParse({
-    ...(search.get("cursor") ? { cursor: search.get("cursor") } : {}),
-    ...(search.get("limit") ? { limit: search.get("limit") } : {}),
-    ...(search.get("scope") ? { scope: search.get("scope") } : {}),
-  });
-  if (!parsed.success) {
-    throw parsed.error;
-  }
-  return json(await listFightPosts(userId, undefined, parsed.data));
+    const { userId } = await verifyUser(request);
+    const search = new URL(request.url).searchParams;
+    const parsed = listFightPostsQuerySchema.safeParse({
+        ...(search.get("cursor") ? { cursor: search.get("cursor") } : {}),
+        ...(search.get("limit") ? { limit: search.get("limit") } : {}),
+        ...(search.get("scope") ? { scope: search.get("scope") } : {}),
+    });
+    if (!parsed.success) {
+        throw parsed.error;
+    }
+    return json(await listFightPosts(userId, undefined, parsed.data));
 });
 
 export function OPTIONS(request: Request) {
-  return corsPreflight(request);
+    return corsPreflight(request);
 }

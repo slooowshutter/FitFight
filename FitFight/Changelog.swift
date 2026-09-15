@@ -25,6 +25,76 @@ enum Changelog {
     /// Newest first. Add a row here whenever we ship a user-facing change.
     static let releases: [ReleaseNote] = [
         ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "Fight charts and standings now use the same confirmed steps. Charts exclude activity outside the Fight, update with late corrections, and show missing history clearly."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "Feedback has one ranked list with compact Top, Features, and Bugs tabs. The extra tab row is gone, and plus opens New request directly."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "Standings refresh automatically when another participant syncs. Rankings use confirmed scores for everyone."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "TestFlight updates no longer block the app. Cancel to keep using FitFight, and the same update will stay dismissed."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "Reopening the app no longer waits for profile loading after your saved session refreshes."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "See who reacted to a post. Posts with comments now open their comments automatically."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "Reactions update immediately and recover if saving fails. Refresh uses one spinner, New opens faster, and restoring your session no longer flashes sign-in. Photos and sign-out are more reliable."
+        ),
+        ReleaseNote(
+            version: "1.1.0",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "Tap a Feed or fight photo to open it. A tall photo no longer covers the caption field, so you can type after you add one."
+        ),
+        ReleaseNote(
+            version: "1.1.0",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "The version line is only on You. Fights, New, Feed, and Feedback no longer show it at the top."
+        ),
+        ReleaseNote(
+            version: "1.1.0",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "The Update screen no longer appears from a leftover version check while TestFlight is still publishing."
+        ),
+        ReleaseNote(
             version: "1.1.0",
             year: 2026,
             month: 9,
@@ -37,6 +107,13 @@ enum Changelog {
             month: 9,
             day: 15,
             notes: "Tabs are Fights, New, Feed, Feedback, You. Fight-feed lock-screen alerts name the person, never scores. Turn posts, comments, replies, and reactions on or off under You → Settings."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "The version line is only on You. Fights, New, Feed, and Feedback no longer show it at the top."
         ),
         ReleaseNote(
             version: "1.0.0",

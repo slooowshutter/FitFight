@@ -12,18 +12,18 @@ For FitFight's current Steps fight, keep Apple Health as the only source and use
 
 ### Decision matrix
 
-| Platform | Direct API | Useful data through the direct API | Apple Health path | FitFight decision |
-| --- | --- | --- | --- | --- |
-| **Apple Health / Apple Watch** | Native HealthKit, on device; no public Apple Health REST API | Standardized samples and workouts already in the user's Health store | Native source | **Use now for Steps.** Expand by HealthKit type only when the backlog calls for it. |
-| **WHOOP** | Public OAuth 2 API | Recovery, strain/cycles, HRV RMSSD, RHR, SpO2, skin temperature, sleep, workouts | Strong, but excludes important proprietary metrics and WHOOP HRV | **HealthKit first.** Direct API only for Recovery/Strain/RMSSD. |
-| **Garmin** | Business/enterprise program, approval required | Daily health, sleep, stress, Body Battery, body composition, detailed FIT activities | Strong for standard daily metrics and workouts; no routes | **HealthKit first.** Direct API only for proprietary/detailed Garmin data. |
-| **Oura** | Public OAuth 2 API; production approval after initial user limit | Readiness/activity/sleep scores, HR/HRV, SpO2, temperature, stress, workouts | Very strong for standard metrics | **HealthKit first.** Direct API only for readiness/stress/deeper ring data. |
-| **Withings** | Public OAuth 2 health-data API | Weight/body composition, BP, sleep, activity, HR, temperature, SpO2 and more | Strong for scale/body metrics | **HealthKit first for weight.** Direct API only for broader Withings history/clinical detail. |
-| **Strava** | OAuth 2 activity API, but restrictive 2026 terms | Activities, routes, segments, streams such as GPS, HR, cadence, watts | Partial activity bridge | **Do not use the direct API for shared fights/leaderboards without written Strava approval.** |
-| **Google Health / Fitbit / Pixel Watch** | Google Health API; Fitbit Web API scheduled to shut down in September 2026 | Activity, workouts, HR/HRV, sleep, vitals, body measurements, nutrition and more | Current Help Center says Apple Health is imported but not yet exported | **Not a dependable HealthKit source today.** Evaluate Google Health API if Fitbit becomes a priority. |
-| **Polar** | AccessLink OAuth APIs | Exercises and samples, daily activity, continuous HR, sleep, cardio load, biosensing | Good but one-way and narrower | **HealthKit first** for standard data; direct API for training detail. |
-| **Samsung Health** | Samsung Health Data SDK, partner registration | Broad activity, body, sleep, vitals, nutrition records | Android-only; no official Apple Health bridge | **No iOS path.** Revisit only with an Android app. |
-| **ClassPass** | Merchant inventory/booking API | Venues, schedules, capacity, reservations, attendance | No official health-data integration found | **Not a health source.** Treat attendance as booking data, not measured exercise. |
+| Platform                                 | Direct API                                                                 | Useful data through the direct API                                                   | Apple Health path                                                      | FitFight decision                                                                                     |
+| ---------------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| **Apple Health / Apple Watch**           | Native HealthKit, on device; no public Apple Health REST API               | Standardized samples and workouts already in the user's Health store                 | Native source                                                          | **Use now for Steps.** Expand by HealthKit type only when the backlog calls for it.                   |
+| **WHOOP**                                | Public OAuth 2 API                                                         | Recovery, strain/cycles, HRV RMSSD, RHR, SpO2, skin temperature, sleep, workouts     | Strong, but excludes important proprietary metrics and WHOOP HRV       | **HealthKit first.** Direct API only for Recovery/Strain/RMSSD.                                       |
+| **Garmin**                               | Business/enterprise program, approval required                             | Daily health, sleep, stress, Body Battery, body composition, detailed FIT activities | Strong for standard daily metrics and workouts; no routes              | **HealthKit first.** Direct API only for proprietary/detailed Garmin data.                            |
+| **Oura**                                 | Public OAuth 2 API; production approval after initial user limit           | Readiness/activity/sleep scores, HR/HRV, SpO2, temperature, stress, workouts         | Very strong for standard metrics                                       | **HealthKit first.** Direct API only for readiness/stress/deeper ring data.                           |
+| **Withings**                             | Public OAuth 2 health-data API                                             | Weight/body composition, BP, sleep, activity, HR, temperature, SpO2 and more         | Strong for scale/body metrics                                          | **HealthKit first for weight.** Direct API only for broader Withings history/clinical detail.         |
+| **Strava**                               | OAuth 2 activity API, but restrictive 2026 terms                           | Activities, routes, segments, streams such as GPS, HR, cadence, watts                | Partial activity bridge                                                | **Do not use the direct API for shared fights/leaderboards without written Strava approval.**         |
+| **Google Health / Fitbit / Pixel Watch** | Google Health API; Fitbit Web API scheduled to shut down in September 2026 | Activity, workouts, HR/HRV, sleep, vitals, body measurements, nutrition and more     | Current Help Center says Apple Health is imported but not yet exported | **Not a dependable HealthKit source today.** Evaluate Google Health API if Fitbit becomes a priority. |
+| **Polar**                                | AccessLink OAuth APIs                                                      | Exercises and samples, daily activity, continuous HR, sleep, cardio load, biosensing | Good but one-way and narrower                                          | **HealthKit first** for standard data; direct API for training detail.                                |
+| **Samsung Health**                       | Samsung Health Data SDK, partner registration                              | Broad activity, body, sleep, vitals, nutrition records                               | Android-only; no official Apple Health bridge                          | **No iOS path.** Revisit only with an Android app.                                                    |
+| **ClassPass**                            | Merchant inventory/booking API                                             | Venues, schedules, capacity, reservations, attendance                                | No official health-data integration found                              | **Not a health source.** Treat attendance as booking data, not measured exercise.                     |
 
 ## What Apple Health actually gives FitFight
 
@@ -50,28 +50,28 @@ This is a useful storage/debug representation, not Apple's wire format:
 
 ```json
 {
-  "uuid": "…",
-  "type": "HKQuantityTypeIdentifierStepCount",
-  "start": "2026-08-29T08:00:00+02:00",
-  "end": "2026-08-29T08:05:00+02:00",
-  "quantity": { "value": 412, "unit": "count" },
-  "sourceRevision": {
-    "source": {
-      "name": "Garmin Connect",
-      "bundleIdentifier": "com.garmin…"
+    "uuid": "…",
+    "type": "HKQuantityTypeIdentifierStepCount",
+    "start": "2026-08-29T08:00:00+02:00",
+    "end": "2026-08-29T08:05:00+02:00",
+    "quantity": { "value": 412, "unit": "count" },
+    "sourceRevision": {
+        "source": {
+            "name": "Garmin Connect",
+            "bundleIdentifier": "com.garmin…"
+        },
+        "version": "…",
+        "productType": "…",
+        "operatingSystemVersion": "…"
     },
-    "version": "…",
-    "productType": "…",
-    "operatingSystemVersion": "…"
-  },
-  "device": {
-    "name": "…",
-    "manufacturer": "Garmin",
-    "model": "…"
-  },
-  "metadata": {
-    "HKWasUserEntered": false
-  }
+    "device": {
+        "name": "…",
+        "manufacturer": "Garmin",
+        "model": "…"
+    },
+    "metadata": {
+        "HKWasUserEntered": false
+    }
 }
 ```
 
@@ -79,16 +79,16 @@ This is a useful storage/debug representation, not Apple's wire format:
 
 ### The important standard objects
 
-| User concept | HealthKit representation | Correct FitFight reading pattern | Provenance |
-| --- | --- | --- | --- |
-| Steps | cumulative `HKQuantitySample`, `.stepCount`, unit `count` | Daily `HKStatisticsCollectionQuery` with `.cumulativeSum` | Per raw sample; use `.separateBySource` only for audit |
-| Weight | discrete `HKQuantitySample`, `.bodyMass`, mass unit | Latest sorted sample or `.mostRecent` statistic | Source, optional scale device, optional user-entered metadata |
-| Heart rate | discrete `HKQuantitySample`, `.heartRate`, count/time unit | Raw samples or interval average/min/max | Source/device; motion/sensor metadata may be absent |
-| HRV | `HKQuantitySample`, `.heartRateVariabilitySDNN` | Raw or interval statistics | Standard is SDNN; WHOOP's RMSSD is not equivalent |
-| Sleep | `HKCategorySample`, `.sleepAnalysis` | Read intervals and interpret the category value | Per interval/source; overlaps can occur |
-| Workout | `HKWorkout` plus associated quantity samples | Read activity, dates, duration, statistics; query associated detail separately | Workout and associated samples each carry provenance |
-| Route | separate `HKWorkoutRoute` associated to a workout | Separate permission and route query | Route object/source |
-| Blood pressure | `HKCorrelation` containing systolic and diastolic quantities | Query the correlation and tolerate hidden unauthorized members | Correlation and members carry provenance |
+| User concept   | HealthKit representation                                     | Correct FitFight reading pattern                                               | Provenance                                                    |
+| -------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| Steps          | cumulative `HKQuantitySample`, `.stepCount`, unit `count`    | Daily `HKStatisticsCollectionQuery` with `.cumulativeSum`                      | Per raw sample; use `.separateBySource` only for audit        |
+| Weight         | discrete `HKQuantitySample`, `.bodyMass`, mass unit          | Latest sorted sample or `.mostRecent` statistic                                | Source, optional scale device, optional user-entered metadata |
+| Heart rate     | discrete `HKQuantitySample`, `.heartRate`, count/time unit   | Raw samples or interval average/min/max                                        | Source/device; motion/sensor metadata may be absent           |
+| HRV            | `HKQuantitySample`, `.heartRateVariabilitySDNN`              | Raw or interval statistics                                                     | Standard is SDNN; WHOOP's RMSSD is not equivalent             |
+| Sleep          | `HKCategorySample`, `.sleepAnalysis`                         | Read intervals and interpret the category value                                | Per interval/source; overlaps can occur                       |
+| Workout        | `HKWorkout` plus associated quantity samples                 | Read activity, dates, duration, statistics; query associated detail separately | Workout and associated samples each carry provenance          |
+| Route          | separate `HKWorkoutRoute` associated to a workout            | Separate permission and route query                                            | Route object/source                                           |
+| Blood pressure | `HKCorrelation` containing systolic and diastolic quantities | Query the correlation and tolerate hidden unauthorized members                 | Correlation and members carry provenance                      |
 
 Quantity types are either cumulative, such as steps/distance/energy, or discrete, such as weight/heart rate. That aggregation style determines valid statistics. [HKQuantitySample](https://developer.apple.com/documentation/healthkit/hkquantitysample), [quantity aggregation styles](https://developer.apple.com/documentation/healthkit/hkquantityaggregationstyle), [HKCategorySample](https://developer.apple.com/documentation/healthkit/hkcategorysample), [HKWorkout](https://developer.apple.com/documentation/healthkit/hkworkout), [HKWorkoutRoute](https://developer.apple.com/documentation/healthkit/hkworkoutroute), [HKCorrelation](https://developer.apple.com/documentation/healthkit/hkcorrelation)
 
@@ -172,14 +172,14 @@ The likely transcription was **ClassPass**. Its [developer API](https://develope
 
 ## Secondary platforms
 
-| Platform | Direct/API position | Apple Health position | Practical conclusion |
-| --- | --- | --- | --- |
-| **Suunto** | [Suunto Cloud API](https://apizone.suunto.com/) uses OAuth and partner approval for workout FIT data; public pages mention workouts/daily activity, while newer webhook docs mention sleep and 24/7 activity. | No current first-party field-level support article was found. | API docs are evolving/gated; verify schemas and Health export on-device before relying on it. [Start guide](https://apizone.suunto.com/how-to-start), [webhooks](https://apizone.suunto.com/webhooks) |
-| **COROS** | [Partner API application](https://support.coros.com/hc/en-us/articles/17085887816340-Submit-an-API-Application); public field schema is sparse, with workout/profile authorization. | Current [Apple Health article](https://support.coros.com/hc/en-us/articles/360041549551-Connecting-Apple-Health-with-COROS-App) lists cycling distance, HR, sleep, steps, swim distance, and walk/run distance. Other support pages conflict on workouts. | Useful as a standard Health source, but verify whether `HKWorkout` is emitted. |
-| **Wahoo** | [Wahoo Cloud API](https://developers.wahooligan.com/cloud) uses OAuth/approval for profile, zones, workouts, plans, and routes. | Wahoo's iOS app supports [Apple Health activity sharing](https://support.wahoofitness.com/hc/en-us/articles/14467471126802-Authorized-Apps-Wahoo-app); product-specific behavior differs, and exact fields are not documented. | Prefer HealthKit for workouts; verify per Wahoo product/app. |
-| **Peloton** | No public consumer workout API was located; do not build against private endpoints. | Peloton documents [Apple Health read/write connectivity](https://www.onepeloton.com/blog/wearables-integration), but not a field-level schema. | Accept normalized workouts through Health and validate fields; no direct integration. |
-| **Zwift** | No documented public user API; activity FIT files can be exported. | Its official [third-party platform list](https://support.zwift.com/de/zwift-and-third-party-platforms-SypU0LdVr) does not list Apple Health. Strava cannot reliably re-export imported Zwift activities to Health. | No dependable direct or HealthKit ingestion path; user file import would be a separate feature. |
-| **MyFitnessPal** | Its [API site](https://myfitnesspalapi.com/) says it is not accepting API access requests. | [Apple Health sync](https://support.myfitnesspal.com/hc/en-us/articles/360032271092-Apple-Health-connection-and-syncing) writes meal summaries/most nutrients and weight, and imports same-day exercise/sleep; historical import is limited. | Potential nutrition/weight Health source, not a new direct integration. |
+| Platform         | Direct/API position                                                                                                                                                                                           | Apple Health position                                                                                                                                                                                                                                     | Practical conclusion                                                                                                                                                                                  |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Suunto**       | [Suunto Cloud API](https://apizone.suunto.com/) uses OAuth and partner approval for workout FIT data; public pages mention workouts/daily activity, while newer webhook docs mention sleep and 24/7 activity. | No current first-party field-level support article was found.                                                                                                                                                                                             | API docs are evolving/gated; verify schemas and Health export on-device before relying on it. [Start guide](https://apizone.suunto.com/how-to-start), [webhooks](https://apizone.suunto.com/webhooks) |
+| **COROS**        | [Partner API application](https://support.coros.com/hc/en-us/articles/17085887816340-Submit-an-API-Application); public field schema is sparse, with workout/profile authorization.                           | Current [Apple Health article](https://support.coros.com/hc/en-us/articles/360041549551-Connecting-Apple-Health-with-COROS-App) lists cycling distance, HR, sleep, steps, swim distance, and walk/run distance. Other support pages conflict on workouts. | Useful as a standard Health source, but verify whether `HKWorkout` is emitted.                                                                                                                        |
+| **Wahoo**        | [Wahoo Cloud API](https://developers.wahooligan.com/cloud) uses OAuth/approval for profile, zones, workouts, plans, and routes.                                                                               | Wahoo's iOS app supports [Apple Health activity sharing](https://support.wahoofitness.com/hc/en-us/articles/14467471126802-Authorized-Apps-Wahoo-app); product-specific behavior differs, and exact fields are not documented.                            | Prefer HealthKit for workouts; verify per Wahoo product/app.                                                                                                                                          |
+| **Peloton**      | No public consumer workout API was located; do not build against private endpoints.                                                                                                                           | Peloton documents [Apple Health read/write connectivity](https://www.onepeloton.com/blog/wearables-integration), but not a field-level schema.                                                                                                            | Accept normalized workouts through Health and validate fields; no direct integration.                                                                                                                 |
+| **Zwift**        | No documented public user API; activity FIT files can be exported.                                                                                                                                            | Its official [third-party platform list](https://support.zwift.com/de/zwift-and-third-party-platforms-SypU0LdVr) does not list Apple Health. Strava cannot reliably re-export imported Zwift activities to Health.                                        | No dependable direct or HealthKit ingestion path; user file import would be a separate feature.                                                                                                       |
+| **MyFitnessPal** | Its [API site](https://myfitnesspalapi.com/) says it is not accepting API access requests.                                                                                                                    | [Apple Health sync](https://support.myfitnesspal.com/hc/en-us/articles/360032271092-Apple-Health-connection-and-syncing) writes meal summaries/most nutrients and weight, and imports same-day exercise/sleep; historical import is limited.              | Potential nutrition/weight Health source, not a new direct integration.                                                                                                                               |
 
 ## Recommended FitFight architecture
 

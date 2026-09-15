@@ -58,6 +58,6 @@ for index, (x0, x1) in enumerate(zip(edges, edges[1:]), start=1):
     (folder / "Contents.json").write_text(json.dumps({
         "images": [{"filename": "image.png", "idiom": "universal"}],
         "info": {"author": "xcode", "version": 1},
-    }, indent=2) + "\n")
+    }, indent=4) + "\n")
 
 print("Prepared Companion-goat-hiking-1…5")

@@ -60,7 +60,6 @@ final class HealthKitStepsStore: ObservableObject {
     private var inFlightSync: Task<Bool, Never>?
     private var observerQuery: HKObserverQuery?
     private weak var session: SessionStore?
-    var onLocalAggregates: (@MainActor (FitFightHealthKitStepSync) -> Void)?
     var onBackendSync: (@MainActor () async -> Void)?
     private var activeUserId: UUID?
     private static let pendingLocalDeletionKey = "ff.healthkit.pendingLocalDeletion"
@@ -376,7 +375,6 @@ final class HealthKitStepsStore: ObservableObject {
             }
             sync.activityDays = activity.days
             sync.workouts = activity.workouts
-            onLocalAggregates?(sync)
             try Task.checkCancellation()
             let syncToken = try await trace.measure(.session) { try await session.freshAccessToken() }
             guard activeUserId == userId, session.authSession?.user.id == userId else { throw CancellationError() }

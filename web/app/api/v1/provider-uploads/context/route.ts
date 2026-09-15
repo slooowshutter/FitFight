@@ -6,10 +6,16 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export const GET = apiRoute(async (request, { timing }) => {
-  const { userId } = await measureRequestStage(timing, "auth", () => verifyUser(request));
-  return json(await measureRequestStage(timing, "db", () => getProviderUploadContext(userId)));
+    const { userId } = await measureRequestStage(timing, "auth", () =>
+        verifyUser(request),
+    );
+    return json(
+        await measureRequestStage(timing, "db", () =>
+            getProviderUploadContext(userId),
+        ),
+    );
 }, "healthkit_context");
 
 export function OPTIONS(request: Request) {
-  return corsPreflight(request);
+    return corsPreflight(request);
 }

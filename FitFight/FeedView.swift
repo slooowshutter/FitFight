@@ -11,10 +11,25 @@ final class FeedStore: ObservableObject {
     @Published var isLoading = false
     @Published var isSaving = false
     @Published var error: String?
+    @Published private(set) var reactingPostIDs: Set<UUID> = []
 
     private let api = FitFightAPI()
     private var listLoad = 0
     private var lastFightID: UUID?
+    private var cachedUserID: UUID?
+
+    func activate(userID: UUID?) {
+        guard cachedUserID != userID else { return }
+        cachedUserID = userID
+        listLoad += 1
+        posts = []
+        nextCursor = nil
+        lastFightID = nil
+        error = nil
+        isLoading = false
+        isSaving = false
+        reactingPostIDs = []
+    }
 
     func load(session: SessionStore, fightID: UUID? = nil, more: Bool = false) async {
         #if DEBUG && targetEnvironment(simulator)
@@ -24,6 +39,9 @@ final class FeedStore: ObservableObject {
             return
         }
         #endif
+        let userID = session.authSession?.user.id
+        activate(userID: userID)
+        guard let userID else { return }
         lastFightID = fightID
         listLoad += 1
         let load = listLoad
@@ -33,14 +51,22 @@ final class FeedStore: ObservableObject {
         }
         do {
             let token = try await session.freshAccessToken()
+            guard session.authSession?.user.id == userID, cachedUserID == userID else { return }
             let result: FitFightFightPostList
             if let fightID {
                 result = try await api.fightPosts(fightID: fightID, cursor: more ? nextCursor : nil, accessToken: token)
             } else {
                 result = try await api.feed(cursor: more ? nextCursor : nil, accessToken: token)
             }
-            guard load == listLoad else { return }
-            posts = more ? posts + result.posts.filter { post in !posts.contains(where: { $0.id == post.id }) } : result.posts
+            guard load == listLoad, session.authSession?.user.id == userID, cachedUserID == userID else { return }
+            let pendingReactions = Dictionary(
+                posts.filter { reactingPostIDs.contains($0.id) }.map { ($0.id, $0.reactions) },
+                uniquingKeysWith: { _, last in last }
+            )
+            let refreshed = result.posts.map { post in
+                post.updating(reactions: pendingReactions[post.id])
+            }
+            posts = more ? posts + refreshed.filter { post in !posts.contains(where: { $0.id == post.id }) } : refreshed
             nextCursor = result.nextCursor
             error = nil
             RemoteImageLoader.shared.prefetch(
@@ -53,7 +79,7 @@ final class FeedStore: ObservableObject {
             )
         } catch {
             if Task.isCancelled || error is CancellationError { return }
-            guard load == listLoad else { return }
+            guard load == listLoad, session.authSession?.user.id == userID, cachedUserID == userID else { return }
             self.error = error.localizedDescription
         }
     }
@@ -65,17 +91,21 @@ final class FeedStore: ObservableObject {
         images: [UIImage],
         videoURL: URL? = nil
     ) async -> Bool {
+        guard let userID = session.authSession?.user.id, cachedUserID == userID else { return false }
         isSaving = true
-        defer { isSaving = false }
+        defer { if cachedUserID == userID { isSaving = false } }
         do {
             var mediaIDs: [UUID] = []
             if let videoURL {
                 mediaIDs.append(try await MediaUploader.uploadVideo(videoURL, purpose: "fight_post", session: session, api: api).id)
+                guard session.authSession?.user.id == userID, cachedUserID == userID else { return false }
             }
             for image in images {
                 mediaIDs.append(try await MediaUploader.upload(image, purpose: "fight_post", session: session, api: api).id)
+                guard session.authSession?.user.id == userID, cachedUserID == userID else { return false }
             }
             let token = try await session.freshAccessToken()
+            guard session.authSession?.user.id == userID, cachedUserID == userID else { return false }
             _ = try await api.createFeedPosts(
                 body: body,
                 mediaIDs: mediaIDs,
@@ -83,11 +113,13 @@ final class FeedStore: ObservableObject {
                 taggedUserIDs: [],
                 accessToken: token
             )
+            guard session.authSession?.user.id == userID, cachedUserID == userID else { return false }
             error = nil
             await load(session: session, fightID: lastFightID)
             return true
         } catch {
             if Task.isCancelled || error is CancellationError { return false }
+            guard session.authSession?.user.id == userID, cachedUserID == userID else { return false }
             self.error = error.localizedDescription
             return false
         }
@@ -95,64 +127,111 @@ final class FeedStore: ObservableObject {
 
     func replace(_ post: FitFightFightPost) {
         if let index = posts.firstIndex(where: { $0.id == post.id }) {
-            posts[index] = post
+            posts[index] = reactingPostIDs.contains(post.id)
+                ? post.updating(reactions: posts[index].reactions)
+                : post
         }
     }
 
     func delete(session: SessionStore, post: FitFightFightPost) async {
+        guard let userID = session.authSession?.user.id, cachedUserID == userID else { return }
         do {
             let token = try await session.freshAccessToken()
+            guard session.authSession?.user.id == userID, cachedUserID == userID else { return }
             try await api.deleteFightPost(postID: post.id, accessToken: token)
+            guard session.authSession?.user.id == userID, cachedUserID == userID else { return }
             posts.removeAll { $0.id == post.id }
         } catch {
             if Task.isCancelled || error is CancellationError { return }
+            guard session.authSession?.user.id == userID, cachedUserID == userID else { return }
             self.error = error.localizedDescription
         }
     }
 
     func update(session: SessionStore, post: FitFightFightPost, body: String) async -> Bool {
+        guard let userID = session.authSession?.user.id, cachedUserID == userID else { return false }
         isSaving = true
-        defer { isSaving = false }
+        defer { if cachedUserID == userID { isSaving = false } }
         do {
             let token = try await session.freshAccessToken()
+            guard session.authSession?.user.id == userID, cachedUserID == userID else { return false }
             let result = try await api.updateFightPost(postID: post.id, body: body, accessToken: token)
+            guard session.authSession?.user.id == userID, cachedUserID == userID else { return false }
             replace(result.post)
             error = nil
             return true
         } catch {
             if Task.isCancelled || error is CancellationError { return false }
+            guard session.authSession?.user.id == userID, cachedUserID == userID else { return false }
             self.error = error.localizedDescription
             return false
         }
     }
 
     func report(session: SessionStore, post: FitFightFightPost) async {
+        guard let userID = session.authSession?.user.id, cachedUserID == userID else { return }
         do {
             let token = try await session.freshAccessToken()
+            guard session.authSession?.user.id == userID, cachedUserID == userID else { return }
             try await api.reportFightPost(postID: post.id, reason: "other", accessToken: token)
         } catch {
             if Task.isCancelled || error is CancellationError { return }
+            guard session.authSession?.user.id == userID, cachedUserID == userID else { return }
             self.error = error.localizedDescription
         }
     }
 
     func hide(session: SessionStore, authorID: UUID) async {
+        guard let userID = session.authSession?.user.id, cachedUserID == userID else { return }
         do {
             let token = try await session.freshAccessToken()
+            guard session.authSession?.user.id == userID, cachedUserID == userID else { return }
             try await api.blockFeedAuthor(userID: authorID, accessToken: token)
+            guard session.authSession?.user.id == userID, cachedUserID == userID else { return }
             posts.removeAll { $0.author.userId == authorID }
         } catch {
             if Task.isCancelled || error is CancellationError { return }
+            guard session.authSession?.user.id == userID, cachedUserID == userID else { return }
             self.error = error.localizedDescription
         }
     }
 
     func react(session: SessionStore, post: FitFightFightPost, emoji: String) async {
+        guard let userID = session.authSession?.user.id, cachedUserID == userID,
+              let index = posts.firstIndex(where: { $0.id == post.id }),
+              reactingPostIDs.insert(post.id).inserted else { return }
+        defer {
+            if cachedUserID == userID { reactingPostIDs.remove(post.id) }
+        }
+        let previous = posts[index].reactions
+        let removing = previous.contains { $0.mine && $0.emoji == emoji }
+        var optimistic = previous.compactMap { reaction -> FitFightFightPost.Reaction? in
+            let count = reaction.count - (reaction.mine ? 1 : 0)
+            return count > 0 ? .init(emoji: reaction.emoji, count: count, mine: false) : nil
+        }
+        if !removing {
+            if let selected = optimistic.firstIndex(where: { $0.emoji == emoji }) {
+                optimistic[selected] = .init(emoji: emoji, count: optimistic[selected].count + 1, mine: true)
+            } else {
+                optimistic.append(.init(emoji: emoji, count: 1, mine: true))
+            }
+        }
+        posts[index] = posts[index].updating(reactions: optimistic)
+        error = nil
         do {
             let token = try await session.freshAccessToken()
+            guard session.authSession?.user.id == userID, cachedUserID == userID else { return }
             let result = try await api.reactToFightPost(postID: post.id, emoji: emoji, accessToken: token)
-            replace(post.updating(reactions: result.reactions))
+            guard session.authSession?.user.id == userID, cachedUserID == userID else { return }
+            if let index = posts.firstIndex(where: { $0.id == post.id }) {
+                posts[index] = posts[index].updating(reactions: result.reactions)
+            }
+            error = nil
         } catch {
+            guard session.authSession?.user.id == userID, cachedUserID == userID else { return }
+            if let index = posts.firstIndex(where: { $0.id == post.id }) {
+                posts[index] = posts[index].updating(reactions: previous)
+            }
             if Task.isCancelled || error is CancellationError { return }
             self.error = error.localizedDescription
         }
@@ -188,6 +267,8 @@ struct FeedView: View {
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
     @State private var composing = false
+    @State private var openedPhoto: FeedOpenedPhoto?
+    @State private var isRefreshingFeed = false
 
     var body: some View {
         FFScreen(refresh: feedRefresh) {
@@ -202,7 +283,9 @@ struct FeedView: View {
                 FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
             }
             if feed.posts.isEmpty && feed.isLoading {
-                FFLoadingBlock()
+                if !model.isRefreshingFights && !isRefreshingFeed {
+                    FFLoadingBlock()
+                }
             } else if feed.posts.isEmpty && !feed.isLoading {
                 FFCard {
                     Text(String(localized: "Nothing here yet. Tap + to post."))
@@ -216,7 +299,8 @@ struct FeedView: View {
                     post: post,
                     onOpen: post.fightId.map { fightID in
                         { model.openFightFromFeed(id: fightID.uuidString) }
-                    }
+                    },
+                    onOpenPhoto: { openedPhoto = FeedOpenedPhoto(url: $0) }
                 )
             }
             if feed.nextCursor != nil {
@@ -238,13 +322,20 @@ struct FeedView: View {
                 .fitFightTheme(theme)
                 .presentationBackground(theme.bg)
         }
+        .fullScreenCover(item: $openedPhoto) { photo in
+            FightPostPhotoViewer(url: photo.url)
+                .fitFightTheme(theme)
+                .presentationBackground(theme.bg)
+        }
     }
 
     private var feedRefresh: FFRefreshConfig {
         FFRefreshConfig(
-            isRefreshing: model.isRefreshingFights,
-            message: model.refreshStatusText,
+            isRefreshing: model.isRefreshingFights || isRefreshingFeed,
+            message: model.isRefreshingFights ? model.refreshStatusText : String(localized: "Loading"),
             action: {
+                isRefreshingFeed = true
+                defer { isRefreshingFeed = false }
                 await model.refreshFights(session: session, steps: steps, trigger: .manual)
                 await feed.load(session: session)
             }
@@ -280,7 +371,7 @@ struct FeedComposeSheet: View {
     }
 
     var body: some View {
-        FFScreen(top: AnyView(VersionBanner()), clearance: false) {
+        FFScreen(clearance: false) {
             HStack {
                 Text(String(localized: "New post"))
                     .ffType(.title)
@@ -432,13 +523,14 @@ private struct FeedComposeButton: View {
 
 struct FightPostsSection: View {
     let fightID: UUID
+    @ObservedObject var fightFeed: FeedStore
 
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var feed: FeedStore
     @Environment(\.ffTheme) private var theme
-    @StateObject private var fightFeed = FeedStore()
     @State private var composing = false
+    @State private var openedPhoto: FeedOpenedPhoto?
 
     var body: some View {
         VStack(alignment: .leading, spacing: theme.space.cardGap) {
@@ -457,7 +549,11 @@ struct FightPostsSection: View {
                     .foregroundStyle(theme.emberText)
             }
             ForEach(fightFeed.posts) { post in
-                FightPostCard(post: post, onOpen: nil)
+                FightPostCard(
+                    post: post,
+                    onOpen: nil,
+                    onOpenPhoto: { openedPhoto = FeedOpenedPhoto(url: $0) }
+                )
             }
         }
         .environmentObject(fightFeed)
@@ -473,6 +569,11 @@ struct FightPostsSection: View {
             .environmentObject(feed)
             .fitFightTheme(theme)
             .presentationBackground(theme.bg)
+        }
+        .fullScreenCover(item: $openedPhoto) { photo in
+            FightPostPhotoViewer(url: photo.url)
+                .fitFightTheme(theme)
+                .presentationBackground(theme.bg)
         }
     }
 }
@@ -530,6 +631,7 @@ struct FightPostComposer: View {
                                     .scaledToFill()
                                     .frame(width: 72, height: 72)
                                     .clipShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
+                                    .contentShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
                                     .onTapGesture {
                                         images.remove(at: index)
                                     }
@@ -716,6 +818,7 @@ struct FightPostComposer: View {
 struct FightPostCard: View {
     let post: FitFightFightPost
     var onOpen: (() -> Void)?
+    var onOpenPhoto: (URL) -> Void
 
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var feed: FeedStore
@@ -786,7 +889,12 @@ struct FightPostCard: View {
                         if media.kind == "video" {
                             FightPostVideo(url: url)
                         } else {
-                            FightPostPhoto(url: url, width: media.width, height: media.height)
+                            FightPostPhoto(
+                                url: url,
+                                width: media.width,
+                                height: media.height,
+                                onOpen: { onOpenPhoto(url) }
+                            )
                         }
                     }
                 }
@@ -841,7 +949,7 @@ private struct FightPostEditSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        FFScreen(top: AnyView(VersionBanner()), clearance: false) {
+        FFScreen(clearance: false) {
             HStack {
                 Text(String(localized: "Edit post"))
                     .ffType(.title)
@@ -877,18 +985,21 @@ private struct FightPostEditSheet: View {
     }
 }
 
+private struct FeedOpenedPhoto: Identifiable {
+    let url: URL
+    var id: String { url.absoluteString }
+}
+
 private struct FightPostPhoto: View {
     let url: URL
     let width: Int
     let height: Int
+    let onOpen: () -> Void
 
     @Environment(\.ffTheme) private var theme
-    @State private var opened = false
 
     var body: some View {
-        Button {
-            opened = true
-        } label: {
+        Button(action: onOpen) {
             Color.clear
                 .aspectRatio(ratio, contentMode: .fit)
                 .frame(maxWidth: .infinity)
@@ -899,14 +1010,10 @@ private struct FightPostPhoto: View {
                     }
                 }
                 .clipShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
+                .contentShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
         }
         .buttonStyle(FFHapticPlainStyle())
         .accessibilityLabel(String(localized: "View photo"))
-        .fullScreenCover(isPresented: $opened) {
-            FightPostPhotoViewer(url: url)
-                .fitFightTheme(theme)
-                .presentationBackground(theme.bg)
-        }
     }
 
     private var ratio: CGFloat {
@@ -922,10 +1029,14 @@ private struct FightPostPhotoViewer: View {
     var body: some View {
         ZStack {
             theme.bg.ignoresSafeArea()
+                .contentShape(Rectangle())
+                .onTapGesture { dismiss() }
             RemotePhoto(url: url, kind: .photo, contentMode: .fit) {
                 theme.control
             }
             .ignoresSafeArea()
+            .contentShape(Rectangle())
+            .onTapGesture { dismiss() }
             .accessibilityHidden(true)
             VStack {
                 HStack {

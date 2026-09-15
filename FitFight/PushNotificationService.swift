@@ -13,6 +13,9 @@ final class PushNotificationService: NSObject, ObservableObject {
     private let api = FitFightAPI()
     private var session: SessionStore?
     private var askedThisSession = false
+    private var deviceToken: String?
+    private var installationTask: Task<Void, Never>?
+    private var isSignedOut = false
     private static let declinedPrePromptKey = "ff.push.declinedPrePrompt"
 
     func configure(session: SessionStore) {
@@ -75,37 +78,49 @@ final class PushNotificationService: NSObject, ObservableObject {
         let granted = (try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])) ?? false
         await refreshAuthorizationStatus()
         if granted {
-            UIApplication.shared.registerForRemoteNotifications()
+            await registerIfAuthorized()
         }
     }
 
-    func registerIfAuthorized() {
-        guard permissionStatus == .authorized else { return }
+    func registerIfAuthorized() async {
+        guard permissionStatus == .authorized, let userID = session?.authSession?.user.id else { return }
+        isSignedOut = false
+        await installationTask?.value
+        guard !isSignedOut, session?.authSession?.user.id == userID else { return }
         UIApplication.shared.registerForRemoteNotifications()
     }
 
     func handleDeviceToken(_ deviceToken: Data) async {
-        guard apnsConfigured, permissionStatus == .authorized,
-              let session, session.authSession != nil else { return }
         let token = deviceToken.map { String(format: "%02x", $0) }.joined()
+        self.deviceToken = token
+        guard apnsConfigured, permissionStatus == .authorized, !isSignedOut,
+              let session, let userID = session.authSession?.user.id else { return }
         let locale = Locale.current.language.languageCode?.identifier == "fr" ? "fr" : "en"
         #if DEBUG
         let environment = "sandbox"
         #else
         let environment = "production"
         #endif
-        do {
-            let access = try await session.freshAccessToken()
-            try await api.registerDeviceInstallation(
-                token: token,
-                apnsEnvironment: environment,
-                locale: locale,
-                permissionStatus: "authorized",
-                accessToken: access
-            )
-        } catch {
-            // Push registration is best-effort; fights still work without it.
+        let previous = installationTask
+        let work = Task { @MainActor in
+            await previous?.value
+            guard !self.isSignedOut, session.authSession?.user.id == userID else { return }
+            do {
+                let access = try await session.freshAccessToken()
+                guard !self.isSignedOut, session.authSession?.user.id == userID else { return }
+                try await self.api.registerDeviceInstallation(
+                    token: token,
+                    apnsEnvironment: environment,
+                    locale: locale,
+                    permissionStatus: "authorized",
+                    accessToken: access
+                )
+            } catch {
+                // Push registration is best-effort; fights still work without it.
+            }
         }
+        installationTask = work
+        await work.value
     }
 
     func handleRegistrationFailure() {
@@ -121,13 +136,20 @@ final class PushNotificationService: NSObject, ObservableObject {
     }
 
     func revokeLocalRegistration() async {
-        guard let session, let userId = session.authSession?.user.id else { return }
-        await revokeInstallations(for: userId)
-    }
-
-    private func revokeInstallations(for userId: UUID) async {
-        _ = userId
-        // Tokens are revoked server-side on account delete; sign-out keeps the row for re-login.
+        isSignedOut = true
+        UIApplication.shared.unregisterForRemoteNotifications()
+        UNUserNotificationCenter.current().removeAllDeliveredNotifications()
+        guard let deviceToken, let access = session?.authSession?.accessToken else { return }
+        let previous = installationTask
+        installationTask = Task { @MainActor in
+            // A registration already sent to the server must finish before revocation.
+            await previous?.value
+            do {
+                try await self.api.revokeDeviceInstallation(token: deviceToken, accessToken: access)
+            } catch {
+                // Local unregistration keeps signed-out devices quiet even while offline.
+            }
+        }
     }
 }
 
@@ -136,7 +158,9 @@ extension PushNotificationService: UNUserNotificationCenterDelegate {
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
-        [.banner, .sound]
+        await MainActor.run {
+            self.session?.isSignedIn == true && !self.isSignedOut ? [.banner, .sound] : []
+        }
     }
 
     nonisolated func userNotificationCenter(

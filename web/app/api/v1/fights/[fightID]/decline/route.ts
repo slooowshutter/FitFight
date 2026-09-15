@@ -5,11 +5,18 @@ import { declineMembership } from "@/lib/supabase/queries/decline-membership-sup
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export const POST = apiRoute<{ fightID: string }>(async (request, { params }) => {
-  const { userId } = await verifyUser(request);
-  return json(await declineMembership(userId, requireUuid(params.fightID, "fightID")));
-});
+export const POST = apiRoute<{ fightID: string }>(
+    async (request, { params }) => {
+        const { userId } = await verifyUser(request);
+        return json(
+            await declineMembership(
+                userId,
+                requireUuid(params.fightID, "fightID"),
+            ),
+        );
+    },
+);
 
 export function OPTIONS(request: Request) {
-  return corsPreflight(request);
+    return corsPreflight(request);
 }

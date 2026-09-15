@@ -34,6 +34,8 @@ struct FightDetailView: View {
     @State private var fightsRevision = 0
     @State private var pane: FightDetailPane = .stats
     @State private var showingEdit = false
+    @StateObject private var fightFeed = FeedStore()
+    @State private var isRefreshingFeed = false
 
     init(fight: Fight, pane: FightDetailPane = .stats) {
         initialFight = fight
@@ -104,7 +106,7 @@ struct FightDetailView: View {
                     historyPane
                 case .feed:
                     if let fightID = UUID(uuidString: fight.id) {
-                        FightPostsSection(fightID: fightID)
+                        FightPostsSection(fightID: fightID, fightFeed: fightFeed)
                     }
                 case .share:
                     shareCard
@@ -136,10 +138,15 @@ struct FightDetailView: View {
 
     private var fightsRefresh: FFRefreshConfig {
         FFRefreshConfig(
-            isRefreshing: model.isRefreshingFights,
-            message: model.refreshStatusText,
+            isRefreshing: model.isRefreshingFights || isRefreshingFeed,
+            message: model.isRefreshingFights ? model.refreshStatusText : String(localized: "Loading"),
             action: {
                 await model.refreshFights(session: session, steps: steps, trigger: .manual)
+                if pane == .feed, let fightID = UUID(uuidString: fight.id) {
+                    isRefreshingFeed = true
+                    defer { isRefreshingFeed = false }
+                    await fightFeed.load(session: session, fightID: fightID)
+                }
             }
         )
     }
@@ -319,10 +326,8 @@ struct FightDetailView: View {
 
     @ViewBuilder
     private var daysSection: some View {
-        if !fight.days.isEmpty {
-            FFSection(title: String(localized: "Every day so far")) {
-                daysCard(initialKind: isPendingSettlement ? .pace : nil)
-            }
+        FFSection(title: String(localized: "Every day so far")) {
+            daysCard(initialKind: isPendingSettlement ? .pace : nil)
         }
     }
 
@@ -610,7 +615,7 @@ struct FightDetailView: View {
     private func daysCard(initialKind: FightDayChartKind? = nil) -> some View {
         FFCard {
             VStack(alignment: .leading, spacing: 0) {
-                FightDayChartsView(days: fight.days, initialKind: initialKind) { value in
+                FightDayChartsView(days: fight.days, standings: fight.standings, initialKind: initialKind) { value in
                     model.formatScore(value, metric: fight.metric)
                 }
                 if let note = fight.paceNote {

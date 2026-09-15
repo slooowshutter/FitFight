@@ -19,7 +19,7 @@ import type {
   ReportFightPostResponse,
   UpdateFightPostRequest,
 } from "@/lib/types/feed/fight-post";
-import { stockCompanionIdSchema } from "@/lib/types/companions/companion";
+import { companionIdSchema } from "@/lib/types/companions/companion";
 import {
   loadReadyMedia,
   mapMedia,
@@ -344,7 +344,7 @@ async function mapPosts(userId: string, rows: PostRow[], database: Sql): Promise
       handle: row.author_handle,
       display_name: row.author_display_name,
       avatar: avatarFromPost(row, row.avatar_object_path ? urls.get(row.avatar_object_path) ?? null : null),
-      companion_id: stockCompanionIdSchema.nullable().parse(row.author_companion_id),
+      companion_id: companionIdSchema.nullable().parse(row.author_companion_id),
     },
     media: attachments
       .filter((attachment) => attachment.post_id === row.id)
@@ -990,7 +990,7 @@ export async function listFeedPeople(
       handle: row.handle,
       display_name: row.display_name,
       avatar,
-      companion_id: stockCompanionIdSchema.nullable().parse(row.companion_id),
+      companion_id: companionIdSchema.nullable().parse(row.companion_id),
     });
   }
   return { people };

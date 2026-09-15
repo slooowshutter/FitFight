@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 15,
+            notes: "Choose a companion from a grid of animals, or Custom. Custom is one description: species, breed, accessories, colors."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 15,
             notes: "Editing a fight now opens the same summary as creating one. Change jumps to that part, then back. If you created it, Delete at the bottom ends the fight."
         ),
         ReleaseNote(

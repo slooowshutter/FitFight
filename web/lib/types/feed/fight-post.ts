@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { stockCompanionIdSchema } from "@/lib/types/companions/companion";
+import { companionIdSchema } from "@/lib/types/companions/companion";
 import { mediaObjectSchema } from "@/lib/types/media/media";
 
 export const feedAudienceValues = ["fight", "main"] as const;
@@ -13,7 +13,7 @@ export const fightPostAuthorSchema = z.object({
   handle: z.string(),
   display_name: z.string(),
   avatar: mediaObjectSchema.nullable(),
-  companion_id: stockCompanionIdSchema.nullable().default(null),
+  companion_id: companionIdSchema.nullable().default(null),
 }).strict();
 
 export const fightPostTagSchema = z.object({
@@ -126,7 +126,7 @@ export const feedPersonSchema = z.object({
   handle: z.string(),
   display_name: z.string(),
   avatar: mediaObjectSchema.nullable(),
-  companion_id: stockCompanionIdSchema.nullable().default(null),
+  companion_id: companionIdSchema.nullable().default(null),
 }).strict();
 
 export const feedPeopleResponseSchema = z.object({

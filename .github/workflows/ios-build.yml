@@ -2,98 +2,129 @@
 name: iOS simulator build
 
 on:
-  pull_request:
-    paths:
-      - "FitFight/**"
-      - "FitFight.xcodeproj/**"
-      - "tests/**"
-      - "contracts/fixtures/**"
-      - "scripts/check_native_api_boundary.py"
-      - "docs/design/source/tokens.json"
-      - "scripts/check_localizations.py"
-      - "fastlane/**"
-      - ".github/workflows/ios-build.yml"
-  push:
-    branches: [main, develop, preview]
-    paths:
-      - "FitFight/**"
-      - "FitFight.xcodeproj/**"
-      - "tests/**"
-      - "contracts/fixtures/**"
-      - "scripts/check_native_api_boundary.py"
-      - "docs/design/source/tokens.json"
-      - "scripts/check_localizations.py"
-      - "fastlane/**"
-      - ".github/workflows/ios-build.yml"
+    pull_request:
+        paths:
+            - "FitFight/**"
+            - "FitFight.xcodeproj/**"
+            - "tests/**"
+            - "contracts/fixtures/**"
+            - "scripts/check_native_api_boundary.py"
+            - "scripts/check_remote_photo_loading.py"
+            - "scripts/test_fight_discovery.py"
+            - "scripts/test_native_state.py"
+            - "scripts/test_fight_live_updates.py"
+            - "scripts/test_fight_chart_scores.py"
+            - "scripts/test_push_state.py"
+            - "docs/design/source/tokens.json"
+            - "scripts/check_localizations.py"
+            - "fastlane/**"
+            - ".github/workflows/ios-build.yml"
+    push:
+        branches: [main, develop, preview]
+        paths:
+            - "FitFight/**"
+            - "FitFight.xcodeproj/**"
+            - "tests/**"
+            - "contracts/fixtures/**"
+            - "scripts/check_native_api_boundary.py"
+            - "scripts/check_remote_photo_loading.py"
+            - "scripts/test_fight_discovery.py"
+            - "scripts/test_native_state.py"
+            - "scripts/test_fight_live_updates.py"
+            - "scripts/test_fight_chart_scores.py"
+            - "scripts/test_push_state.py"
+            - "docs/design/source/tokens.json"
+            - "scripts/check_localizations.py"
+            - "fastlane/**"
+            - ".github/workflows/ios-build.yml"
 
 concurrency:
-  group: ios-build-${{ github.ref }}
-  cancel-in-progress: true
+    group: ios-build-${{ github.ref }}
+    cancel-in-progress: true
 
 jobs:
-  design-previews:
-    name: Design tokens
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-      - name: Release availability
-        run: ruby fastlane/testflight_test.rb
-      - name: Native API boundary
-        run: python3 scripts/check_native_api_boundary.py
-      - name: tokens.json is valid and in sync
-        run: |
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          app = json.loads(Path("FitFight/DesignSystem/tokens.json").read_text())
-          source = json.loads(Path("docs/design/source/tokens.json").read_text())
-          if app != source:
-              raise SystemExit("FitFight/DesignSystem/tokens.json must match docs/design/source/tokens.json")
-          print("tokens ok", len(app.get("colors", {}).get("accents", {})), "accents")
-          PY
+    design-previews:
+        name: Design tokens
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        permissions:
+            contents: read
+        steps:
+            - uses: actions/checkout@v4
+            - name: Release availability
+              run: ruby fastlane/testflight_test.rb
+            - name: Native API boundary
+              run: python3 scripts/check_native_api_boundary.py
+            - name: tokens.json is valid and in sync
+              run: |
+                  python3 - <<'PY'
+                  import json
+                  from pathlib import Path
+                  app = json.loads(Path("FitFight/DesignSystem/tokens.json").read_text())
+                  source = json.loads(Path("docs/design/source/tokens.json").read_text())
+                  if app != source:
+                      raise SystemExit("FitFight/DesignSystem/tokens.json must match docs/design/source/tokens.json")
+                  print("tokens ok", len(app.get("colors", {}).get("accents", {})), "accents")
+                  PY
 
-  build:
-    name: Simulator
-    runs-on: macos-26
-    timeout-minutes: 30
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
+    build:
+        name: Simulator
+        runs-on: macos-26
+        timeout-minutes: 30
+        permissions:
+            contents: read
+        steps:
+            - uses: actions/checkout@v4
 
-      - name: Validate English and French localizations
-        run: python3 scripts/check_localizations.py
+            - name: Validate English and French localizations
+              run: python3 scripts/check_localizations.py
 
-      - name: Verify required app updates
-        run: |
-          swiftc -swift-version 5 -target "$(uname -m)-apple-macosx13.0" FitFight/AppUpdateChecker.swift tests/AppUpdateCheckerTests.swift -o /tmp/fitfight-update-tests
-          /tmp/fitfight-update-tests
+            - name: Verify app update prompts and cancellation
+              timeout-minutes: 1
+              run: |
+                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx13.0" FitFight/AppUpdateChecker.swift tests/AppUpdateCheckerTests.swift -o /tmp/fitfight-update-tests
+                  /tmp/fitfight-update-tests
 
-      - name: Verify remaining-time labels
-        run: |
-          swiftc -swift-version 5 -target "$(uname -m)-apple-macosx13.0" FitFight/RemainingTime.swift tests/RemainingTimeTests.swift -o /tmp/fitfight-remaining-tests
-          /tmp/fitfight-remaining-tests
+            - name: Verify remaining-time labels
+              run: |
+                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx13.0" FitFight/RemainingTime.swift tests/RemainingTimeTests.swift -o /tmp/fitfight-remaining-tests
+                  /tmp/fitfight-remaining-tests
 
-      - name: Verify remote photo cache keys
-        run: |
-          swiftc -swift-version 5 -target "$(uname -m)-apple-macosx13.0" FitFight/RemoteImageCache.swift tests/RemoteImageCacheTests.swift -o /tmp/fitfight-image-cache-tests
-          /tmp/fitfight-image-cache-tests
+            - name: Verify remote photo cache keys
+              run: |
+                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx13.0" FitFight/RemoteImageCache.swift tests/RemoteImageCacheTests.swift -o /tmp/fitfight-image-cache-tests
+                  /tmp/fitfight-image-cache-tests
 
-      - name: Verify native API contracts
-        run: |
-          swiftc -swift-version 5 -target "$(uname -m)-apple-macosx13.0" FitFight/Media.swift FitFight/Profile.swift FitFight/FightSnapshot.swift tests/APIContractTests.swift -o /tmp/fitfight-contract-tests
-          /tmp/fitfight-contract-tests contracts/fixtures
+            - name: Verify live standings and snapshot ordering
+              run: python3 scripts/test_fight_live_updates.py
 
-      - name: Build for iOS Simulator
-        run: |
-          set -o pipefail
-          xcodebuild \
-            -project FitFight.xcodeproj \
-            -scheme FitFight \
-            -configuration Debug \
-            -destination 'generic/platform=iOS Simulator' \
-            CODE_SIGNING_ALLOWED=NO \
-            build
+            - name: Verify Fight charts use confirmed scores
+              run: python3 scripts/test_fight_chart_scores.py
+
+            - name: Verify native refresh and feed state
+              run: python3 scripts/test_native_state.py
+
+            - name: Verify remote photo loading
+              run: python3 scripts/check_remote_photo_loading.py
+
+            - name: Verify push signout and session restoration
+              run: python3 scripts/test_push_state.py
+
+            - name: Verify fight discovery caching
+              run: python3 scripts/test_fight_discovery.py
+
+            - name: Verify native API contracts
+              run: |
+                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx13.0" FitFight/Media.swift FitFight/Profile.swift FitFight/FightSnapshot.swift tests/APIContractTests.swift -o /tmp/fitfight-contract-tests
+                  /tmp/fitfight-contract-tests contracts/fixtures
+
+            - name: Build for iOS Simulator
+              run: |
+                  set -o pipefail
+                  xcodebuild \
+                    -project FitFight.xcodeproj \
+                    -scheme FitFight \
+                    -configuration Debug \
+                    -destination 'generic/platform=iOS Simulator' \
+                    CODE_SIGNING_ALLOWED=NO \
+                    build

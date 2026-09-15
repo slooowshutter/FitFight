@@ -10,13 +10,13 @@ Nothing in this repo sends push today. `docs/status.md` blocked notifications un
 
 Anchored to **`ends_at`**, not “when the closer first noticed.”
 
-| Slot | When | Audience | `copy_key` idea |
-|---|---|---|---|
-| `t0` | `ends_at` | Every accepted member | Fight ended. Open FitFight. Pending variant: sync your steps. |
-| `t12` | `ends_at + 12h` | Still `final_steps_complete = false` | 12 hours left. Open or you lose. |
-| `t18` | `ends_at + 18h` | Still pending | 6 hours left. Open or you lose. |
-| `t23` | `ends_at + 23h` | Still pending | Last hour. Open or you lose. |
-| `final` | Fight becomes `final` | Every accepted member | Result is in. Open FitFight. |
+| Slot    | When                  | Audience                             | `copy_key` idea                                               |
+| ------- | --------------------- | ------------------------------------ | ------------------------------------------------------------- |
+| `t0`    | `ends_at`             | Every accepted member                | Fight ended. Open FitFight. Pending variant: sync your steps. |
+| `t12`   | `ends_at + 12h`       | Still `final_steps_complete = false` | 12 hours left. Open or you lose.                              |
+| `t18`   | `ends_at + 18h`       | Still pending                        | 6 hours left. Open or you lose.                               |
+| `t23`   | `ends_at + 23h`       | Still pending                        | Last hour. Open or you lose.                                  |
+| `final` | Fight becomes `final` | Every accepted member                | Result is in. Open FitFight.                                  |
 
 Skip `t12` / `t18` / `t23` if that person already submitted. Cancel leftover grace intents when the fight finals early. One visible alert per `(fight_id, user_id, slot)`.
 
@@ -38,14 +38,14 @@ Title = **FitFight**. Body = one sentence. Tap = `/fights/{uuid}` only.
 
 Suggested bodies:
 
-| Slot | EN | FR |
-|---|---|---|
-| t0 everyone | A fight ended. Open FitFight. | Un défi est terminé. Ouvrez FitFight. |
-| t0 pending | A fight ended. Open FitFight to sync your steps. | Un défi est terminé. Ouvrez FitFight pour synchroniser vos pas. |
-| t12 | 12 hours left. Open FitFight or you lose. | 12 heures restantes. Ouvrez FitFight ou vous perdez. |
-| t18 | 6 hours left. Open FitFight or you lose. | 6 heures restantes. Ouvrez FitFight ou vous perdez. |
-| t23 | Last hour. Open FitFight or you lose. | Dernière heure. Ouvrez FitFight ou vous perdez. |
-| final | The result is in. Open FitFight. | Le résultat est tombé. Ouvrez FitFight. |
+| Slot        | EN                                               | FR                                                              |
+| ----------- | ------------------------------------------------ | --------------------------------------------------------------- |
+| t0 everyone | A fight ended. Open FitFight.                    | Un défi est terminé. Ouvrez FitFight.                           |
+| t0 pending  | A fight ended. Open FitFight to sync your steps. | Un défi est terminé. Ouvrez FitFight pour synchroniser vos pas. |
+| t12         | 12 hours left. Open FitFight or you lose.        | 12 heures restantes. Ouvrez FitFight ou vous perdez.            |
+| t18         | 6 hours left. Open FitFight or you lose.         | 6 heures restantes. Ouvrez FitFight ou vous perdez.             |
+| t23         | Last hour. Open FitFight or you lose.            | Dernière heure. Ouvrez FitFight ou vous perdez.                 |
+| final       | The result is in. Open FitFight.                 | Le résultat est tombé. Ouvrez FitFight.                         |
 
 Do **not** put W/L or step totals on the lock screen even at `final`.
 
@@ -53,14 +53,14 @@ Do **not** put W/L or step totals on the lock screen even at `final`.
 
 ## What exists vs missing
 
-| Exists | Missing |
-|---|---|
-| Closer + `awaiting_final_sync` + 24h grace | `aps-environment` in `FitFight.entitlements` |
-| `CRON_SECRET` on `/api/internal/close-fights` | `UNUserNotificationCenter`, token register |
-| AES-256-GCM pattern on `private.apple_sign_in_tokens` | `device_installations`, outbox |
-| AASA `/j/*`, `/r/*` | AASA + `handleOpenURL` `/fights/*` |
-| Daily Vercel cron 03:00 UTC | 15-minute worker |
-| Review notes: “no push” | Must change before App Store, not before staging try |
+| Exists                                                | Missing                                              |
+| ----------------------------------------------------- | ---------------------------------------------------- |
+| Closer + `awaiting_final_sync` + 24h grace            | `aps-environment` in `FitFight.entitlements`         |
+| `CRON_SECRET` on `/api/internal/close-fights`         | `UNUserNotificationCenter`, token register           |
+| AES-256-GCM pattern on `private.apple_sign_in_tokens` | `device_installations`, outbox                       |
+| AASA `/j/*`, `/r/*`                                   | AASA + `handleOpenURL` `/fights/*`                   |
+| Daily Vercel cron 03:00 UTC                           | 15-minute worker                                     |
+| Review notes: “no push”                               | Must change before App Store, not before staging try |
 
 ---
 
@@ -176,11 +176,11 @@ Ask permission once the person has a live fight, **before** `ends_at`, or the T+
 
 Three different Apple keys. Do not reuse them.
 
-| Key | Where | Use |
-|---|---|---|
-| App Store Connect `.p8` | GitHub Actions | TestFlight upload (already) |
-| Sign in with Apple | Vercel | Login / delete (already) |
-| **FitFight APNs** (new) | Vercel Preview + Production only | This feature |
+| Key                     | Where                            | Use                         |
+| ----------------------- | -------------------------------- | --------------------------- |
+| App Store Connect `.p8` | GitHub Actions                   | TestFlight upload (already) |
+| Sign in with Apple      | Vercel                           | Login / delete (already)    |
+| **FitFight APNs** (new) | Vercel Preview + Production only | This feature                |
 
 Vercel names: `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_PRIVATE_KEY`, `APNS_TOPIC=com.fitfight.mvp`, `APNS_TOKEN_ENCRYPTION_KEY` (32-byte, **not** the Sign in with Apple encryption key).
 
@@ -190,14 +190,14 @@ Never put the `.p8` in git, chat, or the iOS bundle.
 
 ## Failure modes
 
-| Failure | What must still happen |
-|---|---|
-| No token / denied | Fight still finals at T+24. In-app P / settlement UI still true. |
-| Push dropped | Same. Open app → closer + HealthKit upload. |
-| Cron miss | Next 15-minute tick. Grace copy has `expires_at`. |
-| Daily cron only | Worst case: transition/finalize lag ~24h. Why G exists. |
-| User opens without a tap | Sync + closer run. Skip leftover grace intents. |
-| Account deleted | Cascade installations + intents. No post-delete send. |
+| Failure                  | What must still happen                                           |
+| ------------------------ | ---------------------------------------------------------------- |
+| No token / denied        | Fight still finals at T+24. In-app P / settlement UI still true. |
+| Push dropped             | Same. Open app → closer + HealthKit upload.                      |
+| Cron miss                | Next 15-minute tick. Grace copy has `expires_at`.                |
+| Daily cron only          | Worst case: transition/finalize lag ~24h. Why G exists.          |
+| User opens without a tap | Sync + closer run. Skip leftover grace intents.                  |
+| Account deleted          | Cascade installations + intents. No post-delete send.            |
 
 ---
 

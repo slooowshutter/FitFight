@@ -6,11 +6,11 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export const GET = apiRoute<{ code: string }>(async (request, { params }) => {
-  const { userId } = await verifyUser(request);
-  const fight = await getJoinableFightByCode(userId, params.code);
-  return json(fight);
+    const { userId } = await verifyUser(request);
+    const fight = await getJoinableFightByCode(userId, params.code);
+    return json(fight);
 });
 
 export function OPTIONS(request: Request) {
-  return corsPreflight(request);
+    return corsPreflight(request);
 }

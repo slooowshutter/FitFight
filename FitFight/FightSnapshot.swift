@@ -1,5 +1,16 @@
 import Foundation
 
+struct FightStepCheckpoint: Codable, Equatable {
+    let day: String
+    let cutoffAt: String
+    let steps: Int
+
+    enum CodingKeys: String, CodingKey {
+        case day, steps
+        case cutoffAt = "cutoff_at"
+    }
+}
+
 struct FitFightSnapshot: Decodable {
     let fights: [FightRow]
     let members: [MemberRow]
@@ -108,6 +119,7 @@ struct MemberRow: Decodable {
     let finalValue: Double?
     let lastSyncedAt: Date?
     let finalStepsComplete: Bool?
+    let stepCheckpoints: [FightStepCheckpoint]?
 
     enum CodingKeys: String, CodingKey {
         case fightId = "fight_id"
@@ -118,6 +130,7 @@ struct MemberRow: Decodable {
         case finalValue = "final_value"
         case lastSyncedAt = "last_synced_at"
         case finalStepsComplete = "final_steps_complete"
+        case stepCheckpoints = "step_checkpoints"
     }
 
     init(from decoder: Decoder) throws {
@@ -129,6 +142,7 @@ struct MemberRow: Decodable {
         currentValue = Self.number(container, .currentValue)
         finalValue = Self.number(container, .finalValue)
         finalStepsComplete = try container.decodeIfPresent(Bool.self, forKey: .finalStepsComplete)
+        stepCheckpoints = try container.decodeIfPresent([FightStepCheckpoint].self, forKey: .stepCheckpoints)
         if let date = try? container.decode(Date.self, forKey: .lastSyncedAt) {
             lastSyncedAt = date
         } else if let raw = try container.decodeIfPresent(String.self, forKey: .lastSyncedAt) {

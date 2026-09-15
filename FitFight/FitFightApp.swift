@@ -6,7 +6,8 @@ extension AppUpdateChecker {
     static let shared = AppUpdateChecker(
         version: AppVersion.marketing,
         build: AppVersion.build,
-        releaseURL: APIConfig.publicOrigin.appendingPathComponent("api/app-release")
+        releaseURL: APIConfig.publicOrigin.appendingPathComponent("api/app-release"),
+        isTestFlight: AppVersion.backend == "staging"
     )
 }
 
@@ -63,6 +64,7 @@ struct FitFightApp: App {
     @StateObject private var session: SessionStore
     @StateObject private var steps: HealthKitStepsStore
     @StateObject private var feed = FeedStore()
+    @StateObject private var fightLiveUpdates = FightLiveUpdates()
     @StateObject private var push = PushNotificationService.shared
 
     init() {
@@ -125,16 +127,13 @@ struct FitFightApp: App {
                         #endif
                         return
                     }
-                    steps.onLocalAggregates = { sync in
-                        model.applyLocalHealthKitScores(sync)
-                    }
                     steps.onBackendSync = {
                         await model.refreshFromServer(session: session)
                     }
                     push.configure(session: session)
                     await push.refreshServerStatus()
                     await push.refreshAuthorizationStatus()
-                    push.registerIfAuthorized()
+                    await push.registerIfAuthorized()
                     if ScreenshotExport.isEnabled {
                         ScreenshotExport.exportAll()
                     }
@@ -142,10 +141,21 @@ struct FitFightApp: App {
                     await session.devAdoptSessionIfNeeded()
                     #endif
                 }
+                .task(id: scenePhase == .active && appUpdate.allowsUse ? session.authSession?.user.id : nil) {
+                    guard !CompanionPreview.isEnabled, !ScreenshotExport.isEnabled else { return }
+                    let userID = scenePhase == .active && appUpdate.allowsUse ? session.authSession?.user.id : nil
+                    await fightLiveUpdates.activate(client: session.client, userID: userID) {
+                        guard session.authSession?.user.id == userID, appUpdate.allowsUse else { return }
+                        await model.refreshFromServer(session: session, performMaintenance: false)
+                    }
+                }
                 .task(id: session.authSession?.user.id) {
                     guard !CompanionPreview.isEnabled else { return }
+                    feed.activate(userID: session.authSession?.user.id)
                     guard let userId = session.authSession?.user.id else { return }
                     CrashReporting.identify(userId: userId)
+                    await push.refreshAuthorizationStatus()
+                    await push.registerIfAuthorized()
                 }
                 .task(id: appUpdate.allowsUse ? session.authSession?.user.id : nil) {
                     guard !CompanionPreview.isEnabled else { return }
@@ -166,6 +176,10 @@ struct FitFightApp: App {
                     guard appUpdate.allowsUse else { return }
                     await model.consumePendingLinks(session: session)
                 }
+                .task(id: appUpdate.allowsUse ? session.authSession?.user.id : nil) {
+                    guard !CompanionPreview.isEnabled, appUpdate.allowsUse else { return }
+                    await model.loadFightDiscovery(session: session, force: true)
+                }
                 .onOpenURL { url in
                     guard !CompanionPreview.isEnabled else { return }
                     Task { await model.handleOpenURL(url, session: session) }
@@ -180,7 +194,9 @@ struct FitFightApp: App {
                     guard phase == .active, session.authSession != nil else { return }
                     Task {
                         guard await AppUpdateChecker.shared.permitsRequests() else { return }
+                        async let discovery: Void = model.loadFightDiscovery(session: session, force: true)
                         await model.refreshFights(session: session, steps: steps)
+                        await discovery
                     }
                 }
         }

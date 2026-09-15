@@ -13,47 +13,47 @@ select has_table('private', 'fight_post_comment_reports', 'comment reports stay 
 select has_table('private', 'feed_blocks', 'feed blocks stay private');
 
 select ok(
-  exists (
-    select 1 from information_schema.columns
-    where table_schema = 'public' and table_name = 'profiles' and column_name = 'avatar_media_id'
-  ),
-  'profiles can point at a photo'
+    exists (
+        select 1 from information_schema.columns
+        where table_schema = 'public' and table_name = 'profiles' and column_name = 'avatar_media_id'
+    ),
+    'profiles can point at a photo'
 );
 
 select is(
-  (select public from storage.buckets where id = 'user-media'),
-  false,
-  'user-media is a private bucket'
+    (select public from storage.buckets where id = 'user-media'),
+    false,
+    'user-media is a private bucket'
 );
 select is(
-  (select file_size_limit from storage.buckets where id = 'user-media'),
-  52428800::bigint,
-  'user-media allows photos and short videos'
+    (select file_size_limit from storage.buckets where id = 'user-media'),
+    52428800::bigint,
+    'user-media allows photos and short videos'
 );
 select ok(
-  (select allowed_mime_types is null from storage.buckets where id = 'user-media'),
-  'user-media accepts any file type for request attachments'
+    (select allowed_mime_types is null from storage.buckets where id = 'user-media'),
+    'user-media accepts any file type for request attachments'
 );
 
 select is(
-  has_table_privilege('authenticated', 'public.media_objects', 'INSERT'),
-  false,
-  'clients cannot insert media rows'
+    has_table_privilege('authenticated', 'public.media_objects', 'INSERT'),
+    false,
+    'clients cannot insert media rows'
 );
 select is(
-  has_table_privilege('authenticated', 'public.fight_posts', 'INSERT'),
-  false,
-  'clients cannot insert fight posts'
+    has_table_privilege('authenticated', 'public.fight_posts', 'INSERT'),
+    false,
+    'clients cannot insert fight posts'
 );
 select is(
-  has_table_privilege('authenticated', 'private.fight_post_reports', 'SELECT'),
-  false,
-  'clients cannot read post reports'
+    has_table_privilege('authenticated', 'private.fight_post_reports', 'SELECT'),
+    false,
+    'clients cannot read post reports'
 );
 select is(
-  has_table_privilege('authenticated', 'private.feed_blocks', 'SELECT'),
-  false,
-  'clients cannot read feed blocks'
+    has_table_privilege('authenticated', 'private.feed_blocks', 'SELECT'),
+    false,
+    'clients cannot read feed blocks'
 );
 
 select * from finish();

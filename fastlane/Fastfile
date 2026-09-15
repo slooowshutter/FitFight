@@ -13,465 +13,572 @@ XCODEPROJ = "FitFight.xcodeproj"
 SCHEME = "FitFight"
 
 def decode_api_key(raw)
-  raw = raw.strip.gsub("\r\n", "\n")
-  return raw.gsub("\\n", "\n") if raw.include?("BEGIN PRIVATE KEY")
-  return raw.gsub("\\n", "\n") if raw.include?("\\n") && !raw.include?("\n")
+    raw = raw.strip.gsub("\r\n", "\n")
+    return raw.gsub("\\n", "\n") if raw.include?("BEGIN PRIVATE KEY")
+    return raw.gsub("\\n", "\n") if raw.include?("\\n") && !raw.include?("\n")
 
-  decoded = Base64.decode64(raw)
-  return decoded if decoded.include?("BEGIN PRIVATE KEY")
+    decoded = Base64.decode64(raw)
+    return decoded if decoded.include?("BEGIN PRIVATE KEY")
 
-  raw
+    raw
 end
 
 def write_api_key_file(key_id, raw)
-  contents = decode_api_key(raw)
-  contents += "\n" unless contents.end_with?("\n")
-  dir = File.expand_path("~/private_keys")
-  FileUtils.mkdir_p(dir)
-  path = File.join(dir, "AuthKey_#{key_id}.p8")
-  File.write(path, contents)
-  path
+    contents = decode_api_key(raw)
+    contents += "\n" unless contents.end_with?("\n")
+    dir = File.expand_path("~/private_keys")
+    FileUtils.mkdir_p(dir)
+    path = File.join(dir, "AuthKey_#{key_id}.p8")
+    File.write(path, contents)
+    path
 end
 
 # Automatic cloud signing mints a fresh certificate on every archive, and Apple caps how
 # many an account may hold. Nobody signs from a Mac here, so the old ones are dead weight:
 # clear them out before the archive asks for another.
 def revoke_stale_certificates(key_id, issuer_id, key_path)
-  require "spaceship"
+    require "spaceship"
 
-  token = Spaceship::ConnectAPI::Token.create(
-    key_id: key_id,
-    issuer_id: issuer_id,
-    filepath: key_path
-  )
-  Spaceship::ConnectAPI.token = token
+    token = Spaceship::ConnectAPI::Token.create(
+        key_id: key_id,
+        issuer_id: issuer_id,
+        filepath: key_path
+    )
+    Spaceship::ConnectAPI.token = token
 
-  Spaceship::ConnectAPI::Certificate.all.each do |certificate|
-    UI.message("Revoking #{certificate.certificate_type} certificate #{certificate.id}")
-    certificate.delete!
-  rescue StandardError => e
-    UI.important("Could not revoke certificate #{certificate.id}: #{e.message}")
-  end
+    Spaceship::ConnectAPI::Certificate.all.each do |certificate|
+        UI.message("Revoking #{certificate.certificate_type} certificate #{certificate.id}")
+        certificate.delete!
+    rescue StandardError => e
+        UI.important("Could not revoke certificate #{certificate.id}: #{e.message}")
+    end
 rescue StandardError => e
-  UI.important("Skipping certificate cleanup: #{e.message}")
+    UI.important("Skipping certificate cleanup: #{e.message}")
 end
 
-# App Store Connect Internal testers get every processed build automatically.
-# Do not assign the public join link or any other external group from CI.
-def report_internal_only(version, build_number)
-  require "spaceship"
+# After the IPA is on App Store Connect, put this build on every TestFlight
+# group: Internal testers (automatic), every External group, and Friends Beta.
+def report_testflight_groups(version, build_number)
+    require "spaceship"
 
-  app = Spaceship::ConnectAPI::App.find(BUNDLE_ID)
-  if app.nil?
-    UI.important("No App Store Connect app for #{BUNDLE_ID}")
-    return
-  end
+    app = Spaceship::ConnectAPI::App.find(BUNDLE_ID)
+    if app.nil?
+        UI.important("No App Store Connect app for #{BUNDLE_ID}")
+        return
+    end
 
-  build = Spaceship::ConnectAPI::Build.all(
-    app_id: app.id,
-    version: version,
-    build_number: build_number.to_s
-  ).first
-  if build.nil?
-    UI.important("Build #{version} (#{build_number}) is not on App Store Connect yet")
-    return
-  end
+    build = Spaceship::ConnectAPI::Build.all(
+        app_id: app.id,
+        version: version,
+        build_number: build_number.to_s
+    ).first
+    if build.nil?
+        UI.important("Build #{version} (#{build_number}) is not on App Store Connect yet")
+        return
+    end
 
-  UI.message("Build #{version} (#{build_number}): processing=#{build.processing_state} expired=#{build.expired}")
-
-  groups = app.get_beta_groups
-  internals = groups.select(&:is_internal_group)
-  externals = groups.reject(&:is_internal_group)
-  internals.each do |group|
-    UI.message("Internal group '#{group.name}' receives this build after processing.")
-  end
-  if internals.empty?
-    UI.important(
-      "No App Store Connect Internal tester group. Add Marc (and any internals) " \
-      "under Users and Access → TestFlight Internal Testing."
-    )
-  end
-  unless externals.empty?
     UI.message(
-      "External groups left untouched: #{externals.map(&:name).join(', ')}. " \
-      "Promote this build in App Store Connect when Marc asks."
+        "Build #{version} (#{build_number}): processing=#{build.processing_state} " \
+        "expired=#{build.expired} external=#{build.build_beta_detail&.external_build_state}"
     )
-  end
-  UI.success("TestFlight upload is internal-only; the public join link was not updated.")
+
+    groups = app.get_beta_groups
+    internals = groups.select(&:is_internal_group)
+    externals = groups.reject(&:is_internal_group)
+    internals.each do |group|
+        UI.message("Internal group '#{group.name}' has this build after processing.")
+    end
+    externals.each do |group|
+        UI.message("External group '#{group.name}' was submitted for this build.")
+    end
+    UI.success(
+        "TestFlight #{version} (#{build_number}) is on Internal " \
+        "(#{internals.map(&:name).join(', ')}) and External " \
+        "(#{externals.map(&:name).join(', ')})."
+    )
 rescue StandardError => e
-  UI.important("Skipping TestFlight group report: #{e.message}")
+    UI.important("Skipping TestFlight group report: #{e.message}")
+end
+
+def assign_all_testflight_groups(version, build_number, api_key:)
+    require "spaceship"
+
+    app = Spaceship::ConnectAPI::App.find(BUNDLE_ID)
+    UI.user_error!("No App Store Connect app for #{BUNDLE_ID}") if app.nil?
+
+    groups = app.get_beta_groups
+    UI.user_error!("This app has no TestFlight groups") if groups.nil? || groups.empty?
+
+    internals = groups.select(&:is_internal_group)
+    externals = groups.reject(&:is_internal_group)
+    if internals.empty?
+        UI.user_error!(
+            "No Internal TestFlight group. Add testers under Users and Access → " \
+            "TestFlight Internal Testing."
+        )
+    end
+    if externals.empty?
+        UI.user_error!("No External TestFlight groups. Create Friends Beta and any other external groups.")
+    end
+    friends = externals.find { |group| group.name == "Friends Beta" }
+    UI.user_error!("No external TestFlight group named 'Friends Beta'") if friends.nil?
+
+    UI.message(
+        "TestFlight groups: " + groups.map { |group|
+            "#{group.name} (#{group.is_internal_group ? 'internal' : 'external'})"
+        }.join(", ")
+    )
+    internals.each do |group|
+        UI.message(
+            "Internal group '#{group.name}' auto-receives #{version} (#{build_number}) " \
+            "after processing. Apple rejects assigning an internal group by hand."
+        )
+    end
+    UI.message(
+        "Adding #{version} (#{build_number}) to every external group: #{externals.map(&:name).join(', ')}"
+    )
+    upload_to_testflight(
+        api_key: api_key,
+        app_identifier: BUNDLE_ID,
+        app_platform: "ios",
+        app_version: version,
+        build_number: build_number.to_s,
+        distribute_only: true,
+        distribute_external: true,
+        groups: externals.map(&:id),
+        skip_waiting_for_build_processing: false,
+        skip_submission: false,
+        submit_beta_review: true,
+        notify_external_testers: true,
+        changelog: "FitFight #{version} (#{build_number})"
+    )
+    UI.success(
+        "Build #{version} (#{build_number}) is assigned to Internal " \
+        "(#{internals.map(&:name).join(', ')}) and External " \
+        "(#{externals.map(&:name).join(', ')})"
+    )
 end
 
 def cloud_signing_flags(key_path, key_id, issuer_id, team_id)
-  [
-    "DEVELOPMENT_TEAM=#{team_id}",
-    "CODE_SIGN_STYLE=Automatic",
-    "-allowProvisioningUpdates",
-    "-allowProvisioningDeviceRegistration",
-    "-authenticationKeyPath #{key_path}",
-    "-authenticationKeyID #{key_id}",
-    "-authenticationKeyIssuerID #{issuer_id}"
-  ].join(" ")
+    [
+        "DEVELOPMENT_TEAM=#{team_id}",
+        "CODE_SIGN_STYLE=Automatic",
+        "-allowProvisioningUpdates",
+        "-allowProvisioningDeviceRegistration",
+        "-authenticationKeyPath #{key_path}",
+        "-authenticationKeyID #{key_id}",
+        "-authenticationKeyIssuerID #{issuer_id}"
+    ].join(" ")
 end
 
 def record_uploaded_release(channel, version, build_number)
-  path = "/tmp/fitfight-uploaded-release.json"
-  File.write(
-    path,
-    JSON.pretty_generate(
-      "channel" => channel,
-      "version" => version.to_s,
-      "build" => Integer(build_number)
-    ) + "\n"
-  )
-  UI.message("Registered #{channel} candidate #{version} (#{build_number}); it is not yet mandatory")
+    path = "/tmp/fitfight-uploaded-release.json"
+    File.write(
+        path,
+        JSON.pretty_generate(
+            "channel" => channel,
+            "version" => version.to_s,
+            "build" => Integer(build_number)
+        ) + "\n"
+    )
+    UI.message("Registered #{channel} candidate #{version} (#{build_number}); it is not yet mandatory")
 end
 
 # Apple App Store versions are often "1.0"; the app and /api/app-release require 1.0.0.
 def marketing_version(version)
-  return if version.nil?
+    return if version.nil?
 
-  text = version.to_s.strip
-  return "#{text}.0" if text.match?(/\A\d+\.\d+\z/)
+    text = version.to_s.strip
+    return "#{text}.0" if text.match?(/\A\d+\.\d+\z/)
 
-  text
+    text
+end
+
+def registered_release?(registered, channel, version, build)
+    return false if version.nil? || build.nil?
+
+    padded = marketing_version(version)
+    build_number = Integer(build)
+    registered.any? { |entry|
+        entry["channel"] == channel &&
+            marketing_version(entry["version"]) == padded &&
+            entry["build"] == build_number
+    }
+end
+
+def same_release?(left, right)
+    return left.nil? && right.nil? if left.nil? || right.nil?
+
+    marketing_version(left["version"]) == marketing_version(right["version"]) &&
+        left["build"] == right["build"]
+end
+
+def newer_release?(left, right)
+    return !left.nil? if right.nil?
+    return false if left.nil?
+
+    ([Gem::Version.new(marketing_version(left["version"])), left["build"]] <=>
+      [Gem::Version.new(marketing_version(right["version"])), right["build"]]) > 0
+end
+
+# Testers install a processed IPA before the next refresh rewrites both review
+# and internal to that build. Keep the last admitted tester IPA in review so
+# existing binaries stay allowed until Friends latest actually moves.
+def retain_previous_tester_releases(channel, latest, review, internal, previous)
+    return [review, internal] unless channel == "staging"
+
+    previous_tester = (previous.dig(channel, "internal") || previous.dig(channel, "review"))&.dup
+    return [review, internal] if previous_tester.nil?
+    return [review, internal] unless same_release?(latest, previous.dig(channel, "latest"))
+    return [review, internal] unless newer_release?(previous_tester, latest)
+
+    if internal && !same_release?(internal, previous_tester)
+        review = previous_tester if review.nil? || same_release?(review, internal)
+    elsif internal.nil?
+        internal = previous_tester
+        review = previous.dig(channel, "review")&.dup || previous_tester if review.nil?
+    end
+    [review, internal]
 end
 
 # Only public-group installable builds become mandatory. Registered internal
 # TestFlight latest and review candidates are admitted separately so Internal
 # testers and Apple review are not blocked by the Friends Beta minimum.
 def available_app_releases(app, registered, previous)
-  builds = Spaceship::ConnectAPI::Build.all(app_id: app.id, platform: "IOS", processing_states: "VALID")
-  external_groups = app.get_beta_groups.reject(&:is_internal_group)
-  group_build_ids = external_groups.map { |group| group.fetch_builds.map(&:id) }
-  staging = builds.select do |build|
-    build.processing_state == "VALID" && !build.expired &&
-      build.build_beta_detail.external_build_state == "IN_BETA_TESTING" &&
-      !group_build_ids.empty? && group_build_ids.all? { |ids| ids.include?(build.id) }
-  end.max_by { |build| [Gem::Version.new(build.app_version), Integer(build.version)] }
-  staging_candidate = builds.select do |build|
-    build.processing_state == "VALID" && !build.expired &&
-      %w[WAITING_FOR_BETA_REVIEW IN_BETA_REVIEW].include?(build.build_beta_detail.external_build_state) &&
-      registered.any? { |entry|
-        entry["channel"] == "staging" && entry["version"] == build.app_version &&
-          entry["build"] == Integer(build.version)
-      }
-  end.max_by { |build| [Gem::Version.new(build.app_version), Integer(build.version)] }
-  # Internal testers receive every processed build. The newest registered VALID
-  # staging binary is installable for them even when Friends Beta still has an older one.
-  staging_internal = builds.select do |build|
-    build.processing_state == "VALID" && !build.expired &&
-      registered.any? { |entry|
-        entry["channel"] == "staging" && entry["version"] == build.app_version &&
-          entry["build"] == Integer(build.version)
-      }
-  end.max_by { |build| [Gem::Version.new(build.app_version), Integer(build.version)] }
+    builds = Spaceship::ConnectAPI::Build.all(app_id: app.id, platform: "IOS", processing_states: "VALID")
+    external_groups = app.get_beta_groups.reject(&:is_internal_group)
+    group_build_ids = external_groups.map { |group| group.fetch_builds.map(&:id) }
+    staging = builds.select do |build|
+        build.processing_state == "VALID" && !build.expired &&
+            build.build_beta_detail.external_build_state == "IN_BETA_TESTING" &&
+            !group_build_ids.empty? && group_build_ids.all? { |ids| ids.include?(build.id) }
+    end.max_by { |build| [Gem::Version.new(marketing_version(build.app_version)), Integer(build.version)] }
+    staging_candidate = builds.select do |build|
+        build.processing_state == "VALID" && !build.expired &&
+            %w[WAITING_FOR_BETA_REVIEW IN_BETA_REVIEW].include?(build.build_beta_detail.external_build_state) &&
+            registered_release?(registered, "staging", build.app_version, build.version)
+    end.max_by { |build| [Gem::Version.new(marketing_version(build.app_version)), Integer(build.version)] }
+    # Internal testers receive every processed build. The newest registered VALID
+    # staging binary is installable for them even when Friends Beta still has an older one.
+    staging_internal = builds.select do |build|
+        build.processing_state == "VALID" && !build.expired &&
+            registered_release?(registered, "staging", build.app_version, build.version)
+    end.max_by { |build| [Gem::Version.new(marketing_version(build.app_version)), Integer(build.version)] }
 
-  # Fastlane's get_live_app_store_version also includes PROCESSING_FOR_DISTRIBUTION.
-  live = app.get_app_store_versions(
-    filter: { platform: "IOS", appVersionState: "READY_FOR_DISTRIBUTION" }, includes: "build"
-  ).max_by { |version| Gem::Version.new(version.version_string) }
-  candidate = app.get_latest_app_store_version(platform: "IOS", includes: "build")
-  manifest = {}
-  { "staging" => staging, "prod" => live&.build }.each do |channel, build|
-    version = marketing_version(channel == "staging" ? build&.app_version : live&.version_string)
-    update_url = channel == "staging" ? "itms-beta://" : "https://apps.apple.com/app/id#{app.id}"
-    latest = build && { "version" => version, "build" => Integer(build.version), "update_url" => update_url }
-    known = registered.any? do |entry|
-      entry["channel"] == channel && entry["version"] == version && entry["build"] == latest&.fetch("build")
-    end
-    was_enforced = previous.dig(channel, "enforced") == true
-    if was_enforced && latest && !known
-      UI.user_error!("#{channel} latest build lacks the required-update implementation; refusing to require it")
-    end
-    review = nil
-    review_build = channel == "staging" ? staging_candidate : candidate&.build
-    review_version = marketing_version(
-      channel == "staging" ? staging_candidate&.app_version : candidate&.version_string
-    )
-    if review_build && registered.any? { |entry|
-      entry["channel"] == channel && entry["version"] == review_version &&
-        entry["build"] == Integer(review_build.version)
-    }
-      review = { "version" => review_version, "build" => Integer(review_build.version), "update_url" => update_url }
-      if latest && ([Gem::Version.new(review["version"]), review["build"]] <=>
-                    [Gem::Version.new(latest["version"]), latest["build"]]) <= 0
+    # Fastlane's get_live_app_store_version also includes PROCESSING_FOR_DISTRIBUTION.
+    live = app.get_app_store_versions(
+        filter: { platform: "IOS", appVersionState: "READY_FOR_DISTRIBUTION" }, includes: "build"
+    ).max_by { |version| Gem::Version.new(version.version_string) }
+    candidate = app.get_latest_app_store_version(platform: "IOS", includes: "build")
+    manifest = {}
+    { "staging" => staging, "prod" => live&.build }.each do |channel, build|
+        version = marketing_version(channel == "staging" ? build&.app_version : live&.version_string)
+        update_url = channel == "staging" ? "itms-beta://" : "https://apps.apple.com/app/id#{app.id}"
+        latest = build && { "version" => version, "build" => Integer(build.version), "update_url" => update_url }
+        known = registered_release?(registered, channel, version, latest&.fetch("build"))
+        was_enforced = previous.dig(channel, "enforced") == true
+        if was_enforced && latest && !known
+            UI.user_error!("#{channel} latest build lacks the required-update implementation; refusing to require it")
+        end
         review = nil
-      end
+        review_build = channel == "staging" ? staging_candidate : candidate&.build
+        review_version = marketing_version(
+            channel == "staging" ? staging_candidate&.app_version : candidate&.version_string
+        )
+        if review_build && registered_release?(registered, channel, review_version, review_build.version)
+            review = { "version" => review_version, "build" => Integer(review_build.version), "update_url" => update_url }
+            if latest && ([Gem::Version.new(review["version"]), review["build"]] <=>
+                                        [Gem::Version.new(latest["version"]), latest["build"]]) <= 0
+                review = nil
+            end
+        end
+        internal = nil
+        if channel == "staging" && staging_internal
+            internal_release = {
+                "version" => marketing_version(staging_internal.app_version),
+                "build" => Integer(staging_internal.version),
+                "update_url" => update_url
+            }
+            newer_than_latest = latest.nil? ||
+                ([Gem::Version.new(internal_release["version"]), internal_release["build"]] <=>
+                  [Gem::Version.new(latest["version"]), latest["build"]]) > 0
+            if newer_than_latest
+                internal = internal_release
+                # Existing app binaries only admit latest + review. Copy the internal
+                # latest into review when Apple beta review is not occupying that slot.
+                review = internal if review.nil?
+            end
+        end
+        review, internal = retain_previous_tester_releases(channel, latest, review, internal, previous)
+        manifest[channel] = {
+            "latest" => latest, "review" => review, "internal" => internal, "enforced" => was_enforced || known
+        }
     end
-    internal = nil
-    if channel == "staging" && staging_internal
-      internal_release = {
-        "version" => marketing_version(staging_internal.app_version),
-        "build" => Integer(staging_internal.version),
-        "update_url" => update_url
-      }
-      newer_than_latest = latest.nil? ||
-        ([Gem::Version.new(internal_release["version"]), internal_release["build"]] <=>
-         [Gem::Version.new(latest["version"]), latest["build"]]) > 0
-      if newer_than_latest
-        internal = internal_release
-        # Existing app binaries only admit latest + review. Copy the internal
-        # latest into review when Apple beta review is not occupying that slot.
-        review = internal if review.nil?
-      end
-    end
-    manifest[channel] = {
-      "latest" => latest, "review" => review, "internal" => internal, "enforced" => was_enforced || known
-    }
-  end
-  manifest
+    manifest
 end
 
 def verify_healthkit_background_delivery(ipa_path)
-  UI.user_error!("Signed IPA path is unavailable") if ipa_path.nil?
-  Dir.mktmpdir("fitfight-ipa") do |directory|
-    system("ditto", "-x", "-k", ipa_path, directory) ||
-      UI.user_error!("Could not inspect the signed IPA")
-    app_path = Dir[File.join(directory, "Payload", "*.app")].first
-    UI.user_error!("Signed app was not found in the IPA") if app_path.nil?
+    UI.user_error!("Signed IPA path is unavailable") if ipa_path.nil?
+    Dir.mktmpdir("fitfight-ipa") do |directory|
+        system("ditto", "-x", "-k", ipa_path, directory) ||
+            UI.user_error!("Could not inspect the signed IPA")
+        app_path = Dir[File.join(directory, "Payload", "*.app")].first
+        UI.user_error!("Signed app was not found in the IPA") if app_path.nil?
 
-    stdout, stderr, status = Open3.capture3(
-      "codesign", "-d", "--entitlements", ":-", app_path
-    )
-    UI.user_error!("Could not read signed app entitlements") unless status.success?
-    entitlements = stdout + stderr
-    unless entitlements.include?("com.apple.developer.healthkit.background-delivery")
-      UI.user_error!("Signed app is missing HealthKit background delivery")
+        stdout, stderr, status = Open3.capture3(
+            "codesign", "-d", "--entitlements", ":-", app_path
+        )
+        UI.user_error!("Could not read signed app entitlements") unless status.success?
+        entitlements = stdout + stderr
+        unless entitlements.include?("com.apple.developer.healthkit.background-delivery")
+            UI.user_error!("Signed app is missing HealthKit background delivery")
+        end
+        UI.success("Signed app includes HealthKit background delivery")
     end
-    UI.success("Signed app includes HealthKit background delivery")
-  end
 end
 
 def verify_production_configuration(ipa_path)
-  UI.user_error!("Signed IPA path is unavailable") if ipa_path.nil?
+    UI.user_error!("Signed IPA path is unavailable") if ipa_path.nil?
 
-  production_url = ENV.fetch("SUPABASE_PRODUCTION_URL").sub(%r{/+\z}, "")
-  production_key = ENV.fetch("SUPABASE_PRODUCTION_PUBLISHABLE_KEY")
-  production_api = ENV.fetch("FITFIGHT_PRODUCTION_API_URL").sub(%r{/+\z}, "")
-  build_env_path = File.expand_path("../FitFight/Generated/BuildEnv.swift", __dir__)
-  build_env = File.read(build_env_path)
+    production_url = ENV.fetch("SUPABASE_PRODUCTION_URL").sub(%r{/+\z}, "")
+    production_key = ENV.fetch("SUPABASE_PRODUCTION_PUBLISHABLE_KEY")
+    production_api = ENV.fetch("FITFIGHT_PRODUCTION_API_URL").sub(%r{/+\z}, "")
+    build_env_path = File.expand_path("../FitFight/Generated/BuildEnv.swift", __dir__)
+    build_env = File.read(build_env_path)
 
-  [production_url, production_key, production_api].each do |value|
-    UI.user_error!("Generated BuildEnv is missing production configuration") unless build_env.include?(value)
-  end
-  if build_env.include?("zstzbfocunthczzubggz") || build_env.include?("staging.fitfight.app")
-    UI.user_error!("Generated BuildEnv contains staging configuration")
-  end
-
-  Dir.mktmpdir("fitfight-production-ipa") do |directory|
-    system("ditto", "-x", "-k", ipa_path, directory) ||
-      UI.user_error!("Could not inspect the signed IPA")
-    app_path = Dir[File.join(directory, "Payload", "*.app")].first
-    UI.user_error!("Signed app was not found in the IPA") if app_path.nil?
-    privacy_manifest_path = File.join(app_path, "PrivacyInfo.xcprivacy")
-    UI.user_error!("Signed app is missing PrivacyInfo.xcprivacy") unless File.file?(privacy_manifest_path)
-    system("plutil", "-lint", privacy_manifest_path) ||
-      UI.user_error!("Signed app privacy manifest is invalid")
-    executable_path = File.join(app_path, SCHEME)
-    UI.user_error!("Signed app executable was not found") unless File.file?(executable_path)
-
-    executable = File.binread(executable_path)
     [production_url, production_key, production_api].each do |value|
-      UI.user_error!("Signed app is missing production configuration") unless executable.include?(value)
+        UI.user_error!("Generated BuildEnv is missing production configuration") unless build_env.include?(value)
     end
-    UI.success("Signed app includes production backend configuration")
-  end
+    if build_env.include?("zstzbfocunthczzubggz") || build_env.include?("staging.fitfight.app")
+        UI.user_error!("Generated BuildEnv contains staging configuration")
+    end
+
+    Dir.mktmpdir("fitfight-production-ipa") do |directory|
+        system("ditto", "-x", "-k", ipa_path, directory) ||
+            UI.user_error!("Could not inspect the signed IPA")
+        app_path = Dir[File.join(directory, "Payload", "*.app")].first
+        UI.user_error!("Signed app was not found in the IPA") if app_path.nil?
+        privacy_manifest_path = File.join(app_path, "PrivacyInfo.xcprivacy")
+        UI.user_error!("Signed app is missing PrivacyInfo.xcprivacy") unless File.file?(privacy_manifest_path)
+        system("plutil", "-lint", privacy_manifest_path) ||
+            UI.user_error!("Signed app privacy manifest is invalid")
+        executable_path = File.join(app_path, SCHEME)
+        UI.user_error!("Signed app executable was not found") unless File.file?(executable_path)
+
+        executable = File.binread(executable_path)
+        [production_url, production_key, production_api].each do |value|
+            UI.user_error!("Signed app is missing production configuration") unless executable.include?(value)
+        end
+        UI.success("Signed app includes production backend configuration")
+    end
 end
 
 platform :ios do
-  desc "Bump build number, archive, and upload to TestFlight"
-  lane :beta do
-    ENV["FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT"] = "120"
-    ENV["FASTLANE_XCODEBUILD_SETTINGS_RETRIES"] = "3"
+    desc "Bump build number, archive, and upload to TestFlight"
+    lane :beta do
+        ENV["FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT"] = "120"
+        ENV["FASTLANE_XCODEBUILD_SETTINGS_RETRIES"] = "3"
 
-    setup_ci if is_ci
+        setup_ci if is_ci
 
-    key_id = ENV.fetch("APP_STORE_CONNECT_KEY_ID")
-    issuer_id = ENV.fetch("APP_STORE_CONNECT_ISSUER_ID")
-    key_content = ENV.fetch("APP_STORE_CONNECT_API_KEY")
-    team_id = ENV.fetch("APPLE_TEAM_ID")
-    key_path = write_api_key_file(key_id, key_content)
-    signing_flags = cloud_signing_flags(key_path, key_id, issuer_id, team_id)
+        key_id = ENV.fetch("APP_STORE_CONNECT_KEY_ID")
+        issuer_id = ENV.fetch("APP_STORE_CONNECT_ISSUER_ID")
+        key_content = ENV.fetch("APP_STORE_CONNECT_API_KEY")
+        team_id = ENV.fetch("APPLE_TEAM_ID")
+        key_path = write_api_key_file(key_id, key_content)
+        signing_flags = cloud_signing_flags(key_path, key_id, issuer_id, team_id)
 
-    api_key = app_store_connect_api_key(
-      key_id: key_id,
-      issuer_id: issuer_id,
-      key_filepath: key_path,
-      duration: 1200,
-      in_house: false
-    )
+        api_key = app_store_connect_api_key(
+            key_id: key_id,
+            issuer_id: issuer_id,
+            key_filepath: key_path,
+            duration: 1200,
+            in_house: false
+        )
 
-    build_number = begin
-      latest_testflight_build_number(
-        api_key: api_key,
-        app_identifier: BUNDLE_ID,
-        initial_build_number: 0
-      ) + 1
-    rescue StandardError => e
-      fallback = (ENV["GITHUB_RUN_NUMBER"] || "1").to_i
-      UI.important("Could not read TestFlight build number (#{e.message}); using #{fallback}")
-      fallback
+        build_number = begin
+            latest_testflight_build_number(
+                api_key: api_key,
+                app_identifier: BUNDLE_ID,
+                initial_build_number: 0
+            ) + 1
+        rescue StandardError => e
+            fallback = (ENV["GITHUB_RUN_NUMBER"] || "1").to_i
+            UI.important("Could not read TestFlight build number (#{e.message}); using #{fallback}")
+            fallback
+        end
+
+        version = get_version_number(xcodeproj: XCODEPROJ, target: SCHEME)
+        release_version = ENV["FITFIGHT_RELEASE_VERSION"].to_s
+        unless release_version.empty?
+            unless version == release_version
+                UI.user_error!(
+                    "Project marketing version #{version} does not match release version #{release_version}"
+                )
+            end
+            changelog = File.read(File.expand_path("../FitFight/Changelog.swift", __dir__))
+            unless changelog.match?(/version:\s*"#{Regexp.escape(release_version)}"/)
+                UI.user_error!("Changelog is missing the #{release_version} release note")
+            end
+        end
+        UI.message("Shipping #{version} (#{build_number})")
+
+        revoke_stale_certificates(key_id, issuer_id, key_path)
+
+        build_app(
+            project: XCODEPROJ,
+            scheme: SCHEME,
+            configuration: "Release",
+            export_method: "app-store",
+            export_team_id: team_id,
+            export_options: {
+                method: "app-store",
+                signingStyle: "automatic",
+                teamID: team_id
+            },
+            xcargs: "#{signing_flags} CURRENT_PROJECT_VERSION=#{build_number}",
+            skip_profile_detection: true
+        )
+
+        verify_healthkit_background_delivery(
+            Actions.lane_context[SharedValues::IPA_OUTPUT_PATH]
+        )
+
+        upload_to_testflight(
+            api_key: api_key,
+            skip_waiting_for_build_processing: false,
+            skip_submission: true,
+            distribute_external: false,
+            notify_external_testers: false,
+            changelog: "FitFight #{version} (#{build_number})"
+        )
+
+        record_uploaded_release("staging", version, build_number)
+        assign_all_testflight_groups(version, build_number, api_key: api_key)
+        report_testflight_groups(version, build_number)
+    ensure
+        FileUtils.rm_f(key_path) if defined?(key_path) && key_path
     end
 
-    version = get_version_number(xcodeproj: XCODEPROJ, target: SCHEME)
-    UI.message("Shipping #{version} (#{build_number})")
+    desc "Archive a production build and upload it to App Store Connect without submitting"
+    lane :app_store_candidate do
+        ENV["FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT"] = "120"
+        ENV["FASTLANE_XCODEBUILD_SETTINGS_RETRIES"] = "3"
 
-    revoke_stale_certificates(key_id, issuer_id, key_path)
+        unless is_ci && ENV["GITHUB_ACTIONS"] == "true" &&
+                      ENV["GITHUB_REF"] == "refs/heads/main" && ENV["GITHUB_REF_NAME"] == "main"
+            UI.user_error!("App Store candidates may only run in GitHub Actions from main")
+        end
 
-    build_app(
-      project: XCODEPROJ,
-      scheme: SCHEME,
-      configuration: "Release",
-      export_method: "app-store",
-      export_team_id: team_id,
-      export_options: {
-        method: "app-store",
-        signingStyle: "automatic",
-        teamID: team_id
-      },
-      xcargs: "#{signing_flags} CURRENT_PROJECT_VERSION=#{build_number}",
-      skip_profile_detection: true
-    )
+        setup_ci
 
-    verify_healthkit_background_delivery(
-      Actions.lane_context[SharedValues::IPA_OUTPUT_PATH]
-    )
+        key_id = ENV.fetch("APP_STORE_CONNECT_KEY_ID")
+        issuer_id = ENV.fetch("APP_STORE_CONNECT_ISSUER_ID")
+        key_content = ENV.fetch("APP_STORE_CONNECT_API_KEY")
+        team_id = ENV.fetch("APPLE_TEAM_ID")
+        key_path = write_api_key_file(key_id, key_content)
+        signing_flags = cloud_signing_flags(key_path, key_id, issuer_id, team_id)
 
-    upload_to_testflight(
-      api_key: api_key,
-      skip_waiting_for_build_processing: false,
-      skip_submission: true,
-      distribute_external: false,
-      notify_external_testers: false,
-      changelog: "FitFight #{version} (#{build_number})"
-    )
+        api_key = app_store_connect_api_key(
+            key_id: key_id,
+            issuer_id: issuer_id,
+            key_filepath: key_path,
+            duration: 1200,
+            in_house: false
+        )
 
-    record_uploaded_release("staging", version, build_number)
-    report_internal_only(version, build_number)
-  ensure
-    FileUtils.rm_f(key_path) if defined?(key_path) && key_path
-  end
+        version = get_version_number(xcodeproj: XCODEPROJ, target: SCHEME)
+        release_version = ENV.fetch("FITFIGHT_RELEASE_VERSION")
+        unless version == release_version
+            UI.user_error!(
+                "Project marketing version #{version} does not match release version #{release_version}"
+            )
+        end
+        changelog = File.read(File.expand_path("../FitFight/Changelog.swift", __dir__))
+        unless changelog.match?(/version:\s*"#{Regexp.escape(release_version)}"/)
+            UI.user_error!("Changelog is missing the #{release_version} App Store release note")
+        end
+        build_number = latest_testflight_build_number(
+            api_key: api_key,
+            app_identifier: BUNDLE_ID,
+            version: version,
+            initial_build_number: 0
+        ) + 1
+        UI.message("Uploading production candidate #{version} (#{build_number})")
 
-  desc "Archive a production build and upload it to App Store Connect without submitting"
-  lane :app_store_candidate do
-    ENV["FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT"] = "120"
-    ENV["FASTLANE_XCODEBUILD_SETTINGS_RETRIES"] = "3"
+        build_app(
+            project: XCODEPROJ,
+            scheme: SCHEME,
+            configuration: "Release",
+            export_method: "app-store",
+            export_team_id: team_id,
+            export_options: {
+                method: "app-store",
+                signingStyle: "automatic",
+                teamID: team_id
+            },
+            xcargs: "#{signing_flags} CURRENT_PROJECT_VERSION=#{build_number}",
+            skip_profile_detection: true
+        )
 
-    unless is_ci && ENV["GITHUB_ACTIONS"] == "true" &&
-           ENV["GITHUB_REF"] == "refs/heads/main" && ENV["GITHUB_REF_NAME"] == "main"
-      UI.user_error!("App Store candidates may only run in GitHub Actions from main")
+        ipa_path = Actions.lane_context[SharedValues::IPA_OUTPUT_PATH]
+        verify_healthkit_background_delivery(ipa_path)
+        verify_production_configuration(ipa_path)
+
+        upload_to_app_store(
+            api_key: api_key,
+            app_identifier: BUNDLE_ID,
+            app_version: version,
+            ipa: ipa_path,
+            skip_binary_upload: false,
+            skip_app_version_update: true,
+            skip_metadata: true,
+            skip_screenshots: true,
+            submit_for_review: false,
+            automatic_release: false,
+            run_precheck_before_submit: false,
+            force: true
+        )
+        record_uploaded_release("prod", version, build_number)
+        UI.success("Production candidate uploaded to App Store Connect; it was not submitted for review")
+    ensure
+        FileUtils.rm_f(key_path) if defined?(key_path) && key_path
     end
 
-    setup_ci
-
-    key_id = ENV.fetch("APP_STORE_CONNECT_KEY_ID")
-    issuer_id = ENV.fetch("APP_STORE_CONNECT_ISSUER_ID")
-    key_content = ENV.fetch("APP_STORE_CONNECT_API_KEY")
-    team_id = ENV.fetch("APPLE_TEAM_ID")
-    key_path = write_api_key_file(key_id, key_content)
-    signing_flags = cloud_signing_flags(key_path, key_id, issuer_id, team_id)
-
-    api_key = app_store_connect_api_key(
-      key_id: key_id,
-      issuer_id: issuer_id,
-      key_filepath: key_path,
-      duration: 1200,
-      in_house: false
-    )
-
-    version = get_version_number(xcodeproj: XCODEPROJ, target: SCHEME)
-    release_version = ENV.fetch("FITFIGHT_RELEASE_VERSION")
-    unless version == release_version
-      UI.user_error!(
-        "Project marketing version #{version} does not match release version #{release_version}"
-      )
+    desc "Read Apple release availability and refresh the mandatory app versions"
+    lane :refresh_app_releases do
+        require "spaceship"
+        app_store_connect_api_key(
+            key_id: ENV.fetch("APP_STORE_CONNECT_KEY_ID"),
+            issuer_id: ENV.fetch("APP_STORE_CONNECT_ISSUER_ID"),
+            key_content: decode_api_key(ENV.fetch("APP_STORE_CONNECT_API_KEY")),
+            duration: 1200,
+            in_house: false
+        )
+        app = Spaceship::ConnectAPI::App.find(BUNDLE_ID)
+        UI.user_error!("No App Store Connect app for #{BUNDLE_ID}") if app.nil?
+        directory = ENV.fetch("FITFIGHT_RELEASE_STATE_DIR")
+        registry_path = File.join(directory, "builds.json")
+        manifest_path = File.join(directory, "releases.json")
+        registered = File.exist?(registry_path) ? JSON.parse(File.read(registry_path)) : []
+        uploaded_path = "/tmp/fitfight-uploaded-release.json"
+        registered << JSON.parse(File.read(uploaded_path)) if File.exist?(uploaded_path)
+        unless registered.is_a?(Array) && registered.all? { |entry|
+            entry.is_a?(Hash) && %w[staging prod].include?(entry["channel"]) &&
+                entry["version"].is_a?(String) && entry["version"].match?(/\A\d+\.\d+\.\d+\z/) &&
+                entry["build"].is_a?(Integer) && entry["build"].positive?
+        }
+            UI.user_error!("Invalid app release registry")
+        end
+        registered.uniq!
+        previous = File.exist?(manifest_path) ? JSON.parse(File.read(manifest_path)) : {}
+        manifest = available_app_releases(app, registered, previous)
+        File.write(registry_path, JSON.pretty_generate(registered) + "\n")
+        File.write(manifest_path, JSON.pretty_generate(manifest) + "\n")
+        latest_path = File.join(directory, "latest.json")
+        if manifest["staging"]["latest"]
+            File.write(latest_path, JSON.pretty_generate(manifest["staging"]["latest"]) + "\n")
+        end
+        UI.message("Release availability refreshed; minimum supported always follows the latest public build")
     end
-    changelog = File.read(File.expand_path("../FitFight/Changelog.swift", __dir__))
-    unless changelog.match?(/version:\s*"#{Regexp.escape(release_version)}"/)
-      UI.user_error!("Changelog is missing the #{release_version} App Store release note")
-    end
-    build_number = latest_testflight_build_number(
-      api_key: api_key,
-      app_identifier: BUNDLE_ID,
-      version: version,
-      initial_build_number: 0
-    ) + 1
-    UI.message("Uploading production candidate #{version} (#{build_number})")
-
-    build_app(
-      project: XCODEPROJ,
-      scheme: SCHEME,
-      configuration: "Release",
-      export_method: "app-store",
-      export_team_id: team_id,
-      export_options: {
-        method: "app-store",
-        signingStyle: "automatic",
-        teamID: team_id
-      },
-      xcargs: "#{signing_flags} CURRENT_PROJECT_VERSION=#{build_number}",
-      skip_profile_detection: true
-    )
-
-    ipa_path = Actions.lane_context[SharedValues::IPA_OUTPUT_PATH]
-    verify_healthkit_background_delivery(ipa_path)
-    verify_production_configuration(ipa_path)
-
-    upload_to_app_store(
-      api_key: api_key,
-      app_identifier: BUNDLE_ID,
-      app_version: version,
-      ipa: ipa_path,
-      skip_binary_upload: false,
-      skip_app_version_update: true,
-      skip_metadata: true,
-      skip_screenshots: true,
-      submit_for_review: false,
-      automatic_release: false,
-      run_precheck_before_submit: false,
-      force: true
-    )
-    record_uploaded_release("prod", version, build_number)
-    UI.success("Production candidate uploaded to App Store Connect; it was not submitted for review")
-  ensure
-    FileUtils.rm_f(key_path) if defined?(key_path) && key_path
-  end
-
-  desc "Read Apple release availability and refresh the mandatory app versions"
-  lane :refresh_app_releases do
-    require "spaceship"
-    app_store_connect_api_key(
-      key_id: ENV.fetch("APP_STORE_CONNECT_KEY_ID"),
-      issuer_id: ENV.fetch("APP_STORE_CONNECT_ISSUER_ID"),
-      key_content: decode_api_key(ENV.fetch("APP_STORE_CONNECT_API_KEY")),
-      duration: 1200,
-      in_house: false
-    )
-    app = Spaceship::ConnectAPI::App.find(BUNDLE_ID)
-    UI.user_error!("No App Store Connect app for #{BUNDLE_ID}") if app.nil?
-    directory = ENV.fetch("FITFIGHT_RELEASE_STATE_DIR")
-    registry_path = File.join(directory, "builds.json")
-    manifest_path = File.join(directory, "releases.json")
-    registered = File.exist?(registry_path) ? JSON.parse(File.read(registry_path)) : []
-    uploaded_path = "/tmp/fitfight-uploaded-release.json"
-    registered << JSON.parse(File.read(uploaded_path)) if File.exist?(uploaded_path)
-    unless registered.is_a?(Array) && registered.all? { |entry|
-      entry.is_a?(Hash) && %w[staging prod].include?(entry["channel"]) &&
-        entry["version"].is_a?(String) && entry["version"].match?(/\A\d+\.\d+\.\d+\z/) &&
-        entry["build"].is_a?(Integer) && entry["build"].positive?
-    }
-      UI.user_error!("Invalid app release registry")
-    end
-    registered.uniq!
-    previous = File.exist?(manifest_path) ? JSON.parse(File.read(manifest_path)) : {}
-    manifest = available_app_releases(app, registered, previous)
-    File.write(registry_path, JSON.pretty_generate(registered) + "\n")
-    File.write(manifest_path, JSON.pretty_generate(manifest) + "\n")
-    latest_path = File.join(directory, "latest.json")
-    if manifest["staging"]["latest"]
-      File.write(latest_path, JSON.pretty_generate(manifest["staging"]["latest"]) + "\n")
-    end
-    UI.message("Release availability refreshed; minimum supported always follows the latest public build")
-  end
 end

@@ -15,11 +15,8 @@ struct ContentView: View {
 
     var body: some View {
         Group {
-            if appUpdate.allowsUse || ScreenshotExport.isEnabled || CompanionPreview.isEnabled {
-                VStack(spacing: 0) {
-                    VersionBanner(onTap: versionBannerTap)
-                    appContent
-                }
+            if !appUpdate.showsUpdate || ScreenshotExport.isEnabled || CompanionPreview.isEnabled {
+                appContent
             } else {
                 updateScreen
             }
@@ -36,7 +33,7 @@ struct ContentView: View {
         }
         .onChange(of: appUpdate.status) { _, status in
             guard !CompanionPreview.isEnabled else { return }
-            if status == .updateRequired {
+            if appUpdate.showsUpdate {
                 model.showingVersions = false
                 model.showingDebugMenu = false
             } else if status == .current, session.isSignedIn, session.profile == nil {
@@ -47,7 +44,10 @@ struct ContentView: View {
 
     private var appContent: some View {
         Group {
-            if session.isSignedIn {
+            if session.isRestoringSession {
+                FFLoadingBlock()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if session.isSignedIn {
                 signedInRoot
             } else {
                 WelcomeView()
@@ -154,15 +154,8 @@ struct ContentView: View {
         }
     }
 
-    private var versionBannerTap: (() -> Void)? {
-        guard !CompanionPreview.isEnabled else { return nil }
-        guard appUpdate.allowsUse, session.isFitFightAdmin else { return nil }
-        return { model.showingDebugMenu = true }
-    }
-
     private var updateScreen: some View {
         VStack(spacing: 0) {
-            VersionBanner()
             Spacer(minLength: 0)
             updateCard
             Spacer(minLength: 0)
@@ -173,26 +166,37 @@ struct ContentView: View {
 
     private var updateCard: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(String(localized: "Update FitFight to continue"))
+            Text(appUpdate.isTestFlight
+                 ? String(localized: "A FitFight update is available")
+                 : String(localized: "Update FitFight to continue"))
                 .font(.ff(18, 800))
                 .tracking(18 * -0.015)
                 .foregroundStyle(theme.text)
-            Text(String(localized: "You can’t use FitFight until you install the latest version."))
+            Text(appUpdate.isTestFlight
+                 ? String(localized: "Open TestFlight to check for the update. If it isn’t available yet, cancel and keep using FitFight.")
+                 : String(localized: "You can’t use FitFight until you install the latest version."))
                 .ffType(.body)
                 .foregroundStyle(theme.textSecondary)
                 .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 7)
             HStack(spacing: 9) {
-                FFButton(
-                    title: String(localized: "Check again"),
-                    kind: appUpdate.policy?.offeredRelease != nil ? .secondary : .primary,
-                    fullWidth: true
-                ) {
-                    Task { await appUpdate.check() }
+                if appUpdate.isTestFlight {
+                    FFButton(title: String(localized: "Cancel"), kind: .secondary, fullWidth: true) {
+                        appUpdate.dismissUpdate()
+                    }
+                    .accessibilityIdentifier("cancel-update-button")
+                } else {
+                    FFButton(
+                        title: String(localized: "Check again"),
+                        kind: appUpdate.offeredRelease != nil ? .secondary : .primary,
+                        fullWidth: true
+                    ) {
+                        Task { await appUpdate.check() }
+                    }
+                    .disabled(appUpdate.isChecking)
                 }
-                .disabled(appUpdate.isChecking)
-                if let release = appUpdate.policy?.offeredRelease {
+                if let release = appUpdate.offeredRelease {
                     FFButton(title: String(localized: "Update FitFight"), kind: .primary, fullWidth: true) {
                         openURL(release.updateURL)
                     }
@@ -264,7 +268,7 @@ struct ContentView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             FFTabBar(tab: $model.tab, onReselect: {
                 if model.tab == .feedback {
-                    model.feedbackPane = .bugs
+                    model.feedbackRequestFilter = .top
                 }
                 model.openFightID = nil
             })

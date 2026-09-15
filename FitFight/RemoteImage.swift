@@ -202,6 +202,7 @@ struct RemotePhoto<Placeholder: View>: View {
                     .clipped()
             }
         }
+        .contentShape(Rectangle())
         .onAppear {
             if let url, let cached = RemoteImageLoader.shared.cached(url: url, kind: kind) {
                 image = cached
@@ -212,14 +213,10 @@ struct RemotePhoto<Placeholder: View>: View {
                 image = nil
                 return
             }
-            var delay: UInt64 = 400_000_000
-            while !Task.isCancelled {
-                if let loaded = await RemoteImageLoader.shared.image(for: url, kind: kind) {
-                    image = loaded
-                    return
-                }
-                try? await Task.sleep(nanoseconds: delay)
-                if delay < 8_000_000_000 { delay *= 2 }
+            image = RemoteImageLoader.shared.cached(url: url, kind: kind)
+            if let loaded = await RemoteImageLoader.shared.image(for: url, kind: kind),
+               !Task.isCancelled {
+                image = loaded
             }
         }
     }

@@ -1,11 +1,13 @@
-# FitFight 1.1.0 release
+# FitFight release preparation: now 1.1.1
 
 Marc authorized the production update and one-time beta data migration on
 15 September 2026. PR creation still requires an explicit PR request under AGENTS.md.
 
+The latest merged fixes select **1.1.1**. Earlier 1.1.0 preparation below is historical; refresh the draft and screenshots for the final 1.1.1 candidate.
+
 ## Prepared code and listing
 
-- Marketing version and production upload workflow: `1.1.0`; CI allocates the build.
+- Marketing version and production upload workflow: `1.1.1`; CI allocates the build.
 - New release note in English and French; existing icon is the intended beige FF on green.
 - Six screenshots per language and an [HTML gallery](index.html).
 - Updated [store copy](../metadata.md), [review notes](../review-notes.md), English/French
@@ -33,11 +35,12 @@ and PostgREST requests against the migrated disposable database, then reproduces
 staging's write cutoff and runs the existing security tests unchanged. The later
 full client-access cutoff also revokes these separately granted columns.
 
-Staging currently admits `1.0.0 (190)` for Friends and `1.0.0 (198)` for review/internal.
-Existing `/api/v1` fixtures and 205 backend tests pass. No API version changes.
+At 21:38 UTC, staging advertises `1.0.0 (190)` for Friends and `1.1.0 (200)` for
+review/internal, with enforcement off. Existing `/api/v1` fixtures and all 237
+backend unit tests pass after merging develop `685507d`. No API version changes.
 The new Auth/PostgREST test and native compile still need PR CI.
 
-## Cloud rehearsal evidence, 15 September
+## Earlier cloud rehearsal evidence, 15 September
 
 Created temporary Supabase branch `release-1-1-rehearsal` with production data.
 All 28 pending migrations applied successfully. Before and after: 3 Auth users,
@@ -47,12 +50,13 @@ and read paths. Unauthorized score changes, joining as a stranger, and accepting
 for another person were rejected. The test fixture was rolled back.
 
 This verifies migration execution and database permissions on a production copy.
-It does not verify signed-in iOS behavior, HTTP requests against the candidate
-backend, beta data import, or live production readiness.
+It predates the final 1.1.1 migrations and does not verify signed-in iOS behavior,
+HTTP requests against the candidate backend, beta data import, or live production
+readiness. The temporary branch is paused until the next rehearsal.
 
 ## One-time data migration
 
-Read-only inventory: staging has 22 Auth users, 22 Fights, 73 memberships, and 47
+The earlier read-only inventory found staging with 22 Auth users, 22 Fights, 73 memberships, and 47
 stored objects. Production has 3 Auth users, 14 Fights, and 14 memberships. Two
 Apple identities occur in both environments with different account UUIDs. There
 are 23 distinct Apple identities and no username collision between different
@@ -67,9 +71,10 @@ Do not copy sessions, APNs device registrations, pending jobs, or encrypted Appl
 refresh credentials under a different environment's key.
 
 The source import and storage transfer are not implemented or executed yet.
-Staging's migration ledger contains several manually assigned timestamps that
-differ from repository filenames, plus the social-notification migration is absent.
-Reconcile schema and ledger before the next staging deployment.
+The earlier staging migration audit found manually assigned timestamps that
+differed from repository filenames and an absent social-notification migration.
+Recheck the live schema and ledger after the latest fixes before deployment.
+The evening refresh was unavailable during Supabase maintenance.
 
 ## Required order
 

@@ -28,11 +28,8 @@ struct NewFightView: View {
     @State private var visibilityJoinable = false
     @State private var recurring = true
     @State private var joinCode = ""
-    @State private var joinable: [FitFightJoinableFight] = []
     @State private var lookingUp = false
-    @State private var loadingJoinable = false
     @State private var composing = false
-    @State private var suggested: [FitFightJoinableFight] = []
     @FocusState private var usernameFocused: Bool
     @FocusState private var titleFocused: Bool
     @FocusState private var actionFocused: Bool
@@ -82,14 +79,8 @@ struct NewFightView: View {
             }
         }
         .task(id: opening) {
-            guard opening == .join, !staticRender else { return }
-            if joinable.isEmpty { loadingJoinable = true }
-            joinable = await model.listJoinableFights(session: session)
-            loadingJoinable = false
-        }
-        .task {
-            guard !staticRender else { return }
-            suggested = await model.listSuggestedFights(session: session)
+            guard opening != .create, !staticRender else { return }
+            await model.loadFightDiscovery(session: session)
         }
         .sheet(isPresented: $composing) {
             FeedComposeSheet()
@@ -278,10 +269,7 @@ struct NewFightView: View {
                     subtitle: String(localized: "Code, invite link, or a public fight"),
                     systemImage: "person.badge.plus",
                     subtitleTone: .neutral,
-                    action: {
-                        if joinable.isEmpty { loadingJoinable = true }
-                        opening = .join
-                    }
+                    action: { opening = .join }
                 )
                 FFDivider()
                 FFGroupedRow(
@@ -298,14 +286,19 @@ struct NewFightView: View {
     }
 
     private var suggestedSection: some View {
-        let rows = staticRender ? Array(Self.screenshotJoinable.prefix(2)) : suggested
+        let rows = staticRender ? Array(Self.screenshotJoinable.prefix(2)) : model.suggestedFights
         return VStack(alignment: .leading, spacing: 12) {
             FFSectionHeader(title: String(localized: "Suggested"))
-            if rows.isEmpty {
+            if let error = model.discoveryError {
+                FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
+            }
+            if model.isLoadingDiscovery && rows.isEmpty && !staticRender {
+                FFLoadingBlock()
+            } else if rows.isEmpty && model.discoveryError == nil {
                 Text(String(localized: "No suggested fights right now."))
                     .ffType(.body)
                     .foregroundStyle(theme.textSecondary)
-            } else {
+            } else if !rows.isEmpty {
                 FFGroupedRows {
                     ForEach(Array(rows.enumerated()), id: \.element.id) { index, item in
                         if index > 0 { FFDivider() }
@@ -378,14 +371,17 @@ struct NewFightView: View {
             }
 
             FFSectionHeader(title: String(localized: "Live public fights"))
-            let rows = staticRender ? Self.screenshotJoinable : joinable
-            if loadingJoinable && rows.isEmpty {
+            let rows = staticRender ? Self.screenshotJoinable : model.joinableFights
+            if let error = model.discoveryError {
+                FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
+            }
+            if model.isLoadingDiscovery && rows.isEmpty && !staticRender {
                 FFLoadingBlock()
-            } else if rows.isEmpty {
+            } else if rows.isEmpty && model.discoveryError == nil {
                 Text("No live public fights right now. Use a code or invite link.")
                     .ffType(.body)
                     .foregroundStyle(theme.textSecondary)
-            } else {
+            } else if !rows.isEmpty {
                 FFGroupedRows {
                     ForEach(Array(rows.enumerated()), id: \.element.id) { index, item in
                         if index > 0 { FFDivider() }

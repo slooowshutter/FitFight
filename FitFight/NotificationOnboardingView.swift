@@ -52,7 +52,7 @@ struct NotificationOnboardingView: View {
             if push.permissionStatus != .notDetermined {
                 push.markPromptHandledThisSession()
                 if push.permissionStatus == .authorized {
-                    push.registerIfAuthorized()
+                    await push.registerIfAuthorized()
                 }
                 finish()
             }

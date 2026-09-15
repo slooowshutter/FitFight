@@ -5,6 +5,7 @@ import Supabase
 @MainActor
 final class SessionStore: ObservableObject {
     @Published private(set) var authSession: Session?
+    @Published private(set) var isRestoringSession = true
     @Published private(set) var profile: FitFightProfile?
     @Published var authError: String?
     @Published private(set) var isBusy = false
@@ -94,7 +95,10 @@ final class SessionStore: ObservableObject {
     }
 
     init(listenForSession: Bool = true) {
-        guard listenForSession, !CompanionPreview.isEnabled else { return }
+        guard listenForSession, !CompanionPreview.isEnabled else {
+            isRestoringSession = false
+            return
+        }
         Task { await listen() }
     }
 
@@ -196,6 +200,7 @@ final class SessionStore: ObservableObject {
     func signOut() async {
         guard !screenshotSignedIn else { authError = CompanionPreview.writeUnavailable; return }
         authError = nil
+        await PushNotificationService.shared.revokeLocalRegistration()
         try? await client.auth.signOut()
         authSession = nil
         profile = nil
@@ -362,6 +367,8 @@ final class SessionStore: ObservableObject {
 
     private func listen() async {
         for await (event, session) in client.auth.authStateChanges {
+            // A token refresh can restore a saved session before the initial-session event.
+            if event == .initialSession || session != nil { isRestoringSession = false }
             if let session {
                 if event == .tokenRefreshed, authSession?.user.id == session.user.id,
                    profile?.userId == session.user.id {
@@ -385,7 +392,7 @@ final class SessionStore: ObservableObject {
                 authSession = session
                 await loadProfile()
             } else {
-                // Launch emits nil before restore; only reset after a real session is dropped.
+                // A nil initial session is signed out; reset crash identity only after a real session is dropped.
                 if authSession != nil {
                     CrashReporting.reset()
                 }

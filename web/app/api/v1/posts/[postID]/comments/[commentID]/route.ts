@@ -5,16 +5,18 @@ import { deleteFightPostComment } from "@/lib/supabase/queries/fight-post-engage
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export const DELETE = apiRoute<{ postID: string; commentID: string }>(async (request, { params }) => {
-  const { userId } = await verifyUser(request);
-  await deleteFightPostComment(
-    userId,
-    requireUuid(params.postID, "postID"),
-    requireUuid(params.commentID, "commentID"),
-  );
-  return json({ deleted: true });
-});
+export const DELETE = apiRoute<{ postID: string; commentID: string }>(
+    async (request, { params }) => {
+        const { userId } = await verifyUser(request);
+        const result = await deleteFightPostComment(
+            userId,
+            requireUuid(params.postID, "postID"),
+            requireUuid(params.commentID, "commentID"),
+        );
+        return json(result);
+    },
+);
 
 export function OPTIONS(request: Request) {
-  return corsPreflight(request);
+    return corsPreflight(request);
 }

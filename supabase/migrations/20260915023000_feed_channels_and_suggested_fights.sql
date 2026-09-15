@@ -2,27 +2,27 @@
 -- Marc can flag a series as suggested for the New tab.
 
 alter table public.fight_posts
-  add column broadcast boolean not null default false;
+    add column broadcast boolean not null default false;
 
 create table public.fight_post_channels (
-  post_id uuid not null references public.fight_posts (id) on delete cascade,
-  fight_id uuid not null references public.fights (id) on delete cascade,
-  created_at timestamptz not null default now(),
-  primary key (post_id, fight_id)
+    post_id uuid not null references public.fight_posts (id) on delete cascade,
+    fight_id uuid not null references public.fights (id) on delete cascade,
+    created_at timestamptz not null default now(),
+    primary key (post_id, fight_id)
 );
 
 create index fight_post_channels_fight_idx
-  on public.fight_post_channels (fight_id, post_id);
+    on public.fight_post_channels (fight_id, post_id);
 
 alter table public.fight_series
-  add column suggested boolean not null default false;
+    add column suggested boolean not null default false;
 
 alter table public.fight_series
-  add column suggested_at timestamptz;
+    add column suggested_at timestamptz;
 
 create index fight_series_suggested_idx
-  on public.fight_series (suggested_at desc)
-  where suggested;
+    on public.fight_series (suggested_at desc)
+    where suggested;
 
 insert into public.fight_post_channels (post_id, fight_id)
 select id, fight_id
@@ -33,21 +33,21 @@ on conflict do nothing;
 -- Copies from one compose (same author, body, and second) become one post
 -- with every fight attached, so comments and the root Feed stop splitting.
 create temporary table fight_post_dupes (
-  id uuid primary key,
-  keeper_id uuid not null
+    id uuid primary key,
+    keeper_id uuid not null
 ) on commit drop;
 
 insert into fight_post_dupes (id, keeper_id)
 select id, keeper_id
 from (
-  select
-    id,
-    first_value(id) over (
-      partition by author_id, body, date_trunc('second', created_at)
-      order by id
-    ) as keeper_id
-  from public.fight_posts
-  where audience = 'fight'
+    select
+        id,
+        first_value(id) over (
+            partition by author_id, body, date_trunc('second', created_at)
+            order by id
+        ) as keeper_id
+    from public.fight_posts
+    where audience = 'fight'
 ) as ranked
 where id <> keeper_id;
 
@@ -101,70 +101,70 @@ stable
 security definer
 set search_path = public
 as $$
-  select exists (
-    select 1
-    from public.fight_posts as post
-    where post.id = _post_id
-      and (
-        (
-          post.audience = 'main'
-          and (
-            post.author_id = (select auth.uid())
-            or exists (
-              select 1
-              from public.fight_members as me
-              join public.fight_members as them
-                on them.fight_id = me.fight_id
-              where me.user_id = (select auth.uid())
-                and them.user_id = post.author_id
-                and me.state in ('accepted', 'deferred')
-                and them.state in ('accepted', 'deferred')
-            )
-          )
-        )
-        or (
-          post.audience = 'fight'
-          and (
-            private.current_user_is_roster_member(post.fight_id)
-            or exists (
-              select 1
-              from public.fights as posted
-              join public.fights as sibling
-                on sibling.series_id = posted.series_id
-              where posted.id = post.fight_id
-                and posted.series_id is not null
-                and private.current_user_is_roster_member(sibling.id)
-            )
-          )
-        )
-        or exists (
-          select 1
-          from public.fight_post_channels as channel
-          join public.fights as posted
-            on posted.id = channel.fight_id
-          where channel.post_id = post.id
+    select exists (
+        select 1
+        from public.fight_posts as post
+        where post.id = _post_id
             and (
-              private.current_user_is_roster_member(channel.fight_id)
-              or (
-                posted.series_id is not null
-                and exists (
-                  select 1
-                  from public.fights as sibling
-                  where sibling.series_id = posted.series_id
-                    and private.current_user_is_roster_member(sibling.id)
+                (
+                    post.audience = 'main'
+                    and (
+                        post.author_id = (select auth.uid())
+                        or exists (
+                            select 1
+                            from public.fight_members as me
+                            join public.fight_members as them
+                                on them.fight_id = me.fight_id
+                            where me.user_id = (select auth.uid())
+                                and them.user_id = post.author_id
+                                and me.state in ('accepted', 'deferred')
+                                and them.state in ('accepted', 'deferred')
+                        )
+                    )
                 )
-              )
+                or (
+                    post.audience = 'fight'
+                    and (
+                        private.current_user_is_roster_member(post.fight_id)
+                        or exists (
+                            select 1
+                            from public.fights as posted
+                            join public.fights as sibling
+                                on sibling.series_id = posted.series_id
+                            where posted.id = post.fight_id
+                                and posted.series_id is not null
+                                and private.current_user_is_roster_member(sibling.id)
+                        )
+                    )
+                )
+                or exists (
+                    select 1
+                    from public.fight_post_channels as channel
+                    join public.fights as posted
+                        on posted.id = channel.fight_id
+                    where channel.post_id = post.id
+                        and (
+                            private.current_user_is_roster_member(channel.fight_id)
+                            or (
+                                posted.series_id is not null
+                                and exists (
+                                    select 1
+                                    from public.fights as sibling
+                                    where sibling.series_id = posted.series_id
+                                        and private.current_user_is_roster_member(sibling.id)
+                                )
+                            )
+                        )
+                )
             )
-        )
-      )
-  );
+    );
 $$;
 
 create policy fight_post_channels_select_visible
-  on public.fight_post_channels
-  for select
-  to authenticated, fitfight_backend_reader
-  using (private.current_user_can_see_fight_post(post_id));
+    on public.fight_post_channels
+    for select
+    to authenticated, fitfight_backend_reader
+    using (private.current_user_can_see_fight_post(post_id));
 
 -- fight_posts.fight_id still cascades. Rehome that pointer before the
 -- fight row goes away so a shared or Public post is not wiped.
@@ -173,30 +173,30 @@ returns trigger
 language plpgsql
 as $$
 begin
-  update public.fight_posts as post
-  set fight_id = remaining.fight_id
-  from (
-    select distinct on (channel.post_id)
-      channel.post_id,
-      channel.fight_id
-    from public.fight_post_channels as channel
-    where channel.fight_id is distinct from old.id
-    order by channel.post_id, channel.fight_id
-  ) as remaining
-  where post.fight_id = old.id
-    and remaining.post_id = post.id;
+    update public.fight_posts as post
+    set fight_id = remaining.fight_id
+    from (
+        select distinct on (channel.post_id)
+            channel.post_id,
+            channel.fight_id
+        from public.fight_post_channels as channel
+        where channel.fight_id is distinct from old.id
+        order by channel.post_id, channel.fight_id
+    ) as remaining
+    where post.fight_id = old.id
+        and remaining.post_id = post.id;
 
-  update public.fight_posts
-  set audience = 'main',
-      fight_id = null
-  where fight_id = old.id
-    and broadcast;
+    update public.fight_posts
+    set audience = 'main',
+            fight_id = null
+    where fight_id = old.id
+        and broadcast;
 
-  return old;
+    return old;
 end;
 $$;
 
 create trigger rehome_fight_posts_before_fight_delete
-  before delete on public.fights
-  for each row
-  execute function private.rehome_fight_posts_before_fight_delete();
+    before delete on public.fights
+    for each row
+    execute function private.rehome_fight_posts_before_fight_delete();

@@ -1,32 +1,32 @@
 {
-  "name": "fitfight-web",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "typecheck": "tsc --noEmit",
-    "test": "tsx --test lib/admin/*.test.ts lib/apple/*.test.ts lib/apns/*.test.ts lib/cursor/*.test.ts lib/ingest/*.test.ts lib/notifications/*.test.ts lib/openrouter/*.test.ts lib/scoring/*.test.ts lib/domain/**/*.test.ts lib/observability/*.test.ts lib/releases/*.test.ts lib/notion/*.test.ts lib/supabase/queries/*.test.ts",
-    "test:database": "tsx --test lib/supabase/queries/*.integration.ts",
-    "test:legacy-113": "tsx --test lib/supabase/queries/legacy-client-113.compatibility.ts"
-  },
-  "engines": {
-    "node": ">=20"
-  },
-  "dependencies": {
-    "@supabase/supabase-js": "^2.76.1",
-    "@vercel/analytics": "^2.0.1",
-    "next": "^15.5.2",
-    "postgres": "3.4.7",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
-    "zod": "^3.24.2"
-  },
-  "devDependencies": {
-    "@types/node": "^22.18.0",
-    "@types/react": "^19.1.12",
-    "@types/react-dom": "^19.1.9",
-    "tsx": "^4.20.5",
-    "typescript": "^5.9.2"
-  }
+    "name": "fitfight-web",
+    "private": true,
+    "scripts": {
+        "dev": "next dev",
+        "build": "next build",
+        "start": "next start",
+        "typecheck": "tsc --noEmit",
+        "test": "tsx --test lib/admin/*.test.ts lib/apple/*.test.ts lib/apns/*.test.ts lib/cursor/*.test.ts lib/ingest/*.test.ts lib/notifications/*.test.ts lib/openrouter/*.test.ts lib/scoring/*.test.ts lib/domain/**/*.test.ts lib/observability/*.test.ts lib/releases/*.test.ts lib/notion/*.test.ts lib/supabase/queries/*.test.ts",
+        "test:database": "tsx --test lib/supabase/queries/*.integration.ts",
+        "test:legacy-113": "tsx --test lib/supabase/queries/legacy-client-113.compatibility.ts"
+    },
+    "engines": {
+        "node": ">=20"
+    },
+    "dependencies": {
+        "@supabase/supabase-js": "^2.76.1",
+        "@vercel/analytics": "^2.0.1",
+        "next": "^15.5.2",
+        "postgres": "3.4.7",
+        "react": "^19.1.1",
+        "react-dom": "^19.1.1",
+        "zod": "^3.24.2"
+    },
+    "devDependencies": {
+        "@types/node": "^22.18.0",
+        "@types/react": "^19.1.12",
+        "@types/react-dom": "^19.1.9",
+        "tsx": "^4.20.5",
+        "typescript": "^5.9.2"
+    }
 }

@@ -87,10 +87,16 @@ extension CompanionPreview {
             fight.kickerRest = ""
             fight.listSubtitle = fight.timeLeftLabel
             fight.actionText = french ? "Apporte des croissants pour tout le monde" : "Brings croissants for everyone"
-            fight.days = (0..<min(length, max(1, length - hoursLeft / 24))).map { day in
-                FightDay(label: String(localized: "companion.day", defaultValue: "Day \(day + 1)"),
+            let dayCount = min(length, max(1, length - hoursLeft / 24))
+            let weights = (0..<dayCount).map { [0.8, 1.1, 1.3, 0.9][$0 % 4] }
+            let weightTotal = weights.reduce(0, +)
+            fight.days = (0..<dayCount).map { day in
+                let previousWeight = weights.prefix(day).reduce(0, +)
+                return FightDay(label: String(localized: "companion.day", defaultValue: "Day \(day + 1)"),
                          scores: zip(cast, totals).map { person, total in
-                    DayScore(person: person, value: (total / Double(length) * [0.8, 1.1, 1.3, 0.9][day % 4]).rounded())
+                    DayScore(person: person, value:
+                        (total * (previousWeight + weights[day]) / weightTotal).rounded()
+                        - (total * previousWeight / weightTotal).rounded())
                 })
             }
             return fight

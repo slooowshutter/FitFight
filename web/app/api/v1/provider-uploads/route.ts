@@ -8,13 +8,13 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export const POST = apiRoute(async (request) => {
-  const { userId } = await verifyUser(request);
-  const input = createProviderUploadSchema.parse(await readJson(request));
-  requireProviderArchiveSize(input.byte_size);
-  const result = await createProviderUpload(userId, input);
-  return json(result.response, result.created ? 201 : 200);
+    const { userId } = await verifyUser(request);
+    const input = createProviderUploadSchema.parse(await readJson(request));
+    requireProviderArchiveSize(input.byte_size);
+    const result = await createProviderUpload(userId, input);
+    return json(result.response, result.created ? 201 : 200);
 });
 
 export function OPTIONS(request: Request) {
-  return corsPreflight(request);
+    return corsPreflight(request);
 }

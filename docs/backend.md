@@ -16,7 +16,7 @@ audit did not verify hosted grants or signed-in devices. See the
 [dated deployment evidence](status.md#api-and-update-rollout-verified-13-sep-2026).
 Every API/schema edit must follow [API compatibility](shipping.md#api-compatibility-for-every-change).
 
-The native app uses Supabase directly only for Auth. All application database reads
+The native app uses Supabase directly for Auth and private Realtime invalidations. All application database reads
 and writes use the authenticated FitFight API. `GET /api/v1/me` returns
 `user_id`, `handle`, `display_name`, nullable `handle_set_at`, `referral_code`,
 and nullable `avatar` (the shared media object).
@@ -65,6 +65,31 @@ safe backend migration, not automatically an iOS release. Removing information o
 behavior an admitted app still requires waits for that app to be retired. Destructive
 SQL and hosted deployment still follow Marc's authorization rules.
 
+## Fight chart consistency (prepared 15 Sep 2026)
+
+Apply `20260915200338_fight_step_checkpoints.sql` before deploying this backend.
+`GET /api/v1/provider-uploads/context` adds the Fight's `time_zone`. New native
+uploads attach optional `step_checkpoints` to each `fight_aggregates` item. Each
+point is Apple's cumulative query from the same Fight start, through that Fight
+day's end or the current cutoff. The final query supplies both the last point
+and the scored total. The server validates complete day coverage, increasing
+cutoffs and counts, and an identical final cutoff and total.
+
+Checkpoints live on `private.fight_score_snapshots` with their score revision.
+The existing upload transaction saves the score and history together. Snapshot
+responses add nullable member `step_checkpoints` from the latest selected-source
+revision, only when its value matches the member score. Final history freezes
+with the final snapshot. The backend reader has limited SELECT columns and the
+existing roster-membership policy; client roles gain no private-table access.
+
+Older requests still work and may produce a latest revision without checkpoints.
+New clients then show confirmed totals and an unavailable-history message; they
+never fill the gap from legacy `step_days`. Existing daily rows and client grants
+are retained for installed builds. An older backend without context `time_zone`
+receives the original upload fields from the new app. Distribute the new native
+build after the migration and compatible backend deployment. See
+[status](status.md#fight-charts-and-standings-prepared-15-sep-2026) for verification.
+
 ## Friend referrals (pending deployment)
 
 Profiles carry a stable, read-only `referral_code`; there is no link-generation endpoint.
@@ -78,7 +103,7 @@ backend before the native build. See the install handoff in [`status.md`](status
 
 A cloud agent writes SQL in `supabase/migrations` and tests in `supabase/tests`, then opens a PR **into `develop` only when Marc explicitly asks for a PR**. Marc merges that. The persistent Supabase branch `develop` picks it up. TestFlight is a later merge to `preview`. Production only changes when Marc merges `preview` → `main`. Agents do not get the database password or `sb_secret_...` key, and they do not merge unless Marc asked.
 
-GitHub-hosted **Ubuntu** starts disposable Supabase Postgres, Auth, and the Data API, lints the schema, runs pgTAP and TypeScript transaction tests, and rejects `DROP TABLE` / `TRUNCATE` / `DROP COLUMN` unless the **first line** of the file is exactly `-- allow-destructive`. The same backend tests run again after applying the deferred client-permission cutoff, including real signed-in Data API denials and signup. Agents do not run this stack on Marc's Mac or a hosted project.
+GitHub-hosted **Ubuntu** starts disposable Supabase Postgres, Auth, Realtime, and the Data API, lints the schema, runs pgTAP and TypeScript transaction tests, and rejects `DROP TABLE` / `TRUNCATE` / `DROP COLUMN` unless the **first line** of the file is exactly `-- allow-destructive`. The same backend tests run again after applying the deferred client-permission cutoff, including real signed-in Data API denials and signup. Agents do not run this stack on Marc's Mac or a hosted project.
 
 iOS TestFlight is unchanged and still ignores this folder. iOS simulator and screenshot jobs skip when the PR does not touch the app.
 
@@ -86,26 +111,26 @@ iOS TestFlight is unchanged and still ignores this folder. iOS simulator and scr
 
 In the project: **Project Settings → Integrations → GitHub**.
 
-| Field | Value |
-| --- | --- |
-| GitHub repository | `marclelamy/FitFight` (same repo as `slooowshutter/FitFight`) |
-| Working directory | `.` |
-| Deploy to production | On |
-| Production branch | `main` |
-| Automatic branching | On |
-| Branch limit | `3` (preview branches cost extra; do not raise this) |
-| Supabase changes only | On |
+| Field                 | Value                                                         |
+| --------------------- | ------------------------------------------------------------- |
+| GitHub repository     | `marclelamy/FitFight` (same repo as `slooowshutter/FitFight`) |
+| Working directory     | `.`                                                           |
+| Deploy to production  | On                                                            |
+| Production branch     | `main`                                                        |
+| Automatic branching   | On                                                            |
+| Branch limit          | `3` (preview branches cost extra; do not raise this)          |
+| Supabase changes only | On                                                            |
 
 Then **Enable integration**. Do not paste a secret key, `service_role` key, or database password into GitHub. Those are legacy for this loop. Deploys go through the GitHub app, not a key in Actions.
 
 GitHub branches:
 
-| GitHub branch | Meaning | Hosted database |
-| --- | --- | --- |
-| Feature (`cursor/…`) | One piece of work | Preview (only if `supabase/` changed, max 3) |
-| `develop` | Integration / staging site | Persistent Supabase branch named **`develop`** |
-| `preview` | TestFlight cut | Same persistent `develop` project |
-| `main` | Production | The main project |
+| GitHub branch        | Meaning                    | Hosted database                                |
+| -------------------- | -------------------------- | ---------------------------------------------- |
+| Feature (`cursor/…`) | One piece of work          | Preview (only if `supabase/` changed, max 3)   |
+| `develop`            | Integration / staging site | Persistent Supabase branch named **`develop`** |
+| `preview`            | TestFlight cut             | Same persistent `develop` project              |
+| `main`               | Production                 | The main project                               |
 
 In **Branching**, create one long-lived branch named **`develop`** (not `staging`). It tracks the GitHub `develop` branch. Feature PRs merge into `develop`. GitHub `preview` only cuts TestFlight binaries; it must not become an extra hosted database. When Marc wants a TestFlight, he merges `develop` → `preview`. When he wants production, he merges `preview` into `main`.
 
@@ -124,7 +149,7 @@ Marc’s extra lock (GitHub ruleset **Protect main**): target **`main`, `develop
 
 ```bash
 python3 scripts/forbid-destructive-sql.py
-npx supabase@2.115.0 start -x studio,meta,analytics,vector,imgproxy,realtime,storage,edge-runtime
+npx supabase@2.115.0 start -x studio,meta,analytics,vector,imgproxy,storage,edge-runtime
 npx supabase@2.115.0 db lint --local --schema public,private --fail-on error
 npx supabase@2.115.0 test db --local
 ```
@@ -213,6 +238,41 @@ period remains a product decision; Apple provides no historical immutability dea
 The snapshot fingerprint includes the read's `complete_through` timestamp. Replaying
 the same reading is idempotent, but a later reading that returns to an earlier total
 creates a new snapshot and can become the latest correction at the same Fight end.
+
+## Live standings (prepared 15 Sep 2026)
+
+A foreground, signed-in app subscribes to one private topic,
+`fitfight:fights:<user UUID>`, for `fights_changed` broadcasts with no app payload.
+Supabase adds its own random message ID. The topic's
+receive policy requires that exact authenticated User. Clients have no publish
+policy. Statement triggers on Fight memberships and Fight updates notify the
+current roster, owner, and changed members, including removals. No scores,
+HealthKit records, or Fight IDs travel over the socket. The API rechecks current
+access whenever a notification arrives.
+
+`POST /api/v1/fights/snapshot` takes the same `{ "time_zone": "Europe/Paris" }`
+request and returns the same `{ fights, members, profiles, series, step_days }`
+contract as `/fights/refresh`, with no maintenance or HealthKit work. It uses the
+same authenticated, read-only query and sends `Cache-Control: no-store`. Existing
+`/fights/refresh` clients keep their maintenance and response contract.
+
+Trigger inserts into `realtime.messages` commit with the score transaction; rolled
+back changes publish nothing. `realtime.send` can warn and skip publication on an
+internal failure, so this is best-effort invalidation. The app also refetches on
+subscription/reconnection, replication readiness, and foreground entry. It coalesces bursts, queues an
+extra read for events received during a fetch, and rejects superseded requests or
+responses from a previous account. Backgrounding and sign-out remove the channel.
+SDK Auth refresh continues to update the channel's credentials. The readiness
+refresh follows the [Realtime system-event protocol](https://supabase.com/docs/guides/realtime/protocol).
+
+Standings are replaced together from confirmed API snapshots. Reading fresh local
+HealthKit totals no longer edits the viewer's score or rank before the upload is
+accepted. Failed reads retain the previous confirmed snapshot.
+
+Roll out the additive `20260915193015_broadcast_fight_changes.sql` migration and
+read-only backend endpoint before distributing the native build. No old columns,
+API fields, or direct-client grants are removed. Live deployment and device
+verification are recorded separately in [status.md](status.md).
 
 ## Request performance and timing (5 Sep 2026)
 

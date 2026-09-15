@@ -14,9 +14,9 @@ Read this first, then `docs/`. Marc talks from his phone, often transcribing. Be
 - Never put `.p8` / API keys / provisioning profiles in git or chat.
 - Keep the repo **public** (free GitHub macOS minutes). Don’t make it private without saying so.
 - Never use em dashes (U+2014) or en dashes (U+2013). Use a comma, period, colon, or ASCII hyphen `-`. This applies to user-facing copy, docs, comments, and agent writing.
-- Version label stays at the **top of the screen** (not the nav bar), e.g. `1.0.0 · build N · staging · 2 Sep`.
-- Permanent **Versions** button: under You → Settings, and the version label at the top. Every user-facing ship adds a `ReleaseNote` in `FitFight/Changelog.swift` (same marketing version, new date/notes).
-- **Do not bump `MARKETING_VERSION` for TestFlight.** The App Store release version is **1.0.0**. Stay on `1.0.0`; CI increments the **build number**. Changelog rows reuse `1.0.0`. Only bump marketing version for the next App Store version or if Marc asks.
+- Version label shows at the **top of You** only (not the nav bar), e.g. `1.1.1 · build N · staging · 15 Sep`. Do not show it on Fights, New, Feed, or Feedback.
+- Permanent **Versions** button: under You → Settings. Keep the version label on You. Every user-facing ship adds a `ReleaseNote` in `FitFight/Changelog.swift` (same marketing version, new date/notes).
+- Marketing version is **1.1.1**, as requested by Marc on 15 Sep 2026. Apple closed the 1.0.0 train (altool 90062 / 90186). Do not upload 1.0.0. `FITFIGHT_RELEASE_VERSION` and Fastlane must equal 1.1.1. CI still increments the **build number**. Changelog rows reuse `1.1.1` until Marc asks for the next version.
 - Design tokens live in `docs/design/source/tokens.json` and are copied byte-for-byte into `FitFight/DesignSystem/tokens.json` for the app bundle. Don’t hardcode colours. The current system is **Night/Day with fixed semantic families**: Moss is you/winning, Ember is urgency/losing, and Gold is progress only. There is no accent picker.
 - Talk to Marc only for things only he can do: Apple login, GitHub secrets, TestFlight testers, legal, the hosted Supabase dashboard. Agents cannot `workflow_dispatch`. Staging TestFlight uploads only on push/merge to `preview` (plus optional manual `workflow_dispatch` on that branch). Feature-branch, `develop`, and cron do not upload. `main` never uploads to TestFlight. After a `preview` merge, tell Marc a staging build is coming; he opens TestFlight → Update. Do not ask him to Run workflow.
 - Never nuke the hosted database. No `supabase db reset` / `db push` against production or `develop`, no `DROP TABLE` / `TRUNCATE` / `DROP SCHEMA` / `DROP DATABASE` unless Marc asked in that chat and the migration starts with `-- allow-destructive`. Never put `sb_secret_...`, `service_role`, or the database password in git, chat, or iOS. Never merge to `main` unless Marc asked to ship to production. Never merge to `develop` or `preview` unless Marc asked. Production migrations apply only after `preview` is merged to `main`.
@@ -39,7 +39,7 @@ Before changing an API, native API model, or database schema, read [API compatib
 Current map: [`docs/status.md`](docs/status.md). Sign-in, username, direct-username Steps challenges, Apple Health aggregate sync, invitations, and standings work on staging.
 
 - Native SwiftUI iOS app, scheme `FitFight`, bundle ID `com.fitfight.mvp`.
-- First TestFlight upload **succeeded** (build `0.1.0 (1)`). Current release/TestFlight marketing version: **1.0.0**.
+- First TestFlight upload **succeeded** (build `0.1.0 (1)`). Next prepared release/TestFlight marketing version: **1.1.1**. The last uploaded build is **1.1.0 (200)**; see `docs/status.md` for availability.
 - Staging TestFlight only on push/merge to `preview` (optional manual `workflow_dispatch` on that branch). No daily cron. Feature branches and `develop` do not upload. `main` never uploads to TestFlight.
 - Simulator compile on every PR.
 - Approved design source remains in `docs/design/source/`. The app uses Night/Day and one fixed semantic palette.
@@ -63,7 +63,7 @@ He asks for several designs of a screen. He wants to **tap them on his phone**, 
 
 - **Never** answer with AI-generated images. A generated picture is not the product and cannot be tapped.
 - Build **one self-contained HTML page** under `docs/design/source/kit/`, named for the screen (`fights-home-proposals.html`). Plain HTML, CSS and vanilla JS in that one file. No build step, no framework, no npm.
-- Use the real kit: `tokens.json` colours, Nunito, 22pt cards, hairline borders, no shadows, and a 393×852 phone frame with the version line and the Fights / New / You tab bar.
+- Use the real kit: `tokens.json` colours, Nunito, 22pt cards, hairline borders, no shadows, and a 393×852 phone frame with the version line on You only and the Fights / New / Feed / Feedback / You tab bar.
 - Put every option in **one page** behind a picker, so he taps between them without leaving. Each option needs a short line saying when it is the right choice.
 - Feed every option the **same** fake fights, so he compares layouts and not data.
 - When Marc explicitly asks for a PR, commit, push, open it, then **give him a clickable link** in the reply:
@@ -75,7 +75,7 @@ He asks for several designs of a screen. He wants to **tap them on his phone**, 
 
 1. Branch off `develop`. Only when Marc explicitly asks for a PR, open it **into `develop`**. Do not PR into `preview` or `main` unless Marc is cutting that release.
 2. Add new `.swift` files to `FitFight.xcodeproj/project.pbxproj` (explicit file list, not a synchronized group). JSON in `DesignSystem/` must also be in the Resources build phase.
-3. If users will see it: append a `ReleaseNote` in `Changelog.swift` using the current `MARKETING_VERSION` (`1.0.0`). Do **not** change `MARKETING_VERSION` in `project.pbxproj`. CI bumps the build number. Only bump marketing version for the next App Store version or when Marc asks in that chat.
+3. If users will see it: append a `ReleaseNote` in `Changelog.swift` using the current `MARKETING_VERSION` (`1.1.1`). Do **not** change `MARKETING_VERSION` in `project.pbxproj` unless Marc asks or Apple closed the train. CI bumps the build number.
 4. Don’t ask Marc to open Xcode or his Mac. Feature-branch and `develop` pushes do not upload TestFlight. A staging build uploads when the change lands on `preview`. Then he opens TestFlight → Update. Do not ask him to Run workflow.
 5. Shipping to production is Marc merging `preview` → `main`. Agents do not do that unless he said so in that chat.
 6. Merged feature branches are deleted by CI. `main`, `develop`, `preview`, and `testflight-latest` stay. Do not enable GitHub’s “Automatically delete head branches.”
@@ -86,6 +86,7 @@ These rules apply to Swift, TypeScript, SQL, scripts, and documentation. The det
 
 - Do exactly the requested task. Do not add features, options, abstractions, fallbacks, retries, refactors, or cleanup that the request does not require.
 - Keep the diff surgical. Every changed line must trace to the request. Match the style of the file being changed.
+- Use **four spaces per indentation level**, never two spaces or tabs. Follow the repository `.editorconfig` and `.prettierrc.json` settings when editing or formatting code.
 - Remove imports, variables, functions, and files that **your change** makes unused. Do not remove pre-existing dead code unless asked.
 - State material assumptions. Ask before coding only when different answers would produce meaningfully different work and the answer cannot be found in the repo.
 - For multi-step work, define verifiable success criteria, implement to those criteria, and run the smallest relevant checks.
@@ -141,20 +142,29 @@ Names such as `get*`, `is*`, `has*`, `resolve*`, `normalize*`, `describe*`, `for
 
 ```ts
 // WRONG: three single-use helpers make one flow harder to read
-function normalizeFightID(id: string) { return id.trim().toLowerCase(); }
-function isFinalFight(fight: Fight) { return fight.state === "final"; }
-function getFightLabel(fight: Fight) { return `${fight.name} (${fight.state})`; }
+function normalizeFightID(id: string) {
+    return id.trim().toLowerCase();
+}
+function isFinalFight(fight: Fight) {
+    return fight.state === "final";
+}
+function getFightLabel(fight: Fight) {
+    return `${fight.name} (${fight.state})`;
+}
 export function summarizeFight(id: string, fights: Fight[]) {
-  const fight = fights.find((item) => item.id === normalizeFightID(id));
-  if (!fight) return null;
-  return { label: getFightLabel(fight), final: isFinalFight(fight) };
+    const fight = fights.find((item) => item.id === normalizeFightID(id));
+    if (!fight) return null;
+    return { label: getFightLabel(fight), final: isFinalFight(fight) };
 }
 
 // RIGHT: one function keeps the operation visible
 export function summarizeFight(id: string, fights: Fight[]) {
-  const fight = fights.find((item) => item.id === id.trim().toLowerCase());
-  if (!fight) return null;
-  return { label: `${fight.name} (${fight.state})`, final: fight.state === "final" };
+    const fight = fights.find((item) => item.id === id.trim().toLowerCase());
+    if (!fight) return null;
+    return {
+        label: `${fight.name} (${fight.state})`,
+        final: fight.state === "final",
+    };
 }
 ```
 
@@ -196,8 +206,8 @@ export const fightStateValues = ["draft", "live", "final"] as const;
 export const fightStateSchema = z.enum(fightStateValues);
 
 export const fightSummarySchema = z.object({
-  id: z.string().uuid(),
-  state: fightStateSchema,
+    id: z.string().uuid(),
+    state: fightStateSchema,
 });
 
 export type FightState = z.infer<typeof fightStateSchema>;
@@ -228,7 +238,7 @@ const body = await readJson(request);
 const parsed = createFightRequestSchema.safeParse(body);
 
 if (!parsed.success) {
-  throw parsed.error;
+    throw parsed.error;
 }
 
 const input = parsed.data;

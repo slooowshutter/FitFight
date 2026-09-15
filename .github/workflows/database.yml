@@ -2,91 +2,91 @@
 name: Database
 
 on:
-  pull_request:
-  push:
-    branches: [main, develop, preview]
+    pull_request:
+    push:
+        branches: [main, develop, preview]
 
 concurrency:
-  group: database-${{ github.ref }}
-  cancel-in-progress: true
+    group: database-${{ github.ref }}
+    cancel-in-progress: true
 
 jobs:
-  test:
-    name: Migrations and RLS
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
+    test:
+        name: Migrations and RLS
+        runs-on: ubuntu-latest
+        timeout-minutes: 25
+        permissions:
+            contents: read
+        steps:
+            - uses: actions/checkout@v4
 
-      - name: Forbid destructive SQL
-        run: python3 scripts/forbid-destructive-sql.py
+            - name: Forbid destructive SQL
+              run: python3 scripts/forbid-destructive-sql.py
 
-      - uses: supabase/setup-cli@v1
-        with:
-          version: 2.115.0
+            - uses: supabase/setup-cli@v1
+              with:
+                  version: 2.115.0
 
-      - name: Start disposable database, Auth, and Data API
-        run: supabase start -x studio,meta,analytics,vector,imgproxy,realtime,storage,edge-runtime
+            - name: Start disposable database, Auth, Realtime, and Data API
+              run: supabase start -x studio,meta,analytics,vector,imgproxy,storage,edge-runtime
 
-      - name: Lint schema
-        run: supabase db lint --local --schema public,private --fail-on error
+            - name: Lint schema
+              run: supabase db lint --local --schema public,private --fail-on error
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: web/package-lock.json
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+                  cache: npm
+                  cache-dependency-path: web/package-lock.json
 
-      - run: npm ci
-        working-directory: web
+            - run: npm ci
+              working-directory: web
 
-      - name: Public build 113 migration compatibility
-        run: |
-          supabase status --output json > "$RUNNER_TEMP/supabase-test.json"
-          export DATABASE_URL="$(jq -er .DB_URL "$RUNNER_TEMP/supabase-test.json")"
-          export SUPABASE_TEST_URL="$(jq -er .API_URL "$RUNNER_TEMP/supabase-test.json")"
-          export SUPABASE_TEST_ANON_KEY="$(jq -er .ANON_KEY "$RUNNER_TEMP/supabase-test.json")"
-          export SUPABASE_TEST_SERVICE_KEY="$(jq -er .SERVICE_ROLE_KEY "$RUNNER_TEMP/supabase-test.json")"
-          export SUPABASE_CLIENT_ACCESS_CLOSED=false
-          cd web
-          npm run test:legacy-113
+            - name: Public build 113 migration compatibility
+              run: |
+                  supabase status --output json > "$RUNNER_TEMP/supabase-test.json"
+                  export DATABASE_URL="$(jq -er .DB_URL "$RUNNER_TEMP/supabase-test.json")"
+                  export SUPABASE_TEST_URL="$(jq -er .API_URL "$RUNNER_TEMP/supabase-test.json")"
+                  export SUPABASE_TEST_ANON_KEY="$(jq -er .ANON_KEY "$RUNNER_TEMP/supabase-test.json")"
+                  export SUPABASE_TEST_SERVICE_KEY="$(jq -er .SERVICE_ROLE_KEY "$RUNNER_TEMP/supabase-test.json")"
+                  export SUPABASE_CLIENT_ACCESS_CLOSED=false
+                  cd web
+                  npm run test:legacy-113
 
-      - name: Staging write permissions and pgTAP
-        run: |
-          export DATABASE_URL="$(jq -er .DB_URL "$RUNNER_TEMP/supabase-test.json")"
-          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 --single-transaction \
-            -f supabase/migration-tests/staging-fight-write-cutoff.sql
-          supabase test db --local
+            - name: Staging write permissions and pgTAP
+              run: |
+                  export DATABASE_URL="$(jq -er .DB_URL "$RUNNER_TEMP/supabase-test.json")"
+                  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 --single-transaction \
+                    -f supabase/migration-tests/staging-fight-write-cutoff.sql
+                  supabase test db --local
 
-      - name: Database transaction tests
-        run: |
-          export DATABASE_URL="$(jq -er .DB_URL "$RUNNER_TEMP/supabase-test.json")"
-          export SUPABASE_TEST_URL="$(jq -er .API_URL "$RUNNER_TEMP/supabase-test.json")"
-          export SUPABASE_TEST_ANON_KEY="$(jq -er .ANON_KEY "$RUNNER_TEMP/supabase-test.json")"
-          export SUPABASE_TEST_SERVICE_KEY="$(jq -er .SERVICE_ROLE_KEY "$RUNNER_TEMP/supabase-test.json")"
-          export SUPABASE_CLIENT_ACCESS_CLOSED=false
-          cd web
-          npm run test:database
+            - name: Database transaction tests
+              run: |
+                  export DATABASE_URL="$(jq -er .DB_URL "$RUNNER_TEMP/supabase-test.json")"
+                  export SUPABASE_TEST_URL="$(jq -er .API_URL "$RUNNER_TEMP/supabase-test.json")"
+                  export SUPABASE_TEST_ANON_KEY="$(jq -er .ANON_KEY "$RUNNER_TEMP/supabase-test.json")"
+                  export SUPABASE_TEST_SERVICE_KEY="$(jq -er .SERVICE_ROLE_KEY "$RUNNER_TEMP/supabase-test.json")"
+                  export SUPABASE_CLIENT_ACCESS_CLOSED=false
+                  cd web
+                  npm run test:database
 
-      - name: Verify later client permission cutoff
-        run: |
-          export DATABASE_URL="$(jq -er .DB_URL "$RUNNER_TEMP/supabase-test.json")"
-          export SUPABASE_TEST_URL="$(jq -er .API_URL "$RUNNER_TEMP/supabase-test.json")"
-          export SUPABASE_TEST_ANON_KEY="$(jq -er .ANON_KEY "$RUNNER_TEMP/supabase-test.json")"
-          export SUPABASE_TEST_SERVICE_KEY="$(jq -er .SERVICE_ROLE_KEY "$RUNNER_TEMP/supabase-test.json")"
-          export SUPABASE_CLIENT_ACCESS_CLOSED=true
-          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 --single-transaction \
-            -f supabase/deferred-migrations/20260909133941_close_direct_app_database_access.sql
-          supabase test db --local supabase/migration-tests/client-access-closed.sql supabase/tests/backend_reader.sql
-          cd web
-          npm run test:database
+            - name: Verify later client permission cutoff
+              run: |
+                  export DATABASE_URL="$(jq -er .DB_URL "$RUNNER_TEMP/supabase-test.json")"
+                  export SUPABASE_TEST_URL="$(jq -er .API_URL "$RUNNER_TEMP/supabase-test.json")"
+                  export SUPABASE_TEST_ANON_KEY="$(jq -er .ANON_KEY "$RUNNER_TEMP/supabase-test.json")"
+                  export SUPABASE_TEST_SERVICE_KEY="$(jq -er .SERVICE_ROLE_KEY "$RUNNER_TEMP/supabase-test.json")"
+                  export SUPABASE_CLIENT_ACCESS_CLOSED=true
+                  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 --single-transaction \
+                    -f supabase/deferred-migrations/20260909133941_close_direct_app_database_access.sql
+                  supabase test db --local supabase/migration-tests/client-access-closed.sql supabase/tests/backend_reader.sql
+                  cd web
+                  npm run test:database
 
-      - name: Legacy deletion migration boundary
-        run: |
-          supabase db reset --local --version 20260831113843 --no-seed --yes
-          cp supabase/migration-tests/legacy-deleted-accounts-fixture.sql \
-            supabase/migrations/20260901103642_legacy_deleted_accounts_fixture.sql
-          supabase migration up --local --yes
-          supabase test db --local supabase/migration-tests/legacy-deleted-accounts.sql
+            - name: Legacy deletion migration boundary
+              run: |
+                  supabase db reset --local --version 20260831113843 --no-seed --yes
+                  cp supabase/migration-tests/legacy-deleted-accounts-fixture.sql \
+                    supabase/migrations/20260901103642_legacy_deleted_accounts_fixture.sql
+                  supabase migration up --local --yes
+                  supabase test db --local supabase/migration-tests/legacy-deleted-accounts.sql

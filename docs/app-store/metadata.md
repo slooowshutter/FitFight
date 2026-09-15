@@ -1,26 +1,26 @@
 # App Store metadata
 
-Prepared English (U.S.) and French (France) copy for the authorized 1.1.0 production update. Keep the existing approved app name, contact details, territories, and seller settings unless Marc requests a change. This file is a draft until saved in App Store Connect.
+Prepared English (U.S.) and French (France) copy for the authorized 1.1.1 production update. Keep the existing approved app name, contact details, territories, and seller settings unless Marc requests a change. This file is a draft until saved in App Store Connect.
 
 ## App information
 
-| Field | Value |
-| --- | --- |
-| App Store name | `FitFight: Step Challenges` |
-| On-device name | `FitFight` |
-| Subtitle | `Compete on steps with friends` |
-| Primary category | Health & Fitness |
-| Secondary category | Sports |
-| Bundle ID | `com.fitfight.mvp` |
-| SKU | `fitfight` |
-| Price | Free |
-| In-app purchases | None |
-| Advertising | None |
-| Privacy Policy URL | `https://fitfight.app/privacy` |
-| Support URL | `https://fitfight.app/support` |
-| Marketing URL | `https://fitfight.app` |
-| Copyright | `2026 Marc Lamy` |
-| Release method | Manually release after approval |
+| Field              | Value                           |
+| ------------------ | ------------------------------- |
+| App Store name     | `FitFight: Step Challenges`     |
+| On-device name     | `FitFight`                      |
+| Subtitle           | `Compete on steps with friends` |
+| Primary category   | Health & Fitness                |
+| Secondary category | Sports                          |
+| Bundle ID          | `com.fitfight.mvp`              |
+| SKU                | `fitfight`                      |
+| Price              | Free                            |
+| In-app purchases   | None                            |
+| Advertising        | None                            |
+| Privacy Policy URL | `https://fitfight.app/privacy`  |
+| Support URL        | `https://fitfight.app/support`  |
+| Marketing URL      | `https://fitfight.app`          |
+| Copyright          | `2026 Marc Lamy`                |
+| Release method     | Manually release after approval |
 
 ## Promotional text
 
@@ -53,7 +53,7 @@ Prepared English (U.S.) and French (France) copy for the authorized 1.1.0 produc
 
 `step challenge,walking,fitness,friends,competition,pedometer,health`
 
-## What is new in 1.1.0
+## What is new in 1.1.1
 
 > Meet your companion, share photos and posts, schedule or repeat challenges, and choose your notifications. This update also brings the new FitFight icon and improvements to Health sync and standings.
 
@@ -76,13 +76,13 @@ Do not submit old design-source screenshots: they contain removed Requests, mone
 
 Keep English (U.S.) as the primary App Store language and add French (France) as a localization.
 
-| Field | Value |
-| --- | --- |
-| App Store name | `FitFight : Défis de pas` |
-| Subtitle | `Défiez vos amis à pied` |
+| Field              | Value                             |
+| ------------------ | --------------------------------- |
+| App Store name     | `FitFight : Défis de pas`         |
+| Subtitle           | `Défiez vos amis à pied`          |
 | Privacy Policy URL | `https://fitfight.app/fr/privacy` |
-| Support URL | `https://fitfight.app/fr/support` |
-| Marketing URL | `https://fitfight.app` |
+| Support URL        | `https://fitfight.app/fr/support` |
+| Marketing URL      | `https://fitfight.app`            |
 
 ### Promotional text
 
@@ -115,7 +115,7 @@ Keep English (U.S.) as the primary App Store language and add French (France) as
 
 `défi de pas,marche,fitness,amis,compétition,podomètre,santé`
 
-### Nouveautés de la version 1.1.0
+### Nouveautés de la version 1.1.1
 
 > Découvrez votre compagnon, partagez des photos et des publications, programmez ou répétez vos défis et choisissez vos notifications. Cette mise à jour apporte aussi la nouvelle icône FitFight et des améliorations de la synchronisation Santé et des classements.
 

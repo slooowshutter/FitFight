@@ -259,6 +259,33 @@ struct FitFightCreateFight: Encodable, Equatable {
     var recurring: Bool?
 }
 
+struct FitFightUpdateFight: Encodable, Equatable {
+    var name: String?
+    var actionText: String?
+    var visibility: String?
+    var recurring: Bool?
+    var startsAt: Date?
+    var endsAt: Date?
+    var inviteHandles: [String]?
+    var removeUserIds: [UUID]?
+
+    enum CodingKeys: String, CodingKey {
+        case name, actionText, visibility, recurring, startsAt, endsAt, inviteHandles, removeUserIds
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(name, forKey: .name)
+        try container.encodeIfPresent(actionText, forKey: .actionText)
+        try container.encodeIfPresent(visibility, forKey: .visibility)
+        try container.encodeIfPresent(recurring, forKey: .recurring)
+        try container.encodeIfPresent(startsAt, forKey: .startsAt)
+        try container.encodeIfPresent(endsAt, forKey: .endsAt)
+        try container.encodeIfPresent(inviteHandles, forKey: .inviteHandles)
+        try container.encodeIfPresent(removeUserIds, forKey: .removeUserIds)
+    }
+}
+
 struct FitFightJoinableFight: Decodable, Equatable, Identifiable {
     var fightId: UUID
     var seriesId: UUID
@@ -322,6 +349,7 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
     var mine: Bool
     var createdAt: Date
     var metadata: FitFightFeedbackMetadata
+    var media: [FitFightMedia]
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -336,6 +364,7 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
         case mine
         case createdAt = "created_at"
         case metadata
+        case media
     }
 
     init(
@@ -350,7 +379,8 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
         authorHandle: String,
         mine: Bool,
         createdAt: Date,
-        metadata: FitFightFeedbackMetadata = FitFightFeedbackMetadata()
+        metadata: FitFightFeedbackMetadata = FitFightFeedbackMetadata(),
+        media: [FitFightMedia] = []
     ) {
         self.id = id
         self.kind = kind
@@ -364,6 +394,7 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
         self.mine = mine
         self.createdAt = createdAt
         self.metadata = metadata
+        self.media = media
     }
 
     init(from decoder: Decoder) throws {
@@ -381,6 +412,7 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         metadata = try container.decodeIfPresent(FitFightFeedbackMetadata.self, forKey: .metadata)
             ?? FitFightFeedbackMetadata()
+        media = try container.decodeIfPresent([FitFightMedia].self, forKey: .media) ?? []
     }
 }
 
@@ -479,7 +511,24 @@ struct FitFightCreateFeedback: Encodable, Equatable {
     var kind: String
     var title: String
     var body: String
+    var mediaIds: [UUID] = []
     var metadata: FitFightFeedbackMetadata
+
+    enum CodingKeys: String, CodingKey {
+        case kind, title, body, metadata
+        case mediaIds = "media_ids"
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(kind, forKey: .kind)
+        try container.encode(title, forKey: .title)
+        try container.encode(body, forKey: .body)
+        try container.encode(metadata, forKey: .metadata)
+        if !mediaIds.isEmpty {
+            try container.encode(mediaIds, forKey: .mediaIds)
+        }
+    }
 }
 
 struct FitFightReferralLink: Encodable {
@@ -864,6 +913,21 @@ struct FitFightAPI {
             body: payload,
             idempotencyKey: idempotencyKey,
             expected: [200, 201]
+        )
+    }
+
+    func updateFight(
+        fightID: UUID,
+        payload: FitFightUpdateFight,
+        accessToken: String
+    ) async throws -> FitFightSummary {
+        try await request(
+            path: "fights/\(fightID.uuidString.lowercased())",
+            method: "PATCH",
+            accessToken: accessToken,
+            body: Self.encoder.encode(payload),
+            idempotencyKey: nil,
+            expected: [200]
         )
     }
 

@@ -19,6 +19,7 @@ const detail: FeedbackPostDetail = {
     mine: false,
     created_at: "2026-09-04T12:00:00Z",
     metadata: { app_version: "1.0.0", os: "iOS", os_version: "26.0" },
+    media: [],
   },
   comments: [{
     id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
@@ -105,6 +106,7 @@ test("starts a v1 cloud agent on develop without a webhook", async () => {
     assert.match(prompt, /Kind: bug/);
     assert.match(prompt, /Title: Steps chart is blank/);
     assert.match(prompt, /daily Steps chart/);
+    assert.match(prompt, /No attachments\./);
     assert.match(prompt, /Device metadata:/);
     assert.match(prompt, /"os":"iOS"/);
     assert.match(prompt, /Sent to Cursor from:/);
@@ -138,11 +140,68 @@ test("labels a feature request and still attaches device metadata with no commen
       return v1CreatedResponse(agentUrl);
     }) as typeof fetch);
     assert.match(prompt, /Kind: feature request/);
+    assert.match(prompt, /No attachments\./);
     assert.match(prompt, /Device metadata:/);
     assert.match(prompt, /Sent to Cursor from:/);
     assert.match(prompt, /No comments\./);
     assert.doesNotMatch(prompt, /AGENTS\.md/);
     assert.doesNotMatch(prompt, /1\.0\.0 if people will see/);
+  } finally {
+    restoreEnv("CURSOR_API_KEY", previous);
+  }
+});
+
+test("includes photo, video, and file links in the agent prompt", async () => {
+  const previous = process.env.CURSOR_API_KEY;
+  process.env.CURSOR_API_KEY = longCursorKey;
+  const withMedia: FeedbackPostDetail = {
+    post: {
+      ...detail.post,
+      media: [
+        {
+          id: "55555555-5555-4555-8555-555555555555",
+          kind: "photo",
+          purpose: "feedback",
+          status: "ready",
+          original_filename: "blank-chart.jpg",
+          content_type: "image/jpeg",
+          byte_size: 2048,
+          width: 64,
+          height: 64,
+          duration_ms: null,
+          sha256: "b".repeat(64),
+          url: "https://example.com/blank-chart.jpg",
+          created_at: "2026-09-04T12:00:00Z",
+        },
+        {
+          id: "55555555-5555-4555-8555-555555555556",
+          kind: "file",
+          purpose: "feedback",
+          status: "ready",
+          original_filename: "console.log",
+          content_type: "text/plain",
+          byte_size: 120,
+          width: 1,
+          height: 1,
+          duration_ms: null,
+          sha256: "c".repeat(64),
+          url: "https://example.com/console.log",
+          created_at: "2026-09-04T12:00:00Z",
+        },
+      ],
+    },
+    comments: [],
+  };
+  try {
+    let prompt = "";
+    await launchFeedbackFixAgent(withMedia, (async (_url, init) => {
+      prompt = (JSON.parse(String(init?.body)) as { prompt: { text: string } }).prompt.text;
+      return v1CreatedResponse(agentUrl);
+    }) as typeof fetch);
+    assert.match(prompt, /Attachments:/);
+    assert.match(prompt, /blank-chart\.jpg \(photo, image\/jpeg\) https:\/\/example.com\/blank-chart\.jpg/);
+    assert.match(prompt, /console\.log \(file, text\/plain\) https:\/\/example.com\/console\.log/);
+    assert.doesNotMatch(prompt, /No attachments\./);
   } finally {
     restoreEnv("CURSOR_API_KEY", previous);
   }

@@ -125,18 +125,10 @@ final class HealthKitStepsStore: ObservableObject {
     }
 
     var currentFailureText: String? {
-        switch diagnostics.errorCode {
-        case .authenticationUnavailable: return String(localized: "Sign in, then open FitFight to sync.")
-        case .networkUnavailable: return String(localized: "Connect to the internet, then open FitFight.")
-        case .protectedDataUnavailable: return String(localized: "Unlock your iPhone, then open FitFight.")
-        case .attemptExpired: return String(localized: "Open FitFight to finish syncing.")
-        case .healthKitUnavailable: return String(localized: "Apple Health isn’t available on this device.")
-        case .backgroundDeliveryUnavailable: return String(localized: "Open FitFight to sync your Steps.")
-        case .syncFailed:
-            return diagnostics.failureDetail
-                ?? String(localized: "Open FitFight and try the Apple Health sync again.")
-        case nil: return nil
+        if let detail = diagnostics.failureDetail, !detail.isEmpty {
+            return detail
         }
+        return diagnostics.errorCode.map(Self.fallbackMessage)
     }
 
     func installObserverAtLaunch() {
@@ -463,6 +455,9 @@ final class HealthKitStepsStore: ObservableObject {
             updateDiagnostics {
                 $0.errorCode = attempt.errorCode ?? .syncFailed
                 $0.failureReference = reference
+                if $0.failureDetail == nil || $0.failureDetail?.isEmpty == true {
+                    $0.failureDetail = Self.fallbackMessage(for: attempt.errorCode ?? .syncFailed)
+                }
             }
         }
         let snapshot = FitFightHealthKitDiagnosticSnapshot(diagnostics, attempts: [attempt])
@@ -495,6 +490,18 @@ final class HealthKitStepsStore: ObservableObject {
         }
     }
 
+    static func fallbackMessage(for code: SyncErrorCode) -> String {
+        switch code {
+        case .authenticationUnavailable: return String(localized: "Sign in, then open FitFight to sync.")
+        case .networkUnavailable: return String(localized: "Connect to the internet, then open FitFight.")
+        case .protectedDataUnavailable: return String(localized: "Unlock your iPhone, then open FitFight.")
+        case .attemptExpired: return String(localized: "Open FitFight to finish syncing.")
+        case .healthKitUnavailable: return String(localized: "Apple Health isn’t available on this device.")
+        case .backgroundDeliveryUnavailable: return String(localized: "Open FitFight to sync your Steps.")
+        case .syncFailed: return String(localized: "Sync failed. Tap to retry.")
+        }
+    }
+
     static func errorCode(for error: Error) -> SyncErrorCode {
         if error is CancellationError { return .attemptExpired }
         if let urlError = error as? URLError,
@@ -510,12 +517,20 @@ final class HealthKitStepsStore: ObservableObject {
         if case HealthKitStepAggregates.ReadError.noAccessibleSteps = error {
             return String(localized: "No accessible Steps")
         }
-        if let api = error as? FitFightAPIError, let description = api.errorDescription {
+        let retry = String(localized: "Tap to retry")
+        if case FitFightAPIError.http(let status, _, _) = error, status >= 500 {
+            let saved = String(
+                localized: "health.sync-server-failed",
+                defaultValue: "FitFight's server could not save your Steps (error \(status))."
+            )
+            return "\(saved) \(retry)"
+        }
+        if let api = error as? FitFightAPIError, let description = api.errorDescription, !description.isEmpty {
             var text = description.trimmingCharacters(in: .whitespaces)
             if let last = text.last, !".!?".contains(last) {
                 text += "."
             }
-            return String(localized: "\(text) Tap to retry.")
+            return "\(text) \(retry)"
         }
         if let urlError = error as? URLError {
             switch urlError.code {

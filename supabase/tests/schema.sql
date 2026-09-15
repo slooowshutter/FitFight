@@ -1,5 +1,5 @@
 begin;
-select plan(72);
+select plan(76);
 
 select has_schema('private', 'private schema exists');
 select has_table('public', 'profiles', 'profiles exists');
@@ -31,6 +31,7 @@ select has_table(
 select has_table('public', 'feedback_posts', 'feedback posts exist');
 select has_table('public', 'feedback_votes', 'feedback votes exist');
 select has_table('public', 'feedback_comments', 'feedback comments exist');
+select has_table('public', 'feedback_post_media', 'feedback post media exist');
 
 select ok(
   (select relrowsecurity from pg_class c
@@ -175,6 +176,12 @@ select ok(
     where n.nspname = 'public' and c.relname = 'feedback_comments'),
   'feedback_comments has RLS'
 );
+select ok(
+  (select relrowsecurity from pg_class c
+     join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relname = 'feedback_post_media'),
+  'feedback_post_media has RLS'
+);
 select is(
   has_table_privilege('authenticated', 'public.feedback_posts', 'SELECT'),
   true,
@@ -194,6 +201,16 @@ select is(
   has_table_privilege('authenticated', 'public.feedback_comments', 'INSERT'),
   false,
   'clients cannot insert feedback comments'
+);
+select is(
+  has_table_privilege('authenticated', 'public.feedback_post_media', 'SELECT'),
+  true,
+  'signed-in users can read feedback attachments'
+);
+select is(
+  has_table_privilege('authenticated', 'public.feedback_post_media', 'INSERT'),
+  false,
+  'clients cannot insert feedback attachments'
 );
 select is(
   has_table_privilege('authenticated', 'public.feedback_votes', 'SELECT'),

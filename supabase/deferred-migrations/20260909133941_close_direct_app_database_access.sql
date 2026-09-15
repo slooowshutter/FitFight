@@ -3,6 +3,7 @@ revoke all on public.profiles, public.friendships, public.fights,
   public.data_sources, public.fight_members, public.fight_invites,
   public.step_days, public.metric_days, public.fight_series, public.fight_series_members,
   public.feedback_posts, public.feedback_votes, public.feedback_comments,
+  public.feedback_post_media,
   public.media_objects, public.fight_posts, public.fight_post_media,
   public.fight_post_tags, public.fight_post_reactions, public.fight_post_comments
   from public, anon, authenticated;

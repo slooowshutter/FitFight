@@ -301,9 +301,11 @@ export async function syncHealthKitAggregates(
         await persistHealthKitExtras(sql, userId, result.sourceId, input);
       });
     } catch (error) {
+      // Extra movement is not a Fight score. A missing column or check must not
+      // roll back Steps that already committed.
       console.error(
         "fitfight_healthkit_extras_failed",
-        error instanceof Error ? error.message : "unknown",
+        error instanceof Error ? error.name : "unknown",
       );
     }
   }

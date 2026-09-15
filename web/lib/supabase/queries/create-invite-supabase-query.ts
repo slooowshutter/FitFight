@@ -31,8 +31,12 @@ export async function lookupProfileByHandle(
   return profile;
 }
 
-export async function createInvite(ownerId: string, fightId: string, rawHandle: string) {
-  const admin = createAdminClient();
+export async function createInvite(
+  ownerId: string,
+  fightId: string,
+  rawHandle: string,
+  admin: SupabaseClient = createAdminClient(),
+) {
   const fight = await loadOwnedFight(fightId, ownerId, admin);
 
   if (["awaiting_final_sync", "final", "cancelled"].includes(fight.state)) {
@@ -54,10 +58,32 @@ export async function createInvite(ownerId: string, fightId: string, rawHandle: 
     throw new ApiError(500, ERROR_CODES.db_error, "Could not load membership");
   }
   const member = existingMember as Pick<FightMemberRow, "state"> | null;
-  if (member && member.state === "accepted") {
-    throw new ApiError(409, ERROR_CODES.already_member, "User is already in this fight");
-  }
-  if (!member) {
+  if (member) {
+    switch (member.state) {
+      case "accepted":
+      case "deferred":
+        throw new ApiError(409, ERROR_CODES.already_member, "User is already in this fight");
+      case "invited":
+        break;
+      case "declined":
+      case "withdrawn":
+      case "disqualified": {
+        const { error: restoreError } = await admin
+          .from("fight_members")
+          .update({ state: "invited", accepted_at: null })
+          .eq("fight_id", fightId)
+          .eq("user_id", profile.user_id);
+        if (restoreError) {
+          throw new ApiError(500, ERROR_CODES.db_error, "Could not create membership");
+        }
+        break;
+      }
+      default: {
+        const _exhaustive: never = member.state;
+        throw new ApiError(409, ERROR_CODES.already_member, "User is already in this fight");
+      }
+    }
+  } else {
     const { error: insertMemberError } = await admin.from("fight_members").insert({
       fight_id: fightId,
       user_id: profile.user_id,
@@ -77,6 +103,17 @@ export async function createInvite(ownerId: string, fightId: string, rawHandle: 
   });
   if (inviteError) {
     throw new ApiError(500, ERROR_CODES.db_error, "Could not create invite");
+  }
+
+  if (fight.series_id) {
+    const { error: seriesMemberError } = await admin.from("fight_series_members").upsert({
+      series_id: fight.series_id,
+      user_id: profile.user_id,
+      state: "invited",
+    });
+    if (seriesMemberError) {
+      throw new ApiError(500, ERROR_CODES.db_error, "Could not create membership");
+    }
   }
 
   if (fight.state === "draft") {

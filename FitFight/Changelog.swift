@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 15,
+            notes: "The Update screen no longer appears from a leftover version check while TestFlight is still publishing."
+        ),
+        ReleaseNote(
+            version: "1.1.0",
+            year: 2026,
+            month: 9,
+            day: 15,
             notes: "Tabs are Fights, New, Feed, Feedback, You. Fight-feed lock-screen alerts name the person, never scores. Turn posts, comments, replies, and reactions on or off under You → Settings."
         ),
         ReleaseNote(

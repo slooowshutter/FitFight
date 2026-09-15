@@ -112,8 +112,6 @@ final class AppUpdateChecker: ObservableObject {
             status = .updateRequired
         } else if let policy, policy.allows(version: version, build: build) {
             status = .current
-        } else if let policy, policy.latest != nil {
-            status = .updateRequired
         }
     }
 

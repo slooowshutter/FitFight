@@ -156,6 +156,61 @@ class ReleaseAvailabilityTest < Minitest::Test
     assert_equal false, policy.fetch("enforced")
   end
 
+  def test_two_part_apple_testflight_version_matches_registered_marketing_version
+    @older.app_version = "1.0.0"
+    @older.version = "190"
+    @newer.app_version = "1.1"
+    @newer.version = "200"
+    @registered = [{ "channel" => "staging", "version" => "1.1.0", "build" => 200 }]
+    policy = manifest.fetch("staging")
+    assert_equal 190, policy.fetch("latest").fetch("build")
+    assert_equal "1.1.0", policy.fetch("internal").fetch("version")
+    assert_equal 200, policy.fetch("internal").fetch("build")
+    assert_equal 200, policy.fetch("review").fetch("build")
+  end
+
+  def test_promoting_internal_keeps_the_previous_tester_build_admitted
+    @previous = {
+      "staging" => {
+        "latest" => { "version" => "1.0.0", "build" => 153, "update_url" => "itms-beta://" },
+        "review" => { "version" => "1.0.0", "build" => 155, "update_url" => "itms-beta://" },
+        "internal" => { "version" => "1.0.0", "build" => 155, "update_url" => "itms-beta://" },
+        "enforced" => true
+      }
+    }
+    @registered = [
+      { "channel" => "staging", "version" => "1.0.0", "build" => 153 },
+      { "channel" => "staging", "version" => "1.0.0", "build" => 155 },
+      { "channel" => "staging", "version" => "1.0.0", "build" => 160 }
+    ]
+    @newer.build_beta_detail.external_build_state = "READY_FOR_BETA_SUBMISSION"
+    policy = manifest.fetch("staging")
+    assert_equal 153, policy.fetch("latest").fetch("build")
+    assert_equal 155, policy.fetch("review").fetch("build")
+    assert_equal 160, policy.fetch("internal").fetch("build")
+    assert_equal true, policy.fetch("enforced")
+  end
+
+  def test_a_missed_internal_match_keeps_the_previous_tester_build
+    @previous = {
+      "staging" => {
+        "latest" => { "version" => "1.0.0", "build" => 153, "update_url" => "itms-beta://" },
+        "review" => { "version" => "1.1.0", "build" => 200, "update_url" => "itms-beta://" },
+        "internal" => { "version" => "1.1.0", "build" => 200, "update_url" => "itms-beta://" },
+        "enforced" => true
+      }
+    }
+    @registered = [
+      { "channel" => "staging", "version" => "1.0.0", "build" => 153 },
+      { "channel" => "staging", "version" => "1.1.0", "build" => 200 }
+    ]
+    policy = manifest.fetch("staging")
+    assert_equal 153, policy.fetch("latest").fetch("build")
+    assert_equal 200, policy.fetch("review").fetch("build")
+    assert_equal 200, policy.fetch("internal").fetch("build")
+    assert_equal "1.1.0", policy.fetch("internal").fetch("version")
+  end
+
   def test_first_app_store_review_can_run_before_a_public_release_exists
     @app.candidate = OpenStruct.new(version_string: "1.0.0", build: OpenStruct.new(version: "170"))
     @registered << { "channel" => "prod", "version" => "1.0.0", "build" => 170 }

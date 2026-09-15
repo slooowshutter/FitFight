@@ -6,7 +6,7 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ---
 
-**Last TestFlight:** 15 Sep 2026. **1.0.0 (197)** from [#220](https://github.com/slooowshutter/FitFight/pull/220). Tester: five tabs ([#218](https://github.com/slooowshutter/FitFight/pull/218)), Edit fight header ([#219](https://github.com/slooowshutter/FitFight/pull/219)), pause-before-cancel ([#215](https://github.com/slooowshutter/FitFight/pull/215)), plus that develop tree including the [#213](https://github.com/slooowshutter/FitFight/pull/213) icon. Friends stay **190**.
+**Last TestFlight:** 15 Sep 2026. **1.0.0 (198)** from [#223](https://github.com/slooowshutter/FitFight/pull/223). Tester: Invited-tab count ([#222](https://github.com/slooowshutter/FitFight/pull/222)). Friends stay **190**.
 
 ## API and update rollout (verified 13 Sep 2026)
 

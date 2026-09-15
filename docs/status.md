@@ -8,6 +8,28 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last TestFlight:** 15 Sep 2026. **1.0.0 (198)** from [#223](https://github.com/slooowshutter/FitFight/pull/223). Tester: Invited-tab count ([#222](https://github.com/slooowshutter/FitFight/pull/222)). Friends stay **190**.
 
+## App Store refresh and release audit (15 Sep 2026)
+
+App Store Connect shows public iOS version **1.0**, **Ready for Distribution**, using
+**1.0.0 (113)**. The [refresh package](app-store/2026-09-15/README.md) contains six
+English and six French simulator screenshots and the current icon PNG. The local
+Debug simulator build and image checks passed; capture data is simulated. Listing
+assets have not been uploaded, and no new version has been submitted.
+
+Read-only live checks supersede the older build observations below: staging admits
+Friends/public **190** and review/internal **198**, all `1.0.0`, with enforcement on.
+Staging health reports `profile_api: true`. Production still returns **404** for
+`/api/app-release`; its healthy schema response lacks the `profile_api` marker.
+Privacy and support return 200 in both environments. The current app still needs a
+verified compatible production backend rollout before distribution.
+
+Supabase confirms separate production and persistent `develop` projects. Its
+`develop` branch metadata reports `MIGRATIONS_FAILED` with an old 27 August timestamp;
+reconcile integration logs and the migration ledger before promotion. No hosted
+rows, identity conflicts, or historical-client behavior were tested by this audit.
+No database or deployment changed. See the refresh package for the proposed next
+release and one-time beta-data migration sequence.
+
 ## API and update rollout (verified 13 Sep 2026)
 
 Read-only checks on **13 Sep 2026 (UTC)** supersede the earlier blanket "prepared, not deployed"

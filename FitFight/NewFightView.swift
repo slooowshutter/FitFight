@@ -39,7 +39,8 @@ struct NewFightView: View {
     @FocusState private var joinCodeFocused: Bool
 
     init(opening: NewFightOpening = .choose, initialStep: Int = 0) {
-        _opening = State(initialValue: opening)
+        let capturing = CompanionPreview.isEnabled && ScreenshotExport.isEnabled
+        _opening = State(initialValue: capturing ? .create : opening)
         _step = State(initialValue: initialStep)
     }
 

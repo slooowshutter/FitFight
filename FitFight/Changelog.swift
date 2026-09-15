@@ -29,6 +29,27 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 15,
+            notes: "Edit fight now keeps the version and header tight at the top, and the recap names your opponents instead of showing join instructions."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "Feed and Feedback now have separate tabs: Fights, New, You, Feed, Feedback."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "FitFight has a new green and beige double-F app icon."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 15,
             notes: "Choose a companion from a grid of animals, or Custom. Custom is one description: species, breed, accessories, colors."
         ),
         ReleaseNote(

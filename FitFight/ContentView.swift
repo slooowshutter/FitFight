@@ -264,7 +264,7 @@ struct ContentView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             FFTabBar(tab: $model.tab, onReselect: {
                 if model.tab == .feedback {
-                    model.feedbackPane = .feed
+                    model.feedbackPane = .bugs
                 }
                 model.openFightID = nil
             })
@@ -280,6 +280,8 @@ struct ContentView: View {
             NewFightView()
         case .you:
             YouView()
+        case .feed:
+            FeedView()
         case .feedback:
             FeedbackTabView()
         }

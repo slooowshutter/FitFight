@@ -15,8 +15,6 @@ export async function cancelFight(
     case "final":
       throw new ApiError(409, ERROR_CODES.fight_not_cancellable, "Final fights cannot be cancelled");
     case "cancelled":
-      await pauseFightSeries(admin, fight.series_id, now);
-      return fightSummary(fight);
     case "draft":
     case "inviting":
     case "scheduled":
@@ -29,6 +27,11 @@ export async function cancelFight(
     }
   }
 
+  await pauseFightSeries(admin, fight.series_id, now);
+  if (fight.state === "cancelled") {
+    return fightSummary(fight);
+  }
+
   const { data: updated, error } = await admin
     .from("fights")
     .update({ state: "cancelled" })
@@ -39,7 +42,6 @@ export async function cancelFight(
     throw new ApiError(500, ERROR_CODES.db_error, "Could not cancel fight");
   }
 
-  await pauseFightSeries(admin, fight.series_id, now);
   return fightSummary(updated);
 }
 

@@ -109,7 +109,7 @@ struct EditFightView: View {
             title: String(localized: "Edit fight"),
             onClose: { dismiss() },
             skipTitle: step == .review ? nil : String(localized: "Done"),
-            onSkip: step == .review ? nil : { step = .review }
+            onSkip: step == .review ? nil : { returnToSummary() }
         )
         .padding(.horizontal, theme.space.screenPadding)
         .padding(.bottom, 12)
@@ -207,9 +207,17 @@ struct EditFightView: View {
             }
         } else {
             FFButton(title: String(localized: "Done"), size: .large, enabled: step != .duration || scheduleError == nil, fullWidth: true) {
-                step = .review
+                returnToSummary()
             }
         }
+    }
+
+    private func returnToSummary() {
+        if step == .people, !username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            addUsername()
+            if usernameError != nil { return }
+        }
+        step = .review
     }
 
     private func addUsername() {

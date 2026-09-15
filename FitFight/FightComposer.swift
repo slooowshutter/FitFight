@@ -240,29 +240,38 @@ struct FightComposerPeoplePage: View {
                     .ffType(.rowTitle)
                     .foregroundStyle(theme.text)
 
-                Group {
-                    if staticRender {
-                        Text(verbatim: username.isEmpty ? String(localized: "@username") : username)
-                            .foregroundStyle(username.isEmpty ? theme.textFaint : theme.text)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    } else {
-                        TextField("@username", text: $username)
-                            .focused(usernameFocused)
-                            .foregroundStyle(theme.text)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .submitLabel(.done)
-                            .onSubmit {
-                                onAdd()
-                                usernameFocused.wrappedValue = false
-                            }
+                HStack(spacing: 8) {
+                    Group {
+                        if staticRender {
+                            Text(verbatim: username.isEmpty ? String(localized: "@username") : username)
+                                .foregroundStyle(username.isEmpty ? theme.textFaint : theme.text)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        } else {
+                            TextField("@username", text: $username)
+                                .focused(usernameFocused)
+                                .foregroundStyle(theme.text)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                                .submitLabel(.done)
+                                .onSubmit {
+                                    onAdd()
+                                    usernameFocused.wrappedValue = false
+                                }
+                        }
+                    }
+                    .font(.ff(15, 700))
+                    .padding(.horizontal, 15)
+                    .padding(.vertical, 13)
+                    .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
+                    .ffBorder(usernameError == nil ? theme.line : theme.emberText, radius: theme.radius.field)
+                    FFButton(
+                        title: String(localized: "Add"),
+                        size: .small,
+                        enabled: !username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    ) {
+                        onAdd()
                     }
                 }
-                .font(.ff(15, 700))
-                .padding(.horizontal, 15)
-                .padding(.vertical, 13)
-                .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
-                .ffBorder(usernameError == nil ? theme.line : theme.emberText, radius: theme.radius.field)
 
                 if let usernameError {
                     Text(usernameError)

@@ -95,3 +95,38 @@ test("only the owner can delete, and final fights stay frozen", async (t) => {
       error instanceof ApiError && error.status === 409 && error.message.includes("cannot be cancelled"),
   );
 });
+
+test("a cancelled fight still pauses its series on retry", async (t) => {
+  withSupabaseEnv(t);
+  let seriesPatches = 0;
+  t.mock.method(globalThis, "fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    const url = new URL(request.url);
+    switch (url.pathname) {
+      case "/rest/v1/fights":
+        assert.equal(request.method, "GET");
+        return Response.json([{
+          id: fightId,
+          owner_id: owner,
+          name: "Office steps",
+          state: "cancelled",
+          starts_at: startsAt,
+          ends_at: endsAt,
+          action_text: "Cook dinner",
+          series_id: seriesId,
+        }]);
+      case "/rest/v1/fight_series":
+        assert.equal(request.method, "PATCH");
+        seriesPatches += 1;
+        assert.deepEqual(await request.json(), { paused_at: now.toISOString() });
+        return new Response(null, { status: 204 });
+      default:
+        throw new Error(`Unexpected query: ${url.pathname}`);
+    }
+  });
+
+  const { cancelFight } = await import("./cancel-fight-supabase-query");
+  const result = await cancelFight(owner, fightId, createAdminClient(), now);
+  assert.deepEqual(result, { id: fightId, state: "cancelled" });
+  assert.equal(seriesPatches, 1);
+});

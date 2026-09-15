@@ -15,6 +15,7 @@ export async function cancelFight(
     case "final":
       throw new ApiError(409, ERROR_CODES.fight_not_cancellable, "Final fights cannot be cancelled");
     case "cancelled":
+      await pauseFightSeries(admin, fight.series_id, now);
       return fightSummary(fight);
     case "draft":
     case "inviting":
@@ -38,16 +39,24 @@ export async function cancelFight(
     throw new ApiError(500, ERROR_CODES.db_error, "Could not cancel fight");
   }
 
-  if (fight.series_id) {
-    const { error: seriesError } = await admin
-      .from("fight_series")
-      .update({ paused_at: now.toISOString() })
-      .eq("id", fight.series_id)
-      .is("paused_at", null);
-    if (seriesError) {
-      throw new ApiError(500, ERROR_CODES.db_error, "Could not cancel fight");
-    }
-  }
-
+  await pauseFightSeries(admin, fight.series_id, now);
   return fightSummary(updated);
+}
+
+async function pauseFightSeries(
+  admin: SupabaseClient,
+  seriesId: string | null,
+  now: Date,
+) {
+  if (!seriesId) {
+    return;
+  }
+  const { error } = await admin
+    .from("fight_series")
+    .update({ paused_at: now.toISOString() })
+    .eq("id", seriesId)
+    .is("paused_at", null);
+  if (error) {
+    throw new ApiError(500, ERROR_CODES.db_error, "Could not cancel fight");
+  }
 }

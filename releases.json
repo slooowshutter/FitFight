@@ -11,8 +11,8 @@
       "update_url": "itms-beta://"
     },
     "internal": {
-      "version": "1.1.0",
-      "build": 200,
+      "version": "1.1.1",
+      "build": 201,
       "update_url": "itms-beta://"
     },
     "enforced": true

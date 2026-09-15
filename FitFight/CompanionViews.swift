@@ -197,14 +197,12 @@ final class CompanionStore: ObservableObject {
         if CompanionPreview.isEnabled {
             selection = animal
             hasChosen = true
-            showingPicker = false
             persist()
             return
         }
         #endif
         selection = animal
         hasChosen = true
-        showingPicker = false
         persist()
         if let userId = session.profile?.userId {
             UserDefaults.standard.set(animal.rawValue, forKey: Self.pendingPrefix + userId.uuidString)
@@ -267,7 +265,6 @@ final class CompanionStore: ObservableObject {
         hasChosen = true
         isRestoring = false
         persist()
-        showingPicker = false
     }
 
     private func restore() {
@@ -686,10 +683,8 @@ struct CompanionPicker: View {
     @State private var breed: String
     @State private var accessories: String
     @State private var previewStage: CompanionEffortStage
-    var required: Bool
 
     init(selection: StockCompanion, required: Bool = false) {
-        self.required = required
         _draft = State(initialValue: required ? nil : selection)
         _sport = State(initialValue: .hiking)
         _emotion = State(initialValue: .calm)
@@ -705,7 +700,7 @@ struct CompanionPicker: View {
                     .font(.custom("Nunito-ExtraBold", size: 26, relativeTo: .title))
                     .foregroundStyle(theme.text)
                 Spacer()
-                if !required {
+                if !session.needsCompanionSelection {
                     Button(String(localized: "Close")) { dismiss() }
                         .ffType(.label)
                         .foregroundStyle(theme.mossText)
@@ -767,7 +762,7 @@ struct CompanionPicker: View {
             }
             #endif
         }
-        .interactiveDismissDisabled(required)
+        .interactiveDismissDisabled(session.needsCompanionSelection)
         .onAppear {
             sport = companions.sport
             emotion = companions.emotion
@@ -775,13 +770,14 @@ struct CompanionPicker: View {
             accessories = companions.accessories
             previewStage = liveEffort
         }
+        .onChange(of: sport) { _, _ in persistDraftIdentity() }
+        .onChange(of: emotion) { _, _ in persistDraftIdentity() }
+        .onChange(of: breed) { _, _ in persistDraftIdentity() }
+        .onChange(of: accessories) { _, _ in persistDraftIdentity() }
     }
 
-    private func save(_ animal: StockCompanion) async {
-        error = ""
-        draft = animal
-        isSaving = true
-        defer { isSaving = false }
+    private func persistDraftIdentity(_ animal: StockCompanion? = nil) {
+        guard let animal = animal ?? draft else { return }
         companions.choose(
             animal: animal,
             sport: sport,
@@ -789,9 +785,17 @@ struct CompanionPicker: View {
             breed: breed,
             accessories: accessories
         )
+    }
+
+    private func save(_ animal: StockCompanion) async {
+        error = ""
+        draft = animal
+        companions.showingPicker = true
+        isSaving = true
+        defer { isSaving = false }
+        persistDraftIdentity(animal)
         do {
             try await companions.choose(animal, session: session)
-            dismiss()
         } catch is CancellationError {
             return
         } catch {
@@ -857,28 +861,10 @@ struct CompanionPicker: View {
                 }
             }
             if !draft.hasEffortSet(for: sport) {
-                Text("Hiking goat is the example until this sport has its own scenes.")
+                Text("This companion stays in every pose until this sport has its own scenes.")
                     .ffType(.caption)
                     .foregroundStyle(theme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
-                HStack(alignment: .top, spacing: 6) {
-                    ForEach(CompanionEffortStage.allCases) { stage in
-                        VStack(spacing: 4) {
-                            Image("Companion-goat-hiking-\(stage.rawValue)")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(height: 56)
-                            Text(CompanionSport.hiking.stageLabel(stage))
-                                .font(.custom("Nunito-Bold", size: 10, relativeTo: .caption2))
-                                .foregroundStyle(theme.textTertiary)
-                                .multilineTextAlignment(.center)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                }
-                .accessibilityElement(children: .contain)
-                .accessibilityLabel(String(localized: "Hiking goat effort poses, from resting to the peak"))
             }
         }
         .padding(.top, 8)

@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 15,
+            notes: "Tapping an animal keeps that character on screen with its own poses. Other animals no longer show the hiking goat pictures."
+        ),
+        ReleaseNote(
+            version: "1.0.0",
+            year: 2026,
+            month: 9,
+            day: 15,
             notes: "A fight you just created stays on your list even if the refresh failed."
         ),
         ReleaseNote(

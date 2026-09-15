@@ -125,5 +125,16 @@ export const providerArchiveRecordSchema = z.discriminatedUnion("type", [
 
 export const providerUploadIdSchema = canonicalUuidV4Schema;
 
+export const providerFightWindowStateValues = ["live", "awaiting_final_sync"] as const;
+
+export const providerFightWindowRowSchema = z.object({
+  fight_id: z.string().uuid(),
+  state: z.enum(providerFightWindowStateValues),
+  starts_at: z.string().refine((value) => Number.isFinite(Date.parse(value))),
+  ends_at: z.string().refine((value) => Number.isFinite(Date.parse(value))),
+  time_zone: timeZoneSchema,
+});
+
 export type CreateProviderUpload = z.infer<typeof createProviderUploadSchema>;
 export type ProviderArchiveRecord = z.infer<typeof providerArchiveRecordSchema>;
+export type ProviderFightWindowRow = z.infer<typeof providerFightWindowRowSchema>;

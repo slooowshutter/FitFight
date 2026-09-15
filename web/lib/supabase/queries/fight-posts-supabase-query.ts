@@ -27,7 +27,6 @@ import {
   signMediaUrls,
   type MediaRow,
 } from "./media-supabase-query";
-import { processNotificationOutbox } from "./process-notification-outbox-supabase-query";
 
 const POST_LIMIT_PER_DAY = 20;
 
@@ -741,7 +740,6 @@ export async function createFightPost(
     await enqueueFightFeedPostNotifications(sql, { fightId, postId: id, actorId: userId });
     return id;
   });
-  await processNotificationOutbox(new Date(), database);
 
   const [row] = await loadPostRows([createdId], database);
   if (!row) {
@@ -867,7 +865,6 @@ export async function createFeedPosts(
     }
     return [createdId];
   });
-  await processNotificationOutbox(new Date(), database);
 
   return { posts: await mapPosts(userId, await loadPostRows(createdIds, database), database) };
 }

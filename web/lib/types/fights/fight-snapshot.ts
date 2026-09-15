@@ -3,6 +3,7 @@ import { companionIdSchema } from "@/lib/types/companions/companion";
 import { mediaObjectSchema } from "@/lib/types/media/media";
 import { fightMemberStateValues, fightStateValues } from "./membership-decision";
 import { fightVisibilityValues } from "./fight-visibility";
+import { fightStepCheckpointSchema } from "./fight-step-checkpoint";
 
 const timestampSchema = z.string().datetime({ offset: true });
 
@@ -38,6 +39,7 @@ export const fightSnapshotSchema = z.object({
     final_value: z.number().finite().nullable(),
     last_synced_at: timestampSchema.nullable(),
     final_steps_complete: z.boolean(),
+    step_checkpoints: z.array(fightStepCheckpointSchema).nullable().optional(),
   })),
   profiles: z.array(z.object({
     user_id: z.string().uuid(),

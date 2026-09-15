@@ -19,6 +19,10 @@ export const joinableFightSummarySchema = z.object({
   canJoinNext: z.boolean(),
 });
 
+export const joinableFightListResponseSchema = z.object({
+  fights: z.array(joinableFightSummarySchema),
+});
+
 export const joinFightRequestSchema = z
   .object({
     code: z.string().min(1).max(16).optional(),
@@ -40,5 +44,6 @@ export const leaveFightRequestSchema = z.object({
 
 export type FightVisibility = z.infer<typeof fightVisibilitySchema>;
 export type JoinableFightSummary = z.infer<typeof joinableFightSummarySchema>;
+export type JoinableFightListResponse = z.infer<typeof joinableFightListResponseSchema>;
 export type JoinFightRequest = z.infer<typeof joinFightRequestSchema>;
 export type LeaveFightRequest = z.infer<typeof leaveFightRequestSchema>;

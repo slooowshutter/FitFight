@@ -29,6 +29,15 @@ test("snapshot validates the requested timezone and returns five empty arrays", 
     { fights: [], members: [], profiles: [], series: [], step_days: [] });
 });
 
+test("checkpoint snapshots preserve legacy scores and publish matching cumulative history", () => {
+  const fixture = fightSnapshotSchema.parse(JSON.parse(readFileSync(
+    new URL("../../../../contracts/fixtures/fight-snapshot-checkpoints.json", import.meta.url), "utf8",
+  )));
+  assert.equal(fixture.members[0].step_checkpoints?.at(-1)?.steps, fixture.members[0].current_value);
+  assert.equal(fixture.members[1].step_checkpoints, null);
+  assert.equal(fixture.step_days[0].steps, 8500);
+});
+
 test("snapshot establishes transaction-local caller permissions before its single data query", async () => {
   const userId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
   const snapshot = { fights: [], members: [], profiles: [], series: [], step_days: [] };
@@ -117,5 +126,16 @@ test("refresh endpoint rejects unauthenticated requests before maintenance and e
   assert.equal(response.status, 401);
   assert.equal(response.headers.get("X-FitFight-Trace-ID"), traceId);
   assert.match(response.headers.get("Server-Timing") ?? "", /auth;dur=[\d.]+, total;dur=[\d.]+/);
+  assert.equal((await response.json()).code, "unauthorized");
+});
+
+
+test("live snapshot endpoint authenticates before reading and never caches responses", async () => {
+  const { POST } = await import("@/app/api/v1/fights/snapshot/route");
+  const response = await POST(new Request("https://fitfight.app/api/v1/fights/snapshot", {
+    method: "POST", body: JSON.stringify({ time_zone: "UTC" }),
+  }), { params: Promise.resolve({}) });
+  assert.equal(response.status, 401);
+  assert.match(response.headers.get("Cache-Control") ?? "", /no-store/);
   assert.equal((await response.json()).code, "unauthorized");
 });

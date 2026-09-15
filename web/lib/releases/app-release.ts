@@ -30,7 +30,8 @@ export async function appReleasePolicy(): Promise<AppReleasePolicy> {
   const channel = project.data === "https://zstzbfocunthczzubggz.supabase.co" ? "staging" : "prod";
   const parsed = appReleaseManifestSchema.safeParse(payload);
   if (parsed.success) {
-    return parsed.data[channel];
+    // TestFlight availability can differ per tester, so its updates are advisory.
+    return channel === "staging" ? { ...parsed.data.staging, enforced: false } : parsed.data.prod;
   }
   const selected = payload && typeof payload === "object" && !Array.isArray(payload) && channel in payload
     ? Reflect.get(payload, channel)
@@ -40,7 +41,7 @@ export async function appReleasePolicy(): Promise<AppReleasePolicy> {
   if (!salvaged.success) {
     throw new ApiError(503, "release_unavailable", "Could not read the latest app release");
   }
-  return salvaged.data;
+  return channel === "staging" ? { ...salvaged.data, enforced: false } : salvaged.data;
 }
 
 export async function requireLatestAppRelease(request: Request): Promise<void> {

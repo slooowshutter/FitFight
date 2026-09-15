@@ -8,6 +8,7 @@ process.env.SUPABASE_SECRET_KEY = "test-secret-key";
 
 function createDatabaseStub(options: {
   profileExists: boolean;
+  mediaPaths?: string[];
 }) {
   const queries: string[] = [];
   const query = ((first: TemplateStringsArray, ..._values: unknown[]) => {
@@ -15,6 +16,9 @@ function createDatabaseStub(options: {
     queries.push(sql);
     if (sql.includes("select user_id from public.profiles")) {
       return Promise.resolve(options.profileExists ? [{ user_id: "user-id" }] : []);
+    }
+    if (sql.includes("select object_path from public.media_objects")) {
+      return Promise.resolve((options.mediaPaths ?? []).map((object_path) => ({ object_path })));
     }
     return Promise.resolve([]);
   }) as unknown as Sql;
@@ -89,4 +93,43 @@ test("account deletion stops before destructive SQL when the profile is missing"
 
   assert.equal(queries.some((query) => query.startsWith("delete from public.fights")), false);
   assert.equal(queries.some((query) => query.startsWith("delete from auth.users")), false);
+});
+
+test("account deletion preserves the account and media references when Storage removal fails", async (t) => {
+  const { database, queries } = createDatabaseStub({
+    profileExists: true,
+    mediaPaths: ["user-id/profile/avatar"],
+  });
+  const removal = t.mock.method(globalThis, "fetch", async () => new Response(
+    JSON.stringify({ message: "Storage unavailable", statusCode: "503" }),
+    { status: 503, headers: { "Content-Type": "application/json" } },
+  ));
+
+  await assert.rejects(deleteAccount("user-id", database), /Could not remove uploaded photos/);
+
+  assert.equal(removal.mock.callCount(), 1);
+  assert.equal(queries.some((query) => query.startsWith("delete from")), false);
+});
+
+test("account deletion removes stored media before deleting its references and authentication", async (t) => {
+  const { database, queries } = createDatabaseStub({
+    profileExists: true,
+    mediaPaths: ["user-id/profile/avatar", "user-id/fight_post/photo"],
+  });
+  let deletedRowsBeforeStorage = true;
+  let removalBody = "";
+  const removal = t.mock.method(globalThis, "fetch", async (...[, request]: Parameters<typeof fetch>) => {
+    deletedRowsBeforeStorage = queries.some((query) => query.startsWith("delete from"));
+    removalBody = String(request?.body);
+    return new Response("[]", { status: 200, headers: { "Content-Type": "application/json" } });
+  });
+
+  assert.equal(await deleteAccount("user-id", database), false);
+
+  assert.equal(removal.mock.callCount(), 1);
+  assert.equal(deletedRowsBeforeStorage, false);
+  assert.deepEqual(JSON.parse(removalBody), {
+    prefixes: ["user-id/profile/avatar", "user-id/fight_post/photo"],
+  });
+  assert.equal(queries.at(-1), "delete from auth.users where id = ?");
 });

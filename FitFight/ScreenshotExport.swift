@@ -141,7 +141,7 @@ enum ScreenshotExport {
                 let view = AnyView(FFScreen {
                     FFSection(title: String(localized: "Every day so far")) {
                         FFCard {
-                            FightDayChartsView(days: group.days, initialKind: kind) { value in
+                            FightDayChartsView(days: group.days, standings: group.standings, initialKind: kind) { value in
                                 model.formatScore(value, metric: group.metric)
                             }
                         }

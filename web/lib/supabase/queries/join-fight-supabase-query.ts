@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import type { FightRow, FightSeriesRow, ProfileRow } from "@/lib/types/database";
 import type { JoinFightRequest, JoinableFightSummary } from "@/lib/types/fights/joinable-fight";
+import { joinableFightListFightSchema, joinableFightListSeriesSchema } from "@/lib/types/fights/joinable-fight-list";
 import { ensureAppleHealthSource } from "./apple-health-source-supabase-query";
 import { fightSummary, loadSeries } from "./fight-access-supabase-query";
 import { mintNextRecurringFight } from "./mint-recurring-fight-supabase-query";
@@ -14,6 +15,7 @@ import { recalculateFight } from "./recalculate-fight-supabase-query";
 export const JOINABLE_MEMBER_CAP = 50;
 const JOIN_ATTEMPTS_PER_USER_HOUR = 10;
 const JOIN_ATTEMPTS_PER_IP_HOUR = 30;
+const JOINABLE_FIGHT_SELECT = "id,state,starts_at,ends_at,time_zone,action_text,roster:fight_members(count),membership:fight_members(user_id)";
 
 async function recordJoinAttempt(userId: string, clientIp: string | null, sql: Sql) {
   const [userCount] = await sql<{ n: number }[]>`
@@ -169,9 +171,12 @@ export async function listJoinableFights(
 ): Promise<JoinableFightSummary[]> {
   let request = admin
     .from("fight_series")
-    .select("*")
+    .select(`id,name,join_code,recurring,paused_at,owner:profiles!owner_id(handle),fight:fights!current_fight_id(${JOINABLE_FIGHT_SELECT})`)
     .eq("visibility", "joinable")
-    .is("paused_at", null);
+    .is("paused_at", null)
+    .in("fight.roster.state", [...ROSTER_STATES])
+    .in("fight.membership.state", [...ROSTER_STATES])
+    .eq("fight.membership.user_id", userId);
   request = suggestedOnly
     ? request.eq("suggested", true).order("suggested_at", { ascending: false }).limit(8)
     : request.order("created_at", { ascending: false }).limit(50);
@@ -180,19 +185,54 @@ export async function listJoinableFights(
     throw new ApiError(500, ERROR_CODES.db_error, "Could not list joinable fights");
   }
   const summaries: JoinableFightSummary[] = [];
-  const cap = suggestedOnly ? 8 : 50;
-  for (const row of (data ?? []) as FightSeriesRow[]) {
-    const fight = await currentJoinableFight(row, admin, now);
-    if (!fight) {
-      continue;
+  for (const row of joinableFightListSeriesSchema.array().parse(data)) {
+    let fight = row.fight;
+    if (!fight) continue;
+    if (row.recurring && !row.paused_at && Date.parse(fight.ends_at) <= now.getTime()) {
+      const nextId = await mintNextRecurringFight(fight.id, admin, now);
+      if (nextId && nextId !== fight.id) {
+        const { data: nextData, error: nextError } = await admin
+          .from("fights")
+          .select(JOINABLE_FIGHT_SELECT)
+          .eq("id", nextId)
+          .in("roster.state", [...ROSTER_STATES])
+          .in("membership.state", [...ROSTER_STATES])
+          .eq("membership.user_id", userId)
+          .maybeSingle();
+        if (nextError) {
+          throw new ApiError(500, ERROR_CODES.db_error, "Could not load next fight");
+        }
+        fight = joinableFightListFightSchema.nullable().parse(nextData);
+      }
     }
+    if (!fight) continue;
     if (fight.state === "final" || fight.state === "cancelled" || fight.state === "awaiting_final_sync") {
       continue;
     }
-    summaries.push(await toSummary(row, fight, userId, admin, now));
-    if (summaries.length >= cap) {
-      break;
+    if (!row.join_code) {
+      throw new ApiError(404, ERROR_CODES.not_found, "Fight not found");
     }
+    const alreadyMember = fight.membership.length > 0;
+    summaries.push({
+      fightId: fight.id,
+      seriesId: row.id,
+      name: row.name,
+      joinCode: row.join_code,
+      ownerHandle: row.owner?.handle ?? "user",
+      actionText: fight.action_text,
+      startsAt: fight.starts_at,
+      endsAt: fight.ends_at,
+      memberCount: fight.roster[0].count,
+      recurring: row.recurring,
+      alreadyMember,
+      canJoinNext: !alreadyMember && canDeferFightJoin({
+        recurring: row.recurring,
+        paused: Boolean(row.paused_at),
+        startsAt: fight.starts_at,
+        timeZone: fight.time_zone,
+        now,
+      }),
+    });
   }
   return summaries;
 }

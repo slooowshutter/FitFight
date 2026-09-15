@@ -7,12 +7,12 @@ export const dynamic = "force-dynamic";
 
 export const DELETE = apiRoute<{ postID: string; commentID: string }>(async (request, { params }) => {
   const { userId } = await verifyUser(request);
-  await deleteFightPostComment(
+  const result = await deleteFightPostComment(
     userId,
     requireUuid(params.postID, "postID"),
     requireUuid(params.commentID, "commentID"),
   );
-  return json({ deleted: true });
+  return json(result);
 });
 
 export function OPTIONS(request: Request) {

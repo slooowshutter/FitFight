@@ -23,7 +23,7 @@ export async function deleteAccount(
     }
 
     await removeProviderInboxObjects(userId, database);
-    const mediaPaths = await database.begin("read write", async (sql) => {
+    await database.begin("read write", async (sql) => {
       const [profile] = await sql<{ user_id: string }[]>`
         select user_id from public.profiles
         where user_id = ${userId} and deleted_at is null
@@ -35,6 +35,8 @@ export async function deleteAccount(
       const media = await sql<{ object_path: string }[]>`
         select object_path from public.media_objects where owner_id = ${userId} for update
       `;
+      // Keep the account and object paths available for another deletion attempt if Storage fails.
+      await removeStoragePaths(media.map((row) => row.object_path));
 
       await sql`delete from public.feedback_votes where user_id = ${userId}`;
       await sql`delete from public.feedback_comments where author_id = ${userId}`;
@@ -84,16 +86,7 @@ export async function deleteAccount(
       await sql`delete from auth.identities where user_id = ${userId}`;
 
       await sql`delete from auth.users where id = ${userId}`;
-      return media.map((row) => row.object_path);
     });
-    try {
-      await removeStoragePaths(mediaPaths);
-    } catch (error) {
-      console.error(
-        "user_media_remove_failed",
-        error instanceof Error ? error.name : "unknown",
-      );
-    }
 
     if (!appleRefreshToken) {
       return false;

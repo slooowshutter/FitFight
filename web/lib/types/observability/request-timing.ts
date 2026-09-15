@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const requestTimingPhaseValues = ["auth", "db", "maintenance"] as const;
-export const requestOperationValues = ["healthkit_context", "healthkit_upload", "fights_refresh"] as const;
+export const requestOperationValues = ["healthkit_context", "healthkit_upload", "fights_refresh", "fights_snapshot"] as const;
 export const requestTraceIdSchema = z.string().uuid();
 
 export type RequestTraceId = z.infer<typeof requestTraceIdSchema>;

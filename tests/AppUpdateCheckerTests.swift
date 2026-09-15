@@ -4,12 +4,22 @@ private final class ReleaseProtocol: URLProtocol {
     static var responseData = Data()
     static var responseStatus = 200
     static var requests = 0
+    static var holdResponses = false
+    static var heldRequest: ReleaseProtocol?
 
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
     override func startLoading() {
         Self.requests += 1
+        if Self.holdResponses {
+            Self.heldRequest = self
+            return
+        }
+        finishLoading()
+    }
+
+    func finishLoading() {
         let response = HTTPURLResponse(url: request.url!, statusCode: Self.responseStatus,
                                        httpVersion: nil, headerFields: nil)!
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
@@ -26,6 +36,8 @@ private struct AppUpdateCheckerTests {
     static func main() async throws {
         precondition(ProcessInfo.processInfo.environment["GITHUB_ACTIONS"] == "true",
                      "Native checks run on GitHub-hosted macOS only")
+        try await testTestFlightUpdates()
+        // Preserve the mandatory production policy separately from optional TestFlight updates.
         let suite = "fitfight-release-tests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
@@ -188,6 +200,113 @@ private struct AppUpdateCheckerTests {
         await justInstalled.check()
         precondition(justInstalled.status == .updateRequired,
                      "A readable policy that does not admit the build still requires an update")
-        print("App update checks passed: overlay gate, public vs internal, persistence, review, concurrency and offline use")
+        print("App update checks passed: TestFlight cancellation, public availability, stale metadata, API access, and production gate")
+    }
+
+    static func testTestFlightUpdates() async throws {
+        let suite = "fitfight-testflight-updates.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [ReleaseProtocol.self]
+        let session = URLSession(configuration: configuration)
+        defer { session.invalidateAndCancel() }
+        let url = URL(string: "https://staging.fitfight.app/api/app-release")!
+        let latest = AppRelease(version: "1.0.0", build: 190, updateURL: URL(string: "itms-beta://")!)
+        let internalLatest = AppRelease(version: "1.1.0", build: 200, updateURL: latest.updateURL)
+        let policy = AppReleasePolicy(latest: latest, review: internalLatest, enforced: true,
+                                      internalLatest: internalLatest)
+        ReleaseProtocol.responseStatus = 200
+        ReleaseProtocol.responseData = try JSONEncoder().encode(policy)
+
+        // Reproduce a lock saved by the old binary before the manifest or Apple caught up.
+        defaults.set(true, forKey: "fitfight.release-required.\(url.absoluteString).1.0.0.189")
+        defaults.set(ReleaseProtocol.responseData, forKey: "fitfight.release-policy.\(url.absoluteString)")
+        let outdated = AppUpdateChecker(version: "1.0.0", build: "189", releaseURL: url,
+                                         isTestFlight: true, defaults: defaults, session: session)
+        precondition(outdated.allowsUse && !outdated.showsUpdate,
+                     "A saved TestFlight lock must not block launch")
+        await outdated.check()
+        precondition(outdated.status == .updateAvailable && outdated.showsUpdate,
+                     "A newer public release offers an optional update")
+        precondition(outdated.offeredRelease == latest, "Never offer the internal-only build to Friends")
+        precondition(outdated.allowsUse, "A TestFlight notice must not block background work")
+        let permitted = await outdated.permitsRequests()
+        precondition(permitted, "The TestFlight notice must allow real API requests")
+
+        // Cancel while the foreground/minute refresh is already in flight.
+        ReleaseProtocol.holdResponses = true
+        let refresh = Task { await outdated.check() }
+        while ReleaseProtocol.heldRequest == nil { await Task.yield() }
+        outdated.dismissUpdate()
+        precondition(outdated.status == .current, "Cancel must dismiss the notice immediately")
+        ReleaseProtocol.heldRequest!.finishLoading()
+        ReleaseProtocol.heldRequest = nil
+        ReleaseProtocol.holdResponses = false
+        await refresh.value
+        precondition(outdated.status == .current, "An in-flight check must respect Cancel")
+        await outdated.check()
+        precondition(outdated.status == .current, "Returning from TestFlight must not reopen a cancelled notice")
+        let relaunched = AppUpdateChecker(version: "1.0.0", build: "189", releaseURL: url,
+                                           isTestFlight: true, defaults: defaults, session: session)
+        await relaunched.check()
+        precondition(relaunched.status == .current, "Cancel must survive relaunch for this release")
+        relaunched.rejectRequest(updateRequired: true)
+        precondition(relaunched.allowsUse && !relaunched.showsUpdate,
+                     "A stale server 426 must not create another persistent TestFlight lock")
+        await relaunched.check()
+        precondition(relaunched.status == .current, "A 426 must not forget a cancelled release")
+
+        for (version, build) in [("1.0.0", "190"), ("1.0.0", "191"), ("1.1.0", "199"), ("1.1.0", "200"), ("1.1.1", "201")] {
+            let installed = AppUpdateChecker(version: version, build: build, releaseURL: url,
+                                               isTestFlight: true, defaults: defaults, session: session)
+            await installed.check()
+            precondition(installed.status == .current && installed.allowsUse,
+                         "Public, intermediate internal, and newly uploaded builds must not get a false update")
+        }
+
+        let next = AppRelease(version: "1.1.1", build: 201, updateURL: latest.updateURL)
+        ReleaseProtocol.responseData = try JSONEncoder().encode(
+            AppReleasePolicy(latest: next, review: nil, enforced: false)
+        )
+        await outdated.check()
+        precondition(outdated.status == .updateAvailable && outdated.offeredRelease == next,
+                     "A different public release can offer another optional update")
+        outdated.dismissUpdate()
+        ReleaseProtocol.responseData = try JSONEncoder().encode(policy)
+        await outdated.check()
+        precondition(outdated.status == .current,
+                     "A manifest rollback must not resurrect an older dismissed update")
+        let later = AppRelease(version: "1.1.1", build: 202, updateURL: latest.updateURL)
+        ReleaseProtocol.responseData = try JSONEncoder().encode(
+            AppReleasePolicy(latest: later, review: nil, enforced: false)
+        )
+        await outdated.check()
+        precondition(outdated.status == .updateAvailable && outdated.allowsUse,
+                     "A subsequent build of the same version can offer an optional update")
+        ReleaseProtocol.responseStatus = 503
+        await outdated.check()
+        precondition(outdated.status == .unavailable && outdated.allowsUse,
+                     "An outage must clear a previously visible TestFlight notice")
+        ReleaseProtocol.responseStatus = 200
+        await outdated.check()
+        ReleaseProtocol.responseData = Data("{broken".utf8)
+        await outdated.check()
+        precondition(outdated.status == .unavailable && outdated.allowsUse,
+                     "Malformed metadata must not preserve a TestFlight notice")
+        ReleaseProtocol.responseData = try JSONEncoder().encode(
+            AppReleasePolicy(latest: nil, review: next, enforced: true, internalLatest: next)
+        )
+        await outdated.check()
+        precondition(outdated.status == .unavailable && outdated.allowsUse,
+                     "Review and internal builds alone must never be advertised as installable")
+        precondition(outdated.offeredRelease == nil)
+
+        let productionURL = URL(string: "https://fitfight.app/api/app-release")!
+        let production = AppUpdateChecker(version: "1.0.0", build: "189", releaseURL: productionURL,
+                                           defaults: defaults, session: session)
+        production.rejectRequest(updateRequired: true)
+        production.dismissUpdate()
+        precondition(!production.allowsUse, "TestFlight cancellation must not bypass the production gate")
     }
 }

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { civilDayBounds, isCivilDay } from "@/lib/scoring/civil-day";
+import { fightStepCheckpointSchema } from "@/lib/types/fights/fight-step-checkpoint";
 import {
   MAX_ACTIVITY_DAYS,
   MAX_ACTIVITY_LOOKBACK_MS,
@@ -49,6 +50,7 @@ const healthKitFightAggregateSchema = z.object({
   ends_at: dateTimeSchema,
   cutoff_at: dateTimeSchema,
   steps: stepCountSchema,
+  step_checkpoints: z.array(fightStepCheckpointSchema).min(1).max(41).optional(),
 }).strict().superRefine((value, context) => {
   const startsAt = Date.parse(value.starts_at);
   const endsAt = Date.parse(value.ends_at);
@@ -66,6 +68,32 @@ const healthKitFightAggregateSchema = z.object({
       message: "cutoff_at is outside the Fight window",
       path: ["cutoff_at"],
     });
+  }
+  if (value.step_checkpoints) {
+    let previousCutoff = startsAt;
+    let previousSteps = 0;
+    let previousDay = "";
+    value.step_checkpoints.forEach((point, index) => {
+      const cutoff = Date.parse(point.cutoff_at);
+      if (cutoff <= previousCutoff || cutoff > cutoffAt
+        || point.steps < previousSteps || point.day <= previousDay) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Fight checkpoints must increase in day, cutoff, and cumulative steps",
+          path: ["step_checkpoints", index],
+        });
+      }
+      previousCutoff = cutoff;
+      previousSteps = point.steps;
+      previousDay = point.day;
+    });
+    if (previousCutoff !== cutoffAt || previousSteps !== value.steps) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "The last Fight checkpoint must equal the scored total and cutoff",
+        path: ["step_checkpoints"],
+      });
+    }
   }
 });
 

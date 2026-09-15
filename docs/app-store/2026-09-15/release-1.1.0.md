@@ -1,8 +1,9 @@
 # FitFight release preparation: now 1.1.1
 
-On 15 September 2026, Marc authorized the release PR and preview promotion, plus
-App Store listing preparation. He deferred the data transfer and main promotion
-until after reviewing the transfer plan. Production remains on hold.
+On 15 September 2026, Marc authorized the release PR, preview promotion, and
+App Store listing preparation. At 22:22 UTC he also authorized implementing and
+rehearsing the data transfer. Main promotion and the live production import
+remain on hold.
 
 The latest merged fixes select **1.1.1**. Earlier 1.1.0 preparation below is historical; refresh the draft and screenshots for the final 1.1.1 candidate.
 
@@ -73,7 +74,20 @@ restorable production backup and account for writes made during the transition.
 Do not copy sessions, APNs device registrations, pending jobs, or encrypted Apple
 refresh credentials under a different environment's key.
 
-The source import and storage transfer are not implemented or executed yet.
+The [cloud transfer tool](../../../../scripts/data-transfer/README.md) is now
+implemented with an explicit table allowlist, Apple identity mapping, private
+checkpoints, file hashes, atomic rollback/commit, and three-way catch-up conflict
+detection. Its target allowlist accepts only the disposable rehearsal project;
+production remains excluded. See the current evidence in `docs/status.md`.
+
+The completed rehearsal combined 23 beta accounts and 3 production accounts into
+24 users, 36 Fights, and 88 memberships. It copied and checked all 52 ready files,
+proved rollback and repeat-run safety, and applied a later 86-row catch-up. Auth
+reads passed for all users and a fresh importer-created fixture. Both read roles,
+the build 113 SQL fixture, TypeScript/Deno checks, and 247 unit tests passed.
+The two shared profiles used beta details on the disposable copy only; the live
+choice remains pending. A fresh production backup and installed-client Apple
+sign-in/API checks are still required for the live rollout.
 
 ### Proposed transfer sequence
 
@@ -101,8 +115,9 @@ transition, not ongoing synchronization between the two environments.
 
 Supabase documents [Auth migration and session validity](https://supabase.com/docs/guides/troubleshooting/migrating-auth-users-between-projects)
 and [database and Storage transfer](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore).
-The account merge and conflict handling above are FitFight-specific work that
-still needs implementation and rehearsal.
+The account merge and conflict handling above are FitFight-specific behavior,
+covered by unit tests and the cloud rehearsal. A real Apple sign-in with the
+production binary and final live cutover verification remain release checks.
 
 After maintenance, the live audit confirmed three missing migrations. Notification
 preferences/social kinds, Fight Realtime invalidations, and chart checkpoints were

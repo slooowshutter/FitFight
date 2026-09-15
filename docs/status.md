@@ -8,6 +8,63 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
 
+## Data transfer implementation and cloud rehearsal, 16 Sep 2026
+
+**Code:** the [one-time transfer tool](../scripts/data-transfer/README.md) is
+implemented. It matches Apple identities, preserves production IDs and referral
+codes, copies 33 allowlisted tables and actual media bytes, and records private
+cloud checkpoints. Conflicts and deletions stop the operation. Later runs compare
+source changes against their prior import and current production values. The
+environment allowlist accepts only the disposable rehearsal project, never live
+production. No app API, native model, or application schema changed in this work.
+
+**Cloud checks:** the restored production copy has all 40 migrations. The frozen
+beta source contained 23 accounts, with 2 identities shared by the 3 production
+accounts. The import produced 24 accounts, 36 Fights, and 88 memberships while
+preserving the original production history. All 52 ready media files passed
+source and destination SHA-256/size checks; 2 unfinished uploads were excluded.
+The default import rolled back to its exact original row digest. The committed
+import matched the complete planned digest, all foreign keys passed, and repeating
+the run created no duplicates. A subsequent catch-up transferred 86 changed rows,
+including later Health activity and its score, with no new accounts or Fights.
+That catch-up also passed rollback, commit, full-digest, and Auth checks.
+
+Supabase Auth successfully read all 24 users and their Apple identities. A fresh
+synthetic account was inserted through the corrected importer, read through Auth,
+and removed; the existing dataset's digest remained unchanged. The rehearsal
+caught and fixed SQL-driver JSON double encoding and Auth's required zero instance
+ID/empty token fields. No passwords, sessions, devices, or Apple refresh credentials
+were copied. The 50 account/role visibility checks passed for the 24 users plus an
+unrelated identity, using both `authenticated` and `fitfight_backend_reader`.
+The released build 113 SQL read/write fixture and forbidden-write checks passed
+after import and rolled back. TypeScript, Deno checking, and all 247 backend tests
+passed, including 10 transfer tests.
+
+Initial applied checkpoint: `61c40c23-34ab-44b0-b45d-6582c68d5ec3`. Catch-up:
+`29d24695-87bc-4361-a5e8-727b6d7e7f41`. Final row digest:
+`b40a21dc8c809c42c6adc2348e99dc8a1faad8c3f27c2f48c357666217c01800`.
+Snapshots and media stayed inside Supabase; workstation evidence contains only
+aggregate results. Existing completed production backups were verified. A fresh
+backup is still required immediately before any live import.
+All five temporary audit/transfer/test functions were deleted, all three temporary
+secrets were removed from both projects, and the local token file was deleted.
+The disposable branch is paused with its private checkpoints retained for the
+release follow-up.
+
+**Live deployment:** main and production data remain untouched. At 22:57 UTC on
+15 September, staging health returns 200 and its release endpoint advertises
+latest 190, review 200, internal 201, with enforcement off. Production health
+returns 200 without `profile_api`; its release endpoint still returns 404. The
+public build 113 remains supported. No physical-device Apple sign-in or candidate
+HTTP smoke test against the imported copy was performed.
+
+Before production: Marc must choose beta or production details for the 2 shared
+profiles, authorize the held main/live rollout, and agree the final beta cutoff.
+Apply compatible production schema/backend first, preserve a fresh recoverable
+backup, repeat the verified transfer, then check installed-client login and the
+production API. The rehearsal used beta profile details only on the disposable
+copy; it does not decide the live profile choice.
+
 ## Release workspace reconciliation, 15 Sep 2026 evening
 
 Release preparation is merged into develop at `25f8ac8` through [#241](https://github.com/slooowshutter/FitFight/pull/241).
@@ -45,9 +102,8 @@ SQL apart from whitespace. All 40 migration versions now match; a subsequent
 
 The earlier disposable production-copy rehearsal applied 28 pending migrations
 and preserved 3 accounts, 14 Fights, and 14 memberships. Legacy SQL request and
-permission checks passed. That rehearsal predates the latest 1.1.1 migrations;
-those still require validation. No beta history/media import or production
-rollout has been performed by this workspace.
+permission checks passed. The completed 40-migration/data-transfer rehearsal
+above supersedes this earlier evidence. The production rollout remains on hold.
 
 Read-only live check at 21:38 UTC: staging advertises public 1.0.0 (190) and
 review/internal 1.1.0 (200), with enforcement off. Production still returns 404

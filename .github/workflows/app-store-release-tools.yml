@@ -7,21 +7,31 @@ on:
             - "scripts/app-store-release-audit.rb"
             - ".github/workflows/app-store-release-tools.yml"
 
+concurrency:
+    group: ios-distribution
+    cancel-in-progress: false
+
 jobs:
     audit:
         runs-on: ubuntu-latest
-        timeout-minutes: 10
+        timeout-minutes: 20
         permissions:
-            contents: read
+            contents: write
         steps:
             - uses: actions/checkout@v4
             - uses: ruby/setup-ruby@v1
               with:
                   ruby-version: "3.3"
                   bundler-cache: true
-            - name: Prepare screenshots and verify release metadata
+            - name: Submit verified production build 202 for review
               env:
                   APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
                   APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
                   APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
-              run: bundle exec ruby scripts/app-store-release-audit.rb prepare
+              run: bundle exec ruby scripts/app-store-release-audit.rb submit 202
+            - name: Refresh available releases after build selection
+              env:
+                  APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+                  APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+                  APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+              run: bash scripts/publish-app-releases.sh

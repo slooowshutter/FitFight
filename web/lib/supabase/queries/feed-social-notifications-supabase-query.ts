@@ -14,6 +14,7 @@ type Recipient = {
   userId: string;
   kind: SocialKind;
   eventId: string;
+  fightId: string;
 };
 
 type RecipientRow = {
@@ -86,9 +87,45 @@ async function recipientRows(sql: Sql, actorId: string, userIds: string[]): Prom
   `;
 }
 
+async function accessibleFightByUser(
+  sql: Sql,
+  userIds: string[],
+  postId: string,
+  preferredFightId: string | null,
+): Promise<Map<string, string>> {
+  if (userIds.length === 0) return new Map();
+  const rows = await sql<{ user_id: string; fight_id: string }[]>`
+    select distinct on (member.user_id)
+      member.user_id,
+      member.fight_id
+    from public.fight_members as member
+    where member.user_id in ${sql(userIds)}
+      and member.state in ('accepted', 'deferred')
+      and (
+        member.fight_id = ${preferredFightId}
+        or exists (
+          select 1
+          from public.fight_post_channels as channel
+          where channel.post_id = ${postId}
+            and channel.fight_id = member.fight_id
+        )
+        or exists (
+          select 1
+          from public.fights as posted
+          join public.fights as sibling
+            on sibling.series_id = posted.series_id
+          where posted.id = ${preferredFightId}
+            and posted.series_id is not null
+            and sibling.id = member.fight_id
+        )
+      )
+    order by member.user_id, (member.fight_id = ${preferredFightId}) desc nulls last, member.fight_id
+  `;
+  return new Map(rows.map((row) => [row.user_id, row.fight_id]));
+}
+
 async function insertSocialIntents(
   sql: Sql,
-  fightId: string,
   actorId: string,
   actor: string,
   recipients: Recipient[],
@@ -116,12 +153,12 @@ async function insertSocialIntents(
     return [{
       idempotency_key: `${recipient.userId}:${recipient.kind}:${recipient.eventId}`,
       user_id: recipient.userId,
-      fight_id: fightId,
+      fight_id: recipient.fightId,
       kind: recipient.kind,
       slot: "event",
       not_before: notBefore,
       expires_at: expiresAt,
-      route: `/fights/${fightId}`,
+      route: `/fights/${recipient.fightId}`,
       copy_key: recipient.kind,
       alert_body: socialNotificationAlert(recipient.kind, actor, locale).body,
     }];
@@ -154,8 +191,10 @@ export async function enqueueFightFeedPostNotifications(
   sql: Sql,
   input: { fightId: string; postId: string; actorId: string },
 ): Promise<void> {
-  const members = await sql<{ user_id: string }[]>`
-    select distinct member.user_id
+  const members = await sql<{ user_id: string; fight_id: string }[]>`
+    select distinct on (member.user_id)
+      member.user_id,
+      member.fight_id
     from public.fight_members as member
     where member.state in ('accepted', 'deferred')
       and member.user_id <> ${input.actorId}
@@ -171,16 +210,17 @@ export async function enqueueFightFeedPostNotifications(
             and sibling.id = member.fight_id
         )
       )
+    order by member.user_id, (member.fight_id = ${input.fightId}) desc, member.fight_id
   `;
   await insertSocialIntents(
     sql,
-    input.fightId,
     input.actorId,
     await actorName(sql, input.actorId),
     members.map((member) => ({
       userId: member.user_id,
       kind: "feed_post",
       eventId: input.postId,
+      fightId: member.fight_id,
     })),
   );
 }
@@ -199,8 +239,8 @@ export async function enqueueFightFeedCommentNotifications(
     from public.fight_posts
     where id = ${input.postId}
   `;
-  if (!post?.fight_id) return;
-  const recipients: Recipient[] = [];
+  if (!post) return;
+  const wanted: Array<Omit<Recipient, "fightId">> = [];
   if (input.parentId) {
     const [parent] = await sql<{ author_id: string }[]>`
       select author_id
@@ -209,7 +249,7 @@ export async function enqueueFightFeedCommentNotifications(
         and post_id = ${input.postId}
     `;
     if (parent && parent.author_id !== input.actorId) {
-      recipients.push({
+      wanted.push({
         userId: parent.author_id,
         kind: "comment_reply",
         eventId: input.commentId,
@@ -218,20 +258,28 @@ export async function enqueueFightFeedCommentNotifications(
   }
   if (
     post.author_id !== input.actorId
-    && !recipients.some((recipient) => recipient.userId === post.author_id)
+    && !wanted.some((recipient) => recipient.userId === post.author_id)
   ) {
-    recipients.push({
+    wanted.push({
       userId: post.author_id,
       kind: "post_comment",
       eventId: input.commentId,
     });
   }
+  const fights = await accessibleFightByUser(
+    sql,
+    wanted.map((recipient) => recipient.userId),
+    input.postId,
+    post.fight_id,
+  );
   await insertSocialIntents(
     sql,
-    post.fight_id,
     input.actorId,
     await actorName(sql, input.actorId),
-    recipients,
+    wanted.flatMap((recipient) => {
+      const fightId = fights.get(recipient.userId);
+      return fightId ? [{ ...recipient, fightId }] : [];
+    }),
   );
 }
 
@@ -244,16 +292,23 @@ export async function enqueueFightFeedReactionNotifications(
     from public.fight_posts
     where id = ${input.postId}
   `;
-  if (!post?.fight_id || post.author_id === input.actorId) return;
+  if (!post || post.author_id === input.actorId) return;
+  const fightId = (await accessibleFightByUser(
+    sql,
+    [post.author_id],
+    input.postId,
+    post.fight_id,
+  )).get(post.author_id);
+  if (!fightId) return;
   await insertSocialIntents(
     sql,
-    post.fight_id,
     input.actorId,
     await actorName(sql, input.actorId),
     [{
       userId: post.author_id,
       kind: "post_reaction",
       eventId: `${input.postId}:${input.actorId}`,
+      fightId,
     }],
   );
 }

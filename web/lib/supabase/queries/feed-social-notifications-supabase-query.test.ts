@@ -17,12 +17,13 @@ const actorId = "11111111-1111-4111-8111-111111111111";
 const otherId = "22222222-2222-4222-8222-222222222222";
 const thirdId = "33333333-3333-4333-8333-333333333333";
 const fightId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const siblingFightId = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
 const postId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const commentId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 const parentId = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
 
 function createSql(options: {
-  members?: Array<{ user_id: string }>;
+  members?: Array<{ user_id: string; fight_id: string }>;
   actor?: { handle: string; display_name: string };
   recipients?: Array<{
     user_id: string;
@@ -111,7 +112,7 @@ test("notification preference routes authenticate before reading or writing", as
 
 test("a fight post notifies other members and skips the author", async () => {
   const { database, inserted } = createSql({
-    members: [{ user_id: otherId }, { user_id: actorId }],
+    members: [{ user_id: otherId, fight_id: fightId }, { user_id: actorId, fight_id: fightId }],
     actor: { handle: "alex", display_name: "Alex" },
     recipients: [{
       user_id: otherId,
@@ -124,15 +125,38 @@ test("a fight post notifies other members and skips the author", async () => {
   });
   await enqueueFightFeedPostNotifications(database, { fightId, postId, actorId });
   assert.equal(inserted.length, 1);
-  const row = inserted[0] as { user_id: string; kind: string; alert_body: string };
+  const row = inserted[0] as { user_id: string; kind: string; alert_body: string; fight_id: string; route: string };
   assert.equal(row.user_id, otherId);
   assert.equal(row.kind, "feed_post");
   assert.equal(row.alert_body, "Alex posted in the feed.");
+  assert.equal(row.fight_id, fightId);
+  assert.equal(row.route, `/fights/${fightId}`);
+});
+
+test("a series-sibling member is routed to their own fight", async () => {
+  const { database, inserted, queries } = createSql({
+    members: [{ user_id: otherId, fight_id: siblingFightId }],
+    actor: { handle: "alex", display_name: "Alex" },
+    recipients: [{
+      user_id: otherId,
+      locale: "en",
+      feed_post: true,
+      post_comment: true,
+      comment_reply: true,
+      post_reaction: true,
+    }],
+  });
+  await enqueueFightFeedPostNotifications(database, { fightId, postId, actorId });
+  assert.equal(inserted.length, 1);
+  const row = inserted[0] as { fight_id: string; route: string };
+  assert.equal(row.fight_id, siblingFightId);
+  assert.equal(row.route, `/fights/${siblingFightId}`);
+  assert.ok(queries.some((sql) => sql.includes("series_id")));
 });
 
 test("a muted feed-post preference is not enqueued", async () => {
   const { database, inserted } = createSql({
-    members: [{ user_id: otherId }],
+    members: [{ user_id: otherId, fight_id: fightId }],
     actor: { handle: "alex", display_name: "Alex" },
     recipients: [{
       user_id: otherId,
@@ -150,6 +174,7 @@ test("a muted feed-post preference is not enqueued", async () => {
 test("a top-level comment notifies the post author only", async () => {
   const { database, inserted } = createSql({
     post: { fight_id: fightId, author_id: otherId },
+    members: [{ user_id: otherId, fight_id: fightId }],
     actor: { handle: "alex", display_name: "Alex" },
     recipients: [{
       user_id: otherId,
@@ -175,6 +200,7 @@ test("a reply to the post author’s comment is one reply, not also a comment", 
   const { database, inserted } = createSql({
     post: { fight_id: fightId, author_id: otherId },
     parent: { author_id: otherId },
+    members: [{ user_id: otherId, fight_id: fightId }],
     actor: { handle: "alex", display_name: "Alex" },
     recipients: [{
       user_id: otherId,
@@ -200,6 +226,10 @@ test("a reply notifies the parent commenter instead of sibling commenters", asyn
   const { database, inserted, queries } = createSql({
     post: { fight_id: fightId, author_id: otherId },
     parent: { author_id: thirdId },
+    members: [
+      { user_id: otherId, fight_id: fightId },
+      { user_id: thirdId, fight_id: fightId },
+    ],
     actor: { handle: "alex", display_name: "Alex" },
     recipients: [
       {
@@ -235,6 +265,7 @@ test("a reply notifies the parent commenter instead of sibling commenters", asyn
 test("a reaction notifies the post author once", async () => {
   const { database, inserted } = createSql({
     post: { fight_id: fightId, author_id: otherId },
+    members: [{ user_id: otherId, fight_id: fightId }],
     actor: { handle: "alex", display_name: "Alex" },
     recipients: [{
       user_id: otherId,
@@ -258,4 +289,30 @@ test("reacting to your own post does not enqueue", async () => {
   });
   await enqueueFightFeedReactionNotifications(database, { postId, actorId });
   assert.equal(inserted.length, 0);
+});
+
+test("a comment routes to a fight the recipient can open", async () => {
+  const { database, inserted } = createSql({
+    post: { fight_id: fightId, author_id: otherId },
+    members: [{ user_id: otherId, fight_id: siblingFightId }],
+    actor: { handle: "alex", display_name: "Alex" },
+    recipients: [{
+      user_id: otherId,
+      locale: "en",
+      feed_post: true,
+      post_comment: true,
+      comment_reply: true,
+      post_reaction: true,
+    }],
+  });
+  await enqueueFightFeedCommentNotifications(database, {
+    postId,
+    commentId,
+    parentId: null,
+    actorId,
+  });
+  assert.equal(inserted.length, 1);
+  const row = inserted[0] as { fight_id: string; route: string };
+  assert.equal(row.fight_id, siblingFightId);
+  assert.equal(row.route, `/fights/${siblingFightId}`);
 });

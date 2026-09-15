@@ -537,6 +537,7 @@ struct CompanionIntroduction: View {
         CompanionEffortStage.matchingDaily(steps.status)
     }
 
+    @ViewBuilder
     private var youCharacter: some View {
         if companions.isCustom {
             Color.clear

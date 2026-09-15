@@ -365,7 +365,10 @@ struct YouView: View {
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(theme.textFaint)
                 ),
-                action: { model.showingRequests = true }
+                action: {
+                    model.feedbackPane = .bugs
+                    model.tab = .feedback
+                }
             )
             .disabled(session.isBusy)
         }

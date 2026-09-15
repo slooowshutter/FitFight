@@ -7,12 +7,12 @@
     },
     "review": {
       "version": "1.0.0",
-      "build": 193,
+      "build": 194,
       "update_url": "itms-beta://"
     },
     "internal": {
       "version": "1.0.0",
-      "build": 193,
+      "build": 194,
       "update_url": "itms-beta://"
     },
     "enforced": true

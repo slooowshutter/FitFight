@@ -24,7 +24,7 @@ export default function PrivacyPage() {
       <article className="legal-content">
         <p className="eyebrow">YOUR DATA, IN PLAIN LANGUAGE</p>
         <h1>Privacy Policy</h1>
-          <p className="legal-updated">Effective 13 September 2026</p>
+        <p className="legal-updated">Effective 15 September 2026</p>
         <p className="legal-intro">
           FitFight lets named participants compete on who records the most Steps during
           a private Fight. This policy explains the data used by the FitFight iPhone app
@@ -60,9 +60,17 @@ export default function PrivacyPage() {
               participants.
             </li>
             <li>
-              <strong>Bugs and feature requests:</strong> the title, details, votes, and
-              comments you post on the in-app board, shown to other signed-in FitFight
-              Users with your username.
+              <strong>Posts, photos, and feedback:</strong> text, selected photos, videos,
+              files, comments, reactions, and tags you submit. Feed posts are visible to
+              the audience selected in the composer; bugs and feature requests are
+              visible to other signed-in users with your username. Your profile also
+              stores your chosen companion and any custom description. We store reports
+              and blocks to moderate user content.
+            </li>
+            <li>
+              <strong>Notifications:</strong> your device push token, notification
+              preferences, language, time zone, and delivery records, used to send the
+              optional notifications you enable.
             </li>
             <li>
               <strong>Support and operations:</strong> messages you send to support and
@@ -82,7 +90,7 @@ export default function PrivacyPage() {
             Apple Health access is read-only. FitFight does not write to Apple Health.
             The current app does not send raw Health samples, GPS routes, heart rate, or
             device and source metadata. It may send merged daily activity totals and
-            workout summaries (type, time, optional active minutes, distance, energy, and
+            workout summaries (identifier, type, time, duration, optional active minutes, distance, energy, and
             effort) so FitFight can prepare later challenge types. Those extra readings
             are not used to score today&apos;s Steps fights and are not shown to other people.
           </p>
@@ -101,6 +109,8 @@ export default function PrivacyPage() {
             <li>create and secure your account;</li>
             <li>create, invite participants to, score, and finish private Fights;</li>
             <li>show standings and shared Fight history;</li>
+            <li>share posts with your chosen audience and moderate reports and blocks;</li>
+            <li>send optional challenge and social notifications;</li>
             <li>run the in-app bugs and feature-request board;</li>
             <li>answer support requests; and</li>
             <li>detect errors, abuse, and security problems.</li>
@@ -114,10 +124,25 @@ export default function PrivacyPage() {
         <section>
           <h2>Who processes data</h2>
           <p>
-            FitFight uses Supabase for authentication and database services, and Vercel
+            FitFight uses Supabase for authentication, database, and media storage, and Vercel
             to host server APIs and scheduled processing. These providers process data
             for FitFight under their service and security terms. We do not make private
             Fight or Health data public.
+          </p>
+          <p>
+            Apple delivers push notifications. PostHog processes crash reports linked
+            to your FitFight account, with app and device details, to diagnose failures.
+            Feedback can be copied to Notion for triage; an administrator can send a
+            feedback report, its comments, attachments, and diagnostics to a Cursor
+            cloud agent to investigate a fix. Avoid putting sensitive information in
+            feedback that you do not want processed for support.
+          </p>
+          <p>
+            When enabled on the server, OpenRouter and its model provider generate
+            short challenge reminders from a limited context: whether you are ahead,
+            behind, or tied, participant count, days remaining, sync status, and language.
+            That request contains no account identifier, name, exact step count, Fight
+            title, or raw Health reading.
           </p>
           <p>
             We may also disclose information when required by law, to protect users or
@@ -128,12 +153,13 @@ export default function PrivacyPage() {
         <section>
           <h2>Permissions, revocation, and retention</h2>
           <p>
-            You choose whether to grant Apple Health access. You can remove FitFight&apos;s
+            You can disable notifications in iOS Settings or adjust their categories
+            in FitFight Settings. You choose whether to grant Apple Health access. You can remove FitFight&apos;s
             access at any time in Apple Health or iOS Settings. Revoking access stops
             future reads but does not change data already used to score a Fight.
           </p>
           <p>
-            We keep account, Fight, bugs and feature-request, and uploaded Steps data while
+            We keep account, Fight, posts, media, feedback, and uploaded Health summaries while
             your account exists.
             Support emails are kept only as long as needed to answer the request. Limited
             security and request logs follow Supabase&apos;s and Vercel&apos;s configured retention
@@ -153,7 +179,8 @@ export default function PrivacyPage() {
             You can permanently delete your account under <strong>You → Settings → Delete
             account</strong>. You do not need to contact support. Deletion removes your
             profile and username, uploaded Apple Health Fight, daily, and activity totals, legacy
-            friendships, invitations, Fight memberships, scores, bugs and feature requests
+            friendships, invitations, Fight memberships, scores, posts and media,
+            notification registrations, bugs and feature requests
             you posted, and every Fight you
             created. It also removes your participation from Fights created by someone else.
           </p>

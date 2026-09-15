@@ -1,6 +1,6 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **15 Sep 2026**. App: **1.0.0**.
+Read this before building. Last updated **15 Sep 2026**. Public app: **1.0.0**. Prepared update: **1.1.0**.
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
@@ -9,6 +9,26 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 **Last TestFlight:** 15 Sep 2026. **1.0.0 (198)** from [#223](https://github.com/slooowshutter/FitFight/pull/223). Tester: Invited-tab count ([#222](https://github.com/slooowshutter/FitFight/pull/222)). Friends stay **190**.
 
 ## App Store refresh and release audit (15 Sep 2026)
+
+Marc subsequently authorized the 1.1.0 production update and beta data migration.
+The [release record](app-store/2026-09-15/release-1.1.0.md) supersedes the initial
+read-only audit below. The version, changelog, store copy, privacy disclosures, and
+legacy build 113 compatibility repair are prepared. App Store Connect has a 1.1.0
+draft; it has not been submitted.
+
+A disposable Supabase production copy applied all 28 pending migrations. Counts
+remained 3 accounts/profiles, 14 Fights, and 14 memberships. Transactional SQL
+verified build 113's direct write/read paths and denied unauthorized writes; fixtures
+were rolled back. Web typecheck, production build, all 205 backend tests,
+localization checks, native API-boundary check, privacy plist validation, and the
+destructive-SQL guard pass. New Auth/PostgREST compatibility CI and native compile
+remain pending PR authorization. No live production schema or data changed.
+
+The data audit found 22 staging accounts and 3 production accounts, with two shared
+Apple identities using different UUIDs. Preserve the existing production UUIDs.
+No cross-identity username collision was found. Source import, media transfer,
+staging migration-ledger reconciliation, production deployment, and device testing
+remain pending. The rehearsal is not evidence that those steps have completed.
 
 App Store Connect shows public iOS version **1.0**, **Ready for Distribution**, using
 **1.0.0 (113)**. The [refresh package](app-store/2026-09-15/README.md) contains six

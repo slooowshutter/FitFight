@@ -25,6 +25,13 @@ enum Changelog {
     /// Newest first. Add a row here whenever we ship a user-facing change.
     static let releases: [ReleaseNote] = [
         ReleaseNote(
+            version: "1.1.0",
+            year: 2026,
+            month: 9,
+            day: 15,
+            notes: "Meet your companion, share photos and posts in your fights, schedule or repeat challenges, and choose which notifications you receive. This update also brings the new FitFight icon and improvements to Health sync and standings."
+        ),
+        ReleaseNote(
             version: "1.0.0",
             year: 2026,
             month: 9,

@@ -1,6 +1,16 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Meet your companion, share photos and posts in your fights, schedule or repeat challenges, and choose which notifications you receive. This update also brings the new FitFight icon and improvements to Health sync and standings." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Découvrez votre compagnon, partagez des photos et des publications dans vos défis, programmez ou répétez vos défis et choisissez vos notifications. Cette mise à jour apporte aussi la nouvelle icône FitFight et des améliorations de la synchronisation Santé et des classements."
+          }
+        }
+      }
+    },
     "Screen CTA — tap to continue" : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Bouton principal — toucher pour continuer"}}}},
     "A full-width button with a centered label. Sliding confirmation is reserved for creating a fight." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Un bouton pleine largeur au libellé centré. La confirmation par glissement est réservée à la création d’un défi."}}}},
     "Touch or slide to inspect a day." : {"localizations":{"fr":{"stringUnit":{"state":"translated","value":"Touche ou fais glisser pour explorer un jour."}}}},

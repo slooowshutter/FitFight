@@ -332,7 +332,7 @@ struct FFScreenTitle: View {
     }
 }
 
-/// Hard rule from AGENTS.md: the version label stays at the top of the screen.
+/// Hard rule from AGENTS.md: the version label stays at the top of You only.
 struct VersionBanner: View {
     @Environment(\.ffTheme) private var theme
     var onTap: (() -> Void)?

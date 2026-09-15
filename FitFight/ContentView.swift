@@ -16,10 +16,7 @@ struct ContentView: View {
     var body: some View {
         Group {
             if appUpdate.allowsUse || ScreenshotExport.isEnabled || CompanionPreview.isEnabled {
-                VStack(spacing: 0) {
-                    VersionBanner(onTap: versionBannerTap)
-                    appContent
-                }
+                appContent
             } else {
                 updateScreen
             }
@@ -152,12 +149,6 @@ struct ContentView: View {
         } message: {
             Text(String(localized: "FitFight can remind you when a fight ends and when to sync your steps. Lock-screen alerts never show scores or fight titles."))
         }
-    }
-
-    private var versionBannerTap: (() -> Void)? {
-        guard !CompanionPreview.isEnabled else { return nil }
-        guard appUpdate.allowsUse, session.isFitFightAdmin else { return nil }
-        return { model.showingDebugMenu = true }
     }
 
     private var updateScreen: some View {

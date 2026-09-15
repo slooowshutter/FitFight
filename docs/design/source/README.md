@@ -37,7 +37,7 @@ When archived material conflicts with the current HTML or `tokens.json`, the cur
 ## Native rules
 
 - Four fixed tabs: Fights, New, You, Feedback.
-- The version label stays at the top of the screen.
+- The version label stays at the top of You only. Do not show it on Fights, New, Feed, or Feedback.
 - Versions remains permanently available under You → Settings.
 - Every number uses tabular figures.
 - Rows use hairline dividers; selected fills use concentric corners and hide adjacent dividers without shifting layout.

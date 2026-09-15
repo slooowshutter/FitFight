@@ -109,7 +109,7 @@ Names only. Never print values. Settings → Secrets and variables → Actions �
 | `FITFIGHT_API_URL` | every TestFlight | `https://staging.fitfight.app` |
 | `POSTHOG_HOST` | TestFlight and App Store, optional | PostHog ingest host. Default `https://us.i.posthog.com`. Use `https://eu.i.posthog.com` for EU Cloud. |
 
-Every TestFlight ships `https://zstzbfocunthczzubggz.supabase.co` (GitHub `SUPABASE_STAGING_*` variables override if set). The staging publishable key must be that project’s key, not production’s. Persistent `develop` must stay persistent so merging to `main` does not delete it. TestFlight CI builds the `preview` commit that triggered it. The top version label always shows `staging`. `main` never uploads to TestFlight.
+Every TestFlight ships `https://zstzbfocunthczzubggz.supabase.co` (GitHub `SUPABASE_STAGING_*` variables override if set). The staging publishable key must be that project’s key, not production’s. Persistent `develop` must stay persistent so merging to `main` does not delete it. TestFlight CI builds the `preview` commit that triggered it. The You version label always shows `staging`. `main` never uploads to TestFlight.
 
 ## App Store production candidate
 

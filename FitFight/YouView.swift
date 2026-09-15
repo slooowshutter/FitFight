@@ -22,7 +22,7 @@ struct YouView: View {
     @State private var showingCompanionPreviewControls = false
 
     var body: some View {
-        FFScreen(refresh: fightsRefresh) {
+        FFScreen(top: AnyView(VersionBanner(onTap: versionBannerTap)), refresh: fightsRefresh) {
             profile
             CompanionIntroduction(surface: .you)
             #if DEBUG && targetEnvironment(simulator)
@@ -122,6 +122,12 @@ struct YouView: View {
         } message: {
             Text("This permanently deletes your profile, photos, uploaded Steps, referrals, invitations, fights you created, and bugs or requests you posted; removes you from other fights; and signs you out. This can’t be undone.")
         }
+    }
+
+    private var versionBannerTap: (() -> Void)? {
+        guard !CompanionPreview.isEnabled else { return nil }
+        guard session.isFitFightAdmin else { return nil }
+        return { model.showingDebugMenu = true }
     }
 
     private var fightsRefresh: FFRefreshConfig {

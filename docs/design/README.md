@@ -10,4 +10,4 @@ Rebuild SwiftUI from that folder. Ignore Arena / Pulse / Locker / Rogue; those w
 
 - App tokens: `FitFight/DesignSystem/tokens.json` (copy of `source/tokens.json`)
 - Theme = **Night / Day**, fixed Moss / Ember / Gold semantics. Switch the base in **You → Look**. There is no accent picker.
-- Version stays at the top of the screen. Versions lives under You → Settings.
+- Version stays at the top of You only. Versions lives under You → Settings.

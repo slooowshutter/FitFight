@@ -24,27 +24,27 @@ struct FeedbackTabView: View {
     var body: some View {
         VStack(spacing: 0) {
             hubBar
-            switch model.feedbackPane {
-            case .feed:
-                FeedView(showsChrome: false)
-                    .id(FeedbackPane.feed)
-            case .bugs:
-                RequestsView(
-                    store: requests,
-                    chrome: .tab,
-                    initialFilter: model.feedbackRequestFilter,
-                    onCompose: { model.feedbackPane = .report }
-                )
-                .id("bugs-\(model.feedbackRequestFilter)")
-            case .top:
-                RequestsView(
-                    store: requests,
-                    chrome: .tab,
-                    lockedFilter: .top,
-                    onCompose: { model.feedbackPane = .report }
-                )
-                .id(FeedbackPane.top)
-            case .report:
+            ZStack {
+                switch model.feedbackPane {
+                case .feed:
+                    FeedView(showsChrome: false)
+                case .bugs:
+                    RequestsView(
+                        store: requests,
+                        chrome: .tab,
+                        filter: $model.feedbackRequestFilter,
+                        onCompose: { model.feedbackPane = .report }
+                    )
+                case .top:
+                    RequestsView(
+                        store: requests,
+                        chrome: .tab,
+                        lockedFilter: .top,
+                        onCompose: { model.feedbackPane = .report }
+                    )
+                case .report:
+                    Color.clear
+                }
                 ComposeRequestView(
                     store: requests,
                     heading: String(localized: "Report"),
@@ -55,7 +55,9 @@ struct FeedbackTabView: View {
                     }
                 )
                 .environmentObject(session)
-                .id(FeedbackPane.report)
+                .opacity(model.feedbackPane == .report ? 1 : 0)
+                .allowsHitTesting(model.feedbackPane == .report)
+                .accessibilityHidden(model.feedbackPane != .report)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

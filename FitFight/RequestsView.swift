@@ -394,7 +394,7 @@ struct RequestsView: View {
     @ObservedObject var store: FeedbackStore
     var chrome: RequestsChrome
     var lockedFilter: RequestFilter?
-    var initialFilter: RequestFilter?
+    var filterSource: Binding<RequestFilter>?
     var onCompose: (() -> Void)?
     @State private var filter: RequestFilter
     @State private var composing = false
@@ -404,19 +404,19 @@ struct RequestsView: View {
         store: FeedbackStore,
         chrome: RequestsChrome = .sheet,
         lockedFilter: RequestFilter? = nil,
-        initialFilter: RequestFilter? = nil,
+        filter: Binding<RequestFilter>? = nil,
         onCompose: (() -> Void)? = nil
     ) {
         _store = ObservedObject(wrappedValue: store)
         self.chrome = chrome
         self.lockedFilter = lockedFilter
-        self.initialFilter = initialFilter
+        self.filterSource = filter
         self.onCompose = onCompose
         let start: RequestFilter
         if let lockedFilter {
             start = lockedFilter
-        } else if let initialFilter {
-            start = initialFilter
+        } else if let filter {
+            start = filter.wrappedValue
         } else if chrome == .tab {
             start = .bugs
         } else {
@@ -433,7 +433,11 @@ struct RequestsView: View {
                 NavigationStack {
                     list
                         .navigationDestination(item: $openPostID) { postID in
-                            RequestDetailView(postID: postID, store: store)
+                            RequestDetailView(
+                                postID: postID,
+                                store: store,
+                                showsVersionBanner: chrome == .sheet
+                            )
                                 .toolbar(.hidden, for: .navigationBar)
                         }
                 }
@@ -457,7 +461,11 @@ struct RequestsView: View {
     }
 
     private var activeFilter: RequestFilter {
-        lockedFilter ?? filter
+        lockedFilter ?? filterSource?.wrappedValue ?? filter
+    }
+
+    private var filterSelection: Binding<RequestFilter> {
+        filterSource ?? $filter
     }
 
     private var filterItems: [RequestFilter] {
@@ -484,7 +492,7 @@ struct RequestsView: View {
             }
 
             if !filterItems.isEmpty {
-                FFSegmented(items: filterItems, selection: $filter) { $0.title }
+                FFSegmented(items: filterItems, selection: filterSelection) { $0.title }
                     .padding(.horizontal, theme.space.screenPadding)
                     .padding(.bottom, 12)
             }
@@ -765,6 +773,7 @@ private struct RequestRow: View {
 private struct RequestDetailView: View {
     let postID: UUID
     @ObservedObject var store: FeedbackStore
+    var showsVersionBanner: Bool = true
     @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
@@ -780,7 +789,9 @@ private struct RequestDetailView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            VersionBanner()
+            if showsVersionBanner {
+                VersionBanner()
+            }
             HStack(alignment: .top, spacing: 10) {
                 FFNavDetail(
                     title: post?.title ?? String(localized: "Request"),

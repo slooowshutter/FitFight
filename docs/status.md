@@ -6,7 +6,7 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ---
 
-**Last TestFlight:** 15 Sep 2026. **1.0.0 (196)** from [#214](https://github.com/slooowshutter/FitFight/pull/214). Tester morning IPA: Feedback last, edit/delete fight, animal grid + Custom. Friends stay **190**. Not the [#213](https://github.com/slooowshutter/FitFight/pull/213) app icon. Cancel-series High ([#215](https://github.com/slooowshutter/FitFight/pull/215)) is on develop for the staging API, not in this IPA.
+**Last TestFlight:** 15 Sep 2026. **1.0.0 (197)** from [#220](https://github.com/slooowshutter/FitFight/pull/220). Tester: five tabs ([#218](https://github.com/slooowshutter/FitFight/pull/218)), Edit fight header ([#219](https://github.com/slooowshutter/FitFight/pull/219)), pause-before-cancel ([#215](https://github.com/slooowshutter/FitFight/pull/215)), plus that develop tree including the [#213](https://github.com/slooowshutter/FitFight/pull/213) icon. Friends stay **190**.
 
 ## API and update rollout (verified 13 Sep 2026)
 

@@ -8,7 +8,7 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
 
-## Production rollout and App Store candidate, 16 Sep 2026
+## Production rollout and App Store submission, 16 Sep 2026
 
 This section supersedes the earlier held-rollout and screenshot-upload notes below.
 Marc authorized the complete production rollout and App Store submission.
@@ -57,8 +57,13 @@ Wellness Topics, Messaging and Chat, and Social Media. The production OpenRouter
 key was removed, so AI daily statuses and recaps are disabled for this release.
 The existing availability and legal/account settings were preserved.
 
-**Review submission:** production build selection and final submission are in progress.
-Manual release remains enabled. Beta stays usable during review; repeat the catch-up
+**Review submission:** [submission CI](https://github.com/slooowshutter/FitFight/actions/runs/35036799296)
+selected production 1.1.1 (202) and submitted it at 23:42 UTC on 15 September,
+01:42 Paris time on 16 September. Both Apple's API and App Store Connect display
+`WAITING_FOR_REVIEW`; release type is `MANUAL`. The production release manifest
+admits review build 202 while public build 113 remains supported. The release-tools
+workflow now defaults to a read-only audit, so another push cannot resubmit the app.
+Beta stays usable during review; repeat the catch-up
 from the retained checkpoint immediately before the manual public release. No
 physical-device Apple sign-in or HealthKit test of build 202 has been performed;
 Auth reads and cloud checks do not replace that installed-app verification.

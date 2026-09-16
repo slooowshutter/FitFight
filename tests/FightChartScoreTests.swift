@@ -49,7 +49,8 @@ enum AppModel {
         // Reproduce the old noon-start chart, including steps before the Fight.
         let unrelatedDays = [FightDay(label: "Sep 15", scores: [DayScore(person: a, value: 12000), DayScore(person: b, value: 7000)])]
         model = FightDayChartModel(days: unrelatedDays, standings: standings, theme: Theme())
-        precondition(model.dayCount == 0, "Unrelated calendar totals must never appear as Fight history")
+        precondition(model.dayCount == 1, "Rejected calendar leftovers still plot the confirmed totals")
+        precondition(model.series.map(\.daily) == [[6000], [4000]], "Unrelated calendar totals must never appear as Fight history")
         precondition(model.series.map(\.total) == [6000, 4000], "Oval always uses the ranked scores")
 
         members[0].stepCheckpoints = nil
@@ -66,7 +67,7 @@ enum AppModel {
         none[0].stepCheckpoints = nil
         none[1].stepCheckpoints = nil
         precondition(dayCards(from: none, standings: standings).isEmpty, "No confirmed history stays empty")
-        var totals = FightDayChartModel(days: [], standings: standings, theme: Theme())
+        let totals = FightDayChartModel(days: [], standings: standings, theme: Theme())
         precondition(totals.dayCount == 1, "Bars and pace still plot the same confirmed totals as the oval")
         precondition(totals.series.map(\.daily) == [[6000], [4000]])
         precondition(totals.series.map { $0.cumulative.last! } == [6000, 4000])

@@ -1,34 +1,22 @@
 {
   "staging": {
     "latest": {
-      "version": "1.0.0",
-      "build": 190,
-      "update_url": "itms-beta://"
-    },
-    "review": {
       "version": "1.1.1",
       "build": 201,
       "update_url": "itms-beta://"
     },
-    "internal": {
-      "version": "1.1.1",
-      "build": 201,
-      "update_url": "itms-beta://"
-    },
+    "review": null,
+    "internal": null,
     "enforced": true
   },
   "prod": {
     "latest": {
-      "version": "1.0.0",
-      "build": 113,
-      "update_url": "https://apps.apple.com/app/id6804230516"
-    },
-    "review": {
       "version": "1.1.1",
       "build": 202,
       "update_url": "https://apps.apple.com/app/id6804230516"
     },
+    "review": null,
     "internal": null,
-    "enforced": false
+    "enforced": true
   }
 }

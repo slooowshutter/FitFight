@@ -1,6 +1,16 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Fight day charts show whoever already has confirmed history. A teammate who has not synced, or is on an older build, is a gap instead of blanking the whole graph.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les graphiques quotidiens affichent l’historique déjà confirmé. Un coéquipier qui n’a pas synchronisé, ou qui a une ancienne version, apparaît comme un trou au lieu de vider tout le graphique."
+                    }
+                }
+            }
+        },
         "Fight charts and standings now use the same confirmed steps. Charts exclude activity outside the Fight, update with late corrections, and show missing history clearly.": {
             "localizations": {
                 "fr": {

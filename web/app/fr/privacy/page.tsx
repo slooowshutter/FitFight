@@ -30,7 +30,7 @@ export default function PrivacyPage() {
             <article className="legal-content">
                 <p className="eyebrow">VOS DONNÉES, EN TOUTE CLARTÉ</p>
                 <h1>Politique de confidentialité</h1>
-                <p className="legal-updated">En vigueur le 15 septembre 2026</p>
+                <p className="legal-updated">En vigueur le 17 septembre 2026</p>
                 <p className="legal-intro">
                     FitFight permet à des participants identifiés de comparer le
                     nombre de pas enregistrés pendant un défi privé. Cette
@@ -142,6 +142,86 @@ export default function PrivacyPage() {
                         classement, le gage et la durée. Ils ne reçoivent jamais
                         les échantillons Santé bruts ni l’historique Santé sans
                         rapport avec le défi d’un autre participant.
+                    </p>
+                </section>
+
+                <section>
+                    <h2>Profils, amis et partage facultatif</h2>
+                    <p>
+                        Les profils sont privés et en mode détente par défaut.
+                        Votre nom, pseudo, photo et compagnon vous identifient
+                        dans l’app. Une amitié nécessite l’acceptation de l’autre
+                        personne. Nous conservons les demandes, amitiés, blocages
+                        et signalements pour fournir ces fonctions et traiter les abus.
+                    </p>
+                    <p>
+                        Le mode Compétitif affiche vos résultats et les duels
+                        admissibles. Un profil privé les réserve aux amis acceptés
+                        et aux adversaires d’un Fight en cours. Un profil public
+                        les partage avec les utilisateurs FitFight connectés.
+                        Désactiver Compétitif masque ces statistiques sans modifier
+                        les résultats. Un ancien adversaire conserve le résultat
+                        du Fight commun, sans accès permanent au profil privé.
+                        Un profil public ne révèle pas les titres, gages,
+                        publications ou autres membres des Fights privés.
+                    </p>
+                    <p>
+                        Le partage des pas quotidiens est désactivé par défaut.
+                        Dans Vous → Modifier le profil, vous pouvez choisir
+                        séparément les amis, les amis et adversaires actuels, ou tous les
+                        utilisateurs connectés avec un profil public, sur 7 ou
+                        30 jours. Ce partage utilise les pas déjà enregistrés,
+                        leur fuseau horaire lorsqu’il est disponible, leur date
+                        de mise à jour et leur complétude. Une journée absente
+                        n’est pas un zéro. Il n’étend ni la collecte Santé ni le
+                        partage aux autres types d’activité. Vous pouvez vérifier
+                        l’aperçu et retirer le partage à tout moment. Passer en
+                        privé désactive le partage public des pas quotidiens.
+                    </p>
+                    <p>
+                        Retirer un ami ou bloquer une personne supprime les accès
+                        correspondants lors des requêtes suivantes. Rejoindre un
+                        Fight public suggéré reste facultatif et n’active pas le
+                        partage du profil ou des journées. Les participants voient
+                        toujours les données partagées dans ce Fight. Les copies
+                        déjà vues ou capturées ne peuvent pas être rappelées.
+                    </p>
+                </section>
+
+                <section>
+                    <h2>Mesure des profils et illustrations de rivalité</h2>
+                    <p>
+                        Lorsque cette mesure est activée, FitFight enregistre les
+                        ouvertures réussies avec les identifiants des deux comptes,
+                        le point d’entrée, un identifiant d’événement aléatoire et
+                        l’heure du serveur. Les visites de son propre profil, les
+                        écrans privés verrouillés et les envois répétés du même
+                        événement sont exclus. Une visite répétée est qualifiée
+                        au maximum toutes les 30 minutes dans chaque sens. Les
+                        demandes d’amitié, acceptations et participations communes
+                        sont aussi enregistrées et attribuées à la dernière visite
+                        du profil dans les sept jours précédents.
+                    </p>
+                    <p>
+                        Ces mesures internes servent à comprendre les rencontres
+                        permises par les profils. Les utilisateurs ne reçoivent
+                        ni liste nominative de visiteurs ni compteur de visites.
+                        Ces événements ne contiennent ni valeurs Santé, ni photos,
+                        ni descriptions de compagnons. Un nettoyage quotidien
+                        supprime les événements de plus de 30 jours, même pour
+                        les comptes inactifs. La suppression de l’un des comptes
+                        efface les événements associés. Les tentatives de recherche
+                        de pseudo expirent après une heure et limitent les abus.
+                        Seuls des rapports agrégés sont accessibles à l’opérateur.
+                    </p>
+                    <p>
+                        La génération d’illustrations de rivalité est indisponible.
+                        Aucun compagnon n’est envoyé à un fournisseur de génération
+                        d’images. Avant son activation, nous nommerons le fournisseur,
+                        expliquerons les données transmises et demanderons une
+                        autorisation spécifique aux deux participants. Le partage
+                        du profil et l’autorisation Santé ne permettent pas ce
+                        traitement externe.
                     </p>
                 </section>
 
@@ -270,7 +350,7 @@ export default function PrivacyPage() {
                         profil et votre nom d’utilisateur, les photos, vidéos et
                         fichiers envoyés, les publications et commentaires, les
                         totaux de pas et d’activité et les résumés
-                        d’entraînement, les anciennes relations d’amitié, les
+                        d’entraînement, les relations d’amitié, les
                         invitations, participations et scores, les bugs et
                         demandes que vous avez publiés, ainsi que tous les défis
                         que vous avez créés. Elle vous retire également des

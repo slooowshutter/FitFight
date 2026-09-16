@@ -47,6 +47,7 @@ struct NewFightView: View {
         step = 0
         durationDays = 7
         customSchedule = false
+        recurring = true
         fightTitle = ""
         visibilityJoinable = false
         inviteHandles = [draft.handle]

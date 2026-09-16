@@ -790,17 +790,6 @@ struct JoinFightPreview: View {
         Fight.deadlineStamp(fight.windowStart)
     }
 
-    private func administer(_ input: AdministerFightRequest) async {
-        guard !adminBusy, let fightID = UUID(uuidString: fight.id) else { return }
-        adminBusy = true
-        defer { adminBusy = false }
-        do {
-            let token = try await session.freshAccessToken()
-            _ = try await FitFightAPI().administerFight(fightID: fightID, input: input, accessToken: token)
-            await model.refreshFromServer()
-        } catch { model.createError = error.localizedDescription }
-    }
-
     private var joinRoundNext: String {
         Fight.deadlineStamp(fight.windowEnd)
     }

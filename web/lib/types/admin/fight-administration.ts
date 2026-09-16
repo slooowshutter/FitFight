@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { fightVisibilitySchema } from "@/lib/types/fights/joinable-fight";
 
-export const fightAdminConfigurationSchema = z.object({ user_id: z.string().uuid().optional() });
+export const fightAdminConfigurationSchema = z.object({ user_id: z.preprocess((value) => value === "" ? undefined : value, z.string().uuid().optional()) });
 export const administerFightRequestSchema = z.object({
     visibility: fightVisibilitySchema.optional(),
     recurring: z.boolean().optional(),

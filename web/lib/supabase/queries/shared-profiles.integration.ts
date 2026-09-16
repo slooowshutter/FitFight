@@ -179,8 +179,8 @@ test("only active accepted opponents see private records, with independent bound
         await database`insert into public.fight_members(fight_id, user_id, state) values (${fightId}, ${id}, ${state})`;
     }
     await database`insert into public.data_sources(id, user_id, provider, source_label, connection_route) values (${sourceId}, ${owner}, 'apple_health', 'Apple Health', 'healthkit')`;
-    await database`insert into public.metric_days(user_id, source_id, metric, day, value, time_zone)
-        select ${owner}, ${sourceId}, 'steps', current_date - day, 1000, 'UTC' from generate_series(0, 40) day`;
+    await database`insert into public.metric_days(user_id, source_id, metric, day, value, time_zone, unit)
+        select ${owner}, ${sourceId}, 'steps', current_date - day, 1000, 'UTC', 'count' from generate_series(0, 40) day`;
     await updateProfileSettings(owner, { competitive: true, activity_audience: "opponents", activity_days: 7 }, database);
     const shared = await readSharedProfile(opponent, owner, undefined, database);
     assert.equal(shared.access, "shared");

@@ -8,7 +8,7 @@ import {
     activityDaySchema, defaultProfileSettings, profileAccessRowSchema, profileFeatureConfigSchema,
     profileSettingsSchema, sharedProfileSchema,
     type ProfilePageQuery, type ProfilePreviewAudience, type ProfileSettings,
-    type SharedIdentity, type SharedProfile, type UpdateProfileSettings,
+    type SharedIdentity, type SharedProfile, type UpdateProfileSettings, type ProfileRivalrySummary,
 } from "@/lib/types/profiles/shared-profile";
 import { signMediaUrl } from "./media-supabase-query";
 
@@ -202,4 +202,33 @@ export async function lookupSharedProfile(userId: string, handle: string, databa
         const row = await loadProfileAccess(sql, userId, targetId);
         return { ...row.identity, avatar_url: row.avatar_path ? await signMediaUrl(row.avatar_path) : null };
     });
+}
+
+/** The six most recent eligible opponents, with each target's current sharing checked separately. */
+export async function readOwnRivalries(userId: string, database: Sql = createDatabaseClient()): Promise<ProfileRivalrySummary[]> {
+    const facts = await database.begin(async (sql) => {
+        await loadProfileAccess(sql, userId, userId);
+        return loadProfileFightFacts(sql, userId);
+    });
+    const candidates = new Set<string>();
+    for (const fight of facts) {
+        const ownResult = classifyFightResult(fight, userId);
+        if (!ownResult.counted || ownResult.fieldSize !== 2) continue;
+        for (const member of fight.members) {
+            if (member.user_id !== userId && classifyFightResult(fight, member.user_id).counted) candidates.add(member.user_id);
+        }
+    }
+    const summaries: ProfileRivalrySummary[] = [];
+    for (const targetId of candidates) {
+        try {
+            const profile = await readSharedProfile(userId, targetId, undefined, database);
+            if (profile.rivalry && profile.rivalry.wins + profile.rivalry.losses + profile.rivalry.draws > 0) {
+                summaries.push({ identity: profile.identity, rivalry: profile.rivalry });
+            }
+        } catch (error) {
+            if (!(error instanceof ApiError) || error.status !== 404) throw error;
+        }
+        if (summaries.length === 6) break;
+    }
+    return summaries;
 }

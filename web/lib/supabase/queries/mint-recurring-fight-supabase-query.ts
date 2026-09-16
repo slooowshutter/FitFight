@@ -24,7 +24,13 @@ export async function mintNextRecurringFight(
         if (!series.recurring || series.paused_at) return null;
         const window = rollingWindow(previous.starts_at, previous.ends_at);
         const [existing] = await sql`select id from public.fights where series_id = ${previous.series_id} and starts_at = ${window.startsAt}`;
-        if (existing) return recurringRoundSchema.shape.id.parse(existing.id);
+        if (existing) {
+            const existingId = recurringRoundSchema.shape.id.parse(existing.id);
+            if (series.current_fight_id === previous.id) {
+                await sql`update public.fight_series set current_fight_id = ${existingId} where id = ${previous.series_id}`;
+            }
+            return existingId;
+        }
         if (series.current_fight_id !== previous.id) return null;
         const [inserted] = await sql`
             insert into public.fights(owner_id, name, state, starts_at, ends_at, time_zone, metric,

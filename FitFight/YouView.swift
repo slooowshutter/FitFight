@@ -15,6 +15,9 @@ struct YouView: View {
     @State private var showingFriends = false
     @State private var showingProfileHistory = false
     @State private var incomingFriends = 0
+    @State private var rivals: [ProfileRivalrySummary] = []
+    @State private var profileLoadGeneration = 0
+    @State private var socialError: String?
     @State private var confirmDelete = false
     @State private var copied = false
     @State private var showingOnboardingPreview = false
@@ -41,7 +44,19 @@ struct YouView: View {
                 ProfileRecordCard(record: record)
                 FFButton(title: String(localized: "Fight history"), kind: .ghost) { showingProfileHistory = true }
             }
-            if let error = profileStore.error {
+            ForEach(rivals) { rival in
+                ProfileIdentityLink(userID: rival.id, source: "friends", onClosed: { Task { await loadOwnProfile() } }) {
+                    FFCard {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(verbatim: "@\(rival.identity.handle)").ffType(.label)
+                            Text(String(format: String(localized: "profile.rivalry-score"), rival.rivalry.wins, rival.rivalry.losses, rival.rivalry.draws))
+                                .ffType(.heading)
+                            Text(String(localized: "Your rivalry")).ffType(.caption).foregroundStyle(theme.textSecondary)
+                        }.frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+            }
+            if let error = profileStore.error ?? socialError {
                 FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
                 FFButton(title: String(localized: "Retry"), kind: .secondary) { Task { await loadOwnProfile() } }
             }
@@ -97,7 +112,10 @@ struct YouView: View {
         }
         .task(id: session.authSession?.user.id) { await loadOwnProfile() }
         .onChange(of: scenePhase) { _, phase in
+            profileLoadGeneration += 1
             profileStore.clear()
+            rivals = []
+            incomingFriends = 0
             if phase == .active { Task { await loadOwnProfile() } }
         }
         .sheet(isPresented: $showingEditProfile, onDismiss: { Task { await loadOwnProfile() } }) {
@@ -207,17 +225,28 @@ struct YouView: View {
     }
 
     private func loadOwnProfile() async {
+        profileLoadGeneration += 1
+        let requestGeneration = profileLoadGeneration
+        rivals = []
+        socialError = nil
         profileStore.clear()
         incomingFriends = 0
         guard !staticRender, let userID = session.authSession?.user.id else { return }
         await profileStore.load(userID: userID, session: session)
         do {
             let token = try await session.freshAccessToken()
-            let friends = try await FitFightAPI().profileFriends(kind: "incoming", accessToken: token)
+            async let friendsRequest = FitFightAPI().profileFriends(kind: "incoming", accessToken: token)
+            async let rivalsRequest = FitFightAPI().ownRivalries(accessToken: token)
+            let (friends, loadedRivals) = try await (friendsRequest, rivalsRequest)
             try Task.checkCancellation()
-            guard session.authSession?.user.id == userID else { return }
+            guard requestGeneration == profileLoadGeneration, session.authSession?.user.id == userID else { return }
             incomingFriends = friends.incomingCount
-        } catch { }
+            rivals = loadedRivals
+        } catch is CancellationError {
+        } catch {
+            guard requestGeneration == profileLoadGeneration, session.authSession?.user.id == userID else { return }
+            socialError = error.localizedDescription
+        }
     }
 
     private var health: some View {

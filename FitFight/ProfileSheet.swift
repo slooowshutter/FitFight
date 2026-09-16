@@ -165,9 +165,11 @@ struct ProfileSheet: View {
                                     .ffType(.micro).foregroundStyle(theme.textSecondary)
                                 Text(day.finalized ? String(localized: "Complete day") : String(localized: "Partial day"))
                                     .ffType(.micro).foregroundStyle(theme.textSecondary)
-                                if let updated = ISO8601DateFormatter().date(from: day.updatedAt) {
-                                    Text(updated, format: .relative(presentation: .named))
-                                        .ffType(.micro).foregroundStyle(theme.textSecondary)
+                                if let updated = FightRow.parse(day.updatedAt) {
+                                    HStack(spacing: 4) {
+                                        Text(String(localized: "Last updated"))
+                                        Text(updated, format: .relative(presentation: .named))
+                                    }.ffType(.micro).foregroundStyle(theme.textSecondary)
                                 }
                             }
                         }

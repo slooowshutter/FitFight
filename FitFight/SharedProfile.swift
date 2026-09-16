@@ -138,3 +138,9 @@ struct AdministerFightRequest: Encodable {
     var recurring: Bool? = nil
     var action: String? = nil
 }
+
+struct ProfileRivalrySummary: Decodable, Identifiable {
+    let identity: SharedProfileIdentity
+    let rivalry: ProfileRivalry
+    var id: UUID { identity.userId }
+}

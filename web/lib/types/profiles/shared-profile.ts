@@ -63,6 +63,8 @@ export const rivalryRecordSchema = z.object({
     }).nullable(),
 });
 
+export const profileRivalrySummarySchema = z.object({ identity: sharedIdentitySchema, rivalry: rivalryRecordSchema });
+
 export const activityDaySchema = z.object({
     day: z.string(),
     steps: z.number().nonnegative(),
@@ -142,3 +144,5 @@ export type ProfilePageQuery = z.infer<typeof profilePageQuerySchema>;
 export type ProfileRelationship = z.infer<typeof profileRelationshipSchema>;
 export type ProfilePreviewAudience = (typeof profilePreviewAudienceValues)[number];
 export type ProfileAccess = { identity: boolean; record: boolean; activity: boolean; shared: boolean };
+
+export type ProfileRivalrySummary = z.infer<typeof profileRivalrySummarySchema>;

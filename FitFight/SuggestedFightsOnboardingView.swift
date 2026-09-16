@@ -85,8 +85,10 @@ struct SuggestedFightOffer: View {
                 Text(String(format: String(localized: "suggested.participants"), fight.memberCount))
                     .ffType(.caption).foregroundStyle(theme.textSecondary)
                 Text(String(localized: "Steps. Highest total wins." )).ffType(.body)
-                Text(verbatim: "\(fight.startsAt.prefix(10)) → \(fight.endsAt.prefix(10))")
-                    .ffType(.caption).foregroundStyle(theme.textSecondary)
+                if let start = FightRow.parse(fight.startsAt), let end = FightRow.parse(fight.endsAt) {
+                    (Text(start, format: .dateTime.day().month().hour().minute()) + Text(verbatim: " → ") + Text(end, format: .dateTime.day().month().hour().minute()))
+                        .ffType(.caption).foregroundStyle(theme.textSecondary)
+                }
                 if fight.recurring {
                     Text(String(localized: "Repeats until you leave. Each round has its own result."))
                         .ffType(.caption).foregroundStyle(theme.textSecondary)

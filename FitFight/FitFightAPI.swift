@@ -685,6 +685,10 @@ struct FitFightAPI {
         return try await get(path: "profiles/\(userID.uuidString.lowercased())\(suffix)", accessToken: accessToken, expected: [200])
     }
 
+    func ownRivalries(accessToken: String) async throws -> [ProfileRivalrySummary] {
+        try await get(path: "me/rivalries", accessToken: accessToken, expected: [200])
+    }
+
     func profileSettings(accessToken: String) async throws -> SharedProfileSettings {
         try await get(path: "me/profile-settings", accessToken: accessToken, expected: [200])
     }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { appDownload } from "@/lib/releases/app-download";
 
 export const metadata: Metadata = {
     title: "Support | FitFight",
@@ -9,6 +10,8 @@ export const metadata: Metadata = {
 };
 
 export default function SupportPage() {
+    const { isStaging, url } = appDownload();
+
     return (
         <main className="legal-page">
             <header className="legal-header">
@@ -46,37 +49,42 @@ export default function SupportPage() {
                 <section>
                     <h2>How to install</h2>
                     <p>
-                        FitFight is a TestFlight beta, not on the App Store yet.
-                        Use the same TestFlight link twice.
+                        {isStaging
+                            ? "Try the FitFight beta through TestFlight. Use the same TestFlight link twice."
+                            : "Download FitFight from the App Store on your iPhone."}
                     </p>
-                    <ol className="install-steps">
-                        <li>
-                            <strong>First tap installs TestFlight.</strong> If
-                            you don&apos;t already have Apple&apos;s TestFlight
-                            app, the link installs TestFlight — not FitFight.
-                            That is expected.
-                        </li>
-                        <li>
-                            <strong>
-                                Tap the same link again to install FitFight.
-                            </strong>{" "}
-                            After TestFlight is on your iPhone, open that same
-                            link a second time. That second tap is what adds
-                            FitFight.
-                        </li>
-                        <li>
-                            <strong>You do not need a code.</strong> If
-                            TestFlight asks for a redemption code, you skipped
-                            the second tap. Close that screen and open the same
-                            TestFlight link again.
-                        </li>
-                    </ol>
+                    {isStaging ? (
+                        <ol className="install-steps">
+                            <li>
+                                <strong>First tap installs TestFlight.</strong> If
+                                you don&apos;t already have Apple&apos;s
+                                TestFlight app, the link installs TestFlight
+                                first. That is expected.
+                            </li>
+                            <li>
+                                <strong>
+                                    Tap the same link again to install FitFight.
+                                </strong>{" "}
+                                After TestFlight is on your iPhone, open that same
+                                link a second time. That second tap is what adds
+                                FitFight.
+                            </li>
+                            <li>
+                                <strong>You do not need a code.</strong> If
+                                TestFlight asks for a redemption code, you skipped
+                                the second tap. Close that screen and open the
+                                same TestFlight link again.
+                            </li>
+                        </ol>
+                    ) : null}
                     <a
                         className="primary-action invite-download"
-                        href="https://testflight.apple.com/join/wcZKdwVZ"
+                        href={url}
                         rel="noreferrer"
                     >
-                        Open this TestFlight link
+                        {isStaging
+                            ? "Open this TestFlight link"
+                            : "Download on the App Store"}
                     </a>
                 </section>
 

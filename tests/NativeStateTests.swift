@@ -88,6 +88,7 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
     static var commentCreations: [CheckedContinuation<FitFightFightPostCommentResponse, Error>] = []
     static var commentDeletions: [CheckedContinuation<FitFightFightPostCommentDeletion, Error>] = []
     static var commentReports: [CheckedContinuation<Void, Error>] = []
+    static var commentPages: [String: FitFightFightPostCommentList]?
 
     func fightPostComments(
         postID: UUID,
@@ -96,6 +97,10 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
         sort: FightPostCommentSort = .comments
     ) async throws -> FitFightFightPostCommentList {
         Self.commentRequests.append((sort, cursor))
+        if let pages = Self.commentPages {
+            guard let page = pages[cursor ?? ""] else { throw TestFailure.offline }
+            return page
+        }
         return try await withCheckedThrowingContinuation { Self.commentLists.append($0) }
     }
     func createFightPostComment(postID: UUID, body: String, parentID: UUID?, accessToken: String) async throws -> FitFightFightPostCommentResponse {
@@ -110,6 +115,7 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
     var listRequests = 0
     var listCursors: [String?] = []
     var postRequests: [UUID] = []
+    var postResults: [UUID: FitFightFightPost]?
     var reactionRequests = 0
     var lists: [CheckedContinuation<FitFightFightPostList, Error>] = []
     var reactions: [CheckedContinuation<FitFightFightPostReactionList, Error>] = []
@@ -129,6 +135,10 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
 
     func fightPost(postID: UUID, accessToken: String) async throws -> FitFightFightPostResponse {
         postRequests.append(postID)
+        if let results = postResults {
+            guard let post = results[postID] else { throw TestFailure.offline }
+            return .init(post: post)
+        }
         return try await withCheckedThrowingContinuation { updates.append($0) }
     }
 
@@ -380,6 +390,52 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
         check(visibleFeed.posts.first?.commentCount == 3 && !visibleFeed.needsLiveRefresh,
               "a live event during pagination is reconciled after the page completes")
 
+        for more in [false, true] {
+            let arriving = FeedStore()
+            arriving.activate(userID: session.authSession?.user.id)
+            arriving.posts = more ? [post] : []
+            arriving.nextCursor = more ? "next-page" : nil
+            let page = Task { await arriving.load(session: session, more: more) }
+            while arriving.api.lists.isEmpty { await Task.yield() }
+            await arriving.refreshVisible(session: session)
+            arriving.api.lists.removeFirst().resume(returning: .init(posts: [newerPost], nextCursor: "older-page"))
+            await page.value
+            check(arriving.stalePostIDs.contains(newerPost.id),
+                  "an event during \(more ? "pagination" : "initial load") invalidates posts in the arriving snapshot")
+            arriving.visiblePostIDs = [newerPost.id]
+            arriving.api.postResults = [newerPost.id: newerPost.updating(commentCount: 9)]
+            if arriving.stalePostIDs.contains(newerPost.id) {
+                await arriving.refreshVisible(session: session, invalidate: false)
+            }
+            check(arriving.posts.last?.commentCount == 9 && arriving.nextCursor == "older-page",
+                  "an arriving stale card refreshes on appearance without losing its pagination cursor")
+        }
+
+        for pageFinishesFirst in [false, true] {
+            let overlapping = FeedStore()
+            overlapping.activate(userID: session.authSession?.user.id)
+            overlapping.posts = [post]
+            overlapping.nextCursor = "next-page"
+            overlapping.visiblePostIDs = [post.id]
+            let live = Task { await overlapping.refreshVisible(session: session) }
+            while overlapping.api.updates.isEmpty { await Task.yield() }
+            let page = Task { await overlapping.load(session: session, more: true) }
+            while overlapping.api.lists.isEmpty { await Task.yield() }
+            overlapping.api.postResults = [post.id: post.updating(commentCount: 7)]
+            if pageFinishesFirst {
+                overlapping.api.lists.removeFirst().resume(returning: .init(posts: [newerPost], nextCursor: nil))
+                await page.value
+            }
+            overlapping.api.updates.removeFirst().resume(returning: .init(post: post.updating(commentCount: 7)))
+            await live.value
+            if !pageFinishesFirst {
+                overlapping.api.lists.removeFirst().resume(returning: .init(posts: [newerPost], nextCursor: nil))
+                await page.value
+            }
+            check(overlapping.posts.first?.commentCount == 7 && overlapping.posts.map(\.id) == [post.id, newerPost.id],
+                  "pagination reconciles an earlier live read when \(pageFinishesFirst ? "the page" : "the live read") finishes first")
+        }
+
         let oldLiveRead = Task { await visibleFeed.refreshVisible(session: session) }
         while visibleFeed.api.updates.isEmpty { await Task.yield() }
         visibleFeed.activate(userID: UUID())
@@ -567,6 +623,51 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
         FitFightAPI.commentLists.removeFirst().resume(returning: .init(comments: [grandchild], nextCursor: nil))
         await targeted.value
         check(pagedThread.comments == [orphan, child, grandchild], "a notification loads comments through the targeted page")
+
+        let commentHistory = (0..<45).map { index in
+            FitFightFightPostComment(
+                id: UUID(), postId: post.id, parentId: nil, body: "Comment \(index)",
+                createdAt: post.createdAt.addingTimeInterval(Double(-index)), author: post.author, mine: false
+            )
+        }
+        let retainedThread = FightPostThreadState(post: post.updating(commentCount: 45))
+        retainedThread.commentSort = .recent
+        FitFightAPI.commentPages = [
+            "": .init(comments: Array(commentHistory.prefix(40)), nextCursor: "older-comments"),
+            "older-comments": .init(comments: Array(commentHistory.suffix(5)), nextCursor: nil),
+        ]
+        await retainedThread.loadForTest()
+        await retainedThread.loadForTest(more: true)
+        check(retainedThread.comments == commentHistory, "More comments loads both pages before an automatic refresh")
+        FitFightAPI.commentPages?["older-comments"] = .init(comments: Array(commentHistory[40..<44]), nextCursor: nil)
+        await retainedThread.loadForTest()
+        check(retainedThread.comments == Array(commentHistory.prefix(44)) && retainedThread.nextCursor == nil,
+              "automatic refresh preserves older loaded comments and removes a deleted comment")
+
+        let beforeFailedRefresh = retainedThread.comments
+        FitFightAPI.commentPages = ["": .init(comments: Array(commentHistory.prefix(40)), nextCursor: "unavailable-page")]
+        await retainedThread.loadForTest()
+        check(retainedThread.comments == beforeFailedRefresh && retainedThread.nextCursor == nil && retainedThread.feed.error != nil,
+              "a failed later refresh page leaves the complete loaded thread and cursor intact")
+
+        let rankedThread = FightPostThreadState(post: post.updating(commentCount: 45))
+        rankedThread.comments = Array(commentHistory.prefix(40))
+        rankedThread.feed.posts = [post.updating(commentCount: 45)]
+        rankedThread.draft = "A new lower-ranked comment"
+        let rankedSend = Task { await rankedThread.sendForTest() }
+        while FitFightAPI.commentCreations.isEmpty { await Task.yield() }
+        let confirmedComment = commentHistory[44]
+        FitFightAPI.commentCreations.removeFirst().resume(returning: .init(comment: confirmedComment, commentCount: 46))
+        await rankedSend.value
+        FitFightAPI.commentPages = [
+            "": .init(comments: Array(commentHistory.prefix(40)), nextCursor: "lower-ranked"),
+            "lower-ranked": .init(comments: Array(commentHistory.suffix(5)), nextCursor: nil),
+        ]
+        await rankedThread.loadForTest()
+        check(rankedThread.comments.contains(confirmedComment),
+              "automatic ranked refresh retains a confirmed local comment outside the first page")
+        FitFightAPI.commentPages = nil
+
         check(thread.rowsForTest().map { $0.0 } == [orphan.id, child.id, grandchild.id], "visible replies survive when their parent author is hidden")
         check(thread.rowsForTest().map { $0.1 } == [0, 1, 2], "children of a hidden-parent reply retain their nesting")
         thread.replyTo = grandchild

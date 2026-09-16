@@ -39,7 +39,7 @@ source += "\nextension FightPostThreadState {\n"
 source += thread[thread.index("    private var displayedComments:"):thread.index("    private func commentRow(")]
 source += thread[thread.index("    private func loadComments("):thread.index("    private func firstEmoji(")]
 source += "    func rowsForTest() -> [(UUID, Int)] { displayedComments.map { ($0.id, $0.depth) } }\n"
-source += "    func loadForTest() async { await loadComments() }\n"
+source += "    func loadForTest(more: Bool = false) async { await loadComments(more: more) }\n"
 source += "    func sendForTest() async { await sendComment() }\n"
 source += "    func reportForTest(_ comment: FitFightFightPostComment) async { await reportComment(comment) }\n"
 source += "    func deleteForTest(_ comment: FitFightFightPostComment) async { await deleteComment(comment) }\n}\n"

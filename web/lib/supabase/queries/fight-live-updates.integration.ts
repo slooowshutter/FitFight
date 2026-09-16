@@ -221,6 +221,38 @@ test(
         assert.ok(feedReceived[0] > 0 && feedReceived[1] > 0, 'Both phones receive a committed comment invalidation');
         assert.equal(feedReceived[2], 0, 'Unrelated users receive no comment invalidation');
 
+        const broadcastId = randomUUID();
+        for (const change of ["post", "edit", "comment", "reaction", "delete"]) {
+            feedReceived.fill(0);
+            switch (change) {
+                case "post":
+                    await database`insert into public.fight_posts (id, audience, app_wide, author_id, body)
+                        values (${broadcastId}, 'main', true, ${owner}, 'App-wide live updates')`;
+                    break;
+                case "edit":
+                    await database`update public.fight_posts set body = 'Edited broadcast' where id = ${broadcastId}`;
+                    break;
+                case "comment":
+                    await database`insert into public.fight_post_comments (post_id, author_id, body)
+                        values (${broadcastId}, ${peer}, 'Broadcast reply')`;
+                    break;
+                case "reaction":
+                    await database`insert into public.fight_post_reactions (post_id, user_id, emoji)
+                        values (${broadcastId}, ${outsider}, '🔥')`;
+                    break;
+                case "delete":
+                    await database`delete from public.fight_posts where id = ${broadcastId}`;
+                    break;
+            }
+            for (let attempt = 0; attempt < 100 && feedReceived.some((count) => count === 0); attempt++) {
+                await delay(50);
+            }
+            assert.ok(
+                feedReceived.every((count) => count > 0),
+                `A broadcast ${change} invalidates every signed-in viewer, including users with no shared Fight`,
+            );
+        }
+
         const cutoff = new Date().toISOString();
         await syncHealthKitAggregates(
             owner,

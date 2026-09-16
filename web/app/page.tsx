@@ -1,8 +1,13 @@
 import { TestflightInvite } from "@/components/testflight-invite";
+import { TotalStepsCount } from "@/components/total-steps-count";
 import { appDownload } from "@/lib/releases/app-download";
+import { readCachedTotalSteps } from "@/lib/supabase/queries/total-steps-supabase-query";
 
-export default function HomePage() {
+export const revalidate = 3600;
+
+export default async function HomePage() {
     const { isStaging, url } = appDownload();
+    const { totalSteps } = await readCachedTotalSteps();
 
     return (
         <main>
@@ -115,6 +120,19 @@ export default function HomePage() {
                         </svg>
                     </div>
                 </div>
+            </section>
+
+            <section
+                className="total-steps"
+                aria-label={`${totalSteps.toLocaleString("en-US")} steps recorded since people joined FitFight`}
+            >
+                <p className="eyebrow">STEPS RECORDED</p>
+                <p className="total-steps-value" aria-hidden="true">
+                    <TotalStepsCount totalSteps={totalSteps} />
+                </p>
+                <p className="total-steps-caption">
+                    since people joined FitFight
+                </p>
             </section>
 
             <section className="how" id="how-it-works">

@@ -36,6 +36,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 16,
+            notes: "The Feed can show a post to everyone signed in, not only people in your fights."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 16,
             notes: "Opening FitFight invites you to the shared Steps fight and any suggested fights. They show on New. You get a notification with the name, no scores, and you can accept when you are ready."
         ),
         ReleaseNote(

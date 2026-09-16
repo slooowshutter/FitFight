@@ -26,7 +26,12 @@ import {
     setFightPostReactionRequestSchema,
     updateFightPostRequestSchema,
 } from "@/lib/types/feed/fight-post";
-import { listFeedPeople, listFightPosts } from "./fight-posts-supabase-query";
+import {
+    createFeedPosts as writeFeedPosts,
+    listFeedPeople,
+    listFightPosts,
+    loadVisiblePost,
+} from "./fight-posts-supabase-query";
 import type { Sql } from "postgres";
 
 const userId = "11111111-1111-4111-8111-111111111111";
@@ -114,6 +119,25 @@ test("fight posts need a note or a photo and reject extra fields", () => {
         createFeedPostsRequestSchema.safeParse({
             body: "Hill.",
             destinations: [],
+        }).success,
+        false,
+    );
+    assert.deepEqual(
+        createFeedPostsRequestSchema.parse({
+            body: "Hello everyone.",
+            destinations: [{ type: "broadcast" }],
+        }),
+        {
+            body: "Hello everyone.",
+            media_ids: [],
+            destinations: [{ type: "broadcast" }],
+            tagged_user_ids: [],
+        },
+    );
+    assert.equal(
+        createFeedPostsRequestSchema.safeParse({
+            body: "Hello everyone.",
+            destinations: [{ type: "broadcast" }, { type: "main" }],
         }).success,
         false,
     );
@@ -263,6 +287,114 @@ test("root and fight listings look up post channels", async () => {
                 sql.includes("fight_post_channels") &&
                 sql.includes("from public.fight_members"),
         ),
+    );
+});
+
+test("default feed listing includes app-wide posts", async () => {
+    const queries: string[] = [];
+    const query = ((first: TemplateStringsArray) => {
+        const sql = first.join("?").replace(/\s+/g, " ").trim();
+        queries.push(sql);
+        return Promise.resolve([]);
+    }) as unknown as Sql;
+    const result = await listFightPosts(userId, undefined, { limit: 30 }, query);
+    assert.deepEqual(result, { posts: [], next_cursor: null });
+    assert.match(queries[0] ?? "", /post\.app_wide/);
+});
+
+test("broadcast posts are Marc-only and skip fight copies", async () => {
+    const queries: string[] = [];
+    const query = Object.assign(
+        (first: TemplateStringsArray) => {
+            const sql = first.join("?").replace(/\s+/g, " ").trim();
+            queries.push(sql);
+            if (sql.includes("from public.profiles")) {
+                return Promise.resolve([{ handle: "maya_moves" }]);
+            }
+            return Promise.resolve([]);
+        },
+        {
+            begin: async () => {
+                throw new Error("broadcast must not write for other people");
+            },
+        },
+    ) as unknown as Sql;
+    await assert.rejects(
+        writeFeedPosts(
+            userId,
+            createFeedPostsRequestSchema.parse({
+                body: "Hello everyone.",
+                destinations: [{ type: "broadcast" }],
+            }),
+            query,
+        ),
+        (error: unknown) =>
+            error instanceof Error && error.message === "Only Marc can broadcast",
+    );
+    assert.ok(queries.some((sql) => sql.includes("from public.profiles")));
+});
+
+test("Marc broadcast checks the daily post limit before writing", async () => {
+    const queries: string[] = [];
+    const query = Object.assign(
+        (first: TemplateStringsArray) => {
+            const sql = first.join("?").replace(/\s+/g, " ").trim();
+            queries.push(sql);
+            if (sql.includes("from public.profiles")) {
+                return Promise.resolve([{ handle: "marc" }]);
+            }
+            if (sql.includes("interval '24 hours'")) {
+                return Promise.resolve([{ n: 20 }]);
+            }
+            return Promise.resolve([]);
+        },
+        {
+            begin: async () => {
+                throw new Error("rate-limited broadcast must not write");
+            },
+        },
+    ) as unknown as Sql;
+    await assert.rejects(
+        writeFeedPosts(
+            userId,
+            createFeedPostsRequestSchema.parse({
+                body: "Hello everyone.",
+                destinations: [{ type: "broadcast" }],
+            }),
+            query,
+        ),
+        (error: unknown) =>
+            error instanceof Error &&
+            error.message ===
+                "You’ve posted a few times recently. Try again later.",
+    );
+    assert.ok(queries.some((sql) => sql.includes("from public.profiles")));
+    assert.ok(queries.some((sql) => sql.includes("interval '24 hours'")));
+});
+
+test("app-wide posts are visible without a shared fight", async () => {
+    const queries: string[] = [];
+    const query = ((first: TemplateStringsArray) => {
+        const sql = first.join("?").replace(/\s+/g, " ").trim();
+        queries.push(sql);
+        if (sql.includes("from public.fight_posts")) {
+            return Promise.resolve([
+                {
+                    id: postId,
+                    audience: "main",
+                    fight_id: null,
+                    author_id: "99999999-9999-4999-8999-999999999999",
+                    app_wide: true,
+                },
+            ]);
+        }
+        return Promise.resolve([]);
+    }) as unknown as Sql;
+    const post = await loadVisiblePost(userId, postId, query);
+    assert.equal(post.app_wide, true);
+    assert.equal(
+        queries.some((sql) => sql.includes("from public.fight_members")),
+        false,
     );
 });
 

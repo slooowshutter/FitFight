@@ -1,6 +1,278 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Suggested Fights": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Suggested Fights"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Fights suggérés"
+                    }
+                }
+            }
+        },
+        "Join a public Fight if you like. Nothing is joined automatically, and your profile settings stay yours.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Join a public Fight if you like. Nothing is joined automatically, and your profile settings stay yours."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Rejoignez un Fight public si vous le souhaitez. Aucune inscription automatique, et vos réglages de profil restent inchangés."
+                    }
+                }
+            }
+        },
+        "Steps. Highest total wins.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Steps. Highest total wins."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Pas. Le total le plus élevé gagne."
+                    }
+                }
+            }
+        },
+        "Repeats until you leave. Each round has its own result.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Repeats until you leave. Each round has its own result."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Se répète jusqu’à votre départ. Chaque manche a son propre résultat."
+                    }
+                }
+            }
+        },
+        "Participants see your identity, Fight Steps, standings, and posts you share in this Fight. Joining does not enable profile or daily-history sharing.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Participants see your identity, Fight Steps, standings, and posts you share in this Fight. Joining does not enable profile or daily-history sharing."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les participants voient votre identité, vos pas et votre classement dans ce Fight, ainsi que les publications que vous y partagez. Rejoindre le Fight n’active pas le partage du profil ou de l’historique quotidien."
+                    }
+                }
+            }
+        },
+        "suggested.participants": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%d participants"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%d participants"
+                    }
+                }
+            }
+        },
+        "Stop this Fight?": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Stop this Fight?"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Arrêter ce Fight ?"
+                    }
+                }
+            }
+        },
+        "Stop future rounds": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Stop future rounds"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Arrêter les prochaines manches"
+                    }
+                }
+            }
+        },
+        "Stop current and future rounds": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Stop current and future rounds"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Arrêter cette manche et les suivantes"
+                    }
+                }
+            }
+        },
+        "Finalized results are kept. Stopping future rounds lets the current round finish.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Finalized results are kept. Stopping future rounds lets the current round finish."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les résultats définitifs sont conservés. Arrêter les prochaines manches laisse la manche actuelle se terminer."
+                    }
+                }
+            }
+        },
+        "Remove suggestion": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Remove suggestion"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Retirer des suggestions"
+                    }
+                }
+            }
+        },
+        "Only public Fights can be suggested.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Only public Fights can be suggested."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Seuls les Fights publics peuvent être suggérés."
+                    }
+                }
+            }
+        },
+        "Make private": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Make private"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Rendre privé"
+                    }
+                }
+            }
+        },
+        "Make public": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Make public"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Rendre public"
+                    }
+                }
+            }
+        },
+        "Turn recurrence off": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Turn recurrence off"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Désactiver la récurrence"
+                    }
+                }
+            }
+        },
+        "Turn recurrence on": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Turn recurrence on"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Activer la récurrence"
+                    }
+                }
+            }
+        },
+        "Manage Fight": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Manage Fight"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Gérer le Fight"
+                    }
+                }
+            }
+        },
         "30 days": {
             "localizations": {
                 "en": {

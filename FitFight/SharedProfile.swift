@@ -127,3 +127,14 @@ struct ProfileChallengeDraft: Equatable {
     let durationSeconds: Int?
     let actionText: String?
 }
+
+struct FightAdministrationCapabilities: Decodable {
+    let manageFights: Bool
+    enum CodingKeys: String, CodingKey { case manageFights = "manage_fights" }
+}
+
+struct AdministerFightRequest: Encodable {
+    var visibility: String? = nil
+    var recurring: Bool? = nil
+    var action: String? = nil
+}

@@ -47,6 +47,16 @@ create table private.profile_reports (
 );
 create index profile_reports_target_idx on private.profile_reports(target_id);
 
+create table private.fight_admin_actions (
+    id bigint generated always as identity primary key,
+    actor_id uuid not null references public.profiles(user_id) on delete cascade,
+    fight_id uuid not null references public.fights(id) on delete cascade,
+    changes jsonb not null,
+    created_at timestamptz not null default now()
+);
+create index fight_admin_actions_actor_idx on private.fight_admin_actions(actor_id);
+create index fight_admin_actions_fight_idx on private.fight_admin_actions(fight_id);
+
 create table private.profile_events (
     actor_id uuid not null references public.profiles(user_id) on delete cascade,
     event_id uuid not null,
@@ -211,7 +221,7 @@ declare table_name text;
 begin
     foreach table_name in array array['profile_settings', 'profile_friendships', 'profile_blocks',
         'profile_reports', 'profile_events', 'profile_lookup_attempts', 'rivalry_artworks',
-        'fight_record_contexts', 'fight_participation_records']
+        'fight_record_contexts', 'fight_participation_records', 'fight_admin_actions']
     loop
         execute format('alter table private.%I enable row level security', table_name);
         execute format('revoke all on private.%I from public, anon, authenticated', table_name);

@@ -85,6 +85,7 @@
         5893F862B25C0EBA522F8DFA /* ProfileSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1FE342B3DFF37CEFC227E1 /* ProfileSheet.swift */; };
         99AAAB8BD6F184E568149D1D /* EditProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41EE371C708EECCC762EB820 /* EditProfileView.swift */; };
         61856F7155495A28A4B93A60 /* FriendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C2AC1044B8F11786123D48E /* FriendsView.swift */; };
+        A0573E386FD2FA2A4A357CC4 /* SuggestedFightsOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AD1CDE4182F6C6E52321063 /* SuggestedFightsOnboardingView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -169,6 +170,7 @@
         1A1FE342B3DFF37CEFC227E1 /* ProfileSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSheet.swift; sourceTree = "<group>"; };
         41EE371C708EECCC762EB820 /* EditProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditProfileView.swift; sourceTree = "<group>"; };
         2C2AC1044B8F11786123D48E /* FriendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendsView.swift; sourceTree = "<group>"; };
+        7AD1CDE4182F6C6E52321063 /* SuggestedFightsOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestedFightsOnboardingView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -210,6 +212,7 @@
                 A10000000000000000000307 /* FitFightAPI.swift */,
                 A10000000000000000000388 /* FeedbackClientMetadata.swift */,
                 A10000000000000000000350 /* Profile.swift */,
+                7AD1CDE4182F6C6E52321063 /* SuggestedFightsOnboardingView.swift */,
                 2C2AC1044B8F11786123D48E /* FriendsView.swift */,
                 41EE371C708EECCC762EB820 /* EditProfileView.swift */,
                 1A1FE342B3DFF37CEFC227E1 /* ProfileSheet.swift */,
@@ -421,6 +424,7 @@
                 A10000000000000000000317 /* FitFightAPI.swift in Sources */,
                 A10000000000000000000389 /* FeedbackClientMetadata.swift in Sources */,
                 A10000000000000000000351 /* Profile.swift in Sources */,
+                A0573E386FD2FA2A4A357CC4 /* SuggestedFightsOnboardingView.swift in Sources */,
                 61856F7155495A28A4B93A60 /* FriendsView.swift in Sources */,
                 99AAAB8BD6F184E568149D1D /* EditProfileView.swift in Sources */,
                 5893F862B25C0EBA522F8DFA /* ProfileSheet.swift in Sources */,

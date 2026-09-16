@@ -317,28 +317,8 @@ struct NewFightView: View {
                     .ffType(.body)
                     .foregroundStyle(theme.textSecondary)
             } else if !rows.isEmpty {
-                FFGroupedRows {
-                    ForEach(Array(rows.enumerated()), id: \.element.id) { index, item in
-                        if index > 0 { FFDivider() }
-                        FFGroupedRow(
-                            title: Fight.displayTitle(name: item.name, actionText: item.actionText),
-                            subtitle: item.recurring
-                                ? String(
-                                    localized: "fight.joinable-row-repeats",
-                                    defaultValue: "@\(item.ownerHandle) · \(item.memberCount) in · repeats"
-                                )
-                                : String(
-                                    localized: "fight.joinable-row",
-                                    defaultValue: "@\(item.ownerHandle) · \(item.memberCount) in"
-                                ),
-                            systemImage: "figure.walk",
-                            subtitleTone: .neutral,
-                            trailing: AnyView(Text(item.joinCode).ffType(.caption).foregroundStyle(theme.textSecondary)),
-                            action: {
-                                Task { await model.openJoinable(item, session: session) }
-                            }
-                        )
-                    }
+                ForEach(rows) { item in
+                    SuggestedFightOffer(fight: item) { Task { await model.openJoinable(item, session: session) } }
                 }
             }
         }

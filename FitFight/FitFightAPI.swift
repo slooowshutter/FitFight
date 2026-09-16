@@ -1053,6 +1053,15 @@ struct FitFightAPI {
         return list.fights
     }
 
+    func fightAdministrationCapabilities(accessToken: String) async throws -> FightAdministrationCapabilities {
+        try await get(path: "me/capabilities", accessToken: accessToken, expected: [200])
+    }
+
+    func administerFight(fightID: UUID, input: AdministerFightRequest, accessToken: String) async throws -> FitFightSummary {
+        try await request(path: "fights/\(fightID.uuidString.lowercased())/admin", method: "PATCH", accessToken: accessToken,
+                          body: Self.encoder.encode(input), idempotencyKey: nil, expected: [200])
+    }
+
     func listSuggestedFights(accessToken: String) async throws -> [FitFightJoinableFight] {
         let list: FitFightJoinableList = try await get(
             path: "fights/suggested",

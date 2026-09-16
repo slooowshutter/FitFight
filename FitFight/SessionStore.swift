@@ -25,6 +25,7 @@ final class SessionStore: ObservableObject {
     private static let needsHealthKey = "ff.onboarding.needsHealth"
     private static let needsNotificationKey = "ff.onboarding.needsNotifications"
     private static let needsRequestsKey = "ff.onboarding.needsRequests"
+    private static let needsSuggestedPrefix = "ff.onboarding.needsSuggested."
     private static let profileCachePrefix = "fitfight.profile."
     private static let adminHandle = "marc"
 
@@ -51,10 +52,22 @@ final class SessionStore: ObservableObject {
             && UserDefaults.standard.bool(forKey: Self.needsRequestsKey)
     }
 
+    var needsSuggestedOnboarding: Bool {
+        guard !screenshotSignedIn, let userID = authSession?.user.id else { return false }
+        return !needsOnboarding && !needsHealthOnboarding && !needsNotificationOnboarding && !needsRequestsOnboarding
+            && UserDefaults.standard.bool(forKey: Self.needsSuggestedPrefix + userID.uuidString)
+    }
+
+    func finishSuggestedOnboarding() {
+        guard let userID = authSession?.user.id else { return }
+        UserDefaults.standard.removeObject(forKey: Self.needsSuggestedPrefix + userID.uuidString)
+        objectWillChange.send()
+    }
+
     var needsCompanionSelection: Bool {
         guard isSignedIn, profile != nil else { return false }
         if screenshotSignedIn || CompanionPreview.isEnabled || ScreenshotExport.isEnabled { return false }
-        guard !needsOnboarding, !needsHealthOnboarding, !needsNotificationOnboarding, !needsRequestsOnboarding else {
+        guard !needsOnboarding, !needsHealthOnboarding, !needsNotificationOnboarding, !needsRequestsOnboarding, !needsSuggestedOnboarding else {
             return false
         }
         return profile?.companionId == nil && !CompanionStore.hasPendingChoice(for: profile?.userId)
@@ -274,6 +287,7 @@ final class SessionStore: ObservableObject {
             guard authSession?.user.id == userId, client.auth.currentUser?.id == userId else {
                 throw CancellationError()
             }
+            UserDefaults.standard.set(true, forKey: Self.needsSuggestedPrefix + userId.uuidString)
             profile = updated
             if let data = try? JSONEncoder().encode(updated) {
                 UserDefaults.standard.set(data, forKey: Self.profileCachePrefix + userId.uuidString)

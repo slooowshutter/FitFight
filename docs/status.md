@@ -8,6 +8,21 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
 
+## Website download destinations: prepared 17 Sep 2026
+
+The homepage, fight/referral invite pages, and English/French support pages use
+the configured backend environment to choose the download destination.
+Production links to `https://apps.apple.com/app/id6804230516`. Staging keeps the
+Friends Beta TestFlight link and installation instructions. Invite pages retain
+their five-second iOS redirect and original-link reopening instructions. The
+App Store destination returned HTTP 200. A 1.1.1 release note is included.
+
+Workspace checks passed: TypeScript, all 266 existing tests, optimized builds for
+both environments, and HTTP-rendered link/copy checks for all five affected routes
+in each environment. Browser redirect execution and native compilation were not
+run. No API contract or database change, cloud CI run, PR, merge, or live deployment
+was performed. The live sites still need the normal authorized promotions.
+
 ## Post and comment translation prepared, 16 Sep 2026
 
 **Code:** Feed and fight-thread posts, comments, and replies have an A speech-bubble

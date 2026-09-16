@@ -11,6 +11,16 @@
                 }
             }
         },
+        "Website download and invitation links open the App Store. The staging website keeps TestFlight access for beta testers.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les liens de téléchargement et d’invitation du site ouvrent l’App Store. Le site de préproduction conserve l’accès à TestFlight pour les bêta-testeurs."
+                    }
+                }
+            }
+        },
         "Translate": {
             "localizations": {
                 "fr": {

@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.1.1",
             year: 2026,
             month: 9,
+            day: 17,
+            notes: "Website download and invitation links open the App Store. The staging website keeps TestFlight access for beta testers."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
             day: 16,
             notes: "Feed comments can be sorted by most comments or most recent. Most comments is the default."
         ),

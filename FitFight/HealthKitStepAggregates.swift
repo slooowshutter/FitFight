@@ -69,22 +69,26 @@ enum HealthKitStepAggregates {
         for window in context.fightWindows {
             try Task.checkCancellation()
             var checkpoints: [FightStepCheckpoint]? = nil
+            var fightCalendar: Calendar? = nil
+            var partialDay: Date? = nil
             if let timeZone = window.timeZone, let zone = TimeZone(identifier: timeZone) {
-                var fightCalendar = Calendar(identifier: .gregorian)
-                fightCalendar.timeZone = zone
+                var calendar = Calendar(identifier: .gregorian)
+                calendar.timeZone = zone
+                fightCalendar = calendar
                 checkpoints = []
-                var day = fightCalendar.startOfDay(for: window.startsAt)
-                while let nextDay = fightCalendar.date(byAdding: .day, value: 1, to: day),
+                var day = calendar.startOfDay(for: window.startsAt)
+                while let nextDay = calendar.date(byAdding: .day, value: 1, to: day),
                       nextDay < window.cutoffAt {
                     try Task.checkCancellation()
                     let count = try await trace.measure(.healthKitFight) {
                         try await total(store: store, type: type, start: window.startsAt, end: nextDay)
                     }
                     checkpoints?.append(FightStepCheckpoint(
-                        day: dayStamp(day, calendar: fightCalendar), cutoffAt: iso8601(nextDay), steps: count ?? 0
+                        day: dayStamp(day, calendar: calendar), cutoffAt: iso8601(nextDay), steps: count ?? 0
                     ))
                     day = nextDay
                 }
+                partialDay = day
             }
             let counted = try await trace.measure(.healthKitFight) {
                 try await total(
@@ -97,12 +101,10 @@ enum HealthKitStepAggregates {
             if counted != nil {
                 sawAccessibleSteps = true
             }
-            if checkpoints != nil, let timeZone = window.timeZone, let zone = TimeZone(identifier: timeZone) {
-                var fightCalendar = Calendar(identifier: .gregorian)
-                fightCalendar.timeZone = zone
+            if let calendar = fightCalendar, let day = partialDay {
                 // The score reuses this final query; separately rounded daily totals cannot define it.
                 checkpoints?.append(FightStepCheckpoint(
-                    day: dayStamp(window.cutoffAt.addingTimeInterval(-0.001), calendar: fightCalendar),
+                    day: dayStamp(day, calendar: calendar),
                     cutoffAt: iso8601(window.cutoffAt), steps: counted ?? 0
                 ))
             }

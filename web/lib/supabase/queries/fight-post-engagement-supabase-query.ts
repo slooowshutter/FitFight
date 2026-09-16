@@ -84,6 +84,30 @@ function parseCursor(
     return { createdAt, id };
 }
 
+function parseDiscussedCursor(
+    cursor: string | undefined,
+): { replyCount: number; createdAt: string; id: string } | null {
+    if (!cursor) return null;
+    const parts = cursor.split("|");
+    if (parts.length !== 3) {
+        throw new ApiError(400, ERROR_CODES.validation, "cursor is invalid");
+    }
+    const replyCount = Number(parts[0]);
+    const createdAt = parts[1];
+    const id = parts[2];
+    if (
+        createdAt === undefined ||
+        id === undefined ||
+        !Number.isInteger(replyCount) ||
+        replyCount < 0 ||
+        !Number.isFinite(Date.parse(createdAt)) ||
+        !/^[0-9a-f-]{36}$/i.test(id)
+    ) {
+        throw new ApiError(400, ERROR_CODES.validation, "cursor is invalid");
+    }
+    return { replyCount, createdAt, id };
+}
+
 function authorFromRow(row: CommentRow, url: string | null): FightPostAuthor {
     if (
         !row.avatar_id ||
@@ -189,6 +213,28 @@ export async function listFightPostComments(
     database: Sql = createDatabaseClient(),
 ): Promise<FightPostCommentListResponse> {
     await loadVisiblePost(userId, postId, database);
+    switch (query.sort) {
+        case "recent":
+            return listRecentFightPostComments(
+                userId,
+                postId,
+                query,
+                database,
+            );
+        case "comments":
+            return listDiscussedFightPostComments(
+                userId,
+                postId,
+                query,
+                database,
+            );
+        case undefined:
+            break;
+        default: {
+            const _never: never = query.sort;
+            throw _never;
+        }
+    }
     const cursor = parseCursor(query.cursor);
     const rows = cursor
         ? await database<CommentRow[]>`
@@ -247,6 +293,171 @@ export async function listFightPostComments(
         next_cursor:
             rows.length > query.limit && last
                 ? `${cursorStamp(last.created_at)}|${last.id}`
+                : null,
+    };
+}
+
+async function listRecentFightPostComments(
+    userId: string,
+    postId: string,
+    query: ListFightPostCommentsQuery,
+    database: Sql,
+): Promise<FightPostCommentListResponse> {
+    const cursor = parseCursor(query.cursor);
+    const rows = cursor
+        ? await database<CommentRow[]>`
+                select
+                    comment.id, comment.post_id, comment.parent_id, comment.body, comment.created_at,
+                    comment.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
+                    profile.companion_id as author_companion_id,
+                    avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
+                    avatar.status::text as avatar_status, avatar.object_path as avatar_object_path,
+                    avatar.original_filename as avatar_original_filename, avatar.content_type as avatar_content_type,
+                    avatar.byte_size::text as avatar_byte_size, avatar.width as avatar_width,
+                    avatar.height as avatar_height, avatar.duration_ms as avatar_duration_ms,
+                    avatar.sha256 as avatar_sha256, avatar.created_at as avatar_created_at
+                from public.fight_post_comments as comment
+                join public.profiles as profile
+                    on profile.user_id = comment.author_id and profile.deleted_at is null
+                left join public.media_objects as avatar
+                    on avatar.id = profile.avatar_media_id and avatar.status = 'ready'
+                where comment.post_id = ${postId}
+                    and not exists (
+                        select 1 from private.feed_blocks as blocked
+                        where blocked.blocker_id = ${userId} and blocked.blocked_id = comment.author_id
+                    )
+                    and (comment.created_at, comment.id) < (${cursor.createdAt}::timestamptz, ${cursor.id}::uuid)
+                order by comment.created_at desc, comment.id desc
+                limit ${query.limit + 1}
+            `
+        : await database<CommentRow[]>`
+                select
+                    comment.id, comment.post_id, comment.parent_id, comment.body, comment.created_at,
+                    comment.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
+                    profile.companion_id as author_companion_id,
+                    avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
+                    avatar.status::text as avatar_status, avatar.object_path as avatar_object_path,
+                    avatar.original_filename as avatar_original_filename, avatar.content_type as avatar_content_type,
+                    avatar.byte_size::text as avatar_byte_size, avatar.width as avatar_width,
+                    avatar.height as avatar_height, avatar.duration_ms as avatar_duration_ms,
+                    avatar.sha256 as avatar_sha256, avatar.created_at as avatar_created_at
+                from public.fight_post_comments as comment
+                join public.profiles as profile
+                    on profile.user_id = comment.author_id and profile.deleted_at is null
+                left join public.media_objects as avatar
+                    on avatar.id = profile.avatar_media_id and avatar.status = 'ready'
+                where comment.post_id = ${postId}
+                    and not exists (
+                        select 1 from private.feed_blocks as blocked
+                        where blocked.blocker_id = ${userId} and blocked.blocked_id = comment.author_id
+                    )
+                order by comment.created_at desc, comment.id desc
+                limit ${query.limit + 1}
+            `;
+    const page = rows.slice(0, query.limit);
+    const last = page.at(-1);
+    return {
+        comments: await mapComments(userId, page),
+        next_cursor:
+            rows.length > query.limit && last
+                ? `${cursorStamp(last.created_at)}|${last.id}`
+                : null,
+    };
+}
+
+async function listDiscussedFightPostComments(
+    userId: string,
+    postId: string,
+    query: ListFightPostCommentsQuery,
+    database: Sql,
+): Promise<FightPostCommentListResponse> {
+    const cursor = parseDiscussedCursor(query.cursor);
+    const rows = await database<CommentRow[]>`
+        select
+            comment.id, comment.post_id, comment.parent_id, comment.body, comment.created_at,
+            comment.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
+            profile.companion_id as author_companion_id,
+            avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
+            avatar.status::text as avatar_status, avatar.object_path as avatar_object_path,
+            avatar.original_filename as avatar_original_filename, avatar.content_type as avatar_content_type,
+            avatar.byte_size::text as avatar_byte_size, avatar.width as avatar_width,
+            avatar.height as avatar_height, avatar.duration_ms as avatar_duration_ms,
+            avatar.sha256 as avatar_sha256, avatar.created_at as avatar_created_at
+        from public.fight_post_comments as comment
+        join public.profiles as profile
+            on profile.user_id = comment.author_id and profile.deleted_at is null
+        left join public.media_objects as avatar
+            on avatar.id = profile.avatar_media_id and avatar.status = 'ready'
+        where comment.post_id = ${postId}
+            and not exists (
+                select 1 from private.feed_blocks as blocked
+                where blocked.blocker_id = ${userId} and blocked.blocked_id = comment.author_id
+            )
+        order by comment.created_at, comment.id
+    `;
+    const ids = new Set(rows.map((row) => row.id));
+    const children = new Map<string, CommentRow[]>();
+    for (const row of rows) {
+        if (!row.parent_id || !ids.has(row.parent_id)) continue;
+        const siblings = children.get(row.parent_id) ?? [];
+        siblings.push(row);
+        children.set(row.parent_id, siblings);
+    }
+    const replyCountById = new Map<string, number>();
+    const replyCount = (row: CommentRow): number => {
+        const cached = replyCountById.get(row.id);
+        if (cached !== undefined) return cached;
+        let count = 0;
+        const pending = [...(children.get(row.id) ?? [])];
+        while (pending.length > 0) {
+            const next = pending.pop();
+            if (!next) continue;
+            count += 1;
+            pending.push(...(children.get(next.id) ?? []));
+        }
+        replyCountById.set(row.id, count);
+        return count;
+    };
+    const roots = rows.filter(
+        (row) => row.parent_id === null || !ids.has(row.parent_id),
+    );
+    roots.sort((left, right) => {
+        const leftCount = replyCount(left);
+        const rightCount = replyCount(right);
+        if (leftCount !== rightCount) return rightCount - leftCount;
+        const leftTime = Date.parse(isoUtc(left.created_at));
+        const rightTime = Date.parse(isoUtc(right.created_at));
+        if (leftTime !== rightTime) return rightTime - leftTime;
+        return right.id.localeCompare(left.id);
+    });
+    let offset = 0;
+    if (cursor) {
+        offset = roots.findIndex((row) => {
+            const count = replyCount(row);
+            if (count !== cursor.replyCount) return count < cursor.replyCount;
+            const created = cursorStamp(row.created_at);
+            if (created !== cursor.createdAt) return created < cursor.createdAt;
+            return row.id < cursor.id;
+        });
+        if (offset < 0) offset = roots.length;
+    }
+    const pageRoots = roots.slice(offset, offset + query.limit);
+    const page: CommentRow[] = [];
+    const take = (row: CommentRow) => {
+        page.push(row);
+        for (const child of children.get(row.id) ?? []) {
+            take(child);
+        }
+    };
+    for (const root of pageRoots) {
+        take(root);
+    }
+    const last = pageRoots.at(-1);
+    return {
+        comments: await mapComments(userId, page),
+        next_cursor:
+            offset + query.limit < roots.length && last
+                ? `${replyCount(last)}|${cursorStamp(last.created_at)}|${last.id}`
                 : null,
     };
 }

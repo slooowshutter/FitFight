@@ -70,7 +70,7 @@ async function recordJoinAttempt(
     `;
 }
 
-async function currentJoinableFight(
+export async function currentJoinableFight(
     series: FightSeriesRow,
     admin = createAdminClient(),
     now: Date = new Date(),
@@ -132,6 +132,7 @@ async function ownerHandle(
 }
 
 const ROSTER_STATES = ["accepted", "deferred"] as const;
+const OPEN_MEMBER_STATES = ["accepted", "deferred", "invited"] as const;
 
 async function rosterMemberCount(
     fightId: string,
@@ -152,7 +153,7 @@ async function rosterMemberCount(
     return count ?? 0;
 }
 
-async function isRosterMember(
+async function hasOpenMembership(
     fightId: string,
     userId: string,
     admin = createAdminClient(),
@@ -162,7 +163,7 @@ async function isRosterMember(
         .select("fight_id")
         .eq("fight_id", fightId)
         .eq("user_id", userId)
-        .in("state", [...ROSTER_STATES])
+        .in("state", [...OPEN_MEMBER_STATES])
         .maybeSingle();
     if (error) {
         throw new ApiError(
@@ -187,7 +188,7 @@ async function toSummary(
     const [handle, memberCount, alreadyMember] = await Promise.all([
         ownerHandle(series.owner_id, admin),
         rosterMemberCount(fight.id, admin),
-        isRosterMember(fight.id, userId, admin),
+        hasOpenMembership(fight.id, userId, admin),
     ]);
     return {
         fightId: fight.id,
@@ -227,7 +228,7 @@ export async function listJoinableFights(
         .eq("visibility", "joinable")
         .is("paused_at", null)
         .in("fight.roster.state", [...ROSTER_STATES])
-        .in("fight.membership.state", [...ROSTER_STATES])
+        .in("fight.membership.state", [...OPEN_MEMBER_STATES])
         .eq("fight.membership.user_id", userId);
     request = suggestedOnly
         ? request

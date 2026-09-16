@@ -13,8 +13,8 @@ The final refresh uses native source `8816e90`, merged into develop as `25f8ac8`
 with existing Companion sample accounts and Steps. The You screen shows `1.1.1`,
 local build `1`, and the production display configuration. Other screens omit the
 version label, matching the current app. These captures do not prove production
-sign-in, real HealthKit sync, or live backend compatibility. Update the You capture
-with the production candidate's build label before final submission.
+sign-in, real HealthKit sync, or live backend compatibility. The gallery retains
+its capture build label; the production archive was verified separately.
 
 ## Capture and verification
 
@@ -43,11 +43,13 @@ The English and French layouts were visually checked.
 
 ## Release status
 
-English/French listing text, release notes, and updated App Review instructions
-are saved in the App Store Connect 1.1.1 draft. Final screenshot upload, privacy
-answers, production build selection, and review submission remain separate steps.
+All twelve screenshots are uploaded and processed. English/French listing text,
+release notes, review instructions, privacy answers, and the updated age rating
+are saved. Production **1.1.1 (202)** was submitted at 01:42 Paris time on
+16 September 2026 and is **Waiting for Review**, with manual release enabled.
 The current public build remains 1.0.0 (113).
 
 See [release preparation and data-transfer plan](release-1.1.0.md) and
-[current deployment evidence](../../status.md). Production promotion and the beta
-account/history/media transfer are on hold until Marc confirms the next stage.
+[current deployment evidence](../../status.md). Production promotion and the initial
+beta account/history/media transfer are complete. Repeat the beta catch-up before
+the manual public release.

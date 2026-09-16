@@ -9,6 +9,7 @@ export const notificationKindValues = [
     "post_comment",
     "comment_reply",
     "post_reaction",
+    "fight_invite",
 ] as const;
 export const notificationSlotValues = [
     "t0",
@@ -55,6 +56,7 @@ export const notificationCopyKeyValues = [
     "post_comment",
     "comment_reply",
     "post_reaction",
+    "fight_invite",
 ] as const;
 
 export const notificationCopyKeySchema = z.enum(notificationCopyKeyValues);

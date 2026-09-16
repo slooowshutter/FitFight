@@ -231,8 +231,12 @@ Deno.serve(async (request) => {
                         body: JSON.stringify({ action: "media", id: media.id }),
                     },
                 );
-                if (!response.ok) throw new Error("Source media unavailable");
+                if (!response.ok) {
+                    phase = `media_download_http_${response.status}`;
+                    throw new Error("Source media unavailable");
+                }
                 const bytes = await response.arrayBuffer();
+                phase = "media_checksum";
                 const hash = createHash("sha256")
                     .update(new Uint8Array(bytes))
                     .digest("hex");

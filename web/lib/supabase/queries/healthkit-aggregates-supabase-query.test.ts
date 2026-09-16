@@ -180,6 +180,98 @@ test("Fight history rejects skipped days and the wrong Fight time zone before wr
     );
 });
 
+test("Fight history accepts a cutoff just after a Fight-day midnight", async () => {
+    const startsAt = "2026-03-28T12:00:00.000Z";
+    const endsAt = "2026-03-30T12:00:00.000Z";
+    const cutoffAt = "2026-03-29T22:00:00.001Z";
+    const { database, queries } = createDatabaseStub((query) => {
+        if (query.includes("returning id")) {
+            return [
+                {
+                    ...sourceRow,
+                    complete_through: cutoffAt,
+                    server_now: "2026-03-30T00:00:00.000Z",
+                },
+            ];
+        }
+        if (query.includes("from public.fights as fight")) {
+            return [
+                {
+                    fight_id:
+                        validAggregate.fight_aggregates[0].fight_id.toLowerCase(),
+                    starts_at: startsAt,
+                    ends_at: endsAt,
+                    time_zone: "Europe/Paris",
+                    outcome_rule: "highest_total",
+                    stake_minor: null,
+                    default_goal_value: null,
+                },
+            ];
+        }
+        if (query.includes("from private.fight_score_snapshots")) {
+            return [
+                {
+                    fight_id:
+                        validAggregate.fight_aggregates[0].fight_id.toLowerCase(),
+                },
+            ];
+        }
+        if (query.includes("from public.fight_members")) {
+            return [
+                {
+                    fight_id:
+                        validAggregate.fight_aggregates[0].fight_id.toLowerCase(),
+                    user_id: "5b2216f4-762d-4890-a516-63046a01df31",
+                    current_value: "7000",
+                    final_value: null,
+                    personal_target: null,
+                },
+            ];
+        }
+        return [];
+    });
+    await syncHealthKitAggregates(
+        "5b2216f4-762d-4890-a516-63046a01df31",
+        healthKitAggregateSyncSchema.parse({
+            complete_through: cutoffAt,
+            time_zone: "Europe/Paris",
+            merged_days: [],
+            fight_aggregates: [
+                {
+                    fight_id: validAggregate.fight_aggregates[0].fight_id,
+                    starts_at: startsAt,
+                    ends_at: endsAt,
+                    cutoff_at: cutoffAt,
+                    steps: 7000,
+                    step_checkpoints: [
+                        {
+                            day: "2026-03-28",
+                            cutoff_at: "2026-03-28T23:00:00.000Z",
+                            steps: 4000,
+                        },
+                        {
+                            day: "2026-03-29",
+                            cutoff_at: "2026-03-29T22:00:00.000Z",
+                            steps: 7000,
+                        },
+                        {
+                            day: "2026-03-30",
+                            cutoff_at: cutoffAt,
+                            steps: 7000,
+                        },
+                    ],
+                },
+            ],
+        }),
+        database,
+    );
+    assert.ok(
+        queries.some(({ query }) =>
+            query.includes("insert into private.fight_score_snapshots"),
+        ),
+    );
+});
+
 test("Apple Health aggregate sync accepts one merged total per Fight", () => {
     const parsed = healthKitAggregateSyncSchema.parse(validAggregate);
 

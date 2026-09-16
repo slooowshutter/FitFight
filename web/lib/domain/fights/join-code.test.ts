@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+    APP_WIDE_JOIN_CODE,
     isJoinCode,
     normalizeJoinCode,
     randomJoinCode,
@@ -10,6 +11,12 @@ import {
 test("normalizeJoinCode strips spaces and dashes and uppercases", () => {
     assert.equal(normalizeJoinCode(" ab-c1 "), "ABC1");
     assert.equal(normalizeJoinCode("k7m2"), "K7M2");
+});
+
+test("the app-wide join code is the existing PGG7 alphabet value", () => {
+    assert.equal(APP_WIDE_JOIN_CODE, "PGG7");
+    assert.equal(isJoinCode(APP_WIDE_JOIN_CODE), true);
+    assert.equal(normalizeJoinCode("pgg7"), APP_WIDE_JOIN_CODE);
 });
 
 test("isJoinCode accepts the 4-character alphabet and rejects lookalikes", () => {

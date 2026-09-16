@@ -1,6 +1,116 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Feed comments can be sorted by most comments or most recent. Most comments is the default.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les commentaires du fil se trient par plus de commentaires ou plus récents. Plus de commentaires est le choix par défaut."
+                    }
+                }
+            }
+        },
+        "Most comments": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Plus de commentaires"
+                    }
+                }
+            }
+        },
+        "Most recent": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Plus récents"
+                    }
+                }
+            }
+        },
+        "Comment order": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ordre des commentaires"
+                    }
+                }
+            }
+        },
+        "The Feed can show a post to everyone signed in, not only people in your fights.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Le fil peut maintenant afficher un message pour tout le monde connecté, pas seulement les personnes dans tes combats."
+                    }
+                }
+            }
+        },
+        "Broadcast": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Annonce"
+                    }
+                }
+            }
+        },
+        "Write one post. Everyone signed in sees it on Feed.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Écris un message. Toutes les personnes connectées le voient dans Fil."
+                    }
+                }
+            }
+        },
+        "This post appears on Feed for everyone signed in.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ce message apparaît dans Fil pour toutes les personnes connectées."
+                    }
+                }
+            }
+        },
+        "Opening FitFight invites you to the shared Steps fight and any suggested fights. They show on New. You get a notification with the name, no scores, and you can accept when you are ready.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Dès l'ouverture, FitFight t'invite au défi Pas partagé et aux défis suggérés. Ils apparaissent dans Nouveau. Tu reçois une notification avec le nom, sans scores, et tu peux accepter quand tu es prêt."
+                    }
+                }
+            }
+        },
+        "Bars, line, histogram, and pace now use the same confirmed Fight scores as the oval. A teammate without daily history is a gap, not a blank graph.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Barres, ligne, histogramme et allure utilisent maintenant les mêmes scores confirmés que l’ovale. Un coéquipier sans historique quotidien apparaît comme un trou, pas un graphique vide."
+                    }
+                }
+            }
+        },
+        "So far": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Jusqu’ici"
+                    }
+                }
+            }
+        },
         "Fight charts and standings now use the same confirmed steps. Charts exclude activity outside the Fight, update with late corrections, and show missing history clearly.": {
             "localizations": {
                 "fr": {

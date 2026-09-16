@@ -1,12 +1,101 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **16 Sep 2026**. Next prepared app: **1.1.1**.
+Read this before building. Last updated **16 Sep 2026**. Production candidate: **1.1.1 (202)**.
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
 ---
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
+
+## Marc broadcast posts, 16 Sep 2026
+
+**Contract:** `POST /api/v1/feed/posts` accepts `{ "type": "broadcast" }` as a
+lone destination. Only username `marc` (same You → Developer gate) can create
+it. The row is `audience=main`, `app_wide=true`, no fight channels. `GET /api/v1/feed`
+with no scope now also returns those rows to every signed-in caller. Old
+`main` / `fight` requests and response shapes stay the same. No lock-screen
+intent is queued; existing `feed_post` alerts still cover fight-channel posts
+only.
+
+**Checks:** workspace TypeScript and feed unit tests. Migration is additive.
+No hosted `db push`. Not on TestFlight until an authorized `preview` merge.
+
+## PGG7 app-wide invite: prepared 16 Sep 2026
+
+**Contract:** `POST /api/v1/fights/refresh` and `POST /api/v1/fights/snapshot` stay on `/api/v1`. Request and response shapes are unchanged except `alreadyMember` on joinable/suggested summaries is now true for pending invitees as well as accepted/deferred members. Older apps already treat `alreadyMember` as "open this fight," so a tap on New opens the existing Accept invitation. After auth, the backend invites the caller to `PGG7` and every currently suggested fight when they have no membership row. Marking a series suggested invites every active profile the same way.
+
+**Choice:** join-by-code still requires an explicit Join. Auto-invite creates the same pending invite the username-invite path already shows on Fights. Suggested fights were already listed on New from `GET /api/v1/fights/suggested`.
+
+**Notifications:** invite pushes did not exist (feed post/reaction kinds did). Additive migration `20260916210000_fight_invite_notifications.sql` allows `fight_invite` outbox rows with a personalized `alert_body` that names the person and fight and includes no scores. Existing clients already open `/fights/{id}` from the payload. No new preference toggle.
+
+**Supported builds checked:** read-only `https://staging.fitfight.app/api/app-release` on 16 Sep 2026 returned `latest` 1.1.1 (201) with `enforced: false` (`review`/`internal` null). Staging still has installed users on older binaries while enforcement is off. Those clients already render `invited` rows and suggested New rows. No required request field.
+
+**Staging evidence:** series `PGG7` exists as `EVERYBODY ON THE APP`, `joinable`, recurring, suggested, current fight `live`. Production was not queried from this change. If that code is absent in an environment, the lookup is a no-op and no fight is invented.
+
+**Deployment order:** apply the additive invite-notification migration and this backend to staging with `develop` first. Existing TestFlight builds pick up invites and the New-tab tap behavior on the next open/sync. The 1.1.1 changelog row ships only when this native change later reaches `preview`. No production deploy, `preview` merge, hosted `db push`, or TestFlight upload from this work.
+
+**Cloud checks vs live:** unit tests cover missing/closed/already-member/new-invite/suggested-everyone paths and invite copy against mocks. No hosted write, disposable migrated-database check, or signed-in device verification was run here.
+
+## Production rollout and App Store submission, 16 Sep 2026
+
+This section supersedes the earlier held-rollout and screenshot-upload notes below.
+Marc authorized the complete production rollout and App Store submission.
+[#245](https://github.com/slooowshutter/FitFight/pull/245) integrated release tools,
+[#246](https://github.com/slooowshutter/FitFight/pull/246) promoted them to preview,
+and [#247](https://github.com/slooowshutter/FitFight/pull/247) merged preview into
+main at 23:30 UTC on 15 September, commit `e2783be`.
+
+**Live backend:** all 40 production migrations are applied. The Supabase deployment
+completed while the operator migration command was running; that command stopped
+during media-policy creation. A fresh migration listing matches all 40
+repository versions and another `migration up` applied nothing. Production health
+returns `ok: true`, `backend: prod`, `schema: ready`, and `profile_api: true`.
+English and French Privacy and Support pages return 200. The old build 113 SQL
+request and forbidden-write checks passed on production with the fixture rolled
+back. `/api/v1/me` reaches authentication and returns 401 without credentials for
+build headers 113, 190, 200, 201, and 202. No API version changed. Production still
+advertises public 1.0.0 (113), with update enforcement off.
+
+**Live data:** a fresh cloud copy of production was created and verified before
+the rollout. The real import combined 23 beta accounts and 3 production accounts,
+matching 2 shared Apple identities, into 24 accounts, 36 Fights, and 88 memberships.
+Beta profile details win; production IDs, referral codes, and unrelated history
+remain. All 52 ready media files passed source/destination checksum and size checks;
+2 unfinished uploads were excluded. Two downloads initially failed; after the
+temporary worker was restarted, both passed the same byte checks. No account rows
+were committed until every media file passed.
+
+The production rehearsal verified the planned result then rolled back to the exact
+original digest. The committed import matched the planned digest; all foreign keys,
+24 Auth account/Apple-identity reads, and 50 account/role visibility checks passed.
+Repeating the import reported `already_applied: true`, with no duplicate rows.
+Checkpoint: `6b482e49-29d7-4442-b87c-871ac4c776cc`. Verified row digest:
+`c0d5a6c2b3ef0c6e30788e51c0bf74ecf6f7ef1f760d4c2b6b13ec8d3e7844db`.
+Data and media moved only between cloud services. Both temporary transfer functions,
+all three temporary secrets on both projects, and the local token file were removed.
+The private checkpoint and pre-rollout backup are retained for the final catch-up.
+
+**Production archive:** [App Store candidate CI](https://github.com/slooowshutter/FitFight/actions/runs/35036003664)
+uploaded 1.1.1 (202) at 23:37 UTC. The signed IPA passed production URL/key checks,
+HealthKit background-delivery entitlement verification, and bundled privacy-manifest
+validation. Database, backend, simulator, and native regression checks passed.
+The twelve English/French screenshots are uploaded and processed. The 12-category
+App Privacy disclosure is published, and the age questionnaire reflects Health or
+Wellness Topics, Messaging and Chat, and Social Media. The production OpenRouter
+key was removed, so AI daily statuses and recaps are disabled for this release.
+The existing availability and legal/account settings were preserved.
+
+**Review submission:** [submission CI](https://github.com/slooowshutter/FitFight/actions/runs/35036799296)
+selected production 1.1.1 (202) and submitted it at 23:42 UTC on 15 September,
+01:42 Paris time on 16 September. Both Apple's API and App Store Connect display
+`WAITING_FOR_REVIEW`; release type is `MANUAL`. The production release manifest
+admits review build 202 while public build 113 remains supported. The release-tools
+workflow now defaults to a read-only audit, so another push cannot resubmit the app.
+Beta stays usable during review; repeat the catch-up
+from the retained checkpoint immediately before the manual public release. No
+physical-device Apple sign-in or HealthKit test of build 202 has been performed;
+Auth reads and cloud checks do not replace that installed-app verification.
 
 ## Data transfer implementation and cloud rehearsal, 16 Sep 2026
 
@@ -150,6 +239,30 @@ review/internal 1.1.0 (200), with enforcement off. Production still returns 404
 for `/api/app-release`; its health response lacks `profile_api`. These live results
 take precedence over older availability descriptions below. Preview is still at
 `025f55c`; the newest develop fixes have not been uploaded to TestFlight yet.
+
+## Fight chart views from stored scores: prepared 16 Sep 2026
+
+**Code:** Oval already plots `fight_members` scores. Bars, line, histogram, and
+pace now use that same stored revision: HealthKit `step_checkpoints` when the
+latest snapshot has them, otherwise one point per Fight day from
+`private.fight_score_snapshots.value`. Calendar `step_days` stay unused. Native
+`dayCards` charts whoever already matches and leaves a gap for everyone else.
+If no daily history is attached, those views plot the same totals as Oval.
+A HealthKit last-day stamp uses the current Fight day, not `cutoff - 1ms`.
+
+**Compatibility:** `/api/v1` remains. `members[].step_checkpoints` stays nullable
+and additive. Older clients ignore extra populated history. Required fields,
+legacy uploads, and client permissions are unchanged. No schema migration.
+
+**Checks:** native chart regressions cover mixed/legacy peers, stale history,
+totals fallback, and a cutoff 1ms after Fight-day midnight. Backend snapshot
+tests cover preferring real checkpoints, synthesizing score-only days, and
+leaving `step_days` unused. Cloud CI on this branch is the remaining evidence.
+No hosted database mutation or TestFlight upload.
+
+**Deployment:** prepare only. Deploy the compatible backend, then distribute
+the app through the authorized `preview` flow. Do not infer production
+readiness from staging.
 
 ## Fight charts and standings: prepared 15 Sep 2026
 
@@ -347,6 +460,21 @@ This is native navigation only. Existing vote ordering, request creation, API
 contracts, and database schema are unchanged. No deployment or TestFlight upload
 was performed.
 
+## Feed comment order: prepared 16 Sep 2026
+
+Feed post comment threads now show an on-thread **Most comments** / **Most recent**
+control. Default is **Most comments**. This is not a new tab and does not change
+Feedback comments or the Feed post list.
+
+**Contract:** additive optional `sort=comments|recent` on
+`GET /api/v1/posts/{postID}/comments`. Omitted `sort` keeps the installed oldest-first
+page. Response shape is unchanged. No database migration. No app-facing RPC.
+
+**Live rollout check:** staging `/api/app-release` on 16 Sep 2026 returned
+`latest` **1.1.1 (201)**, `review`/`internal` null, `enforced: false`. Preserve that
+omitted-sort contract for admitted clients. Production readiness is recorded in the
+production rollout section above. This change is not deployed yet.
+
 ## Post reactions and expanded comments: prepared 15 Sep 2026
 
 Feed and fight posts now offer **View reactions**, listing usernames, display names,
@@ -508,7 +636,7 @@ Apple Health synchronization requires `FITFIGHT_API_URL=https://staging.fitfight
 
 After the backend is configured, merge the feature PR into **`develop`**, not `main`. The staging migration must land before merging `develop` → `preview` for the TestFlight build.
 
-The 9 Sep Feed destinations change needs `20260909233000_feed_destinations_and_engagement.sql` plus the feed/posts, people, comments, and reactions APIs deployed before the native build. Old `GET /api/v1/feed` still returns only fight-audience posts so installed builds keep decoding. The 12 Sep one-feed list uses `GET /api/v1/feed?scope=all` (Main and fight posts). Current Feed uses `GET /api/v1/feed` with no scope (fight posts from membership only).
+The 9 Sep Feed destinations change needs `20260909233000_feed_destinations_and_engagement.sql` plus the feed/posts, people, comments, and reactions APIs deployed before the native build. Old `GET /api/v1/feed` still returns only fight-audience posts so installed builds keep decoding. The 12 Sep one-feed list uses `GET /api/v1/feed?scope=all` (Main and fight posts). Current Feed uses `GET /api/v1/feed` with no scope (fight posts from membership only), plus Marc `app_wide` broadcasts after `20260916204500_feed_app_wide_broadcast.sql`.
 
 Verify the minimal product alongside Apple Health synchronization:
 
@@ -544,7 +672,7 @@ The native Fight path uses the API to create and join; Apple Health synchronizat
 | Versions                | Works under You → Settings (the public changelog). The version label is only on You. Do not put it on Fights, New, Feed, or Feedback. Tapping it opens the admin/debug menu only for signed-in username `marc`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | Bugs & requests         | Works on the Feedback tab (Bugs, Top, and Report), with a shortcut still on You above Settings. Signed-in people can post a bug or a feature request, attach a photo, a video, or any file, browse the board, upvote, and comment with their username. Device/debug metadata is stored when someone posts or comments, omitted from the board API, and attached again when Marc taps Send to Cursor (original snapshot plus the phone that sent it, plus attachment links). After `NOTION_TOKEN` is on Vercel, each new post also lands as a P0 Inbox row in the Product Backlog. After `CURSOR_API_KEY` is on Vercel, Marc sees **Send to Cursor** on a post and can start a cloud agent with the post, comments, those device snapshots, and attachment URLs. A successful send moves the matching Notion Product Backlog row to Building; when that agent finishes and opens a PR, FitFight marks the same row Done.                                                                                                                                                                                                                                                                                                                                                                           |
 | Privacy / Support       | Pages are implemented and linked under You → Settings. Staging uses `staging.fitfight.app`; production uses `fitfight.app`. Each route must be deployed before that build is tested or submitted.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| Fight posts / Feed      | Accepted and waiting-next-round members can post a short note, up to four photos, or one short video. Root Feedback → Feed is the same fight posts list as before (not a Recent/Top ranking of loaded posts). Root + chooses a new post or a new request. Media can take a photo with the camera or pick photos and video from the library. Posting to several fights keeps one post and shows those fight names; All fights shows Public. A fight’s Feed tab starts on that fight and can add other channels. There is no Main destination or tag-people picker. Each card puts its plain channel label, then the relative time, beneath the author, with actions at the top right. Posts support emoji reactions, nested comments, editing/deleting your own post, reporting another post and hiding its author. Other members of that fight can get a push when you post in that fight’s Feed; the post author can get comments and reactions; a reply notifies the parent commenter, not sibling commenters. You → Settings → Notifications turns each of those on or off, plus challenge reminders and daily status. Fight detail opens on Stats, with Feed, Share and recurring History alongside it. Recurring fights retain earlier posts; invited-only people gain access after joining. |
+| Fight posts / Feed      | Marc (username `marc`, You → Developer) can post one Broadcast that every signed-in user sees on the Feed tab; it is a normal post, not copied into each Fight, and it does not send a new lock-screen alert. Accepted and waiting-next-round members can post a short note, up to four photos, or one short video. Root Feedback → Feed is the same fight posts list as before (not a Recent/Top ranking of loaded posts). Root + chooses a new post or a new request. Media can take a photo with the camera or pick photos and video from the library. Posting to several fights keeps one post and shows those fight names; All fights shows Public. A fight’s Feed tab starts on that fight and can add other channels. There is no Main destination or tag-people picker. Each card puts its plain channel label, then the relative time, beneath the author, with actions at the top right. Posts support emoji reactions, nested comments, editing/deleting your own post, reporting another post and hiding its author. Other members of that fight can get a push when you post in that fight’s Feed; the post author can get comments and reactions; a reply notifies the parent commenter, not sibling commenters. You → Settings → Notifications turns each of those on or off, plus challenge reminders and daily status. Fight detail opens on Stats, with Feed, Share and recurring History alongside it. Recurring fights retain earlier posts; invited-only people gain access after joining. |
 | Companion               | Saved on the account. Pick from a grid of animals, or Custom with one description (species, breed, accessories, colors). That text is stored for later image generation; generation is not built. Other people see the stock animal, or initials until a custom image exists. People who have not chosen an animal are asked the next time they open a build that includes this. Pose and generation controls are not shown.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | Account deletion        | Permanently deletes the profile, photos, username, authentication, Health/Steps data, relationships, invitations, memberships, scores, owned Fights, fight posts, and bugs/requests the User posted; removes participation from other Fights; clears local Health sync state; and revokes a stored Apple credential when available.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | WHOOP / Strava          | Not built                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |

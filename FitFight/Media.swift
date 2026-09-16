@@ -237,6 +237,20 @@ struct FitFightFightPost: Codable, Equatable, Hashable, Identifiable {
     }
 }
 
+enum FightPostCommentSort: String, CaseIterable, Hashable {
+    case comments
+    case recent
+
+    var title: String {
+        switch self {
+        case .comments:
+            String(localized: "Most comments")
+        case .recent:
+            String(localized: "Most recent")
+        }
+    }
+}
+
 struct FitFightFightPostComment: Codable, Equatable, Hashable, Identifiable {
     let id: UUID
     let postId: UUID

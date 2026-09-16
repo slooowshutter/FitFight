@@ -71,7 +71,7 @@ test("joinable list embedding counts accepted/deferred members and keeps empty f
             const empty = summaries.find((row) => row.fightId === fightIds[1]);
             assert.ok(occupied && empty);
             assert.equal(occupied.memberCount, 2);
-            assert.equal(occupied.alreadyMember, userId !== invited);
+            assert.equal(occupied.alreadyMember, true);
             assert.equal(empty.memberCount, 0);
             assert.equal(empty.alreadyMember, false);
         }

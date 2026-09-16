@@ -112,6 +112,9 @@ create index rivalry_artworks_work_idx on private.rivalry_artworks(created_at) w
 create table private.fight_record_contexts (
     fight_id uuid primary key references public.fights(id) on delete cascade,
     category text not null check (category in ('public', 'private', 'unknown')),
+    deleted_entrants integer not null default 0,
+    unknown_deleted_participant boolean not null default false,
+    result_summary jsonb,
     captured_at timestamptz not null default now()
 );
 create table private.fight_participation_records (
@@ -145,6 +148,49 @@ select member.fight_id, member.user_id,
         or member.state in ('invited', 'declined', 'deferred')
 from public.fight_members member;
 
+-- Anonymous counts preserve ties and original field size after account deletion.
+-- These are frozen evidence aggregates; TypeScript still decides every result.
+create function private.snapshot_profile_result_evidence(target_fight_id uuid)
+returns void language sql security definer set search_path = '' as $$
+    update private.fight_record_contexts context
+    set result_summary = (
+        select jsonb_build_object(
+            'field_size', count(*) filter (where entrant) + context.deleted_entrants,
+            'complete_finishers', count(*) filter (where entrant and departure is null and complete),
+            'first_place_finishers', count(*) filter (where entrant and departure is null and complete and rank = 1),
+            'verified', not context.unknown_deleted_participant
+                and coalesce(bool_and(reliable or state in ('invited', 'declined', 'deferred')), true)
+                and coalesce(bool_and(not entrant or departure is not null
+                    or (finalized_at is not null and complete is not null and rank is not null)), true)
+        )
+        from (
+            select member.*, member.entered_at is not null and member.entered_at < fight.ends_at
+                and (member.departed_at is null or member.departed_at > fight.starts_at) entrant
+            from private.fight_participation_records member
+            join public.fights fight on fight.id = member.fight_id
+            where member.fight_id = target_fight_id
+        ) evidence
+    )
+    where context.fight_id = target_fight_id and context.result_summary is null;
+$$;
+select private.snapshot_profile_result_evidence(id) from public.fights where state = 'final';
+
+create function private.preserve_anonymous_participation()
+returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+    update private.fight_record_contexts context
+    set deleted_entrants = deleted_entrants + case when old.entered_at is not null
+            and old.entered_at < fight.ends_at and (old.departed_at is null or old.departed_at > fight.starts_at)
+            and clock_timestamp() >= fight.starts_at then 1 else 0 end,
+        unknown_deleted_participant = unknown_deleted_participant
+            or (not old.reliable and old.state not in ('invited', 'declined', 'deferred'))
+    from public.fights fight where context.fight_id = old.fight_id and fight.id = old.fight_id;
+    return old;
+end;
+$$;
+create trigger preserve_anonymous_participation before delete on private.fight_participation_records
+    for each row execute function private.preserve_anonymous_participation();
+
 create function private.capture_fight_record_context()
 returns trigger language plpgsql security definer set search_path = '' as $$
 begin
@@ -160,10 +206,14 @@ begin
             from public.fight_series series where series.id = new.series_id and context.fight_id = new.id;
         end if;
     end if;
+    if new.state = 'final' then
+        perform private.snapshot_profile_result_evidence(new.id);
+    end if;
     return new;
 end;
 $$;
-create trigger capture_fight_record_context after insert or update of series_id on public.fights
+-- Alphabetical trigger ordering places this after freeze_fight_members_on_final.
+create trigger profile_record_context after insert or update of series_id, state on public.fights
     for each row execute function private.capture_fight_record_context();
 
 create function private.capture_profile_participation()
@@ -238,6 +288,7 @@ begin
 end;
 $$;
 revoke all on function private.capture_fight_record_context(), private.capture_profile_participation(),
-    private.preserve_profile_fight_category() from public, anon, authenticated;
+    private.preserve_profile_fight_category(), private.snapshot_profile_result_evidence(uuid),
+    private.preserve_anonymous_participation() from public, anon, authenticated;
 
 commit;

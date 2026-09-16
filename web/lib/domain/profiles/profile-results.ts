@@ -7,14 +7,14 @@ export function classifyFightResult(fight: FightRecordFact, userId: string): Cla
     const entrants = fight.members.filter((item) => item.entered_at !== null
         && Date.parse(item.entered_at) < Date.parse(fight.ends_at)
         && (item.departed_at === null || Date.parse(item.departed_at) > Date.parse(fight.starts_at)));
-    const fieldSize = entrants.length;
+    const fieldSize = fight.summary?.field_size ?? entrants.length;
     const excluded = { counted: false, fieldSize, placement: member?.rank ?? null };
     if (!member) return { ...excluded, result: "not_entered" };
     if (fight.state === "cancelled") return { ...excluded, result: "cancelled" };
     if (fight.state !== "final") return { ...excluded, result: "ongoing" };
     if (member.departure === "removed") return { ...excluded, result: "removed" };
     if (!member.reliable || fight.outcome_rule !== "highest_total"
-        || fight.members.some((item) => !item.reliable && !["invited", "declined", "deferred"].includes(item.state))) {
+        || (fight.summary ? !fight.summary.verified : fight.members.some((item) => !item.reliable && !["invited", "declined", "deferred"].includes(item.state)))) {
         return { ...excluded, result: "unavailable" };
     }
     if (!entrants.includes(member)) return { ...excluded, result: "not_entered" };
@@ -28,13 +28,15 @@ export function classifyFightResult(fight: FightRecordFact, userId: string): Cla
         return { ...excluded, result: "unavailable" };
     }
     const complete = finishers.filter((item) => item.complete);
-    const result = complete.length === 0
+    const completeCount = fight.summary?.complete_finishers ?? complete.length;
+    const firstPlaceCount = fight.summary?.first_place_finishers ?? complete.filter((item) => item.rank === 1).length;
+    const result = completeCount === 0
         ? "draw"
         : !member.complete
             ? "incomplete"
             : member.rank !== 1
                 ? "loss"
-                : complete.filter((item) => item.rank === 1).length === 1 ? "win" : "draw";
+                : firstPlaceCount === 1 ? "win" : "draw";
     return { ...excluded, counted: true, result };
 }
 

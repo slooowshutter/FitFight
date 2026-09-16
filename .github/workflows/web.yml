@@ -39,7 +39,7 @@ jobs:
               run: ruby -ryaml -e 'YAML.load_file("../contracts/openapi.yaml"); puts "API contract YAML parsed"'
             - name: Render Profile privacy disclosures
               if: github.ref == 'refs/heads/profiles-friends-and-stats'
-              run: python3 ../scripts/check_profile_privacy_pages.py
+              run: node ../scripts/check-profile-privacy-pages.mjs
             - uses: actions/upload-artifact@v4
               if: github.ref == 'refs/heads/profiles-friends-and-stats' && always()
               with:

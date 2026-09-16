@@ -17,7 +17,13 @@ export const participationFactSchema = z.object({
     reliable: z.boolean(),
 });
 
+export const resultEvidenceSummarySchema = z.object({
+    field_size: z.number().int().nonnegative(), complete_finishers: z.number().int().nonnegative(),
+    first_place_finishers: z.number().int().nonnegative(), verified: z.boolean(),
+});
+
 export const fightRecordFactSchema = z.object({
+    summary: resultEvidenceSummarySchema.nullable(),
     id: z.string().uuid(),
     state: z.string(),
     starts_at: recordTimestampSchema,
@@ -58,3 +64,5 @@ export type ClassifiedFightResult = {
     fieldSize: number;
     placement: number | null;
 };
+
+export type ResultEvidenceSummary = z.infer<typeof resultEvidenceSummarySchema>;

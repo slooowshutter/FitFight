@@ -18,6 +18,11 @@ select fight.id, person.id,
 from public.fights fight cross join auth.users person
 where fight.id in ('72000000-0000-4000-8000-000000000001', '72000000-0000-4000-8000-000000000002', '72000000-0000-4000-8000-000000000003')
     and person.id in ('71000000-0000-4000-8000-000000000001', '71000000-0000-4000-8000-000000000002');
+-- Existing score protection strips scores on INSERT; the scoring writer uses UPDATE.
+update public.fight_members set
+    current_value = case when user_id = '71000000-0000-4000-8000-000000000001' then 3000 else 1000 end,
+    rank = case when user_id = '71000000-0000-4000-8000-000000000001' then 1 else 2 end
+where fight_id = '72000000-0000-4000-8000-000000000001';
 update public.fights set state = 'final' where id = '72000000-0000-4000-8000-000000000001';
 update public.fight_members set state = 'withdrawn'
     where fight_id = '72000000-0000-4000-8000-000000000002' and user_id = '71000000-0000-4000-8000-000000000002';

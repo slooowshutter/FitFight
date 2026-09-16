@@ -135,6 +135,39 @@ test("withdrawal is recorded atomically and later visibility edits never reclass
     assert.equal((await readSharedProfile(owner, owner, undefined, database)).record?.wins, 1);
 });
 
+test("account deletion preserves a frozen group draw and cannot create a duel", async (t) => {
+    const users = [randomUUID(), randomUUID(), randomUUID()];
+    const [owner, opponent, departing] = users;
+    const fightId = randomUUID();
+    t.after(async () => {
+        await database`delete from public.fights where id = ${fightId}`;
+        await database`delete from auth.users where id = any(${database.array(users)}::uuid[])`;
+    });
+    for (const id of users) await database`insert into auth.users(id) values (${id})`;
+    await database`insert into public.fights(id, owner_id, name, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy)
+        values (${fightId}, ${owner}, 'Group draw', 'live', now() - interval '1 hour', now() + interval '1 hour', 'UTC', 'highest_total', 'shared')`;
+    for (const id of users) {
+        await database`insert into public.fight_members(fight_id, user_id, state, accepted_at) values (${fightId}, ${id}, 'accepted', now())`;
+    }
+    await database`update public.fight_members set current_value = case when user_id = ${opponent} then 500 else 1000 end,
+        rank = case when user_id = ${opponent} then 3 else 1 end, final_steps_complete = true where fight_id = ${fightId}`;
+    await database`update public.fights set state = 'final' where id = ${fightId}`;
+    await updateProfileSettings(owner, { competitive: true, audience: "public" }, database);
+    assert.equal((await readSharedProfile(owner, owner, undefined, database)).record?.wins, 0);
+    await database`delete from auth.users where id = ${departing}`;
+    const afterDeletion = await readSharedProfile(opponent, owner, undefined, database);
+    assert.equal(afterDeletion.record?.played, 1);
+    assert.equal(afterDeletion.record?.wins, 0);
+    assert.equal(afterDeletion.rivalry?.wins, 0);
+    assert.equal(afterDeletion.rivalry?.losses, 0);
+    assert.equal(afterDeletion.rivalry?.draws, 0);
+    const history = await readProfileHistory(owner, owner, profilePageQuerySchema.parse({}), database);
+    assert.equal(history.results[0].field_size, 3);
+    assert.equal(history.results[0].result, "draw");
+    const [erased] = await database`select count(*)::int n from private.fight_participation_records where user_id = ${departing}`;
+    assert.equal(erased.n, 0);
+});
+
 test("view replay, rolling qualification, privacy locks, and inactive-user retention", async (t) => {
     const users = [randomUUID(), randomUUID()];
     const [viewer, target] = users;

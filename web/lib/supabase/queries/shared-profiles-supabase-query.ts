@@ -70,7 +70,7 @@ export async function loadProfileAccess(sql: TransactionSql, viewerId: string, t
 export async function loadProfileFightFacts(sql: TransactionSql, userId: string): Promise<FightRecordFact[]> {
     return fightRecordFactSchema.array().parse(await sql`
         select fight.id, fight.state::text, fight.starts_at::text, fight.ends_at::text,
-            context.category, fight.name, fight.action_text, fight.outcome_rule::text,
+            context.category, context.result_summary summary, fight.name, fight.action_text, fight.outcome_rule::text,
             (select jsonb_agg(jsonb_build_object(
                 'user_id', member.user_id, 'entered_at', member.entered_at,
                 'departed_at', member.departed_at, 'departure', member.departure,

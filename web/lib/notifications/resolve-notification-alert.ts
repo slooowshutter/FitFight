@@ -89,6 +89,16 @@ const staticCopy: Record<
         en: { title: "FitFight", body: "Someone reacted to your post." },
         fr: { title: "FitFight", body: "Quelqu’un a réagi à ta publication." },
     },
+    fight_invite: {
+        en: {
+            title: "FitFight",
+            body: "You were invited to a fight. Open FitFight.",
+        },
+        fr: {
+            title: "FitFight",
+            body: "Tu as été invité à un défi. Ouvre FitFight.",
+        },
+    },
 };
 
 export function resolveNotificationAlert(input: {

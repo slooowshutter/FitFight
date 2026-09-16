@@ -45,6 +45,8 @@ source += "    func reportForTest(_ comment: FitFightFightPostComment) async { a
 source += "    func deleteForTest(_ comment: FitFightFightPostComment) async { await deleteComment(comment) }\n}\n"
 count_change = thread.split(".onChange(of: post.commentCount) { previous, count in\n", 1)[1].split("\n        }\n", 1)[0]
 source += "\nextension FightPostThreadState {\n    func countChangedForTest(previous: Int, count: Int) {\n" + count_change + "\n    }\n}\n"
+sort_change = thread.split(".onChange(of: commentSort) { _, _ in\n", 1)[1].split("\n        }\n", 1)[0]
+source += "\nextension FightPostThreadState {\n    func sortChangedForTest() {\n" + sort_change + "\n    }\n}\n"
 source += thread[thread.index("private struct DisplayedFightComment:"):]
 
 with tempfile.TemporaryDirectory(prefix="fitfight-state-tests-") as directory:

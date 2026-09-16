@@ -6,6 +6,8 @@ import {
     requireUuid,
 } from "@/lib/http";
 import { verifyUser } from "@/lib/supabase/queries/auth-supabase-query";
+import { createDatabaseClient } from "@/lib/supabase/postgres";
+import { processNotificationOutbox } from "@/lib/supabase/queries/process-notification-outbox-supabase-query";
 import { updateFight } from "@/lib/supabase/queries/update-fight-supabase-query";
 import { updateFightRequestSchema } from "@/lib/types/fights/update-fight";
 
@@ -17,7 +19,17 @@ export const PATCH = apiRoute<{ fightID: string }>(
         const { userId } = await verifyUser(request);
         const fightId = requireUuid(params.fightID, "fightID");
         const input = updateFightRequestSchema.parse(await readJson(request));
-        return json(await updateFight(userId, fightId, input));
+        const sql = createDatabaseClient();
+        const fight = await updateFight(
+            userId,
+            fightId,
+            input,
+            undefined,
+            undefined,
+            sql,
+        );
+        await processNotificationOutbox(new Date(), sql);
+        return json(fight);
     },
 );
 

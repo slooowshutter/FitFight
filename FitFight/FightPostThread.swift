@@ -11,6 +11,7 @@ struct FightPostEngagement: View {
 
     @State private var comments: [FitFightFightPostComment] = []
     @State private var nextCursor: String?
+    @State private var commentSort = FightPostCommentSort.comments
     @State private var open = false
     @State private var showingReactions = false
     @State private var replyTo: FitFightFightPostComment?
@@ -51,6 +52,11 @@ struct FightPostEngagement: View {
             }
             .buttonStyle(FFHapticPlainStyle())
             if open {
+                FFSegmented(
+                    items: FightPostCommentSort.allCases,
+                    selection: $commentSort
+                ) { $0.title }
+                .accessibilityLabel(String(localized: "Comment order"))
                 if loadingComments {
                     ProgressView()
                         .tint(theme.mossText)
@@ -120,6 +126,10 @@ struct FightPostEngagement: View {
                 onTargetCommentLoaded?()
             }
         }
+        .onChange(of: commentSort) { _, _ in
+            nextCursor = nil
+            Task { await loadComments() }
+        }
         .sheet(isPresented: $showingReactions) {
             FightPostReactionsSheet(post: post)
                 .environmentObject(session)
@@ -175,14 +185,39 @@ struct FightPostEngagement: View {
     private var displayedComments: [DisplayedFightComment] {
         let commentIDs = Set(comments.map(\.id))
         let children = Dictionary(grouping: comments, by: \.parentId)
+        func replyCount(_ comment: FitFightFightPostComment) -> Int {
+            var count = 0
+            var pending = children[comment.id] ?? []
+            while let next = pending.popLast() {
+                count += 1
+                pending.append(contentsOf: children[next.id] ?? [])
+            }
+            return count
+        }
+        func ordered(_ items: [FitFightFightPostComment]) -> [FitFightFightPostComment] {
+            items.sorted { lhs, rhs in
+                switch commentSort {
+                case .comments:
+                    let left = replyCount(lhs)
+                    let right = replyCount(rhs)
+                    if left != right { return left > right }
+                    if lhs.createdDate != rhs.createdDate { return lhs.createdDate > rhs.createdDate }
+                    return lhs.id.uuidString > rhs.id.uuidString
+                case .recent:
+                    if lhs.createdDate != rhs.createdDate { return lhs.createdDate > rhs.createdDate }
+                    return lhs.id.uuidString > rhs.id.uuidString
+                }
+            }
+        }
         var rows: [DisplayedFightComment] = []
-        var stack: [(FitFightFightPostComment, Int)] = comments
-            .filter { comment in comment.parentId.map { !commentIDs.contains($0) } ?? true }
-            .reversed()
-            .map { ($0, 0) }
+        var stack: [(FitFightFightPostComment, Int)] = ordered(
+            comments.filter { comment in comment.parentId.map { !commentIDs.contains($0) } ?? true }
+        )
+        .reversed()
+        .map { ($0, 0) }
         while let (comment, depth) = stack.popLast() {
             rows.append(DisplayedFightComment(comment: comment, depth: depth))
-            for child in (children[comment.id] ?? []).reversed() {
+            for child in ordered(children[comment.id] ?? []).reversed() {
                 stack.append((child, depth + 1))
             }
         }
@@ -204,6 +239,7 @@ struct FightPostEngagement: View {
                     Text(comment.author.atHandle)
                         .ffType(.caption)
                         .foregroundStyle(theme.text)
+                        .lineLimit(1)
                     Text(comment.body)
                         .ffType(.body)
                         .foregroundStyle(theme.text)
@@ -220,23 +256,29 @@ struct FightPostEngagement: View {
                         .buttonStyle(FFHapticPlainStyle())
                     }
                 }
-                Spacer(minLength: 0)
-                Menu {
-                    if comment.mine {
-                        Button(String(localized: "Delete"), role: .destructive) {
-                            Task { await deleteComment(comment) }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                HStack(alignment: .top, spacing: 0) {
+                    TextTranslationButton(text: comment.body)
+                    Menu {
+                        if comment.mine {
+                            Button(String(localized: "Delete"), role: .destructive) {
+                                Task { await deleteComment(comment) }
+                            }
+                        } else {
+                            Button(String(localized: "Report")) {
+                                Task { await reportComment(comment) }
+                            }
                         }
-                    } else {
-                        Button(String(localized: "Report")) {
-                            Task { await reportComment(comment) }
-                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(theme.textFaint)
+                            .frame(height: 20)
+                            .frame(width: 44, height: 44, alignment: .top)
+                            .contentShape(Rectangle())
                     }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(theme.textFaint)
+                    .buttonStyle(FFHapticPlainStyle())
                 }
-                .buttonStyle(FFHapticPlainStyle())
             }
         }
     }
@@ -260,21 +302,23 @@ struct FightPostEngagement: View {
             repeat {
                 reloadComments = false
                 let version = commentsVersion
+                let sort = commentSort
                 let token = try await session.freshAccessToken()
                 guard !Task.isCancelled, session.authSession?.user.id == userID else { return }
                 let result = try await FitFightAPI().fightPostComments(
                     postID: post.id,
                     cursor: append ? nextCursor : nil,
-                    accessToken: token
+                    accessToken: token,
+                    sort: sort
                 )
                 guard !Task.isCancelled, session.authSession?.user.id == userID else { return }
-                if commentsVersion == version {
+                if commentsVersion == version && commentSort == sort {
                     comments = append
                         ? comments + result.comments.filter { comment in !comments.contains(where: { $0.id == comment.id }) }
                         : result.comments
                     nextCursor = result.nextCursor
                 } else {
-                    // A response started before our write must not undo that write.
+                    // A response started before a write or sort change must not undo it.
                     reloadComments = true
                 }
                 if reloadComments {

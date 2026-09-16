@@ -1,4 +1,5 @@
 import type { Sql } from "postgres";
+import { isFitFightAdmin } from "@/lib/admin/is-fitfight-admin";
 import { ApiError, ERROR_CODES } from "@/lib/http";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import type {
@@ -35,6 +36,7 @@ export type VisibleFightPost = {
     audience: FeedAudience;
     fight_id: string | null;
     author_id: string;
+    app_wide: boolean;
 };
 
 type PostRow = {
@@ -139,12 +141,15 @@ export async function loadVisiblePost(
     database: Sql = createDatabaseClient(),
 ): Promise<VisibleFightPost> {
     const [post] = await database<VisibleFightPost[]>`
-        select id, audience::text as audience, fight_id, author_id
+        select id, audience::text as audience, fight_id, author_id, app_wide
         from public.fight_posts
         where id = ${postId}
     `;
     if (!post) {
         throw new ApiError(404, ERROR_CODES.not_found, "Post not found");
+    }
+    if (post.app_wide) {
+        return post;
     }
     if (post.audience === "main") {
         if (post.author_id === userId) return post;
@@ -556,6 +561,10 @@ export async function listFightPosts(
                                     )
                             )
                         )
+                        or (
+                            ${fightId ?? null}::uuid is null
+                            and post.app_wide
+                        )
                     )
                 order by post.created_at desc, post.id desc
                 limit ${query.limit + 1}
@@ -679,6 +688,10 @@ export async function listFightPosts(
                                     )
                             )
                         )
+                        or (
+                            ${fightId ?? null}::uuid is null
+                            and post.app_wide
+                        )
                     )
                 order by post.created_at desc, post.id desc
                 limit ${query.limit + 1}
@@ -703,11 +716,16 @@ async function insertFightPost(
     tagIds: string[],
     channelIds: string[],
     broadcast: boolean,
+    appWide: boolean,
     database: Sql,
 ): Promise<string> {
     const [created] = await database<{ id: string }[]>`
-        insert into public.fight_posts (fight_id, author_id, body, audience, broadcast)
-        values (${fightId}, ${userId}, ${body}, ${audience}, ${broadcast})
+        insert into public.fight_posts (
+            fight_id, author_id, body, audience, broadcast, app_wide
+        )
+        values (
+            ${fightId}, ${userId}, ${body}, ${audience}, ${broadcast}, ${appWide}
+        )
         returning id
     `;
     if (!created) {
@@ -865,6 +883,7 @@ export async function createFightPost(
             [],
             [fightId],
             false,
+            false,
             sql,
         );
         await enqueueFightFeedPostNotifications(sql, {
@@ -900,11 +919,15 @@ export async function createFeedPosts(
     database: Sql = createDatabaseClient(),
 ): Promise<FightPostBatchResponse> {
     let includeMain = false;
+    let includeBroadcast = false;
     const fightIds: string[] = [];
     for (const destination of input.destinations) {
         switch (destination.type) {
             case "main":
                 includeMain = true;
+                break;
+            case "broadcast":
+                includeBroadcast = true;
                 break;
             case "fight":
                 if (!fightIds.includes(destination.fight_id)) {
@@ -921,12 +944,37 @@ export async function createFeedPosts(
             }
         }
     }
-    if (!includeMain && fightIds.length === 0) {
+    if (includeBroadcast && (includeMain || fightIds.length > 0)) {
+        throw new ApiError(
+            400,
+            ERROR_CODES.validation,
+            "Broadcast is its own post",
+        );
+    }
+    if (!includeBroadcast && !includeMain && fightIds.length === 0) {
         throw new ApiError(
             400,
             ERROR_CODES.validation,
             "Pick at least one place to post",
         );
+    }
+    if (includeBroadcast) {
+        const [profile] = await database<{ handle: string }[]>`
+            select handle
+            from public.profiles
+            where user_id = ${userId}
+                and deleted_at is null
+        `;
+        if (
+            !profile ||
+            !isFitFightAdmin({ handle: profile.handle, emails: [] })
+        ) {
+            throw new ApiError(
+                403,
+                ERROR_CODES.forbidden,
+                "Only Marc can broadcast",
+            );
+        }
     }
     for (const fightId of fightIds) {
         await requireRosterMember(userId, fightId, database);
@@ -961,10 +1009,10 @@ export async function createFeedPosts(
         );
     }
 
-    const broadcast = includeMain;
-    const wantedTags = [...new Set(input.tagged_user_ids)].filter(
-        (id) => id !== userId,
-    );
+    const broadcast = includeMain || includeBroadcast;
+    const wantedTags = includeBroadcast
+        ? []
+        : [...new Set(input.tagged_user_ids)].filter((id) => id !== userId);
     const createdIds = await database.begin("read write", async (sql) => {
         const mediaIds = await preparePostMedia(userId, input.media_ids, sql);
         const tagIds =
@@ -1008,30 +1056,44 @@ export async function createFeedPosts(
                             and fight.state = 'final'
                     `
                     ).map((row) => row.user_id);
-        const createdId =
-            fightIds.length > 0
-                ? await insertFightPost(
-                      userId,
-                      "fight",
-                      fightIds[0] ?? null,
-                      input.body,
-                      mediaIds,
-                      tagIds,
-                      fightIds,
-                      broadcast,
-                      sql,
-                  )
-                : await insertFightPost(
-                      userId,
-                      "main",
-                      null,
-                      input.body,
-                      mediaIds,
-                      tagIds,
-                      [],
-                      broadcast,
-                      sql,
-                  );
+        const createdId = includeBroadcast
+            ? await insertFightPost(
+                  userId,
+                  "main",
+                  null,
+                  input.body,
+                  mediaIds,
+                  [],
+                  [],
+                  true,
+                  true,
+                  sql,
+              )
+            : fightIds.length > 0
+              ? await insertFightPost(
+                    userId,
+                    "fight",
+                    fightIds[0] ?? null,
+                    input.body,
+                    mediaIds,
+                    tagIds,
+                    fightIds,
+                    broadcast,
+                    false,
+                    sql,
+                )
+              : await insertFightPost(
+                    userId,
+                    "main",
+                    null,
+                    input.body,
+                    mediaIds,
+                    tagIds,
+                    [],
+                    broadcast,
+                    false,
+                    sql,
+                );
         for (const destinationFightId of fightIds) {
             await enqueueFightFeedPostNotifications(sql, {
                 fightId: destinationFightId,

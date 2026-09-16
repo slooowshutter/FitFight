@@ -200,7 +200,8 @@ final class FeedStore: ObservableObject {
             )
             guard session.authSession?.user.id == userID, cachedUserID == userID else { return false }
             error = nil
-            await load(session: session, fightID: lastFightID)
+            let reloadFightID = destinations.contains(where: { $0.type == "broadcast" }) ? nil : lastFightID
+            await load(session: session, fightID: reloadFightID)
             return true
         } catch {
             if Task.isCancelled || error is CancellationError { return false }
@@ -422,6 +423,7 @@ struct FeedView: View {
 
 struct FeedComposeSheet: View {
     var defaultFightID: UUID? = nil
+    var broadcastOnly: Bool = false
     var onPosted: (() -> Void)? = nil
 
     @EnvironmentObject private var model: AppModel
@@ -431,11 +433,14 @@ struct FeedComposeSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var destinations: Set<FeedPostDestination>
 
-    init(defaultFightID: UUID? = nil, onPosted: (() -> Void)? = nil) {
+    init(defaultFightID: UUID? = nil, broadcastOnly: Bool = false, onPosted: (() -> Void)? = nil) {
         self.defaultFightID = defaultFightID
+        self.broadcastOnly = broadcastOnly
         self.onPosted = onPosted
         _destinations = State(
-            initialValue: defaultFightID.map { Set([FeedPostDestination.fight($0)]) } ?? []
+            initialValue: broadcastOnly
+                ? Set([FeedPostDestination.broadcast])
+                : defaultFightID.map { Set([FeedPostDestination.fight($0)]) } ?? []
         )
     }
 
@@ -446,7 +451,7 @@ struct FeedComposeSheet: View {
     var body: some View {
         FFScreen(clearance: false) {
             HStack {
-                Text(String(localized: "New post"))
+                Text(broadcastOnly ? String(localized: "Broadcast") : String(localized: "New post"))
                     .ffType(.title)
                     .foregroundStyle(theme.text)
                 Spacer()
@@ -454,11 +459,20 @@ struct FeedComposeSheet: View {
                     .ffType(.label)
                     .foregroundStyle(theme.mossText)
             }
-            Text("Your post will only appear in the channels you select. You can choose more than one.")
+            Text(
+                broadcastOnly
+                    ? String(localized: "This post appears on Feed for everyone signed in.")
+                    : "Your post will only appear in the channels you select. You can choose more than one."
+            )
                 .ffType(.caption)
                 .foregroundStyle(theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
-            if fights.isEmpty && defaultFightID == nil {
+            if broadcastOnly {
+                FightPostComposer(destinations: Array(destinations)) {
+                    onPosted?()
+                    dismiss()
+                }
+            } else if fights.isEmpty && defaultFightID == nil {
                 FFCard {
                     Text(String(localized: "Join a fight first, then post from here."))
                         .ffType(.body)
@@ -987,18 +1001,21 @@ struct FightPostCard: View {
                     .onTapGesture {
                         onOpen?()
                     }
-                    Button {
-                        showActions = true
-                    } label: {
-                        Image(systemName: "ellipsis")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(theme.textFaint)
-                            .frame(width: 32, height: 20)
-                            .frame(height: 38, alignment: .top)
-                            .contentShape(Rectangle())
+                    HStack(alignment: .top, spacing: 0) {
+                        TextTranslationButton(text: post.body)
+                        Button {
+                            showActions = true
+                        } label: {
+                            Image(systemName: "ellipsis")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(theme.textFaint)
+                                .frame(height: 20)
+                                .frame(width: 44, height: 44, alignment: .top)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(FFHapticPlainStyle())
+                        .accessibilityLabel(String(localized: "Post actions"))
                     }
-                    .buttonStyle(FFHapticPlainStyle())
-                    .accessibilityLabel(String(localized: "Post actions"))
                 }
                 if !post.tags.isEmpty {
                     Text(post.tags.map { "@\($0.handle)" }.joined(separator: " "))

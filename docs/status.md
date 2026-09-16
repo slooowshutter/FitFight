@@ -87,6 +87,60 @@ then distribute the native build through preview. Production needs its own
 authorized rollout and checks. A two-device live comment/tap check remains.
 The specific reported missing comment is not confirmed without both phones'
 build/environment labels; staging and production use separate databases.
+## Post and comment translation prepared, 16 Sep 2026
+
+**Code:** Feed and fight-thread posts, comments, and replies have an A speech-bubble
+translation icon at the top right, immediately left of the ellipsis. Apple's
+[`NLLanguageRecognizer`](https://developer.apple.com/documentation/naturallanguage/nllanguagerecognizer) detects the text's language on device before displaying the
+icon. It appears only when the detected language differs from the first language
+in `Locale.preferredLanguages`; regional variants count as the same language.
+Empty text, text without letters, and unrecognized languages have no icon.
+Detection is best-effort for short or mixed-language text. Tapping opens Apple's system translation sheet,
+which chooses a target from the reader's language preferences and lets them change
+it. Original content stays intact. The control uses the existing theme, a 44-point
+tap target, an English/French accessibility label, and a `1.1.1` release note. It is
+available on iOS 17.4+ and hidden on earlier supported iOS versions, matching
+[Apple's translation API](https://developer.apple.com/documentation/swiftui/view/translationpresentation(ispresented:text:attachmentanchor:arrowedge:replacementaction:)).
+The English simulator preview keeps Bertille's first post in French so the icon
+can be inspected alongside English posts where it stays hidden.
+
+**Checks:** localization, native API-boundary, Xcode project-file syntax, and
+whitespace checks passed. Cloud iOS compilation and physical-device translation
+checks are pending. Verify icon visibility for same/different languages and regional
+variants, both English/French translation directions, target-language changes, and
+dismissal back to the unchanged post or comment on a device.
+
+**Live deployment:** not deployed. No API contract, native API model, or database
+schema changed. No merge, TestFlight upload, or production deployment was made.
+
+## Marc broadcast posts, 16 Sep 2026
+
+**Contract:** `POST /api/v1/feed/posts` accepts `{ "type": "broadcast" }` as a
+lone destination. Only username `marc` (same You → Developer gate) can create
+it. The row is `audience=main`, `app_wide=true`, no fight channels. `GET /api/v1/feed`
+with no scope now also returns those rows to every signed-in caller. Old
+`main` / `fight` requests and response shapes stay the same. No lock-screen
+intent is queued; existing `feed_post` alerts still cover fight-channel posts
+only.
+
+**Checks:** workspace TypeScript and feed unit tests. Migration is additive.
+No hosted `db push`. Not on TestFlight until an authorized `preview` merge.
+
+## PGG7 app-wide invite: prepared 16 Sep 2026
+
+**Contract:** `POST /api/v1/fights/refresh` and `POST /api/v1/fights/snapshot` stay on `/api/v1`. Request and response shapes are unchanged except `alreadyMember` on joinable/suggested summaries is now true for pending invitees as well as accepted/deferred members. Older apps already treat `alreadyMember` as "open this fight," so a tap on New opens the existing Accept invitation. After auth, the backend invites the caller to `PGG7` and every currently suggested fight when they have no membership row. Marking a series suggested invites every active profile the same way.
+
+**Choice:** join-by-code still requires an explicit Join. Auto-invite creates the same pending invite the username-invite path already shows on Fights. Suggested fights were already listed on New from `GET /api/v1/fights/suggested`.
+
+**Notifications:** invite pushes did not exist (feed post/reaction kinds did). Additive migration `20260916210000_fight_invite_notifications.sql` allows `fight_invite` outbox rows with a personalized `alert_body` that names the person and fight and includes no scores. Existing clients already open `/fights/{id}` from the payload. No new preference toggle.
+
+**Supported builds checked:** read-only `https://staging.fitfight.app/api/app-release` on 16 Sep 2026 returned `latest` 1.1.1 (201) with `enforced: false` (`review`/`internal` null). Staging still has installed users on older binaries while enforcement is off. Those clients already render `invited` rows and suggested New rows. No required request field.
+
+**Staging evidence:** series `PGG7` exists as `EVERYBODY ON THE APP`, `joinable`, recurring, suggested, current fight `live`. Production was not queried from this change. If that code is absent in an environment, the lookup is a no-op and no fight is invented.
+
+**Deployment order:** apply the additive invite-notification migration and this backend to staging with `develop` first. Existing TestFlight builds pick up invites and the New-tab tap behavior on the next open/sync. The 1.1.1 changelog row ships only when this native change later reaches `preview`. No production deploy, `preview` merge, hosted `db push`, or TestFlight upload from this work.
+
+**Cloud checks vs live:** unit tests cover missing/closed/already-member/new-invite/suggested-everyone paths and invite copy against mocks. No hosted write, disposable migrated-database check, or signed-in device verification was run here.
 
 ## Production rollout and App Store submission, 16 Sep 2026
 
@@ -291,6 +345,30 @@ for `/api/app-release`; its health response lacks `profile_api`. These live resu
 take precedence over older availability descriptions below. Preview is still at
 `025f55c`; the newest develop fixes have not been uploaded to TestFlight yet.
 
+## Fight chart views from stored scores: prepared 16 Sep 2026
+
+**Code:** Oval already plots `fight_members` scores. Bars, line, histogram, and
+pace now use that same stored revision: HealthKit `step_checkpoints` when the
+latest snapshot has them, otherwise one point per Fight day from
+`private.fight_score_snapshots.value`. Calendar `step_days` stay unused. Native
+`dayCards` charts whoever already matches and leaves a gap for everyone else.
+If no daily history is attached, those views plot the same totals as Oval.
+A HealthKit last-day stamp uses the current Fight day, not `cutoff - 1ms`.
+
+**Compatibility:** `/api/v1` remains. `members[].step_checkpoints` stays nullable
+and additive. Older clients ignore extra populated history. Required fields,
+legacy uploads, and client permissions are unchanged. No schema migration.
+
+**Checks:** native chart regressions cover mixed/legacy peers, stale history,
+totals fallback, and a cutoff 1ms after Fight-day midnight. Backend snapshot
+tests cover preferring real checkpoints, synthesizing score-only days, and
+leaving `step_days` unused. Cloud CI on this branch is the remaining evidence.
+No hosted database mutation or TestFlight upload.
+
+**Deployment:** prepare only. Deploy the compatible backend, then distribute
+the app through the authorized `preview` flow. Do not infer production
+readiness from staging.
+
 ## Fight charts and standings: prepared 15 Sep 2026
 
 **Code:** all Fight charts now use the same confirmed score revision as standings.
@@ -487,6 +565,21 @@ This is native navigation only. Existing vote ordering, request creation, API
 contracts, and database schema are unchanged. No deployment or TestFlight upload
 was performed.
 
+## Feed comment order: prepared 16 Sep 2026
+
+Feed post comment threads now show an on-thread **Most comments** / **Most recent**
+control. Default is **Most comments**. This is not a new tab and does not change
+Feedback comments or the Feed post list.
+
+**Contract:** additive optional `sort=comments|recent` on
+`GET /api/v1/posts/{postID}/comments`. Omitted `sort` keeps the installed oldest-first
+page. Response shape is unchanged. No database migration. No app-facing RPC.
+
+**Live rollout check:** staging `/api/app-release` on 16 Sep 2026 returned
+`latest` **1.1.1 (201)**, `review`/`internal` null, `enforced: false`. Preserve that
+omitted-sort contract for admitted clients. Production readiness is recorded in the
+production rollout section above. This change is not deployed yet.
+
 ## Post reactions and expanded comments: prepared 15 Sep 2026
 
 Feed and fight posts now offer **View reactions**, listing usernames, display names,
@@ -648,7 +741,7 @@ Apple Health synchronization requires `FITFIGHT_API_URL=https://staging.fitfight
 
 After the backend is configured, merge the feature PR into **`develop`**, not `main`. The staging migration must land before merging `develop` → `preview` for the TestFlight build.
 
-The 9 Sep Feed destinations change needs `20260909233000_feed_destinations_and_engagement.sql` plus the feed/posts, people, comments, and reactions APIs deployed before the native build. Old `GET /api/v1/feed` still returns only fight-audience posts so installed builds keep decoding. The 12 Sep one-feed list uses `GET /api/v1/feed?scope=all` (Main and fight posts). Current Feed uses `GET /api/v1/feed` with no scope (fight posts from membership only).
+The 9 Sep Feed destinations change needs `20260909233000_feed_destinations_and_engagement.sql` plus the feed/posts, people, comments, and reactions APIs deployed before the native build. Old `GET /api/v1/feed` still returns only fight-audience posts so installed builds keep decoding. The 12 Sep one-feed list uses `GET /api/v1/feed?scope=all` (Main and fight posts). Current Feed uses `GET /api/v1/feed` with no scope (fight posts from membership only), plus Marc `app_wide` broadcasts after `20260916204500_feed_app_wide_broadcast.sql`.
 
 Verify the minimal product alongside Apple Health synchronization:
 
@@ -684,7 +777,7 @@ The native Fight path uses the API to create and join; Apple Health synchronizat
 | Versions                | Works under You → Settings (the public changelog). The version label is only on You. Do not put it on Fights, New, Feed, or Feedback. Tapping it opens the admin/debug menu only for signed-in username `marc`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | Bugs & requests         | Works on the Feedback tab (Bugs, Top, and Report), with a shortcut still on You above Settings. Signed-in people can post a bug or a feature request, attach a photo, a video, or any file, browse the board, upvote, and comment with their username. Device/debug metadata is stored when someone posts or comments, omitted from the board API, and attached again when Marc taps Send to Cursor (original snapshot plus the phone that sent it, plus attachment links). After `NOTION_TOKEN` is on Vercel, each new post also lands as a P0 Inbox row in the Product Backlog. After `CURSOR_API_KEY` is on Vercel, Marc sees **Send to Cursor** on a post and can start a cloud agent with the post, comments, those device snapshots, and attachment URLs. A successful send moves the matching Notion Product Backlog row to Building; when that agent finishes and opens a PR, FitFight marks the same row Done.                                                                                                                                                                                                                                                                                                                                                                           |
 | Privacy / Support       | Pages are implemented and linked under You → Settings. Staging uses `staging.fitfight.app`; production uses `fitfight.app`. Each route must be deployed before that build is tested or submitted.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| Fight posts / Feed      | Accepted and waiting-next-round members can post a short note, up to four photos, or one short video. Root Feedback → Feed is the same fight posts list as before (not a Recent/Top ranking of loaded posts). Root + chooses a new post or a new request. Media can take a photo with the camera or pick photos and video from the library. Posting to several fights keeps one post and shows those fight names; All fights shows Public. A fight’s Feed tab starts on that fight and can add other channels. There is no Main destination or tag-people picker. Each card puts its plain channel label, then the relative time, beneath the author, with actions at the top right. Posts support emoji reactions, nested comments, editing/deleting your own post, reporting another post and hiding its author. Other members of that fight can get a push when you post in that fight’s Feed; the post author can get comments and reactions; a reply notifies the parent commenter, not sibling commenters. You → Settings → Notifications turns each of those on or off, plus challenge reminders and daily status. Fight detail opens on Stats, with Feed, Share and recurring History alongside it. Recurring fights retain earlier posts; invited-only people gain access after joining. |
+| Fight posts / Feed      | Marc (username `marc`, You → Developer) can post one Broadcast that every signed-in user sees on the Feed tab; it is a normal post, not copied into each Fight, and it does not send a new lock-screen alert. Accepted and waiting-next-round members can post a short note, up to four photos, or one short video. Root Feedback → Feed is the same fight posts list as before (not a Recent/Top ranking of loaded posts). Root + chooses a new post or a new request. Media can take a photo with the camera or pick photos and video from the library. Posting to several fights keeps one post and shows those fight names; All fights shows Public. A fight’s Feed tab starts on that fight and can add other channels. There is no Main destination or tag-people picker. Each card puts its plain channel label, then the relative time, beneath the author, with actions at the top right. Posts support emoji reactions, nested comments, editing/deleting your own post, reporting another post and hiding its author. Other members of that fight can get a push when you post in that fight’s Feed; the post author can get comments and reactions; a reply notifies the parent commenter, not sibling commenters. You → Settings → Notifications turns each of those on or off, plus challenge reminders and daily status. Fight detail opens on Stats, with Feed, Share and recurring History alongside it. Recurring fights retain earlier posts; invited-only people gain access after joining. |
 | Companion               | Saved on the account. Pick from a grid of animals, or Custom with one description (species, breed, accessories, colors). That text is stored for later image generation; generation is not built. Other people see the stock animal, or initials until a custom image exists. People who have not chosen an animal are asked the next time they open a build that includes this. Pose and generation controls are not shown.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | Account deletion        | Permanently deletes the profile, photos, username, authentication, Health/Steps data, relationships, invitations, memberships, scores, owned Fights, fight posts, and bugs/requests the User posted; removes participation from other Fights; clears local Health sync state; and revokes a stored Apple credential when available.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | WHOOP / Strava          | Not built                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |

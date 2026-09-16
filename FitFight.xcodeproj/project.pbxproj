@@ -64,6 +64,7 @@
         A10000000000000000000361 /* Media.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000360 /* Media.swift */; };
         A10000000000000000000363 /* MediaUploader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000362 /* MediaUploader.swift */; };
         A10000000000000000000365 /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000364 /* FeedView.swift */; };
+        A10000000000000000000433 /* TextTranslationButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000432 /* TextTranslationButton.swift */; };
         A10000000000000000000425 /* FeedbackTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000424 /* FeedbackTabView.swift */; };
         A10000000000000000000367 /* HealthOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000366 /* HealthOnboardingView.swift */; };
         A10000000000000000000369 /* FightDayCharts.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000368 /* FightDayCharts.swift */; };
@@ -149,6 +150,7 @@
         A10000000000000000000360 /* Media.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Media.swift; sourceTree = "<group>"; };
         A10000000000000000000362 /* MediaUploader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaUploader.swift; sourceTree = "<group>"; };
         A10000000000000000000364 /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
+        A10000000000000000000432 /* TextTranslationButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextTranslationButton.swift; sourceTree = "<group>"; };
         A10000000000000000000424 /* FeedbackTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedbackTabView.swift; sourceTree = "<group>"; };
         A10000000000000000000366 /* HealthOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthOnboardingView.swift; sourceTree = "<group>"; };
         A10000000000000000000368 /* FightDayCharts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FightDayCharts.swift; sourceTree = "<group>"; };
@@ -210,6 +212,7 @@
                 A10000000000000000000412 /* RemoteImage.swift */,
                 A10000000000000000000364 /* FeedView.swift */,
                 FB2026091621080000000002 /* FeedActivity.swift */,
+                A10000000000000000000432 /* TextTranslationButton.swift */,
                 A10000000000000000000424 /* FeedbackTabView.swift */,
                 A10000000000000000000372 /* FightPostThread.swift */,
                 A10000000000000000000366 /* HealthOnboardingView.swift */,
@@ -417,6 +420,7 @@
                 A10000000000000000000413 /* RemoteImage.swift in Sources */,
                 A10000000000000000000365 /* FeedView.swift in Sources */,
                 FB2026091621080000000001 /* FeedActivity.swift in Sources */,
+                A10000000000000000000433 /* TextTranslationButton.swift in Sources */,
                 A10000000000000000000425 /* FeedbackTabView.swift in Sources */,
                 A10000000000000000000379 /* PushNotificationService.swift in Sources */,
                 A10000000000000000000381 /* NotificationOnboardingView.swift in Sources */,

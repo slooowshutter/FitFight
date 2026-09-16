@@ -88,13 +88,16 @@ test("activity retains membership history, links older posts, and enforces curre
     await database`insert into public.fight_post_comments ${database(pageCommentIds.map((id) => ({
         id, post_id: newerPostId, author_id: peer, body: 'A paginated comment',
     })))}`;
-    const firstComments = await listFightPostComments(owner, newerPostId, { limit: 40 }, database);
-    assert.equal(firstComments.comments.length, 40);
-    assert.ok(firstComments.next_cursor);
-    for (const cursor of [firstComments.next_cursor, firstComments.next_cursor.replace(/(\.\d{3})\d+Z/, '$1Z')]) {
-        const secondComments = await listFightPostComments(owner, newerPostId, { limit: 40, cursor }, database);
-        assert.deepEqual(secondComments.comments.map((c) => c.id), pageCommentIds.slice(40));
-        assert.equal(secondComments.next_cursor, null, 'Targeted comments must reach the last page with both new and legacy cursors');
+    for (const sort of [undefined, 'recent', 'comments'] as const) {
+        const expected = sort === undefined ? pageCommentIds : [...pageCommentIds].reverse();
+        const firstComments = await listFightPostComments(owner, newerPostId, { limit: 40, sort }, database);
+        assert.equal(firstComments.comments.length, 40);
+        assert.ok(firstComments.next_cursor);
+        for (const cursor of [firstComments.next_cursor, firstComments.next_cursor.replace(/(\.\d{3})\d+Z/, '$1Z')]) {
+            const secondComments = await listFightPostComments(owner, newerPostId, { limit: 40, cursor, sort }, database);
+            assert.deepEqual(secondComments.comments.map((c) => c.id), expected.slice(40));
+            assert.equal(secondComments.next_cursor, null, 'Targeted comments must reach the last page in every sort with new and legacy cursors');
+        }
     }
     await database`update public.fight_posts set created_at = '2026-09-15T00:00:00.123456Z'::timestamptz where id in (${postId}, ${newerPostId})`;
     const tiedPosts = await listFightPosts(owner, undefined, { limit: 1 }, database);

@@ -1378,10 +1378,12 @@ final class AppModel: ObservableObject {
         let racers = standings.filter { !$0.invited && !$0.deferred }
         var histories: [String: [FightStepCheckpoint]] = [:]
         for row in racers {
-            guard let points = members.first(where: { $0.userId.uuidString == row.person.id })?.stepCheckpoints,
-                  let last = points.last, Double(last.steps) == row.score else { return [] }
+            guard let personID = UUID(uuidString: row.person.id),
+                  let points = members.first(where: { $0.userId == personID })?.stepCheckpoints,
+                  let last = points.last, Double(last.steps) == row.score else { continue }
             histories[row.person.id] = points
         }
+        guard !histories.isEmpty else { return [] }
         let days = Set(histories.values.flatMap { $0.map(\.day) }).sorted()
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)

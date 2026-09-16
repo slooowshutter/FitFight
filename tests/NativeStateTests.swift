@@ -9,7 +9,9 @@ struct TestClient { var auth: TestAuth }
 enum TestFailure: Error { case offline }
 enum FitFightAPIError: Error { case http(status: Int, code: String?, message: String?) }
 struct UIImage {}
-struct FeedPostDestination {}
+struct FeedPostDestination {
+    var type: String = ""
+}
 struct TestMedia { let id: UUID }
 
 @MainActor enum MediaUploader {
@@ -81,13 +83,20 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
 }
 
 @MainActor final class FitFightAPI {
+    static var commentRequests: [(sort: FightPostCommentSort, cursor: String?)] = []
     static var commentLists: [CheckedContinuation<FitFightFightPostCommentList, Error>] = []
     static var commentCreations: [CheckedContinuation<FitFightFightPostCommentResponse, Error>] = []
     static var commentDeletions: [CheckedContinuation<FitFightFightPostCommentDeletion, Error>] = []
     static var commentReports: [CheckedContinuation<Void, Error>] = []
 
-    func fightPostComments(postID: UUID, cursor: String?, accessToken: String) async throws -> FitFightFightPostCommentList {
-        try await withCheckedThrowingContinuation { Self.commentLists.append($0) }
+    func fightPostComments(
+        postID: UUID,
+        cursor: String?,
+        accessToken: String,
+        sort: FightPostCommentSort = .comments
+    ) async throws -> FitFightFightPostCommentList {
+        Self.commentRequests.append((sort, cursor))
+        return try await withCheckedThrowingContinuation { Self.commentLists.append($0) }
     }
     func createFightPostComment(postID: UUID, body: String, parentID: UUID?, accessToken: String) async throws -> FitFightFightPostCommentResponse {
         try await withCheckedThrowingContinuation { Self.commentCreations.append($0) }
@@ -194,6 +203,7 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
     var replyTo: FitFightFightPostComment?
     var draft = ""
     var nextCursor: String?
+    var commentSort = FightPostCommentSort.comments
     var loading = false
     var loadingComments = false
     var open = false
@@ -479,6 +489,25 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
         check(mutations.posts == [post.updating(commentCount: 8)], "old-account edit and deletion responses cannot replace the new feed")
         check(mutations.isSaving && mutations.error == "New account error", "old-account completions preserve the new account's saving and error state")
 
+        let sortAuthor = FitFightFightPost.Author(userId: UUID(), handle: "test", displayName: "Test", avatar: nil)
+        let quiet = FitFightFightPostComment(
+            id: UUID(), postId: post.id, parentId: nil, body: "Quiet",
+            createdAt: "2026-09-16T12:00:00Z", author: sortAuthor, mine: false
+        )
+        let busy = FitFightFightPostComment(
+            id: UUID(), postId: post.id, parentId: nil, body: "Busy",
+            createdAt: "2026-09-16T11:00:00Z", author: sortAuthor, mine: false
+        )
+        let reply = FitFightFightPostComment(
+            id: UUID(), postId: post.id, parentId: busy.id, body: "Reply",
+            createdAt: "2026-09-16T11:30:00Z", author: sortAuthor, mine: false
+        )
+        let sortThread = FightPostThreadState(post: post)
+        sortThread.comments = [quiet, busy, reply]
+        check(sortThread.rowsForTest().map(\.0) == [busy.id, reply.id, quiet.id], "most comments shows the busiest thread first")
+        sortThread.commentSort = .recent
+        check(sortThread.rowsForTest().map(\.0) == [quiet.id, busy.id, reply.id], "most recent shows the newest root first")
+
         let thread = FightPostThreadState(post: post)
         let orphan = FitFightFightPostComment(
             id: UUID(), postId: post.id, parentId: UUID(), body: "Visible reply to hidden author",
@@ -514,6 +543,20 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
         FitFightAPI.commentLists.removeFirst().resume(returning: .init(comments: [orphan, child, grandchild], nextCursor: nil))
         await duringRead.value
         check(refreshedThread.comments.contains(grandchild), "a comment arriving during a read queues another read")
+
+        let changingSort = Task { await refreshedThread.loadForTest() }
+        while FitFightAPI.commentLists.isEmpty { await Task.yield() }
+        refreshedThread.commentSort = .recent
+        refreshedThread.sortChangedForTest()
+        while !refreshedThread.reloadComments { await Task.yield() }
+        FitFightAPI.commentLists.removeFirst().resume(returning: .init(comments: [orphan], nextCursor: "old-sort"))
+        while FitFightAPI.commentLists.isEmpty { await Task.yield() }
+        check(FitFightAPI.commentRequests.last?.sort == .recent && FitFightAPI.commentRequests.last?.cursor == nil,
+              "a sort change restarts the first page instead of reusing the previous order's cursor")
+        check(refreshedThread.comments.contains(grandchild), "an older sort response cannot replace the displayed comments")
+        FitFightAPI.commentLists.removeFirst().resume(returning: .init(comments: [grandchild, child, orphan], nextCursor: nil))
+        await changingSort.value
+        check(refreshedThread.comments.first?.id == grandchild.id, "the queued refresh uses the current comment order")
 
         let pagedThread = FightPostThreadState(post: post.updating(commentCount: 3))
         pagedThread.targetCommentID = grandchild.id

@@ -11,6 +11,8 @@ import {
     createFight,
     createFightSchema,
 } from "@/lib/supabase/queries/create-fight-supabase-query";
+import { createDatabaseClient } from "@/lib/supabase/postgres";
+import { processNotificationOutbox } from "@/lib/supabase/queries/process-notification-outbox-supabase-query";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,7 +30,9 @@ export const POST = apiRoute(async (request) => {
         );
     }
     const body = createFightSchema.parse(await readJson(request));
-    const fight = await createFight(userId, body);
+    const sql = createDatabaseClient();
+    const fight = await createFight(userId, body, sql);
+    await processNotificationOutbox(new Date(), sql);
     return json(fight, 201);
 });
 

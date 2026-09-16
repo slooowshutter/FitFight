@@ -1,6 +1,26 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Joined": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Inscrit"
+                    }
+                }
+            }
+        },
+        "Skip": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Passer"
+                    }
+                }
+            }
+        },
         "Suggested Fights": {
             "localizations": {
                 "en": {

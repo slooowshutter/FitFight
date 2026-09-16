@@ -2,6 +2,9 @@ import { z } from "zod";
 import { companionIdSchema } from "@/lib/types/companions/companion";
 import { recordTimestampSchema } from "./profile-results";
 
+export const profileCountRowSchema = z.object({ n: z.number().int().nonnegative() });
+export const profileIdentifierRowSchema = z.object({ id: z.string().uuid() });
+
 export const profileUserIDSchema = z.string().uuid().transform((value) => value.toLowerCase());
 
 export const profileAudienceValues = ["private", "public"] as const;
@@ -146,3 +149,6 @@ export type ProfilePreviewAudience = (typeof profilePreviewAudienceValues)[numbe
 export type ProfileAccess = { identity: boolean; record: boolean; activity: boolean; shared: boolean };
 
 export type ProfileRivalrySummary = z.infer<typeof profileRivalrySummarySchema>;
+
+export type ProfileCountRow = z.infer<typeof profileCountRowSchema>;
+export type ProfileIdentifierRow = z.infer<typeof profileIdentifierRowSchema>;

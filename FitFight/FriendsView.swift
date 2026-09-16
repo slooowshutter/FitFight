@@ -63,7 +63,7 @@ struct FriendsView: View {
     }
 
     private func personRow(_ person: SharedProfileIdentity, source: String) -> some View {
-        ProfileIdentityLink(userID: person.userId, source: source, onClosed: { Task { await load() } }) {
+        ProfileIdentityLink(userID: person.userId, source: source, onClosed: { found = nil; Task { await load() } }) {
             FFCard {
                 HStack(spacing: 12) {
                     CompanionAvatar(personID: person.userId.uuidString, companionID: person.companionId, isYou: false, monogram: person.initials, photoURL: person.avatarUrl, size: 44)

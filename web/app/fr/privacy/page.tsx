@@ -140,12 +140,13 @@ export default function PrivacyPage() {
                         noms d’utilisateur, le total agrégé de pas du défi, les
                         totaux quotidiens affichés dans le graphique, le
                         classement, le gage et la durée. Ils ne reçoivent jamais
-                        les échantillons Santé bruts ni l’historique Santé sans
-                        rapport avec le défi d’un autre participant.
+                        les échantillons Santé bruts. Les pas quotidiens hors du
+                        Fight ne sont partagés qu’avec les réglages séparés
+                        décrits ci-dessous.
                     </p>
                 </section>
 
-                <section>
+                <section id="profiles">
                     <h2>Profils, amis et partage facultatif</h2>
                     <p>
                         Les profils sont privés et en mode détente par défaut.

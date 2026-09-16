@@ -287,15 +287,15 @@ struct FightComposerPeoplePage: View {
                         HStack(spacing: 12) {
                             ProfileIdentityLink(userID: UUID(uuidString: person.id), source: "participants") {
                                 HStack(spacing: 12) {
-                            FFAvatar(monogram: String(person.handle.prefix(2)).uppercased(), size: 36)
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(verbatim: person.name)
-                                    .ffType(.rowTitle)
-                                    .foregroundStyle(theme.text)
-                                Text(person.subtitle(createMode: createMode))
-                                    .ffType(.caption)
-                                    .foregroundStyle(person.isOwner ? theme.mossText : (createMode || person.pendingAdd ? theme.mossText : theme.textSecondary))
-                            }
+                                    FFAvatar(monogram: String(person.handle.prefix(2)).uppercased(), size: 36)
+                                    VStack(alignment: .leading, spacing: 1) {
+                                        Text(verbatim: person.name)
+                                            .ffType(.rowTitle)
+                                            .foregroundStyle(theme.text)
+                                        Text(person.subtitle(createMode: createMode))
+                                            .ffType(.caption)
+                                            .foregroundStyle(person.isOwner ? theme.mossText : (createMode || person.pendingAdd ? theme.mossText : theme.textSecondary))
+                                    }
                                 }
                             }
                             Spacer(minLength: 8)

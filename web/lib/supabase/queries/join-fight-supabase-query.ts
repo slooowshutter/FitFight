@@ -1,3 +1,4 @@
+import { profileCountRowSchema } from "@/lib/types/profiles/shared-profile";
 import { lockFightSeries } from "./fight-series-lock-supabase-query";
 import type { Sql } from "postgres";
 import { isJoinCode, normalizeJoinCode } from "@/lib/domain/fights/join-code";
@@ -23,7 +24,7 @@ import {
 } from "@/lib/types/fights/joinable-fight-list";
 import { joiningFightRowSchema, joiningSeriesRowSchema, joiningMemberRowSchema } from "@/lib/types/fights/joinable-fight";
 import { ensureAppleHealthSource } from "./apple-health-source-supabase-query";
-import { fightSummary, loadSeries } from "./fight-access-supabase-query";
+import { loadSeries } from "./fight-access-supabase-query";
 import { mintNextRecurringFight } from "./mint-recurring-fight-supabase-query";
 import { recalculateFight } from "./recalculate-fight-supabase-query";
 
@@ -97,7 +98,7 @@ async function currentJoinableFight(
         !series.paused_at &&
         Date.parse(fight.ends_at) <= now.getTime()
     ) {
-        const nextId = await mintNextRecurringFight(fight.id, admin, now);
+        const nextId = await mintNextRecurringFight(fight.id, now);
         if (nextId && nextId !== fight.id) {
             const { data: nextData, error: nextError } = await admin
                 .from("fights")
@@ -254,7 +255,7 @@ export async function listJoinableFights(
             !row.paused_at &&
             Date.parse(fight.ends_at) <= now.getTime()
         ) {
-            const nextId = await mintNextRecurringFight(fight.id, admin, now);
+            const nextId = await mintNextRecurringFight(fight.id, now);
             if (nextId && nextId !== fight.id) {
                 const { data: nextData, error: nextError } = await admin
                     .from("fights")
@@ -451,7 +452,7 @@ export async function joinFight(
         `);
         if (members[0]?.state === "accepted" || members[0]?.state === "deferred") return { id: current.id, state: current.state };
         const [count] = await transaction`select count(*)::int n from public.fight_members where fight_id = ${current.id} and state in ('accepted', 'deferred')`;
-        if (count.n >= JOINABLE_MEMBER_CAP) throw new ApiError(409, ERROR_CODES.fight_full, "This fight is full");
+        if (profileCountRowSchema.parse(count).n >= JOINABLE_MEMBER_CAP) throw new ApiError(409, ERROR_CODES.fight_full, "This fight is full");
         const memberState = fightJoinMemberState(input.start, canDeferFightJoin({
             recurring: currentSeries.recurring, paused: currentSeries.paused_at !== null,
             startsAt: current.starts_at.toISOString(), timeZone: current.time_zone, now,

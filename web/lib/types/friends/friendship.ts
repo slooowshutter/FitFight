@@ -19,6 +19,9 @@ export const friendshipRowSchema = z.object({
     state: z.enum(["pending", "accepted"]),
 });
 
+export const profileFriendListRowSchema = sharedIdentitySchema.extend(friendshipRowSchema.shape).extend({ avatar_path: z.string().nullable() });
+export type ProfileFriendListRow = z.infer<typeof profileFriendListRowSchema>;
+
 export type FriendshipAction = (typeof friendshipActionValues)[number];
 export type FriendshipResponse = z.infer<typeof friendshipResponseSchema>;
 export type FriendsQuery = z.infer<typeof friendsQuerySchema>;

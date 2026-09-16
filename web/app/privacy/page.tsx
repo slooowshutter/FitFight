@@ -138,7 +138,7 @@ export default function PrivacyPage() {
                     </p>
                 </section>
 
-                <section>
+                <section id="profiles">
                     <h2>Profiles, Friends, and optional sharing</h2>
                     <p>
                         Profiles start Private and Casual. Your name, username,

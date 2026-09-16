@@ -1,3 +1,4 @@
+import { profileCountRowSchema } from "@/lib/types/profiles/shared-profile";
 import type { Sql } from "postgres";
 import { canDeferFightJoin, fightJoinMemberState } from "@/lib/domain/fights/join-start";
 import { ApiError } from "@/lib/http";
@@ -40,7 +41,7 @@ export async function acceptFightParticipation(
         if (!tokenHash && member?.state !== "invited") throw new ApiError(409, "conflict", "This membership cannot be accepted");
         if (series && (series.paused_at || series.current_fight_id !== fightId)) throw new ApiError(409, "conflict", "Fight is no longer joinable");
         const [capacity] = await sql`select count(*)::int n from public.fight_members where fight_id = ${fightId} and state in ('accepted', 'deferred')`;
-        if (capacity.n >= 50) throw new ApiError(409, "fight_full", "This fight is full");
+        if (profileCountRowSchema.parse(capacity).n >= 50) throw new ApiError(409, "fight_full", "This fight is full");
         const state = fightJoinMemberState(start, canDeferFightJoin({
             recurring: series?.recurring ?? false, paused: series?.paused_at != null,
             startsAt: fight.starts_at.toISOString(), timeZone: fight.time_zone, now,

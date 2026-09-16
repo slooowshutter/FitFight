@@ -2,8 +2,9 @@ import type { Sql } from "postgres";
 import { randomUUID } from "node:crypto";
 import { ApiError } from "@/lib/http";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
-import { friendshipRowSchema, type FriendsPage, type FriendsQuery, type FriendshipAction, type FriendshipResponse } from "@/lib/types/friends/friendship";
-import { profileFeatureConfigSchema, sharedIdentitySchema } from "@/lib/types/profiles/shared-profile";
+import { profileFriendListRowSchema, friendshipRowSchema, type FriendsPage, type FriendsQuery, type FriendshipAction, type FriendshipResponse } from "@/lib/types/friends/friendship";
+import { profileFeatureConfigSchema } from "@/lib/types/profiles/shared-profile";
+import { signMediaUrl } from "./media-supabase-query";
 import { loadProfileAccess } from "./shared-profiles-supabase-query";
 
 /** A reverse request stays pending until its recipient explicitly accepts it. */
@@ -53,12 +54,13 @@ export async function changeFriendship(viewerId: string, targetId: string, actio
 export async function listProfileFriends(userId: string, query: FriendsQuery, database: Sql = createDatabaseClient()): Promise<FriendsPage> {
     return database.begin(async (sql) => {
         await sql`select user_id from public.profiles where user_id = ${userId} and deleted_at is null for share`;
-        const rows = await sql`
+        const rows = profileFriendListRowSchema.array().parse(await sql`
             select profile.user_id, profile.handle, profile.display_name, profile.companion_id, null avatar_url,
-                friendship.state, friendship.requester_id
+                friendship.state, friendship.requester_id, media.object_path avatar_path
             from private.profile_friendships friendship
             join public.profiles profile on profile.user_id = case when friendship.user_low = ${userId}
                 then friendship.user_high else friendship.user_low end
+            left join public.media_objects media on media.id = profile.avatar_media_id and media.status = 'ready'
             where (friendship.user_low = ${userId} or friendship.user_high = ${userId})
                 and profile.deleted_at is null
                 and not exists (
@@ -70,11 +72,14 @@ export async function listProfileFriends(userId: string, query: FriendsQuery, da
                         or (blocker_id = profile.user_id and blocked_id = ${userId})
                 )
             order by profile.user_id
-        `;
+        `);
         const filtered = rows.filter((row) => query.kind === "accepted" ? row.state === "accepted"
             : row.state === "pending" && (query.kind === "outgoing" ? row.requester_id === userId : row.requester_id !== userId));
         const afterCursor = filtered.filter((row) => !query.cursor || row.user_id > query.cursor);
-        const people = sharedIdentitySchema.array().parse(afterCursor.slice(0, query.limit));
+        const people = await Promise.all(afterCursor.slice(0, query.limit).map(async (row) => ({
+            user_id: row.user_id, handle: row.handle, display_name: row.display_name, companion_id: row.companion_id,
+            avatar_url: row.avatar_path ? await signMediaUrl(row.avatar_path) : null,
+        })));
         return {
             people,
             next_cursor: afterCursor.length > query.limit ? people[people.length - 1].user_id : null,

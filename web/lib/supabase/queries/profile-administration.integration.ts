@@ -13,6 +13,7 @@ import { mintNextRecurringFight } from "./mint-recurring-fight-supabase-query";
 import { departFightMemberships } from "./membership-departure-supabase-query";
 import { recordProfileView, readProfileMeasurements } from "./profile-events-supabase-query";
 import { updateProfileSettings } from "./shared-profiles-supabase-query";
+import { startFight } from "./start-fight-supabase-query";
 import { recalculateFight } from "./recalculate-fight-supabase-query";
 
 const env = databaseTestEnvironmentSchema.parse(process.env);
@@ -75,15 +76,21 @@ test("suggestions serialize privacy, joining, stopping and recurring roster chan
 
     await database`update public.fights set starts_at = now() - interval '3 hours', ends_at = now() - interval '1 hour' where id = ${fightId}`;
     const [nextId] = await Promise.all([
-        mintNextRecurringFight(fightId, admin, now, database),
+        mintNextRecurringFight(fightId, now, database),
         departFightMemberships(guest, fightId, guest, database),
     ]);
     assert.ok(nextId);
-    assert.equal(await mintNextRecurringFight(fightId, admin, now, database), nextId);
+    assert.equal(await mintNextRecurringFight(fightId, now, database), nextId);
     const [count] = await database`select count(*)::int n from public.fight_members where fight_id = ${nextId} and user_id = ${guest} and state = 'accepted'`;
     assert.equal(count.n, 0);
-    await administerFight(owner, nextId, { action: "stop_round" }, database);
-    assert.equal(await mintNextRecurringFight(nextId, admin, new Date(now.getTime() + 86400000), database), null);
+    await Promise.allSettled([
+        administerFight(owner, nextId, { action: "stop_round" }, database),
+        startFight(owner, nextId, "now", database),
+    ]);
+    const [stopped] = await database`select state::text from public.fights where id = ${nextId}`;
+    assert.equal(stopped.state, "cancelled");
+    await assert.rejects(startFight(owner, nextId, "now", database));
+    assert.equal(await mintNextRecurringFight(nextId, new Date(now.getTime() + 86400000), database), null);
     await database`update public.fights set state = 'final' where id = ${fightId}`;
     await assert.rejects(administerFight(owner, fightId, { action: "stop_round" }, database));
     const [final] = await database`select state::text from public.fights where id = ${fightId}`;

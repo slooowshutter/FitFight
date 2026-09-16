@@ -9,7 +9,6 @@ import { lockFightSeries } from "./fight-series-lock-supabase-query";
 /** Creates a round and copies its accepted series roster in one transaction. */
 export async function mintNextRecurringFight(
     previousFightId: string,
-    _admin = createAdminClient(),
     now: Date = new Date(),
     database: Sql = createDatabaseClient(),
 ): Promise<string | null> {
@@ -80,7 +79,7 @@ export async function mintDueRecurringFights(
         if (!currentId) {
             continue;
         }
-        const nextId = await mintNextRecurringFight(currentId, admin, now);
+        const nextId = await mintNextRecurringFight(currentId, now);
         if (nextId && nextId !== currentId) {
             minted.push(nextId);
         }

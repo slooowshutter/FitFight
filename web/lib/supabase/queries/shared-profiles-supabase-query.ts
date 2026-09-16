@@ -5,7 +5,7 @@ import { ApiError } from "@/lib/http";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import { fightRecordFactSchema, type FightRecordFact, type ProfileHistoryPage } from "@/lib/types/profiles/profile-results";
 import {
-    activityDaySchema, defaultProfileSettings, profileAccessRowSchema, profileFeatureConfigSchema,
+    profileCountRowSchema, profileIdentifierRowSchema, profileUserIDSchema, activityDaySchema, defaultProfileSettings, profileAccessRowSchema, profileFeatureConfigSchema,
     profileSettingsSchema, sharedProfileSchema,
     type ProfilePageQuery, type ProfilePreviewAudience, type ProfileSettings,
     type SharedIdentity, type SharedProfile, type UpdateProfileSettings, type ProfileRivalrySummary,
@@ -137,12 +137,12 @@ export async function readProfileHistory(
         const cursorIndex = query.cursor ? eligible.findIndex((fight) => fight.id === query.cursor) : -1;
         if (query.cursor && cursorIndex === -1) throw new ApiError(400, "validation", "Invalid history cursor");
         const page = eligible.slice(cursorIndex + 1, cursorIndex + 1 + query.limit);
-        const visible = await sql`
-            select fight_id from public.fight_members
+        const visible = profileIdentifierRowSchema.array().parse(await sql`
+            select fight_id as id from public.fight_members
             where user_id = ${viewerId} and state in ('accepted', 'deferred')
                 and fight_id = any(${sql.array(page.map((fight) => fight.id))}::uuid[])
-        `;
-        const visibleIds = new Set(visible.map((member) => member.fight_id));
+        `);
+        const visibleIds = new Set(visible.map((member) => member.id));
         return {
             results: page.map((fight) => {
                 const result = classifyFightResult(fight, targetId);
@@ -192,10 +192,10 @@ export async function lookupSharedProfile(userId: string, handle: string, databa
         await sql`select user_id from public.profiles where user_id = ${userId} for update`;
         const [count] = await sql`select count(*)::int n from private.profile_lookup_attempts
             where actor_id = ${userId} and created_at > now() - interval '1 hour'`;
-        if (count.n >= 30) throw new ApiError(429, "rate_limited", "Too many username searches");
+        if (profileCountRowSchema.parse(count).n >= 30) throw new ApiError(429, "rate_limited", "Too many username searches");
         await sql`insert into private.profile_lookup_attempts(actor_id) values (${userId})`;
         const [profile] = await sql`select user_id from public.profiles where lower(handle) = ${handle} and deleted_at is null`;
-        return profile ? String(profile.user_id) : null;
+        return profile ? profileUserIDSchema.parse(profile.user_id) : null;
     });
     if (!targetId) throw new ApiError(404, "not_found", "Profile unavailable");
     return database.begin(async (sql) => {

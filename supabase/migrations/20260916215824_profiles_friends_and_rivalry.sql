@@ -1,3 +1,6 @@
+-- Keep the evidence snapshot and trigger installation atomic with concurrent writers.
+lock table public.fight_series, public.fights, public.fight_members in share row exclusive mode;
+
 -- New sharing permissions never trust legacy public.friendships writes.
 -- Historical day zones are unknown; only future uploads can supply them accurately.
 alter table public.metric_days add column time_zone text;
@@ -149,7 +152,7 @@ begin
     left join public.fight_series series on series.id = new.series_id
     on conflict (fight_id) do nothing;
     if tg_op = 'UPDATE' then
-        if old.series_id is null and new.series_id is not null then
+        if old.series_id is null and new.series_id is not null and new.starts_at > clock_timestamp() then
             update private.fight_record_contexts context
             set category = case when series.visibility = 'joinable' then 'public' else 'private' end
             from public.fight_series series where series.id = new.series_id and context.fight_id = new.id;

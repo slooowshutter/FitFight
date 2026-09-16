@@ -87,6 +87,22 @@ then distribute the native build through preview. Production needs its own
 authorized rollout and checks. A two-device live comment/tap check remains.
 The specific reported missing comment is not confirmed without both phones'
 build/environment labels; staging and production use separate databases.
+
+## Website download destinations: prepared 17 Sep 2026
+
+The homepage, fight/referral invite pages, and English/French support pages use
+the configured backend environment to choose the download destination.
+Production links to `https://apps.apple.com/app/id6804230516`. Staging keeps the
+Friends Beta TestFlight link and installation instructions. Invite pages retain
+their five-second iOS redirect and original-link reopening instructions. The
+App Store destination returned HTTP 200. A 1.1.1 release note is included.
+
+Workspace checks passed: TypeScript, all 266 existing tests, optimized builds for
+both environments, and HTTP-rendered link/copy checks for all five affected routes
+in each environment. Browser redirect execution and native compilation were not
+run. No API contract or database change, cloud CI run, PR, merge, or live deployment
+was performed. The live sites still need the normal authorized promotions.
+
 ## Post and comment translation prepared, 16 Sep 2026
 
 **Code:** Feed and fight-thread posts, comments, and replies have an A speech-bubble

@@ -860,18 +860,21 @@ struct FightPostCard: View {
                     .onTapGesture {
                         onOpen?()
                     }
-                    Button {
-                        showActions = true
-                    } label: {
-                        Image(systemName: "ellipsis")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(theme.textFaint)
-                            .frame(width: 32, height: 20)
-                            .frame(height: 38, alignment: .top)
-                            .contentShape(Rectangle())
+                    HStack(alignment: .top, spacing: 0) {
+                        TextTranslationButton(text: post.body)
+                        Button {
+                            showActions = true
+                        } label: {
+                            Image(systemName: "ellipsis")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(theme.textFaint)
+                                .frame(height: 20)
+                                .frame(width: 44, height: 44, alignment: .top)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(FFHapticPlainStyle())
+                        .accessibilityLabel(String(localized: "Post actions"))
                     }
-                    .buttonStyle(FFHapticPlainStyle())
-                    .accessibilityLabel(String(localized: "Post actions"))
                 }
                 if !post.tags.isEmpty {
                     Text(post.tags.map { "@\($0.handle)" }.joined(separator: " "))

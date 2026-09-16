@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 16,
+            notes: "Opening FitFight invites you to the shared Steps fight and any suggested fights. They show on New. You get a notification with the name, no scores, and you can accept when you are ready."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 16,
             notes: "Bars, line, histogram, and pace now use the same confirmed Fight scores as the oval. A teammate without daily history is a gap, not a blank graph."
         ),
         ReleaseNote(

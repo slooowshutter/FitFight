@@ -8,6 +8,22 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
 
+## PGG7 app-wide invite: prepared 16 Sep 2026
+
+**Contract:** `POST /api/v1/fights/refresh` and `POST /api/v1/fights/snapshot` stay on `/api/v1`. Request and response shapes are unchanged except `alreadyMember` on joinable/suggested summaries is now true for pending invitees as well as accepted/deferred members. Older apps already treat `alreadyMember` as "open this fight," so a tap on New opens the existing Accept invitation. After auth, the backend invites the caller to `PGG7` and every currently suggested fight when they have no membership row. Marking a series suggested invites every active profile the same way.
+
+**Choice:** join-by-code still requires an explicit Join. Auto-invite creates the same pending invite the username-invite path already shows on Fights. Suggested fights were already listed on New from `GET /api/v1/fights/suggested`.
+
+**Notifications:** invite pushes did not exist (feed post/reaction kinds did). Additive migration `20260916210000_fight_invite_notifications.sql` allows `fight_invite` outbox rows with a personalized `alert_body` that names the person and fight and includes no scores. Existing clients already open `/fights/{id}` from the payload. No new preference toggle.
+
+**Supported builds checked:** read-only `https://staging.fitfight.app/api/app-release` on 16 Sep 2026 returned `latest` 1.1.1 (201) with `enforced: false` (`review`/`internal` null). Staging still has installed users on older binaries while enforcement is off. Those clients already render `invited` rows and suggested New rows. No required request field.
+
+**Staging evidence:** series `PGG7` exists as `EVERYBODY ON THE APP`, `joinable`, recurring, suggested, current fight `live`. Production was not queried from this change. If that code is absent in an environment, the lookup is a no-op and no fight is invented.
+
+**Deployment order:** apply the additive invite-notification migration and this backend to staging with `develop` first. Existing TestFlight builds pick up invites and the New-tab tap behavior on the next open/sync. The 1.1.1 changelog row ships only when this native change later reaches `preview`. No production deploy, `preview` merge, hosted `db push`, or TestFlight upload from this work.
+
+**Cloud checks vs live:** unit tests cover missing/closed/already-member/new-invite/suggested-everyone paths and invite copy against mocks. No hosted write, disposable migrated-database check, or signed-in device verification was run here.
+
 ## Production rollout and App Store submission, 16 Sep 2026
 
 This section supersedes the earlier held-rollout and screenshot-upload notes below.

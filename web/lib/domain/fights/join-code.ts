@@ -1,5 +1,8 @@
 const JOIN_CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTVWXYZ";
 
+/** Existing app-wide Steps fight. Looked up at runtime; never invented. */
+export const APP_WIDE_JOIN_CODE = "PGG7";
+
 export function normalizeJoinCode(raw: string): string {
     return raw.replace(/[\s-]/g, "").toUpperCase();
 }

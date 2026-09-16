@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Sql } from "postgres";
 import { z } from "zod";
 import { randomJoinCode } from "@/lib/domain/fights/join-code";
 import { ApiError, ERROR_CODES } from "@/lib/http";
@@ -99,7 +100,11 @@ async function allocateJoinCode(admin: SupabaseClient): Promise<string> {
     );
 }
 
-export async function createFight(userId: string, input: CreateFightInput) {
+export async function createFight(
+    userId: string,
+    input: CreateFightInput,
+    sql?: Sql,
+) {
     if (input.metric && input.metric !== "steps") {
         throw new ApiError(
             400,
@@ -268,7 +273,7 @@ export async function createFight(userId: string, input: CreateFightInput) {
     }
 
     for (const handle of handles) {
-        await createInvite(userId, inserted.id as string, handle);
+        await createInvite(userId, inserted.id as string, handle, admin, sql);
     }
 
     return fightSummary(inserted as Pick<FightRow, "id" | "state">);

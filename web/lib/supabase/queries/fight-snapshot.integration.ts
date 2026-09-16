@@ -380,16 +380,23 @@ test("Fight chart and score share a revision through corrections, legacy uploads
         database,
     );
     const afterLegacy = await readFightSnapshot(f.owner, "UTC", database);
-    assert.equal(
-        afterLegacy.members.find((member) => member.user_id === f.owner)
-            ?.current_value,
-        6500,
+    const legacyMember = afterLegacy.members.find(
+        (member) => member.user_id === f.owner,
     );
+    assert.equal(legacyMember?.current_value, 6500);
     assert.equal(
-        afterLegacy.members.find((member) => member.user_id === f.owner)
-            ?.step_checkpoints,
-        null,
+        legacyMember?.step_checkpoints?.at(-1)?.steps,
+        6500,
+        "Score-only uploads still chart the stored Fight total",
+    );
+    assert.notDeepEqual(
+        legacyMember?.step_checkpoints,
+        corrected.fight_aggregates[0].step_checkpoints,
         "Older clients keep scoring without attaching stale chart history",
+    );
+    assert.ok(
+        afterLegacy.step_days.every((day) => day.steps === 123),
+        "Legacy calendar days cannot determine Fight history",
     );
 
     await database`update public.fights set state = 'final' where id = ${f.shared}`;
@@ -401,5 +408,52 @@ test("Fight chart and score share a revision through corrections, legacy uploads
             ?.step_checkpoints,
         peerUpload.fight_aggregates[0].step_checkpoints,
         "Final chart history freezes with its total",
+    );
+});
+
+test("Fight charts reuse stored scores when a revision has no HealthKit day curve", async (t) => {
+    const f = await fixture(t);
+    await database`delete from public.fights where id = any(${database.array([f.ownerOnly, f.unrelated])}::uuid[])`;
+    await database`update public.fights set starts_at = '2026-03-29T10:00:00Z', ends_at = '2026-04-01T10:00:00Z'
+        where id = ${f.shared}`;
+    const first = {
+        complete_through: "2026-03-29T18:00:00Z",
+        time_zone: "America/New_York",
+        merged_days: [],
+        fight_aggregates: [
+            {
+                fight_id: f.shared,
+                starts_at: "2026-03-29T10:00:00Z",
+                ends_at: "2026-04-01T10:00:00Z",
+                cutoff_at: "2026-03-29T18:00:00Z",
+                steps: 4000,
+            },
+        ],
+    };
+    await syncHealthKitAggregates(
+        f.owner,
+        healthKitAggregateSyncSchema.parse(first),
+        database,
+    );
+    const second = structuredClone(first);
+    second.complete_through = "2026-03-30T18:00:00Z";
+    second.fight_aggregates[0].cutoff_at = "2026-03-30T18:00:00Z";
+    second.fight_aggregates[0].steps = 9000;
+    await syncHealthKitAggregates(
+        f.owner,
+        healthKitAggregateSyncSchema.parse(second),
+        database,
+    );
+    const snapshot = await readFightSnapshot(f.owner, "UTC", database);
+    const member = snapshot.members.find((row) => row.user_id === f.owner);
+    assert.equal(member?.current_value, 9000);
+    assert.deepEqual(
+        member?.step_checkpoints?.map((point) => point.steps),
+        [4000, 9000],
+        "Each stored Fight score day becomes a chart point",
+    );
+    assert.ok(
+        snapshot.step_days.every((day) => day.steps === 123),
+        "Calendar step_days stay unused",
     );
 });

@@ -36,6 +36,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 16,
+            notes: "Posts and comments in another language now have a translation icon beside their actions on iOS 17.4 or later."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 16,
             notes: "Feed comments can be sorted by most comments or most recent. Most comments is the default."
         ),
         ReleaseNote(

@@ -6,4 +6,6 @@ export const profileMeasurementGroupSchema = z.object({
     source: z.enum(profileEntryPointValues).nullable(), events: z.number().int().nonnegative(),
     unique_actors: z.number().int().nonnegative(), qualifying: z.number().int().nonnegative(),
 });
+export const profileMeasurementTotalsSchema = profileMeasurementGroupSchema.omit({ unique_actors: true });
+export type ProfileMeasurementTotals = z.infer<typeof profileMeasurementTotalsSchema>;
 export type ProfileMeasurementGroup = z.infer<typeof profileMeasurementGroupSchema>;

@@ -2284,7 +2284,8 @@ components:
             "required": [
                 "days",
                 "attribution_days",
-                "groups"
+                "groups",
+                "archived_groups"
             ],
             "properties": {
                 "days": {
@@ -2339,6 +2340,58 @@ components:
                                 "minimum": 0
                             },
                             "unique_actors": {
+                                "type": "integer",
+                                "minimum": 0
+                            },
+                            "qualifying": {
+                                "type": "integer",
+                                "minimum": 0
+                            }
+                        }
+                    }
+                },
+                "archived_groups": {
+                    "type": "array",
+                    "description": "Anonymous cumulative counts archived as raw events expire. No identities or health data are retained.",
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "kind",
+                            "source",
+                            "events",
+                            "qualifying"
+                        ],
+                        "properties": {
+                            "kind": {
+                                "type": "string",
+                                "enum": [
+                                    "view",
+                                    "friend_request",
+                                    "friend_accept",
+                                    "shared_fight"
+                                ]
+                            },
+                            "source": {
+                                "anyOf": [
+                                    {
+                                        "type": "string",
+                                        "enum": [
+                                            "standings",
+                                            "participants",
+                                            "feed",
+                                            "comments",
+                                            "reactions",
+                                            "feedback",
+                                            "friends",
+                                            "lookup"
+                                        ]
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ]
+                            },
+                            "events": {
                                 "type": "integer",
                                 "minimum": 0
                             },

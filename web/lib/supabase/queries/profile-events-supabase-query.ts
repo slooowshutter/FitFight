@@ -1,5 +1,5 @@
 import { canAdministerFights } from "@/lib/admin/can-administer-fights";
-import { profileMeasurementGroupSchema } from "@/lib/types/profiles/profile-measurement";
+import { profileMeasurementGroupSchema, profileMeasurementTotalsSchema } from "@/lib/types/profiles/profile-measurement";
 import type { Sql, TransactionSql } from "postgres";
 import { profileAccess } from "@/lib/domain/profiles/profile-access";
 import { ApiError } from "@/lib/http";
@@ -34,14 +34,25 @@ export async function recordProfileView(viewerId: string, targetId: string, inpu
 /** Scheduled independently of user activity, including accounts that stop opening the app. */
 export async function pruneProfileEvents(database: Sql = createDatabaseClient()) {
     return database.begin(async (sql) => {
-        const events = await sql`delete from private.profile_events where created_at < now() - interval '30 days' returning event_id`;
+        const events = await sql`
+            with expired as (
+                delete from private.profile_events where created_at < now() - interval '30 days'
+                returning kind, source, attributed_source, qualifying
+            )
+            insert into private.profile_event_totals(kind, source, events, qualifying)
+            select kind, coalesce(source, attributed_source, ''), count(*), count(*) filter (where qualifying)
+            from expired group by kind, coalesce(source, attributed_source, '')
+            on conflict (kind, source) do update set events = private.profile_event_totals.events + excluded.events,
+                qualifying = private.profile_event_totals.qualifying + excluded.qualifying
+            returning kind
+        `;
         const lookups = await sql`delete from private.profile_lookup_attempts where created_at < now() - interval '1 hour' returning id`;
-        return { events_deleted: events.length, lookup_attempts_deleted: lookups.length };
+        return { archived_groups: events.length, lookup_attempts_deleted: lookups.length };
     });
 }
 
 /** One conversion per directed pair/round, attributed to that actor's last visible open within seven days. */
-export async function recordSharedFightParticipation(sql: TransactionSql, fightId: string) {
+export async function recordSharedFightParticipation(sql: TransactionSql, fightId: string, joiningUserId: string | null) {
     if (!profileFeatureConfigSchema.parse({ measurement: process.env.FITFIGHT_PROFILE_MEASUREMENT_ENABLED }).measurement) return;
     await sql`
         insert into private.profile_events(actor_id, event_id, target_id, kind, fight_id, attributed_source)
@@ -52,6 +63,7 @@ export async function recordSharedFightParticipation(sql: TransactionSql, fightI
         from public.fight_members mine
         join public.fight_members theirs on theirs.fight_id = mine.fight_id and theirs.user_id <> mine.user_id
         where mine.fight_id = ${fightId} and mine.state = 'accepted' and theirs.state = 'accepted'
+            and (${joiningUserId}::uuid is null or mine.user_id = ${joiningUserId} or theirs.user_id = ${joiningUserId})
             and not exists (
                 select 1 from (
                     select blocker_id, blocked_id from private.profile_blocks
@@ -73,5 +85,7 @@ export async function readProfileMeasurements(userId: string, database: Sql = cr
         from private.profile_events where created_at > now() - interval '30 days'
         group by kind, coalesce(source, attributed_source) order by kind, source
     `;
-    return { days: 30, attribution_days: 7, groups: profileMeasurementGroupSchema.array().parse(rows) };
+    const totals = await database`select kind, nullif(source, '') source, events::float8, qualifying::float8 from private.profile_event_totals order by kind, source`;
+    return { days: 30, attribution_days: 7, groups: profileMeasurementGroupSchema.array().parse(rows),
+        archived_groups: profileMeasurementTotalsSchema.array().parse(totals) };
 }

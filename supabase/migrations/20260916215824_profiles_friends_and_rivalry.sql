@@ -81,6 +81,15 @@ create index profile_events_fight_idx on private.profile_events(fight_id);
 create index profile_events_retention_idx on private.profile_events(created_at);
 create index profile_events_target_idx on private.profile_events(target_id);
 
+-- Aggregates outlive raw events without preserving actor, target, Fight, or health data.
+create table private.profile_event_totals (
+    kind text not null check (kind in ('view', 'friend_request', 'friend_accept', 'shared_fight')),
+    source text not null,
+    events bigint not null,
+    qualifying bigint not null,
+    primary key (kind, source)
+);
+
 create table private.profile_lookup_attempts (
     id bigint generated always as identity primary key,
     actor_id uuid not null references public.profiles(user_id) on delete cascade,
@@ -278,7 +287,7 @@ do $$
 declare table_name text;
 begin
     foreach table_name in array array['profile_settings', 'profile_friendships', 'profile_blocks',
-        'profile_reports', 'profile_events', 'profile_lookup_attempts', 'rivalry_artworks',
+        'profile_reports', 'profile_events', 'profile_event_totals', 'profile_lookup_attempts', 'rivalry_artworks',
         'fight_record_contexts', 'fight_participation_records', 'fight_admin_actions']
     loop
         execute format('alter table private.%I enable row level security', table_name);

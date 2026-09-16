@@ -1,3 +1,4 @@
+import { recordSharedFightParticipation } from "./profile-events-supabase-query";
 import { profileCountRowSchema } from "@/lib/types/profiles/shared-profile";
 import type { Sql } from "postgres";
 import { canDeferFightJoin, fightJoinMemberState } from "@/lib/domain/fights/join-start";
@@ -61,6 +62,7 @@ export async function acceptFightParticipation(
                 values (${fight.series_id}, ${userId}, 'accepted', ${now})
                 on conflict (series_id, user_id) do update set state = 'accepted', joined_at = excluded.joined_at`;
         }
+        if (state === "accepted") await recordSharedFightParticipation(sql, fightId, userId);
     });
     await recalculateFight(fightId, now, database);
     const [updated] = await database`select state::text from public.fights where id = ${fightId}`;

@@ -1,4 +1,3 @@
-import { recordSharedFightParticipation } from "./profile-events-supabase-query";
 import type { Sql } from "postgres";
 import { nextFightState } from "@/lib/scoring/fight-clock";
 import { scoreFight, scoreFightAtFinal } from "@/lib/scoring/score-fight";
@@ -41,7 +40,6 @@ export async function recalculateFight(
             for update
         `,
         );
-        if (Date.parse(fight.starts_at) <= now.getTime()) await recordSharedFightParticipation(sql, fightId);
         const snapshots = fightCalculationSnapshotSchema.array().parse(
             await sql`
             select distinct on (snapshot.user_id)

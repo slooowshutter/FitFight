@@ -1,3 +1,4 @@
+import { recordSharedFightParticipation } from "./profile-events-supabase-query";
 import type { Sql } from "postgres";
 import { rollingWindow } from "@/lib/domain/fights/join-code";
 import { ApiError, ERROR_CODES } from "@/lib/http";
@@ -53,6 +54,7 @@ export async function mintNextRecurringFight(
             where member.series_id = ${previous.series_id} and member.state = 'accepted'
         `;
         await sql`update public.fight_series set current_fight_id = ${nextId} where id = ${previous.series_id}`;
+        await recordSharedFightParticipation(sql, nextId, null);
         return nextId;
     });
 }

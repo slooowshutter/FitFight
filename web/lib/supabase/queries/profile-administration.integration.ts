@@ -52,6 +52,9 @@ test("suggestions serialize privacy, joining, stopping and recurring roster chan
     await administerFight(owner, fightId, { visibility: "joinable" }, database);
     await setFightSuggested(owner, fightId, true, database);
     await database`insert into public.fight_members(fight_id, user_id, state) values (${fightId}, ${guest}, 'invited')`;
+    process.env.FITFIGHT_PROFILE_MEASUREMENT_ENABLED = "true";
+    await updateProfileSettings(owner, { audience: "public" }, database);
+    await recordProfileView(guest, owner, { event_id: randomUUID(), source: "standings" }, database);
     await acceptFightParticipation(guest, fightId, undefined, "now", now, undefined, database, admin);
     await acceptFightParticipation(guest, fightId, undefined, "now", now, undefined, database, admin);
     await assert.rejects(acceptFightParticipation(outsider, fightId, undefined, "now", now, undefined, database, admin));
@@ -71,9 +74,6 @@ test("suggestions serialize privacy, joining, stopping and recurring roster chan
     assert.equal(publicSeries.suggested, false);
     await joinFight(guest, { fightId, start: "now" }, null, admin, now, database);
 
-    process.env.FITFIGHT_PROFILE_MEASUREMENT_ENABLED = "true";
-    await updateProfileSettings(owner, { audience: "public" }, database);
-    await recordProfileView(guest, owner, { event_id: randomUUID(), source: "standings" }, database);
     await recalculateFight(fightId, now, database);
     await recalculateFight(fightId, now, database);
     const report = await readProfileMeasurements(owner, database);

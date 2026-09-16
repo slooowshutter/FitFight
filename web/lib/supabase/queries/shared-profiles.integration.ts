@@ -10,6 +10,7 @@ import { friendsQuerySchema } from "@/lib/types/friends/friendship";
 import { readSharedProfile, readProfileHistory, readProfileSettings, updateProfileSettings } from "./shared-profiles-supabase-query";
 import { blockProfile, changeFriendship, listProfileFriends } from "./profile-friends-supabase-query";
 import { pruneProfileEvents, recordProfileView } from "./profile-events-supabase-query";
+import { deleteAccount } from "./delete-account-supabase-query";
 import { departFightMemberships } from "./membership-departure-supabase-query";
 
 const env = databaseTestEnvironmentSchema.parse(process.env);
@@ -154,7 +155,7 @@ test("account deletion preserves a frozen group draw and cannot create a duel", 
     await database`update public.fights set state = 'final' where id = ${fightId}`;
     await updateProfileSettings(owner, { competitive: true, audience: "public" }, database);
     assert.equal((await readSharedProfile(owner, owner, undefined, database)).record?.wins, 0);
-    await database`delete from auth.users where id = ${departing}`;
+    await deleteAccount(departing, database);
     const afterDeletion = await readSharedProfile(opponent, owner, undefined, database);
     assert.equal(afterDeletion.record?.played, 1);
     assert.equal(afterDeletion.record?.wins, 0);
@@ -194,6 +195,9 @@ test("view replay, rolling qualification, privacy locks, and inactive-user reten
     await pruneProfileEvents(database);
     const [remaining] = await database`select count(*)::int n from private.profile_events where actor_id = ${viewer}`;
     assert.equal(remaining.n, 0);
+    const [archived] = await database`select events::int, qualifying::int from private.profile_event_totals where kind = 'view' and source = 'friends'`;
+    assert.ok(archived.events >= 3);
+    assert.ok(archived.qualifying >= 2);
 });
 
 test("only active accepted opponents see private records, with independent bounded activity", async (t) => {

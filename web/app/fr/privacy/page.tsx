@@ -216,6 +216,10 @@ export default function PrivacyPage() {
                         Seuls des rapports agrégés sont accessibles à l’opérateur.
                     </p>
                     <p>
+                        Des totaux anonymes sont conservés après la suppression
+                        des événements identifiants.
+                    </p>
+                    <p>
                         La génération d’illustrations de rivalité est indisponible.
                         Aucun compagnon n’est envoyé à un fournisseur de génération
                         d’images. Avant son activation, nous nommerons le fournisseur,

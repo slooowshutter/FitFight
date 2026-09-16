@@ -202,7 +202,8 @@ export default function PrivacyPage() {
                         accounts, and when either account is deleted. Exact
                         username lookup attempts expire after one hour and are
                         used to limit abuse. Only aggregate measurement reports
-                        are available to the FitFight operator.
+                        are available to the FitFight operator. Anonymous event totals
+                        are retained after the identifiable events expire.
                     </p>
                     <p>
                         Pair artwork generation is currently unavailable. No

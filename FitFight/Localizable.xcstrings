@@ -1,6 +1,16 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Charts use stored fight scores. Opening the app invites you to the shared Steps fight and suggested fights. Marc can post to everyone's Feed. Comments sort by most comments or most recent.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les graphiques utilisent les scores enregistrés. Ouvrir l'app t'invite au combat de pas partagé et aux combats suggérés. Marc peut publier dans le fil de tout le monde. Les commentaires se trient par plus de commentaires ou plus récents."
+                    }
+                }
+            }
+        },
         "Feed comments can be sorted by most comments or most recent. Most comments is the default.": {
             "localizations": {
                 "fr": {

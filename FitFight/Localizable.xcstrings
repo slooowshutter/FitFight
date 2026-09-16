@@ -1,6 +1,22 @@
 {
     "sourceLanguage": "en",
     "strings": {
+    "Profiles now include Friends, private sharing controls, Fight records and head-to-head rivalries. Tap a person to open their profile or challenge them. Suggested public Fights are optional at the end of onboarding.": {
+        "localizations": {
+            "en": {
+                "stringUnit": {
+                    "state": "translated",
+                    "value": "Profiles now include Friends, private sharing controls, Fight records and head-to-head rivalries. Tap a person to open their profile or challenge them. Suggested public Fights are optional at the end of onboarding."
+                }
+            },
+            "fr": {
+                "stringUnit": {
+                    "state": "translated",
+                    "value": "Les profils incluent les amis, les réglages de partage, les résultats des Fights et les rivalités en duel. Touchez une personne pour ouvrir son profil ou la défier. Les Fights publics suggérés sont facultatifs à la fin de la présentation."
+                }
+            }
+        }
+    },
         "Joined": {
             "localizations": {
                 "fr": {

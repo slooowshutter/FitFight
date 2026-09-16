@@ -116,7 +116,7 @@ test("withdrawal is recorded atomically and later visibility edits never reclass
     await departFightMemberships(opponent, fightId, opponent, database);
     await database.begin(async (sql) => {
         await sql`select id from public.fights where id = ${fightId} for update`;
-        await sql`update public.fight_members set rank = 1, current_value = 1000, final_steps_complete = true where fight_id = ${fightId} and user_id = ${owner}`;
+        await sql`update public.fight_members set rank = 1, current_value = 1000, final_value = 1000, final_steps_complete = true, finalized_at = now() where fight_id = ${fightId} and user_id = ${owner}`;
         await sql`update public.fights set state = 'final' where id = ${fightId}`;
     });
     const own = await readSharedProfile(opponent, opponent, undefined, database);
@@ -161,4 +161,41 @@ test("view replay, rolling qualification, privacy locks, and inactive-user reten
     await pruneProfileEvents(database);
     const [remaining] = await database`select count(*)::int n from private.profile_events where actor_id = ${viewer}`;
     assert.equal(remaining.n, 0);
+});
+
+test("only active accepted opponents see private records, with independent bounded activity", async (t) => {
+    const users = Array.from({ length: 5 }, () => randomUUID());
+    const [owner, opponent, invited, deferred, stranger] = users;
+    const fightId = randomUUID();
+    const sourceId = randomUUID();
+    t.after(async () => {
+        await database`delete from public.fights where id = ${fightId}`;
+        await database`delete from auth.users where id = any(${database.array(users)}::uuid[])`;
+    });
+    for (const id of users) await database`insert into auth.users(id) values (${id})`;
+    await database`insert into public.fights(id, owner_id, name, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy)
+        values (${fightId}, ${owner}, 'Opponent access', 'live', now() - interval '1 hour', now() + interval '1 day', 'UTC', 'highest_total', 'shared')`;
+    for (const [id, state] of [[owner, "accepted"], [opponent, "accepted"], [invited, "invited"], [deferred, "deferred"]]) {
+        await database`insert into public.fight_members(fight_id, user_id, state) values (${fightId}, ${id}, ${state})`;
+    }
+    await database`insert into public.data_sources(id, user_id, provider, source_label, connection_route) values (${sourceId}, ${owner}, 'apple_health', 'Apple Health', 'healthkit')`;
+    await database`insert into public.metric_days(user_id, source_id, metric, day, value, time_zone)
+        select ${owner}, ${sourceId}, 'steps', current_date - day, 1000, 'UTC' from generate_series(0, 40) day`;
+    await updateProfileSettings(owner, { competitive: true, activity_audience: "opponents", activity_days: 7 }, database);
+    const shared = await readSharedProfile(opponent, owner, undefined, database);
+    assert.equal(shared.access, "shared");
+    assert.equal(shared.activity?.values.length, 7);
+    assert.equal(shared.activity.values[0].time_zone, "UTC");
+    for (const id of [invited, deferred, stranger]) {
+        const profile = await readSharedProfile(id, owner, undefined, database);
+        assert.equal(profile.record, null);
+        assert.equal(profile.activity, null);
+    }
+    await updateProfileSettings(owner, { activity_days: 30 }, database);
+    assert.equal((await readSharedProfile(opponent, owner, undefined, database)).activity?.values.length, 30);
+    await database`update public.fights set starts_at = now() + interval '1 hour' where id = ${fightId}`;
+    assert.equal((await readSharedProfile(opponent, owner, undefined, database)).record, null);
+    await database`update public.fights set starts_at = now() - interval '1 day', ends_at = now() - interval '1 hour', state = 'final' where id = ${fightId}`;
+    assert.equal((await readSharedProfile(opponent, owner, undefined, database)).record, null);
+    assert.equal((await readProfileHistory(opponent, owner, profilePageQuerySchema.parse({ shared: "true" }), database)).results.length, 1);
 });

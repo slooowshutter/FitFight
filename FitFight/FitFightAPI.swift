@@ -431,6 +431,7 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
 struct FitFightFeedbackComment: Codable, Identifiable, Equatable, Hashable {
     var id: UUID
     var body: String
+    var authorId: UUID?
     var authorHandle: String
     var createdAt: Date
     var metadata: FitFightFeedbackMetadata
@@ -438,6 +439,7 @@ struct FitFightFeedbackComment: Codable, Identifiable, Equatable, Hashable {
     enum CodingKeys: String, CodingKey {
         case id
         case body
+        case authorId = "author_id"
         case authorHandle = "author_handle"
         case createdAt = "created_at"
         case metadata
@@ -448,10 +450,12 @@ struct FitFightFeedbackComment: Codable, Identifiable, Equatable, Hashable {
         body: String,
         authorHandle: String,
         createdAt: Date,
-        metadata: FitFightFeedbackMetadata = FitFightFeedbackMetadata()
+        metadata: FitFightFeedbackMetadata = FitFightFeedbackMetadata(),
+        authorId: UUID? = nil
     ) {
         self.id = id
         self.body = body
+        self.authorId = authorId
         self.authorHandle = authorHandle
         self.createdAt = createdAt
         self.metadata = metadata
@@ -461,6 +465,7 @@ struct FitFightFeedbackComment: Codable, Identifiable, Equatable, Hashable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
         body = try container.decode(String.self, forKey: .body)
+        authorId = try container.decodeIfPresent(UUID.self, forKey: .authorId)
         authorHandle = try container.decode(String.self, forKey: .authorHandle)
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         metadata = try container.decodeIfPresent(FitFightFeedbackMetadata.self, forKey: .metadata)

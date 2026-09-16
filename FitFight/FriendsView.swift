@@ -14,6 +14,7 @@ struct FriendsView: View {
     @State private var loading = false
     @State private var error: String?
     @State private var generation = 0
+    @State private var lookupGeneration = 0
 
     var body: some View {
         VStack(spacing: 0) {
@@ -54,10 +55,11 @@ struct FriendsView: View {
         }.foregroundStyle(theme.text).background(theme.bg.ignoresSafeArea())
         .task(id: kind) { await load() }
         .onChange(of: scenePhase) { _, phase in
-            generation += 1; people = []; found = nil; nextCursor = nil
+            generation += 1; lookupGeneration += 1; people = []; found = nil; nextCursor = nil
             if phase == .active { Task { await load() } }
         }
-        .onChange(of: session.authSession?.user.id) { _, _ in generation += 1; people = []; found = nil; dismiss() }
+        .onChange(of: session.authSession?.user.id) { _, _ in generation += 1; lookupGeneration += 1; people = []; found = nil; dismiss() }
+        .onDisappear { generation += 1; lookupGeneration += 1; people = []; found = nil; nextCursor = nil }
     }
 
     private func personRow(_ person: SharedProfileIdentity, source: String) -> some View {
@@ -102,18 +104,23 @@ struct FriendsView: View {
     }
 
     private func lookup() async {
+        lookupGeneration += 1
+        let requestGeneration = lookupGeneration
         let accountID = session.authSession?.user.id
         found = nil
         loading = true
-        defer { loading = false }
+        defer { if requestGeneration == lookupGeneration { loading = false } }
         do {
             let token = try await session.freshAccessToken()
             let person = try await FitFightAPI().lookupProfile(handle: handle, accessToken: token)
             try Task.checkCancellation()
-            guard accountID == session.authSession?.user.id else { return }
+            guard requestGeneration == lookupGeneration, accountID == session.authSession?.user.id else { return }
             found = person
             error = nil
         } catch is CancellationError {
-        } catch { self.error = error.localizedDescription }
+        } catch {
+            guard requestGeneration == lookupGeneration, accountID == session.authSession?.user.id else { return }
+            self.error = error.localizedDescription
+        }
     }
 }

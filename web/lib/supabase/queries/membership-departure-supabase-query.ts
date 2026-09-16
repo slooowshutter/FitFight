@@ -1,3 +1,4 @@
+import { lockFightSeries } from "./fight-series-lock-supabase-query";
 import type { Sql } from "postgres";
 import { ApiError } from "@/lib/http";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
@@ -6,6 +7,7 @@ import { departureFightSchema, departureMemberSchema } from "@/lib/types/fights/
 /** The capture trigger records the cause in the same transaction as the membership change. */
 export async function departFightMemberships(actorId: string, fightId: string, targetId: string, database: Sql = createDatabaseClient()) {
     return database.begin(async (sql) => {
+        await lockFightSeries(sql, fightId);
         const fights = departureFightSchema.array().parse(await sql`
             select id, owner_id, state::text, series_id from public.fights
             where id = ${fightId} or id = (

@@ -1,3 +1,4 @@
+import { lockFightSeries } from "./fight-series-lock-supabase-query";
 import type { Sql } from "postgres";
 import { canAdministerFights } from "@/lib/admin/can-administer-fights";
 import { ApiError } from "@/lib/http";
@@ -7,6 +8,7 @@ import { administeredFightSchema, administeredSeriesSchema, type AdministerFight
 export async function administerFight(userId: string, fightId: string, input: AdministerFightRequest, database: Sql = createDatabaseClient()) {
     if (!canAdministerFights(userId)) throw new ApiError(403, "forbidden", "Only Marc can administer a fight");
     return database.begin(async (sql) => {
+        await lockFightSeries(sql, fightId);
         const [row] = await sql`select id, state::text, series_id, ends_at from public.fights where id = ${fightId} for update`;
         if (!row) throw new ApiError(404, "not_found", "Fight not found");
         const fight = administeredFightSchema.parse(row);

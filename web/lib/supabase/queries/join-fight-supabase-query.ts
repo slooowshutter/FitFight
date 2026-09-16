@@ -1,3 +1,4 @@
+import { lockFightSeries } from "./fight-series-lock-supabase-query";
 import type { Sql } from "postgres";
 import { isJoinCode, normalizeJoinCode } from "@/lib/domain/fights/join-code";
 import {
@@ -285,6 +286,7 @@ export async function listJoinableFights(
             throw new ApiError(404, ERROR_CODES.not_found, "Fight not found");
         }
         const alreadyMember = fight.membership.length > 0;
+        if (suggestedOnly && (Date.parse(fight.ends_at) <= now.getTime() || (!alreadyMember && fight.roster[0].count >= JOINABLE_MEMBER_CAP))) continue;
         summaries.push({
             fightId: fight.id,
             seriesId: row.id,
@@ -425,6 +427,7 @@ export async function joinFight(
 
     const source = await ensureAppleHealthSource(userId, { admin });
     const summary = await sql.begin(async (transaction) => {
+        await lockFightSeries(transaction, fight.id);
         const [lockedFight] = await transaction`
             select id, state::text, starts_at, ends_at, time_zone, series_id
             from public.fights where id = ${fight.id} for update

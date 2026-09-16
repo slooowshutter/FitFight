@@ -11,7 +11,7 @@ struct ProfileIdentityLink<Label: View>: View {
 
     var body: some View {
         if let userID {
-            Button { showingProfile = true } label: { label }
+            Button { showingProfile = true } label: { label.frame(minHeight: 44).contentShape(Rectangle()) }
             .buttonStyle(FFHapticPlainStyle())
             .accessibilityHint(String(localized: "Open profile"))
             .sheet(isPresented: $showingProfile, onDismiss: onClosed) {
@@ -165,6 +165,10 @@ struct ProfileSheet: View {
                                     .ffType(.micro).foregroundStyle(theme.textSecondary)
                                 Text(day.finalized ? String(localized: "Complete day") : String(localized: "Partial day"))
                                     .ffType(.micro).foregroundStyle(theme.textSecondary)
+                                if let updated = ISO8601DateFormatter().date(from: day.updatedAt) {
+                                    Text(updated, format: .relative(presentation: .named))
+                                        .ffType(.micro).foregroundStyle(theme.textSecondary)
+                                }
                             }
                         }
                         if activity.values.isEmpty { Text(String(localized: "No shared days available")).ffType(.body) }

@@ -680,72 +680,41 @@ private struct RequestRow: View {
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
-            Button(action: onOpen) {
-                HStack(alignment: .top, spacing: 10) {
-                    Color.clear
-                        .frame(width: 44)
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack(spacing: 8) {
-                            FFTag(
-                                post.kind == "bug" ? String(localized: "Bug") : String(localized: "Feature"),
-                                tone: post.kind == "bug" ? .ember : .moss
-                            )
-                            Spacer(minLength: 0)
-                            if !post.mine {
-                                RequestPostMenu(onReport: onReport, onHide: onHide)
-                            }
-                            Text(post.createdAt, format: .relative(presentation: .named))
-                                .ffType(.caption)
-                                .foregroundStyle(theme.textFaint)
-                        }
-                        Text(post.title)
-                            .ffType(.rowTitle)
-                            .foregroundStyle(theme.text)
-                            .multilineTextAlignment(.leading)
-                        Text(post.body)
-                            .ffType(.caption)
-                            .foregroundStyle(theme.textSecondary)
-                            .lineLimit(2)
-                            .multilineTextAlignment(.leading)
-                        RequestMediaStack(media: post.media, compact: true)
-                        Text(
-                            String(
-                                localized: "feedback.meta",
-                                defaultValue: "@\(post.authorHandle) · \(post.commentCount) comments"
-                            )
-                        )
-                        .ffType(.micro)
-                        .foregroundStyle(theme.textFaint)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .padding(14)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
-                .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
-                .ffBorder(theme.hairline, radius: theme.radius.card)
-            }
-            .buttonStyle(FFHapticPlainStyle())
-
+        HStack(alignment: .top, spacing: 10) {
             Button(action: onVote) {
                 VStack(spacing: 2) {
                     Image(systemName: post.voted ? "arrow.up.circle.fill" : "arrow.up.circle")
                         .font(.system(size: 22, weight: .bold))
-                    Text(verbatim: "\(post.voteCount)")
-                        .ffType(.micro)
-                        .fontWeight(.heavy)
+                    Text(verbatim: "\(post.voteCount)").ffType(.micro).fontWeight(.heavy)
                 }
                 .foregroundStyle(post.voted ? theme.mossText : theme.textSecondary)
-                .frame(width: 44)
-                .padding(.top, 2)
-                .contentShape(Rectangle())
+                .frame(width: 44, height: 44).contentShape(Rectangle())
             }
             .buttonStyle(FFPressStyle(scale: 0.92))
             .accessibilityLabel(String(localized: "Upvote"))
-            .padding(.leading, 14)
-            .padding(.top, 14)
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 8) {
+                    FFTag(post.kind == "bug" ? String(localized: "Bug") : String(localized: "Feature"), tone: post.kind == "bug" ? .ember : .moss)
+                    Spacer(minLength: 0)
+                    if !post.mine { RequestPostMenu(onReport: onReport, onHide: onHide) }
+                    Text(post.createdAt, format: .relative(presentation: .named)).ffType(.caption).foregroundStyle(theme.textFaint)
+                }
+                Button(action: onOpen) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(post.title).ffType(.rowTitle).foregroundStyle(theme.text)
+                        Text(post.body).ffType(.caption).foregroundStyle(theme.textSecondary).lineLimit(2)
+                        RequestMediaStack(media: post.media, compact: true)
+                    }.multilineTextAlignment(.leading).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+                }.buttonStyle(FFHapticPlainStyle())
+                ProfileIdentityLink(userID: post.authorId, source: "feedback") {
+                    Text(String(localized: "feedback.meta", defaultValue: "@\(post.authorHandle) · \(post.commentCount) comments"))
+                        .ffType(.micro).foregroundStyle(theme.textFaint)
+                }
+            }.frame(maxWidth: .infinity, alignment: .leading)
         }
+        .padding(14)
+        .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
+        .ffBorder(theme.hairline, radius: theme.radius.card)
     }
 }
 
@@ -774,7 +743,7 @@ private struct RequestDetailView: View {
             HStack(alignment: .top, spacing: 10) {
                 FFNavDetail(
                     title: post?.title ?? String(localized: "Request"),
-                    subtitle: post.map { "@\($0.authorHandle)" },
+                    subtitle: nil,
                     onBack: { dismiss() }
                 )
                 if let post, !post.mine {
@@ -884,6 +853,10 @@ private struct RequestDetailView: View {
                     Spacer()
                 }
 
+                ProfileIdentityLink(userID: post.authorId, source: "feedback") {
+                    Text(verbatim: "@\(post.authorHandle)").ffType(.label).foregroundStyle(theme.mossText)
+                }
+
                 Text(post.body)
                     .ffType(.body)
                     .foregroundStyle(theme.text)
@@ -933,9 +906,10 @@ private struct RequestDetailView: View {
                 ForEach(store.comments) { item in
                     VStack(alignment: .leading, spacing: 4) {
                         HStack {
-                            Text(verbatim: "@\(item.authorHandle)")
-                                .ffType(.label)
-                                .foregroundStyle(theme.mossText)
+                            ProfileIdentityLink(userID: item.authorId, source: "feedback") {
+                                Text(verbatim: "@\(item.authorHandle)")
+                                    .ffType(.label).foregroundStyle(theme.mossText)
+                            }
                             Spacer()
                             Text(item.createdAt, format: .relative(presentation: .named))
                                 .ffType(.caption)

@@ -118,6 +118,11 @@ jobs:
                   swiftc -swift-version 5 -target "$(uname -m)-apple-macosx13.0" FitFight/Media.swift FitFight/Profile.swift FitFight/FightSnapshot.swift tests/APIContractTests.swift -o /tmp/fitfight-contract-tests
                   /tmp/fitfight-contract-tests contracts/fixtures
 
+            - name: Verify profile access and response ordering
+              run: |
+                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx13.0" FitFight/SharedProfile.swift FitFight/ProfileScreenStore.swift tests/ProfileScreenStoreTests.swift -o /tmp/fitfight-profile-tests
+                  /tmp/fitfight-profile-tests contracts/fixtures
+
             - name: Build for iOS Simulator
               run: |
                   set -o pipefail

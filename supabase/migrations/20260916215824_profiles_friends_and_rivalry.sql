@@ -61,6 +61,7 @@ create table private.profile_events (
     actor_id uuid not null references public.profiles(user_id) on delete cascade,
     event_id uuid not null,
     target_id uuid not null references public.profiles(user_id) on delete cascade,
+    fight_id uuid references public.fights(id) on delete cascade,
     kind text not null check (kind in ('view', 'friend_request', 'friend_accept', 'shared_fight')),
     source text check (source in ('standings', 'participants', 'feed', 'comments', 'reactions', 'feedback', 'friends', 'lookup')),
     qualifying boolean not null default false,
@@ -70,6 +71,8 @@ create table private.profile_events (
     check (actor_id <> target_id)
 );
 create index profile_events_pair_time_idx on private.profile_events(actor_id, target_id, created_at desc);
+create unique index profile_events_shared_fight_idx on private.profile_events(actor_id, target_id, fight_id) where kind = 'shared_fight';
+create index profile_events_fight_idx on private.profile_events(fight_id);
 create index profile_events_retention_idx on private.profile_events(created_at);
 create index profile_events_target_idx on private.profile_events(target_id);
 

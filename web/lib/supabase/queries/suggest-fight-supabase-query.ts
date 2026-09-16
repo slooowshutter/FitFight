@@ -1,3 +1,4 @@
+import { lockFightSeries } from "./fight-series-lock-supabase-query";
 import type { Sql } from "postgres";
 import { canAdministerFights } from "@/lib/admin/can-administer-fights";
 import { ApiError } from "@/lib/http";
@@ -8,6 +9,7 @@ import type { SuggestFightResponse } from "@/lib/types/fights/suggest-fight";
 export async function setFightSuggested(userId: string, fightId: string, suggested: boolean, database: Sql = createDatabaseClient()): Promise<SuggestFightResponse> {
     if (!canAdministerFights(userId)) throw new ApiError(403, "forbidden", "Only Marc can suggest a fight");
     return database.begin(async (sql) => {
+        await lockFightSeries(sql, fightId);
         const [row] = await sql`select id, state::text, series_id, ends_at from public.fights where id = ${fightId} for update`;
         if (!row) throw new ApiError(404, "not_found", "Fight not found");
         const fight = administeredFightSchema.parse(row);
@@ -17,6 +19,10 @@ export async function setFightSuggested(userId: string, fightId: string, suggest
         if (suggested && (series.visibility !== "joinable" || series.paused_at !== null || series.current_fight_id !== fight.id
             || !["live", "scheduled", "inviting"].includes(fight.state) || fight.ends_at.getTime() <= Date.now())) {
             throw new ApiError(409, "conflict", "Only an active public fight can be suggested");
+        }
+        if (suggested) {
+            const [capacity] = await sql`select count(*)::int n from public.fight_members where fight_id = ${fightId} and state in ('accepted', 'deferred')`;
+            if (capacity.n >= 50) throw new ApiError(409, "conflict", "This fight is full");
         }
         await sql`update public.fight_series set suggested = ${suggested}, suggested_at = ${suggested ? new Date() : null} where id = ${series.id}`;
         await sql`insert into private.fight_admin_actions(actor_id, fight_id, changes) values (${userId}, ${fightId}, ${sql.json({ suggested })})`;

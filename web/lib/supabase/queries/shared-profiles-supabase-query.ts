@@ -104,7 +104,7 @@ export async function readSharedProfile(
             join public.data_sources source on source.id = days.source_id
             where days.user_id = ${targetId} and days.metric = 'steps'
                 and source.provider = 'apple_health'
-                and days.day >= (now() at time zone coalesce(days.time_zone, 'UTC'))::date - ${row.settings.activity_days - 1}
+                and days.day >= (now() at time zone coalesce(days.time_zone, 'UTC'))::date - ${row.settings.activity_days - 1}::integer
                 and days.day <= (now() at time zone coalesce(days.time_zone, 'UTC'))::date
             order by days.day, days.updated_at desc
         `) : [];

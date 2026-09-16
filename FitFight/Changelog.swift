@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.1.1",
             year: 2026,
             month: 9,
+            day: 17,
+            notes: "Feedback no longer shows a duplicate button above the bottom tabs. Use the plus at the top to add a request."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
             day: 16,
             notes: "Posts and comments in another language now have a translation icon beside their actions on iOS 17.4 or later."
         ),

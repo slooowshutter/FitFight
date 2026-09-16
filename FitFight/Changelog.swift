@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.1.1",
             year: 2026,
             month: 9,
+            day: 16,
+            notes: "Bars, line, histogram, and pace now use the same confirmed Fight scores as the oval. A teammate without daily history is a gap, not a blank graph."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
             day: 15,
             notes: "Fight charts and standings now use the same confirmed steps. Charts exclude activity outside the Fight, update with late corrections, and show missing history clearly."
         ),

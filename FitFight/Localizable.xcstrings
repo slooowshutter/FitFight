@@ -1,6 +1,26 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Bars, line, histogram, and pace now use the same confirmed Fight scores as the oval. A teammate without daily history is a gap, not a blank graph.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Barres, ligne, histogramme et allure utilisent maintenant les mêmes scores confirmés que l’ovale. Un coéquipier sans historique quotidien apparaît comme un trou, pas un graphique vide."
+                    }
+                }
+            }
+        },
+        "So far": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Jusqu’ici"
+                    }
+                }
+            }
+        },
         "Fight charts and standings now use the same confirmed steps. Charts exclude activity outside the Fight, update with late corrections, and show missing history clearly.": {
             "localizations": {
                 "fr": {

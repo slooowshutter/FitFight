@@ -211,6 +211,30 @@ for `/api/app-release`; its health response lacks `profile_api`. These live resu
 take precedence over older availability descriptions below. Preview is still at
 `025f55c`; the newest develop fixes have not been uploaded to TestFlight yet.
 
+## Fight chart views from stored scores: prepared 16 Sep 2026
+
+**Code:** Oval already plots `fight_members` scores. Bars, line, histogram, and
+pace now use that same stored revision: HealthKit `step_checkpoints` when the
+latest snapshot has them, otherwise one point per Fight day from
+`private.fight_score_snapshots.value`. Calendar `step_days` stay unused. Native
+`dayCards` charts whoever already matches and leaves a gap for everyone else.
+If no daily history is attached, those views plot the same totals as Oval.
+A HealthKit last-day stamp uses the current Fight day, not `cutoff - 1ms`.
+
+**Compatibility:** `/api/v1` remains. `members[].step_checkpoints` stays nullable
+and additive. Older clients ignore extra populated history. Required fields,
+legacy uploads, and client permissions are unchanged. No schema migration.
+
+**Checks:** native chart regressions cover mixed/legacy peers, stale history,
+totals fallback, and a cutoff 1ms after Fight-day midnight. Backend snapshot
+tests cover preferring real checkpoints, synthesizing score-only days, and
+leaving `step_days` unused. Cloud CI on this branch is the remaining evidence.
+No hosted database mutation or TestFlight upload.
+
+**Deployment:** prepare only. Deploy the compatible backend, then distribute
+the app through the authorized `preview` flow. Do not infer production
+readiness from staging.
+
 ## Fight charts and standings: prepared 15 Sep 2026
 
 **Code:** all Fight charts now use the same confirmed score revision as standings.

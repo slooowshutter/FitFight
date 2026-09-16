@@ -445,7 +445,7 @@ async function listDiscussedFightPostComments(
         offset = roots.findIndex((row) => {
             const count = replyCount(row);
             if (count !== cursor.replyCount) return count < cursor.replyCount;
-            const created = cursorStamp(row.created_at);
+            const created = new Date(row.created_at).toISOString();
             if (created !== cursor.createdAt) return created < cursor.createdAt;
             return row.id < cursor.id;
         });
@@ -467,7 +467,7 @@ async function listDiscussedFightPostComments(
         comments: await mapComments(userId, page),
         next_cursor:
             offset + query.limit < roots.length && last
-                ? `${replyCount(last)}|${cursorStamp(last.created_at)}|${last.id}`
+                ? `${replyCount(last)}|${new Date(last.created_at).toISOString()}|${last.id}`
                 : null,
     };
 }

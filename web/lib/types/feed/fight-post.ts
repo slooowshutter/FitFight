@@ -97,6 +97,7 @@ export const updateFightPostRequestSchema = z
 
 export const feedDestinationSchema = z.discriminatedUnion("type", [
     z.object({ type: z.literal("main") }).strict(),
+    z.object({ type: z.literal("broadcast") }).strict(),
     z
         .object({
             type: z.literal("fight"),
@@ -115,7 +116,19 @@ export const createFeedPostsRequestSchema = z
     .strict()
     .refine((input) => input.body.length > 0 || input.media_ids.length > 0, {
         message: "Add a photo, a video, or a short note",
-    });
+    })
+    .refine(
+        (input) => {
+            const broadcasts = input.destinations.filter(
+                (destination) => destination.type === "broadcast",
+            );
+            return (
+                broadcasts.length === 0 ||
+                (broadcasts.length === 1 && input.destinations.length === 1)
+            );
+        },
+        { message: "Broadcast is its own post" },
+    );
 
 export const listFightPostsQuerySchema = z
     .object({

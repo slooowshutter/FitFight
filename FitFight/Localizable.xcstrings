@@ -1,6 +1,46 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "The Feed can show a post to everyone signed in, not only people in your fights.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Le fil peut maintenant afficher un message pour tout le monde connecté, pas seulement les personnes dans tes combats."
+                    }
+                }
+            }
+        },
+        "Broadcast": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Annonce"
+                    }
+                }
+            }
+        },
+        "Write one post. Everyone signed in sees it on Feed.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Écris un message. Toutes les personnes connectées le voient dans Fil."
+                    }
+                }
+            }
+        },
+        "This post appears on Feed for everyone signed in.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ce message apparaît dans Fil pour toutes les personnes connectées."
+                    }
+                }
+            }
+        },
         "Opening FitFight invites you to the shared Steps fight and any suggested fights. They show on New. You get a notification with the name, no scores, and you can accept when you are ready.": {
             "localizations": {
                 "fr": {

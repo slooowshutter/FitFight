@@ -87,7 +87,12 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
     static var commentDeletions: [CheckedContinuation<FitFightFightPostCommentDeletion, Error>] = []
     static var commentReports: [CheckedContinuation<Void, Error>] = []
 
-    func fightPostComments(postID: UUID, cursor: String?, accessToken: String) async throws -> FitFightFightPostCommentList {
+    func fightPostComments(
+        postID: UUID,
+        cursor: String?,
+        accessToken: String,
+        sort: FightPostCommentSort = .comments
+    ) async throws -> FitFightFightPostCommentList {
         try await withCheckedThrowingContinuation { Self.commentLists.append($0) }
     }
     func createFightPostComment(postID: UUID, body: String, parentID: UUID?, accessToken: String) async throws -> FitFightFightPostCommentResponse {
@@ -164,6 +169,8 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
     var replyTo: FitFightFightPostComment?
     var draft = ""
     var nextCursor: String?
+    var commentSort = FightPostCommentSort.comments
+    var commentsLoad = 0
     var loading = false
     var loadingComments = false
     init(post: FitFightFightPost) { self.post = post }
@@ -325,6 +332,25 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
         check(!oldCreateCompleted && !oldUpdateCompleted, "old-account save completions do not dismiss a new account's composer")
         check(mutations.posts == [post.updating(commentCount: 8)], "old-account edit and deletion responses cannot replace the new feed")
         check(mutations.isSaving && mutations.error == "New account error", "old-account completions preserve the new account's saving and error state")
+
+        let sortAuthor = FitFightFightPost.Author(userId: UUID(), handle: "test", displayName: "Test", avatar: nil)
+        let quiet = FitFightFightPostComment(
+            id: UUID(), postId: post.id, parentId: nil, body: "Quiet",
+            createdAt: "2026-09-16T12:00:00Z", author: sortAuthor, mine: false
+        )
+        let busy = FitFightFightPostComment(
+            id: UUID(), postId: post.id, parentId: nil, body: "Busy",
+            createdAt: "2026-09-16T11:00:00Z", author: sortAuthor, mine: false
+        )
+        let reply = FitFightFightPostComment(
+            id: UUID(), postId: post.id, parentId: busy.id, body: "Reply",
+            createdAt: "2026-09-16T11:30:00Z", author: sortAuthor, mine: false
+        )
+        let sortThread = FightPostThreadState(post: post)
+        sortThread.comments = [quiet, busy, reply]
+        check(sortThread.rowsForTest().map(\.0) == [busy.id, reply.id, quiet.id], "most comments shows the busiest thread first")
+        sortThread.commentSort = .recent
+        check(sortThread.rowsForTest().map(\.0) == [quiet.id, busy.id, reply.id], "most recent shows the newest root first")
 
         let thread = FightPostThreadState(post: post)
         let orphan = FitFightFightPostComment(

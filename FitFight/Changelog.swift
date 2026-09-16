@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 16,
+            notes: "Feed comments can be sorted by most comments or most recent. Most comments is the default."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 16,
             notes: "The Feed can show a post to everyone signed in, not only people in your fights."
         ),
         ReleaseNote(

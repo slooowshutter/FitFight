@@ -27,6 +27,7 @@ export const GET = apiRoute<{ postID: string }>(async (request, { params }) => {
     const parsed = listFightPostCommentsQuerySchema.safeParse({
         ...(search.get("cursor") ? { cursor: search.get("cursor") } : {}),
         ...(search.get("limit") ? { limit: search.get("limit") } : {}),
+        ...(search.get("sort") ? { sort: search.get("sort") } : {}),
     });
     if (!parsed.success) {
         throw parsed.error;

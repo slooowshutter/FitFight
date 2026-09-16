@@ -228,10 +228,14 @@ export const createFightPostCommentRequestSchema = z
     })
     .strict();
 
+export const fightPostCommentSortValues = ["recent", "comments"] as const;
+export const fightPostCommentSortSchema = z.enum(fightPostCommentSortValues);
+
 export const listFightPostCommentsQuerySchema = z
     .object({
         cursor: z.string().min(1).max(120).optional(),
         limit: z.coerce.number().int().min(1).max(80).default(40),
+        sort: fightPostCommentSortSchema.optional(),
     })
     .strict();
 
@@ -344,6 +348,7 @@ export type DeleteFightPostCommentResponse = z.infer<
 export type CreateFightPostCommentRequest = z.infer<
     typeof createFightPostCommentRequestSchema
 >;
+export type FightPostCommentSort = z.infer<typeof fightPostCommentSortSchema>;
 export type ListFightPostCommentsQuery = z.infer<
     typeof listFightPostCommentsQuerySchema
 >;

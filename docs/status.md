@@ -486,6 +486,21 @@ This is native navigation only. Existing vote ordering, request creation, API
 contracts, and database schema are unchanged. No deployment or TestFlight upload
 was performed.
 
+## Feed comment order: prepared 16 Sep 2026
+
+Feed post comment threads now show an on-thread **Most comments** / **Most recent**
+control. Default is **Most comments**. This is not a new tab and does not change
+Feedback comments or the Feed post list.
+
+**Contract:** additive optional `sort=comments|recent` on
+`GET /api/v1/posts/{postID}/comments`. Omitted `sort` keeps the installed oldest-first
+page. Response shape is unchanged. No database migration. No app-facing RPC.
+
+**Live rollout check:** staging `/api/app-release` on 16 Sep 2026 returned
+`latest` **1.1.1 (201)**, `review`/`internal` null, `enforced: false`. Preserve that
+omitted-sort contract for admitted clients. Production readiness is recorded in the
+production rollout section above. This change is not deployed yet.
+
 ## Post reactions and expanded comments: prepared 15 Sep 2026
 
 Feed and fight posts now offer **View reactions**, listing usernames, display names,

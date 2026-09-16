@@ -71,6 +71,46 @@
                 }
             }
         },
+        "Cheer this post": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Encourager cette publication"
+                    }
+                }
+            }
+        },
+        "Remove reaction": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Retirer la réaction"
+                    }
+                }
+            }
+        },
+        "React": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Réagir"
+                    }
+                }
+            }
+        },
+        "Posts now have a like control under the photo or note, next to comments.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les publications ont désormais un bouton j’aime sous la photo ou la note, à côté des commentaires."
+                    }
+                }
+            }
+        },
         "View reactions": {
             "localizations": {
                 "fr": {

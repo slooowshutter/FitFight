@@ -13,38 +13,22 @@ struct FightPostEngagement: View {
     @State private var showingReactions = false
     @State private var replyTo: FitFightFightPostComment?
     @State private var draft = ""
-    @State private var customEmoji = ""
     @State private var loading = false
     @State private var loadingComments = false
 
+    private let likeEmoji = "👏"
     private let quickEmoji = ["🔥", "💪", "😂", "❤️", "👏", "😮"]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            reactions
             if !post.reactions.isEmpty {
+                reactionChips
                 Button(String(localized: "View reactions")) { showingReactions = true }
                     .ffType(.caption)
                     .foregroundStyle(theme.mossText)
                     .buttonStyle(FFHapticPlainStyle())
             }
-            Button {
-                open.toggle()
-                if open && comments.isEmpty {
-                    Task { await loadComments() }
-                }
-            } label: {
-                Text(
-                    post.commentCount == 0
-                        ? String(localized: "Comment")
-                        : post.commentCount == 1
-                            ? String(localized: "1 comment")
-                            : String(localized: "\(post.commentCount) comments")
-                )
-                .ffType(.caption)
-                .foregroundStyle(theme.mossText)
-            }
-            .buttonStyle(FFHapticPlainStyle())
+            actions
             if open {
                 if loadingComments {
                     ProgressView()
@@ -113,48 +97,114 @@ struct FightPostEngagement: View {
         }
     }
 
-    private var reactions: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(post.reactions, id: \.emoji) { reaction in
-                    Button {
-                        Task { await feed.react(session: session, post: post, emoji: reaction.emoji) }
-                    } label: {
-                        Text("\(reaction.emoji) \(reaction.count)")
-                            .ffType(.caption)
-                            .foregroundStyle(reaction.mine ? theme.mossOn : theme.text)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(reaction.mine ? theme.mossFill : theme.control, in: Capsule())
-                    }
-                    .buttonStyle(FFHapticPlainStyle())
-                }
-                ForEach(quickEmoji.filter { emoji in !post.reactions.contains(where: { $0.emoji == emoji }) }, id: \.self) { emoji in
-                    Button {
-                        Task { await feed.react(session: session, post: post, emoji: emoji) }
-                    } label: {
-                        Text(emoji)
-                            .ffType(.caption)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 5)
-                            .background(theme.control, in: Capsule())
-                    }
-                    .buttonStyle(FFHapticPlainStyle())
-                }
-                TextField(String(localized: "Emoji"), text: $customEmoji)
-                    .ffType(.caption)
-                    .frame(width: 36)
-                    .onChange(of: customEmoji) { _, value in
-                        let emoji = firstEmoji(in: value)
-                        customEmoji = ""
-                        if let emoji {
-                            Task { await feed.react(session: session, post: post, emoji: emoji) }
-                        }
-                    }
+    // NOTE: nested horizontal ScrollView plus a tiny emoji field sat inside Feed's
+    // vertical scroll, so the like controls were easy to miss and often untappable.
+    private var actions: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            FFDivider(inset: 0)
+            HStack(spacing: 16) {
+                likeButton
+                commentButton
+                reactMenu
+                Spacer(minLength: 0)
             }
+            .frame(minHeight: 44)
         }
         .disabled(feed.reactingPostIDs.contains(post.id))
         .accessibilityValue(feed.reactingPostIDs.contains(post.id) ? String(localized: "Saving…") : "")
+    }
+
+    private var liked: Bool {
+        post.reactions.contains { $0.mine }
+    }
+
+    private var likeCount: Int {
+        post.reactions.reduce(0) { $0 + $1.count }
+    }
+
+    private var likeButton: some View {
+        Button {
+            let emoji = post.reactions.first(where: \.mine)?.emoji ?? likeEmoji
+            Task { await feed.react(session: session, post: post, emoji: emoji) }
+        } label: {
+            HStack(spacing: 6) {
+                Text(post.reactions.first(where: \.mine)?.emoji ?? likeEmoji)
+                if likeCount > 0 {
+                    Text(verbatim: "\(likeCount)")
+                }
+            }
+            .ffType(.caption)
+            .foregroundStyle(liked ? theme.mossText : theme.textSecondary)
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(FFHapticPlainStyle())
+        .accessibilityLabel(liked ? String(localized: "Remove reaction") : String(localized: "Cheer this post"))
+        .accessibilityValue(likeCount > 0 ? String(likeCount) : "")
+    }
+
+    private var commentButton: some View {
+        Button {
+            open.toggle()
+            if open && comments.isEmpty {
+                Task { await loadComments() }
+            }
+        } label: {
+            Text(
+                post.commentCount == 0
+                    ? String(localized: "Comment")
+                    : post.commentCount == 1
+                        ? String(localized: "1 comment")
+                        : String(localized: "\(post.commentCount) comments")
+            )
+            .ffType(.caption)
+            .foregroundStyle(theme.mossText)
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(FFHapticPlainStyle())
+    }
+
+    private var reactMenu: some View {
+        Menu {
+            ForEach(quickEmoji, id: \.self) { emoji in
+                Button {
+                    Task { await feed.react(session: session, post: post, emoji: emoji) }
+                } label: {
+                    Text(emoji)
+                }
+            }
+        } label: {
+            Image(systemName: "face.smiling")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(theme.textSecondary)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(FFHapticPlainStyle())
+        .menuOrder(.fixed)
+        .accessibilityLabel(String(localized: "React"))
+    }
+
+    private var reactionChips: some View {
+        HStack(spacing: 8) {
+            ForEach(post.reactions, id: \.emoji) { reaction in
+                Button {
+                    Task { await feed.react(session: session, post: post, emoji: reaction.emoji) }
+                } label: {
+                    Text("\(reaction.emoji) \(reaction.count)")
+                        .ffType(.caption)
+                        .foregroundStyle(reaction.mine ? theme.mossOn : theme.text)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(reaction.mine ? theme.mossFill : theme.control, in: Capsule())
+                }
+                .buttonStyle(FFHapticPlainStyle())
+            }
+            Spacer(minLength: 0)
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .disabled(feed.reactingPostIDs.contains(post.id))
     }
 
     private var displayedComments: [DisplayedFightComment] {
@@ -324,12 +374,6 @@ struct FightPostEngagement: View {
             guard session.authSession?.user.id == userID else { return }
             feed.error = error.localizedDescription
         }
-    }
-
-    private func firstEmoji(in value: String) -> String? {
-        guard let segment = value.precomposedStringWithCanonicalMapping.first else { return nil }
-        let candidate = String(segment)
-        return candidate.unicodeScalars.contains(where: { $0.properties.isEmoji }) ? candidate : nil
     }
 }
 

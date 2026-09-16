@@ -627,7 +627,7 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
         let commentHistory = (0..<45).map { index in
             FitFightFightPostComment(
                 id: UUID(), postId: post.id, parentId: nil, body: "Comment \(index)",
-                createdAt: post.createdAt.addingTimeInterval(Double(-index)), author: post.author, mine: false
+                createdAt: post.createdAt, author: post.author, mine: false
             )
         }
         let retainedThread = FightPostThreadState(post: post.updating(commentCount: 45))

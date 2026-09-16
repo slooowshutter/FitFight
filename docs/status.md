@@ -1,6 +1,6 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **16 Sep 2026**. Production candidate: **1.1.1 (202)**.
+Read this before building. Last updated **17 Sep 2026**. Production candidate: **1.1.1 (202)**.
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
@@ -8,7 +8,93 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
 
+## Profiles, Friends, and Rivalry implementation, 17 Sep 2026
+
+**Code prepared on `profiles-friends-and-stats`, not deployed.** The
+[implementation plan](design/profiles-friends-implementation-plan.md) now has
+native Profile sheets and editing, mutually accepted Friends and request lists,
+Competitive/Public controls, explicit 7/30-day Steps sharing, records, shared
+history, 1v1 rivalry summaries, and composer-based challenges/rematches. Avatars
+and usernames open Profiles from standings, participants, Feed, comments,
+reactions, Feedback, and Friends. Defaults are Private, Casual, and no daily
+Steps sharing. Identity-only lookup never returns referral codes, companion
+prompts, a friends roster, or private Fight titles/actions.
+
+**Suggested Fights:** the existing New/discovery and invitation surfaces and an
+optional final onboarding step use the eligible server list. No automatic joining
+or sharing change occurs. New administrative capability depends only on
+`FITFIGHT_ADMIN_USER_ID`, an immutable Auth UUID configured on the server. It is
+disabled when absent. Admin visibility, recurrence, suggestion, and stop controls
+serialize with joins and recurring rounds; stopped/private series lose Suggested.
+No new global leaderboard or recurring-league scoring system was added.
+
+**Records and privacy:** the additive migration captures participation and
+freezes category/result evidence without changing Fight scoring. Anonymous field
+and tie counts preserve surviving Users' results when a participant deletes their
+account. Existing account deletion still removes the deleting owner's own Fights.
+Historical category/departure facts remain unknown when evidence is missing;
+there is no invented lifetime completeness date. Backfill locks existing Fight
+writes until its snapshot and triggers commit. Old backend departures remain
+unclassified; full-fidelity capture begins only after the new mutation paths are
+live and old instances drain. That has not happened in either live environment.
+The new friendship store never trusts legacy client-created accepted rows.
+
+**Measurement:** authenticated display events deduplicate replay, qualify at most
+once per rolling 30 minutes per direction, and expire after 30 days through the
+existing daily maintenance route. Friend actions and actual participation
+transactions record seven-day last-visit attribution. Anonymous aggregate counts
+remain after raw events expire. Reports are operator-only. Measurement defaults
+off (`FITFIGHT_PROFILE_MEASUREMENT_ENABLED=false`), pending publication of the
+prepared English/French Privacy disclosure.
+
+**Held parts of the plan:** artwork has private storage metadata only; there is
+no provider request, runner, paid generation, delivery route, or loading card.
+Artwork opt-in is rejected until implemented. Marc still needs to supply the
+provider/model, credentials through secret storage, budget, and approved companion
+input policy. Terms pages and native sign-in/settings Terms links remain unbuilt
+until the actual operator/address, jurisdiction, and minimum-age facts are supplied.
+No placeholder legal page or extra Terms acceptance flow was introduced.
+
+**Cloud checks passed:**
+
+- [Web API, `99d55cb`](https://github.com/slooowshutter/FitFight/actions/runs/35162380008): strict typecheck, all 257 unit/contract tests, API contract parsing, and cloud Chrome rendering of both signed-out Privacy pages at 393 by 852. English/French screenshots were visually inspected.
+- [Database, `99d55cb`](https://github.com/slooowshutter/FitFight/actions/runs/35162379985): additive migration, schema lint, private grants/RLS, build 113 compatibility, historical backfill rehearsal, and 29 transaction/HTTP tests before and after the separately deferred client-permission cutoff. Cases include actual account deletion preserving a group draw, mutual friendship access, independently bounded activity, concurrent capacity/privacy/stop/recurrence changes, attribution and retention.
+- [iOS simulator, `6c4880e`](https://github.com/slooowshutter/FitFight/actions/runs/35162152346): app compilation on GitHub-hosted `macos-26`, Profile DTO/redaction and state response ordering/revocation/account-switch checks, existing native regressions, English/French localizations, API boundary, and design tokens. Native source has not changed since this run.
+
+These checks use disposable cloud data and simulated network responses for native
+state tests. They do not establish a live deployment, real image generation, or
+installed-device verification. No workstation Xcode or local database tests were
+used.
+
+**Compatibility and rollout:** API stays `/api/v1`; existing `/me`, Fight and
+media payloads and build 113 fixtures remain intact. Feedback comment `author_id`
+is additive and optional in native decoding. Cloud authenticated `/me` requests
+cover version/build headers 113, 190, 200, 201, and 202; this is contract evidence,
+not installed-device testing of each build. The separately deferred direct-client
+grant cutoff is rehearsed in CI only, not activated by this migration.
+Read-only live checks at **16 Sep 23:00:21 UTC** returned staging latest 1.1.1 (201),
+null review/internal, enforcement off; production latest 1.1.1 (202), null
+review/internal, enforcement on. No live schema, backend, release manifest, or
+app distribution changed in this work. Feature-branch Vercel deployment is
+explicitly disabled while cloud checks run.
+
+Before release: recheck both manifests, apply the additive schema then compatible
+backend, publish the accurate legal disclosures, configure the admin UUID, and
+verify with two installed staging clients before distributing the native build.
+Keep measurement/artwork disabled until their respective dependencies are met.
+Physical-device VoiceOver, Dynamic Type, Night/Day, onboarding, Apple sign-in and
+HealthKit verification remains outstanding. Marketing version stays `1.1.1`, with
+a 17 September release note prepared. No PR, branch merge, TestFlight upload,
+production deployment, or App Store action was performed for this feature.
+
 ## Production rollout and App Store submission, 16 Sep 2026
+
+**Later read-only release check, 16 Sep at 21:45:58 UTC:** staging
+`/api/app-release` returned latest **1.1.1 (201)**, null review/internal, and
+`enforced: false`. Production returned latest **1.1.1 (202)**, null review/internal,
+and `enforced: true`. These current manifest observations supersede the older
+manifest values below; they do not establish installed-device verification or
+retirement of direct-table clients.
 
 This section supersedes the earlier held-rollout and screenshot-upload notes below.
 Marc authorized the complete production rollout and App Store submission.

@@ -9,12 +9,16 @@ A person with a FitFight identity.
 _Avoid_: Account, athlete, customer
 
 **Profile**:
-The public-facing name, handle, photo, and preferences attached to a User.
+The audience-controlled name, handle, photo, preferences, and shared competitive record attached to a User.
 _Avoid_: User record, account
 
 **Friendship**:
 A mutually accepted relationship that makes it easier for two Users to invite one another.
 _Avoid_: Follow, contact
+
+**Rivalry**:
+The competitive history between two Users, including their shared Fights and results against one another.
+_Avoid_: Friendship, global ranking
 
 ## Fights
 
@@ -37,6 +41,10 @@ _Avoid_: Data grant, provider permission
 **Invite**:
 A revocable offer for a User or recipient to become a Fight member before or during the Fight; it expires when the Fight window closes.
 _Avoid_: Share link, request
+
+**Suggested fight**:
+A public Fight selected by FitFight's administrator to be offered to Users, including during onboarding. The suggestion invites participation without making a User a Fight member.
+_Avoid_: Global leaderboard, automatic membership
 
 **Fight window**:
 The exact interval during which qualifying activity contributes to a Fight.

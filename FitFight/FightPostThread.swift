@@ -2,6 +2,8 @@ import SwiftUI
 
 struct FightPostEngagement: View {
     let post: FitFightFightPost
+    var targetCommentID: UUID? = nil
+    var onTargetCommentLoaded: (() -> Void)? = nil
 
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var feed: FeedStore
@@ -16,6 +18,9 @@ struct FightPostEngagement: View {
     @State private var customEmoji = ""
     @State private var loading = false
     @State private var loadingComments = false
+    @State private var reloadComments = false
+    @State private var commentsVersion = 0
+    @State private var didRevealTarget = false
 
     private let quickEmoji = ["🔥", "💪", "😂", "❤️", "👏", "😮"]
 
@@ -53,6 +58,7 @@ struct FightPostEngagement: View {
                 ForEach(displayedComments) { row in
                     commentRow(row.comment)
                         .padding(.leading, CGFloat(min(row.depth, 4)) * 14)
+                        .id(row.id)
                 }
                 if nextCursor != nil {
                     Button(String(localized: "More comments")) {
@@ -92,7 +98,7 @@ struct FightPostEngagement: View {
             }
         }
         .task {
-            if post.commentCount > 0 {
+            if post.commentCount > 0 || targetCommentID != nil {
                 open = true
                 await loadComments()
             }
@@ -100,9 +106,18 @@ struct FightPostEngagement: View {
         .onChange(of: post.commentCount) { previous, count in
             if previous == 0 && count > 0 {
                 open = true
-                if comments.isEmpty {
-                    Task { await loadComments() }
-                }
+            }
+            if open {
+                Task { await loadComments() }
+            }
+        }
+        .onChange(of: feed.revision) { _, _ in
+            if open { Task { await loadComments() } }
+        }
+        .onChange(of: comments.map(\.id)) { _, ids in
+            if !didRevealTarget, let targetCommentID, ids.contains(targetCommentID) {
+                didRevealTarget = true
+                onTargetCommentLoaded?()
             }
         }
         .sheet(isPresented: $showingReactions) {
@@ -233,22 +248,43 @@ struct FightPostEngagement: View {
             return
         }
         #endif
-        guard !loadingComments, let userID = session.authSession?.user.id else { return }
+        guard let userID = session.authSession?.user.id else { return }
+        if loadingComments {
+            reloadComments = true
+            return
+        }
         loadingComments = true
         defer { if session.authSession?.user.id == userID { loadingComments = false } }
+        var append = more
         do {
-            let token = try await session.freshAccessToken()
-            guard session.authSession?.user.id == userID else { return }
-            let result = try await FitFightAPI().fightPostComments(
-                postID: post.id,
-                cursor: more ? nextCursor : nil,
-                accessToken: token
-            )
-            guard session.authSession?.user.id == userID else { return }
-            comments = more
-                ? comments + result.comments.filter { comment in !comments.contains(where: { $0.id == comment.id }) }
-                : result.comments
-            nextCursor = result.nextCursor
+            repeat {
+                reloadComments = false
+                let version = commentsVersion
+                let token = try await session.freshAccessToken()
+                guard !Task.isCancelled, session.authSession?.user.id == userID else { return }
+                let result = try await FitFightAPI().fightPostComments(
+                    postID: post.id,
+                    cursor: append ? nextCursor : nil,
+                    accessToken: token
+                )
+                guard !Task.isCancelled, session.authSession?.user.id == userID else { return }
+                if commentsVersion == version {
+                    comments = append
+                        ? comments + result.comments.filter { comment in !comments.contains(where: { $0.id == comment.id }) }
+                        : result.comments
+                    nextCursor = result.nextCursor
+                } else {
+                    // A response started before our write must not undo that write.
+                    reloadComments = true
+                }
+                if reloadComments {
+                    append = false
+                } else if let targetCommentID, !comments.contains(where: { $0.id == targetCommentID }), nextCursor != nil {
+                    append = true
+                } else {
+                    break
+                }
+            } while true
         } catch {
             if Task.isCancelled || error is CancellationError { return }
             guard session.authSession?.user.id == userID else { return }
@@ -272,6 +308,7 @@ struct FightPostEngagement: View {
                 accessToken: token
             )
             guard session.authSession?.user.id == userID else { return }
+            commentsVersion += 1
             if !comments.contains(where: { $0.id == created.comment.id }) {
                 comments.append(created.comment)
             }
@@ -294,6 +331,7 @@ struct FightPostEngagement: View {
             guard session.authSession?.user.id == userID else { return }
             let result = try await FitFightAPI().deleteFightPostComment(postID: post.id, commentID: comment.id, accessToken: token)
             guard session.authSession?.user.id == userID else { return }
+            commentsVersion += 1
             let children = Dictionary(grouping: comments, by: \.parentId)
             var removed = Set<UUID>()
             var pending = [comment.id]

@@ -141,6 +141,8 @@ async function insertSocialIntents(
     actorId: string,
     actor: string,
     recipients: Recipient[],
+    postId: string,
+    commentId?: string,
 ): Promise<void> {
     const unique = new Map<string, Recipient>();
     for (const recipient of recipients) {
@@ -172,7 +174,7 @@ async function insertSocialIntents(
                 slot: "event",
                 not_before: notBefore,
                 expires_at: expiresAt,
-                route: `/fights/${recipient.fightId}`,
+                route: `/fights/${recipient.fightId}?post=${postId}${commentId ? `&comment=${commentId}` : ""}`,
                 copy_key: recipient.kind,
                 alert_body: socialNotificationAlert(
                     recipient.kind,
@@ -241,6 +243,7 @@ export async function enqueueFightFeedPostNotifications(
             eventId: input.postId,
             fightId: member.fight_id,
         })),
+        input.postId,
     );
 }
 
@@ -299,6 +302,8 @@ export async function enqueueFightFeedCommentNotifications(
             const fightId = fights.get(recipient.userId);
             return fightId ? [{ ...recipient, fightId }] : [];
         }),
+        input.postId,
+        input.commentId,
     );
 }
 
@@ -333,5 +338,6 @@ export async function enqueueFightFeedReactionNotifications(
                 fightId,
             },
         ],
+        input.postId,
     );
 }

@@ -1,12 +1,92 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **16 Sep 2026**. Production candidate: **1.1.1 (202)**.
+Read this before building. Last updated **17 Sep 2026**. Production candidate: **1.1.1 (202)**.
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
 ---
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
+
+## Feed pagination and direct refresh, prepared 17 Sep 2026
+
+**Code:** root Feed and each Fight's feed now request ten posts per page through
+the existing `limit` parameter. A lazy list automatically appends the next page at
+the bottom. Stable post IDs, reserved photo dimensions, and unchanged existing
+rows preserve the reading position. Page requests deduplicate overlapping triggers;
+failed pages keep their cursor and offer a retry at the bottom. Pagination does not
+reload comments on earlier cards.
+
+Pull-to-refresh fetches the latest ten posts and supersedes older page responses.
+It awaits the feed request directly, without first waiting for HealthKit/Fight
+sync. Server feed responses already use `Cache-Control: no-store`; this corrects
+the refresh sequencing and stale thread state. Background events refresh displayed
+cards in place and mark offscreen cards for refresh on reappearance, preserving
+the reading order and pagination cursor. New posts appear on initial load or pull.
+
+**Cloud checks:** [iOS build and native regression checks](https://github.com/slooowshutter/FitFight/actions/runs/35157007769)
+passed on GitHub-hosted macOS. The actual API methods request ten posts and retain
+opaque cursors. Suspended-request tests verify direct pull-to-refresh and its
+indicator, one request per page, stable append order, no reload of earlier threads,
+refresh/page races, error recovery, end-of-feed behavior, visible/offscreen live
+updates, and account isolation.
+
+The [hosted iOS simulator scroll check](https://github.com/slooowshutter/FitFight/actions/runs/35157007857)
+also passed with the actual feed layout and an isolated 25-post fixture. Initial
+load stopped at ten posts; scrolling requested exactly two more pages, reaching
+20 and then 25 posts. The same visible card moved **0 points** on both appends.
+The final page stopped pagination. This measures fixture layout on iOS 26.5;
+physical-device and two-user live verification remain separate.
+
+**Compatibility and deployment:** no additional API or schema changes. Older
+clients retain the default 30-post page and existing response fields. The earlier
+single-post endpoint and feed invalidation migration below still deploy before the
+native app. No hosted promotion or TestFlight upload was performed.
+
+## Feed refresh, notification targets and Activity, prepared 16 Sep 2026
+
+**Code:** reproduced two defects in cloud regression checks: a loaded thread did
+not refresh when its comment count changed from one positive number to another,
+and social pushes carried only a Fight destination. Existing Realtime covered
+standings, not feed content. The prepared change adds private `feed_changed`
+invalidations, refreshes visible posts and threads, and retains post/comment
+targets through foreground taps, cold starts and sign-in. A dedicated post read
+resolves targets outside the feed's loaded pages. Equal-timestamp post/comment
+pagination preserves microseconds and accepts existing opaque cursors.
+
+You -> Activity lists currently accessible Fight posts, comments, reactions and
+membership history, with timestamps and links. New membership transitions are
+recorded privately. Existing acceptance times are backfilled; older invitations
+display **Time not recorded**. This is available product activity, not a push
+delivery log. Deleted/blocked content and inaccessible Fights are excluded.
+
+**Cloud checks:** [iOS simulator build and native regressions](https://github.com/slooowshutter/FitFight/actions/runs/35153263762)
+passed on GitHub-hosted macOS. Tests cover comment refresh during another read,
+confirmed local writes, retained feed pages, independent live-update streams,
+exact post/comment routes, account changes, and shared Swift/API fixtures.
+[TypeScript and all 251 backend tests](https://github.com/slooowshutter/FitFight/actions/runs/35153836885)
+passed. The [disposable database checks](https://github.com/slooowshutter/FitFight/actions/runs/35153836954)
+passed before and after the deferred client-permission cutoff, including legacy
+migration replay. They cover real WebSocket commit/rollback behavior, membership history, blocks,
+withdrawals, deletion, private-table permissions, and pagination beyond 40
+equal-timestamp comments. Compatibility includes the preserved build 113 SQL
+fixture and the unchanged notification parsers from builds 201 and 202.
+
+**Live evidence:** at 21:02 UTC on 16 September, staging `/api/app-release`
+advertised latest **1.1.1 (201)**, no review/internal candidates, enforcement off.
+Production advertised latest **1.1.1 (202)**, no review/internal candidates,
+enforcement on. These reads supersede the older manifest observations below.
+`/api/v1`, existing post/comment response fields, and direct-client permissions
+remain unchanged. Notification URLs retain `/fights/{id}` and add query targets;
+installed 201/202 clients still open the Fight.
+
+**Deployment:** no hosted schema/backend promotion, TestFlight upload, production
+deployment was performed. After authorized merges, apply the additive
+`20260916210740_feed_activity_updates.sql` migration, deploy the compatible backend,
+then distribute the native build through preview. Production needs its own
+authorized rollout and checks. A two-device live comment/tap check remains.
+The specific reported missing comment is not confirmed without both phones'
+build/environment labels; staging and production use separate databases.
 
 ## Production rollout and App Store submission, 16 Sep 2026
 

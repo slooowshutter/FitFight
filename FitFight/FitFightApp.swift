@@ -130,7 +130,10 @@ struct FitFightApp: App {
                     steps.onBackendSync = {
                         await model.refreshFromServer(session: session)
                     }
-                    push.configure(session: session)
+                    push.configure(session: session) {
+                        model.feedRevision += 1
+                        Task { await model.consumePendingLinks(session: session) }
+                    }
                     await push.refreshServerStatus()
                     await push.refreshAuthorizationStatus()
                     await push.registerIfAuthorized()
@@ -147,12 +150,19 @@ struct FitFightApp: App {
                     await fightLiveUpdates.activate(client: session.client, userID: userID) {
                         guard session.authSession?.user.id == userID, appUpdate.allowsUse else { return }
                         await model.refreshFromServer(session: session, performMaintenance: false)
+                    } refreshFeed: {
+                        guard session.authSession?.user.id == userID, appUpdate.allowsUse else { return }
+                        model.feedRevision += 1
                     }
                 }
                 .task(id: session.authSession?.user.id) {
                     guard !CompanionPreview.isEnabled else { return }
                     feed.activate(userID: session.authSession?.user.id)
-                    guard let userId = session.authSession?.user.id else { return }
+                    guard let userId = session.authSession?.user.id else {
+                        model.openPost = nil
+                        model.showingActivity = false
+                        return
+                    }
                     CrashReporting.identify(userId: userId)
                     await push.refreshAuthorizationStatus()
                     await push.registerIfAuthorized()
@@ -192,10 +202,12 @@ struct FitFightApp: App {
                 .onChange(of: scenePhase) { _, phase in
                     guard !CompanionPreview.isEnabled else { return }
                     guard phase == .active, session.authSession != nil else { return }
+                    model.feedRevision += 1
                     Task {
                         guard await AppUpdateChecker.shared.permitsRequests() else { return }
                         async let discovery: Void = model.loadFightDiscovery(session: session, force: true)
                         await model.refreshFights(session: session, steps: steps)
+                        await model.consumePendingLinks(session: session)
                         await discovery
                     }
                 }

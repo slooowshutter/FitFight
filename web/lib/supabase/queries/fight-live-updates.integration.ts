@@ -100,6 +100,7 @@ test(
         where fight_id = ${fightId}`;
 
         const received = [0, 0, 0];
+        const feedReceived = [0, 0, 0];
         const replicationReady = new Set<number>();
         const channels = clients.map((client, index) =>
             client
@@ -125,6 +126,10 @@ test(
                         ![fightId, ...users].includes(message.payload.id),
                     );
                     received[index]++;
+                })
+                .on("broadcast", { event: "feed_changed" }, (message) => {
+                    assert.deepEqual(Object.keys(message.payload), ["id"]);
+                    feedReceived[index]++;
                 }),
         );
         await Promise.all(channels.map((channel) => subscribe(channel, true)));
@@ -197,6 +202,24 @@ test(
             await database`select count(*)::int as count from realtime.messages
         where topic = ${"fitfight:fights:" + peer} and event = 'fights_changed'`;
         assert.equal(afterRollback.count, before[0].count);
+
+        const postId = randomUUID();
+        await database`insert into public.fight_posts (id, fight_id, audience, author_id, body)
+            values (${postId}, ${fightId}, 'fight', ${owner}, 'Live comment regression')`;
+        await delay(500);
+        feedReceived.fill(0);
+        await assert.rejects(database.begin(async (sql) => {
+            await sql`insert into public.fight_post_comments (post_id, author_id, body)
+                values (${postId}, ${peer}, 'Rolled back comment')`;
+            throw new Error('rollback comment');
+        }), /rollback comment/);
+        await delay(300);
+        assert.deepEqual(feedReceived, [0, 0, 0]);
+        await database`insert into public.fight_post_comments (post_id, author_id, body)
+            values (${postId}, ${peer}, 'Committed comment')`;
+        for (let attempt = 0; attempt < 100 && (feedReceived[0] === 0 || feedReceived[1] === 0); attempt++) await delay(50);
+        assert.ok(feedReceived[0] > 0 && feedReceived[1] > 0, 'Both phones receive a committed comment invalidation');
+        assert.equal(feedReceived[2], 0, 'Unrelated users receive no comment invalidation');
 
         const cutoff = new Date().toISOString();
         await syncHealthKitAggregates(

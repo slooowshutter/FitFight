@@ -1,6 +1,310 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Activity": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Activity"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Activité"
+                    }
+                }
+            }
+        },
+        "Notifications & activity": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Notifications & activity"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Notifications et activité"
+                    }
+                }
+            }
+        },
+        "Posts, comments, reactions and membership history from your fights.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Posts, comments, reactions and membership history from your fights."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Publications, commentaires, réactions et historique des participants de vos combats."
+                    }
+                }
+            }
+        },
+        "No activity yet.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "No activity yet."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Aucune activité pour le moment."
+                    }
+                }
+            }
+        },
+        "Time not recorded": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Time not recorded"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Date non enregistrée"
+                    }
+                }
+            }
+        },
+        "This post is no longer available.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "This post is no longer available."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cette publication n’est plus disponible."
+                    }
+                }
+            }
+        },
+        "Fight activity": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Fight activity"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Activité du combat"
+                    }
+                }
+            }
+        },
+        "Invitation": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Invitation"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Invitation"
+                    }
+                }
+            }
+        },
+        "activity.post": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ posted"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ a publié"
+                    }
+                }
+            }
+        },
+        "activity.comment": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ commented"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ a commenté"
+                    }
+                }
+            }
+        },
+        "activity.reply": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ replied"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ a répondu"
+                    }
+                }
+            }
+        },
+        "activity.reaction": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ reacted"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ a réagi"
+                    }
+                }
+            }
+        },
+        "activity.invitation": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%1$@ invited @%2$@"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%1$@ a invité @%2$@"
+                    }
+                }
+            }
+        },
+        "activity.joined": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ joined"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ a rejoint le combat"
+                    }
+                }
+            }
+        },
+        "activity.next-round": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ joined the next round"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ a rejoint la prochaine manche"
+                    }
+                }
+            }
+        },
+        "activity.declined": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ declined"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ a refusé"
+                    }
+                }
+            }
+        },
+        "activity.left": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ left"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ a quitté le combat"
+                    }
+                }
+            }
+        },
+        "activity.disqualified": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ was disqualified"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ a été disqualifié"
+                    }
+                }
+            }
+        },
+        "Comments and reactions refresh live. Feed loads ten posts at a time and loads more as you scroll. Pull down to fetch the latest posts. Notifications open the exact post. You now has Activity with posts, comments, reactions and timestamped membership history.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Comments and reactions refresh live. Feed loads ten posts at a time and loads more as you scroll. Pull down to fetch the latest posts. Notifications open the exact post. You now has Activity with posts, comments, reactions and timestamped membership history."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les commentaires et réactions s’actualisent en direct. Le fil charge dix publications à la fois, puis la suite quand vous faites défiler. Tirez vers le bas pour actualiser les publications. Les notifications ouvrent la publication concernée. L’onglet Vous propose Activité, avec les publications, commentaires, réactions et l’historique daté des participants."
+                    }
+                }
+            }
+        },
         "Fight charts and standings now use the same confirmed steps. Charts exclude activity outside the Fight, update with late corrections, and show missing history clearly.": {
             "localizations": {
                 "fr": {

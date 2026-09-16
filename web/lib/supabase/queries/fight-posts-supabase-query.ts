@@ -90,7 +90,7 @@ function isoUtc(value: Date | string): string {
 }
 
 function cursorStamp(value: Date | string): string {
-    return new Date(value).toISOString();
+    return value instanceof Date ? value.toISOString() : value;
 }
 
 function parseCursor(
@@ -436,7 +436,8 @@ export async function listFightPosts(
         ? await database<PostRow[]>`
                 select
                     post.id, post.audience::text as audience, post.fight_id, post.broadcast,
-                    coalesce(fight.name, '') as fight_name, post.body, post.created_at,
+                    coalesce(fight.name, '') as fight_name, post.body,
+                    to_char(post.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as created_at,
                     post.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
                     profile.companion_id as author_companion_id,
                     avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
@@ -455,7 +456,10 @@ export async function listFightPosts(
                         select 1 from private.feed_blocks as blocked
                         where blocked.blocker_id = ${userId} and blocked.blocked_id = post.author_id
                     )
-                    and (post.created_at, post.id) < (${cursor.createdAt}::timestamptz, ${cursor.id}::uuid)
+                    and (post.created_at, post.id) < (coalesce(
+                        (select anchor.created_at from public.fight_posts anchor where anchor.id = ${cursor.id}::uuid),
+                        ${cursor.createdAt}::text::timestamptz
+                    ), ${cursor.id}::uuid)
                     and (
                         (
                             ${fightId ?? null}::uuid is not null
@@ -559,7 +563,8 @@ export async function listFightPosts(
         : await database<PostRow[]>`
                 select
                     post.id, post.audience::text as audience, post.fight_id, post.broadcast,
-                    coalesce(fight.name, '') as fight_name, post.body, post.created_at,
+                    coalesce(fight.name, '') as fight_name, post.body,
+                    to_char(post.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as created_at,
                     post.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
                     profile.companion_id as author_companion_id,
                     avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
@@ -802,6 +807,30 @@ async function preparePostMedia(
         }
     }
     return uniqueMediaIds;
+}
+
+/** Resolves a notification target independently of the feed's loaded pages. */
+export async function getFightPost(
+    userId: string,
+    postId: string,
+    database: Sql = createDatabaseClient(),
+): Promise<FightPostResponse> {
+    return database.begin("isolation level repeatable read read only", async (sql) => {
+        await loadVisiblePost(userId, postId, sql);
+        const [blocked] = await sql`
+            select 1 from private.feed_blocks as blocked
+            join public.fight_posts as post on post.id = ${postId}
+            where (blocked.blocker_id = ${userId} and blocked.blocked_id = post.author_id)
+                or (blocked.blocked_id = ${userId} and blocked.blocker_id = post.author_id)
+            limit 1
+        `;
+        const [row] = await loadPostRows([postId], sql);
+        if (blocked || !row) {
+            throw new ApiError(404, ERROR_CODES.not_found, "Post not found");
+        }
+        const [post] = await mapPosts(userId, [row], sql);
+        return { post };
+    });
 }
 
 export async function createFightPost(

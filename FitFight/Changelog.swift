@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.1.1",
             year: 2026,
             month: 9,
+            day: 17,
+            notes: "Comments and reactions refresh live. Feed loads ten posts at a time and loads more as you scroll. Pull down to fetch the latest posts. Notifications open the exact post. You now has Activity with posts, comments, reactions and timestamped membership history."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
             day: 15,
             notes: "Fight charts and standings now use the same confirmed steps. Charts exclude activity outside the Fight, update with late corrections, and show missing history clearly."
         ),

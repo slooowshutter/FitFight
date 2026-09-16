@@ -43,6 +43,12 @@ struct YouView: View {
                 health
             }
 
+            FFSection(title: String(localized: "Activity")) {
+                FFGroupedRows {
+                    navRow(String(localized: "Notifications & activity")) { model.showingActivity = true }
+                }
+            }
+
             FFSection(title: String(localized: "Bugs & requests")) {
                 requests
             }

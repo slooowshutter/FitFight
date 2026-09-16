@@ -1,3 +1,5 @@
+begin;
+
 -- Keep the evidence snapshot and trigger installation atomic with concurrent writers.
 lock table public.fight_series, public.fights, public.fight_members in share row exclusive mode;
 
@@ -237,3 +239,5 @@ end;
 $$;
 revoke all on function private.capture_fight_record_context(), private.capture_profile_participation(),
     private.preserve_profile_fight_category() from public, anon, authenticated;
+
+commit;

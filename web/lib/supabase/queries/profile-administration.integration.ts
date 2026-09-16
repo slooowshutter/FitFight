@@ -13,6 +13,7 @@ import { mintNextRecurringFight } from "./mint-recurring-fight-supabase-query";
 import { departFightMemberships } from "./membership-departure-supabase-query";
 import { recordProfileView, readProfileMeasurements } from "./profile-events-supabase-query";
 import { updateProfileSettings } from "./shared-profiles-supabase-query";
+import { acceptFightParticipation } from "./accept-fight-participation-supabase-query";
 import { startFight } from "./start-fight-supabase-query";
 import { recalculateFight } from "./recalculate-fight-supabase-query";
 
@@ -50,6 +51,10 @@ test("suggestions serialize privacy, joining, stopping and recurring roster chan
     await assert.rejects(setFightSuggested(owner, fightId, true, database));
     await administerFight(owner, fightId, { visibility: "joinable" }, database);
     await setFightSuggested(owner, fightId, true, database);
+    await database`insert into public.fight_members(fight_id, user_id, state) values (${fightId}, ${guest}, 'invited')`;
+    await acceptFightParticipation(guest, fightId, undefined, "now", now, undefined, database, admin);
+    await acceptFightParticipation(guest, fightId, undefined, "now", now, undefined, database, admin);
+    await assert.rejects(acceptFightParticipation(outsider, fightId, undefined, "now", now, undefined, database, admin));
     assert.ok((await listJoinableFights(guest, admin, now, true)).some((fight) => fight.fightId === fightId));
     await Promise.allSettled([
         setFightSuggested(owner, fightId, true, database),
@@ -95,4 +100,32 @@ test("suggestions serialize privacy, joining, stopping and recurring roster chan
     await assert.rejects(administerFight(owner, fightId, { action: "stop_round" }, database));
     const [final] = await database`select state::text from public.fights where id = ${fightId}`;
     assert.equal(final.state, "final");
+});
+
+test("concurrent joins cannot overfill a suggested Fight and ended offers disappear", async (t) => {
+    const users = Array.from({ length: 52 }, () => randomUUID());
+    const owner = users[0];
+    const fightId = randomUUID();
+    const seriesId = randomUUID();
+    const now = new Date();
+    t.after(async () => {
+        await database`delete from public.fights where id = ${fightId}`;
+        await database`delete from public.fight_series where id = ${seriesId}`;
+        await database`delete from auth.users where id = any(${database.array(users)}::uuid[])`;
+    });
+    for (const id of users) await database`insert into auth.users(id) values (${id})`;
+    await database`insert into public.fight_series(id, owner_id, visibility, duration_seconds, name, time_zone, join_code, suggested, recurring)
+        values (${seriesId}, ${owner}, 'joinable', 7200, 'Capacity', 'UTC', ${randomJoinCode()}, true, false)`;
+    await database`insert into public.fights(id, owner_id, name, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy, series_id)
+        values (${fightId}, ${owner}, 'Capacity', 'live', now() - interval '1 hour', now() + interval '1 hour', 'UTC', 'highest_total', 'shared', ${seriesId})`;
+    await database`update public.fight_series set current_fight_id = ${fightId} where id = ${seriesId}`;
+    for (const id of users.slice(0, 49)) await database`insert into public.fight_members(fight_id, user_id, state) values (${fightId}, ${id}, 'accepted')`;
+    const attempts = await Promise.allSettled(users.slice(49, 51).map((id) => joinFight(id, { fightId, start: "now" }, null, admin, now, database)));
+    assert.equal(attempts.filter((result) => result.status === "fulfilled").length, 1);
+    const [capacity] = await database`select count(*)::int n from public.fight_members where fight_id = ${fightId} and state = 'accepted'`;
+    assert.equal(capacity.n, 50);
+    assert.equal((await listJoinableFights(users[51], admin, now, true)).some((fight) => fight.fightId === fightId), false);
+    await database`update public.fights set ends_at = now() - interval '1 second' where id = ${fightId}`;
+    await assert.rejects(joinFight(users[51], { fightId, start: "now" }, null, admin, new Date(), database));
+    assert.equal((await listJoinableFights(owner, admin, new Date(), true)).some((fight) => fight.fightId === fightId), false);
 });

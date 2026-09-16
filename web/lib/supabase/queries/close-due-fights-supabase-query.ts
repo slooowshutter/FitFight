@@ -125,7 +125,7 @@ export async function closeDueFightsForUser(
         database,
     );
     for (const previousFightId of recurring.slice(0, BATCH)) {
-        await mintNextRecurringFight(previousFightId, admin, now);
+        await mintNextRecurringFight(previousFightId, now, database);
     }
     const notifications = await processNotificationOutbox(now, database);
     return {

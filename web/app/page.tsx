@@ -3,6 +3,8 @@ import { TotalStepsCount } from "@/components/total-steps-count";
 import { appDownload } from "@/lib/releases/app-download";
 import { readCachedTotalSteps } from "@/lib/supabase/queries/total-steps-supabase-query";
 
+import "./total-steps.css";
+
 export const revalidate = 3600;
 
 export default async function HomePage() {

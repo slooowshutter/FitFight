@@ -20,7 +20,21 @@ App-wide post writes now send empty invalidations to every active profile's
 existing private topic, including users with no shared Fight. The 1.1.1 release
 note has English and French copy.
 
-**Cloud checks:** verification of the fixes is in progress. Before the fixes,
+**Cloud checks:** at `b1efa8d`, the
+[iOS simulator build and native regressions](https://github.com/slooowshutter/FitFight/actions/runs/35160730520)
+passed on GitHub-hosted macOS. The regressions cover loaded comment pages,
+confirmed lower-ranked comments, deleted comments, later-page failures, sort
+changes, arriving-card invalidation, and both live read/pagination completion
+orders. [TypeScript and all 270 backend tests](https://github.com/slooowshutter/FitFight/actions/runs/35160730532)
+passed. [English/French screen rendering and screenshot asset checks](https://github.com/slooowshutter/FitFight/actions/runs/35160730592)
+also passed. The [disposable database checks](https://github.com/slooowshutter/FitFight/actions/runs/35160730447)
+passed all 21 transaction tests before and after the deferred client-permission
+cutoff, pgTAP, the preserved build 113 fixture, and legacy migration replay. Real
+WebSocket checks cover app-wide post creation, edits, comments, reactions, and
+deletion, including a user with no shared Fight. Private Fight events still
+exclude that user.
+
+Before the fixes,
 [native regression tests](https://github.com/slooowshutter/FitFight/actions/runs/35160578605)
 reproduced the loaded-comment loss, arriving-page invalidation gap, and both live
 read/pagination completion orders. The

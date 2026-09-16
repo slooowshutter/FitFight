@@ -522,7 +522,7 @@ struct FightDetailView: View {
         contextFight: Fight,
         inWinnerBand: Bool = false
     ) -> some View {
-        Group {
+        ProfileIdentityLink(userID: UUID(uuidString: row.person.id), source: "standings") {
             if row.invited || row.deferred {
                 HStack(spacing: 13) {
                     Text("-")

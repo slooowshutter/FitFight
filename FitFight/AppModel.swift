@@ -237,6 +237,7 @@ final class AppModel: ObservableObject {
     @Published var joined: Set<String> = []
     @Published var createError: String?
     @Published var pendingJoinable: Fight?
+    @Published var profileChallenge: ProfileChallengeDraft?
     @Published var pendingReferralError: String?
     @Published private(set) var isCreatingFight = false
     @Published private(set) var isUpdatingFight = false

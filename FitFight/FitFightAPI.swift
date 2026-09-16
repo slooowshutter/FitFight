@@ -675,6 +675,64 @@ struct FitFightAPI {
         )
     }
 
+    func sharedProfile(userID: UUID, preview: String? = nil, accessToken: String) async throws -> SharedProfile {
+        let suffix = preview.map { "?preview=\($0)" } ?? ""
+        return try await get(path: "profiles/\(userID.uuidString.lowercased())\(suffix)", accessToken: accessToken, expected: [200])
+    }
+
+    func profileSettings(accessToken: String) async throws -> SharedProfileSettings {
+        try await get(path: "me/profile-settings", accessToken: accessToken, expected: [200])
+    }
+
+    func updateProfileSettings(_ settings: SharedProfileSettings, accessToken: String) async throws -> SharedProfileSettings {
+        try await request(
+            path: "me/profile-settings", method: "PATCH", accessToken: accessToken,
+            body: Self.encoder.encode(ProfileSettingsUpdate(settings: settings)), idempotencyKey: nil, expected: [200]
+        )
+    }
+
+    func profileHistory(userID: UUID, shared: Bool, cursor: UUID? = nil, accessToken: String) async throws -> ProfileHistoryPage {
+        let suffix = cursor.map { "&cursor=\($0.uuidString.lowercased())" } ?? ""
+        return try await get(path: "profiles/\(userID.uuidString.lowercased())/history?shared=\(shared)\(suffix)", accessToken: accessToken, expected: [200])
+    }
+
+    func profileFriends(kind: String, cursor: UUID? = nil, accessToken: String) async throws -> ProfileFriendsPage {
+        let suffix = cursor.map { "&cursor=\($0.uuidString.lowercased())" } ?? ""
+        return try await get(path: "friends?kind=\(kind)\(suffix)", accessToken: accessToken, expected: [200])
+    }
+
+    func lookupProfile(handle: String, accessToken: String) async throws -> SharedProfileIdentity {
+        var query = URLComponents()
+        query.queryItems = [URLQueryItem(name: "handle", value: handle)]
+        return try await get(path: "profiles/lookup?\(query.percentEncodedQuery ?? "")", accessToken: accessToken, expected: [200])
+    }
+
+    func changeFriendship(userID: UUID, action: String, accessToken: String) async throws -> ProfileFriendshipResponse {
+        let path = "friends/\(userID.uuidString.lowercased())"
+        if action == "remove" {
+            return try await delete(path: path, accessToken: accessToken, expected: [200])
+        }
+        if action == "request" {
+            return try await post(path: path + "/request", accessToken: accessToken, body: EmptyJSON(), expected: [200])
+        }
+        return try await post(path: path + "/respond", accessToken: accessToken, body: ["action": action], expected: [200])
+    }
+
+    func blockProfile(userID: UUID, accessToken: String) async throws {
+        let _: DiscardBody = try await post(path: "profiles/\(userID.uuidString.lowercased())/block", accessToken: accessToken, body: EmptyJSON(), expected: [200])
+    }
+
+    func reportProfile(userID: UUID, reason: String, accessToken: String) async throws {
+        let _: DiscardBody = try await post(path: "profiles/\(userID.uuidString.lowercased())/report", accessToken: accessToken, body: ["reason": reason], expected: [200])
+    }
+
+    func recordProfileView(userID: UUID, eventID: UUID, source: String, accessToken: String) async throws {
+        let _: DiscardBody = try await post(
+            path: "profiles/\(userID.uuidString.lowercased())/views", accessToken: accessToken,
+            body: ["event_id": eventID.uuidString.lowercased(), "source": source], expected: [200]
+        )
+    }
+
     func profile(accessToken: String) async throws -> FitFightProfile {
         try await get(path: "me", accessToken: accessToken, expected: [200])
     }
@@ -1643,4 +1701,19 @@ private struct FitFightDeviceInstallationBody: Encodable {
 
 private struct FitFightDeviceInstallationRegistered: Decodable {
     var registered: Bool
+}
+
+private struct ProfileSettingsUpdate: Encodable {
+    let settings: SharedProfileSettings
+    enum CodingKeys: String, CodingKey {
+        case competitive, audience, activityAudience = "activity_audience", activityDays = "activity_days", artworkAllowed = "artwork_allowed"
+    }
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(settings.competitive, forKey: .competitive)
+        try container.encode(settings.audience, forKey: .audience)
+        try container.encode(settings.activityAudience, forKey: .activityAudience)
+        try container.encode(settings.activityDays, forKey: .activityDays)
+        try container.encode(settings.artworkAllowed, forKey: .artworkAllowed)
+    }
 }

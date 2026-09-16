@@ -293,6 +293,18 @@ final class SessionStore: ObservableObject {
         }
     }
 
+    func updateIdentity(displayName: String, handle: String) async throws {
+        guard let userId = authSession?.user.id else { throw HandleError.notSignedIn }
+        let token = try await freshAccessToken()
+        let updated = try await api.updateProfile(handle: handle, displayName: displayName, accessToken: token)
+        try Task.checkCancellation()
+        guard authSession?.user.id == userId else { throw CancellationError() }
+        profile = updated
+        if let data = try? JSONEncoder().encode(updated) {
+            UserDefaults.standard.set(data, forKey: Self.profileCachePrefix + userId.uuidString)
+        }
+    }
+
     func setAvatar(_ media: FitFightMedia) async throws {
         guard !screenshotSignedIn else { throw CompanionPreview.WriteUnavailable() }
         guard let userId = authSession?.user.id ?? client.auth.currentUser?.id else {

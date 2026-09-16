@@ -1,4 +1,3 @@
-import PhotosUI
 import SwiftUI
 import UIKit
 
@@ -10,11 +9,14 @@ struct YouView: View {
     @EnvironmentObject private var companions: CompanionStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
+    @Environment(\.scenePhase) private var scenePhase
+    @StateObject private var profileStore = ProfileScreenStore()
+    @State private var showingEditProfile = false
+    @State private var showingFriends = false
+    @State private var showingProfileHistory = false
+    @State private var incomingFriends = 0
     @State private var confirmDelete = false
     @State private var copied = false
-    @State private var pickerItem: PhotosPickerItem?
-    @State private var isUploadingPhoto = false
-    @State private var photoError = ""
     @State private var showingOnboardingPreview = false
     @State private var showingSlideHapticsLab = false
     @State private var showingHealthDetails = false
@@ -35,8 +37,23 @@ struct YouView: View {
             if session.isSignedIn, let authError = session.authError {
                 FFNotice(text: authError, tone: .ember, systemImage: "exclamationmark.triangle")
             }
-            if !photoError.isEmpty {
-                FFNotice(text: photoError, tone: .ember, systemImage: "exclamationmark.triangle")
+            if let record = profileStore.profile?.record {
+                ProfileRecordCard(record: record)
+                FFButton(title: String(localized: "Fight history"), kind: .ghost) { showingProfileHistory = true }
+            }
+            if let error = profileStore.error {
+                FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
+                FFButton(title: String(localized: "Retry"), kind: .secondary) { Task { await loadOwnProfile() } }
+            }
+            if session.isSignedIn {
+                FFGroupedRows {
+                    FFGroupedRow(
+                        title: String(localized: "Friends"),
+                        subtitle: incomingFriends > 0 ? String(format: String(localized: "profile.requests-count"), incomingFriends) : nil,
+                        systemImage: "person.2",
+                        action: { showingFriends = true }
+                    )
+                }
             }
 
             FFSection(title: String(localized: "Apple Health")) {
@@ -77,6 +94,22 @@ struct YouView: View {
         .task {
             guard !staticRender else { return }
             await model.refreshFights(session: session, steps: steps)
+        }
+        .task(id: session.authSession?.user.id) { await loadOwnProfile() }
+        .onChange(of: scenePhase) { _, phase in
+            profileStore.clear()
+            if phase == .active { Task { await loadOwnProfile() } }
+        }
+        .sheet(isPresented: $showingEditProfile, onDismiss: { Task { await loadOwnProfile() } }) {
+            EditProfileView().fitFightTheme(theme).presentationBackground(theme.bg)
+        }
+        .sheet(isPresented: $showingFriends, onDismiss: { Task { await loadOwnProfile() } }) {
+            FriendsView().fitFightTheme(theme).presentationBackground(theme.bg)
+        }
+        .sheet(isPresented: $showingProfileHistory) {
+            if let userID = session.authSession?.user.id {
+                ProfileSheet(userID: userID, source: "friends").fitFightTheme(theme).presentationBackground(theme.bg)
+            }
         }
         .sheet(isPresented: $showingOnboardingPreview) {
             OnboardingPreviewView()
@@ -143,72 +176,48 @@ struct YouView: View {
     @ViewBuilder
     private var profile: some View {
         if session.isSignedIn {
-            HStack(spacing: 14) {
-                if companions.hasChosen {
-                    Button { companions.showingPicker = true } label: {
-                        CompanionAvatar(
-                            personID: session.profile?.userId.uuidString,
-                            companionID: session.profile?.companionId,
-                            isYou: true,
-                            monogram: session.profile?.initials ?? "FF",
-                            size: 68
-                        )
-                            .overlay { Circle().strokeBorder(theme.mossEdge, lineWidth: 3) }
-                            .contentShape(Circle())
-                    }
-                    .buttonStyle(FFHapticPlainStyle())
-                    .accessibilityLabel(String(localized: "Choose your companion"))
-                } else {
-                    PhotosPicker(selection: $pickerItem, matching: .images) {
-                        FFAvatar(
-                            monogram: session.profile?.initials ?? "FF",
-                            size: 68,
-                            selected: true,
-                            photoURL: session.profile?.avatar?.url
-                        )
-                        .contentShape(Circle())
-                        .overlay {
-                            if isUploadingPhoto {
-                                ZStack {
-                                    Circle().fill(theme.bg.opacity(0.45))
-                                    ProgressView().tint(theme.text)
-                                }
-                            }
-                        }
-                    }
-                    .buttonStyle(FFHapticPlainStyle())
-                    .disabled(isUploadingPhoto)
-                    .onChange(of: pickerItem) { _, item in
-                        Task { await uploadPhoto(item) }
-                    }
-                }
-                VStack(alignment: .leading, spacing: 3) {
+            HStack(alignment: .top, spacing: 14) {
+                CompanionAvatar(
+                    personID: session.profile?.userId.uuidString,
+                    companionID: session.profile?.companionId, isYou: true,
+                    monogram: session.profile?.initials ?? "FF", photoURL: session.profile?.avatar?.url, size: 68
+                )
+                VStack(alignment: .leading, spacing: 4) {
                     Text(verbatim: session.profile?.displayName ?? String(localized: "Signed in"))
-                        .ffType(.heading)
-                        .foregroundStyle(theme.text)
+                        .ffType(.heading).foregroundStyle(theme.text)
                     Text(verbatim: session.profile?.atHandle ?? String(localized: "Profile isn’t ready yet"))
-                        .ffType(.caption)
-                        .foregroundStyle(theme.textSecondary)
-                        .lineLimit(1)
+                        .ffType(.caption).foregroundStyle(theme.textSecondary)
                     if session.profile != nil {
                         Button {
                             UIPasteboard.general.string = session.profile?.atHandle ?? ""
                             copied = true
                         } label: {
                             Text(copied ? String(localized: "Copied") : String(localized: "Copy username"))
-                                .ffType(.micro)
-                                .fontWeight(.heavy)
-                                .foregroundStyle(theme.mossText)
-                        }
-                        .buttonStyle(FFHapticPlainStyle())
+                                .ffType(.micro).foregroundStyle(theme.mossText)
+                        }.buttonStyle(FFHapticPlainStyle()).frame(minHeight: 44)
                     }
                 }
-                .layoutPriority(1)
                 Spacer(minLength: 4)
+                Button(String(localized: "Edit profile")) { showingEditProfile = true }
+                    .ffType(.label).foregroundStyle(theme.mossText).frame(minHeight: 44)
             }
         } else {
             AppleSignInControl()
         }
+    }
+
+    private func loadOwnProfile() async {
+        profileStore.clear()
+        incomingFriends = 0
+        guard !staticRender, let userID = session.authSession?.user.id else { return }
+        await profileStore.load(userID: userID, session: session)
+        do {
+            let token = try await session.freshAccessToken()
+            let friends = try await FitFightAPI().profileFriends(kind: "incoming", accessToken: token)
+            try Task.checkCancellation()
+            guard session.authSession?.user.id == userID else { return }
+            incomingFriends = friends.incomingCount
+        } catch { }
     }
 
     private var health: some View {
@@ -341,26 +350,6 @@ struct YouView: View {
             return FFPill(String(localized: "Connected"), style: .softMoss)
         case .notConnected:
             return FFPill(String(localized: "Connect"), style: .solidMoss)
-        }
-    }
-
-    private func uploadPhoto(_ item: PhotosPickerItem?) async {
-        defer { pickerItem = nil }
-        guard let item else { return }
-        guard !CompanionPreview.isEnabled else { photoError = CompanionPreview.writeUnavailable; return }
-        guard let data = try? await item.loadTransferable(type: Data.self),
-              let image = UIImage(data: data) else {
-            photoError = String(localized: "That photo could not be read.")
-            return
-        }
-        isUploadingPhoto = true
-        defer { isUploadingPhoto = false }
-        do {
-            let media = try await MediaUploader.upload(image, purpose: "profile", session: session)
-            try await session.setAvatar(media)
-            photoError = ""
-        } catch {
-            photoError = error.localizedDescription
         }
     }
 

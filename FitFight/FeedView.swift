@@ -832,19 +832,23 @@ struct FightPostCard: View {
         FFCard(padding: 16) {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .top, spacing: 10) {
-                    CompanionAvatar(
-                        personID: post.author.userId.uuidString,
-                        companionID: post.author.companionId,
-                        isYou: post.mine,
-                        monogram: post.author.initials,
-                        photoURL: post.author.avatar?.url,
-                        size: 38
-                    )
+                    ProfileIdentityLink(userID: post.author.userId, source: "feed") {
+                        CompanionAvatar(
+                            personID: post.author.userId.uuidString,
+                            companionID: post.author.companionId,
+                            isYou: post.mine,
+                            monogram: post.author.initials,
+                            photoURL: post.author.avatar?.url,
+                            size: 38
+                        )
+                    }
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(verbatim: post.author.atHandle)
-                            .ffType(.rowTitle)
-                            .foregroundStyle(theme.text)
-                            .lineLimit(1)
+                        ProfileIdentityLink(userID: post.author.userId, source: "feed") {
+                            Text(verbatim: post.author.atHandle)
+                                .ffType(.rowTitle)
+                                .foregroundStyle(theme.text)
+                                .lineLimit(1)
+                        }
                         HStack(spacing: 5) {
                             Text(post.channelLabel)
                                 .lineLimit(1)
@@ -854,12 +858,10 @@ struct FightPostCard: View {
                         }
                         .ffType(.micro)
                         .foregroundStyle(theme.textTertiary)
+                        .contentShape(Rectangle())
+                        .onTapGesture { onOpen?() }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        onOpen?()
-                    }
                     Button {
                         showActions = true
                     } label: {

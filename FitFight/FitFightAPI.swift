@@ -775,12 +775,21 @@ struct FitFightAPI {
     }
 
 
-    func fightPostComments(postID: UUID, cursor: String?, accessToken: String) async throws -> FitFightFightPostCommentList {
-        var path = "posts/\(postID.uuidString.lowercased())/comments"
+    func fightPostComments(
+        postID: UUID,
+        cursor: String?,
+        accessToken: String,
+        sort: FightPostCommentSort = .comments
+    ) async throws -> FitFightFightPostCommentList {
+        var parts = ["sort=\(sort.rawValue)"]
         if let cursor, let encoded = cursor.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
-            path += "?cursor=\(encoded)"
+            parts.append("cursor=\(encoded)")
         }
-        return try await get(path: path, accessToken: accessToken, expected: [200])
+        return try await get(
+            path: "posts/\(postID.uuidString.lowercased())/comments?\(parts.joined(separator: "&"))",
+            accessToken: accessToken,
+            expected: [200]
+        )
     }
 
     func createFightPostComment(
@@ -1453,6 +1462,7 @@ struct FeedPostDestination: Encodable, Hashable {
     let fightId: UUID?
 
     static var main: FeedPostDestination { FeedPostDestination(type: "main", fightId: nil) }
+    static var broadcast: FeedPostDestination { FeedPostDestination(type: "broadcast", fightId: nil) }
 
     static func fight(_ id: UUID) -> FeedPostDestination {
         FeedPostDestination(type: "fight", fightId: id)

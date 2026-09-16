@@ -35,8 +35,9 @@ select ok(
             and pg_get_constraintdef(oid) like '%post_comment%'
             and pg_get_constraintdef(oid) like '%comment_reply%'
             and pg_get_constraintdef(oid) like '%post_reaction%'
+            and pg_get_constraintdef(oid) like '%fight_invite%'
     ),
-    'Social notification kinds are allowed on the outbox'
+    'Social and invite notification kinds are allowed on the outbox'
 );
 
 select ok(

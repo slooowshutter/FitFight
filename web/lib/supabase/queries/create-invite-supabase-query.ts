@@ -1,9 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Sql } from "postgres";
 import { newInviteToken, normalizeHandle } from "@/lib/domain/invites/token";
 import { ApiError, ERROR_CODES } from "@/lib/http";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { FightMemberRow, ProfileRow } from "@/lib/types/database";
 import { loadOwnedFight } from "./fight-access-supabase-query";
+import { enqueueFightInviteNotifications } from "./notification-intents-supabase-query";
 
 const HANDLE_FORMAT = /^[a-z0-9_]{2,30}$/;
 
@@ -44,6 +46,7 @@ export async function createInvite(
     fightId: string,
     rawHandle: string,
     admin: SupabaseClient = createAdminClient(),
+    sql?: Sql,
 ) {
     const fight = await loadOwnedFight(fightId, ownerId, admin);
 
@@ -78,6 +81,7 @@ export async function createInvite(
         );
     }
     const member = existingMember as Pick<FightMemberRow, "state"> | null;
+    const alreadyInvited = member?.state === "invited";
     if (member) {
         switch (member.state) {
             case "accepted":
@@ -176,6 +180,24 @@ export async function createInvite(
                 "Could not update fight state",
             );
         }
+    }
+
+    if (sql && !alreadyInvited) {
+        const { data: owner } = await admin
+            .from("profiles")
+            .select("handle, display_name")
+            .eq("user_id", ownerId)
+            .maybeSingle();
+        const display = owner?.display_name?.replace(/\s+/g, " ").trim();
+        await enqueueFightInviteNotifications(sql, {
+            fightId,
+            fightName: fight.name,
+            actorName:
+                display && display.length > 0
+                    ? display
+                    : (owner?.handle ?? "user"),
+            userIds: [profile.user_id],
+        });
     }
 
     return { token, invitedUserId: profile.user_id };

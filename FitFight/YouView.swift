@@ -8,6 +8,7 @@ struct YouView: View {
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var steps: HealthKitStepsStore
     @EnvironmentObject private var companions: CompanionStore
+    @EnvironmentObject private var feed: FeedStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
     @State private var confirmDelete = false
@@ -17,6 +18,7 @@ struct YouView: View {
     @State private var photoError = ""
     @State private var showingOnboardingPreview = false
     @State private var showingSlideHapticsLab = false
+    @State private var showingBroadcastCompose = false
     @State private var showingHealthDetails = false
     @State private var showingNotificationSettings = false
     @State private var showingCompanionPreviewControls = false
@@ -90,6 +92,16 @@ struct YouView: View {
             SlideHapticsLabView()
                 .fitFightTheme(themeStore.theme)
                 .presentationBackground(themeStore.theme.bg)
+        }
+        .sheet(isPresented: $showingBroadcastCompose) {
+            FeedComposeSheet(broadcastOnly: true) {
+                model.tab = .feed
+            }
+            .environmentObject(model)
+            .environmentObject(session)
+            .environmentObject(feed)
+            .fitFightTheme(themeStore.theme)
+            .presentationBackground(themeStore.theme.bg)
         }
         .sheet(isPresented: $showingNotificationSettings) {
             NotificationSettingsView()
@@ -444,6 +456,19 @@ struct YouView: View {
                         .foregroundStyle(theme.textFaint)
                 ),
                 action: { showingSlideHapticsLab = true }
+            )
+            FFDivider()
+            FFGroupedRow(
+                title: String(localized: "Broadcast"),
+                subtitle: String(localized: "Write one post. Everyone signed in sees it on Feed."),
+                systemImage: "megaphone",
+                subtitleTone: .neutral,
+                trailing: AnyView(
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(theme.textFaint)
+                ),
+                action: { showingBroadcastCompose = true }
             )
         }
     }

@@ -9,6 +9,8 @@ struct FightPostEngagement: View {
 
     @State private var comments: [FitFightFightPostComment] = []
     @State private var nextCursor: String?
+    @State private var commentSort = FightPostCommentSort.comments
+    @State private var commentsLoad = 0
     @State private var open = false
     @State private var showingReactions = false
     @State private var replyTo: FitFightFightPostComment?
@@ -46,6 +48,11 @@ struct FightPostEngagement: View {
             }
             .buttonStyle(FFHapticPlainStyle())
             if open {
+                FFSegmented(
+                    items: FightPostCommentSort.allCases,
+                    selection: $commentSort
+                ) { $0.title }
+                .accessibilityLabel(String(localized: "Comment order"))
                 if loadingComments {
                     ProgressView()
                         .tint(theme.mossText)
@@ -105,6 +112,10 @@ struct FightPostEngagement: View {
                 }
             }
         }
+        .onChange(of: commentSort) { _, _ in
+            nextCursor = nil
+            Task { await loadComments() }
+        }
         .sheet(isPresented: $showingReactions) {
             FightPostReactionsSheet(post: post)
                 .environmentObject(session)
@@ -160,14 +171,39 @@ struct FightPostEngagement: View {
     private var displayedComments: [DisplayedFightComment] {
         let commentIDs = Set(comments.map(\.id))
         let children = Dictionary(grouping: comments, by: \.parentId)
+        func replyCount(_ comment: FitFightFightPostComment) -> Int {
+            var count = 0
+            var pending = children[comment.id] ?? []
+            while let next = pending.popLast() {
+                count += 1
+                pending.append(contentsOf: children[next.id] ?? [])
+            }
+            return count
+        }
+        func ordered(_ items: [FitFightFightPostComment]) -> [FitFightFightPostComment] {
+            items.sorted { lhs, rhs in
+                switch commentSort {
+                case .comments:
+                    let left = replyCount(lhs)
+                    let right = replyCount(rhs)
+                    if left != right { return left > right }
+                    if lhs.createdDate != rhs.createdDate { return lhs.createdDate > rhs.createdDate }
+                    return lhs.id.uuidString > rhs.id.uuidString
+                case .recent:
+                    if lhs.createdDate != rhs.createdDate { return lhs.createdDate > rhs.createdDate }
+                    return lhs.id.uuidString > rhs.id.uuidString
+                }
+            }
+        }
         var rows: [DisplayedFightComment] = []
-        var stack: [(FitFightFightPostComment, Int)] = comments
-            .filter { comment in comment.parentId.map { !commentIDs.contains($0) } ?? true }
-            .reversed()
-            .map { ($0, 0) }
+        var stack: [(FitFightFightPostComment, Int)] = ordered(
+            comments.filter { comment in comment.parentId.map { !commentIDs.contains($0) } ?? true }
+        )
+        .reversed()
+        .map { ($0, 0) }
         while let (comment, depth) = stack.popLast() {
             rows.append(DisplayedFightComment(comment: comment, depth: depth))
-            for child in (children[comment.id] ?? []).reversed() {
+            for child in ordered(children[comment.id] ?? []).reversed() {
                 stack.append((child, depth + 1))
             }
         }
@@ -233,25 +269,28 @@ struct FightPostEngagement: View {
             return
         }
         #endif
-        guard !loadingComments, let userID = session.authSession?.user.id else { return }
+        guard let userID = session.authSession?.user.id else { return }
+        commentsLoad += 1
+        let load = commentsLoad
         loadingComments = true
-        defer { if session.authSession?.user.id == userID { loadingComments = false } }
+        defer { if load == commentsLoad, session.authSession?.user.id == userID { loadingComments = false } }
         do {
             let token = try await session.freshAccessToken()
-            guard session.authSession?.user.id == userID else { return }
+            guard load == commentsLoad, session.authSession?.user.id == userID else { return }
             let result = try await FitFightAPI().fightPostComments(
                 postID: post.id,
                 cursor: more ? nextCursor : nil,
-                accessToken: token
+                accessToken: token,
+                sort: commentSort
             )
-            guard session.authSession?.user.id == userID else { return }
+            guard load == commentsLoad, session.authSession?.user.id == userID else { return }
             comments = more
                 ? comments + result.comments.filter { comment in !comments.contains(where: { $0.id == comment.id }) }
                 : result.comments
             nextCursor = result.nextCursor
         } catch {
             if Task.isCancelled || error is CancellationError { return }
-            guard session.authSession?.user.id == userID else { return }
+            guard load == commentsLoad, session.authSession?.user.id == userID else { return }
             feed.error = error.localizedDescription
         }
     }

@@ -180,7 +180,11 @@ private struct FightDayChartSeries: Identifiable {
     var cumulative: [Double]
     var total: Double
 
-    var id: String { person.id }
+    // Include the drawn values so ForEach rebuilds bars when scores change.
+    var id: String {
+        let points = daily.map { value in value.map { String($0) } ?? "-" }.joined(separator: ",")
+        return "\(person.id):\(total):\(points)"
+    }
 }
 
 private struct FightDayChartModel {

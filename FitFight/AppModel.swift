@@ -1372,7 +1372,8 @@ final class AppModel: ObservableObject {
         let racers = standings.filter { !$0.invited && !$0.deferred }
         var histories: [String: [FightStepCheckpoint]] = [:]
         for row in racers {
-            guard let points = members.first(where: { $0.userId.uuidString == row.person.id })?.stepCheckpoints,
+            guard let personID = UUID(uuidString: row.person.id),
+                  let points = members.first(where: { $0.userId == personID })?.stepCheckpoints,
                   let last = points.last, Double(last.steps) == row.score else { return [] }
             histories[row.person.id] = points
         }

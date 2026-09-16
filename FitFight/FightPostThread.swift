@@ -225,6 +225,7 @@ struct FightPostEngagement: View {
                     Text(comment.author.atHandle)
                         .ffType(.caption)
                         .foregroundStyle(theme.text)
+                        .lineLimit(1)
                     Text(comment.body)
                         .ffType(.body)
                         .foregroundStyle(theme.text)
@@ -241,23 +242,29 @@ struct FightPostEngagement: View {
                         .buttonStyle(FFHapticPlainStyle())
                     }
                 }
-                Spacer(minLength: 0)
-                Menu {
-                    if comment.mine {
-                        Button(String(localized: "Delete"), role: .destructive) {
-                            Task { await deleteComment(comment) }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                HStack(alignment: .top, spacing: 0) {
+                    TextTranslationButton(text: comment.body)
+                    Menu {
+                        if comment.mine {
+                            Button(String(localized: "Delete"), role: .destructive) {
+                                Task { await deleteComment(comment) }
+                            }
+                        } else {
+                            Button(String(localized: "Report")) {
+                                Task { await reportComment(comment) }
+                            }
                         }
-                    } else {
-                        Button(String(localized: "Report")) {
-                            Task { await reportComment(comment) }
-                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(theme.textFaint)
+                            .frame(height: 20)
+                            .frame(width: 44, height: 44, alignment: .top)
+                            .contentShape(Rectangle())
                     }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(theme.textFaint)
+                    .buttonStyle(FFHapticPlainStyle())
                 }
-                .buttonStyle(FFHapticPlainStyle())
             }
         }
     }

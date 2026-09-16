@@ -8,6 +8,32 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
 
+## Post and comment translation prepared, 16 Sep 2026
+
+**Code:** Feed and fight-thread posts, comments, and replies have an A speech-bubble
+translation icon at the top right, immediately left of the ellipsis. Apple's
+[`NLLanguageRecognizer`](https://developer.apple.com/documentation/naturallanguage/nllanguagerecognizer) detects the text's language on device before displaying the
+icon. It appears only when the detected language differs from the first language
+in `Locale.preferredLanguages`; regional variants count as the same language.
+Empty text, text without letters, and unrecognized languages have no icon.
+Detection is best-effort for short or mixed-language text. Tapping opens Apple's system translation sheet,
+which chooses a target from the reader's language preferences and lets them change
+it. Original content stays intact. The control uses the existing theme, a 44-point
+tap target, an English/French accessibility label, and a `1.1.1` release note. It is
+available on iOS 17.4+ and hidden on earlier supported iOS versions, matching
+[Apple's translation API](https://developer.apple.com/documentation/swiftui/view/translationpresentation(ispresented:text:attachmentanchor:arrowedge:replacementaction:)).
+The English simulator preview keeps Bertille's first post in French so the icon
+can be inspected alongside English posts where it stays hidden.
+
+**Checks:** localization, native API-boundary, Xcode project-file syntax, and
+whitespace checks passed. Cloud iOS compilation and physical-device translation
+checks are pending. Verify icon visibility for same/different languages and regional
+variants, both English/French translation directions, target-language changes, and
+dismissal back to the unchanged post or comment on a device.
+
+**Live deployment:** not deployed. No API contract, native API model, or database
+schema changed. No merge, TestFlight upload, or production deployment was made.
+
 ## Marc broadcast posts, 16 Sep 2026
 
 **Contract:** `POST /api/v1/feed/posts` accepts `{ "type": "broadcast" }` as a

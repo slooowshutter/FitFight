@@ -14,6 +14,8 @@ import { deleteAccount } from "./delete-account-supabase-query";
 import { departFightMemberships } from "./membership-departure-supabase-query";
 
 const env = databaseTestEnvironmentSchema.parse(process.env);
+process.env.NEXT_PUBLIC_SUPABASE_URL = env.SUPABASE_TEST_URL;
+process.env.SUPABASE_SERVICE_ROLE_KEY = env.SUPABASE_TEST_SERVICE_KEY;
 const database = postgres(env.DATABASE_URL, { max: 5 });
 after(() => database.end());
 

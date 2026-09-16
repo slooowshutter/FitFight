@@ -12,6 +12,7 @@ struct FightPostEngagement: View {
     @State private var comments: [FitFightFightPostComment] = []
     @State private var nextCursor: String?
     @State private var commentSort = FightPostCommentSort.comments
+    @State private var loadedCommentSort = FightPostCommentSort.comments
     @State private var open = false
     @State private var showingReactions = false
     @State private var replyTo: FitFightFightPostComment?
@@ -303,32 +304,40 @@ struct FightPostEngagement: View {
                 reloadComments = false
                 let version = commentsVersion
                 let sort = commentSort
+                let retainedIDs = loadedCommentSort == sort ? Set(comments.map(\.id)) : []
+                var refreshed = append && loadedCommentSort == sort ? comments : []
+                var cursor = append && loadedCommentSort == sort ? nextCursor : nil
                 let token = try await session.freshAccessToken()
                 guard !Task.isCancelled, session.authSession?.user.id == userID else { return }
-                let result = try await FitFightAPI().fightPostComments(
-                    postID: post.id,
-                    cursor: append ? nextCursor : nil,
-                    accessToken: token,
-                    sort: sort
-                )
-                guard !Task.isCancelled, session.authSession?.user.id == userID else { return }
-                if commentsVersion == version && commentSort == sort {
-                    comments = append
-                        ? comments + result.comments.filter { comment in !comments.contains(where: { $0.id == comment.id }) }
-                        : result.comments
-                    nextCursor = result.nextCursor
-                } else {
-                    // A response started before a write or sort change must not undo it.
-                    reloadComments = true
+                repeat {
+                    let result = try await FitFightAPI().fightPostComments(
+                        postID: post.id,
+                        cursor: cursor,
+                        accessToken: token,
+                        sort: sort
+                    )
+                    guard !Task.isCancelled, session.authSession?.user.id == userID else { return }
+                    if commentsVersion != version || commentSort != sort || reloadComments {
+                        // A response started before a write, sort change, or invalidation must not undo it.
+                        reloadComments = true
+                        break
+                    }
+                    refreshed += result.comments.filter { comment in !refreshed.contains(where: { $0.id == comment.id }) }
+                    cursor = result.nextCursor
+                    if cursor == nil { break }
+                    if retainedIDs.isSubset(of: Set(refreshed.map(\.id))) {
+                        if let targetCommentID, !refreshed.contains(where: { $0.id == targetCommentID }) { continue }
+                        break
+                    }
+                } while true
+                if !reloadComments {
+                    // Publish all retained pages together so a failed later page cannot collapse the thread.
+                    comments = refreshed
+                    nextCursor = cursor
+                    loadedCommentSort = sort
                 }
-                if reloadComments {
-                    append = false
-                } else if let targetCommentID, !comments.contains(where: { $0.id == targetCommentID }), nextCursor != nil {
-                    append = true
-                } else {
-                    break
-                }
-            } while true
+                append = false
+            } while reloadComments
         } catch {
             if Task.isCancelled || error is CancellationError { return }
             guard session.authSession?.user.id == userID else { return }

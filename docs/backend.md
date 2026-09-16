@@ -272,12 +272,18 @@ write's timestamp. Account/Fight deletion cascades to this history.
 
 The same migration broadcasts empty `feed_changed` invalidations on the existing
 private per-user topic for posts, comments, reactions, channels, membership events,
-and blocks. These commit with the write. The native listener handles this event
-separately from standings, coalesces bursts, and reconciles on subscription,
+and blocks. App-wide posts invalidate every active profile's private topic,
+including viewers with no shared Fight. Post edits, comments, reactions, and
+deletions use the same recipients. These commit with the write. The native listener
+handles this event separately from standings, coalesces bursts, and reconciles on subscription,
 reconnection and foreground entry. Visible root/Fight feeds, post detail, and
 Activity refetch through the API. Loaded threads refresh even after their first
 comment, and queue another read when an event arrives during a request. A completed
-local write cannot be overwritten by an older comment response.
+local write cannot be overwritten by an older comment response. An automatic
+refresh reads through the previously loaded comment IDs, including confirmed
+local comments outside the first ranked page, before replacing the thread.
+Deleted comments disappear after that read; a failed later page retains the
+complete previous thread and cursor. Changing the sort starts a new first page.
 
 The native root feed and Fight feed request `limit=10` using the existing page
 contract. Initial load and pull-to-refresh fetch one page. Pull-to-refresh directly
@@ -290,9 +296,11 @@ and show a retry at the bottom.
 Live events refresh currently displayed cards through the single-post endpoint,
 preserving their order and the older-page cursor. Offscreen cards are marked stale
 and refreshed when they reappear. New posts enter on initial load or pull-to-refresh.
-Events received during a page request are reconciled afterward, and a manual
-refresh supersedes older page responses. Older clients still use the existing
-server default of 30; no response fields or API versions change for pagination.
+Events received during a page request also invalidate cards in the arriving page.
+Pagination queues reconciliation for any visible stale cards, including a live
+read that began before pagination. A manual refresh supersedes older page
+responses. Older clients still use the existing server default of 30; no response
+fields or API versions change for pagination.
 
 Deploy the additive migration and compatible backend before distributing the
 native build. `/api/v1`, old response fields, direct-client grants, and existing

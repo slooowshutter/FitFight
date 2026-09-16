@@ -63,6 +63,7 @@ declare
     changed jsonb;
     changed_post_id uuid;
     changed_fight_id uuid;
+    changed_app_wide boolean := false;
     recipient uuid;
 begin
     if tg_op = 'DELETE' then
@@ -72,8 +73,11 @@ begin
     end if;
     if tg_table_name = 'fight_posts' then
         changed_post_id := (changed->>'id')::uuid;
+        changed_app_wide := (changed->>'app_wide')::boolean;
     else
         changed_post_id := (changed->>'post_id')::uuid;
+        select p.app_wide into changed_app_wide
+        from public.fight_posts p where p.id = changed_post_id;
     end if;
     changed_fight_id := (changed->>'fight_id')::uuid;
 
@@ -95,6 +99,9 @@ begin
         select m.user_id from public.fight_members m
         where m.fight_id in (select v.id from visible_fights v)
             and m.state in ('accepted', 'deferred', 'invited')
+        union
+        select p.user_id from public.profiles p
+        where changed_app_wide and p.deleted_at is null
         union
         select (changed->>'user_id')::uuid
         where tg_table_name = 'fight_membership_events'

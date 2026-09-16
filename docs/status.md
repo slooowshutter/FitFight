@@ -8,6 +8,37 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
 
+## Feed review fixes, prepared 17 Sep 2026
+
+**Code:** automatic thread refresh preserves all previously loaded comments,
+including confirmed local comments below the first ranked page. It publishes the
+refreshed pages together, removes deleted comments, and preserves the previous
+thread and cursor if a later page fails. Changing the comment sort starts at its
+first page. Feed events invalidate posts returned by an in-flight page, and
+pagination reconciles visible stale cards when it supersedes an earlier live read.
+App-wide post writes now send empty invalidations to every active profile's
+existing private topic, including users with no shared Fight. The 1.1.1 release
+note has English and French copy.
+
+**Cloud checks:** verification of the fixes is in progress. Before the fixes,
+[native regression tests](https://github.com/slooowshutter/FitFight/actions/runs/35160578605)
+reproduced the loaded-comment loss, arriving-page invalidation gap, and both live
+read/pagination completion orders. The
+[disposable database test](https://github.com/slooowshutter/FitFight/actions/runs/35160359036)
+reproduced the missing app-wide invalidation.
+
+**Compatibility and live evidence:** `/api/v1`, post/comment request and response
+fields, private topic names, and existing client permissions are unchanged. This
+adjusts the pending additive feed migration, with no new app-facing RPC. At 22:57
+UTC on 16 September, staging `/api/app-release` listed latest **1.1.1 (201)**,
+review/internal null, enforcement off. Production listed latest **1.1.1 (202)**,
+review/internal null, enforcement on. Legacy clients remain supported in staging.
+
+**Deployment:** code only. No hosted migration, backend promotion, TestFlight
+upload, or production deployment. After authorized merges, deploy the additive
+migration and compatible backend before the native app. Physical-device and
+two-user live verification remain outstanding.
+
 ## Feed pagination and direct refresh, prepared 17 Sep 2026
 
 **Code:** root Feed and each Fight's feed now request ten posts per page through

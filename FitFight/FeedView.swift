@@ -57,6 +57,9 @@ final class FeedStore: ObservableObject {
         guard let userID else { return }
         guard !more || (!isLoading && nextCursor != nil) else { return }
         lastFightID = fightID
+        if more && !stalePostIDs.isDisjoint(with: visiblePostIDs) {
+            needsLiveRefresh = true
+        }
         listLoad += 1
         let load = listLoad
         isLoading = true
@@ -90,7 +93,11 @@ final class FeedStore: ObservableObject {
             }
             posts = more ? posts + refreshed.filter { post in !posts.contains(where: { $0.id == post.id }) } : refreshed
             stalePostIDs.formIntersection(posts.map(\.id))
-            if !needsLiveRefresh { stalePostIDs.subtract(refreshed.map(\.id)) }
+            if needsLiveRefresh {
+                stalePostIDs.formUnion(refreshed.map(\.id))
+            } else {
+                stalePostIDs.subtract(refreshed.map(\.id))
+            }
             nextCursor = result.nextCursor
             if !more {
                 revision += 1

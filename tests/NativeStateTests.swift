@@ -214,6 +214,7 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
     var draft = ""
     var nextCursor: String?
     var commentSort = FightPostCommentSort.comments
+    var loadedCommentSort = FightPostCommentSort.comments
     var loading = false
     var loadingComments = false
     var open = false

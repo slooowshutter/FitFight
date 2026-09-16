@@ -1,6 +1,22 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Live feed updates keep loaded comments in place and refresh posts reliably while scrolling. Broadcast posts now update live too.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Live feed updates keep loaded comments in place and refresh posts reliably while scrolling. Broadcast posts now update live too."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les actualisations en direct conservent les commentaires déjà chargés et mettent les publications à jour pendant le défilement. Les publications destinées à tous s’actualisent aussi en direct."
+                    }
+                }
+            }
+        },
         "Website download and invitation links open the App Store. The staging website keeps TestFlight access for beta testers.": {
             "localizations": {
                 "fr": {

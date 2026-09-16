@@ -53,9 +53,19 @@ enum AppModel {
         precondition(model.series.map(\.total) == [6000, 4000], "Oval always uses the ranked scores")
 
         members[0].stepCheckpoints = nil
-        precondition(dayCards(from: members, standings: standings).isEmpty, "Legacy uploads cannot invent a daily curve")
+        var mixed = FightDayChartModel(days: dayCards(from: members, standings: standings), standings: standings, theme: Theme())
+        precondition(mixed.dayCount == 1, "A confirmed history still charts when a peer has none")
+        precondition(mixed.series[0].daily == [6000])
+        precondition(mixed.series[1].daily == [nil], "Legacy uploads cannot invent a daily curve")
         members[0].stepCheckpoints = [FightStepCheckpoint(day: "2026-09-15", cutoffAt: "2026-09-15T18:00:00Z", steps: 9000)]
-        precondition(dayCards(from: members, standings: standings).isEmpty, "A stale history must not accompany a newer total")
+        mixed = FightDayChartModel(days: dayCards(from: members, standings: standings), standings: standings, theme: Theme())
+        precondition(mixed.dayCount == 1, "A stale history must not accompany a newer total")
+        precondition(mixed.series[0].daily == [6000])
+        precondition(mixed.series[1].daily == [nil])
+        var none = members
+        none[0].stepCheckpoints = nil
+        none[1].stepCheckpoints = nil
+        precondition(dayCards(from: none, standings: standings).isEmpty, "No confirmed history stays empty")
 
         members[0].stepCheckpoints = [FightStepCheckpoint(day: "2026-09-15", cutoffAt: "2026-09-15T18:00:00Z", steps: 4000)]
         members[1].stepCheckpoints = [

@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.1.1",
             year: 2026,
             month: 9,
+            day: 16,
+            notes: "The Bars chart updates again when fight scores refresh after a Steps sync."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
             day: 15,
             notes: "Fight charts and standings now use the same confirmed steps. Charts exclude activity outside the Fight, update with late corrections, and show missing history clearly."
         ),

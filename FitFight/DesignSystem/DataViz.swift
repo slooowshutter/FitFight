@@ -15,15 +15,20 @@ struct FFProgressBar: View {
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
-        GeometryReader { geo in
-            ZStack(alignment: .leading) {
-                Capsule().fill(track ?? theme.track)
-                Capsule()
-                    .fill(fill ?? theme.mossFill)
-                    .frame(width: geo.size.width * min(max(value, 0), 1))
+        let fraction = min(max(value, 0), 1)
+        Capsule()
+            .fill(track ?? theme.track)
+            .frame(height: height)
+            .overlay(alignment: .leading) {
+                GeometryReader { geo in
+                    Capsule()
+                        .fill(fill ?? theme.mossFill)
+                        .frame(width: geo.size.width * fraction, height: height)
+                        // Stable person rows reused the old fill width after a sync.
+                        .id(fraction)
+                }
             }
-        }
-        .frame(height: height)
+            .clipShape(Capsule())
     }
 }
 

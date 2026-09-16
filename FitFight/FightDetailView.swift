@@ -329,6 +329,7 @@ struct FightDetailView: View {
         FFSection(title: String(localized: "Every day so far")) {
             daysCard(initialKind: isPendingSettlement ? .pace : nil)
         }
+        .id(fightsRevision)
     }
 
     private var nav: some View {

@@ -23,8 +23,8 @@ enum AppModel {
     // PRODUCTION_METHODS
 
     static func run() {
-        let a = Person(id: UUID().uuidString, name: "A")
-        let b = Person(id: UUID().uuidString, name: "B")
+        let a = Person(id: UUID().uuidString.lowercased(), name: "A")
+        let b = Person(id: UUID().uuidString.lowercased(), name: "B")
         let encodedDay = try! JSONEncoder().encode(DayScore(person: a, value: 12000))
         var oldCacheDay = try! JSONSerialization.jsonObject(with: encodedDay) as! [String: Any]
         oldCacheDay.removeValue(forKey: "hasData")
@@ -41,7 +41,7 @@ enum AppModel {
             ])
         ]
         var model = FightDayChartModel(days: dayCards(from: members, standings: standings), standings: standings, theme: Theme())
-        precondition(model.dayCount == 1)
+        precondition(model.dayCount == 1, "Lowercase person IDs must still match member UUIDs")
         precondition(model.series.first?.person.id == b.id)
         precondition(model.series.map(\.total) == [6000, 4000])
         precondition(model.series.map { $0.cumulative.last! } == [6000, 4000])
@@ -67,6 +67,7 @@ enum AppModel {
         precondition(model.series[1].daily[1] == nil, "A participant who has not synced has missing data, not zero steps")
         precondition(model.series[1].cumulative == [4000, 4000], "The cumulative curve keeps the last confirmed total")
         precondition(model.series[0].daily == [5000, 1000])
+        let identityBeforeCorrection = model.series.first { $0.person.id == b.id }!.id
 
         let correctedStandings = orderedStandings([Standing(person: a, score: 4000), Standing(person: b, score: 3000)], status: .live)
         members[1].stepCheckpoints = [
@@ -76,6 +77,10 @@ enum AppModel {
         model = FightDayChartModel(days: dayCards(from: members, standings: correctedStandings), standings: correctedStandings, theme: Theme())
         precondition(model.series.first?.person.id == a.id, "A late correction changes the graph and standings together")
         precondition(model.series[1].daily == [2000, 1000])
+        precondition(
+            model.series.first { $0.person.id == b.id }!.id != identityBeforeCorrection,
+            "Chart series identity must change when daily values change"
+        )
 
         let final = orderedStandings([
             Standing(person: a, score: 4000, rank: 2), Standing(person: b, score: 3000, rank: 1)

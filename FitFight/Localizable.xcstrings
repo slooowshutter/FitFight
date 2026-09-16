@@ -1,6 +1,46 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Feed comments can be sorted by most comments or most recent. Most comments is the default.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les commentaires du fil se trient par plus de commentaires ou plus récents. Plus de commentaires est le choix par défaut."
+                    }
+                }
+            }
+        },
+        "Most comments": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Plus de commentaires"
+                    }
+                }
+            }
+        },
+        "Most recent": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Plus récents"
+                    }
+                }
+            }
+        },
+        "Comment order": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ordre des commentaires"
+                    }
+                }
+            }
+        },
         "The Feed can show a post to everyone signed in, not only people in your fights.": {
             "localizations": {
                 "fr": {

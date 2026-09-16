@@ -8,7 +8,9 @@ struct TestAuth { var currentUser: TestUser? }
 struct TestClient { var auth: TestAuth }
 enum TestFailure: Error { case offline }
 struct UIImage {}
-struct FeedPostDestination {}
+struct FeedPostDestination {
+    var type: String = ""
+}
 struct TestMedia { let id: UUID }
 
 @MainActor enum MediaUploader {

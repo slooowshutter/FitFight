@@ -18,9 +18,13 @@ Suggested Fights retain immutable-admin authorization and transaction locks;
 the same transaction creates upstream's pending invitations and notification
 intents. Acceptance stays explicit. Upstream's approved 1.1.2 version is retained.
 
-**Checks:** cloud Web API, disposable-database compatibility, and macOS simulator
-checks are pending on the merge commit. Regression coverage includes invitation
-idempotency and privacy changes racing with admission. Existing supported-client
+**Checks:** the merge passed strict typechecking, 312 backend tests, and the full
+macOS simulator build. Database validation exposed interference between shared
+fixtures once suggestions began inviting all users: the live-update case passed
+in isolation after failing in the parallel suite. Database files now run
+sequentially; explicit concurrent joins, privacy edits, and finalization races
+still run inside their tests. Final cloud database validation is pending.
+Regression coverage includes invitation idempotency, and existing supported-client
 fixtures remain in place.
 
 **Live deployment:** none. The feature branch has Vercel deployment disabled and

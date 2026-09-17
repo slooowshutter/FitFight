@@ -81,7 +81,6 @@ jobs:
                     -f supabase/deferred-migrations/20260909133941_close_direct_app_database_access.sql
                   supabase test db --local supabase/migration-tests/client-access-closed.sql supabase/tests/backend_reader.sql
                   cd web
-                  npx tsx --test lib/supabase/queries/fight-live-updates.integration.ts
                   npm run test:database
 
             - name: Legacy deletion migration boundary

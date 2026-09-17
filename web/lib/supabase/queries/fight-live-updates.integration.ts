@@ -215,14 +215,10 @@ test(
         }), /rollback comment/);
         await delay(300);
         assert.deepEqual(feedReceived, [0, 0, 0]);
-        const queuedBefore = await database`select topic, count(*)::int count from realtime.messages
-            where topic in ${database(users.map((id) => "fitfight:fights:" + id))} and event = 'feed_changed' group by topic order by topic`;
         await database`insert into public.fight_post_comments (post_id, author_id, body)
             values (${postId}, ${peer}, 'Committed comment')`;
         for (let attempt = 0; attempt < 100 && (feedReceived[0] === 0 || feedReceived[1] === 0); attempt++) await delay(50);
-        const queuedAfter = await database`select topic, count(*)::int count from realtime.messages
-            where topic in ${database(users.map((id) => "fitfight:fights:" + id))} and event = 'feed_changed' group by topic order by topic`;
-        assert.ok(feedReceived[0] > 0 && feedReceived[1] > 0, `Both phones receive a committed comment invalidation: ${JSON.stringify({ queuedBefore, queuedAfter, received: feedReceived, channels: channels.map((channel) => channel.state) })}`);
+        assert.ok(feedReceived[0] > 0 && feedReceived[1] > 0, 'Both phones receive a committed comment invalidation');
         assert.equal(feedReceived[2], 0, 'Unrelated users receive no comment invalidation');
 
         const broadcastId = randomUUID();

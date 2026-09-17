@@ -35,11 +35,28 @@ and no selected build. A separate [cloud readback](https://github.com/slooowshut
 confirmed automatic publication and exact English/French description and release
 note matches (434 and 529 description characters). The one-time configuration
 trigger was removed; the release-tools workflow is back to its original audit-only
-branch trigger. The setting is saved at Apple. The release defaults and
-1.1.2 build files are pushed on `update-app-store-copy`; they are not merged into
-the release branches. No PR, merge, review submission, or build upload has been
-performed for this update. Native compilation and upload still require the
-authorized GitHub-hosted macOS release flow.
+branch trigger. The setting is saved at Apple.
+
+Marc authorized the release PR and promotion through develop, preview, and main,
+followed by review submission. [Release PR #268](https://github.com/slooowshutter/FitFight/pull/268)
+contains the 1.1.2 build files and automatic-release defaults, integrated with
+develop through `511f400`. Standards and spec reviews found no actionable issues;
+post-merge localization and all 20 release tests passed. Cloud simulator,
+screenshot, and disposable database checks are pending. No release-branch merge,
+1.1.2 upload, or review submission has happened yet.
+
+**Compatibility and order:** the metadata/version change adds no API or schema
+change. The release also carries the previously merged compatible Feed, chart,
+notification, and Activity work documented below. At 01:14 UTC on 17 Sep, staging
+reported latest **1.1.1 (201)** with enforcement off; production reported latest
+**1.1.1 (202)** with enforcement on. Both had null review/internal candidates and
+healthy profile APIs. Staging's Supabase integration and Vercel deployment at
+`511f400` succeeded. The three additive migrations retain existing client grants
+and `/api/v1` contracts; preserved build 113 fixtures and 201/202 native contracts
+remain in the cloud checks. Verify those checks before promotion. Production's
+migration and backend deployment must succeed after the authorized main merge,
+before submitting the production candidate. Physical-device checks remain
+separate from the cloud evidence.
 
 ## Interrupted comment requests, prepared 17 Sep 2026
 

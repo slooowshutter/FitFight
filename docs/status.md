@@ -8,6 +8,57 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
 
+## App Store description draft: saved 17 Sep 2026
+
+Marc authorized the English/French description refresh, creation of the 1.1.2
+App Store version, and publication. Both descriptions and the required localized
+release notes in [App Store metadata](app-store/metadata.md) are saved in App Store
+Connect under **1.1.2, Prepare for Submission**. The new version inherited the
+English/French screenshots; its promotional-text fields are blank.
+
+Apple's Add for Review validation now reports only **You must choose a build**.
+No 1.1.2 build is available, so nothing was submitted or published. The current
+App Store version is **1.1.1 (202), Ready for Distribution**. A compatible 1.1.2
+production build and Apple review are still required.
+
+Marc also requested automatic publication after every approved App Store review.
+The workspace prepares native/CI version 1.1.2, an English/French release note,
+and Fastlane/release-tool defaults for `AFTER_APPROVAL`. The release tool targets
+`FITFIGHT_RELEASE_VERSION` and verifies Apple's saved release mode. Local release
+regressions passed (20 tests, 92 assertions), as did localization, Ruby syntax,
+project-file syntax, and whitespace checks. The release workflow YAML and all
+native/CI version values also passed validation.
+
+[Cloud configuration](https://github.com/slooowshutter/FitFight/actions/runs/35168925860)
+confirmed 1.1.2 has `releaseType: AFTER_APPROVAL`, state `PREPARE_FOR_SUBMISSION`,
+and no selected build. A separate [cloud readback](https://github.com/slooowshutter/FitFight/actions/runs/35169051669)
+confirmed automatic publication and exact English/French description and release
+note matches (434 and 529 description characters). The one-time configuration
+trigger was removed; the release-tools workflow is back to its original audit-only
+branch trigger. The setting is saved at Apple.
+
+Marc authorized the release PR and promotion through develop, preview, and main,
+followed by review submission. [Release PR #268](https://github.com/slooowshutter/FitFight/pull/268)
+contains the 1.1.2 build files and automatic-release defaults, integrated with
+develop through `2b4859d`, including the approved admin feedback deletion.
+Standards and spec reviews found no actionable issues; post-merge localization
+and all 20 release tests passed. Cloud simulator, screenshot, and disposable
+database checks passed at `1a41380`; checks for the latest integration are pending. No release-branch merge,
+1.1.2 upload, or review submission has happened yet.
+
+**Compatibility and order:** the metadata/version change adds no API or schema
+change. The release also carries the previously merged compatible Feed, chart,
+notification, and Activity work documented below. At 01:14 UTC on 17 Sep, staging
+reported latest **1.1.1 (201)** with enforcement off; production reported latest
+**1.1.1 (202)** with enforcement on. Both had null review/internal candidates and
+healthy profile APIs. Staging's Supabase integration and Vercel deployment at
+`511f400` succeeded. The three additive migrations retain existing client grants
+and `/api/v1` contracts; preserved build 113 fixtures and 201/202 native contracts
+remain in the cloud checks. Verify those checks before promotion. Production's
+migration and backend deployment must succeed after the authorized main merge,
+before submitting the production candidate. Physical-device checks remain
+separate from the cloud evidence.
+
 ## Admin feedback deletion: prepared 17 Sep 2026
 
 **Code:** admins can open a Feedback request, tap its ellipsis menu, and choose

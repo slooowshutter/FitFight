@@ -13,7 +13,6 @@ import { inviteEveryoneToOpenFight } from "./app-wide-fight-invite-supabase-quer
 import { currentJoinableFight } from "./join-fight-supabase-query";
 import { loadFight } from "./fight-access-supabase-query";
 import { enqueueFightInviteNotifications } from "./notification-intents-supabase-query";
-import { processNotificationOutbox } from "./process-notification-outbox-supabase-query";
 
 export async function setFightSuggested(
     userId: string,
@@ -88,7 +87,6 @@ export async function setFightSuggested(
                     userIds: invitedIds,
                     now,
                 });
-                await processNotificationOutbox(now, sql);
             }
         }
     }

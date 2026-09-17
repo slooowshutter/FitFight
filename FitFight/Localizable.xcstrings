@@ -11,6 +11,60 @@
                 }
             }
         },
+        "Comment refreshes are more reliable after connection errors. Live updates no longer interrupt loading more comments.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Comment refreshes are more reliable after connection errors. Live updates no longer interrupt loading more comments."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "L’actualisation des commentaires est plus fiable après une erreur de connexion. Les mises à jour en direct n’interrompent plus le chargement de commentaires supplémentaires."
+                    }
+                }
+            }
+        },
+        "Reactions swipe horizontally, with a visible like button and any emoji. Charts refresh without losing your selection and keep missing history clear. Comments load reliably, and notification failures no longer interrupt saved fights.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les réactions défilent horizontalement, avec un bouton J’aime visible et le choix de tout emoji. Les graphiques s’actualisent sans perdre ta sélection et signalent les données manquantes. Les commentaires se chargent correctement et les échecs de notification n’interrompent plus les fights enregistrés."
+                    }
+                }
+            }
+        },
+        "Cheer this post": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": { "state": "translated", "value": "Encourager cette publication" }
+                }
+            }
+        },
+        "Remove reaction": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": { "state": "translated", "value": "Retirer la réaction" }
+                }
+            }
+        },
+        "React": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": { "state": "translated", "value": "Réagir" }
+                }
+            }
+        },
+        "Other emoji…": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": { "state": "translated", "value": "Autre emoji…" }
+                }
+            }
+        },
         "Feedback no longer shows a duplicate button above the bottom tabs. Use the plus at the top to add a request.": {
             "localizations": {
                 "fr": {
@@ -21,12 +75,332 @@
                 }
             }
         },
+        "Live feed updates keep loaded comments in place and refresh posts reliably while scrolling. Broadcast posts now update live too.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Live feed updates keep loaded comments in place and refresh posts reliably while scrolling. Broadcast posts now update live too."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les actualisations en direct conservent les commentaires déjà chargés et mettent les publications à jour pendant le défilement. Les publications destinées à tous s’actualisent aussi en direct."
+                    }
+                }
+            }
+        },
         "Website download and invitation links open the App Store. The staging website keeps TestFlight access for beta testers.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
                         "value": "Les liens de téléchargement et d’invitation du site ouvrent l’App Store. Le site de préproduction conserve l’accès à TestFlight pour les bêta-testeurs."
+                    }
+                }
+            }
+        },
+        "Activity": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Activity"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Activité"
+                    }
+                }
+            }
+        },
+        "Notifications & activity": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Notifications & activity"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Notifications et activité"
+                    }
+                }
+            }
+        },
+        "Posts, comments, reactions and membership history from your fights.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Posts, comments, reactions and membership history from your fights."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Publications, commentaires, réactions et historique des participants de vos combats."
+                    }
+                }
+            }
+        },
+        "No activity yet.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "No activity yet."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Aucune activité pour le moment."
+                    }
+                }
+            }
+        },
+        "Time not recorded": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Time not recorded"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Date non enregistrée"
+                    }
+                }
+            }
+        },
+        "This post is no longer available.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "This post is no longer available."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cette publication n’est plus disponible."
+                    }
+                }
+            }
+        },
+        "Fight activity": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Fight activity"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Activité du combat"
+                    }
+                }
+            }
+        },
+        "Invitation": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Invitation"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Invitation"
+                    }
+                }
+            }
+        },
+        "activity.post": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ posted"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ a publié"
+                    }
+                }
+            }
+        },
+        "activity.comment": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ commented"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ a commenté"
+                    }
+                }
+            }
+        },
+        "activity.reply": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ replied"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ a répondu"
+                    }
+                }
+            }
+        },
+        "activity.reaction": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ reacted"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ a réagi"
+                    }
+                }
+            }
+        },
+        "activity.invitation": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%1$@ invited @%2$@"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%1$@ a invité @%2$@"
+                    }
+                }
+            }
+        },
+        "activity.joined": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ joined"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ a rejoint le combat"
+                    }
+                }
+            }
+        },
+        "activity.next-round": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ joined the next round"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ a rejoint la prochaine manche"
+                    }
+                }
+            }
+        },
+        "activity.declined": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ declined"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ a refusé"
+                    }
+                }
+            }
+        },
+        "activity.left": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ left"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ a quitté le combat"
+                    }
+                }
+            }
+        },
+        "activity.disqualified": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ was disqualified"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ a été disqualifié"
+                    }
+                }
+            }
+        },
+        "Comments and reactions refresh live. Feed loads ten posts at a time and loads more as you scroll. Pull down to fetch the latest posts. Notifications open the exact post. You now has Activity with posts, comments, reactions and timestamped membership history.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Comments and reactions refresh live. Feed loads ten posts at a time and loads more as you scroll. Pull down to fetch the latest posts. Notifications open the exact post. You now has Activity with posts, comments, reactions and timestamped membership history."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les commentaires et réactions s’actualisent en direct. Le fil charge dix publications à la fois, puis la suite quand vous faites défiler. Tirez vers le bas pour actualiser les publications. Les notifications ouvrent la publication concernée. L’onglet Vous propose Activité, avec les publications, commentaires, réactions et l’historique daté des participants."
                     }
                 }
             }

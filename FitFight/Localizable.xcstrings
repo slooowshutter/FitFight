@@ -1,6 +1,16 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Feedback no longer shows a duplicate button above the bottom tabs. Use the plus at the top to add a request.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Le bouton en double au-dessus des onglets a été supprimé de Feedback. Utilisez le plus en haut pour ajouter une demande."
+                    }
+                }
+            }
+        },
         "Live feed updates keep loaded comments in place and refresh posts reliably while scrolling. Broadcast posts now update live too.": {
             "localizations": {
                 "en": {

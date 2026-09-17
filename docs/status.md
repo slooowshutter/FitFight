@@ -1,6 +1,6 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **17 Sep 2026**. Production candidate: **1.1.1 (202)**.
+Read this before building. Last updated **16 Sep 2026**. Production candidate: **1.1.1 (202)**.
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
@@ -46,15 +46,57 @@ show visible reaction chips, the emoji menu icon, and unclipped like/comment act
 in English and French, Night and Day. Static export omitted the scroll contents and
 menu, so it was not used to verify those controls. Captures verify layout, not swipe
 or menu interactions. Validation-only workflow triggers were confined to a temporary
-branch; all 17 changed application and test files match the passing revision
-byte-for-byte. No app tests ran on the workstation.
+branch; all 17 changed application and test files matched the passing revision
+byte-for-byte before PR preparation integrated the newer `develop` changes.
+PR CI will verify the combined branch. No app tests ran on the workstation.
 
 **Rollout:** compatible backend fixes can land on staging through an authorized
 `develop` merge before the native update. A later authorized `preview` merge ships
 the native changes with a 1.1.1 release note. Production still requires its separate
-authorized `preview` to `main` promotion. This work has not opened a PR, merged a
-release branch, changed the hosted database, or uploaded a TestFlight build. Physical
+authorized `preview` to `main` promotion. This work has not merged a release branch,
+changed the hosted database, or uploaded a TestFlight build. Physical
 device interaction and HealthKit verification remain separate from cloud checks.
+
+## Website download destinations: prepared 17 Sep 2026
+
+The homepage, fight/referral invite pages, and English/French support pages use
+the configured backend environment to choose the download destination.
+Production links to `https://apps.apple.com/app/id6804230516`. Staging keeps the
+Friends Beta TestFlight link and installation instructions. Invite pages retain
+their five-second iOS redirect and original-link reopening instructions. The
+App Store destination returned HTTP 200. A 1.1.1 release note is included.
+
+Workspace checks passed: TypeScript, all 266 existing tests, optimized builds for
+both environments, and HTTP-rendered link/copy checks for all five affected routes
+in each environment. Browser redirect execution and native compilation were not
+run. No API contract or database change, cloud CI run, PR, merge, or live deployment
+was performed. The live sites still need the normal authorized promotions.
+
+## Post and comment translation prepared, 16 Sep 2026
+
+**Code:** Feed and fight-thread posts, comments, and replies have an A speech-bubble
+translation icon at the top right, immediately left of the ellipsis. Apple's
+[`NLLanguageRecognizer`](https://developer.apple.com/documentation/naturallanguage/nllanguagerecognizer) detects the text's language on device before displaying the
+icon. It appears only when the detected language differs from the first language
+in `Locale.preferredLanguages`; regional variants count as the same language.
+Empty text, text without letters, and unrecognized languages have no icon.
+Detection is best-effort for short or mixed-language text. Tapping opens Apple's system translation sheet,
+which chooses a target from the reader's language preferences and lets them change
+it. Original content stays intact. The control uses the existing theme, a 44-point
+tap target, an English/French accessibility label, and a `1.1.1` release note. It is
+available on iOS 17.4+ and hidden on earlier supported iOS versions, matching
+[Apple's translation API](https://developer.apple.com/documentation/swiftui/view/translationpresentation(ispresented:text:attachmentanchor:arrowedge:replacementaction:)).
+The English simulator preview keeps Bertille's first post in French so the icon
+can be inspected alongside English posts where it stays hidden.
+
+**Checks:** localization, native API-boundary, Xcode project-file syntax, and
+whitespace checks passed. Cloud iOS compilation and physical-device translation
+checks are pending. Verify icon visibility for same/different languages and regional
+variants, both English/French translation directions, target-language changes, and
+dismissal back to the unchanged post or comment on a device.
+
+**Live deployment:** not deployed. No API contract, native API model, or database
+schema changed. No merge, TestFlight upload, or production deployment was made.
 
 ## Marc broadcast posts, 16 Sep 2026
 

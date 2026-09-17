@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { InviteDownload } from "@/components/testflight-invite";
+import { appDownload } from "@/lib/releases/app-download";
 import { referralCodeSchema } from "@/lib/types/referrals/referral";
 
 export const metadata: Metadata = {
@@ -34,7 +35,7 @@ export default async function ReferralPage({
                     Your friend invited you to FitFight. Challenge each other to
                     walk more, compare Steps, and make every day count.
                 </p>
-                <InviteDownload />
+                <InviteDownload {...appDownload()} />
             </article>
         </main>
     );

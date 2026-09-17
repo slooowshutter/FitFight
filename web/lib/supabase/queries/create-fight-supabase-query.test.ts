@@ -1,9 +1,7 @@
+import { createFightSchema } from "@/lib/types/fights/create-fight";
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import {
-    createFightSchema,
-    storedFightIdentity,
-} from "./create-fight-supabase-query";
+import { storedFightIdentity } from "./create-fight-supabase-query";
 
 const base = {
     name: "Steps Fight",
@@ -14,6 +12,11 @@ const base = {
     stakeKind: "action" as const,
     actionText: "Cook dinner",
 };
+
+test("custom Fight time zones must be recognized IANA zones", () => {
+    assert.equal(createFightSchema.safeParse({ ...base, timeZone: "Pacific/Kiritimati" }).success, true);
+    assert.equal(createFightSchema.safeParse({ ...base, timeZone: "Nowhere/Invalid" }).success, false);
+});
 
 test("private create can start with the owner alone", () => {
     const parsed = createFightSchema.parse({

@@ -258,6 +258,8 @@ struct ContentView: View {
             NotificationOnboardingView()
         } else if session.needsRequestsOnboarding {
             RequestsOnboardingView()
+        } else if session.needsSuggestedOnboarding {
+            SuggestedFightsOnboardingView()
         } else {
             signedInApp
                 .id(session.authSession?.user.id)
@@ -321,7 +323,7 @@ struct ContentView: View {
                 .toolbar(.hidden, for: .navigationBar)
                 .navigationDestination(for: String.self) { id in
                     Group {
-                        if let fight = model.canonicalFight(for: id) {
+                        if let fight = model.detailFight(for: id) {
                             FightDetailView(fight: fight)
                         } else {
                             VStack(alignment: .leading, spacing: 12) {

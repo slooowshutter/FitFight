@@ -17,6 +17,1091 @@ info:
 servers:
     - url: /api/v1
 paths:
+    "/profiles/{userID}": {
+        "get": {
+            "operationId": "readSharedProfile",
+            "summary": "Read only currently shared identity, record and optional activity.",
+            "security": [
+                {
+                    "bearerAuth": []
+                }
+            ],
+            "parameters": [
+                {
+                    "$ref": "#/components/parameters/AppVersion"
+                },
+                {
+                    "$ref": "#/components/parameters/AppBuild"
+                },
+                {
+                    "name": "userID",
+                    "in": "path",
+                    "required": true,
+                    "schema": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                {
+                    "name": "preview",
+                    "in": "query",
+                    "required": false,
+                    "schema": {
+                        "type": "string",
+                        "enum": [
+                            "friend",
+                            "opponent",
+                            "past_opponent",
+                            "stranger"
+                        ]
+                    }
+                }
+            ],
+            "responses": {
+                "200": {
+                    "description": "Authorized current state. Cache-Control no-store.",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SharedProfile"
+                            }
+                        }
+                    }
+                },
+                "400": {
+                    "description": "Invalid input"
+                },
+                "401": {
+                    "description": "Missing or invalid session"
+                },
+                "403": {
+                    "description": "Access not permitted"
+                },
+                "404": {
+                    "description": "Unavailable or blocked profile or Fight"
+                },
+                "409": {
+                    "description": "Transition no longer available"
+                },
+                "426": {
+                    "description": "App update required where enforced"
+                },
+                "429": {
+                    "description": "Rate limit"
+                }
+            }
+        }
+    }
+    "/profiles/{userID}/history": {
+        "get": {
+            "operationId": "readProfileHistory",
+            "summary": "Read redacted results. shared=true limits results to Fights the viewer entered.",
+            "security": [
+                {
+                    "bearerAuth": []
+                }
+            ],
+            "parameters": [
+                {
+                    "$ref": "#/components/parameters/AppVersion"
+                },
+                {
+                    "$ref": "#/components/parameters/AppBuild"
+                },
+                {
+                    "name": "userID",
+                    "in": "path",
+                    "required": true,
+                    "schema": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                {
+                    "name": "cursor",
+                    "in": "query",
+                    "required": false,
+                    "schema": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                {
+                    "name": "limit",
+                    "in": "query",
+                    "required": false,
+                    "schema": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 50,
+                        "default": 20
+                    }
+                },
+                {
+                    "name": "shared",
+                    "in": "query",
+                    "required": false,
+                    "schema": {
+                        "type": "string",
+                        "enum": [
+                            "true",
+                            "false"
+                        ],
+                        "default": "false"
+                    }
+                }
+            ],
+            "responses": {
+                "200": {
+                    "description": "Authorized current state. Cache-Control no-store.",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProfileHistoryPage"
+                            }
+                        }
+                    }
+                },
+                "400": {
+                    "description": "Invalid input"
+                },
+                "401": {
+                    "description": "Missing or invalid session"
+                },
+                "403": {
+                    "description": "Access not permitted"
+                },
+                "404": {
+                    "description": "Unavailable or blocked profile or Fight"
+                },
+                "409": {
+                    "description": "Transition no longer available"
+                },
+                "426": {
+                    "description": "App update required where enforced"
+                },
+                "429": {
+                    "description": "Rate limit"
+                }
+            }
+        }
+    }
+    "/profiles/lookup": {
+        "get": {
+            "operationId": "lookupSharedProfile",
+            "summary": "Exact normalized username lookup, at most 30 attempts per actor per hour.",
+            "security": [
+                {
+                    "bearerAuth": []
+                }
+            ],
+            "parameters": [
+                {
+                    "$ref": "#/components/parameters/AppVersion"
+                },
+                {
+                    "$ref": "#/components/parameters/AppBuild"
+                },
+                {
+                    "name": "handle",
+                    "in": "query",
+                    "required": true,
+                    "schema": {
+                        "type": "string"
+                    }
+                }
+            ],
+            "responses": {
+                "200": {
+                    "description": "Authorized current state. Cache-Control no-store.",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SharedProfileIdentity"
+                            }
+                        }
+                    }
+                },
+                "400": {
+                    "description": "Invalid input"
+                },
+                "401": {
+                    "description": "Missing or invalid session"
+                },
+                "403": {
+                    "description": "Access not permitted"
+                },
+                "404": {
+                    "description": "Unavailable or blocked profile or Fight"
+                },
+                "409": {
+                    "description": "Transition no longer available"
+                },
+                "426": {
+                    "description": "App update required where enforced"
+                },
+                "429": {
+                    "description": "Rate limit"
+                }
+            }
+        }
+    }
+    "/me/profile-settings": {
+        "get": {
+            "operationId": "readOwnProfileSettings",
+            "summary": "Read explicit sharing choices or safe defaults.",
+            "security": [
+                {
+                    "bearerAuth": []
+                }
+            ],
+            "parameters": [
+                {
+                    "$ref": "#/components/parameters/AppVersion"
+                },
+                {
+                    "$ref": "#/components/parameters/AppBuild"
+                }
+            ],
+            "responses": {
+                "200": {
+                    "description": "Authorized current state. Cache-Control no-store.",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SharedProfileSettings"
+                            }
+                        }
+                    }
+                },
+                "400": {
+                    "description": "Invalid input"
+                },
+                "401": {
+                    "description": "Missing or invalid session"
+                },
+                "403": {
+                    "description": "Access not permitted"
+                },
+                "404": {
+                    "description": "Unavailable or blocked profile or Fight"
+                },
+                "409": {
+                    "description": "Transition no longer available"
+                },
+                "426": {
+                    "description": "App update required where enforced"
+                },
+                "429": {
+                    "description": "Rate limit"
+                }
+            }
+        },
+        "patch": {
+            "operationId": "updateOwnProfileSettings",
+            "summary": "Change only supplied settings; audience preview is read-only.",
+            "security": [
+                {
+                    "bearerAuth": []
+                }
+            ],
+            "parameters": [
+                {
+                    "$ref": "#/components/parameters/AppVersion"
+                },
+                {
+                    "$ref": "#/components/parameters/AppBuild"
+                }
+            ],
+            "requestBody": {
+                "required": true,
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/UpdateSharedProfileSettings"
+                        }
+                    }
+                }
+            },
+            "responses": {
+                "200": {
+                    "description": "Authorized current state. Cache-Control no-store.",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SharedProfileSettings"
+                            }
+                        }
+                    }
+                },
+                "400": {
+                    "description": "Invalid input"
+                },
+                "401": {
+                    "description": "Missing or invalid session"
+                },
+                "403": {
+                    "description": "Access not permitted"
+                },
+                "404": {
+                    "description": "Unavailable or blocked profile or Fight"
+                },
+                "409": {
+                    "description": "Transition no longer available"
+                },
+                "426": {
+                    "description": "App update required where enforced"
+                },
+                "429": {
+                    "description": "Rate limit"
+                }
+            }
+        }
+    }
+    "/me/rivalries": {
+        "get": {
+            "operationId": "readOwnRivalries",
+            "summary": "Six recent eligible rivalries under each target profile permission.",
+            "security": [
+                {
+                    "bearerAuth": []
+                }
+            ],
+            "parameters": [
+                {
+                    "$ref": "#/components/parameters/AppVersion"
+                },
+                {
+                    "$ref": "#/components/parameters/AppBuild"
+                }
+            ],
+            "responses": {
+                "200": {
+                    "description": "Authorized current state. Cache-Control no-store.",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/ProfileRivalrySummary"
+                                }
+                            }
+                        }
+                    }
+                },
+                "400": {
+                    "description": "Invalid input"
+                },
+                "401": {
+                    "description": "Missing or invalid session"
+                },
+                "403": {
+                    "description": "Access not permitted"
+                },
+                "404": {
+                    "description": "Unavailable or blocked profile or Fight"
+                },
+                "409": {
+                    "description": "Transition no longer available"
+                },
+                "426": {
+                    "description": "App update required where enforced"
+                },
+                "429": {
+                    "description": "Rate limit"
+                }
+            }
+        }
+    }
+    "/friends": {
+        "get": {
+            "operationId": "listProfileFriends",
+            "summary": "Accepted friends and pending requests use server-owned mutual acceptance.",
+            "security": [
+                {
+                    "bearerAuth": []
+                }
+            ],
+            "parameters": [
+                {
+                    "$ref": "#/components/parameters/AppVersion"
+                },
+                {
+                    "$ref": "#/components/parameters/AppBuild"
+                },
+                {
+                    "name": "cursor",
+                    "in": "query",
+                    "required": false,
+                    "schema": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                {
+                    "name": "limit",
+                    "in": "query",
+                    "required": false,
+                    "schema": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 50,
+                        "default": 20
+                    }
+                },
+                {
+                    "name": "kind",
+                    "in": "query",
+                    "required": false,
+                    "schema": {
+                        "type": "string",
+                        "enum": [
+                            "accepted",
+                            "incoming",
+                            "outgoing"
+                        ],
+                        "default": "accepted"
+                    }
+                }
+            ],
+            "responses": {
+                "200": {
+                    "description": "Authorized current state. Cache-Control no-store.",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProfileFriendsPage"
+                            }
+                        }
+                    }
+                },
+                "400": {
+                    "description": "Invalid input"
+                },
+                "401": {
+                    "description": "Missing or invalid session"
+                },
+                "403": {
+                    "description": "Access not permitted"
+                },
+                "404": {
+                    "description": "Unavailable or blocked profile or Fight"
+                },
+                "409": {
+                    "description": "Transition no longer available"
+                },
+                "426": {
+                    "description": "App update required where enforced"
+                },
+                "429": {
+                    "description": "Rate limit"
+                }
+            }
+        }
+    }
+    "/friends/{userID}/request": {
+        "post": {
+            "operationId": "requestProfileFriendship",
+            "summary": "Idempotent request. A reverse request does not auto-accept.",
+            "security": [
+                {
+                    "bearerAuth": []
+                }
+            ],
+            "parameters": [
+                {
+                    "$ref": "#/components/parameters/AppVersion"
+                },
+                {
+                    "$ref": "#/components/parameters/AppBuild"
+                },
+                {
+                    "name": "userID",
+                    "in": "path",
+                    "required": true,
+                    "schema": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                }
+            ],
+            "responses": {
+                "200": {
+                    "description": "Authorized current state. Cache-Control no-store.",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProfileFriendshipResponse"
+                            }
+                        }
+                    }
+                },
+                "400": {
+                    "description": "Invalid input"
+                },
+                "401": {
+                    "description": "Missing or invalid session"
+                },
+                "403": {
+                    "description": "Access not permitted"
+                },
+                "404": {
+                    "description": "Unavailable or blocked profile or Fight"
+                },
+                "409": {
+                    "description": "Transition no longer available"
+                },
+                "426": {
+                    "description": "App update required where enforced"
+                },
+                "429": {
+                    "description": "Rate limit"
+                }
+            }
+        }
+    }
+    "/friends/{userID}/respond": {
+        "post": {
+            "operationId": "respondToProfileFriendship",
+            "summary": "Only the recipient may accept or decline a pending request.",
+            "security": [
+                {
+                    "bearerAuth": []
+                }
+            ],
+            "parameters": [
+                {
+                    "$ref": "#/components/parameters/AppVersion"
+                },
+                {
+                    "$ref": "#/components/parameters/AppBuild"
+                },
+                {
+                    "name": "userID",
+                    "in": "path",
+                    "required": true,
+                    "schema": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                }
+            ],
+            "requestBody": {
+                "required": true,
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/ProfileRespondRequest"
+                        }
+                    }
+                }
+            },
+            "responses": {
+                "200": {
+                    "description": "Authorized current state. Cache-Control no-store.",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProfileFriendshipResponse"
+                            }
+                        }
+                    }
+                },
+                "400": {
+                    "description": "Invalid input"
+                },
+                "401": {
+                    "description": "Missing or invalid session"
+                },
+                "403": {
+                    "description": "Access not permitted"
+                },
+                "404": {
+                    "description": "Unavailable or blocked profile or Fight"
+                },
+                "409": {
+                    "description": "Transition no longer available"
+                },
+                "426": {
+                    "description": "App update required where enforced"
+                },
+                "429": {
+                    "description": "Rate limit"
+                }
+            }
+        }
+    }
+    "/friends/{userID}": {
+        "delete": {
+            "operationId": "removeProfileFriendship",
+            "summary": "Cancel an outgoing request or remove a friendship.",
+            "security": [
+                {
+                    "bearerAuth": []
+                }
+            ],
+            "parameters": [
+                {
+                    "$ref": "#/components/parameters/AppVersion"
+                },
+                {
+                    "$ref": "#/components/parameters/AppBuild"
+                },
+                {
+                    "name": "userID",
+                    "in": "path",
+                    "required": true,
+                    "schema": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                }
+            ],
+            "responses": {
+                "200": {
+                    "description": "Authorized current state. Cache-Control no-store.",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProfileFriendshipResponse"
+                            }
+                        }
+                    }
+                },
+                "400": {
+                    "description": "Invalid input"
+                },
+                "401": {
+                    "description": "Missing or invalid session"
+                },
+                "403": {
+                    "description": "Access not permitted"
+                },
+                "404": {
+                    "description": "Unavailable or blocked profile or Fight"
+                },
+                "409": {
+                    "description": "Transition no longer available"
+                },
+                "426": {
+                    "description": "App update required where enforced"
+                },
+                "429": {
+                    "description": "Rate limit"
+                }
+            }
+        }
+    }
+    "/profiles/{userID}/block": {
+        "post": {
+            "operationId": "blockProfile",
+            "summary": "Block in either direction revokes profile access and removes friendship.",
+            "security": [
+                {
+                    "bearerAuth": []
+                }
+            ],
+            "parameters": [
+                {
+                    "$ref": "#/components/parameters/AppVersion"
+                },
+                {
+                    "$ref": "#/components/parameters/AppBuild"
+                },
+                {
+                    "name": "userID",
+                    "in": "path",
+                    "required": true,
+                    "schema": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                }
+            ],
+            "responses": {
+                "200": {
+                    "description": "Authorized current state. Cache-Control no-store.",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "blocked"
+                                ],
+                                "properties": {
+                                    "blocked": {
+                                        "type": "boolean"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "400": {
+                    "description": "Invalid input"
+                },
+                "401": {
+                    "description": "Missing or invalid session"
+                },
+                "403": {
+                    "description": "Access not permitted"
+                },
+                "404": {
+                    "description": "Unavailable or blocked profile or Fight"
+                },
+                "409": {
+                    "description": "Transition no longer available"
+                },
+                "426": {
+                    "description": "App update required where enforced"
+                },
+                "429": {
+                    "description": "Rate limit"
+                }
+            }
+        }
+    }
+    "/profiles/{userID}/report": {
+        "post": {
+            "operationId": "reportProfile",
+            "summary": "Store a private moderation report using the authenticated reporter.",
+            "security": [
+                {
+                    "bearerAuth": []
+                }
+            ],
+            "parameters": [
+                {
+                    "$ref": "#/components/parameters/AppVersion"
+                },
+                {
+                    "$ref": "#/components/parameters/AppBuild"
+                },
+                {
+                    "name": "userID",
+                    "in": "path",
+                    "required": true,
+                    "schema": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                }
+            ],
+            "requestBody": {
+                "required": true,
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/ProfileReportRequest"
+                        }
+                    }
+                }
+            },
+            "responses": {
+                "200": {
+                    "description": "Authorized current state. Cache-Control no-store.",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "reported"
+                                ],
+                                "properties": {
+                                    "reported": {
+                                        "type": "boolean"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "400": {
+                    "description": "Invalid input"
+                },
+                "401": {
+                    "description": "Missing or invalid session"
+                },
+                "403": {
+                    "description": "Access not permitted"
+                },
+                "404": {
+                    "description": "Unavailable or blocked profile or Fight"
+                },
+                "409": {
+                    "description": "Transition no longer available"
+                },
+                "426": {
+                    "description": "App update required where enforced"
+                },
+                "429": {
+                    "description": "Rate limit"
+                }
+            }
+        }
+    }
+    "/profiles/{userID}/views": {
+        "post": {
+            "operationId": "recordDisplayedProfile",
+            "summary": "Disabled until disclosed and configured. Deduplicated, server-timed visible opens only.",
+            "security": [
+                {
+                    "bearerAuth": []
+                }
+            ],
+            "parameters": [
+                {
+                    "$ref": "#/components/parameters/AppVersion"
+                },
+                {
+                    "$ref": "#/components/parameters/AppBuild"
+                },
+                {
+                    "name": "userID",
+                    "in": "path",
+                    "required": true,
+                    "schema": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                }
+            ],
+            "requestBody": {
+                "required": true,
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/ProfileViewRequest"
+                        }
+                    }
+                }
+            },
+            "responses": {
+                "200": {
+                    "description": "Authorized current state. Cache-Control no-store.",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "recorded"
+                                ],
+                                "properties": {
+                                    "recorded": {
+                                        "type": "boolean"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "400": {
+                    "description": "Invalid input"
+                },
+                "401": {
+                    "description": "Missing or invalid session"
+                },
+                "403": {
+                    "description": "Access not permitted"
+                },
+                "404": {
+                    "description": "Unavailable or blocked profile or Fight"
+                },
+                "409": {
+                    "description": "Transition no longer available"
+                },
+                "426": {
+                    "description": "App update required where enforced"
+                },
+                "429": {
+                    "description": "Rate limit"
+                }
+            }
+        }
+    }
+    "/me/capabilities": {
+        "get": {
+            "operationId": "readFightCapabilities",
+            "summary": "Server-configured immutable Auth identity determines administration.",
+            "security": [
+                {
+                    "bearerAuth": []
+                }
+            ],
+            "parameters": [
+                {
+                    "$ref": "#/components/parameters/AppVersion"
+                },
+                {
+                    "$ref": "#/components/parameters/AppBuild"
+                }
+            ],
+            "responses": {
+                "200": {
+                    "description": "Authorized current state. Cache-Control no-store.",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "manage_fights"
+                                ],
+                                "properties": {
+                                    "manage_fights": {
+                                        "type": "boolean"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "400": {
+                    "description": "Invalid input"
+                },
+                "401": {
+                    "description": "Missing or invalid session"
+                },
+                "403": {
+                    "description": "Access not permitted"
+                },
+                "404": {
+                    "description": "Unavailable or blocked profile or Fight"
+                },
+                "409": {
+                    "description": "Transition no longer available"
+                },
+                "426": {
+                    "description": "App update required where enforced"
+                },
+                "429": {
+                    "description": "Rate limit"
+                }
+            }
+        }
+    }
+    "/me/profile-measurements": {
+        "get": {
+            "operationId": "readProfileMeasurements",
+            "summary": "Operator-only aggregate report, 30-day retention and seven-day last-view attribution.",
+            "security": [
+                {
+                    "bearerAuth": []
+                }
+            ],
+            "parameters": [
+                {
+                    "$ref": "#/components/parameters/AppVersion"
+                },
+                {
+                    "$ref": "#/components/parameters/AppBuild"
+                }
+            ],
+            "responses": {
+                "200": {
+                    "description": "Authorized current state. Cache-Control no-store.",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProfileMeasurements"
+                            }
+                        }
+                    }
+                },
+                "400": {
+                    "description": "Invalid input"
+                },
+                "401": {
+                    "description": "Missing or invalid session"
+                },
+                "403": {
+                    "description": "Access not permitted"
+                },
+                "404": {
+                    "description": "Unavailable or blocked profile or Fight"
+                },
+                "409": {
+                    "description": "Transition no longer available"
+                },
+                "426": {
+                    "description": "App update required where enforced"
+                },
+                "429": {
+                    "description": "Rate limit"
+                }
+            }
+        }
+    }
+    "/fights/{fightID}/admin": {
+        "patch": {
+            "operationId": "administerFight",
+            "summary": "Audited visibility, recurrence, stop-round and pause-series operations. Final results are preserved.",
+            "security": [
+                {
+                    "bearerAuth": []
+                }
+            ],
+            "parameters": [
+                {
+                    "$ref": "#/components/parameters/AppVersion"
+                },
+                {
+                    "$ref": "#/components/parameters/AppBuild"
+                },
+                {
+                    "name": "fightID",
+                    "in": "path",
+                    "required": true,
+                    "schema": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                }
+            ],
+            "requestBody": {
+                "required": true,
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/AdministerFightRequest"
+                        }
+                    }
+                }
+            },
+            "responses": {
+                "200": {
+                    "description": "Authorized current state. Cache-Control no-store.",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/FightSummary"
+                            }
+                        }
+                    }
+                },
+                "400": {
+                    "description": "Invalid input"
+                },
+                "401": {
+                    "description": "Missing or invalid session"
+                },
+                "403": {
+                    "description": "Access not permitted"
+                },
+                "404": {
+                    "description": "Unavailable or blocked profile or Fight"
+                },
+                "409": {
+                    "description": "Transition no longer available"
+                },
+                "426": {
+                    "description": "App update required where enforced"
+                },
+                "429": {
+                    "description": "Rate limit"
+                }
+            }
+        }
+    }
     /fights/snapshot:
         post:
             operationId: readFightSnapshot
@@ -605,6 +1690,722 @@ components:
             scheme: bearer
             bearerFormat: JWT
     schemas:
+        SharedProfileIdentity: {
+            "type": "object",
+            "required": [
+                "user_id",
+                "handle",
+                "display_name",
+                "companion_id",
+                "avatar_url"
+            ],
+            "properties": {
+                "user_id": {
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "handle": {
+                    "type": "string"
+                },
+                "display_name": {
+                    "type": "string"
+                },
+                "companion_id": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ]
+                },
+                "avatar_url": {
+                    "anyOf": [
+                        {
+                            "type": "string",
+                            "format": "uri"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ]
+                }
+            }
+        }
+        SharedProfileSettings: {
+            "type": "object",
+            "required": [
+                "competitive",
+                "audience",
+                "activity_audience",
+                "activity_days",
+                "artwork_allowed",
+                "revision"
+            ],
+            "properties": {
+                "competitive": {
+                    "type": "boolean"
+                },
+                "audience": {
+                    "type": "string",
+                    "enum": [
+                        "private",
+                        "public"
+                    ]
+                },
+                "activity_audience": {
+                    "type": "string",
+                    "enum": [
+                        "off",
+                        "friends",
+                        "opponents",
+                        "public"
+                    ]
+                },
+                "activity_days": {
+                    "type": "integer",
+                    "enum": [
+                        7,
+                        30
+                    ]
+                },
+                "artwork_allowed": {
+                    "type": "boolean"
+                },
+                "revision": {
+                    "type": "integer",
+                    "minimum": 0
+                }
+            }
+        }
+        UpdateSharedProfileSettings: {
+            "type": "object",
+            "required": [],
+            "properties": {
+                "competitive": {
+                    "type": "boolean"
+                },
+                "audience": {
+                    "type": "string",
+                    "enum": [
+                        "private",
+                        "public"
+                    ]
+                },
+                "activity_audience": {
+                    "type": "string",
+                    "enum": [
+                        "off",
+                        "friends",
+                        "opponents",
+                        "public"
+                    ]
+                },
+                "activity_days": {
+                    "type": "integer",
+                    "enum": [
+                        7,
+                        30
+                    ]
+                },
+                "artwork_allowed": {
+                    "type": "boolean"
+                }
+            },
+            "additionalProperties": false,
+            "minProperties": 1,
+            "description": "Private and Casual by default; Steps sharing off. Public Steps require a public profile. artwork_allowed=true is unavailable (409)."
+        }
+        ProfileCounts: {"type": "object", "required": ["played", "wins", "win_rate"], "properties": {"played": {"type": "integer", "minimum": 0}, "wins": {"type": "integer", "minimum": 0}, "win_rate": {"anyOf": [{"type": "number", "minimum": 0, "maximum": 1}, {"type": "null"}]}}}
+        ProfileRecord: {
+            "allOf": [
+                {
+                    "$ref": "#/components/schemas/ProfileCounts"
+                },
+                {
+                    "type": "object",
+                    "required": [
+                        "categories",
+                        "excluded"
+                    ],
+                    "properties": {
+                        "categories": {
+                            "type": "object",
+                            "required": [
+                                "private",
+                                "public",
+                                "unknown"
+                            ],
+                            "properties": {
+                                "private": {
+                                    "$ref": "#/components/schemas/ProfileCounts"
+                                },
+                                "public": {
+                                    "$ref": "#/components/schemas/ProfileCounts"
+                                },
+                                "unknown": {
+                                    "$ref": "#/components/schemas/ProfileCounts"
+                                }
+                            }
+                        },
+                        "excluded": {
+                            "type": "integer",
+                            "minimum": 0
+                        }
+                    }
+                }
+            ]
+        }
+        ProfileRivalry: {
+            "type": "object",
+            "required": [
+                "wins",
+                "losses",
+                "draws",
+                "rematch"
+            ],
+            "properties": {
+                "wins": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "losses": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "draws": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "rematch": {
+                    "anyOf": [
+                        {
+                            "type": "object",
+                            "required": [
+                                "duration_seconds",
+                                "action_text"
+                            ],
+                            "properties": {
+                                "duration_seconds": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                },
+                                "action_text": {
+                                    "anyOf": [
+                                        {
+                                            "type": "string"
+                                        },
+                                        {
+                                            "type": "null"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ]
+                }
+            }
+        }
+        ProfileRivalrySummary: {"type": "object", "required": ["identity", "rivalry"], "properties": {"identity": {"$ref": "#/components/schemas/SharedProfileIdentity"}, "rivalry": {"$ref": "#/components/schemas/ProfileRivalry"}}}
+        ProfileActivity: {
+            "type": "object",
+            "required": [
+                "metric",
+                "days",
+                "values"
+            ],
+            "properties": {
+                "metric": {
+                    "const": "steps"
+                },
+                "days": {
+                    "type": "integer",
+                    "enum": [
+                        7,
+                        30
+                    ]
+                },
+                "values": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "day",
+                            "steps",
+                            "time_zone",
+                            "updated_at",
+                            "finalized"
+                        ],
+                        "properties": {
+                            "day": {
+                                "type": "string",
+                                "format": "date"
+                            },
+                            "steps": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "time_zone": {
+                                "anyOf": [
+                                    {
+                                        "type": "string"
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ]
+                            },
+                            "updated_at": {
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "finalized": {
+                                "type": "boolean"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        SharedProfile: {
+            "type": "object",
+            "required": [
+                "identity",
+                "access",
+                "competitive",
+                "friendship",
+                "record",
+                "rivalry",
+                "activity",
+                "artwork",
+                "view_measurement_enabled"
+            ],
+            "properties": {
+                "identity": {
+                    "$ref": "#/components/schemas/SharedProfileIdentity"
+                },
+                "access": {
+                    "type": "string",
+                    "enum": [
+                        "owner",
+                        "shared",
+                        "private"
+                    ]
+                },
+                "competitive": {
+                    "type": "boolean"
+                },
+                "friendship": {
+                    "type": "string",
+                    "enum": [
+                        "none",
+                        "outgoing",
+                        "incoming",
+                        "friends",
+                        "self"
+                    ]
+                },
+                "record": {
+                    "anyOf": [
+                        {
+                            "$ref": "#/components/schemas/ProfileRecord"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ]
+                },
+                "rivalry": {
+                    "anyOf": [
+                        {
+                            "$ref": "#/components/schemas/ProfileRivalry"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ]
+                },
+                "activity": {
+                    "anyOf": [
+                        {
+                            "$ref": "#/components/schemas/ProfileActivity"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ]
+                },
+                "artwork": {
+                    "anyOf": [
+                        {
+                            "type": "object",
+                            "required": [
+                                "id",
+                                "image_path"
+                            ],
+                            "properties": {
+                                "id": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                },
+                                "image_path": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ]
+                },
+                "view_measurement_enabled": {
+                    "type": "boolean"
+                }
+            }
+        }
+        ProfileHistoryPage: {
+            "type": "object",
+            "required": [
+                "results",
+                "next_cursor"
+            ],
+            "properties": {
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "id",
+                            "fight_id",
+                            "name",
+                            "starts_at",
+                            "ends_at",
+                            "category",
+                            "result",
+                            "placement",
+                            "field_size",
+                            "counted",
+                            "complete"
+                        ],
+                        "properties": {
+                            "id": {
+                                "description": "Opaque identifier scoped to this Profile. Use fight_id for authorized Fight navigation.",
+                                "type": "string",
+                                "format": "uuid"
+                            },
+                            "fight_id": {
+                                "anyOf": [
+                                    {
+                                        "type": "string",
+                                        "format": "uuid"
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ]
+                            },
+                            "name": {
+                                "anyOf": [
+                                    {
+                                        "type": "string"
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ]
+                            },
+                            "starts_at": {
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "ends_at": {
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "category": {
+                                "type": "string",
+                                "enum": [
+                                    "private",
+                                    "public",
+                                    "unknown"
+                                ]
+                            },
+                            "result": {
+                                "type": "string",
+                                "enum": [
+                                    "win",
+                                    "loss",
+                                    "draw",
+                                    "withdrawn",
+                                    "removed",
+                                    "incomplete",
+                                    "cancelled",
+                                    "ongoing",
+                                    "solo",
+                                    "not_entered",
+                                    "unavailable"
+                                ]
+                            },
+                            "placement": {
+                                "anyOf": [
+                                    {
+                                        "type": "integer",
+                                        "minimum": 1
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ]
+                            },
+                            "field_size": {
+                                "type": "integer",
+                                "minimum": 0
+                            },
+                            "counted": {
+                                "type": "boolean"
+                            },
+                            "complete": {
+                                "anyOf": [
+                                    {
+                                        "type": "boolean"
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                },
+                "next_cursor": {
+                    "description": "Opaque cursor scoped to this Profile; not a Fight ID.",
+                    "anyOf": [
+                        {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ]
+                }
+            }
+        }
+        ProfileFriendsPage: {
+            "type": "object",
+            "required": [
+                "people",
+                "next_cursor",
+                "incoming_count"
+            ],
+            "properties": {
+                "people": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/components/schemas/SharedProfileIdentity"
+                    }
+                },
+                "next_cursor": {
+                    "anyOf": [
+                        {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ]
+                },
+                "incoming_count": {
+                    "type": "integer",
+                    "minimum": 0
+                }
+            }
+        }
+        ProfileFriendshipResponse: {"type": "object", "required": ["friendship"], "properties": {"friendship": {"type": "string", "enum": ["none", "outgoing", "incoming", "friends", "self"]}}}
+        ProfileRespondRequest: {"type": "object", "required": ["action"], "properties": {"action": {"type": "string", "enum": ["accept", "decline"]}}, "additionalProperties": false}
+        ProfileViewRequest: {
+            "type": "object",
+            "required": [
+                "event_id",
+                "source"
+            ],
+            "properties": {
+                "event_id": {
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "source": {
+                    "type": "string",
+                    "enum": [
+                        "standings",
+                        "participants",
+                        "feed",
+                        "comments",
+                        "reactions",
+                        "feedback",
+                        "friends",
+                        "lookup"
+                    ]
+                }
+            },
+            "additionalProperties": false
+        }
+        ProfileReportRequest: {"type": "object", "required": ["reason"], "properties": {"reason": {"type": "string", "minLength": 1, "maxLength": 1000}}, "additionalProperties": false}
+        AdministerFightRequest: {
+            "type": "object",
+            "required": [],
+            "properties": {
+                "visibility": {
+                    "type": "string",
+                    "enum": [
+                        "invite_only",
+                        "joinable"
+                    ]
+                },
+                "recurring": {
+                    "type": "boolean"
+                },
+                "action": {
+                    "type": "string",
+                    "enum": [
+                        "stop_round",
+                        "pause_series"
+                    ]
+                }
+            },
+            "additionalProperties": false,
+            "minProperties": 1
+        }
+        ProfileMeasurements: {
+            "type": "object",
+            "required": [
+                "days",
+                "attribution_days",
+                "groups",
+                "archived_groups"
+            ],
+            "properties": {
+                "days": {
+                    "const": 30
+                },
+                "attribution_days": {
+                    "const": 7
+                },
+                "groups": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "kind",
+                            "source",
+                            "events",
+                            "unique_actors",
+                            "qualifying"
+                        ],
+                        "properties": {
+                            "kind": {
+                                "type": "string",
+                                "enum": [
+                                    "view",
+                                    "friend_request",
+                                    "friend_accept",
+                                    "shared_fight"
+                                ]
+                            },
+                            "source": {
+                                "anyOf": [
+                                    {
+                                        "type": "string",
+                                        "enum": [
+                                            "standings",
+                                            "participants",
+                                            "feed",
+                                            "comments",
+                                            "reactions",
+                                            "feedback",
+                                            "friends",
+                                            "lookup"
+                                        ]
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ]
+                            },
+                            "events": {
+                                "type": "integer",
+                                "minimum": 0
+                            },
+                            "unique_actors": {
+                                "type": "integer",
+                                "minimum": 0
+                            },
+                            "qualifying": {
+                                "type": "integer",
+                                "minimum": 0
+                            }
+                        }
+                    }
+                },
+                "archived_groups": {
+                    "type": "array",
+                    "description": "Anonymous cumulative counts archived as raw events expire. No identities or health data are retained.",
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "kind",
+                            "source",
+                            "events",
+                            "qualifying"
+                        ],
+                        "properties": {
+                            "kind": {
+                                "type": "string",
+                                "enum": [
+                                    "view",
+                                    "friend_request",
+                                    "friend_accept",
+                                    "shared_fight"
+                                ]
+                            },
+                            "source": {
+                                "anyOf": [
+                                    {
+                                        "type": "string",
+                                        "enum": [
+                                            "standings",
+                                            "participants",
+                                            "feed",
+                                            "comments",
+                                            "reactions",
+                                            "feedback",
+                                            "friends",
+                                            "lookup"
+                                        ]
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ]
+                            },
+                            "events": {
+                                "type": "integer",
+                                "minimum": 0
+                            },
+                            "qualifying": {
+                                "type": "integer",
+                                "minimum": 0
+                            }
+                        }
+                    }
+                }
+            }
+        }
         FightSnapshot:
             type: object
             required: [fights, members, profiles, series, step_days]
@@ -645,6 +2446,9 @@ components:
                                 }
                             starts_at: { type: string, format: date-time }
                             ends_at: { type: string, format: date-time }
+                            time_zone:
+                                type: string
+                                description: Fight calendar time zone; optional for older responses.
                             grace_ends_at: { type: string, format: date-time }
                             action_text: { type: [string, "null"] }
                             series_id: { type: [string, "null"], format: uuid }
@@ -746,11 +2550,17 @@ components:
                 display_name: { type: string }
                 handle_set_at: { type: [string, "null"], format: date-time }
                 referral_code: { type: string, format: uuid }
+                time_zone:
+                    type: string
+                    description: Saved personal IANA time zone, or UTC for legacy unset accounts; optional for older responses.
         UpdateProfile:
             type: object
             additionalProperties: false
             minProperties: 1
             properties:
+                time_zone:
+                    type: string
+                    description: Save a personal IANA time zone. Omission preserves the existing setting.
                 handle:
                     type: string
                     description: Trimmed, surrounding @ removed, lowercased, then validated as 2–30 letters, numbers, or underscores.

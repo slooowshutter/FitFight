@@ -204,6 +204,7 @@ export async function syncHealthKitAggregates(
                 source_id: source.id,
                 metric: "steps",
                 day: day.day,
+                time_zone: input.time_zone,
                 value: day.steps,
                 unit: "steps",
                 input_hash: createHash("sha256")
@@ -228,6 +229,7 @@ export async function syncHealthKitAggregates(
                     "source_id",
                     "metric",
                     "day",
+                    "time_zone",
                     "value",
                     "unit",
                     "input_hash",
@@ -237,6 +239,7 @@ export async function syncHealthKitAggregates(
                 )}
                 on conflict (user_id, source_id, metric, day) do update
                 set value = excluded.value,
+                    time_zone = excluded.time_zone,
                     input_hash = excluded.input_hash,
                     normalization_version = excluded.normalization_version,
                     calculation_version = excluded.calculation_version,

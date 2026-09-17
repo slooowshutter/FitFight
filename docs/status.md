@@ -8,6 +8,34 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
 
+## Develop merge into Profiles branch, 17 Sep 2026
+
+**Code:** merged `develop` at `88c5932` into `profiles-friends-and-stats`.
+Profile identity links, exact historical-round navigation, saved personal and
+Fight time zones, and the Health upload/refresh ordering remain alongside the
+new Feed activity, notification targets, pagination, and companion controls.
+Suggested Fights retain immutable-admin authorization and transaction locks;
+the same transaction creates upstream's pending invitations and notification
+intents. Acceptance stays explicit. Upstream's approved 1.1.2 version is retained.
+
+**Cloud checks:**
+
+- [Web API at `ab8fe24`](https://github.com/slooowshutter/FitFight/actions/runs/35248653718): strict typechecking, all 312 backend tests, API contract parsing, and English/French privacy-page rendering passed.
+- [Database at `ab8fe24`](https://github.com/slooowshutter/FitFight/actions/runs/35248653719): all 35 integration tests passed before and after the deferred client-permission cutoff, including invitation idempotency and real WebSocket commit/rollback delivery. Build 113 compatibility, 223 pgTAP checks, 18 cutoff checks, and historical deletion/profile-record migration replay passed. Authenticated `/me` fixtures retain builds 113, 190, 200, 201, 202, and 203.
+- [iOS simulator at `f35e254`](https://github.com/slooowshutter/FitFight/actions/runs/35247525681): full compilation on GitHub-hosted `macos-26`, native regression tests, and English/French localizations passed. Native source and fixtures are unchanged in `ab8fe24`.
+
+Database validation exposed interference between shared fixtures once suggestions
+began inviting all users: the live-update case passed in isolation after failing
+in the parallel suite. Database files now run sequentially; explicit concurrent
+joins, privacy edits, and finalization races still run inside their tests. Both
+complete passes now succeed without the temporary diagnostic run or changed
+assertions. Existing supported-client fixtures remain in place.
+
+**Live deployment:** none. The feature branch has Vercel deployment disabled and
+cannot upload TestFlight. No hosted database, `develop`, `preview`, or `main` was
+changed. The documented additive-migration, compatible-backend, then-app rollout
+and separate permission-cutoff requirements still apply.
+
 ## Selective Bugbot reviews, prepared 17 Sep 2026
 
 **Code:** the prepared GitHub workflow requests reviews for ready PRs into
@@ -507,7 +535,175 @@ No hosted `db push`. Not on TestFlight until an authorized `preview` merge.
 
 **Cloud checks vs live:** unit tests cover missing/closed/already-member/new-invite/suggested-everyone paths and invite copy against mocks. No hosted write, disposable migrated-database check, or signed-in device verification was run here.
 
+## Profiles, Friends, and Rivalry implementation, 17 Sep 2026
+
+**Review fixes and saved time zones, 17 Sep:** prepared on this branch, not deployed.
+You waits for Health upload completion before reloading statistics on first load,
+foregrounding, pull to refresh, and Health actions. Feedback usernames open Profile;
+comment counts open the discussion. Shared activity and statistics use one saved
+personal date boundary, including audience previews, so a seven-day grant cannot
+expose an eighth date after travel.
+
+The existing `profiles.time_zone` column is now exposed as optional `/api/v1/me`
+`time_zone` and an optional PATCH input. Existing values are preserved; accounts
+without a stored zone use fixed UTC until they choose one. New username
+onboarding saves the phone's zone, and Edit profile can change it. Daily Health
+aggregates and new Fight durations use the saved zone. Custom Fight date pickers
+and review use a selectable Fight zone; changing it preserves the entered local
+times and recalculates their UTC instants. The zone can be edited before a Fight
+starts and is locked afterward. Snapshot Fight rows gain optional `time_zone`.
+Old fixtures still omit these fields. No database migration is needed for these
+fixes, and no finalized daily totals are relabeled.
+
+**Cloud checks:** the new regression commit `c07ad09` reproduced both defects:
+[iOS refresh](https://github.com/slooowshutter/FitFight/actions/runs/35239173445)
+failed all three upload-order checks, and the
+[database test](https://github.com/slooowshutter/FitFight/actions/runs/35239173174)
+returned eight dates for a seven-day grant. Both regressions pass with the fixes.
+
+- [Web API, `613b388`](https://github.com/slooowshutter/FitFight/actions/runs/35241578740): strict typecheck, all 268 unit/contract tests, API contract parsing, and privacy-page rendering passed. Coverage includes valid/invalid zones, unset legacy accounts, and rejecting a zone edit once the Fight's start instant has passed.
+- [Database, `613b388`](https://github.com/slooowshutter/FitFight/actions/runs/35241578761): all 32 transaction/HTTP tests passed both before and after the deferred client-permission cutoff. The mixed-zone sharing regression returns exactly seven dates; owner statistics and previews use the same saved zone. Authenticated `/me` requests cover build headers 113, 190, 200, 201, 202, and 203, including legacy PATCH requests that omit and preserve the zone. The 211 pgTAP checks, 18 cutoff checks, and historical backfill/deletion rehearsal also passed.
+- [iOS simulator, `733f642`](https://github.com/slooowshutter/FitFight/actions/runs/35241180293): full app compilation on GitHub-hosted `macos-26`, Health upload/refresh ordering, saved-zone travel, daylight-saving custom/preset windows and rematches, old/new optional-field decoding, and English/French localizations passed. Native source and fixtures are unchanged in `613b388`.
+
+These are disposable cloud database and simulated native checks. They do not
+replace installed-device verification or prove live deployment.
+
+**Live and rollout:** read-only `/api/app-release` checks at **17 Sep 15:41:31 UTC**
+show staging latest 1.1.1 (201), review/internal 1.1.2 (203), enforcement off;
+production latest 1.1.1 (202), review/internal null, enforcement on. Those live
+candidates do not contain this branch. Deploy the compatible backend after the
+branch's existing Profile expansion migration, then distribute the native app.
+No merge, deployment, TestFlight upload, or change to the live database was made.
+Installed-device verification remains outstanding.
+
+**Steps statistics extension, 17 Sep:** prepared on this branch. You and Profile
+sheets now show best recorded day, average per recorded day, weekly average and
+total, and day distributions/current/longest recorded streaks across five activity
+levels. Levels use the companion's existing 2k/4k/6k/8k thresholds. The owner's
+avatar opens their Profile. Only finalized days with known time zones count,
+through yesterday; missing days are unknown. Exact-category streaks cannot bridge
+unknown days. Weekly summaries disclose their recorded-day denominator and use
+the person's saved Profile time zone. Travel does not change that setting; existing
+recorded days retain their original zone and finalized value.
+
+Owners see available recorded history. Other viewers and previews receive only
+statistics within their explicit activity audience and 7/30-day period. Earlier
+records and streak lengths remain private. The existing v1 Profile response gains
+optional `step_statistics`; existing daily-history and legacy `/me` contracts stay
+intact. No new schema or HealthKit collection is added by this extension.
+
+**Cloud checks for the statistics extension:**
+
+- [Web API, `9513ee6`](https://github.com/slooowshutter/FitFight/actions/runs/35172085761): strict typecheck, all 265 unit/contract tests, API contract parsing, and the existing Privacy-page rendering checks. Eight new calculation tests cover thresholds, exact-category streaks, gaps, partial days, observed weekly denominators, sharing windows, empty history, DST, leap days, and year boundaries.
+- [Database, `9513ee6`](https://github.com/slooowshutter/FitFight/actions/runs/35172085773): all 31 transaction/HTTP tests pass before and after the separately deferred grant cutoff, alongside 211 pgTAP checks, build 113 compatibility, and the historical backfill/deletion rehearsal. New checks prove older personal records remain owner-only, shared streaks clip to 7/30 days, previews use the same limits, sharing revocation/friend removal/blocking take effect, and recorded time zones govern the date boundary. Existing authenticated `/me` compatibility covers build headers 113, 190, 200, 201, and 202.
+- [iOS simulator, `2ab9359`](https://github.com/slooowshutter/FitFight/actions/runs/35171964316): app compilation on GitHub-hosted `macos-26`, new statistics response decoding, old optional-field compatibility, stale-response/revocation/account-switch tests, and English/French localizations. The later review-fix checks above cover the current native source and fixtures.
+
+The checks use disposable cloud data and simulated native responses, not installed
+versions of every supported build. No live deployment or app distribution has
+occurred. Read-only manifests at **17 Sep 01:45:27 UTC** still list staging 1.1.1
+(201), enforcement off, and production 1.1.1 (202), enforcement on, with null
+review/internal in both. Backend support precedes native distribution, after the
+already-required Profile expansion rollout. Installed-device verification remains
+outstanding.
+
+**Code prepared on `profiles-friends-and-stats`, not deployed.** The
+[implementation plan](design/profiles-friends-implementation-plan.md) now has
+native Profile sheets and editing, mutually accepted Friends and request lists,
+Competitive/Public controls, explicit 7/30-day Steps sharing, records, shared
+history, 1v1 rivalry summaries, and composer-based challenges/rematches. Avatars
+and usernames open Profiles from standings, participants, Feed, comments,
+reactions, Feedback, and Friends. Defaults are Private, Casual, and no daily
+Steps sharing. Identity-only lookup never returns referral codes, companion
+prompts, a friends roster, or private Fight titles/actions.
+
+**Suggested Fights:** the existing New/discovery and invitation surfaces and an
+optional final onboarding step use the eligible server list. No automatic joining
+or sharing change occurs. New administrative capability depends only on
+`FITFIGHT_ADMIN_USER_ID`, an immutable Auth UUID configured on the server. It is
+disabled when absent. Admin visibility, recurrence, suggestion, and stop controls
+serialize with joins and recurring rounds; stopped/private series lose Suggested.
+No new global leaderboard or recurring-league scoring system was added.
+
+**Records and privacy:** the additive migration captures participation and
+freezes category/result evidence without changing Fight scoring. Anonymous field
+and tie counts preserve surviving Users' results when a participant deletes their
+account. Existing account deletion still removes the deleting owner's own Fights.
+Historical category/departure facts remain unknown when evidence is missing;
+there is no invented lifetime completeness date. Backfill locks existing Fight
+writes until its snapshot and triggers commit. Old backend departures remain
+unclassified; full-fidelity capture begins only after the new mutation paths are
+live and old instances drain. That has not happened in either live environment.
+The new friendship store never trusts legacy client-created accepted rows.
+
+**Review fixes:** history row IDs and pagination cursors are now random,
+participant-specific UUIDs. Authorized navigation still uses `fight_id`; a
+shared identifier no longer links private participants across Profiles. The
+backfill preserves reliable membership evidence for accepted future rounds, so
+their later completed results count. Historical Profile links keep the selected
+round through navigation and refresh. Rematches use a custom schedule whenever
+a preset would change the prior elapsed duration, including daylight-saving
+transitions. Each defect was reproduced in cloud CI before its fix.
+
+**Measurement:** authenticated display events deduplicate replay, qualify at most
+once per rolling 30 minutes per direction, and expire after 30 days through the
+existing daily maintenance route. Friend actions and actual participation
+transactions record seven-day last-visit attribution. Anonymous aggregate counts
+remain after raw events expire. Reports are operator-only. Measurement defaults
+off (`FITFIGHT_PROFILE_MEASUREMENT_ENABLED=false`), pending publication of the
+prepared English/French Privacy disclosure.
+
+**Held parts of the plan:** artwork has private storage metadata only; there is
+no provider request, runner, paid generation, delivery route, or loading card.
+Artwork opt-in is rejected until implemented. Marc still needs to supply the
+provider/model, credentials through secret storage, budget, and approved companion
+input policy. Terms pages and native sign-in/settings Terms links remain unbuilt
+until the actual operator/address, jurisdiction, and minimum-age facts are supplied.
+No placeholder legal page or extra Terms acceptance flow was introduced.
+
+**Cloud checks passed:**
+
+- [Web API, `712fd22`](https://github.com/slooowshutter/FitFight/actions/runs/35167142686): strict typecheck, all 257 unit/contract tests, API contract parsing, and cloud Chrome rendering of both signed-out Privacy pages at 393 by 852. Web source has not changed since this run.
+- [Database, `90b9211`](https://github.com/slooowshutter/FitFight/actions/runs/35170544134): additive migration, schema lint, 211 pgTAP checks, build 113 compatibility, and all 30 transaction/HTTP tests before and after the separately deferred client-permission cutoff. The new privacy regression proves independent stable history IDs, scoped pagination, and preserved authorized Fight navigation. The backfill rehearsal starts with an accepted future round before migration and proves its completed result counts afterward while uncertain historical results stay excluded. Existing account-deletion, friendship, concurrency, attribution, and retention checks still pass.
+- [iOS simulator, `90b9211`](https://github.com/slooowshutter/FitFight/actions/runs/35170544151): app compilation on GitHub-hosted `macos-26`, exact historical-round navigation through destination/detail resolution and refresh, normal Feed navigation, custom and daylight-saving rematch durations, and ordinary duration presets. Profile DTO/redaction, response ordering/revocation/account-switch checks, existing native regressions, English/French localizations, API boundary, and design tokens also pass.
+
+These checks use disposable cloud data and simulated network responses for native
+state tests. They do not establish a live deployment, real image generation, or
+installed-device verification. No workstation Xcode or local database tests were
+used.
+
+**Compatibility and rollout:** API stays `/api/v1`; existing `/me`, Fight and
+media payloads and build 113 fixtures remain intact. The new Profile history
+contract keeps UUID-shaped IDs/cursors and its existing fixtures; `fight_id`
+remains nullable and available only to authorized viewers. These Profile routes
+and the expansion migration have not been deployed, so the migration itself
+includes both review corrections. Feedback comment `author_id` is additive and
+optional in native decoding. Cloud authenticated `/me` requests
+cover version/build headers 113, 190, 200, 201, and 202; this is contract evidence,
+not installed-device testing of each build. The separately deferred direct-client
+grant cutoff is rehearsed in CI only, not activated by this migration.
+Read-only live checks at **17 Sep 01:27:12 UTC** returned staging latest 1.1.1 (201),
+null review/internal, enforcement off; production latest 1.1.1 (202), null
+review/internal, enforcement on. No live schema, backend, release manifest, or
+app distribution changed in this work. Feature-branch Vercel deployment is
+explicitly disabled while cloud checks run.
+
+Before release: recheck both manifests, apply the additive schema then compatible
+backend, publish the accurate legal disclosures, configure the admin UUID, and
+verify with two installed staging clients before distributing the native build.
+Keep measurement/artwork disabled until their respective dependencies are met.
+Physical-device VoiceOver, Dynamic Type, Night/Day, onboarding, Apple sign-in and
+HealthKit verification remains outstanding. Marketing version stays `1.1.1`, with
+a 17 September release note prepared. No PR, branch merge, TestFlight upload,
+production deployment, or App Store action was performed for this feature.
+
 ## Production rollout and App Store submission, 16 Sep 2026
+
+**Later read-only release check, 16 Sep at 21:45:58 UTC:** staging
+`/api/app-release` returned latest **1.1.1 (201)**, null review/internal, and
+`enforced: false`. Production returned latest **1.1.1 (202)**, null review/internal,
+and `enforced: true`. These current manifest observations supersede the older
+manifest values below; they do not establish installed-device verification or
+retirement of direct-table clients.
 
 This section supersedes the earlier held-rollout and screenshot-upload notes below.
 Marc authorized the complete production rollout and App Store submission.

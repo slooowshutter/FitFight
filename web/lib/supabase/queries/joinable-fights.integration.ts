@@ -77,3 +77,35 @@ test("joinable list embedding counts accepted/deferred members and keeps empty f
         }
     }
 });
+
+test("batched lists advance expired recurring rounds and use the next round's actual roster", async (t) => {
+    const users = Array.from({ length: 4 }, () => randomUUID());
+    const [owner] = users;
+    const seriesId = randomUUID();
+    const previousId = randomUUID();
+    const nextId = randomUUID();
+    const now = new Date();
+    t.after(async () => {
+        await database`delete from public.fights where series_id = ${seriesId}`;
+        await database`delete from public.fight_series where id = ${seriesId}`;
+        await database`delete from auth.users where id in ${database(users)}`;
+    });
+    for (const user of users) await database`insert into auth.users(id) values (${user})`;
+    await database`insert into public.fight_series(id, owner_id, join_code, visibility, recurring, duration_seconds, name, time_zone, suggested)
+        values (${seriesId}, ${owner}, ${randomJoinCode()}, 'joinable', true, 604800, 'Next round', 'UTC', true)`;
+    const start = new Date(now.getTime() - 604800000);
+    const nextEnd = new Date(now.getTime() + 604800000);
+    await database`insert into public.fights(id, owner_id, name, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy, series_id) values
+        (${previousId}, ${owner}, 'Previous round', 'final', ${start}, ${now}, 'UTC', 'highest_total', 'shared', ${seriesId}),
+        (${nextId}, ${owner}, 'Next round', 'live', ${now}, ${nextEnd}, 'UTC', 'highest_total', 'shared', ${seriesId})`;
+    await database`update public.fight_series set current_fight_id = ${previousId} where id = ${seriesId}`;
+    for (const user of users) await database`insert into public.fight_members(fight_id, user_id, state) values (${nextId}, ${user}, 'accepted')`;
+    const fights = await listJoinableFights(owner, admin, now, true);
+    const next = fights.find((fight) => fight.seriesId === seriesId);
+    assert.ok(next);
+    assert.equal(next.fightId, nextId);
+    assert.equal(next.alreadyMember, true);
+    assert.equal(next.memberCount, 4);
+    const [series] = await database`select current_fight_id from public.fight_series where id = ${seriesId}`;
+    assert.equal(series.current_fight_id, nextId);
+});

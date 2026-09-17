@@ -1,736 +1,2139 @@
 {
     "sourceLanguage": "en",
     "strings": {
-    "Try the beta": {
-        "localizations": {
-            "fr": {
-                "stringUnit": {
-                    "state": "translated",
-                    "value": "Essayer la bêta"
-                }
-            }
-        }
-    },
-    "Try upcoming features in TestFlight. Beta builds may have bugs.": {
-        "localizations": {
-            "fr": {
-                "stringUnit": {
-                    "state": "translated",
-                    "value": "Essaie les prochaines fonctionnalités dans TestFlight. Les versions bêta peuvent contenir des bugs."
-                }
-            }
-        }
-    },
-    "The beta uses a separate database. Accounts, fights, and progress do not sync automatically with the App Store version, even when you use the same Apple ID.": {
-        "localizations": {
-            "fr": {
-                "stringUnit": {
-                    "state": "translated",
-                    "value": "La bêta utilise une base de données séparée. Les comptes, les fights et la progression ne se synchronisent pas automatiquement avec la version App Store, même avec le même identifiant Apple."
-                }
-            }
-        }
-    },
-    "Installing the beta replaces the App Store app on this device. To switch back, reinstall FitFight from the App Store.": {
-        "localizations": {
-            "fr": {
-                "stringUnit": {
-                    "state": "translated",
-                    "value": "Installer la bêta remplace l’app App Store sur cet appareil. Pour revenir à la version publique, réinstalle FitFight depuis l’App Store."
-                }
-            }
-        }
-    },
-    "Open TestFlight": {
-        "localizations": {
-            "fr": {
-                "stringUnit": {
-                    "state": "translated",
-                    "value": "Ouvrir TestFlight"
-                }
-            }
-        }
-    },
-    "Return to the App Store": {
-        "localizations": {
-            "fr": {
-                "stringUnit": {
-                    "state": "translated",
-                    "value": "Revenir à l’App Store"
-                }
-            }
-        }
-    },
-    "You can open the TestFlight beta or return to the App Store from You → Settings. Before switching, see how installing the beta replaces the app and keeps accounts, fights, and progress in a separate database.": {
-        "localizations": {
-            "fr": {
-                "stringUnit": {
-                    "state": "translated",
-                    "value": "Tu peux ouvrir la bêta TestFlight ou revenir à l’App Store depuis Toi → Réglages. Avant de changer de version, découvre comment la bêta remplace l’app et conserve les comptes, les fights et la progression dans une base de données séparée."
-                }
-            }
-        }
-    },
-        "The slide haptics lab has a Custom option for tuning rumble, pulses, ramp shapes, the finishing hit, and confirmation distance. Your settings save automatically on this phone.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Le laboratoire haptique propose une option Custom pour régler les vibrations continues, les impulsions, leur progression, l’impact final et la distance de confirmation. Vos réglages sont enregistrés automatiquement sur ce téléphone."
-                    }
-                }
-            }
-        },
-        "Slide to start builds from soft feedback to full-strength vibration, with a heavy finish even on a quick swipe. The 20 haptic tests now have wider ramps and a 0-100 scale.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Glisser pour démarrer passe de vibrations douces à la puissance maximale, avec un impact final puissant même lors d’un geste rapide. Les 20 tests haptiques proposent des montées plus marquées et une échelle de 0 à 100."
-                    }
-                }
-            }
-        },
-        "Type @ to tag someone in a post or comment. They get a FitFight notification with your name.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Tape @ pour mentionner quelqu’un dans une publication ou un commentaire. FitFight lui envoie une notification avec ton nom."
-                    }
-                }
-            }
-        },
-        "A refreshed App Store description explaining how to start a private step challenge and follow the standings.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Une description App Store actualisée pour découvrir comment lancer un défi de pas privé et suivre le classement."
-                    }
-                }
-            }
-        },
-        "Make it yours": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "À ton image"
-                    }
-                }
-            }
-        },
-        "Change animal": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Changer d’animal"
-                    }
-                }
-            }
-        },
-        "This is how other people see you in fights and Feed. You can change your animal anytime.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "C’est ainsi que les autres te voient dans les combats et le fil. Tu peux changer d’animal à tout moment."
-                    }
-                }
-            }
-        },
-        "You can change your animal anytime. Choose another from the grid or describe any animal below.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Tu peux changer d’animal à tout moment. Choisis-en un autre dans la grille ou décris l’animal de ton choix ci-dessous."
-                    }
-                }
-            }
-        },
-        "Make it yours opens your animal description, ready to edit and save. Use Change animal to choose another companion anytime.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "À ton image ouvre la description de ton animal pour la modifier et l’enregistrer. Utilise Changer d’animal pour choisir un autre compagnon à tout moment."
-                    }
-                }
-            }
-        },
-        "Feedback keeps loading correctly when you leave a request while it is being deleted.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Les demandes continuent de se charger correctement lorsque vous quittez une demande en cours de suppression."
-                    }
-                }
-            }
-        },
-        "Delete request": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Supprimer la demande"
-                    }
-                }
-            }
-        },
-        "Delete request?": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Supprimer la demande ?"
-                    }
-                }
-            }
-        },
-        "This removes the request, comments, and votes for everyone. This cannot be undone.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "La demande, les commentaires et les votes seront supprimés pour tout le monde. Cette action est irréversible."
-                    }
-                }
-            }
-        },
-        "Admins can delete a feedback request from its menu after confirming.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Les administrateurs peuvent supprimer une demande depuis son menu après confirmation."
-                    }
-                }
-            }
-        },
-        "Comment refreshes are more reliable after connection errors. Live updates no longer interrupt loading more comments.": {
+        "Search time zones": {
+            "extractionState": "manual",
             "localizations": {
                 "en": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Comment refreshes are more reliable after connection errors. Live updates no longer interrupt loading more comments."
+                        "value": "Search time zones"
                     }
                 },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "L’actualisation des commentaires est plus fiable après une erreur de connexion. Les mises à jour en direct n’interrompent plus le chargement de commentaires supplémentaires."
+                        "value": "Rechercher un fuseau horaire"
                     }
                 }
             }
         },
-        "Reactions swipe horizontally, with a visible like button and any emoji. Charts refresh without losing your selection and keep missing history clear. Comments load reliably, and notification failures no longer interrupt saved fights.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Les réactions défilent horizontalement, avec un bouton J’aime visible et le choix de tout emoji. Les graphiques s’actualisent sans perdre ta sélection et signalent les données manquantes. Les commentaires se chargent correctement et les échecs de notification n’interrompent plus les fights enregistrés."
-                    }
-                }
-            }
-        },
-        "Cheer this post": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": { "state": "translated", "value": "Encourager cette publication" }
-                }
-            }
-        },
-        "Remove reaction": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": { "state": "translated", "value": "Retirer la réaction" }
-                }
-            }
-        },
-        "React": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": { "state": "translated", "value": "Réagir" }
-                }
-            }
-        },
-        "Other emoji…": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": { "state": "translated", "value": "Autre emoji…" }
-                }
-            }
-        },
-        "Feedback no longer shows a duplicate button above the bottom tabs. Use the plus at the top to add a request.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Le bouton en double au-dessus des onglets a été supprimé de Feedback. Utilisez le plus en haut pour ajouter une demande."
-                    }
-                }
-            }
-        },
-        "Live feed updates keep loaded comments in place and refresh posts reliably while scrolling. Broadcast posts now update live too.": {
+        "Time zone": {
+            "extractionState": "manual",
             "localizations": {
                 "en": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Live feed updates keep loaded comments in place and refresh posts reliably while scrolling. Broadcast posts now update live too."
+                        "value": "Time zone"
                     }
                 },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Les actualisations en direct conservent les commentaires déjà chargés et mettent les publications à jour pendant le défilement. Les publications destinées à tous s’actualisent aussi en direct."
+                        "value": "Fuseau horaire"
                     }
                 }
             }
         },
-        "Website download and invitation links open the App Store. The staging website keeps TestFlight access for beta testers.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Les liens de téléchargement et d’invitation du site ouvrent l’App Store. Le site de préproduction conserve l’accès à TestFlight pour les bêta-testeurs."
-                    }
-                }
-            }
-        },
-        "Activity": {
+        "Your daily Steps and new Fights use this time zone, even when you travel.": {
+            "extractionState": "manual",
             "localizations": {
                 "en": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Activity"
+                        "value": "Your daily Steps and new Fights use this time zone, even when you travel."
                     }
                 },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Activité"
+                        "value": "Vos pas quotidiens et vos nouveaux défis utilisent ce fuseau horaire, même en voyage."
                     }
                 }
             }
         },
-        "Notifications & activity": {
+        "Your time zone stays fixed when you travel and can be changed in Edit profile. Custom Fights let you choose their time zone. Profile statistics refresh after Health sync, and Feedback comment counts open the discussion.": {
+            "extractionState": "manual",
             "localizations": {
                 "en": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Notifications & activity"
+                        "value": "Your time zone stays fixed when you travel and can be changed in Edit profile. Custom Fights let you choose their time zone. Profile statistics refresh after Health sync, and Feedback comment counts open the discussion."
                     }
                 },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Notifications et activité"
+                        "value": "Votre fuseau horaire reste fixe en voyage et peut être modifié dans Modifier le profil. Les défis personnalisés permettent de choisir leur fuseau horaire. Les statistiques du profil sont actualisées après la synchronisation Santé et le nombre de commentaires ouvre la discussion dans Feedback."
                     }
                 }
             }
         },
-        "Posts, comments, reactions and membership history from your fights.": {
+        "feedback.comment-count": {
+            "extractionState": "manual",
             "localizations": {
                 "en": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Posts, comments, reactions and membership history from your fights."
+                        "value": "%lld comments"
                     }
                 },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Publications, commentaires, réactions et historique des participants de vos combats."
+                        "value": "%lld commentaires"
                     }
                 }
             }
         },
-        "No activity yet.": {
+        "Steps and streaks": {
             "localizations": {
                 "en": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "No activity yet."
+                        "value": "Steps and streaks"
                     }
                 },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Aucune activité pour le moment."
+                        "value": "Pas et séries"
                     }
                 }
             }
         },
-        "Time not recorded": {
+        "Your recorded history": {
             "localizations": {
                 "en": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Time not recorded"
+                        "value": "Your recorded history"
                     }
                 },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Date non enregistrée"
+                        "value": "Votre historique enregistré"
                     }
                 }
             }
         },
-        "This post is no longer available.": {
+        "Completed days only, through yesterday. Missing or partial days never count as zero.": {
             "localizations": {
                 "en": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "This post is no longer available."
+                        "value": "Completed days only, through yesterday. Missing or partial days never count as zero."
                     }
                 },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Cette publication n’est plus disponible."
+                        "value": "Journées complètes uniquement, jusqu’à hier. Les journées manquantes ou partielles ne comptent jamais comme un zéro."
                     }
                 }
             }
         },
-        "Fight activity": {
+        "Best recorded day": {
             "localizations": {
                 "en": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Fight activity"
+                        "value": "Best recorded day"
                     }
                 },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Activité du combat"
+                        "value": "Meilleure journée enregistrée"
                     }
                 }
             }
         },
-        "Invitation": {
+        "Average per recorded day": {
             "localizations": {
                 "en": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Invitation"
+                        "value": "Average per recorded day"
                     }
                 },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Invitation"
+                        "value": "Moyenne par journée enregistrée"
                     }
                 }
             }
         },
-        "activity.post": {
+        "No completed days recorded yet": {
             "localizations": {
                 "en": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "@%@ posted"
+                        "value": "No completed days recorded yet"
                     }
                 },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "@%@ a publié"
+                        "value": "Aucune journée complète enregistrée pour le moment"
                     }
                 }
             }
         },
-        "activity.comment": {
+        "profile.stats-coverage": {
             "localizations": {
                 "en": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "@%@ commented"
+                        "value": "%lld complete days · %lld unknown days"
                     }
                 },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "@%@ a commenté"
+                        "value": "%lld jours complets · %lld jours inconnus"
                     }
                 }
             }
         },
-        "activity.reply": {
+        "This week": {
             "localizations": {
                 "en": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "@%@ replied"
+                        "value": "This week"
                     }
                 },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "@%@ a répondu"
+                        "value": "Cette semaine"
                     }
                 }
             }
         },
-        "activity.reaction": {
+        "Average steps per day": {
             "localizations": {
                 "en": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "@%@ reacted"
+                        "value": "Average steps per day"
                     }
                 },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "@%@ a réagi"
+                        "value": "Moyenne de pas par jour"
                     }
                 }
             }
         },
-        "activity.invitation": {
+        "Recorded steps": {
             "localizations": {
                 "en": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "@%1$@ invited @%2$@"
+                        "value": "Recorded steps"
                     }
                 },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "@%1$@ a invité @%2$@"
+                        "value": "Pas enregistrés"
                     }
                 }
             }
         },
-        "activity.joined": {
+        "profile.stats-week-coverage": {
             "localizations": {
                 "en": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "@%@ joined"
+                        "value": "%lld of %lld elapsed days recorded"
                     }
                 },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "@%@ a rejoint le combat"
+                        "value": "%lld jours enregistrés sur %lld jours écoulés"
                     }
                 }
             }
         },
-        "activity.next-round": {
+        "Monday to yesterday. Averages use recorded days only.": {
             "localizations": {
                 "en": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "@%@ joined the next round"
+                        "value": "Monday to yesterday. Averages use recorded days only."
                     }
                 },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "@%@ a rejoint la prochaine manche"
+                        "value": "De lundi à hier. Les moyennes utilisent uniquement les journées enregistrées."
                     }
                 }
             }
         },
-        "activity.declined": {
+        "Days by activity level": {
             "localizations": {
                 "en": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "@%@ declined"
+                        "value": "Days by activity level"
                     }
                 },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "@%@ a refusé"
+                        "value": "Journées par niveau d’activité"
                     }
                 }
             }
         },
-        "activity.left": {
+        "profile.stats-level-days": {
             "localizations": {
                 "en": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "@%@ left"
+                        "value": "%lld days"
                     }
                 },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "@%@ a quitté le combat"
+                        "value": "%lld jours"
                     }
                 }
             }
         },
-        "activity.disqualified": {
+        "8,000+ steps": {
             "localizations": {
                 "en": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "@%@ was disqualified"
+                        "value": "8,000+ steps"
                     }
                 },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "@%@ a été disqualifié"
+                        "value": "8 000 pas et plus"
                     }
                 }
             }
         },
-        "Comments and reactions refresh live. Feed loads ten posts at a time and loads more as you scroll. Pull down to fetch the latest posts. Notifications open the exact post. You now has Activity with posts, comments, reactions and timestamped membership history.": {
+        "profile.stats-level-range": {
             "localizations": {
                 "en": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Comments and reactions refresh live. Feed loads ten posts at a time and loads more as you scroll. Pull down to fetch the latest posts. Notifications open the exact post. You now has Activity with posts, comments, reactions and timestamped membership history."
+                        "value": "%lld to %lld steps"
                     }
                 },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Les commentaires et réactions s’actualisent en direct. Le fil charge dix publications à la fois, puis la suite quand vous faites défiler. Tirez vers le bas pour actualiser les publications. Les notifications ouvrent la publication concernée. L’onglet Vous propose Activité, avec les publications, commentaires, réactions et l’historique daté des participants."
+                        "value": "%lld à %lld pas"
                     }
                 }
             }
         },
-        "Translate": {
+        "profile.stats-streak-best": {
             "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Best recorded streak: %lld days"
+                    }
+                },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Traduire"
+                        "value": "Meilleure série enregistrée : %lld jours"
                     }
                 }
             }
         },
-        "Posts and comments in another language now have a translation icon beside their actions on iOS 17.4 or later.": {
+        "profile.stats-streak-current": {
             "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Current streak: %lld days"
+                    }
+                },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Les publications et les commentaires dans une autre langue affichent désormais une icône de traduction à côté de leurs actions, à partir d’iOS 17.4."
+                        "value": "Série actuelle : %lld jours"
                     }
                 }
             }
         },
-        "Feed comments can be sorted by most comments or most recent. Most comments is the default.": {
+        "A streak is consecutive recorded days in the same level. Unknown days interrupt the record.": {
             "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "A streak is consecutive recorded days in the same level. Unknown days interrupt the record."
+                    }
+                },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Les commentaires du fil se trient par plus de commentaires ou plus récents. Plus de commentaires est le choix par défaut."
+                        "value": "Une série compte les journées enregistrées consécutives au même niveau. Les journées inconnues interrompent le suivi."
                     }
                 }
             }
         },
-        "Most comments": {
+        "Current streak unavailable until yesterday is complete.": {
             "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Current streak unavailable until yesterday is complete."
+                    }
+                },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Plus de commentaires"
+                        "value": "La série actuelle sera disponible lorsque la journée d’hier sera complète."
                     }
                 }
             }
         },
-        "Most recent": {
+        "profile.stats-level-couch": {
             "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Couch"
+                    }
+                },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Plus récents"
+                        "value": "Canapé"
                     }
                 }
             }
         },
-        "Comment order": {
+        "profile.stats-level-warming-up": {
             "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Warming up"
+                    }
+                },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Ordre des commentaires"
+                        "value": "Échauffement"
                     }
                 }
             }
         },
-        "The Feed can show a post to everyone signed in, not only people in your fights.": {
+        "profile.stats-level-moving": {
             "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Moving"
+                    }
+                },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Le fil peut maintenant afficher un message pour tout le monde connecté, pas seulement les personnes dans tes combats."
+                        "value": "En mouvement"
                     }
                 }
             }
         },
-        "Broadcast": {
+        "profile.stats-level-active": {
             "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Active"
+                    }
+                },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Annonce"
+                        "value": "Actif"
                     }
                 }
             }
         },
-        "Write one post. Everyone signed in sees it on Feed.": {
+        "profile.stats-level-ripped": {
             "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ripped"
+                    }
+                },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Écris un message. Toutes les personnes connectées le voient dans Fil."
+                        "value": "Musclé"
                     }
                 }
             }
         },
-        "This post appears on Feed for everyone signed in.": {
+        "This also shares step records, averages, activity levels and streaks for that period. Your full recorded history stays private.": {
             "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "This also shares step records, averages, activity levels and streaks for that period. Your full recorded history stays private."
+                    }
+                },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Ce message apparaît dans Fil pour toutes les personnes connectées."
+                        "value": "Les records de pas, moyennes, niveaux d’activité et séries de cette période sont aussi partagés. Votre historique complet reste privé."
                     }
                 }
             }
         },
-        "Opening FitFight invites you to the shared Steps fight and any suggested fights. They show on New. You get a notification with the name, no scores, and you can accept when you are ready.": {
+        "Profiles now show your best recorded step day, weekly averages, activity-level distribution and streaks. Shared statistics respect your chosen audience and history period.": {
             "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Profiles now show your best recorded step day, weekly averages, activity-level distribution and streaks. Shared statistics respect your chosen audience and history period."
+                    }
+                },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Dès l'ouverture, FitFight t'invite au défi Pas partagé et aux défis suggérés. Ils apparaissent dans Nouveau. Tu reçois une notification avec le nom, sans scores, et tu peux accepter quand tu es prêt."
+                        "value": "Les profils affichent votre meilleure journée de pas enregistrée, les moyennes hebdomadaires, la répartition des niveaux d’activité et les séries. Les statistiques partagées respectent le public et la période choisis."
                     }
                 }
             }
         },
-        "Bars, line, histogram, and pace now use the same confirmed Fight scores as the oval. A teammate without daily history is a gap, not a blank graph.": {
+        "Profile history keeps private Fight participants hidden and opens the selected round. Scheduled Fight records and rematch durations are now preserved.": {
             "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Profile history keeps private Fight participants hidden and opens the selected round. Scheduled Fight records and rematch durations are now preserved."
+                    }
+                },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Barres, ligne, histogramme et allure utilisent maintenant les mêmes scores confirmés que l’ovale. Un coéquipier sans historique quotidien apparaît comme un trou, pas un graphique vide."
+                        "value": "L'historique des profils garde les participants des Fights privés confidentiels et ouvre la manche sélectionnée. Les résultats des Fights programmés et la durée des revanches sont désormais préservés."
                     }
                 }
             }
         },
-        "So far": {
+        "Last updated": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Last updated"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Dernière mise à jour"
+                    }
+                }
+            }
+        },
+        "Profiles now include Friends, private sharing controls, Fight records and head-to-head rivalries. Tap a person to open their profile or challenge them. Suggested public Fights are optional at the end of onboarding.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Profiles now include Friends, private sharing controls, Fight records and head-to-head rivalries. Tap a person to open their profile or challenge them. Suggested public Fights are optional at the end of onboarding."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les profils incluent les amis, les réglages de partage, les résultats des Fights et les rivalités en duel. Touchez une personne pour ouvrir son profil ou la défier. Les Fights publics suggérés sont facultatifs à la fin de la présentation."
+                    }
+                }
+            }
+        },
+        "Joined": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Jusqu’ici"
+                        "value": "Inscrit"
+                    }
+                }
+            }
+        },
+        "Skip": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Passer"
+                    }
+                }
+            }
+        },
+        "Suggested Fights": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Suggested Fights"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Fights suggérés"
+                    }
+                }
+            }
+        },
+        "Join a public Fight if you like. Nothing is joined automatically, and your profile settings stay yours.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Join a public Fight if you like. Nothing is joined automatically, and your profile settings stay yours."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Rejoignez un Fight public si vous le souhaitez. Aucune inscription automatique, et vos réglages de profil restent inchangés."
+                    }
+                }
+            }
+        },
+        "Steps. Highest total wins.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Steps. Highest total wins."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Pas. Le total le plus élevé gagne."
+                    }
+                }
+            }
+        },
+        "Repeats until you leave. Each round has its own result.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Repeats until you leave. Each round has its own result."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Se répète jusqu’à votre départ. Chaque manche a son propre résultat."
+                    }
+                }
+            }
+        },
+        "Participants see your identity, Fight Steps, standings, and posts you share in this Fight. Joining does not enable profile or daily-history sharing.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Participants see your identity, Fight Steps, standings, and posts you share in this Fight. Joining does not enable profile or daily-history sharing."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les participants voient votre identité, vos pas et votre classement dans ce Fight, ainsi que les publications que vous y partagez. Rejoindre le Fight n’active pas le partage du profil ou de l’historique quotidien."
+                    }
+                }
+            }
+        },
+        "suggested.participants": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%d participants"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%d participants"
+                    }
+                }
+            }
+        },
+        "Stop this Fight?": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Stop this Fight?"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Arrêter ce Fight ?"
+                    }
+                }
+            }
+        },
+        "Stop future rounds": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Stop future rounds"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Arrêter les prochaines manches"
+                    }
+                }
+            }
+        },
+        "Stop current and future rounds": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Stop current and future rounds"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Arrêter cette manche et les suivantes"
+                    }
+                }
+            }
+        },
+        "Finalized results are kept. Stopping future rounds lets the current round finish.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Finalized results are kept. Stopping future rounds lets the current round finish."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les résultats définitifs sont conservés. Arrêter les prochaines manches laisse la manche actuelle se terminer."
+                    }
+                }
+            }
+        },
+        "Remove suggestion": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Remove suggestion"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Retirer des suggestions"
+                    }
+                }
+            }
+        },
+        "Only public Fights can be suggested.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Only public Fights can be suggested."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Seuls les Fights publics peuvent être suggérés."
+                    }
+                }
+            }
+        },
+        "Make private": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Make private"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Rendre privé"
+                    }
+                }
+            }
+        },
+        "Make public": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Make public"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Rendre public"
+                    }
+                }
+            }
+        },
+        "Turn recurrence off": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Turn recurrence off"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Désactiver la récurrence"
+                    }
+                }
+            }
+        },
+        "Turn recurrence on": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Turn recurrence on"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Activer la récurrence"
+                    }
+                }
+            }
+        },
+        "Manage Fight": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Manage Fight"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Gérer le Fight"
+                    }
+                }
+            }
+        },
+        "30 days": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "30 days"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "30 jours"
+                    }
+                }
+            }
+        },
+        "7 days": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "7 days"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "7 jours"
+                    }
+                }
+            }
+        },
+        "Add friend": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Add friend"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ajouter en ami"
+                    }
+                }
+            }
+        },
+        "All signed-in users": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "All signed-in users"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tous les utilisateurs connectés"
+                    }
+                }
+            }
+        },
+        "Audience": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Audience"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Visibilité"
+                    }
+                }
+            }
+        },
+        "Block": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Block"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Bloquer"
+                    }
+                }
+            }
+        },
+        "Block this person?": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Block this person?"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Bloquer cette personne ?"
+                    }
+                }
+            }
+        },
+        "Cancelled": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cancelled"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Annulé"
+                    }
+                }
+            }
+        },
+        "Casual profile. Competitive statistics are hidden.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Casual profile. Competitive statistics are hidden."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Profil loisir. Les statistiques de compétition sont masquées."
+                    }
+                }
+            }
+        },
+        "Category unknown": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Category unknown"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Catégorie inconnue"
+                    }
+                }
+            }
+        },
+        "Challenge": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Challenge"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Défier"
+                    }
+                }
+            }
+        },
+        "Change profile photo": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Change profile photo"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Changer la photo de profil"
+                    }
+                }
+            }
+        },
+        "Competitive": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Competitive"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Compétition"
+                    }
+                }
+            }
+        },
+        "Complete day": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Complete day"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Journée complète"
+                    }
+                }
+            }
+        },
+        "Current opponent": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Current opponent"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Adversaire actuel"
+                    }
+                }
+            }
+        },
+        "Decided 1v1 Fights only. Group results appear in history.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Decided 1v1 Fights only. Group results appear in history."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Uniquement les Fights en duel terminés. Les résultats de groupe figurent dans l’historique."
+                    }
+                }
+            }
+        },
+        "Did not enter": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Did not enter"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Non-participation"
+                    }
+                }
+            }
+        },
+        "Display name": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Display name"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nom affiché"
+                    }
+                }
+            }
+        },
+        "Draw": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Draw"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Égalité"
+                    }
+                }
+            }
+        },
+        "Edit profile": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Edit profile"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Modifier le profil"
+                    }
+                }
+            }
+        },
+        "Exact username": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Exact username"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nom d’utilisateur exact"
+                    }
+                }
+            }
+        },
+        "Fight history": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Fight history"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Historique des Fights"
+                    }
+                }
+            }
+        },
+        "Fight result": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Fight result"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Résultat du Fight"
+                    }
+                }
+            }
+        },
+        "Fights played": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Fights played"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Fights joués"
+                    }
+                }
+            }
+        },
+        "Find": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Find"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Rechercher"
+                    }
+                }
+            }
+        },
+        "Friend": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Friend"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ami"
+                    }
+                }
+            }
+        },
+        "Friends": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Friends"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Amis"
+                    }
+                }
+            }
+        },
+        "Friends and current opponents": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Friends and current opponents"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Amis et adversaires actuels"
+                    }
+                }
+            }
+        },
+        "Historical result unavailable": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Historical result unavailable"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Résultat historique indisponible"
+                    }
+                }
+            }
+        },
+        "Historical time zone unavailable": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Historical time zone unavailable"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Fuseau horaire historique indisponible"
+                    }
+                }
+            }
+        },
+        "Incomplete final sync": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Incomplete final sync"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Synchronisation finale incomplète"
+                    }
+                }
+            }
+        },
+        "Load more": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Load more"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Afficher plus"
+                    }
+                }
+            }
+        },
+        "Lost": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Lost"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Perdu"
+                    }
+                }
+            }
+        },
+        "No friends or requests here yet. Search an exact username to connect.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "No friends or requests here yet. Search an exact username to connect."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Aucun ami ni demande ici pour le moment. Recherchez un nom d’utilisateur exact."
+                    }
+                }
+            }
+        },
+        "No head-to-head results yet": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "No head-to-head results yet"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Pas encore de résultat en duel"
+                    }
+                }
+            }
+        },
+        "No results yet": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "No results yet"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Pas encore de résultat"
+                    }
+                }
+            }
+        },
+        "No shared days available": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "No shared days available"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Aucune journée partagée disponible"
+                    }
+                }
+            }
+        },
+        "Off": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Off"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Désactivé"
+                    }
+                }
+            }
+        },
+        "Ongoing": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ongoing"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "En cours"
+                    }
+                }
+            }
+        },
+        "Ongoing, cancelled, solo and unverifiable historical results are excluded from win rate.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ongoing, cancelled, solo and unverifiable historical results are excluded from win rate."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les résultats en cours, annulés, en solo ou historiquement invérifiables sont exclus du taux de victoire."
+                    }
+                }
+            }
+        },
+        "Only stored days are shown. Missing days are unknown, not zero.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Only stored days are shown. Missing days are unknown, not zero."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Seules les journées enregistrées sont affichées. Les journées absentes sont inconnues, pas à zéro."
+                    }
+                }
+            }
+        },
+        "Open profile": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Open profile"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ouvrir le profil"
+                    }
+                }
+            }
+        },
+        "Optional. Choose who can see your stored daily Steps and for how long. Fight participation shares its own results separately.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Optional. Choose who can see your stored daily Steps and for how long. Fight participation shares its own results separately."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Facultatif. Choisissez qui peut voir vos pas quotidiens enregistrés et sur quelle période. Les résultats des Fights sont partagés séparément avec leurs participants."
+                    }
+                }
+            }
+        },
+        "Other signed-in user": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Other signed-in user"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Autre utilisateur connecté"
+                    }
+                }
+            }
+        },
+        "Partial day": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Partial day"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Journée partielle"
+                    }
+                }
+            }
+        },
+        "Past opponent": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Past opponent"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ancien adversaire"
+                    }
+                }
+            }
+        },
+        "Period": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Period"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Période"
+                    }
+                }
+            }
+        },
+        "Preview audience": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Preview audience"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Voir le profil en tant que"
+                    }
+                }
+            }
+        },
+        "Private Fights": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Private Fights"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Fights privés"
+                    }
+                }
+            }
+        },
+        "Private profile. Friends and current opponents can see what this person shares.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Private profile. Friends and current opponents can see what this person shares."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Profil privé. Les amis et adversaires actuels peuvent voir ce que cette personne partage."
+                    }
+                }
+            }
+        },
+        "Profile": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Profile"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Profil"
+                    }
+                }
+            }
+        },
+        "Profile preview": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Profile preview"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Aperçu du profil"
+                    }
+                }
+            }
+        },
+        "Profile visibility": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Profile visibility"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Visibilité du profil"
+                    }
+                }
+            }
+        },
+        "Public Fights": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Public Fights"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Fights publics"
+                    }
+                }
+            }
+        },
+        "Public means all signed-in FitFight users. Private means friends and current opponents. Your name and companion remain identifiable.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Public means all signed-in FitFight users. Private means friends and current opponents. Your name and companion remain identifiable."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Public : tous les utilisateurs FitFight connectés. Privé : amis et adversaires actuels. Votre nom et votre compagnon restent identifiables."
+                    }
+                }
+            }
+        },
+        "Public profile": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Public profile"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Profil public"
+                    }
+                }
+            }
+        },
+        "Reason": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Reason"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Motif"
+                    }
+                }
+            }
+        },
+        "Rematch": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Rematch"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Revanche"
+                    }
+                }
+            }
+        },
+        "Remove friend": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Remove friend"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Retirer cet ami"
+                    }
+                }
+            }
+        },
+        "Remove friend?": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Remove friend?"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Retirer cet ami ?"
+                    }
+                }
+            }
+        },
+        "Removed": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Removed"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Retiré"
+                    }
+                }
+            }
+        },
+        "Report profile": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Report profile"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Signaler le profil"
+                    }
+                }
+            }
+        },
+        "Requested, cancel": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Requested, cancel"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Demande envoyée, annuler"
+                    }
+                }
+            }
+        },
+        "Save and preview": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Save and preview"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Enregistrer et prévisualiser"
+                    }
+                }
+            }
+        },
+        "Send report": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Send report"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Envoyer le signalement"
+                    }
+                }
+            }
+        },
+        "Sent": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Sent"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Envoyées"
+                    }
+                }
+            }
+        },
+        "Share Steps history": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Share Steps history"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Partager l’historique des pas"
+                    }
+                }
+            }
+        },
+        "Show your competitive record and rivalry scores. Turning this off never erases results.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Show your competitive record and rivalry scores. Turning this off never erases results."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Afficher votre bilan de compétition et vos duels. Désactiver cette option n’efface jamais vos résultats."
+                    }
+                }
+            }
+        },
+        "Solo Fight": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Solo Fight"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Fight en solo"
+                    }
+                }
+            }
+        },
+        "This removes the friendship and hides profiles and shared artwork. Existing Fight results stay.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "This removes the friendship and hides profiles and shared artwork. Existing Fight results stay."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "L’amitié est supprimée et les profils et illustrations partagées sont masqués. Les résultats des Fights restent."
+                    }
+                }
+            }
+        },
+        "Win rate": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Win rate"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Taux de victoire"
+                    }
+                }
+            }
+        },
+        "Wins": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Wins"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Victoires"
+                    }
+                }
+            }
+        },
+        "Withdrew": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Withdrew"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Abandon"
+                    }
+                }
+            }
+        },
+        "Won": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Won"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Gagné"
+                    }
+                }
+            }
+        },
+        "Your rivalry": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Your rivalry"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Votre rivalité"
+                    }
+                }
+            }
+        },
+        "profile.category-record": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%d wins / %d played"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%d victoires / %d joués"
+                    }
+                }
+            }
+        },
+        "profile.placement": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%d of %d"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%d sur %d"
+                    }
+                }
+            }
+        },
+        "profile.requests-count": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Requests (%d)"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Demandes (%d)"
+                    }
+                }
+            }
+        },
+        "profile.rivalry-score": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%d wins · %d losses · %d draws"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%d victoires · %d défaites · %d nuls"
+                    }
+                }
+            }
+        },
+        "profile.steps-period": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Steps · last %d days"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Pas · %d derniers jours"
                     }
                 }
             }
@@ -908,7 +2311,10 @@
         "Channels": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Canaux" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Canaux"
+                    }
                 }
             }
         },
@@ -1065,7 +2471,10 @@
         "Media": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Médias" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Médias"
+                    }
                 }
             }
         },
@@ -1102,7 +2511,10 @@
         "File": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Fichier" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Fichier"
+                    }
                 }
             }
         },
@@ -1191,7 +2603,7 @@
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Appuie sur + pour publier dans ce défi."
+                        "value": "Touche + pour publier dans ce défi."
                     }
                 }
             }
@@ -1236,7 +2648,10 @@
                     }
                 },
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "0–%@ pas" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "0–%@ pas"
+                    }
                 }
             }
         },
@@ -1260,21 +2675,30 @@
         "Current": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "En cours" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "En cours"
+                    }
                 }
             }
         },
         "Past": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Passés" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Passés"
+                    }
                 }
             }
         },
         "Challenges": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Défis" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Défis"
+                    }
                 }
             }
         },
@@ -1322,17 +2746,26 @@
             "extractionState": "manual",
             "localizations": {
                 "en": {
-                    "stringUnit": { "state": "translated", "value": "Invited" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Invited"
+                    }
                 },
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Invités" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Invités"
+                    }
                 }
             }
         },
         "Live": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "En cours" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "En cours"
+                    }
                 }
             }
         },
@@ -1429,21 +2862,30 @@
         "Badger": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Blaireau" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Blaireau"
+                    }
                 }
             }
         },
         "Bear": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Ours" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ours"
+                    }
                 }
             }
         },
         "Boar": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Sanglier" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Sanglier"
+                    }
                 }
             }
         },
@@ -1540,28 +2982,40 @@
         "Dog": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Chien" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Chien"
+                    }
                 }
             }
         },
         "Empty": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Vide" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Vide"
+                    }
                 }
             }
         },
         "Fox": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Renard" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Renard"
+                    }
                 }
             }
         },
         "Goat": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Chèvre" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Chèvre"
+                    }
                 }
             }
         },
@@ -1628,7 +3082,10 @@
         "Otter": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Loutre" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Loutre"
+                    }
                 }
             }
         },
@@ -1705,7 +3162,10 @@
         "Rabbit": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Lapin" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Lapin"
+                    }
                 }
             }
         },
@@ -1802,7 +3262,10 @@
         "Solo": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "En solo" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "En solo"
+                    }
                 }
             }
         },
@@ -1839,7 +3302,10 @@
         "Turtle": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Tortue" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tortue"
+                    }
                 }
             }
         },
@@ -1907,7 +3373,10 @@
             "extractionState": "manual",
             "localizations": {
                 "en": {
-                    "stringUnit": { "state": "translated", "value": "Day %lld" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Day %lld"
+                    }
                 },
                 "fr": {
                     "stringUnit": {
@@ -1981,7 +3450,10 @@
         "End": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Fin" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Fin"
+                    }
                 }
             }
         },
@@ -2088,7 +3560,10 @@
         "Review": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Vérifier" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Vérifier"
+                    }
                 }
             }
         },
@@ -2181,7 +3656,7 @@
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Les pas de Santé d’Apple se synchronisent toujours même si les détails d’activité supplémentaires échouent. Vous affiche la vraie erreur serveur ou réseau au lieu du seul Échec de la synchronisation, et ne marque plus une synchro échouée comme Connecté."
+                        "value": "Les pas Apple Health se synchronisent toujours même si les détails d’entraînement en plus échouent. Toi affiche la vraie erreur serveur ou réseau au lieu de seulement Synchronisation échouée, et ne marque plus une sync ratée comme Connecté."
                     }
                 }
             }
@@ -2749,7 +4224,10 @@
         "1 month": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "1 mois" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "1 mois"
+                    }
                 }
             }
         },
@@ -2766,7 +4244,10 @@
         "1st": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "1er" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "1er"
+                    }
                 }
             }
         },
@@ -2813,7 +4294,10 @@
         "3 days": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "3 jours" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "3 jours"
+                    }
                 }
             }
         },
@@ -2900,7 +4384,10 @@
         "Accept": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Accepter" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Accepter"
+                    }
                 }
             }
         },
@@ -2927,7 +4414,10 @@
         "Action": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Gage" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Gage"
+                    }
                 }
             }
         },
@@ -3094,7 +4584,10 @@
         "Back": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Retour" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Retour"
+                    }
                 }
             }
         },
@@ -3111,7 +4604,10 @@
         "Cancel": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Annuler" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Annuler"
+                    }
                 }
             }
         },
@@ -3128,7 +4624,10 @@
         "Change": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Modifier" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Modifier"
+                    }
                 }
             }
         },
@@ -3145,7 +4644,10 @@
         "Close": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Fermer" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Fermer"
+                    }
                 }
             }
         },
@@ -3222,7 +4724,10 @@
         "Connected": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Connecté" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Connecté"
+                    }
                 }
             }
         },
@@ -3249,7 +4754,10 @@
         "Copied": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Copié" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Copié"
+                    }
                 }
             }
         },
@@ -3318,7 +4826,7 @@
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Le serveur a mis trop de temps. Touchez pour réessayer."
+                        "value": "Le serveur a trop tardé. Touche pour réessayer."
                     }
                 }
             }
@@ -3356,35 +4864,50 @@
         "Day": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Jour" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Jour"
+                    }
                 }
             }
         },
         "Day 1": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Jour 1" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Jour 1"
+                    }
                 }
             }
         },
         "Day 2": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Jour 2" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Jour 2"
+                    }
                 }
             }
         },
         "Day 3": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Jour 3" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Jour 3"
+                    }
                 }
             }
         },
         "Decline": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Refuser" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Refuser"
+                    }
                 }
             }
         },
@@ -3421,14 +4944,20 @@
         "Duration": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Durée" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Durée"
+                    }
                 }
             }
         },
         "Ended": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Terminé" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Terminé"
+                    }
                 }
             }
         },
@@ -3485,7 +5014,10 @@
         "Line": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Courbe" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Courbe"
+                    }
                 }
             }
         },
@@ -3502,70 +5034,100 @@
         "Bars": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Barres" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Barres"
+                    }
                 }
             }
         },
         "Pace": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Cumul" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cumul"
+                    }
                 }
             }
         },
         "Heat": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Grille" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Grille"
+                    }
                 }
             }
         },
         "Track": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Course" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Course"
+                    }
                 }
             }
         },
         "Oval": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Ovale" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ovale"
+                    }
                 }
             }
         },
         "Rings": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Anneaux" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Anneaux"
+                    }
                 }
             }
         },
         "Stack": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Pile" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Pile"
+                    }
                 }
             }
         },
         "Dots": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Points" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Points"
+                    }
                 }
             }
         },
         "Start": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Départ" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Départ"
+                    }
                 }
             }
         },
         "Lead": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Tête" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tête"
+                    }
                 }
             }
         },
@@ -3582,14 +5144,20 @@
         "Feed": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Fil" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Fil"
+                    }
                 }
             }
         },
         "Feedback": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Retours" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Retours"
+                    }
                 }
             }
         },
@@ -3696,7 +5264,10 @@
         "Photo": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Photo" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Photo"
+                    }
                 }
             }
         },
@@ -3793,14 +5364,20 @@
         "Video": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Vidéo" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Vidéo"
+                    }
                 }
             }
         },
         "Text": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Texte" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Texte"
+                    }
                 }
             }
         },
@@ -3827,7 +5404,10 @@
         "Everything": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Tout" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tout"
+                    }
                 }
             }
         },
@@ -3854,7 +5434,10 @@
         "Fight": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Défi" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Défi"
+                    }
                 }
             }
         },
@@ -3881,7 +5464,10 @@
         "Stats": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Stats" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Stats"
+                    }
                 }
             }
         },
@@ -4028,7 +5614,10 @@
         "Edit": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Modifier" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Modifier"
+                    }
                 }
             }
         },
@@ -4205,7 +5794,10 @@
         "Emoji": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Emoji" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Emoji"
+                    }
                 }
             }
         },
@@ -4232,14 +5824,20 @@
         "Send": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Envoyer" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Envoyer"
+                    }
                 }
             }
         },
         "Reply": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Répondre" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Répondre"
+                    }
                 }
             }
         },
@@ -4376,7 +5974,10 @@
         "Report": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Signaler" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Signaler"
+                    }
                 }
             }
         },
@@ -4433,28 +6034,40 @@
         "More": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Plus" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Plus"
+                    }
                 }
             }
         },
         "Fights": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Défis" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Défis"
+                    }
                 }
             }
         },
         "Finished": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Terminés" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Terminés"
+                    }
                 }
             }
         },
         "Got it": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Compris" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Compris"
+                    }
                 }
             }
         },
@@ -4491,7 +6104,10 @@
         "Holding": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Toujours" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Toujours"
+                    }
                 }
             }
         },
@@ -4528,7 +6144,10 @@
         "Invited": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Invité" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Invité"
+                    }
                 }
             }
         },
@@ -4605,14 +6224,20 @@
         "Metric": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Mesure" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Mesure"
+                    }
                 }
             }
         },
         "New": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Nouveau" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nouveau"
+                    }
                 }
             }
         },
@@ -4629,7 +6254,10 @@
         "Next": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Suivant" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Suivant"
+                    }
                 }
             }
         },
@@ -4646,7 +6274,10 @@
         "Night": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Nuit" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nuit"
+                    }
                 }
             }
         },
@@ -4703,7 +6334,10 @@
         "On": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Activé" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Activé"
+                    }
                 }
             }
         },
@@ -4777,20 +6411,13 @@
                 }
             }
         },
-        "Saving…": {
+        "Settings": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Enregistrement…"
+                        "value": "Réglages"
                     }
-                }
-            }
-        },
-        "Settings": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": { "state": "translated", "value": "Réglages" }
                 }
             }
         },
@@ -4867,7 +6494,10 @@
         "Signed in": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Connecté" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Connecté"
+                    }
                 }
             }
         },
@@ -4936,7 +6566,7 @@
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Lancez-en un dans Nouveau. Ajoutez des personnes avec leur nom d’utilisateur : elles doivent s’être connectées au moins une fois."
+                        "value": "Lance-en un dans Nouveau. Ajoute des personnes avec leur nom d’utilisateur. Elles doivent s’être connectées au moins une fois."
                     }
                 }
             }
@@ -4954,7 +6584,10 @@
         "Steps": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Pas" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Pas"
+                    }
                 }
             }
         },
@@ -5013,7 +6646,7 @@
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Échec de la synchronisation. Touchez pour réessayer."
+                        "value": "Synchronisation échouée. Touche pour réessayer."
                     }
                 }
             }
@@ -5023,7 +6656,7 @@
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "\\(text) Touchez pour réessayer."
+                        "value": "\\(text) Touche pour réessayer."
                     }
                 }
             }
@@ -5211,14 +6844,20 @@
         "Tied": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Égalité" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Égalité"
+                    }
                 }
             }
         },
         "Up to date": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "À jour" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "À jour"
+                    }
                 }
             }
         },
@@ -5265,7 +6904,10 @@
         "Versions": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Versions" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Versions"
+                    }
                 }
             }
         },
@@ -5312,7 +6954,10 @@
         "You": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Vous" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Vous"
+                    }
                 }
             }
         },
@@ -5359,7 +7004,10 @@
         "Code": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Code" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Code"
+                    }
                 }
             }
         },
@@ -5426,7 +7074,10 @@
         "Create": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Créer" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Créer"
+                    }
                 }
             }
         },
@@ -5633,14 +7284,20 @@
         "Private": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Privé" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Privé"
+                    }
                 }
             }
         },
         "Public": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Public" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Public"
+                    }
                 }
             }
         },
@@ -5737,7 +7394,10 @@
         "Joinable": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Ouvert" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ouvert"
+                    }
                 }
             }
         },
@@ -5754,7 +7414,10 @@
         "Link": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Lien" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Lien"
+                    }
                 }
             }
         },
@@ -5851,7 +7514,10 @@
         "Share": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Partager" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Partager"
+                    }
                 }
             }
         },
@@ -6065,7 +7731,6 @@
                 }
             }
         },
-
         "Every fight in the list is now titled by the action the loser owes, because that is the only name a fight has. The number on the right is how far ahead or behind you are, the days left sit underneath, and every live fight is the same size instead of one large card on top.": {
             "localizations": {
                 "fr": {
@@ -6616,7 +8281,6 @@
                 }
             }
         },
-
         "Apple Health isn’t available on this device.": {
             "localizations": {
                 "fr": {
@@ -6662,7 +8326,7 @@
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Pas de connexion Internet. Touchez pour réessayer."
+                        "value": "Pas de connexion internet. Touche pour réessayer."
                     }
                 }
             }
@@ -6680,14 +8344,20 @@
         "Denied": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Refusée" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Refusée"
+                    }
                 }
             }
         },
         "Enabled": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Activée" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Activée"
+                    }
                 }
             }
         },
@@ -6851,7 +8521,6 @@
                 }
             }
         },
-
         "api.request-failed": {
             "extractionState": "manual",
             "localizations": {
@@ -7187,7 +8856,10 @@
             "extractionState": "manual",
             "localizations": {
                 "en": {
-                    "stringUnit": { "state": "translated", "value": "Ended %@" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ended %@"
+                    }
                 },
                 "fr": {
                     "stringUnit": {
@@ -7218,7 +8890,10 @@
             "extractionState": "manual",
             "localizations": {
                 "en": {
-                    "stringUnit": { "state": "translated", "value": "Pending" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Pending"
+                    }
                 },
                 "fr": {
                     "stringUnit": {
@@ -7232,7 +8907,10 @@
             "extractionState": "manual",
             "localizations": {
                 "en": {
-                    "stringUnit": { "state": "translated", "value": "Ends %@" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ends %@"
+                    }
                 },
                 "fr": {
                     "stringUnit": {
@@ -7532,7 +9210,10 @@
             "extractionState": "manual",
             "localizations": {
                 "en": {
-                    "stringUnit": { "state": "translated", "value": "%@ won" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%@ won"
+                    }
                 },
                 "fr": {
                     "stringUnit": {
@@ -7736,10 +9417,16 @@
             "extractionState": "manual",
             "localizations": {
                 "en": {
-                    "stringUnit": { "state": "translated", "value": "%@ steps" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%@ steps"
+                    }
                 },
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "%@ pas" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%@ pas"
+                    }
                 }
             }
         },
@@ -7781,7 +9468,10 @@
             "extractionState": "manual",
             "localizations": {
                 "en": {
-                    "stringUnit": { "state": "translated", "value": "%@ left" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%@ left"
+                    }
                 },
                 "fr": {
                     "stringUnit": {
@@ -8219,14 +9909,20 @@
         "Sending…": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Envoi…" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Envoi…"
+                    }
                 }
             }
         },
         "Open": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Ouvrir" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ouvrir"
+                    }
                 }
             }
         },
@@ -8273,14 +9969,20 @@
         "Bug": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Bug" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Bug"
+                    }
                 }
             }
         },
         "Bugs": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Bugs" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Bugs"
+                    }
                 }
             }
         },
@@ -8327,7 +10029,10 @@
         "Details": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Détails" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Détails"
+                    }
                 }
             }
         },
@@ -8384,7 +10089,10 @@
         "Post": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Publier" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Publier"
+                    }
                 }
             }
         },
@@ -8421,7 +10129,10 @@
         "Request": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Demande" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Demande"
+                    }
                 }
             }
         },
@@ -8458,7 +10169,10 @@
         "Title": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Titre" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Titre"
+                    }
                 }
             }
         },
@@ -8495,7 +10209,10 @@
         "None": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Aucun" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Aucun"
+                    }
                 }
             }
         },
@@ -8532,14 +10249,20 @@
         "Top": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Top" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Top"
+                    }
                 }
             }
         },
         "Upvote": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Voter" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Voter"
+                    }
                 }
             }
         },
@@ -8632,7 +10355,7 @@
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "À synchroniser. Ouvrez l’app"
+                        "value": "En attente. Ouvre l’app"
                     }
                 }
             }
@@ -8640,7 +10363,10 @@
         "Synced": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "À jour" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "À jour"
+                    }
                 }
             }
         },
@@ -8791,7 +10517,10 @@
         "Debug": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Débogage" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Débogage"
+                    }
                 }
             }
         },
@@ -8847,7 +10576,12 @@
         },
         "OK": {
             "localizations": {
-                "fr": { "stringUnit": { "state": "translated", "value": "OK" } }
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "OK"
+                    }
+                }
             }
         },
         "You can go to Settings to submit a feature you want or a bug you see. Those will be fixed rapidly.": {
@@ -8863,7 +10597,10 @@
         "Device": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Appareil" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Appareil"
+                    }
                 }
             }
         },
@@ -9110,7 +10847,10 @@
         "Add": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Ajouter" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ajouter"
+                    }
                 }
             }
         },
@@ -9167,7 +10907,10 @@
         "Owner": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Créateur" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Créateur"
+                    }
                 }
             }
         },
@@ -9231,86 +10974,6 @@
                 }
             }
         },
-        "Apple Health Steps still syncs even if extra workout details fail. You shows the real server or network error instead of only Sync failed, and no longer labels a failed sync as Connected.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Les pas Apple Health se synchronisent toujours même si les détails d’entraînement en plus échouent. Toi affiche la vraie erreur serveur ou réseau au lieu de seulement Synchronisation échouée, et ne marque plus une sync ratée comme Connecté."
-                    }
-                }
-            }
-        },
-        "Retry": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Réessayer"
-                    }
-                }
-            }
-        },
-        "Sync failed. Tap to retry.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Synchronisation échouée. Touche pour réessayer."
-                    }
-                }
-            }
-        },
-        "No internet connection. Tap to retry.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Pas de connexion internet. Touche pour réessayer."
-                    }
-                }
-            }
-        },
-        "The server took too long. Tap to retry.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Le serveur a trop tardé. Touche pour réessayer."
-                    }
-                }
-            }
-        },
-        "Pending. Open the app": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "En attente. Ouvre l’app"
-                    }
-                }
-            }
-        },
-        "Start one under New. Add people with their username. They must have signed in once.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Lance-en un dans Nouveau. Ajoute des personnes avec leur nom d’utilisateur. Elles doivent s’être connectées au moins une fois."
-                    }
-                }
-            }
-        },
-        "\\(text) Tap to retry.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "\\(text) Touche pour réessayer."
-                    }
-                }
-            }
-        },
         "Tap to retry": {
             "localizations": {
                 "fr": {
@@ -9324,7 +10987,10 @@
         "Syncing": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Synchro" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Synchro"
+                    }
                 }
             }
         },
@@ -9458,14 +11124,20 @@
         "Species": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Espèce" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Espèce"
+                    }
                 }
             }
         },
         "Breed": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Race" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Race"
+                    }
                 }
             }
         },
@@ -9482,14 +11154,20 @@
         "Mood": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Humeur" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Humeur"
+                    }
                 }
             }
         },
         "Sport": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Sport" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Sport"
+                    }
                 }
             }
         },
@@ -9526,35 +11204,50 @@
         "Running": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Course" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Course"
+                    }
                 }
             }
         },
         "Football": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Football" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Football"
+                    }
                 }
             }
         },
         "Ski": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Ski" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ski"
+                    }
                 }
             }
         },
         "Walking": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Marche" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Marche"
+                    }
                 }
             }
         },
         "Calm": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Calme" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Calme"
+                    }
                 }
             }
         },
@@ -9581,28 +11274,40 @@
         "Playful": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Joueur" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Joueur"
+                    }
                 }
             }
         },
         "Fierce": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Féroce" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Féroce"
+                    }
                 }
             }
         },
         "Resting": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Au repos" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Au repos"
+                    }
                 }
             }
         },
         "Heading out": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "En route" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "En route"
+                    }
                 }
             }
         },
@@ -9659,7 +11364,10 @@
         "Jogging": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Jogging" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Jogging"
+                    }
                 }
             }
         },
@@ -9786,7 +11494,10 @@
         "Stepping out": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "On sort" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "On sort"
+                    }
                 }
             }
         },
@@ -9853,23 +11564,19 @@
         "Suggest": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Suggérer" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Suggérer"
+                    }
                 }
             }
         },
         "Suggested": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Suggéré" }
-                }
-            }
-        },
-        "Tap + to post to this fight.": {
-            "localizations": {
-                "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Touche + pour publier dans ce défi."
+                        "value": "Suggéré"
                     }
                 }
             }
@@ -9897,7 +11604,10 @@
         "This fight": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Ce défi" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ce défi"
+                    }
                 }
             }
         },
@@ -9964,7 +11674,10 @@
         "Done": {
             "localizations": {
                 "fr": {
-                    "stringUnit": { "state": "translated", "value": "Terminé" }
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Terminé"
+                    }
                 }
             }
         },
@@ -9974,6 +11687,752 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Les pas après l’heure de fin exacte ne comptent pas."
+                    }
+                }
+            }
+        },
+        "Try the beta": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Essayer la bêta"
+                    }
+                }
+            }
+        },
+        "Try upcoming features in TestFlight. Beta builds may have bugs.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Essaie les prochaines fonctionnalités dans TestFlight. Les versions bêta peuvent contenir des bugs."
+                    }
+                }
+            }
+        },
+        "The beta uses a separate database. Accounts, fights, and progress do not sync automatically with the App Store version, even when you use the same Apple ID.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "La bêta utilise une base de données séparée. Les comptes, les fights et la progression ne se synchronisent pas automatiquement avec la version App Store, même avec le même identifiant Apple."
+                    }
+                }
+            }
+        },
+        "Installing the beta replaces the App Store app on this device. To switch back, reinstall FitFight from the App Store.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Installer la bêta remplace l’app App Store sur cet appareil. Pour revenir à la version publique, réinstalle FitFight depuis l’App Store."
+                    }
+                }
+            }
+        },
+        "Open TestFlight": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ouvrir TestFlight"
+                    }
+                }
+            }
+        },
+        "Return to the App Store": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Revenir à l’App Store"
+                    }
+                }
+            }
+        },
+        "You can open the TestFlight beta or return to the App Store from You → Settings. Before switching, see how installing the beta replaces the app and keeps accounts, fights, and progress in a separate database.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tu peux ouvrir la bêta TestFlight ou revenir à l’App Store depuis Toi → Réglages. Avant de changer de version, découvre comment la bêta remplace l’app et conserve les comptes, les fights et la progression dans une base de données séparée."
+                    }
+                }
+            }
+        },
+        "The slide haptics lab has a Custom option for tuning rumble, pulses, ramp shapes, the finishing hit, and confirmation distance. Your settings save automatically on this phone.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Le laboratoire haptique propose une option Custom pour régler les vibrations continues, les impulsions, leur progression, l’impact final et la distance de confirmation. Vos réglages sont enregistrés automatiquement sur ce téléphone."
+                    }
+                }
+            }
+        },
+        "Slide to start builds from soft feedback to full-strength vibration, with a heavy finish even on a quick swipe. The 20 haptic tests now have wider ramps and a 0-100 scale.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Glisser pour démarrer passe de vibrations douces à la puissance maximale, avec un impact final puissant même lors d’un geste rapide. Les 20 tests haptiques proposent des montées plus marquées et une échelle de 0 à 100."
+                    }
+                }
+            }
+        },
+        "Type @ to tag someone in a post or comment. They get a FitFight notification with your name.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tape @ pour mentionner quelqu’un dans une publication ou un commentaire. FitFight lui envoie une notification avec ton nom."
+                    }
+                }
+            }
+        },
+        "A refreshed App Store description explaining how to start a private step challenge and follow the standings.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Une description App Store actualisée pour découvrir comment lancer un défi de pas privé et suivre le classement."
+                    }
+                }
+            }
+        },
+        "Make it yours": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "À ton image"
+                    }
+                }
+            }
+        },
+        "Change animal": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Changer d’animal"
+                    }
+                }
+            }
+        },
+        "This is how other people see you in fights and Feed. You can change your animal anytime.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "C’est ainsi que les autres te voient dans les combats et le fil. Tu peux changer d’animal à tout moment."
+                    }
+                }
+            }
+        },
+        "You can change your animal anytime. Choose another from the grid or describe any animal below.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tu peux changer d’animal à tout moment. Choisis-en un autre dans la grille ou décris l’animal de ton choix ci-dessous."
+                    }
+                }
+            }
+        },
+        "Make it yours opens your animal description, ready to edit and save. Use Change animal to choose another companion anytime.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "À ton image ouvre la description de ton animal pour la modifier et l’enregistrer. Utilise Changer d’animal pour choisir un autre compagnon à tout moment."
+                    }
+                }
+            }
+        },
+        "Feedback keeps loading correctly when you leave a request while it is being deleted.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les demandes continuent de se charger correctement lorsque vous quittez une demande en cours de suppression."
+                    }
+                }
+            }
+        },
+        "Delete request": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Supprimer la demande"
+                    }
+                }
+            }
+        },
+        "Delete request?": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Supprimer la demande ?"
+                    }
+                }
+            }
+        },
+        "This removes the request, comments, and votes for everyone. This cannot be undone.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "La demande, les commentaires et les votes seront supprimés pour tout le monde. Cette action est irréversible."
+                    }
+                }
+            }
+        },
+        "Admins can delete a feedback request from its menu after confirming.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les administrateurs peuvent supprimer une demande depuis son menu après confirmation."
+                    }
+                }
+            }
+        },
+        "Comment refreshes are more reliable after connection errors. Live updates no longer interrupt loading more comments.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Comment refreshes are more reliable after connection errors. Live updates no longer interrupt loading more comments."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "L’actualisation des commentaires est plus fiable après une erreur de connexion. Les mises à jour en direct n’interrompent plus le chargement de commentaires supplémentaires."
+                    }
+                }
+            }
+        },
+        "Reactions swipe horizontally, with a visible like button and any emoji. Charts refresh without losing your selection and keep missing history clear. Comments load reliably, and notification failures no longer interrupt saved fights.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les réactions défilent horizontalement, avec un bouton J’aime visible et le choix de tout emoji. Les graphiques s’actualisent sans perdre ta sélection et signalent les données manquantes. Les commentaires se chargent correctement et les échecs de notification n’interrompent plus les fights enregistrés."
+                    }
+                }
+            }
+        },
+        "Cheer this post": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Encourager cette publication"
+                    }
+                }
+            }
+        },
+        "Remove reaction": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Retirer la réaction"
+                    }
+                }
+            }
+        },
+        "React": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Réagir"
+                    }
+                }
+            }
+        },
+        "Other emoji…": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Autre emoji…"
+                    }
+                }
+            }
+        },
+        "Feedback no longer shows a duplicate button above the bottom tabs. Use the plus at the top to add a request.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Le bouton en double au-dessus des onglets a été supprimé de Feedback. Utilisez le plus en haut pour ajouter une demande."
+                    }
+                }
+            }
+        },
+        "Live feed updates keep loaded comments in place and refresh posts reliably while scrolling. Broadcast posts now update live too.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Live feed updates keep loaded comments in place and refresh posts reliably while scrolling. Broadcast posts now update live too."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les actualisations en direct conservent les commentaires déjà chargés et mettent les publications à jour pendant le défilement. Les publications destinées à tous s’actualisent aussi en direct."
+                    }
+                }
+            }
+        },
+        "Website download and invitation links open the App Store. The staging website keeps TestFlight access for beta testers.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les liens de téléchargement et d’invitation du site ouvrent l’App Store. Le site de préproduction conserve l’accès à TestFlight pour les bêta-testeurs."
+                    }
+                }
+            }
+        },
+        "Activity": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Activity"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Activité"
+                    }
+                }
+            }
+        },
+        "Notifications & activity": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Notifications & activity"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Notifications et activité"
+                    }
+                }
+            }
+        },
+        "Posts, comments, reactions and membership history from your fights.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Posts, comments, reactions and membership history from your fights."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Publications, commentaires, réactions et historique des participants de vos combats."
+                    }
+                }
+            }
+        },
+        "No activity yet.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "No activity yet."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Aucune activité pour le moment."
+                    }
+                }
+            }
+        },
+        "Time not recorded": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Time not recorded"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Date non enregistrée"
+                    }
+                }
+            }
+        },
+        "This post is no longer available.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "This post is no longer available."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cette publication n’est plus disponible."
+                    }
+                }
+            }
+        },
+        "Fight activity": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Fight activity"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Activité du combat"
+                    }
+                }
+            }
+        },
+        "Invitation": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Invitation"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Invitation"
+                    }
+                }
+            }
+        },
+        "activity.post": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ posted"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ a publié"
+                    }
+                }
+            }
+        },
+        "activity.comment": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ commented"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ a commenté"
+                    }
+                }
+            }
+        },
+        "activity.reply": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ replied"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ a répondu"
+                    }
+                }
+            }
+        },
+        "activity.reaction": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ reacted"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ a réagi"
+                    }
+                }
+            }
+        },
+        "activity.invitation": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%1$@ invited @%2$@"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%1$@ a invité @%2$@"
+                    }
+                }
+            }
+        },
+        "activity.joined": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ joined"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ a rejoint le combat"
+                    }
+                }
+            }
+        },
+        "activity.next-round": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ joined the next round"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ a rejoint la prochaine manche"
+                    }
+                }
+            }
+        },
+        "activity.declined": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ declined"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ a refusé"
+                    }
+                }
+            }
+        },
+        "activity.left": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ left"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ a quitté le combat"
+                    }
+                }
+            }
+        },
+        "activity.disqualified": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ was disqualified"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "@%@ a été disqualifié"
+                    }
+                }
+            }
+        },
+        "Comments and reactions refresh live. Feed loads ten posts at a time and loads more as you scroll. Pull down to fetch the latest posts. Notifications open the exact post. You now has Activity with posts, comments, reactions and timestamped membership history.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Comments and reactions refresh live. Feed loads ten posts at a time and loads more as you scroll. Pull down to fetch the latest posts. Notifications open the exact post. You now has Activity with posts, comments, reactions and timestamped membership history."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les commentaires et réactions s’actualisent en direct. Le fil charge dix publications à la fois, puis la suite quand vous faites défiler. Tirez vers le bas pour actualiser les publications. Les notifications ouvrent la publication concernée. L’onglet Vous propose Activité, avec les publications, commentaires, réactions et l’historique daté des participants."
+                    }
+                }
+            }
+        },
+        "Translate": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Traduire"
+                    }
+                }
+            }
+        },
+        "Posts and comments in another language now have a translation icon beside their actions on iOS 17.4 or later.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les publications et les commentaires dans une autre langue affichent désormais une icône de traduction à côté de leurs actions, à partir d’iOS 17.4."
+                    }
+                }
+            }
+        },
+        "Feed comments can be sorted by most comments or most recent. Most comments is the default.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les commentaires du fil se trient par plus de commentaires ou plus récents. Plus de commentaires est le choix par défaut."
+                    }
+                }
+            }
+        },
+        "Most comments": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Plus de commentaires"
+                    }
+                }
+            }
+        },
+        "Most recent": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Plus récents"
+                    }
+                }
+            }
+        },
+        "Comment order": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ordre des commentaires"
+                    }
+                }
+            }
+        },
+        "The Feed can show a post to everyone signed in, not only people in your fights.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Le fil peut maintenant afficher un message pour tout le monde connecté, pas seulement les personnes dans tes combats."
+                    }
+                }
+            }
+        },
+        "Broadcast": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Annonce"
+                    }
+                }
+            }
+        },
+        "Write one post. Everyone signed in sees it on Feed.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Écris un message. Toutes les personnes connectées le voient dans Fil."
+                    }
+                }
+            }
+        },
+        "This post appears on Feed for everyone signed in.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ce message apparaît dans Fil pour toutes les personnes connectées."
+                    }
+                }
+            }
+        },
+        "Opening FitFight invites you to the shared Steps fight and any suggested fights. They show on New. You get a notification with the name, no scores, and you can accept when you are ready.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Dès l'ouverture, FitFight t'invite au défi Pas partagé et aux défis suggérés. Ils apparaissent dans Nouveau. Tu reçois une notification avec le nom, sans scores, et tu peux accepter quand tu es prêt."
+                    }
+                }
+            }
+        },
+        "Bars, line, histogram, and pace now use the same confirmed Fight scores as the oval. A teammate without daily history is a gap, not a blank graph.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Barres, ligne, histogramme et allure utilisent maintenant les mêmes scores confirmés que l’ovale. Un coéquipier sans historique quotidien apparaît comme un trou, pas un graphique vide."
+                    }
+                }
+            }
+        },
+        "So far": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Jusqu’ici"
                     }
                 }
             }

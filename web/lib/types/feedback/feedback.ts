@@ -125,6 +125,7 @@ export const feedbackPostSummarySchema = z
 export const feedbackCommentSchema = z
     .object({
         id: z.string().uuid(),
+        author_id: z.string().uuid().optional(),
         body: z.string(),
         author_handle: z.string(),
         created_at: z.string().datetime(),
@@ -223,3 +224,9 @@ export type FeedbackVoteResponse = z.infer<typeof feedbackVoteResponseSchema>;
 export type FeedbackCommentResponse = z.infer<
     typeof feedbackCommentResponseSchema
 >;
+
+export const feedbackCommentRowSchema = feedbackCommentSchema.extend({
+    created_at: z.union([z.date(), z.string()]),
+    metadata: z.unknown(),
+});
+export type FeedbackCommentRow = z.infer<typeof feedbackCommentRowSchema>;

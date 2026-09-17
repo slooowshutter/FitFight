@@ -1,6 +1,76 @@
 {
     "sourceLanguage": "en",
     "strings": {
+    "Try the beta": {
+        "localizations": {
+            "fr": {
+                "stringUnit": {
+                    "state": "translated",
+                    "value": "Essayer la bêta"
+                }
+            }
+        }
+    },
+    "Try upcoming features in TestFlight. Beta builds may have bugs.": {
+        "localizations": {
+            "fr": {
+                "stringUnit": {
+                    "state": "translated",
+                    "value": "Essaie les prochaines fonctionnalités dans TestFlight. Les versions bêta peuvent contenir des bugs."
+                }
+            }
+        }
+    },
+    "The beta uses a separate database. Accounts, fights, and progress do not sync automatically with the App Store version, even when you use the same Apple ID.": {
+        "localizations": {
+            "fr": {
+                "stringUnit": {
+                    "state": "translated",
+                    "value": "La bêta utilise une base de données séparée. Les comptes, les fights et la progression ne se synchronisent pas automatiquement avec la version App Store, même avec le même identifiant Apple."
+                }
+            }
+        }
+    },
+    "Installing the beta replaces the App Store app on this device. To switch back, reinstall FitFight from the App Store.": {
+        "localizations": {
+            "fr": {
+                "stringUnit": {
+                    "state": "translated",
+                    "value": "Installer la bêta remplace l’app App Store sur cet appareil. Pour revenir à la version publique, réinstalle FitFight depuis l’App Store."
+                }
+            }
+        }
+    },
+    "Open TestFlight": {
+        "localizations": {
+            "fr": {
+                "stringUnit": {
+                    "state": "translated",
+                    "value": "Ouvrir TestFlight"
+                }
+            }
+        }
+    },
+    "Return to the App Store": {
+        "localizations": {
+            "fr": {
+                "stringUnit": {
+                    "state": "translated",
+                    "value": "Revenir à l’App Store"
+                }
+            }
+        }
+    },
+    "You can open the TestFlight beta or return to the App Store from You → Settings. Before switching, see how installing the beta replaces the app and keeps accounts, fights, and progress in a separate database.": {
+        "localizations": {
+            "fr": {
+                "stringUnit": {
+                    "state": "translated",
+                    "value": "Tu peux ouvrir la bêta TestFlight ou revenir à l’App Store depuis Toi → Réglages. Avant de changer de version, découvre comment la bêta remplace l’app et conserve les comptes, les fights et la progression dans une base de données séparée."
+                }
+            }
+        }
+    },
         "The slide haptics lab has a Custom option for tuning rumble, pulses, ramp shapes, the finishing hit, and confirmation distance. Your settings save automatically on this phone.": {
             "localizations": {
                 "fr": {

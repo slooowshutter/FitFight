@@ -8,6 +8,30 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
 
+## In-app beta access: prepared 17 Sep 2026
+
+**Code:** You → Settings → Try the beta opens a scrollable sheet in English or
+French. It includes the existing Friends Beta TestFlight invite and App Store
+listing, warns that accounts, fights, and progress use separate databases without
+automatic syncing, and explains how to reinstall the App Store version to return.
+Both links remain available in both builds. The version banner stays on You, and
+a 1.1.1 release note is included. Apple's [TestFlight guidance](https://testflight.apple.com/)
+confirms that installing a beta replaces the installed App Store app.
+
+**Checks:** localization, native API-boundary, download-link consistency, and
+whitespace checks passed. All seven new catalog entries have French translations;
+existing entries and pre-existing duplicate keys are unchanged. The public beta
+invite returned HTTP 200. Apple's App Store endpoint rate-limited the automated
+check with HTTP 429; its URL matches the existing website destination. Cloud iOS
+compilation and device checks remain pending, including sheet scrolling at large
+text sizes, dismissal, and opening both stores. No app build ran on the workstation.
+
+**Rollout:** UI only, with no API, native API model, database, or supported-client
+contract changes. No PR, merge, cloud CI run, TestFlight upload, or live deployment
+was made. Merging code does not synchronize user data between the databases; the
+existing [data transfer](../scripts/data-transfer/README.md) is a separate,
+explicitly authorized maintenance operation.
+
 ## Stronger slide haptics: prepared 17 Sep 2026
 
 **Code:** The existing 20 slide presets now cover soft starts, early builds, late

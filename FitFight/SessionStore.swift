@@ -308,6 +308,11 @@ final class SessionStore: ObservableObject {
         }
     }
 
+    func companionPrompts() async throws -> [String] {
+        let token = try await freshAccessToken()
+        return try await api.companionPrompts(accessToken: token)
+    }
+
     func setCompanion(id: String, prompt: String?) async throws {
         guard !screenshotSignedIn else { throw CompanionPreview.WriteUnavailable() }
         guard let userId = authSession?.user.id ?? client.auth.currentUser?.id else {
@@ -354,6 +359,7 @@ final class SessionStore: ObservableObject {
             UserDefaults.standard.removeObject(forKey: Self.needsRequestsKey)
             if let userID {
                 UserDefaults.standard.removeObject(forKey: Self.profileCachePrefix + userID.uuidString)
+                CompanionStore.deleteLocalLibrary(for: userID)
             }
             if !deletion.appleAuthorizationRevoked {
                 authError = String(localized: "Account deleted. To disconnect Apple too, open iPhone Settings, tap your name, then Sign in with Apple → FitFight → Stop Using Apple ID.")

@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 17,
+            notes: "Companion descriptions stay saved when you change animals. Browse habitats and reuse your saved descriptions from Yours."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 17,
             notes: "A refreshed App Store description explaining how to start a private step challenge and follow the standings."
         ),
         ReleaseNote(

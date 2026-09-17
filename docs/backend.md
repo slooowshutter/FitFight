@@ -65,6 +65,18 @@ safe backend migration, not automatically an iOS release. Removing information o
 behavior an admitted app still requires waits for that app to be retired. Destructive
 SQL and hosted deployment still follow Marc's authorization rules.
 
+## Saved companion descriptions (prepared 17 Sep 2026)
+
+`GET /api/v1/me/companions` returns the authenticated user's saved descriptions as
+a JSON string array, most recently used first. Apply
+`20260917010915_saved_companion_prompts.sql` before deploying this endpoint.
+The private library is backfilled from existing custom prompts. An internal capture
+trigger keeps it current even when an older backend writes the profile. It is not
+an app-facing RPC. The existing `GET/PATCH /api/v1/me` contract remains unchanged,
+including a null active prompt for stock animals. Reusing a description still uses
+the existing custom-companion PATCH. Libraries are isolated by user and cascade
+away when the account is deleted. This stores descriptions, not generated artwork.
+
 ## Fight chart consistency (prepared 15 Sep 2026)
 
 Apply `20260915200338_fight_step_checkpoints.sql` before deploying this backend.

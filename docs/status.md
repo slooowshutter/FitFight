@@ -8,6 +8,52 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
 
+## Companion descriptions and habitat tabs: prepared 17 Sep 2026
+
+**Code:** choosing a stock animal keeps the saved custom description. The picker
+has All, Yours, Custom, Mountains, Water, Forest, and Jungle tabs using the 12 existing
+animals. Yours reuses saved descriptions without duplicates; the account library
+also works on another device. Local caches are scoped to the user, hidden while
+signed out, and removed on account deletion. English/French copy and a 1.1.2 release
+note are included. This is a description library, not image generation. Additional
+species and their artwork are not implemented. Previously erased descriptions
+cannot be reconstructed from the current profile.
+
+**Contract and rollout:** `GET /api/v1/me/companions` is a new authenticated read
+returning a string array. Existing profile requests/responses and `/api/v1` remain
+unchanged, including null `companion_prompt` for stock animals. The additive
+`20260917010915_saved_companion_prompts.sql` migration backfills current descriptions
+into a private library. An internal capture trigger preserves subsequent writes
+from both older and newer backends; there is no app-facing RPC or client grant.
+Deploy the migration, then the backend, then distribute the native build through
+an authorized preview promotion. Read-only release checks on 17 Sep returned
+staging latest 1.1.1 (201), enforcement off, and production latest 1.1.1 (202),
+enforcement on; review/internal were null in both. Those builds' profile decoders
+were inspected; their contract is unchanged. Legacy build 113 fixtures are retained.
+
+**Cloud checks:** the [native regression](https://github.com/slooowshutter/FitFight/actions/runs/35169363752)
+reproduced the erased prompt before the fix. [Web checks](https://github.com/slooowshutter/FitFight/actions/runs/35170095838)
+pass TypeScript and all 272 tests. [Disposable database checks](https://github.com/slooowshutter/FitFight/actions/runs/35170095821)
+pass migrations/RLS, build 113 compatibility, and all 21 integration tests before
+and after the deferred permission cutoff, without skips. The companion assertions
+cover legacy stock requests with an explicit null prompt, reuse, concurrent saves,
+failed writes, owner isolation, and account deletion. A separate migration rehearsal
+preserved a pre-existing prompt through backfill and a subsequent old backend write.
+The [iOS checks](https://github.com/slooowshutter/FitFight/actions/runs/35170180506)
+pass the actual companion-store regressions, existing native/API checks, localization,
+and a simulator build on `macos-26`. Seventeen running simulator captures were
+inspected: All, Yours, Custom, and Mountains in English/French and Day/Night, plus
+Yours at the largest French accessibility text size. The retained prompt is visible
+in Custom and prior descriptions are visible in Yours. These use isolated preview
+fixtures and verify layout, not touch interactions or live signed-in writes.
+Validation-only workflow triggers and screenshot fixture injection stayed on a
+temporary branch. These checks preceded integration with develop at `85d054f`;
+PR CI verifies the combined branch. No app tests ran on the workstation.
+
+**Live deployment:** none. No hosted database changes, release-branch merge,
+TestFlight upload, or production deployment. Physical-device interaction remains
+separate from cloud state and layout checks.
+
 ## App Store description draft: saved 17 Sep 2026
 
 Marc authorized the English/French description refresh, creation of the 1.1.2

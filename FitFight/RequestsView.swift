@@ -13,6 +13,7 @@ final class FeedbackStore: ObservableObject {
     @Published var isLaunchingFix = false
     @Published var canLaunchFix = false
     @Published var canDelete = false
+    @Published var canEdit = false
     @Published var isDeleting = false
     @Published var error: String?
 
@@ -69,6 +70,7 @@ final class FeedbackStore: ObservableObject {
 
     func loadDetail(session: SessionStore, postID: UUID) async {
         canDelete = false
+        canEdit = false
         #if DEBUG && targetEnvironment(simulator)
         if CompanionPreview.isEnabled {
             detail = Self.previewPosts.first { $0.id == postID }
@@ -105,6 +107,7 @@ final class FeedbackStore: ObservableObject {
             commentsFor = post.id
             canLaunchFix = result.canLaunchFix
             canDelete = result.canDelete
+            canEdit = result.canEdit
             RemoteImageLoader.shared.prefetch(
                 post.media.compactMap { media in
                     RequestAttachment.showsPhoto(media) ? media.url : nil
@@ -220,6 +223,7 @@ final class FeedbackStore: ObservableObject {
                 comments = []
                 commentsFor = nil
                 canDelete = false
+                canEdit = false
                 canLaunchFix = false
                 error = nil
             }
@@ -230,6 +234,48 @@ final class FeedbackStore: ObservableObject {
             if commentsFor == postID {
                 self.error = error.localizedDescription
             }
+            return false
+        }
+    }
+
+    func update(
+        session: SessionStore,
+        postID: UUID,
+        kind: String,
+        title: String,
+        body: String
+    ) async -> Bool {
+        guard !isDeleting else { return false }
+        isSaving = true
+        defer { isSaving = false }
+        do {
+            let token = try await session.freshAccessToken()
+            let post = try await api.updateFeedback(
+                postID: postID,
+                kind: kind,
+                title: title,
+                body: body,
+                accessToken: token
+            )
+            if deletedPostIDs.contains(postID) {
+                error = nil
+                return true
+            }
+            var updated = keepingNewerVote(post, startedAt: voteClock)
+            if let current = posts.first(where: { $0.id == postID }) {
+                updated.commentCount = max(updated.commentCount, current.commentCount)
+            }
+            if detail?.id == postID {
+                updated.commentCount = max(updated.commentCount, detail?.commentCount ?? 0)
+                detail = updated
+            }
+            if let index = posts.firstIndex(where: { $0.id == postID }) {
+                posts[index] = updated
+            }
+            error = nil
+            return true
+        } catch {
+            self.error = error.localizedDescription
             return false
         }
     }
@@ -433,6 +479,8 @@ struct RequestsView: View {
     @State private var filter: RequestFilter
     @State private var composing = false
     @State private var openPostID: UUID?
+    @State private var editingPost: FitFightFeedbackPost?
+    @State private var deletingPostID: UUID?
 
     init(
         store: FeedbackStore,
@@ -477,6 +525,33 @@ struct RequestsView: View {
                 .environmentObject(session)
                 .fitFightTheme(theme)
                 .presentationBackground(theme.bg)
+        }
+        .sheet(item: $editingPost) { post in
+            ComposeRequestView(store: store, editing: post)
+                .environmentObject(session)
+                .fitFightTheme(theme)
+                .presentationBackground(theme.bg)
+        }
+        .confirmationDialog(
+            String(localized: "Delete request?"),
+            isPresented: Binding(
+                get: { deletingPostID != nil },
+                set: { if !$0 { deletingPostID = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button(String(localized: "Delete"), role: .destructive) {
+                guard let deletingPostID else { return }
+                Task {
+                    _ = await store.delete(session: session, postID: deletingPostID)
+                    self.deletingPostID = nil
+                }
+            }
+            Button(String(localized: "Cancel"), role: .cancel) {
+                deletingPostID = nil
+            }
+        } message: {
+            Text("This removes the request, comments, and votes for everyone. This cannot be undone.")
         }
     }
 
@@ -554,7 +629,9 @@ struct RequestsView: View {
                 },
                 onHide: {
                     Task { await store.hide(session: session, authorID: post.authorId) }
-                }
+                },
+                onEdit: post.mine ? { editingPost = post } : nil,
+                onDelete: post.mine ? { deletingPostID = post.id } : nil
             )
         }
         let extras = Group {
@@ -708,6 +785,8 @@ private struct RequestRow: View {
     let onVote: () -> Void
     let onReport: () -> Void
     let onHide: () -> Void
+    var onEdit: (() -> Void)? = nil
+    var onDelete: (() -> Void)? = nil
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
@@ -723,8 +802,14 @@ private struct RequestRow: View {
                                 tone: post.kind == "bug" ? .ember : .moss
                             )
                             Spacer(minLength: 0)
-                            if !post.mine {
-                                RequestPostMenu(onReport: onReport, onHide: onHide)
+                            if !post.mine || onEdit != nil || onDelete != nil {
+                                RequestPostMenu(
+                                    canReport: !post.mine,
+                                    onReport: onReport,
+                                    onHide: onHide,
+                                    onEdit: onEdit,
+                                    onDelete: onDelete
+                                )
                             }
                             Text(post.createdAt, format: .relative(presentation: .named))
                                 .ffType(.caption)
@@ -792,6 +877,7 @@ private struct RequestDetailView: View {
     @State private var comment = ""
     @State private var launchedAgentURL: URL?
     @State private var confirmingDeletion = false
+    @State private var editingPost: FitFightFeedbackPost?
     @FocusState private var commentFocused: Bool
 
     private var post: FitFightFeedbackPost? {
@@ -809,7 +895,7 @@ private struct RequestDetailView: View {
                     subtitle: post.map { "@\($0.authorHandle)" },
                     onBack: { dismiss() }
                 )
-                if let post, !post.mine || store.canDelete {
+                if let post, !post.mine || store.canDelete || store.canEdit {
                     RequestPostMenu(
                         canReport: !post.mine,
                         onReport: {
@@ -821,6 +907,7 @@ private struct RequestDetailView: View {
                                 dismiss()
                             }
                         },
+                        onEdit: store.canEdit ? { editingPost = post } : nil,
                         onDelete: store.canDelete ? { confirmingDeletion = true } : nil
                     )
                     .disabled(store.isDeleting || store.isSaving || store.isLaunchingFix)
@@ -897,6 +984,12 @@ private struct RequestDetailView: View {
             Button(String(localized: "Cancel"), role: .cancel) {}
         } message: {
             Text("This removes the request, comments, and votes for everyone. This cannot be undone.")
+        }
+        .sheet(item: $editingPost) { post in
+            ComposeRequestView(store: store, editing: post)
+                .environmentObject(session)
+                .fitFightTheme(theme)
+                .presentationBackground(theme.bg)
         }
         .task {
             guard !staticRender else { return }
@@ -1030,6 +1123,7 @@ private struct RequestPostMenu: View {
     var canReport = true
     let onReport: () -> Void
     let onHide: () -> Void
+    var onEdit: (() -> Void)? = nil
     var onDelete: (() -> Void)? = nil
     @Environment(\.ffTheme) private var theme
 
@@ -1042,6 +1136,9 @@ private struct RequestPostMenu: View {
                 Button(String(localized: "Hide this person"), role: .destructive) {
                     onHide()
                 }
+            }
+            if let onEdit {
+                Button(String(localized: "Edit request"), action: onEdit)
             }
             if let onDelete {
                 Button(String(localized: "Delete request"), role: .destructive, action: onDelete)
@@ -1058,15 +1155,16 @@ private struct RequestPostMenu: View {
 
 struct ComposeRequestView: View {
     @ObservedObject var store: FeedbackStore
-    var heading: String = String(localized: "New request")
-    var onPosted: ((RequestFilter) -> Void)? = nil
+    var heading: String
+    var editing: FitFightFeedbackPost?
+    var onPosted: ((RequestFilter) -> Void)?
     @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
     @Environment(\.dismiss) private var dismiss
-    @State private var kind: ComposeKind = .bug
-    @State private var title = ""
-    @State private var details = ""
+    @State private var kind: ComposeKind
+    @State private var title: String
+    @State private var details: String
     @State private var mediaItems: [PhotosPickerItem] = []
     @State private var isLoadingMedia = false
     @State private var images: [UIImage] = []
@@ -1075,6 +1173,22 @@ struct ComposeRequestView: View {
     @State private var showingFileImporter = false
     @FocusState private var titleFocused: Bool
     @FocusState private var detailsFocused: Bool
+
+    init(
+        store: FeedbackStore,
+        editing: FitFightFeedbackPost? = nil,
+        onPosted: ((RequestFilter) -> Void)? = nil
+    ) {
+        _store = ObservedObject(wrappedValue: store)
+        self.editing = editing
+        self.onPosted = onPosted
+        heading = editing == nil
+            ? String(localized: "New request")
+            : String(localized: "Edit request")
+        _kind = State(initialValue: editing?.kind == "feature" ? .feature : .bug)
+        _title = State(initialValue: editing?.title ?? "")
+        _details = State(initialValue: editing?.body ?? "")
+    }
 
     private enum ComposeKind: Hashable, CaseIterable {
         case bug, feature
@@ -1120,7 +1234,7 @@ struct ComposeRequestView: View {
             }
 
             FFScreenCTA(
-                title: store.isSaving ? String(localized: "Posting…") : String(localized: "Post"),
+                title: ctaTitle,
                 enabled: canPost,
                 busy: store.isSaving
             ) {
@@ -1149,7 +1263,11 @@ struct ComposeRequestView: View {
                 FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
             }
 
-            Text("Posted with your username. Signed-in people can see it, upvote, and comment.")
+            Text(
+                editing == nil
+                    ? String(localized: "Posted with your username. Signed-in people can see it, upvote, and comment.")
+                    : String(localized: "Changes are visible to everyone who can see this request.")
+            )
                 .ffType(.body)
                 .foregroundStyle(theme.textSecondary)
                 .lineSpacing(3)
@@ -1194,69 +1312,78 @@ struct ComposeRequestView: View {
                 }
             }
 
-            if !images.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(Array(images.enumerated()), id: \.offset) { index, image in
-                            Image(uiImage: image)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 72, height: 72)
-                                .clipShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
-                                .onTapGesture { images.remove(at: index) }
+            if editing == nil {
+                if !images.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(Array(images.enumerated()), id: \.offset) { index, image in
+                                Image(uiImage: image)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 72, height: 72)
+                                    .clipShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
+                                    .onTapGesture { images.remove(at: index) }
+                            }
                         }
                     }
                 }
-            }
-            ForEach(Array(videos.enumerated()), id: \.offset) { index, _ in
-                HStack(spacing: 8) {
-                    Image(systemName: "video.fill")
-                        .foregroundStyle(theme.mossText)
-                    Text(String(localized: "Video"))
-                        .ffType(.caption)
-                        .foregroundStyle(theme.textSecondary)
+                ForEach(Array(videos.enumerated()), id: \.offset) { index, _ in
+                    HStack(spacing: 8) {
+                        Image(systemName: "video.fill")
+                            .foregroundStyle(theme.mossText)
+                        Text(String(localized: "Video"))
+                            .ffType(.caption)
+                            .foregroundStyle(theme.textSecondary)
+                    }
+                    .onTapGesture { removeVideo(at: index) }
                 }
-                .onTapGesture { removeVideo(at: index) }
-            }
-            ForEach(Array(files.enumerated()), id: \.offset) { index, url in
-                HStack(spacing: 8) {
-                    Image(systemName: "doc.fill")
-                        .foregroundStyle(theme.mossText)
-                    Text(url.lastPathComponent)
-                        .ffType(.caption)
-                        .foregroundStyle(theme.textSecondary)
-                        .lineLimit(1)
+                ForEach(Array(files.enumerated()), id: \.offset) { index, url in
+                    HStack(spacing: 8) {
+                        Image(systemName: "doc.fill")
+                            .foregroundStyle(theme.mossText)
+                        Text(url.lastPathComponent)
+                            .ffType(.caption)
+                            .foregroundStyle(theme.textSecondary)
+                            .lineLimit(1)
+                    }
+                    .onTapGesture { removeFile(at: index) }
                 }
-                .onTapGesture { removeFile(at: index) }
-            }
 
-            Text("Add a photo, a video, or any file.")
-                .ffType(.caption)
-                .foregroundStyle(theme.textSecondary)
+                Text("Add a photo, a video, or any file.")
+                    .ffType(.caption)
+                    .foregroundStyle(theme.textSecondary)
 
-            HStack(spacing: 16) {
-                PhotosPicker(
-                    selection: $mediaItems,
-                    maxSelectionCount: max(1, remainingSlots),
-                    matching: .any(of: [.images, .videos])
-                ) {
-                    Label(String(localized: "Media"), systemImage: "photo.on.rectangle.angled")
-                        .ffType(.label)
-                        .foregroundStyle(theme.mossText)
+                HStack(spacing: 16) {
+                    PhotosPicker(
+                        selection: $mediaItems,
+                        maxSelectionCount: max(1, remainingSlots),
+                        matching: .any(of: [.images, .videos])
+                    ) {
+                        Label(String(localized: "Media"), systemImage: "photo.on.rectangle.angled")
+                            .ffType(.label)
+                            .foregroundStyle(theme.mossText)
+                    }
+                    .buttonStyle(FFHapticPlainStyle())
+                    .disabled(remainingSlots == 0 || isLoadingMedia || store.isSaving)
+                    Button {
+                        showingFileImporter = true
+                    } label: {
+                        Label(String(localized: "File"), systemImage: "paperclip")
+                            .ffType(.label)
+                            .foregroundStyle(theme.mossText)
+                    }
+                    .buttonStyle(FFHapticPlainStyle())
+                    .disabled(remainingSlots == 0 || isLoadingMedia || store.isSaving)
+                    if isLoadingMedia { ProgressView().tint(theme.mossText) }
+                    Spacer(minLength: 0)
                 }
-                .buttonStyle(FFHapticPlainStyle())
-                .disabled(remainingSlots == 0 || isLoadingMedia || store.isSaving)
-                Button {
-                    showingFileImporter = true
-                } label: {
-                    Label(String(localized: "File"), systemImage: "paperclip")
-                        .ffType(.label)
-                        .foregroundStyle(theme.mossText)
+            } else {
+                if let editing, !editing.media.isEmpty {
+                    RequestMediaStack(media: editing.media)
                 }
-                .buttonStyle(FFHapticPlainStyle())
-                .disabled(remainingSlots == 0 || isLoadingMedia || store.isSaving)
-                if isLoadingMedia { ProgressView().tint(theme.mossText) }
-                Spacer(minLength: 0)
+                Text(String(localized: "Photos, videos, and files stay on this request."))
+                    .ffType(.caption)
+                    .foregroundStyle(theme.textSecondary)
             }
         }
         .padding(.horizontal, theme.space.screenPadding)
@@ -1274,7 +1401,15 @@ struct ComposeRequestView: View {
         return trimmedTitle.count >= 1
             && trimmedDetails.count >= 1
             && !store.isSaving
+            && !store.isDeleting
             && !isLoadingMedia
+    }
+
+    private var ctaTitle: String {
+        if store.isSaving {
+            return editing == nil ? String(localized: "Posting…") : String(localized: "Saving…")
+        }
+        return editing == nil ? String(localized: "Post") : String(localized: "Save")
     }
 
     private func loadPickedMedia(_ items: [PhotosPickerItem]) async {
@@ -1366,6 +1501,18 @@ struct ComposeRequestView: View {
     private func submit() async {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedDetails = details.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let editing {
+            if await store.update(
+                session: session,
+                postID: editing.id,
+                kind: kind.value,
+                title: trimmedTitle,
+                body: trimmedDetails
+            ) {
+                dismiss()
+            }
+            return
+        }
         if await store.submit(
             session: session,
             kind: kind.value,

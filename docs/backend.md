@@ -169,20 +169,27 @@ creates a P0 Inbox row in the Blend HQ Product Backlog (Product FitFight, Source
 App feedback). Vercel holds `NOTION_TOKEN`. A missing token or a Notion failure
 does not fail the in-app post. The token never belongs in iOS, git, or chat.
 
-`GET /api/v1/feedback/{postID}` includes `can_launch_fix` and `can_delete` for the signed-in viewer.
-Those flags are true only for the FitFight admin: confirmed account email `marc@marclamy.com`, username
-`marc`, or extras in `FITFIGHT_ADMIN_EMAILS` / `FITFIGHT_ADMIN_HANDLES`. Apple Sign
+`GET /api/v1/feedback/{postID}` includes `can_launch_fix`, `can_delete`, and `can_edit`
+for the signed-in viewer. `can_launch_fix` is true only for the FitFight admin:
+confirmed account email `marc@marclamy.com`, username `marc`, or extras in
+`FITFIGHT_ADMIN_EMAILS` / `FITFIGHT_ADMIN_HANDLES`. Apple Sign
 In may store no email, so the username match is required on staging. User-editable
 metadata and identity email copies never grant admin access.
-Admin-only `DELETE /api/v1/feedback/{postID}` returns `{ deleted: true }` and
+`can_delete` is true for that admin or for the request's author. `can_edit` is true
+only for the author. Older backends omit `can_delete` and `can_edit`, which the app
+treats as false.
+`DELETE /api/v1/feedback/{postID}` returns `{ deleted: true }` and
 removes the request plus its comments, votes, reports, and attachment links through
-existing foreign keys. It returns 403 for a regular account and 404 if the request
-is missing. The app asks for confirmation in the request's menu, then returns to
-the board. Older backends omit `can_delete`, which the app treats as false.
+existing foreign keys. The author can delete their own request. An admin can delete
+any request. It returns 403 for anyone else and 404 if the request is missing. The
+app asks for confirmation in the request's menu, then returns to the board.
+Author-only `PATCH /api/v1/feedback/{postID}` replaces `kind`, `title`, and `body`
+and returns `{ post }`. Attachments stay as they are. It returns 403 for anyone else
+and 404 if the request is missing. Older clients never send PATCH.
 No schema migration is needed. Stored media bytes and external Notion copies are
-outside this deletion, matching existing post deletion behavior. List, detail,
+outside this deletion and edit, matching existing post deletion behavior. List, detail,
 create, and comment responses keep a `metadata` object for older clients and always
-send `{}` so the board never shows device details. List, detail, and create include
+send `{}` so the board never shows device details. List, detail, create, and edit include
 `media` with signed URLs. Posts and comments still store the
 client snapshot. Admin-only `POST /api/v1/feedback/{postID}/fix-agent` starts a Cursor
 cloud agent on `develop` with the post, comments, stored snapshots, attachment URLs, and optional

@@ -477,12 +477,14 @@ struct FitFightFeedbackDetail: Decodable, Equatable {
     var comments: [FitFightFeedbackComment]
     var canLaunchFix: Bool
     var canDelete: Bool
+    var canEdit: Bool
 
     enum CodingKeys: String, CodingKey {
         case post
         case comments
         case canLaunchFix = "can_launch_fix"
         case canDelete = "can_delete"
+        case canEdit = "can_edit"
     }
 
     init(from decoder: Decoder) throws {
@@ -491,6 +493,7 @@ struct FitFightFeedbackDetail: Decodable, Equatable {
         comments = try container.decode([FitFightFeedbackComment].self, forKey: .comments)
         canLaunchFix = try container.decodeIfPresent(Bool.self, forKey: .canLaunchFix) ?? false
         canDelete = try container.decodeIfPresent(Bool.self, forKey: .canDelete) ?? false
+        canEdit = try container.decodeIfPresent(Bool.self, forKey: .canEdit) ?? false
     }
 }
 
@@ -1192,6 +1195,24 @@ struct FitFightAPI {
         )
     }
 
+    func updateFeedback(
+        postID: UUID,
+        kind: String,
+        title: String,
+        body: String,
+        accessToken: String
+    ) async throws -> FitFightFeedbackPost {
+        let result: FitFightFeedbackPostResponse = try await request(
+            path: "feedback/\(postID.uuidString.lowercased())",
+            method: "PATCH",
+            accessToken: accessToken,
+            body: Self.encoder.encode(FeedbackUpdateBody(kind: kind, title: title, body: body)),
+            idempotencyKey: nil,
+            expected: [200]
+        )
+        return result.post
+    }
+
     func createFeedback(
         _ payload: FitFightCreateFeedback,
         accessToken: String
@@ -1536,6 +1557,12 @@ private struct FightPostBody: Encodable {
 }
 
 private struct FightPostUpdateBody: Encodable {
+    let body: String
+}
+
+private struct FeedbackUpdateBody: Encodable {
+    let kind: String
+    let title: String
     let body: String
 }
 

@@ -14,10 +14,12 @@ struct SystemMessage { let status: SystemStatus }
 @MainActor final class TestChannel {
     let topic: String
     let (messages, events) = AsyncStream<Void>.makeStream()
+    let (feedMessages, feedEvents) = AsyncStream<Void>.makeStream()
     let (statusChange, statuses) = AsyncStream<ChannelStatus>.makeStream()
     let (systemMessages, systemEvents) = AsyncStream<SystemMessage>.makeStream()
     init(topic: String) { self.topic = topic }
     func broadcastStream(event: String) -> AsyncStream<Void> {
+        if event == "feed_changed" { return feedMessages }
         precondition(event == "fights_changed")
         return messages
     }
@@ -44,6 +46,7 @@ struct SystemMessage { let status: SystemStatus }
     func removeChannel(_ channel: TestChannel) async {
         if holdRemoval { await withCheckedContinuation { pendingRemoval = $0 } }
         channel.events.finish()
+        channel.feedEvents.finish()
         channel.statuses.finish()
         channel.systemEvents.finish()
         channels[channel.topic] = nil
@@ -57,17 +60,24 @@ struct SystemMessage { let status: SystemStatus }
         let live = FightLiveUpdates()
         let userID = UUID()
         var refreshes = 0
+        var feedRefreshes = 0
         var holdRefresh = false
         var pendingRefresh: CheckedContinuation<Void, Never>?
         let refresh: @MainActor () async -> Void = {
             refreshes += 1
             if holdRefresh { await withCheckedContinuation { pendingRefresh = $0 } }
         }
-        await live.activate(client: client, userID: userID, refresh: refresh)
+        await live.activate(client: client, userID: userID, refresh: refresh, refreshFeed: { feedRefreshes += 1 })
         while refreshes < 1 { await Task.yield() }
         precondition(client.channels.count == 1)
         let channel = client.channels.values.first!
         precondition(channel.topic == "fitfight:fights:\(userID.uuidString.lowercased())")
+        while feedRefreshes == 0 { await Task.yield() }
+        let beforeFeed = refreshes
+        for _ in 0..<100 { channel.feedEvents.yield(()) }
+        try await Task.sleep(for: .milliseconds(650))
+        precondition(feedRefreshes >= 2 && feedRefreshes <= 3, "Feed bursts must coalesce")
+        precondition(refreshes == beforeFeed, "A comment must not refresh standings or HealthKit")
 
         for _ in 0..<100 { channel.events.yield(()) }
         try await Task.sleep(for: .milliseconds(650))
@@ -85,9 +95,11 @@ struct SystemMessage { let status: SystemStatus }
         precondition(refreshes == duringRead + 1, "Events arriving during a read must schedule another read")
 
         let beforeReconnect = refreshes
+        let feedBeforeReconnect = feedRefreshes
         channel.statuses.yield(.unsubscribed)
         channel.statuses.yield(.subscribed)
         while refreshes == beforeReconnect { await Task.yield() }
+        while feedRefreshes == feedBeforeReconnect { await Task.yield() }
 
         let beforeReplication = refreshes
         channel.systemEvents.yield(SystemMessage(status: .ok))
@@ -115,6 +127,6 @@ struct SystemMessage { let status: SystemStatus }
         channel.events.yield(())
         try await Task.sleep(for: .milliseconds(300))
         precondition(client.channels.isEmpty && refreshes == stopped, "Sign-out must stop callbacks and remove the channel")
-        print("Fight live updates: burst, in-flight event, reconnect, reactivation, account change, sign-out passed")
+        print("Fight and feed live updates: independent streams, bursts, in-flight event, reconnect, reactivation, account change, sign-out passed")
     }
 }

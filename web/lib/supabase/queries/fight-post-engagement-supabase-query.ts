@@ -62,7 +62,7 @@ function isoUtc(value: Date | string): string {
 }
 
 function cursorStamp(value: Date | string): string {
-    return new Date(value).toISOString();
+    return value instanceof Date ? value.toISOString() : value;
 }
 
 function parseCursor(
@@ -239,7 +239,8 @@ export async function listFightPostComments(
     const rows = cursor
         ? await database<CommentRow[]>`
                 select
-                    comment.id, comment.post_id, comment.parent_id, comment.body, comment.created_at,
+                    comment.id, comment.post_id, comment.parent_id, comment.body,
+                    to_char(comment.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as created_at,
                     comment.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
                     profile.companion_id as author_companion_id,
                     avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
@@ -258,13 +259,17 @@ export async function listFightPostComments(
                         select 1 from private.feed_blocks as blocked
                         where blocked.blocker_id = ${userId} and blocked.blocked_id = comment.author_id
                     )
-                    and (comment.created_at, comment.id) > (${cursor.createdAt}::timestamptz, ${cursor.id}::uuid)
+                    and (comment.created_at, comment.id) > (coalesce(
+                        (select anchor.created_at from public.fight_post_comments anchor where anchor.id = ${cursor.id}::uuid and anchor.post_id = ${postId}),
+                        ${cursor.createdAt}::text::timestamptz
+                    ), ${cursor.id}::uuid)
                 order by comment.created_at, comment.id
                 limit ${query.limit + 1}
             `
         : await database<CommentRow[]>`
                 select
-                    comment.id, comment.post_id, comment.parent_id, comment.body, comment.created_at,
+                    comment.id, comment.post_id, comment.parent_id, comment.body,
+                    to_char(comment.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as created_at,
                     comment.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
                     profile.companion_id as author_companion_id,
                     avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
@@ -307,7 +312,8 @@ async function listRecentFightPostComments(
     const rows = cursor
         ? await database<CommentRow[]>`
                 select
-                    comment.id, comment.post_id, comment.parent_id, comment.body, comment.created_at,
+                    comment.id, comment.post_id, comment.parent_id, comment.body,
+                    to_char(comment.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as created_at,
                     comment.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
                     profile.companion_id as author_companion_id,
                     avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
@@ -326,13 +332,17 @@ async function listRecentFightPostComments(
                         select 1 from private.feed_blocks as blocked
                         where blocked.blocker_id = ${userId} and blocked.blocked_id = comment.author_id
                     )
-                    and (comment.created_at, comment.id) < (${cursor.createdAt}::timestamptz, ${cursor.id}::uuid)
+                    and (comment.created_at, comment.id) < (coalesce(
+                        (select anchor.created_at from public.fight_post_comments anchor where anchor.id = ${cursor.id}::uuid and anchor.post_id = ${postId}),
+                        ${cursor.createdAt}::text::timestamptz
+                    ), ${cursor.id}::uuid)
                 order by comment.created_at desc, comment.id desc
                 limit ${query.limit + 1}
             `
         : await database<CommentRow[]>`
                 select
-                    comment.id, comment.post_id, comment.parent_id, comment.body, comment.created_at,
+                    comment.id, comment.post_id, comment.parent_id, comment.body,
+                    to_char(comment.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as created_at,
                     comment.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
                     profile.companion_id as author_companion_id,
                     avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
@@ -425,9 +435,9 @@ async function listDiscussedFightPostComments(
         const leftCount = replyCount(left);
         const rightCount = replyCount(right);
         if (leftCount !== rightCount) return rightCount - leftCount;
-        const leftTime = Date.parse(isoUtc(left.created_at));
-        const rightTime = Date.parse(isoUtc(right.created_at));
-        if (leftTime !== rightTime) return rightTime - leftTime;
+        const leftTime = cursorStamp(left.created_at);
+        const rightTime = cursorStamp(right.created_at);
+        if (leftTime !== rightTime) return leftTime < rightTime ? 1 : -1;
         return right.id.localeCompare(left.id);
     });
     let offset = 0;
@@ -435,7 +445,7 @@ async function listDiscussedFightPostComments(
         offset = roots.findIndex((row) => {
             const count = replyCount(row);
             if (count !== cursor.replyCount) return count < cursor.replyCount;
-            const created = cursorStamp(row.created_at);
+            const created = new Date(row.created_at).toISOString();
             if (created !== cursor.createdAt) return created < cursor.createdAt;
             return row.id < cursor.id;
         });
@@ -457,7 +467,7 @@ async function listDiscussedFightPostComments(
         comments: await mapComments(userId, page),
         next_cursor:
             offset + query.limit < roots.length && last
-                ? `${replyCount(last)}|${cursorStamp(last.created_at)}|${last.id}`
+                ? `${replyCount(last)}|${new Date(last.created_at).toISOString()}|${last.id}`
                 : null,
     };
 }

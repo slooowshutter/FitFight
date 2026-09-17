@@ -63,12 +63,15 @@ struct ContentView: View {
                     companions.showingPicker = presented
                 }
             }
-        )) {
+        ), onDismiss: {
+            companions.pickerStartsWithCustom = false
+        }) {
             CompanionPicker(
                 selection: companions.selection,
                 required: session.needsCompanionSelection,
                 isCustom: companions.isCustom,
-                prompt: companions.customPrompt
+                prompt: companions.customPrompt,
+                startWithCustom: companions.pickerStartsWithCustom
             )
                 .fitFightTheme(themeStore.theme)
                 .presentationBackground(themeStore.theme.bg)
@@ -257,6 +260,7 @@ struct ContentView: View {
             RequestsOnboardingView()
         } else {
             signedInApp
+                .id(session.authSession?.user.id)
         }
     }
 
@@ -283,11 +287,24 @@ struct ContentView: View {
         case .newFight:
             NewFightView()
         case .feed:
-            FeedView()
+            NavigationStack {
+                FeedView()
+                    .toolbar(.hidden, for: .navigationBar)
+                    .navigationDestination(item: $model.openPost) { target in
+                        FightPostDetailView(target: target)
+                            .id(target)
+                    }
+            }
         case .feedback:
             FeedbackTabView()
         case .you:
-            YouView()
+            NavigationStack {
+                YouView()
+                    .toolbar(.hidden, for: .navigationBar)
+                    .navigationDestination(isPresented: $model.showingActivity) {
+                        FeedActivityView()
+                    }
+            }
         }
     }
 

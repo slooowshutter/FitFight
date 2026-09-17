@@ -18,7 +18,7 @@ struct SlideHapticsLabView: View {
                     .ffType(.title)
                     .foregroundStyle(theme.text)
                 Spacer()
-                Button(String(localized: "Close")) { dismiss() }
+                Button(String(appLocalized: "Close")) { dismiss() }
                     .ffType(.label)
                     .foregroundStyle(theme.mossText)
             }

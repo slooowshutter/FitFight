@@ -28,6 +28,6 @@ else:
         executable = Path(directory) / "SlideHapticTests"
         generated.write_text(source)
         subprocess.run([
-            "swiftc", "-swift-version", "5", "-parse-as-library", str(generated), "-o", str(executable),
+            "swiftc", "-swift-version", "5", "-parse-as-library", str(root / "FitFight/AppLocalization.swift"), str(generated), "-o", str(executable),
         ], check=True)
         subprocess.run([str(executable)], check=True, timeout=20)

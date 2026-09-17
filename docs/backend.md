@@ -90,6 +90,29 @@ receives the original upload fields from the new app. Distribute the new native
 build after the migration and compatible backend deployment. See
 [status](status.md#fight-charts-and-standings-prepared-15-sep-2026) for verification.
 
+## Account preferences (prepared 17 Sep 2026)
+
+`GET/PATCH /api/v1/me/preferences` reads and saves the signed-in account's
+`language` (`system`, `en`, `fr`) and `appearance` (`system`, `light`, `dark`).
+Missing rows follow the iPhone for both settings. PATCH accepts either setting
+independently; concurrent changes to different fields are preserved. The
+authenticated caller owns the row. Unknown fields and client-supplied account
+IDs are rejected.
+
+Apply `20260917024606_account_preferences.sql`, then deploy the backend, then
+distribute the native app. Storage is in `private.account_preferences`, with
+RLS enabled, no direct client grants, and account-deletion cascading. Existing
+profile and notification preference contracts, public tables, and legacy
+permissions remain unchanged. No backfill or client permission cutoff is needed.
+
+The app caches confirmed values per account and environment for offline launch,
+refreshes on foreground and when opening Preferences, and reports failed saves
+without applying them. Language selection uses an explicit localization bundle
+for Foundation strings and the SwiftUI locale. Installation source is read from
+StoreKit separately from the configured account environment; it is device
+information, not an account preference. Beta and App Store databases do not sync
+preferences automatically.
+
 ## Friend referrals (pending deployment)
 
 Profiles carry a stable, read-only `referral_code`; there is no link-generation endpoint.

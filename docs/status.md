@@ -8,6 +8,33 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
 
+## Account preferences: prepared 17 Sep 2026
+
+**Code:** You → Settings → Preferences appears immediately below Refer a friend.
+It saves language (Follow iPhone, English, French) and appearance (Follow iPhone,
+Light, Dark) to the account. Existing notification settings and beta access are
+available there, alongside installed source, version/build, and account
+environment. Versions remains under Settings and the main version label stays
+at the top of You. A 1.1.2 release note includes English and French copy.
+
+**Contract:** additive `GET/PATCH /api/v1/me/preferences` and private
+`account_preferences` storage. Existing profile, notification, and Fight API
+contracts and client grants are unchanged. Partial updates preserve concurrent
+changes to other fields. Settings are cached per account/environment; sign-out,
+account switching, failed writes, and stale reads cannot apply another account's
+preferences. Beta and App Store preferences remain separate.
+
+**Checks:** localization, native API-boundary, and whitespace checks passed.
+Cloud TypeScript, native state/localization, simulator, screenshots, and
+migrated disposable database checks are pending. Existing build 113 fixtures and
+profile/notification contracts are retained. No native build ran on the workstation.
+
+**Live:** read-only release checks returned staging latest **1.1.1 (201)**,
+enforcement off, and production latest **1.1.1 (202)**, enforcement on; both
+review/internal candidates are null. Legacy staging clients remain supported.
+Apply the additive migration, deploy the compatible backend, then distribute
+the app. No release-branch merge, hosted database write, or live deployment.
+
 ## Mention notifications: prepared 17 Sep 2026
 
 **Code:** typing `@` in a Feed post or comment shows username typeahead from

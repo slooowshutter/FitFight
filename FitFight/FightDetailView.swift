@@ -11,13 +11,13 @@ enum FightDetailPane: Hashable {
     var title: String {
         switch self {
         case .stats:
-            return String(localized: "Stats")
+            return String(appLocalized: "Stats")
         case .history:
-            return String(localized: "History")
+            return String(appLocalized: "History")
         case .feed:
-            return String(localized: "Feed")
+            return String(appLocalized: "Feed")
         case .share:
-            return String(localized: "Share")
+            return String(appLocalized: "Share")
         }
     }
 }
@@ -139,7 +139,7 @@ struct FightDetailView: View {
     private var fightsRefresh: FFRefreshConfig {
         FFRefreshConfig(
             isRefreshing: pane == .feed ? isRefreshingFeed : model.isRefreshingFights,
-            message: pane == .feed ? String(localized: "Loading") : model.refreshStatusText,
+            message: pane == .feed ? String(appLocalized: "Loading") : model.refreshStatusText,
             action: {
                 if pane == .feed, let fightID = UUID(uuidString: fight.id) {
                     isRefreshingFeed = true
@@ -176,7 +176,7 @@ struct FightDetailView: View {
 
         if canLeave {
             FFButton(
-                title: String(localized: "Leave fight"),
+                title: String(appLocalized: "Leave fight"),
                 kind: .ghost,
                 fullWidth: true
             ) {
@@ -195,7 +195,7 @@ struct FightDetailView: View {
     }
 
     private var standingsSection: some View {
-        FFSection(title: String(localized: "Standings")) {
+        FFSection(title: String(appLocalized: "Standings")) {
             VStack(alignment: .leading, spacing: theme.space.cardGap) {
                 if let meta = fight.standingsMeta {
                     Text(meta)
@@ -257,9 +257,9 @@ struct FightDetailView: View {
 
     private func standingsSeparatorLabel(for fight: Fight) -> String {
         if fight.status == .live {
-            return String(localized: "fight.standings-chasing", defaultValue: "Chasing the lead")
+            return String(appLocalized: "fight.standings-chasing", defaultValue: "Chasing the lead")
         }
-        return String(localized: "fight.standings-everyone-else", defaultValue: "Everyone else")
+        return String(appLocalized: "fight.standings-everyone-else", defaultValue: "Everyone else")
     }
 
     private func winnerStandings(in racing: [Standing], fight: Fight) -> [Standing] {
@@ -297,7 +297,7 @@ struct FightDetailView: View {
 
     private func historyWindowTitle(_ window: Fight) -> String {
         String(
-            localized: "fight.history-window",
+            appLocalized: "fight.history-window",
             defaultValue: "\(Fight.deadlineStamp(window.windowStart)) – \(Fight.deadlineStamp(window.windowEnd))"
         )
     }
@@ -312,22 +312,22 @@ struct FightDetailView: View {
             fight: window
         )
         if leaders.count > 1 {
-            return String(localized: "Tied")
+            return String(appLocalized: "Tied")
         }
         if let winner = leaders.first {
             return winner.person.isYou
-                ? String(localized: "You won")
+                ? String(appLocalized: "You won")
                 : String(
-                    localized: "fight.history-winner",
+                    appLocalized: "fight.history-winner",
                     defaultValue: "\(winner.person.name) won"
                 )
         }
-        return String(localized: "No result yet")
+        return String(appLocalized: "No result yet")
     }
 
     @ViewBuilder
     private var daysSection: some View {
-        FFSection(title: String(localized: "Every day so far")) {
+        FFSection(title: String(appLocalized: "Every day so far")) {
             daysCard(initialKind: isPendingSettlement ? .pace : nil)
         }
     }
@@ -343,7 +343,7 @@ struct FightDetailView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(FFHapticPlainStyle())
-                .accessibilityLabel(String(localized: "Back"))
+                .accessibilityLabel(String(appLocalized: "Back"))
                 VStack(alignment: .leading, spacing: 3) {
                     Text(fight.listTitle)
                         .font(.custom("Nunito-ExtraBold", size: 18, relativeTo: .headline))
@@ -361,7 +361,7 @@ struct FightDetailView: View {
                     Button {
                         Task { await model.setFightSuggested(id: fight.id, suggested: !fight.suggested) }
                     } label: {
-                        Text(fight.suggested ? String(localized: "Suggested") : String(localized: "Suggest"))
+                        Text(fight.suggested ? String(appLocalized: "Suggested") : String(appLocalized: "Suggest"))
                             .ffType(.label)
                             .foregroundStyle(theme.mossText)
                             .frame(height: 44)
@@ -373,7 +373,7 @@ struct FightDetailView: View {
                         model.createError = nil
                         showingEdit = true
                     } label: {
-                        Text(String(localized: "Edit"))
+                        Text(String(appLocalized: "Edit"))
                             .ffType(.label)
                             .foregroundStyle(theme.mossText)
                             .frame(height: 44)
@@ -414,7 +414,7 @@ struct FightDetailView: View {
                         if grace > context.date {
                             Text(
                                 String(
-                                    localized: "fight.sync-time-left",
+                                    appLocalized: "fight.sync-time-left",
                                     defaultValue: "\(RemainingTime.phrase(from: context.date, until: grace)) left to sync"
                                 )
                             )
@@ -437,13 +437,13 @@ struct FightDetailView: View {
     private var deferredHero: some View {
         FFCard(padding: 24) {
             VStack(alignment: .leading, spacing: 8) {
-                FFTag(String(localized: "Next round"))
-                Text(String(localized: "You start next round"))
+                FFTag(String(appLocalized: "Next round"))
+                Text(String(appLocalized: "You start next round"))
                     .ffType(.title)
                     .foregroundStyle(theme.text)
                 Text(
                     String(
-                        localized: "fight.deferred-copy",
+                        appLocalized: "fight.deferred-copy",
                         defaultValue: "Your steps count from \(joinRoundNext). This round’s standings are still visible."
                     )
                 )
@@ -474,13 +474,13 @@ struct FightDetailView: View {
                             UIPasteboard.general.string = code
                             copiedCode = true
                         } label: {
-                            Text(copiedCode ? String(localized: "Copied") : code)
+                            Text(copiedCode ? String(appLocalized: "Copied") : code)
                                 .ffType(.heading)
                                 .foregroundStyle(theme.mossText)
                                 .frame(minHeight: 44)
                         }
                         .buttonStyle(FFHapticPlainStyle())
-                        .accessibilityLabel(String(localized: "Copy code"))
+                        .accessibilityLabel(String(appLocalized: "Copy code"))
                         .accessibilityValue(code)
                     }
                 }
@@ -501,14 +501,14 @@ struct FightDetailView: View {
                             UIPasteboard.general.string = url.absoluteString
                             copiedLink = true
                         } label: {
-                            Text(copiedLink ? String(localized: "Copied") : String(localized: "Copy link"))
+                            Text(copiedLink ? String(appLocalized: "Copied") : String(appLocalized: "Copy link"))
                                 .ffType(.caption)
                                 .foregroundStyle(theme.mossText)
                         }
                         .buttonStyle(FFHapticPlainStyle())
                     }
                     ShareLink(item: url) {
-                        Label(String(localized: "Share fight"), systemImage: "square.and.arrow.up")
+                        Label(String(appLocalized: "Share fight"), systemImage: "square.and.arrow.up")
                             .ffType(.label)
                             .foregroundStyle(theme.mossText)
                     }
@@ -536,7 +536,7 @@ struct FightDetailView: View {
                         .foregroundStyle(theme.textSecondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     FFPill(
-                        row.deferred ? String(localized: "Next round") : String(localized: "Invited"),
+                        row.deferred ? String(appLocalized: "Next round") : String(appLocalized: "Invited"),
                         style: .gold
                     )
                 }
@@ -595,8 +595,8 @@ struct FightDetailView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             FFPill(
                 needsSync
-                    ? String(localized: "fight.pending-sync", defaultValue: "Pending")
-                    : String(localized: "Synced"),
+                    ? String(appLocalized: "fight.pending-sync", defaultValue: "Pending")
+                    : String(appLocalized: "Synced"),
                 style: needsSync ? .gold : .neutral
             )
             Text(model.formatScore(row.score, metric: contextFight.metric))
@@ -662,7 +662,7 @@ struct JoinFightPreview: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(
                         String(
-                            localized: "fight.duration-rule",
+                            appLocalized: "fight.duration-rule",
                             defaultValue: "\(fight.durationLabel) · Most steps wins"
                         )
                     )
@@ -685,14 +685,14 @@ struct JoinFightPreview: View {
                         VStack(alignment: .leading, spacing: 10) {
                             Text(
                                 String(
-                                    localized: "fight.join-now-copy",
+                                    appLocalized: "fight.join-now-copy",
                                     defaultValue: "This round started \(joinRoundStarted). Join now and your steps count from that date."
                                 )
                             )
                             .ffType(.caption)
                             .foregroundStyle(theme.textSecondary)
                             FFScreenCTA(
-                                title: joining ? String(localized: "Joining…") : String(localized: "Join this round"),
+                                title: joining ? String(appLocalized: "Joining…") : String(appLocalized: "Join this round"),
                                 busy: joining,
                                 action: onJoinNow
                             )
@@ -700,14 +700,14 @@ struct JoinFightPreview: View {
                         VStack(alignment: .leading, spacing: 10) {
                             Text(
                                 String(
-                                    localized: "fight.join-next-copy",
+                                    appLocalized: "fight.join-next-copy",
                                     defaultValue: "Or start next round, from \(joinRoundNext)."
                                 )
                             )
                             .ffType(.caption)
                             .foregroundStyle(theme.textSecondary)
                             FFButton(
-                                title: String(localized: "Start next round"),
+                                title: String(appLocalized: "Start next round"),
                                 kind: .secondary,
                                 enabled: !joining,
                                 fullWidth: true,
@@ -717,15 +717,15 @@ struct JoinFightPreview: View {
                     } else {
                         FFScreenCTA(
                             title: joining
-                                ? String(localized: "Joining…")
-                                : (fight.pendingJoin ? String(localized: "Join fight") : String(localized: "Accept challenge")),
+                                ? String(appLocalized: "Joining…")
+                                : (fight.pendingJoin ? String(appLocalized: "Join fight") : String(appLocalized: "Accept challenge")),
                             busy: joining,
                             action: onJoinNow
                         )
                     }
                 }
                 FFButton(
-                    title: fight.pendingJoin ? String(localized: "Not now") : String(localized: "Decline"),
+                    title: fight.pendingJoin ? String(appLocalized: "Not now") : String(appLocalized: "Decline"),
                     kind: .ghost,
                     enabled: !joining,
                     fullWidth: true,

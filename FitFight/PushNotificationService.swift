@@ -97,7 +97,7 @@ final class PushNotificationService: NSObject, ObservableObject {
         self.deviceToken = token
         guard apnsConfigured, permissionStatus == .authorized, !isSignedOut,
               let session, let userID = session.authSession?.user.id else { return }
-        let locale = Locale.current.language.languageCode?.identifier == "fr" ? "fr" : "en"
+        let locale = AppLocalization.languageCode
         #if DEBUG
         let environment = "sandbox"
         #else

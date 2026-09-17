@@ -1,6 +1,232 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Preferences": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Préférences"
+                    }
+                }
+            }
+        },
+        "Follow iPhone": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Suivre l’iPhone"
+                    }
+                }
+            }
+        },
+        "Language": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Langue"
+                    }
+                }
+            }
+        },
+        "Appearance": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Apparence"
+                    }
+                }
+            }
+        },
+        "Light": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Clair"
+                    }
+                }
+            }
+        },
+        "Dark": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Sombre"
+                    }
+                }
+            }
+        },
+        "Language and appearance are saved to your account and follow you on your devices.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "La langue et l’apparence sont enregistrées sur ton compte et te suivent sur tes appareils."
+                    }
+                }
+            }
+        },
+        "Couldn’t load your preferences. Try again.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Impossible de charger tes préférences. Réessaie."
+                    }
+                }
+            }
+        },
+        "Couldn’t save your preferences. Your previous settings are unchanged.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Impossible d’enregistrer tes préférences. Tes réglages précédents sont conservés."
+                    }
+                }
+            }
+        },
+        "Loading…": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Chargement…"
+                    }
+                }
+            }
+        },
+        "Beta testing": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Test de la bêta"
+                    }
+                }
+            }
+        },
+        "This installation": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cette installation"
+                    }
+                }
+            }
+        },
+        "Installed from": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Installée depuis"
+                    }
+                }
+            }
+        },
+        "Version": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Version"
+                    }
+                }
+            }
+        },
+        "Account environment": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Environnement du compte"
+                    }
+                }
+            }
+        },
+        "App Store account": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Compte App Store"
+                    }
+                }
+            }
+        },
+        "Beta account": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Compte bêta"
+                    }
+                }
+            }
+        },
+        "Development build": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Version de développement"
+                    }
+                }
+            }
+        },
+        "Couldn’t verify the installation source": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Source de l’installation non vérifiée"
+                    }
+                }
+            }
+        },
+        "The beta uses a separate database. Accounts, fights, progress, and preferences do not sync automatically with the App Store version, even when you use the same Apple ID.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "La bêta utilise une base de données séparée. Les comptes, fights, progrès et préférences ne sont pas synchronisés automatiquement avec la version App Store, même avec le même identifiant Apple."
+                    }
+                }
+            }
+        },
+        "Choose your language and appearance in You → Preferences. Your choices are saved to your account. Find notification settings, beta access, and your installed app details in the same place.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Choisis ta langue et ton apparence dans Toi → Préférences. Tes choix sont enregistrés sur ton compte. Retrouve au même endroit les notifications, l’accès à la bêta et les détails de ton application."
+                    }
+                }
+            }
+        },
+        "preferences.version": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%@ · build %@"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%@ · build %@"
+                    }
+                }
+            }
+        },
     "Try the beta": {
         "localizations": {
             "fr": {

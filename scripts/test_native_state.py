@@ -64,7 +64,7 @@ with tempfile.TemporaryDirectory(prefix="fitfight-state-tests-") as directory:
     generated.write_text(source)
     executable = Path(directory) / "native-state-tests"
     subprocess.run([
-        "swiftc", "-swift-version", "5", "-parse-as-library",
+        "swiftc", "-swift-version", "5", "-parse-as-library", str(root / "FitFight/AppLocalization.swift"),
         "-target", f"{platform.machine()}-apple-macosx13.0",
         str(root / "FitFight/Media.swift"), str(generated), "-o", str(executable),
     ], check=True)

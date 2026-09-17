@@ -5,7 +5,7 @@ enum MetricKind: String, Codable, Hashable {
     case steps
 
     var eyebrow: String {
-        String(localized: "Steps total")
+        String(appLocalized: "Steps total")
     }
 }
 
@@ -29,19 +29,19 @@ enum FightRefreshPhase: Equatable {
             return ""
         case .readingHealth:
             lines = [
-                String(localized: "Syncing your step activity…"),
-                String(localized: "Asking Apple Health how far you walked…"),
+                String(appLocalized: "Syncing your step activity…"),
+                String(appLocalized: "Asking Apple Health how far you walked…"),
             ]
         case .uploading:
             lines = [
-                String(localized: "Updating the database…"),
-                String(localized: "Filing your steps where they belong…"),
+                String(appLocalized: "Updating the database…"),
+                String(appLocalized: "Filing your steps where they belong…"),
             ]
         case .updatingFights:
             lines = [
-                String(localized: "Updating the challenges…"),
-                String(localized: "Counting how far you are from your friend…"),
-                String(localized: "Checking whether you’re still ahead…"),
+                String(appLocalized: "Updating the challenges…"),
+                String(appLocalized: "Counting how far you are from your friend…"),
+                String(appLocalized: "Checking whether you’re still ahead…"),
             ]
         }
         return lines[line % lines.count]
@@ -150,7 +150,7 @@ struct Fight: Codable, Identifiable, Hashable {
         let stored = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let action = actionText?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         if stored.isEmpty || stored == "Steps Fight" || stored == "Défi de pas" {
-            return action.isEmpty ? (stored.isEmpty ? String(localized: "Steps Fight") : stored) : action
+            return action.isEmpty ? (stored.isEmpty ? String(appLocalized: "Steps Fight") : stored) : action
         }
         return stored
     }
@@ -166,14 +166,14 @@ struct Fight: Codable, Identifiable, Hashable {
 
     var timeLeftLabel: String {
         if isUpcoming {
-            return String(localized: "fight.starts-at", defaultValue: "Starts \(Self.deadlineStamp(windowStart))")
+            return String(appLocalized: "fight.starts-at", defaultValue: "Starts \(Self.deadlineStamp(windowStart))")
         }
         if hasPassedDeadline {
             return deadlineLabel
         }
         let remaining = RemainingTime.phrase(until: windowEnd)
         return String(
-            localized: "fight.time-left",
+            appLocalized: "fight.time-left",
             defaultValue: "\(remaining) left"
         )
     }
@@ -189,12 +189,12 @@ struct Fight: Codable, Identifiable, Hashable {
         let stamp = Self.deadlineStamp(windowEnd)
         if hasPassedDeadline {
             return endedLabel ?? String(
-                localized: "fight.ended-on",
+                appLocalized: "fight.ended-on",
                 defaultValue: "Ended \(stamp)"
             )
         }
         return String(
-            localized: "fight.ends-at",
+            appLocalized: "fight.ends-at",
             defaultValue: "Ends \(stamp)"
         )
     }
@@ -204,7 +204,7 @@ struct Fight: Codable, Identifiable, Hashable {
             return deadlineLabel
         }
         return String(
-            localized: "fight.duration-end",
+            appLocalized: "fight.duration-end",
             defaultValue: "\(timeLeftLabel) · ends \(Self.deadlineStamp(windowEnd))"
         )
     }
@@ -214,7 +214,7 @@ struct Fight: Codable, Identifiable, Hashable {
     }
 
     static func deadlineStamp(_ date: Date) -> String {
-        date.formatted(date: .abbreviated, time: .shortened)
+        date.formatted(Date.FormatStyle(date: .abbreviated, time: .shortened).locale(AppLocalization.locale))
     }
 }
 
@@ -236,6 +236,7 @@ final class AppModel: ObservableObject {
     @Published var feedRevision = 0
     @Published var dailyStatusRecap: DailyStatusRecap?
     @Published var showingVersions = false
+    @Published var showingPreferences = false
     @Published var showingDebugMenu = false
     @Published var feedbackRequestFilter: RequestFilter = .top
     @Published var companionPreviewNotice: String?
@@ -300,7 +301,7 @@ final class AppModel: ObservableObject {
     }
 
     private static var fightsCachePrefix: String {
-        "fitfight.fights.\(Bundle.main.preferredLocalizations.first ?? "en")."
+        "fitfight.fights.\(AppLocalization.languageCode)."
     }
 
     static var preview: AppModel { AppModel(fixtures: true) }
@@ -330,7 +331,7 @@ final class AppModel: ObservableObject {
         isRefreshingFights = state == .loading
         refreshPhase = state == .loading ? .updatingFights : .idle
         companionPreviewNotice = state == .offline
-            ? String(localized: "Offline preview. These are the last cached sample fights.") : nil
+            ? String(appLocalized: "Offline preview. These are the last cached sample fights.") : nil
     }
     #endif
 
@@ -422,52 +423,52 @@ final class AppModel: ObservableObject {
     }
 
     func formatLastSync(_ date: Date?, now: Date = Date()) -> String {
-        guard let date else { return String(localized: "Not synced yet") }
+        guard let date else { return String(appLocalized: "Not synced yet") }
         let elapsed = max(0, now.timeIntervalSince(date))
-        if elapsed < 60 { return String(localized: "Just now") }
+        if elapsed < 60 { return String(appLocalized: "Just now") }
         if elapsed < 3_600 {
             let minutes = Int(elapsed / 60)
-            return String(localized: "health.minutes-ago", defaultValue: "\(minutes) minutes ago")
+            return String(appLocalized: "health.minutes-ago", defaultValue: "\(minutes) minutes ago")
         }
         if elapsed < 86_400 {
             let hours = Int(elapsed / 3_600)
-            return String(localized: "health.hours-ago", defaultValue: "\(hours) hours ago")
+            return String(appLocalized: "health.hours-ago", defaultValue: "\(hours) hours ago")
         }
         let days = Int(elapsed / 86_400)
-        return String(localized: "health.days-ago", defaultValue: "\(days) days ago")
+        return String(appLocalized: "health.days-ago", defaultValue: "\(days) days ago")
     }
 
     func formatStandingFreshness(_ standing: Standing, fight: Fight, now: Date) -> String {
         guard fight.windowEnd <= now else { return formatLastSync(standing.lastSyncedAt, now: now) }
         if standing.finalStepsComplete == true {
             guard let lastSyncedAt = standing.lastSyncedAt else {
-                return String(localized: "Final steps synced")
+                return String(appLocalized: "Final steps synced")
             }
             let freshness = formatLastSync(lastSyncedAt, now: now)
             return String(
-                localized: "health.final-steps-synced-at",
+                appLocalized: "health.final-steps-synced-at",
                 defaultValue: "Final steps synced · \(freshness)"
             )
         }
         if fight.serverState == "final", !standing.invited, !standing.deferred {
-            return String(localized: "Did not sync · forfeited")
+            return String(appLocalized: "Did not sync · forfeited")
         }
         let finalized = fight.serverState == "final" || fight.serverState == "cancelled"
         if let lastSyncedAt = standing.lastSyncedAt {
             let freshness = formatLastSync(lastSyncedAt, now: now)
             return finalized
                 ? String(
-                    localized: "health.finalized-last-steps-at",
+                    appLocalized: "health.finalized-last-steps-at",
                     defaultValue: "Finalized from last available steps · \(freshness)"
                 )
                 : String(
-                    localized: "health.waiting-final-steps-at",
+                    appLocalized: "health.waiting-final-steps-at",
                     defaultValue: "Waiting for final steps · \(freshness)"
                 )
         }
         return finalized
-            ? String(localized: "Finalized without synced steps")
-            : String(localized: "Waiting for first sync")
+            ? String(appLocalized: "Finalized without synced steps")
+            : String(appLocalized: "Waiting for first sync")
     }
 
     func refreshFromServer() async {
@@ -599,7 +600,9 @@ final class AppModel: ObservableObject {
 
     func removeCachedFights(for userID: UUID) {
         snapshotGeneration += 1
-        UserDefaults.standard.removeObject(forKey: Self.fightsCachePrefix + userID.uuidString)
+        for language in ["en", "fr"] {
+            UserDefaults.standard.removeObject(forKey: "fitfight.fights.\(language).\(userID.uuidString)")
+        }
         if cachedUserID == userID {
             cachedUserID = nil
             fights = []
@@ -698,29 +701,29 @@ final class AppModel: ObservableObject {
         defer { isCreatingFight = false }
         createError = nil
         guard let access = session?.authSession?.accessToken, api.isConfigured else {
-            createError = String(localized: "Sign in to start a fight.")
+            createError = String(appLocalized: "Sign in to start a fight.")
             return
         }
         let title = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let action = actionText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard title.count <= 120 else {
-            createError = String(localized: "Keep the title to 120 characters.")
+            createError = String(appLocalized: "Keep the title to 120 characters.")
             return
         }
         guard action.count <= 120 else {
-            createError = String(localized: "Keep the action to 120 characters.")
+            createError = String(appLocalized: "Keep the action to 120 characters.")
             return
         }
         guard endsAt > startsAt else {
-            createError = String(localized: "The end must be after the start.")
+            createError = String(appLocalized: "The end must be after the start.")
             return
         }
         guard !scheduled || startsAt > Date() else {
-            createError = String(localized: "Choose a start time in the future.")
+            createError = String(appLocalized: "Choose a start time in the future.")
             return
         }
         let storedName = title.isEmpty
-            ? (action.isEmpty ? String(localized: "Steps Fight") : action)
+            ? (action.isEmpty ? String(appLocalized: "Steps Fight") : action)
             : title
 
         let handles = inviteHandles.reduce(into: [String]()) { result, raw in
@@ -760,7 +763,7 @@ final class AppModel: ObservableObject {
         } catch {
             createError = (error as? LiveFightError)?.errorDescription
                 ?? (error as? FitFightAPIError)?.errorDescription
-                ?? String(localized: "Couldn’t start the fight.")
+                ?? String(appLocalized: "Couldn’t start the fight.")
         }
     }
 
@@ -784,33 +787,33 @@ final class AppModel: ObservableObject {
         defer { isUpdatingFight = false }
         createError = nil
         guard let access = session?.authSession?.accessToken, api.isConfigured else {
-            createError = String(localized: "Sign in to edit this fight.")
+            createError = String(appLocalized: "Sign in to edit this fight.")
             return false
         }
         guard let fightID = UUID(uuidString: id) else {
-            createError = String(localized: "Couldn’t save the fight.")
+            createError = String(appLocalized: "Couldn’t save the fight.")
             return false
         }
         let title = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let action = actionText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard title.count <= 120 else {
-            createError = String(localized: "Keep the title to 120 characters.")
+            createError = String(appLocalized: "Keep the title to 120 characters.")
             return false
         }
         guard action.count <= 120 else {
-            createError = String(localized: "Keep the action to 120 characters.")
+            createError = String(appLocalized: "Keep the action to 120 characters.")
             return false
         }
         if let startsAt, startsAt <= Date() {
-            createError = String(localized: "Choose a start time in the future.")
+            createError = String(appLocalized: "Choose a start time in the future.")
             return false
         }
         guard endsAt > (startsAt ?? Date.distantPast) else {
-            createError = String(localized: "The end must be after the start.")
+            createError = String(appLocalized: "The end must be after the start.")
             return false
         }
         guard endsAt > Date() else {
-            createError = String(localized: "The end must be in the future.")
+            createError = String(appLocalized: "The end must be in the future.")
             return false
         }
         let handles = inviteHandles.reduce(into: [String]()) { result, raw in
@@ -841,7 +844,7 @@ final class AppModel: ObservableObject {
         } catch {
             createError = (error as? LiveFightError)?.errorDescription
                 ?? (error as? FitFightAPIError)?.errorDescription
-                ?? String(localized: "Couldn’t save the fight.")
+                ?? String(appLocalized: "Couldn’t save the fight.")
             return false
         }
     }
@@ -856,11 +859,11 @@ final class AppModel: ObservableObject {
         defer { isDeletingFight = false }
         createError = nil
         guard let access = session?.authSession?.accessToken, api.isConfigured else {
-            createError = String(localized: "Sign in to delete this fight.")
+            createError = String(appLocalized: "Sign in to delete this fight.")
             return false
         }
         guard let fightID = UUID(uuidString: id) else {
-            createError = String(localized: "Couldn’t delete the fight.")
+            createError = String(appLocalized: "Couldn’t delete the fight.")
             return false
         }
         do {
@@ -872,7 +875,7 @@ final class AppModel: ObservableObject {
         } catch {
             createError = (error as? LiveFightError)?.errorDescription
                 ?? (error as? FitFightAPIError)?.errorDescription
-                ?? String(localized: "Couldn’t delete the fight.")
+                ?? String(appLocalized: "Couldn’t delete the fight.")
             return false
         }
     }
@@ -903,12 +906,12 @@ final class AppModel: ObservableObject {
                 try await acceptInvite(token: token, start: start)
             } catch {
                 createError = (error as? FitFightAPIError)?.errorDescription
-                    ?? String(localized: "Couldn’t accept.")
+                    ?? String(appLocalized: "Couldn’t accept.")
             }
             return
         }
         guard let session, session.authSession != nil, let fightID = UUID(uuidString: id) else {
-            createError = String(localized: "Sign in to accept this fight.")
+            createError = String(appLocalized: "Sign in to accept this fight.")
             return
         }
         do {
@@ -917,7 +920,7 @@ final class AppModel: ObservableObject {
             joined.insert(id)
             await syncStepsAfterMembershipChange()
         } catch {
-            createError = String(localized: "Couldn’t accept.")
+            createError = String(appLocalized: "Couldn’t accept.")
         }
     }
 
@@ -930,7 +933,7 @@ final class AppModel: ObservableObject {
             return
         }
         guard let session, session.authSession != nil, let fightID = UUID(uuidString: id) else {
-            createError = String(localized: "Sign in to decline this fight.")
+            createError = String(appLocalized: "Sign in to decline this fight.")
             return
         }
         do {
@@ -938,7 +941,7 @@ final class AppModel: ObservableObject {
             _ = try await api.declineFight(fightID: fightID, accessToken: token)
             await refreshFromServer()
         } catch {
-            createError = String(localized: "Couldn’t decline.")
+            createError = String(appLocalized: "Couldn’t decline.")
         }
     }
 
@@ -1024,7 +1027,7 @@ final class AppModel: ObservableObject {
                         case .failure(let error):
                             if !(error is CancellationError) {
                                 discoveryError = (error as? FitFightAPIError)?.errorDescription
-                                    ?? String(localized: "Couldn’t load joinable fights.")
+                                    ?? String(appLocalized: "Couldn’t load joinable fights.")
                             }
                         }
                     }
@@ -1040,7 +1043,7 @@ final class AppModel: ObservableObject {
                       session.authSession?.user.id == userID else { return }
                 discoveryLoadedAt = nil
                 discoveryError = (error as? FitFightAPIError)?.errorDescription
-                    ?? String(localized: "Couldn’t load joinable fights.")
+                    ?? String(appLocalized: "Couldn’t load joinable fights.")
             }
         }
         discoveryTask = task
@@ -1050,7 +1053,7 @@ final class AppModel: ObservableObject {
     func setFightSuggested(id: String, suggested: Bool) async {
         createError = nil
         guard let session, session.authSession != nil, let fightID = UUID(uuidString: id) else {
-            createError = String(localized: "Sign in to suggest this fight.")
+            createError = String(appLocalized: "Sign in to suggest this fight.")
             return
         }
         if let index = fights.firstIndex(where: { $0.id == id }) {
@@ -1066,7 +1069,7 @@ final class AppModel: ObservableObject {
                 fights[index].suggested = !suggested
             }
             createError = (error as? FitFightAPIError)?.errorDescription
-                ?? String(localized: "Couldn’t update that suggestion.")
+                ?? String(appLocalized: "Couldn’t update that suggestion.")
         }
     }
 
@@ -1093,7 +1096,7 @@ final class AppModel: ObservableObject {
                 tab = .fights
                 openFightID = match.id
             } else {
-                createError = String(localized: "Preview codes: K7M2, H8P4, B4K9.")
+                createError = String(appLocalized: "Preview codes: K7M2, H8P4, B4K9.")
             }
             return
         }
@@ -1102,14 +1105,14 @@ final class AppModel: ObservableObject {
         createError = nil
         let code = raw.replacingOccurrences(of: "[\\s-]", with: "", options: .regularExpression).uppercased()
         guard code.count == 4 else {
-            createError = String(localized: "Enter the 4-character code.")
+            createError = String(appLocalized: "Enter the 4-character code.")
             return
         }
         guard let userID = session.authSession?.user.id,
               let access = session.authSession?.accessToken, api.isConfigured,
               session.profile != nil, !session.needsOnboarding else {
             UserDefaults.standard.set(code, forKey: Self.pendingJoinCodeKey)
-            createError = String(localized: "Sign in to join this fight.")
+            createError = String(appLocalized: "Sign in to join this fight.")
             return
         }
         do {
@@ -1122,7 +1125,7 @@ final class AppModel: ObservableObject {
         } catch {
             guard session.authSession?.user.id == userID else { return }
             createError = (error as? FitFightAPIError)?.errorDescription
-                ?? String(localized: "Couldn’t find that fight.")
+                ?? String(appLocalized: "Couldn’t find that fight.")
         }
     }
 
@@ -1192,7 +1195,7 @@ final class AppModel: ObservableObject {
             }
         } catch {
             guard session.authSession?.user.id == profile.userId else { return }
-            pendingReferralError = String(localized: "Your referral hasn’t been saved yet. Check your connection and try again.")
+            pendingReferralError = String(appLocalized: "Your referral hasn’t been saved yet. Check your connection and try again.")
         }
     }
 
@@ -1228,11 +1231,11 @@ final class AppModel: ObservableObject {
 
     private func joinPendingFight(_ fight: Fight, start: String = "now") async {
         guard let access = session?.authSession?.accessToken, api.isConfigured else {
-            createError = String(localized: "Sign in to join this fight.")
+            createError = String(appLocalized: "Sign in to join this fight.")
             return
         }
         guard let fightID = UUID(uuidString: fight.id) else {
-            createError = String(localized: "Couldn’t join.")
+            createError = String(appLocalized: "Couldn’t join.")
             return
         }
         do {
@@ -1244,7 +1247,7 @@ final class AppModel: ObservableObject {
             openFightID = fight.id
         } catch {
             createError = (error as? FitFightAPIError)?.errorDescription
-                ?? String(localized: "Couldn’t join.")
+                ?? String(appLocalized: "Couldn’t join.")
         }
     }
 
@@ -1252,11 +1255,11 @@ final class AppModel: ObservableObject {
         guard !CompanionPreview.isEnabled else { createError = CompanionPreview.writeUnavailable; return }
         createError = nil
         guard let access = session?.authSession?.accessToken, api.isConfigured else {
-            createError = String(localized: "Sign in to leave this fight.")
+            createError = String(appLocalized: "Sign in to leave this fight.")
             return
         }
         guard let fightID = UUID(uuidString: id) else {
-            createError = String(localized: "Couldn’t leave.")
+            createError = String(appLocalized: "Couldn’t leave.")
             return
         }
         do {
@@ -1267,7 +1270,7 @@ final class AppModel: ObservableObject {
             await refreshFromServer()
         } catch {
             createError = (error as? FitFightAPIError)?.errorDescription
-                ?? String(localized: "Couldn’t leave.")
+                ?? String(appLocalized: "Couldn’t leave.")
         }
     }
 
@@ -1309,7 +1312,7 @@ final class AppModel: ObservableObject {
             of: 1,
             pending: payload.inviteHandles?.count ?? 0,
             kickerEmphasis: String(
-                localized: "fight.time-left",
+                appLocalized: "fight.time-left",
                 defaultValue: "\(remaining) left"
             ),
             listSubtitle: localizedDuration(hours: lengthHours, days: lengthDays),
@@ -1347,16 +1350,16 @@ final class AppModel: ObservableObject {
             of: max(summary.memberCount, 1),
             pending: 0,
             kickerEmphasis: String(
-                localized: "fight.challenged-you",
+                appLocalized: "fight.challenged-you",
                 defaultValue: "@\(summary.ownerHandle) challenged you"
             ),
             listSubtitle: "@\(summary.ownerHandle) · \(summary.memberCount)",
             inviter: owner,
             invitePitch: String(
-                localized: "fight.challenged-you",
+                appLocalized: "fight.challenged-you",
                 defaultValue: "@\(summary.ownerHandle) challenged you"
             ),
-            inviteAction: String(localized: "Join fight"),
+            inviteAction: String(appLocalized: "Join fight"),
             standings: [
                 Standing(person: you, score: 0),
                 Standing(person: owner, score: 0),
@@ -1393,7 +1396,7 @@ final class AppModel: ObservableObject {
         let label = DateFormatter()
         label.calendar = formatter.calendar
         label.timeZone = formatter.timeZone
-        label.locale = .autoupdatingCurrent
+        label.locale = AppLocalization.locale
         label.setLocalizedDateFormatFromTemplate("EEEdMMM")
         var previous: [String: Int] = [:]
         return days.map { day in
@@ -1519,7 +1522,7 @@ final class AppModel: ObservableObject {
             } else {
                 person = Person(
                     id: member.userId.uuidString,
-                    name: member.userId == userId ? String(localized: "You") : "@user",
+                    name: member.userId == userId ? String(appLocalized: "You") : "@user",
                     handle: "@user",
                     initials: "FF",
                     isYou: member.userId == userId
@@ -1548,7 +1551,7 @@ final class AppModel: ObservableObject {
         let tiedForFirst = people.filter { !$0.invited && !$0.deferred && $0.rank == 1 }.count > 1
         let of = max(joined.count, 1)
         let owner = profiles[row.ownerId].map { Self.person(from: $0, isYou: $0.userId == userId) }
-        let ownerName = owner?.name ?? String(localized: "Someone")
+        let ownerName = owner?.name ?? String(appLocalized: "Someone")
 
         let actionText = row.actionText?.trimmingCharacters(in: .whitespacesAndNewlines)
         let action = actionText?.isEmpty == false ? (actionText ?? "") : ""
@@ -1564,120 +1567,120 @@ final class AppModel: ObservableObject {
         switch status {
         case .invited:
             invitePitch = String(
-                localized: "fight.challenged-you",
+                appLocalized: "fight.challenged-you",
                 defaultValue: "\(ownerName) challenged you"
             )
-            inviteAction = String(localized: "Accept")
+            inviteAction = String(appLocalized: "Accept")
             kickerEmphasis = invitePitch ?? ""
             listSubtitle = "\(ownerName) · \(durationLabel)"
         case .finished:
             endedLabel = String(
-                localized: "fight.ended-on",
+                appLocalized: "fight.ended-on",
                 defaultValue: "Ended \(Fight.deadlineStamp(ends))"
             )
             if youRow?.deferred == true {
-                listSubtitle = endedLabel ?? String(localized: "Ended")
-                kickerEmphasis = String(localized: "Started next round")
+                listSubtitle = endedLabel ?? String(appLocalized: "Ended")
+                kickerEmphasis = String(appLocalized: "Started next round")
             } else if row.state == "final" && tiedForFirst {
                 listSubtitle = String(
-                    localized: "fight.finished-tied",
-                    defaultValue: "\(endedLabel ?? String(localized: "Ended")) · Tied"
+                    appLocalized: "fight.finished-tied",
+                    defaultValue: "\(endedLabel ?? String(appLocalized: "Ended")) · Tied"
                 )
-                kickerEmphasis = String(localized: "Tied")
+                kickerEmphasis = String(appLocalized: "Tied")
             } else {
                 listSubtitle = String(
-                    localized: "fight.finished-position",
-                    defaultValue: "\(endedLabel ?? String(localized: "Ended")) · \(Self.ordinal(rank)) of \(of)"
+                    appLocalized: "fight.finished-position",
+                    defaultValue: "\(endedLabel ?? String(appLocalized: "Ended")) · \(Self.ordinal(rank)) of \(of)"
                 )
                 if row.state == "final" {
-                    kickerPrefix = rank == 1 ? String(localized: "Won by") : String(localized: "Finished")
+                    kickerPrefix = rank == 1 ? String(appLocalized: "Won by") : String(appLocalized: "Finished")
                 } else {
-                    kickerPrefix = String(localized: "Finished")
+                    kickerPrefix = String(appLocalized: "Finished")
                 }
                 kickerEmphasis = Self.ordinal(rank)
             }
         case .pending:
             endedLabel = String(
-                localized: "fight.ended-on",
+                appLocalized: "fight.ended-on",
                 defaultValue: "Ended \(Fight.deadlineStamp(ends))"
             )
             listSubtitle = String(
-                localized: "fight.pending-ended-on",
+                appLocalized: "fight.pending-ended-on",
                 defaultValue: "Pending · Ended \(Fight.deadlineStamp(ends))"
             )
             if youRow?.deferred == true {
-                kickerEmphasis = String(localized: "Started next round")
+                kickerEmphasis = String(appLocalized: "Started next round")
             } else if youRow?.finalStepsComplete == true {
                 let submitted = people.filter { !$0.invited && !$0.deferred && $0.finalStepsComplete == true }
                 let submittedRank = youRow.flatMap { you in
                     submitted.firstIndex { $0.person.id == you.person.id }.map { $0 + 1 }
                 } ?? 0
                 kickerEmphasis = submittedRank == 1
-                    ? String(localized: "Tentative lead")
-                    : String(localized: "Tentative loss")
+                    ? String(appLocalized: "Tentative lead")
+                    : String(appLocalized: "Tentative loss")
             } else {
-                kickerEmphasis = String(localized: "Pending. Open the app")
+                kickerEmphasis = String(appLocalized: "Pending. Open the app")
             }
         case .live:
             if row.state == "awaiting_final_sync" {
-                kickerEmphasis = String(localized: "Syncing final steps")
+                kickerEmphasis = String(appLocalized: "Syncing final steps")
                 listSubtitle = kickerEmphasis
             } else if youRow?.deferred == true {
-                kickerEmphasis = String(localized: "Starts next round")
+                kickerEmphasis = String(appLocalized: "Starts next round")
                 listSubtitle = kickerEmphasis
             } else if let youRow, let leader = joined.first, !youRow.invited {
                 if youRow.person.id == leader.person.id, let runnerUp = joined.dropFirst().first {
                     let gap = leader.score - runnerUp.score
-                    kickerPrefix = gap == 0 ? "" : String(localized: "Leading by")
+                    kickerPrefix = gap == 0 ? "" : String(appLocalized: "Leading by")
                     kickerEmphasis = gap == 0
-                        ? String(localized: "Tied")
+                        ? String(appLocalized: "Tied")
                         : String(
-                            localized: "fight.steps-value",
+                            appLocalized: "fight.steps-value",
                             defaultValue: "\(formatScore(gap, .steps)) steps"
                         )
                     kickerRest = String(
-                        localized: "fight.time-to-go",
+                        appLocalized: "fight.time-to-go",
                         defaultValue: "with \(remainingLabel) to go"
                     )
                     listSubtitle = gap == 0
                         ? String(
-                            localized: "fight.tied-time-to-go",
+                            appLocalized: "fight.tied-time-to-go",
                             defaultValue: "Tied with \(remainingLabel) to go"
                         )
                         : String(
-                            localized: "fight.leading-time-to-go",
+                            appLocalized: "fight.leading-time-to-go",
                             defaultValue: "Leading by \(kickerEmphasis) with \(remainingLabel) to go"
                         )
                 } else if youRow.person.id == leader.person.id {
                     kickerEmphasis = String(
-                        localized: "fight.time-left",
+                        appLocalized: "fight.time-left",
                         defaultValue: "\(remainingLabel) left"
                     )
                     listSubtitle = kickerEmphasis
                 } else {
                     let gap = leader.score - youRow.score
                     kickerEmphasis = gap == 0
-                        ? String(localized: "Tied")
+                        ? String(appLocalized: "Tied")
                         : String(
-                            localized: "fight.steps-value",
+                            appLocalized: "fight.steps-value",
                             defaultValue: "\(formatScore(gap, .steps)) steps"
                         )
                     kickerRest = gap == 0
                         ? ""
                         : String(
-                            localized: "fight.behind-person",
+                            appLocalized: "fight.behind-person",
                             defaultValue: "behind \(leader.person.name)"
                         )
                     listSubtitle = gap == 0
-                        ? String(localized: "Tied")
+                        ? String(appLocalized: "Tied")
                         : String(
-                            localized: "fight.steps-behind-person",
+                            appLocalized: "fight.steps-behind-person",
                             defaultValue: "\(kickerEmphasis) behind \(leader.person.name)"
                         )
                 }
             } else {
                 kickerEmphasis = String(
-                    localized: "fight.time-left",
+                    appLocalized: "fight.time-left",
                     defaultValue: "\(remainingLabel) left"
                 )
                 listSubtitle = kickerEmphasis
@@ -1710,7 +1713,7 @@ final class AppModel: ObservableObject {
             standingsMeta: waiting.isEmpty
                 ? nil
                 : String(
-                    localized: "fight.standings-next",
+                    appLocalized: "fight.standings-next",
                     defaultValue: "\(joined.count) racing · \(waiting.count) start next"
                 ),
             standings: people,
@@ -1753,7 +1756,7 @@ final class AppModel: ObservableObject {
 
     private static func ordinal(_ value: Int) -> String {
         let formatter = NumberFormatter()
-        formatter.locale = .autoupdatingCurrent
+        formatter.locale = AppLocalization.locale
         formatter.numberStyle = .ordinal
         return formatter.string(from: NSNumber(value: value)) ?? value.formatted()
     }
@@ -1783,10 +1786,10 @@ enum LiveFightError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .notSignedIn:
-            return String(localized: "Sign in to start a fight.")
+            return String(appLocalized: "Sign in to start a fight.")
         case .unknownHandle(let handle):
             return String(
-                localized: "fight.unknown-handle",
+                appLocalized: "fight.unknown-handle",
                 defaultValue: "No one with @\(handle). They need to open the app and pick a username first."
             )
         }
@@ -1796,12 +1799,12 @@ enum LiveFightError: LocalizedError {
 private func localizedDuration(hours: Int, days: Int) -> String {
     if hours <= 6 {
         return String(
-            localized: "duration.hours",
+            appLocalized: "duration.hours",
             defaultValue: "\(hours) hours"
         )
     }
     return String(
-        localized: "duration.days",
+        appLocalized: "duration.days",
         defaultValue: "\(days) days"
     )
 }
@@ -1838,8 +1841,8 @@ private enum AppModelFixtures {
                 of: 3,
                 pending: 0,
                 kickerEmphasis: "12.0k",
-                kickerRest: String(localized: "behind @leo_runs"),
-                listSubtitle: String(localized: "12.0k behind @leo_runs"),
+                kickerRest: String(appLocalized: "behind @leo_runs"),
+                listSubtitle: String(appLocalized: "12.0k behind @leo_runs"),
                 inviter: you,
                 standings: [
                     Standing(person: leo, score: 54_000, lastSyncedAt: syncedJustNow),
@@ -1847,17 +1850,17 @@ private enum AppModelFixtures {
                     Standing(person: sam, score: 37_000, lastSyncedAt: syncedYesterday)
                 ],
                 days: [
-                    FightDay(label: String(localized: "Day 1"), scores: [
+                    FightDay(label: String(appLocalized: "Day 1"), scores: [
                         DayScore(person: leo, value: 20_000),
                         DayScore(person: you, value: 12_000),
                         DayScore(person: sam, value: 15_000)
                     ]),
-                    FightDay(label: String(localized: "Day 2"), scores: [
+                    FightDay(label: String(appLocalized: "Day 2"), scores: [
                         DayScore(person: leo, value: 18_000),
                         DayScore(person: you, value: 16_000),
                         DayScore(person: sam, value: 10_000)
                     ]),
-                    FightDay(label: String(localized: "Day 3"), scores: [
+                    FightDay(label: String(appLocalized: "Day 3"), scores: [
                         DayScore(person: leo, value: 16_000),
                         DayScore(person: you, value: 14_000),
                         DayScore(person: sam, value: 12_000)
@@ -1877,10 +1880,10 @@ private enum AppModelFixtures {
                 rank: 1,
                 of: 5,
                 pending: 1,
-                kickerPrefix: String(localized: "Holding"),
-                kickerEmphasis: String(localized: "1st"),
-                kickerRest: String(localized: "with 2d to go"),
-                listSubtitle: String(localized: "Holding 1st with 2d to go"),
+                kickerPrefix: String(appLocalized: "Holding"),
+                kickerEmphasis: String(appLocalized: "1st"),
+                kickerRest: String(appLocalized: "with 2d to go"),
+                listSubtitle: String(appLocalized: "Holding 1st with 2d to go"),
                 standings: [
                     Standing(person: you, score: 61400, lastSyncedAt: syncedJustNow),
                     Standing(person: ivy, score: 59800, lastSyncedAt: syncedToday),
@@ -1902,9 +1905,9 @@ private enum AppModelFixtures {
                 rank: 2,
                 of: 4,
                 pending: 2,
-                kickerEmphasis: String(localized: "3.2k steps"),
-                kickerRest: String(localized: "behind @sam_sweats"),
-                listSubtitle: String(localized: "3.2k steps behind @sam_sweats"),
+                kickerEmphasis: String(appLocalized: "3.2k steps"),
+                kickerRest: String(appLocalized: "behind @sam_sweats"),
+                listSubtitle: String(appLocalized: "3.2k steps behind @sam_sweats"),
                 standings: [
                     Standing(person: sam, score: 44800, lastSyncedAt: syncedToday),
                     Standing(person: you, score: 41600, lastSyncedAt: syncedJustNow),
@@ -1925,12 +1928,12 @@ private enum AppModelFixtures {
                 rank: 0,
                 of: 4,
                 pending: 2,
-                kickerEmphasis: String(localized: "@theo_rows challenged you"),
-                listSubtitle: String(localized: "@theo_rows · 3 days"),
+                kickerEmphasis: String(appLocalized: "@theo_rows challenged you"),
+                listSubtitle: String(appLocalized: "@theo_rows · 3 days"),
                 inviter: theo,
-                invitePitch: String(localized: "@theo_rows challenged you"),
-                inviteAction: String(localized: "Accept"),
-                standingsMeta: String(localized: "2 in · 2 not replied"),
+                invitePitch: String(appLocalized: "@theo_rows challenged you"),
+                inviteAction: String(appLocalized: "Accept"),
+                standingsMeta: String(appLocalized: "2 in · 2 not replied"),
                 standings: [
                     Standing(person: theo, score: 0),
                     Standing(person: nina, score: 0),
@@ -1949,11 +1952,11 @@ private enum AppModelFixtures {
                 rank: 0,
                 of: 3,
                 pending: 0,
-                kickerEmphasis: String(localized: "@ivy_climbs challenged you"),
-                listSubtitle: String(localized: "@ivy_climbs · 7 days"),
+                kickerEmphasis: String(appLocalized: "@ivy_climbs challenged you"),
+                listSubtitle: String(appLocalized: "@ivy_climbs · 7 days"),
                 inviter: ivy,
-                invitePitch: String(localized: "@ivy_climbs challenged you"),
-                inviteAction: String(localized: "Join"),
+                invitePitch: String(appLocalized: "@ivy_climbs challenged you"),
+                inviteAction: String(appLocalized: "Join"),
                 standings: [
                     Standing(person: ivy, score: 0)
                 ]
@@ -1964,16 +1967,16 @@ private enum AppModelFixtures {
                 name: isFrench ? "Duel de pas du week-end" : "Weekend Step Duel",
                 metric: .steps,
                 lengthDays: 2,
-                endedLabel: String(localized: "Ended Jul 13"),
+                endedLabel: String(appLocalized: "Ended Jul 13"),
                 actionText: isFrench ? "Le perdant choisit le prochain parcours" : "Loser plans the next route",
                 status: .finished,
                 rank: 1,
                 of: 2,
                 pending: 0,
-                kickerPrefix: String(localized: "Leading by"),
-                kickerEmphasis: String(localized: "2.2k steps"),
-                listSubtitle: String(localized: "Ended Jul 13 · 1st of 2"),
-                standingsMeta: String(localized: "2 in"),
+                kickerPrefix: String(appLocalized: "Leading by"),
+                kickerEmphasis: String(appLocalized: "2.2k steps"),
+                listSubtitle: String(appLocalized: "Ended Jul 13 · 1st of 2"),
+                standingsMeta: String(appLocalized: "2 in"),
                 standings: [
                     Standing(person: you, score: 24100, lastSyncedAt: syncedYesterday),
                     Standing(person: leo, score: 21900, lastSyncedAt: syncedYesterday)

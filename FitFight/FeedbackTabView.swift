@@ -33,7 +33,7 @@ struct FeedbackTabView: View {
 
     private var hubBar: some View {
         HStack(alignment: .center, spacing: 12) {
-            Text(String(localized: "Feedback"))
+            Text(String(appLocalized: "Feedback"))
                 .ffType(.title)
                 .foregroundStyle(theme.text)
             Spacer(minLength: 0)
@@ -55,6 +55,6 @@ struct FeedbackTabView: View {
                 .background(theme.mossFill, in: Circle())
         }
         .buttonStyle(FFHapticPlainStyle())
-        .accessibilityLabel(String(localized: "New request"))
+        .accessibilityLabel(String(appLocalized: "New request"))
     }
 }

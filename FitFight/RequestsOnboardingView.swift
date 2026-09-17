@@ -18,7 +18,7 @@ struct RequestsOnboardingView: View {
                 .foregroundStyle(theme.textSecondary)
                 .lineSpacing(3)
                 .padding(.top, 10)
-            FFScreenCTA(title: String(localized: "OK")) {
+            FFScreenCTA(title: String(appLocalized: "OK")) {
                 finish()
             }
             .padding(.top, 28)

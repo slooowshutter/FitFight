@@ -22,7 +22,7 @@ struct HealthOnboardingView: View {
                 .lineSpacing(3)
                 .padding(.top, 10)
             FFScreenCTA(
-                title: isConnecting ? String(localized: "Connecting…") : String(localized: "Continue"),
+                title: isConnecting ? String(appLocalized: "Connecting…") : String(appLocalized: "Continue"),
                 enabled: !isConnecting
             ) {
                 Task { await connect() }

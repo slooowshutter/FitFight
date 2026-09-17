@@ -16,5 +16,5 @@ with tempfile.TemporaryDirectory(prefix="fitfight-discovery-tests-") as director
     swift = Path(directory) / "FightDiscoveryTests.swift"
     binary = Path(directory) / "fight-discovery-tests"
     swift.write_text(source)
-    subprocess.run(["swiftc", "-swift-version", "5", "-parse-as-library", str(swift), "-o", str(binary)], check=True)
+    subprocess.run(["swiftc", "-swift-version", "5", "-parse-as-library", str(root / "FitFight/AppLocalization.swift"), str(swift), "-o", str(binary)], check=True)
     subprocess.run([str(binary)], check=True, timeout=15)

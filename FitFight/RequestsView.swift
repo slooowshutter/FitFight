@@ -402,9 +402,9 @@ enum RequestFilter: Hashable, CaseIterable {
 
     var title: String {
         switch self {
-        case .top: return String(localized: "Top")
-        case .features: return String(localized: "Features")
-        case .bugs: return String(localized: "Bugs")
+        case .top: return String(appLocalized: "Top")
+        case .features: return String(appLocalized: "Features")
+        case .bugs: return String(appLocalized: "Bugs")
         }
     }
 
@@ -529,7 +529,7 @@ struct RequestsView: View {
             }
 
             if chrome == .sheet {
-                FFScreenCTA(title: String(localized: "New request")) {
+                FFScreenCTA(title: String(appLocalized: "New request")) {
                     store.error = nil
                     composing = true
                 }
@@ -566,8 +566,8 @@ struct RequestsView: View {
             if store.posts.isEmpty && !store.isLoading {
                 FFEmptyState(
                     systemImage: "bubble.left.and.bubble.right",
-                    title: String(localized: "No requests yet"),
-                    message: String(localized: "Post a bug or a feature request. Other people can upvote and comment with their username.")
+                    title: String(appLocalized: "No requests yet"),
+                    message: String(appLocalized: "Post a bug or a feature request. Other people can upvote and comment with their username.")
                 )
             }
         }
@@ -719,7 +719,7 @@ private struct RequestRow: View {
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(spacing: 8) {
                             FFTag(
-                                post.kind == "bug" ? String(localized: "Bug") : String(localized: "Feature"),
+                                post.kind == "bug" ? String(appLocalized: "Bug") : String(appLocalized: "Feature"),
                                 tone: post.kind == "bug" ? .ember : .moss
                             )
                             Spacer(minLength: 0)
@@ -742,7 +742,7 @@ private struct RequestRow: View {
                         RequestMediaStack(media: post.media, compact: true)
                         Text(
                             String(
-                                localized: "feedback.meta",
+                                appLocalized: "feedback.meta",
                                 defaultValue: "@\(post.authorHandle) · \(post.commentCount) comments"
                             )
                         )
@@ -773,7 +773,7 @@ private struct RequestRow: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(FFPressStyle(scale: 0.92))
-            .accessibilityLabel(String(localized: "Upvote"))
+            .accessibilityLabel(String(appLocalized: "Upvote"))
             .padding(.leading, 14)
             .padding(.top, 14)
         }
@@ -805,7 +805,7 @@ private struct RequestDetailView: View {
             }
             HStack(alignment: .top, spacing: 10) {
                 FFNavDetail(
-                    title: post?.title ?? String(localized: "Request"),
+                    title: post?.title ?? String(appLocalized: "Request"),
                     subtitle: post.map { "@\($0.authorHandle)" },
                     onBack: { dismiss() }
                 )
@@ -861,7 +861,7 @@ private struct RequestDetailView: View {
                         )
                         .ffBorder(theme.line, radius: theme.radius.field)
                 } else {
-                    TextField(String(localized: "Add a comment"), text: $comment, axis: .vertical)
+                    TextField(String(appLocalized: "Add a comment"), text: $comment, axis: .vertical)
                         .ffType(.body)
                         .foregroundStyle(theme.text)
                         .lineLimit(1...4)
@@ -875,7 +875,7 @@ private struct RequestDetailView: View {
                         .ffBorder(commentFocused ? theme.mossEdge : theme.line, radius: theme.radius.field)
                 }
                 FFButton(
-                    title: String(localized: "Post"),
+                    title: String(appLocalized: "Post"),
                     enabled: canComment,
                     action: {
                         Task { await sendComment() }
@@ -886,15 +886,15 @@ private struct RequestDetailView: View {
             .padding(.vertical, 12)
         }
         .background(theme.bg.ignoresSafeArea())
-        .confirmationDialog(String(localized: "Delete request?"), isPresented: $confirmingDeletion, titleVisibility: .visible) {
-            Button(String(localized: "Delete"), role: .destructive) {
+        .confirmationDialog(String(appLocalized: "Delete request?"), isPresented: $confirmingDeletion, titleVisibility: .visible) {
+            Button(String(appLocalized: "Delete"), role: .destructive) {
                 Task {
                     if await store.delete(session: session, postID: postID) {
                         dismiss()
                     }
                 }
             }
-            Button(String(localized: "Cancel"), role: .cancel) {}
+            Button(String(appLocalized: "Cancel"), role: .cancel) {}
         } message: {
             Text("This removes the request, comments, and votes for everyone. This cannot be undone.")
         }
@@ -909,7 +909,7 @@ private struct RequestDetailView: View {
             if let post {
                 HStack(spacing: 8) {
                     FFTag(
-                        post.kind == "bug" ? String(localized: "Bug") : String(localized: "Feature"),
+                        post.kind == "bug" ? String(appLocalized: "Bug") : String(appLocalized: "Feature"),
                         tone: post.kind == "bug" ? .ember : .moss
                     )
                     Button(action: {
@@ -919,7 +919,7 @@ private struct RequestDetailView: View {
                             Image(systemName: post.voted ? "arrow.up.circle.fill" : "arrow.up.circle")
                             Text(
                                 String(
-                                    localized: "feedback.votes",
+                                    appLocalized: "feedback.votes",
                                     defaultValue: "\(post.voteCount) upvotes"
                                 )
                             )
@@ -942,10 +942,10 @@ private struct RequestDetailView: View {
                 if store.canLaunchFix {
                     if launchedAgentURL != nil {
                         FFNotice(
-                            text: String(localized: "Cursor is on it. A pull request will show up when it’s done."),
+                            text: String(appLocalized: "Cursor is on it. A pull request will show up when it’s done."),
                             tone: .moss,
                             systemImage: "sparkles",
-                            actionTitle: String(localized: "Open"),
+                            actionTitle: String(appLocalized: "Open"),
                             action: {
                                 if let launchedAgentURL {
                                     openURL(launchedAgentURL)
@@ -955,8 +955,8 @@ private struct RequestDetailView: View {
                     }
                     FFButton(
                         title: store.isLaunchingFix
-                            ? String(localized: "Sending…")
-                            : String(localized: "Send to Cursor"),
+                            ? String(appLocalized: "Sending…")
+                            : String(appLocalized: "Send to Cursor"),
                         kind: .secondary,
                         enabled: !store.isLaunchingFix && !store.isSaving && !store.isDeleting,
                         fullWidth: true,
@@ -966,7 +966,7 @@ private struct RequestDetailView: View {
                     )
                 }
 
-                FFSectionHeader(title: String(localized: "Comments"))
+                FFSectionHeader(title: String(appLocalized: "Comments"))
                     .padding(.top, 8)
 
                 if store.isLoading && store.comments.isEmpty {
@@ -1036,15 +1036,15 @@ private struct RequestPostMenu: View {
     var body: some View {
         Menu {
             if canReport {
-                Button(String(localized: "Report")) {
+                Button(String(appLocalized: "Report")) {
                     onReport()
                 }
-                Button(String(localized: "Hide this person"), role: .destructive) {
+                Button(String(appLocalized: "Hide this person"), role: .destructive) {
                     onHide()
                 }
             }
             if let onDelete {
-                Button(String(localized: "Delete request"), role: .destructive, action: onDelete)
+                Button(String(appLocalized: "Delete request"), role: .destructive, action: onDelete)
             }
         } label: {
             Image(systemName: "ellipsis")
@@ -1058,7 +1058,7 @@ private struct RequestPostMenu: View {
 
 struct ComposeRequestView: View {
     @ObservedObject var store: FeedbackStore
-    var heading: String = String(localized: "New request")
+    var heading: String = String(appLocalized: "New request")
     var onPosted: ((RequestFilter) -> Void)? = nil
     @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
@@ -1081,8 +1081,8 @@ struct ComposeRequestView: View {
 
         var title: String {
             switch self {
-            case .bug: return String(localized: "Bug")
-            case .feature: return String(localized: "Feature")
+            case .bug: return String(appLocalized: "Bug")
+            case .feature: return String(appLocalized: "Feature")
             }
         }
 
@@ -1120,7 +1120,7 @@ struct ComposeRequestView: View {
             }
 
             FFScreenCTA(
-                title: store.isSaving ? String(localized: "Posting…") : String(localized: "Post"),
+                title: store.isSaving ? String(appLocalized: "Posting…") : String(appLocalized: "Post"),
                 enabled: canPost,
                 busy: store.isSaving
             ) {
@@ -1157,7 +1157,7 @@ struct ComposeRequestView: View {
             FFSegmented(items: ComposeKind.allCases, selection: $kind) { $0.title }
 
             FFField(
-                label: String(localized: "Title"),
+                label: String(appLocalized: "Title"),
                 state: titleFocused ? .focused : .normal,
                 counter: "\(title.count)/80"
             ) {
@@ -1165,7 +1165,7 @@ struct ComposeRequestView: View {
                     Text("Short and specific")
                         .foregroundStyle(theme.textFaint)
                 } else {
-                    TextField(String(localized: "Short and specific"), text: $title)
+                    TextField(String(appLocalized: "Short and specific"), text: $title)
                         .focused($titleFocused)
                         .onChange(of: title) { _, value in
                             if value.count > 80 { title = String(value.prefix(80)) }
@@ -1174,9 +1174,9 @@ struct ComposeRequestView: View {
             }
 
             FFField(
-                label: String(localized: "Details"),
+                label: String(appLocalized: "Details"),
                 state: detailsFocused ? .focused : .normal,
-                help: String(localized: "What happened, or what you want. Be specific."),
+                help: String(appLocalized: "What happened, or what you want. Be specific."),
                 counter: "\(details.count)/2000",
                 minHeight: 120
             ) {
@@ -1185,7 +1185,7 @@ struct ComposeRequestView: View {
                         .foregroundStyle(theme.textFaint)
                         .frame(maxWidth: .infinity, minHeight: 80, alignment: .topLeading)
                 } else {
-                    TextField(String(localized: "Describe it"), text: $details, axis: .vertical)
+                    TextField(String(appLocalized: "Describe it"), text: $details, axis: .vertical)
                         .focused($detailsFocused)
                         .lineLimit(6...12)
                         .onChange(of: details) { _, value in
@@ -1212,7 +1212,7 @@ struct ComposeRequestView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "video.fill")
                         .foregroundStyle(theme.mossText)
-                    Text(String(localized: "Video"))
+                    Text(String(appLocalized: "Video"))
                         .ffType(.caption)
                         .foregroundStyle(theme.textSecondary)
                 }
@@ -1240,7 +1240,7 @@ struct ComposeRequestView: View {
                     maxSelectionCount: max(1, remainingSlots),
                     matching: .any(of: [.images, .videos])
                 ) {
-                    Label(String(localized: "Media"), systemImage: "photo.on.rectangle.angled")
+                    Label(String(appLocalized: "Media"), systemImage: "photo.on.rectangle.angled")
                         .ffType(.label)
                         .foregroundStyle(theme.mossText)
                 }
@@ -1249,7 +1249,7 @@ struct ComposeRequestView: View {
                 Button {
                     showingFileImporter = true
                 } label: {
-                    Label(String(localized: "File"), systemImage: "paperclip")
+                    Label(String(appLocalized: "File"), systemImage: "paperclip")
                         .ffType(.label)
                         .foregroundStyle(theme.mossText)
                 }

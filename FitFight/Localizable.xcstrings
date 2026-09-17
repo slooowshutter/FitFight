@@ -3011,6 +3011,76 @@
                 }
             }
         },
+        "Sharing": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Partage"
+                    }
+                }
+            }
+        },
+        "Choose which Health types FitFight can read. Fights still use Steps.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Choisis les types Santé que FitFight peut lire. Les défis utilisent uniquement les pas."
+                    }
+                }
+            }
+        },
+        "Reconnect": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Reconnecter"
+                    }
+                }
+            }
+        },
+        "Fix": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Corriger"
+                    }
+                }
+            }
+        },
+        "Steps are off in Health. Tap Fix to choose what to share.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les pas sont désactivés dans Santé. Touche Corriger pour choisir ce que tu partages."
+                    }
+                }
+            }
+        },
+        "Copy": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Copier"
+                    }
+                }
+            }
+        },
+        "On You, Apple Health is shorter: Reconnect chooses what to share, and Fix opens Health when Steps are off.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Sur Vous, Santé d’Apple est plus court : Reconnecter choisit ce que tu partages, et Corriger ouvre Santé quand les pas sont désactivés."
+                    }
+                }
+            }
+        },
         "Ask iPhone for the extra Health types FitFight uses. Fights still use steps.": {
             "localizations": {
                 "fr": {

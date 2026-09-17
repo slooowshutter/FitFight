@@ -430,7 +430,6 @@ struct RequestsView: View {
     @ObservedObject var store: FeedbackStore
     var chrome: RequestsChrome
     var filterSource: Binding<RequestFilter>?
-    var onCompose: (() -> Void)?
     @State private var filter: RequestFilter
     @State private var composing = false
     @State private var openPostID: UUID?
@@ -438,13 +437,11 @@ struct RequestsView: View {
     init(
         store: FeedbackStore,
         chrome: RequestsChrome = .sheet,
-        filter: Binding<RequestFilter>? = nil,
-        onCompose: (() -> Void)? = nil
+        filter: Binding<RequestFilter>? = nil
     ) {
         _store = ObservedObject(wrappedValue: store)
         self.chrome = chrome
         self.filterSource = filter
-        self.onCompose = onCompose
         _filter = State(initialValue: filter?.wrappedValue ?? .top)
     }
 
@@ -531,16 +528,14 @@ struct RequestsView: View {
                 }
             }
 
-            FFScreenCTA(title: String(localized: "New request")) {
-                store.error = nil
-                if let onCompose {
-                    onCompose()
-                } else {
+            if chrome == .sheet {
+                FFScreenCTA(title: String(localized: "New request")) {
+                    store.error = nil
                     composing = true
                 }
+                .padding(.horizontal, theme.space.screenPadding)
+                .padding(.bottom, 16)
             }
-            .padding(.horizontal, theme.space.screenPadding)
-            .padding(.bottom, 16)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(theme.bg)

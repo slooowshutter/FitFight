@@ -43,6 +43,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 17,
+            notes: "Feedback no longer shows a duplicate button above the bottom tabs. Use the plus at the top to add a request."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
             notes: "Website download and invitation links open the App Store. The staging website keeps TestFlight access for beta testers."
         ),
         ReleaseNote(

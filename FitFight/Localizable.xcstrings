@@ -91,6 +91,16 @@
                 }
             }
         },
+        "Your animal is a fighter now. The picker says Choose your fighter.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ton animal est un guerrier. L’écran dit Choisis ton guerrier."
+                    }
+                }
+            }
+        },
         "Type @ to tag someone in a post or comment. They get a FitFight notification with your name.": {
             "localizations": {
                 "fr": {
@@ -1467,12 +1477,12 @@
                 }
             }
         },
-        "Choose your companion": {
+        "Choose your fighter": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Choisis ton compagnon"
+                        "value": "Choisis ton guerrier"
                     }
                 }
             }
@@ -9007,22 +9017,22 @@
                 }
             }
         },
-        "Save companion": {
+        "Save fighter": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Enregistrer le compagnon"
+                        "value": "Enregistrer le guerrier"
                     }
                 }
             }
         },
-        "Your own animal.": {
+        "Your own fighter.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Ton propre animal."
+                        "value": "Ton propre guerrier."
                     }
                 }
             }
@@ -9037,12 +9047,12 @@
                 }
             }
         },
-        "Couldn’t save your companion. Try again.": {
+        "Couldn’t save your fighter. Try again.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Impossible d’enregistrer ton compagnon. Réessaie."
+                        "value": "Impossible d’enregistrer ton guerrier. Réessaie."
                     }
                 }
             }

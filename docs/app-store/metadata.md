@@ -68,7 +68,7 @@ Use screenshots generated from the final release commit, showing `prod` in the v
 2. Accepted Fight with totals, daily progress, and standings.
 3. New Fight setup with Steps, duration, username, and action fields.
 4. Incoming invitation with Accept and Decline.
-5. You with the companion, Apple Health, and Settings.
+5. You with the fighter, Apple Health, and Settings.
 6. Feed with fictional posts and photos.
 
 The [interactive gallery](2026-09-15/index.html) contains both languages and the exact icon PNG. Refresh the visible version/build labels from the final production candidate before submission.

@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 17,
+            notes: "Your animal is a fighter now. The picker says Choose your fighter."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 17,
             notes: "Type @ to tag someone in a post or comment. They get a FitFight notification with your name."
         ),
         ReleaseNote(

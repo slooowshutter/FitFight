@@ -184,7 +184,7 @@ struct YouView: View {
                             .contentShape(Circle())
                     }
                     .buttonStyle(FFHapticPlainStyle())
-                    .accessibilityLabel(String(localized: "Choose your companion"))
+                    .accessibilityLabel(String(localized: "Choose your fighter"))
                 } else {
                     PhotosPicker(selection: $pickerItem, matching: .images) {
                         FFAvatar(

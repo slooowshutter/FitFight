@@ -525,7 +525,7 @@ struct CompanionIntroduction: View {
                     Text("Custom")
                         .font(.custom("Nunito-ExtraBold", size: 22, relativeTo: .title2))
                         .foregroundStyle(theme.text)
-                    Text("Your own animal.")
+                    Text("Your own fighter.")
                         .font(.custom("Nunito-Bold", size: 12, relativeTo: .caption))
                         .foregroundStyle(theme.textSecondary)
                 } else {
@@ -755,7 +755,7 @@ struct CompanionPicker: View {
         ScrollViewReader { scroll in
             FFScreen(clearance: false) {
                 HStack(alignment: .top) {
-                    Text("Choose your companion")
+                    Text("Choose your fighter")
                         .font(.custom("Nunito-ExtraBold", size: 26, relativeTo: .title))
                         .foregroundStyle(theme.text)
                     Spacer()
@@ -872,7 +872,7 @@ struct CompanionPicker: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     FFButton(
-                        title: String(localized: "Save companion"),
+                        title: String(localized: "Save fighter"),
                         kind: .primary,
                         enabled: canSaveCustom,
                         busy: isSaving,
@@ -932,7 +932,7 @@ struct CompanionPicker: View {
         } catch is CancellationError {
             return
         } catch {
-            self.error = String(localized: "Couldn’t save your companion. Try again.")
+            self.error = String(localized: "Couldn’t save your fighter. Try again.")
         }
     }
 
@@ -951,7 +951,7 @@ struct CompanionPicker: View {
         } catch is CancellationError {
             return
         } catch {
-            self.error = String(localized: "Couldn’t save your companion. Try again.")
+            self.error = String(localized: "Couldn’t save your fighter. Try again.")
         }
     }
 }

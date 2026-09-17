@@ -1,6 +1,16 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "A refreshed App Store description explaining how to start a private step challenge and follow the standings.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Une description App Store actualisée pour découvrir comment lancer un défi de pas privé et suivre le classement."
+                    }
+                }
+            }
+        },
         "Make it yours": {
             "localizations": {
                 "fr": {

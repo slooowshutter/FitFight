@@ -26,9 +26,16 @@ The workspace prepares native/CI version 1.1.2, an English/French release note,
 and Fastlane/release-tool defaults for `AFTER_APPROVAL`. The release tool targets
 `FITFIGHT_RELEASE_VERSION` and verifies Apple's saved release mode. Local release
 regressions passed (20 tests, 92 assertions), as did localization, Ruby syntax,
-project-file syntax, and whitespace checks. Cloud configuration of the live
-release setting is pending. No PR, merge, review submission, or build upload has
-been performed for this update.
+project-file syntax, and whitespace checks. The release workflow YAML and all
+native/CI version values also passed validation.
+
+[Cloud configuration](https://github.com/slooowshutter/FitFight/actions/runs/35168925860)
+confirmed 1.1.2 has `releaseType: AFTER_APPROVAL`, state `PREPARE_FOR_SUBMISSION`,
+and no selected build. The setting is saved at Apple. The release defaults and
+1.1.2 build files are pushed on `update-app-store-copy`; they are not merged into
+the release branches. No PR, merge, review submission, or build upload has been
+performed for this update. Native compilation and upload still require the
+authorized GitHub-hosted macOS release flow.
 
 ## Website download destinations: prepared 17 Sep 2026
 

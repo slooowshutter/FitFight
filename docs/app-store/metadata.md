@@ -2,7 +2,7 @@
 
 English (U.S.) and French (France) App Store copy. Keep the existing approved app name, contact details, territories, and seller settings unless Marc requests a change.
 
-Description refresh saved 17 Sep 2026 from Marc's supplied copy, with a French translation. Marc authorized creating the 1.1.2 App Store draft, submitting the update, and automatic publication after approval for every future release. Both descriptions and the required localized release notes below are saved in that draft. Apple blocks review submission because no 1.1.2 build is available. The public version remains 1.1.1 (202); these descriptions are not live. The workspace prepares the 1.1.2 native and CI versions and automatic-release defaults; verification of the live release setting is pending. Other fields below remain the 1.1.1 reference metadata; promotional text is blank in the new draft.
+Description refresh saved 17 Sep 2026 from Marc's supplied copy, with a French translation. Marc authorized creating the 1.1.2 App Store draft, submitting the update, and automatic publication after approval for every future release. Both descriptions and the required localized release notes below are saved in that draft. Apple blocks review submission because no 1.1.2 build is available. The public version remains 1.1.1 (202); these descriptions are not live. The branch prepares the 1.1.2 native and CI versions and automatic-release defaults. [Cloud configuration](https://github.com/slooowshutter/FitFight/actions/runs/35168925860) confirmed the live 1.1.2 draft has `releaseType: AFTER_APPROVAL` and no selected build. Other fields below remain the 1.1.1 reference metadata; promotional text is blank in the new draft.
 
 ## App information
 

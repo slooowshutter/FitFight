@@ -12,6 +12,7 @@ on:
             - "scripts/check_remote_photo_loading.py"
             - "scripts/test_fight_discovery.py"
             - "scripts/test_profile_navigation.py"
+            - "scripts/test_profile_refresh.py"
             - "scripts/test_native_state.py"
             - "scripts/test_fight_live_updates.py"
             - "scripts/test_fight_chart_scores.py"
@@ -31,6 +32,7 @@ on:
             - "scripts/check_remote_photo_loading.py"
             - "scripts/test_fight_discovery.py"
             - "scripts/test_profile_navigation.py"
+            - "scripts/test_profile_refresh.py"
             - "scripts/test_native_state.py"
             - "scripts/test_fight_live_updates.py"
             - "scripts/test_fight_chart_scores.py"
@@ -127,6 +129,9 @@ jobs:
 
             - name: Verify profile history navigation and rematches
               run: python3 scripts/test_profile_navigation.py
+
+            - name: Verify Profile refresh after HealthKit upload
+              run: python3 scripts/test_profile_refresh.py
 
             - name: Build for iOS Simulator
               run: |

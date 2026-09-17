@@ -19,6 +19,32 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = env.SUPABASE_TEST_SERVICE_KEY;
 const database = postgres(env.DATABASE_URL, { max: 5 });
 after(() => database.end());
 
+test("shared activity uses one saved personal time zone across travel", async (t) => {
+    const users = [randomUUID(), randomUUID()];
+    const [owner, friend] = users;
+    const sourceId = randomUUID();
+    t.after(async () => {
+        await database`delete from auth.users where id = any(${database.array(users)}::uuid[])`;
+    });
+    for (const id of users) await database`insert into auth.users(id) values (${id})`;
+    await database`update public.profiles set time_zone = 'Pacific/Kiritimati' where user_id = ${owner}`;
+    await database`insert into public.data_sources(id, user_id, provider, source_label, connection_route)
+        values (${sourceId}, ${owner}, 'apple_health', 'Apple Health', 'healthkit')`;
+    await database`insert into public.metric_days(user_id, source_id, metric, day, value, time_zone, unit, input_hash, normalization_version, calculation_version, finalized_at)
+        select ${owner}, ${sourceId}, 'steps', (now() at time zone 'Pacific/Kiritimati')::date - day,
+            8000, case when day >= 7 then 'Etc/GMT+12' else 'Pacific/Kiritimati' end,
+            'steps', repeat('0', 64), 1, 1, case when day > 0 then now() else null end
+        from generate_series(0, 8) day`;
+    await changeFriendship(friend, owner, "request", database);
+    await changeFriendship(owner, friend, "accept", database);
+    await updateProfileSettings(owner, { activity_audience: "friends", activity_days: 7 }, database);
+    const shared = await readSharedProfile(friend, owner, undefined, database);
+    assert.equal(shared.activity?.values.length, 7, "A seven-day grant must not reveal an eighth date from an earlier time zone");
+    const [period] = await database`select ((now() at time zone 'Pacific/Kiritimati')::date - 6)::text first_day`;
+    assert.equal(shared.activity?.values[0].day, period.first_day);
+    assert.deepEqual((await readSharedProfile(owner, owner, "friend", database)).activity, shared.activity);
+});
+
 test("private history IDs and cursors cannot correlate participants across profiles", async (t) => {
     const users = [randomUUID(), randomUUID(), randomUUID()];
     const [owner, opponent, stranger] = users;

@@ -601,6 +601,25 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
         await duringRead.value
         check(refreshedThread.comments.contains(grandchild), "a comment arriving during a read queues another read")
 
+        for queuedRefresh in [false, true] {
+            let failedThread = FightPostThreadState(post: post.updating(commentCount: 2))
+            failedThread.comments = [orphan]
+            let failingRead = Task { await failedThread.loadForTest() }
+            while FitFightAPI.commentLists.isEmpty { await Task.yield() }
+            if queuedRefresh { await failedThread.loadForTest() }
+            let requestsBeforeFailure = FitFightAPI.commentRequests.count
+            FitFightAPI.commentPages = ["": .init(comments: [orphan, child], nextCursor: nil)]
+            FitFightAPI.commentLists.removeFirst().resume(throwing: TestFailure.offline)
+            await failingRead.value
+            check(FitFightAPI.commentRequests.count == requestsBeforeFailure + (queuedRefresh ? 1 : 0),
+                  "a failed comment read only runs another request when a refresh was already queued")
+            check(failedThread.comments == (queuedRefresh ? [orphan, child] : [orphan]) && !failedThread.loadingComments,
+                  "\(queuedRefresh ? "a queued refresh updates" : "an unqueued failure preserves") the thread after an earlier read fails")
+            check(queuedRefresh ? failedThread.feed.error == nil : failedThread.feed.error != nil,
+                  "a recovered queued refresh does not leave the earlier error visible")
+            FitFightAPI.commentPages = nil
+        }
+
         let changingSort = Task { await refreshedThread.loadForTest() }
         while FitFightAPI.commentLists.isEmpty { await Task.yield() }
         refreshedThread.commentSort = .recent
@@ -631,6 +650,35 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
                 createdAt: post.createdAt, author: post.author, mine: false
             )
         }
+        for changeSort in [false, true] {
+            let interruptedPage = FightPostThreadState(post: post.updating(commentCount: 45))
+            let pages: [String: FitFightFightPostCommentList] = [
+                "": .init(comments: Array(commentHistory.prefix(40)), nextCursor: "older-comments"),
+                "older-comments": .init(comments: Array(commentHistory.suffix(5)), nextCursor: nil),
+            ]
+            FitFightAPI.commentPages = pages
+            await interruptedPage.loadForTest()
+            FitFightAPI.commentPages = nil
+            let moreComments = Task { await interruptedPage.loadForTest(more: true) }
+            while FitFightAPI.commentLists.isEmpty { await Task.yield() }
+            check(FitFightAPI.commentRequests.last?.cursor == "older-comments", "More comments requests the next page")
+            if changeSort {
+                interruptedPage.commentSort = .recent
+                interruptedPage.sortChangedForTest()
+                while !interruptedPage.reloadComments { await Task.yield() }
+            } else {
+                await interruptedPage.loadForTest()
+            }
+            FitFightAPI.commentPages = pages
+            FitFightAPI.commentLists.removeFirst().resume(returning: .init(comments: Array(commentHistory.suffix(5)), nextCursor: nil))
+            await moreComments.value
+            check(interruptedPage.comments == (changeSort ? Array(commentHistory.prefix(40)) : commentHistory),
+                  changeSort ? "changing sort during pagination starts at the new first page" : "a live update during More comments preserves the requested next page")
+            check(interruptedPage.nextCursor == (changeSort ? "older-comments" : nil) && !interruptedPage.loadingComments,
+                  "interrupted comment pagination settles at the cursor for the displayed pages")
+            FitFightAPI.commentPages = nil
+        }
+
         let retainedThread = FightPostThreadState(post: post.updating(commentCount: 45))
         retainedThread.commentSort = .recent
         FitFightAPI.commentPages = [

@@ -64,6 +64,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 17,
+            notes: "You can open the TestFlight beta or return to the App Store from You → Settings. Before switching, see how installing the beta replaces the app and keeps accounts, fights, and progress in a separate database."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
             notes: "Reactions swipe horizontally, with a visible like button and any emoji. Charts refresh without losing your selection and keep missing history clear. Comments load reliably, and notification failures no longer interrupt saved fights."
         ),
         ReleaseNote(

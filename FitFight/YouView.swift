@@ -21,6 +21,7 @@ struct YouView: View {
     @State private var showingBroadcastCompose = false
     @State private var showingHealthDetails = false
     @State private var showingNotificationSettings = false
+    @State private var showingBetaInfo = false
     @State private var showingCompanionPreviewControls = false
 
     var body: some View {
@@ -112,6 +113,11 @@ struct YouView: View {
         .sheet(isPresented: $showingNotificationSettings) {
             NotificationSettingsView()
                 .environmentObject(session)
+                .fitFightTheme(themeStore.theme)
+                .presentationBackground(themeStore.theme.bg)
+        }
+        .sheet(isPresented: $showingBetaInfo) {
+            betaInfo
                 .fitFightTheme(themeStore.theme)
                 .presentationBackground(themeStore.theme.bg)
         }
@@ -426,6 +432,8 @@ struct YouView: View {
             navRow(String(localized: "Notifications")) { showingNotificationSettings = true }
             FFDivider()
             navRow(String(localized: "Versions")) { model.showingVersions = true }
+            FFDivider()
+            navRow(String(localized: "Try the beta")) { showingBetaInfo = true }
             if session.isSignedIn {
                 FFDivider()
                 navRow(String(localized: "Sign out")) {
@@ -437,6 +445,55 @@ struct YouView: View {
                 }
             }
         }
+    }
+
+    private var betaInfo: some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(String(localized: "Try the beta"))
+                    .ffType(.title)
+                    .foregroundStyle(theme.text)
+                    .accessibilityAddTraits(.isHeader)
+                Spacer()
+                Button(String(localized: "Close")) { showingBetaInfo = false }
+                    .ffType(.label)
+                    .foregroundStyle(theme.mossText)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .buttonStyle(FFHapticPlainStyle())
+            }
+            .padding(.horizontal, theme.space.screenPadding)
+            .padding(.vertical, 12)
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: theme.space.cardGap) {
+                    Text(String(localized: "Try upcoming features in TestFlight. Beta builds may have bugs."))
+                        .ffType(.body)
+                        .foregroundStyle(theme.textSecondary)
+                    FFNotice(
+                        text: String(localized: "The beta uses a separate database. Accounts, fights, and progress do not sync automatically with the App Store version, even when you use the same Apple ID."),
+                        tone: .ember,
+                        systemImage: "exclamationmark.triangle"
+                    )
+                    Text(String(localized: "Installing the beta replaces the App Store app on this device. To switch back, reinstall FitFight from the App Store."))
+                        .ffType(.body)
+                        .foregroundStyle(theme.textSecondary)
+                    FFGroupedRows {
+                        linkRow(
+                            String(localized: "Open TestFlight"),
+                            destination: URL(string: "https://testflight.apple.com/join/wcZKdwVZ")!
+                        )
+                        FFDivider()
+                        linkRow(
+                            String(localized: "Return to the App Store"),
+                            destination: URL(string: "https://apps.apple.com/app/id6804230516")!
+                        )
+                    }
+                }
+                .padding(.horizontal, theme.space.screenPadding)
+                .padding(.bottom, 24)
+            }
+        }
+        .background(theme.bg.ignoresSafeArea())
     }
 
     private var developer: some View {

@@ -17,7 +17,9 @@ subtitle follow the same naming. Internal types, `companion_id`, and the
 account save path are unchanged.
 
 **Checks:** `python3 scripts/check_localizations.py` passed. No API, native API
-model, or database change. Cloud iOS compile remains pending.
+model, or database change. [#279](https://github.com/slooowshutter/FitFight/pull/279)
+simulator compile and screenshot render passed. Physical-device English/French
+picker copy remains outstanding.
 
 **Live deployment:** not deployed. No hosted database write or reset.
 

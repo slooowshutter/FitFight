@@ -8,6 +8,28 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
 
+## App Store description draft: saved 17 Sep 2026
+
+Marc authorized the English/French description refresh, creation of the 1.1.2
+App Store version, and publication. Both descriptions and the required localized
+release notes in [App Store metadata](app-store/metadata.md) are saved in App Store
+Connect under **1.1.2, Prepare for Submission**. The new version inherited the
+English/French screenshots; its promotional-text fields are blank.
+
+Apple's Add for Review validation now reports only **You must choose a build**.
+No 1.1.2 build is available, so nothing was submitted or published. The current
+App Store version is **1.1.1 (202), Ready for Distribution**. A compatible 1.1.2
+production build and Apple review are still required.
+
+Marc also requested automatic publication after every approved App Store review.
+The workspace prepares native/CI version 1.1.2, an English/French release note,
+and Fastlane/release-tool defaults for `AFTER_APPROVAL`. The release tool targets
+`FITFIGHT_RELEASE_VERSION` and verifies Apple's saved release mode. Local release
+regressions passed (20 tests, 92 assertions), as did localization, Ruby syntax,
+project-file syntax, and whitespace checks. Cloud configuration of the live
+release setting is pending. No PR, merge, review submission, or build upload has
+been performed for this update.
+
 ## Website download destinations: prepared 17 Sep 2026
 
 The homepage, fight/referral invite pages, and English/French support pages use

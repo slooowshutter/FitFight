@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Sql } from "postgres";
 import { createClient } from "@supabase/supabase-js";
-import { DELETE as deleteFeedbackRoute } from "@/app/api/v1/feedback/[postID]/route";
+import {
+    DELETE as deleteFeedbackRoute,
+    PATCH as patchFeedbackRoute,
+} from "@/app/api/v1/feedback/[postID]/route";
 import { ApiError } from "@/lib/http";
 import {
     blockFeedbackAuthorRequestSchema,
@@ -13,6 +16,7 @@ import {
     launchFeedbackFixRequestSchema,
     listFeedbackQuerySchema,
     reportFeedbackPostRequestSchema,
+    updateFeedbackPostRequestSchema,
 } from "@/lib/types/feedback/feedback";
 import {
     blockFeedbackAuthor,
@@ -22,6 +26,7 @@ import {
     listFeedbackPosts,
     reportFeedbackPost,
     toggleFeedbackVote,
+    updateFeedbackPost,
 } from "./feedback-supabase-query";
 
 const userId = "11111111-1111-4111-8111-111111111111";
@@ -59,8 +64,37 @@ test("feedback deletion authenticates before accessing the database", async () =
     assert.equal(response.status, 401);
 });
 
-test("only a trusted admin account can delete feedback", async (t) => {
+test("feedback edits authenticate before accessing the database", async () => {
+    const response = await patchFeedbackRoute(
+        new Request(`https://staging.fitfight.app/api/v1/feedback/${postId}`, {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+                kind: "bug",
+                title: "Steps chart is blank",
+                body: "The daily Steps chart on a live fight stays empty after a successful sync.",
+            }),
+        }),
+        { params: Promise.resolve({ postID: postId }) },
+    );
+    assert.equal(response.status, 401);
+});
+
+const selectPostSql =
+    "select id, author_id from public.feedback_posts where id = ?";
+const deletePostSql =
+    "delete from public.feedback_posts where id = ? returning id";
+
+test("the author or a trusted admin account can delete feedback", async (t) => {
     for (const scenario of [
+        {
+            name: "author deleting their own request",
+            handle: "maya_moves",
+            email: "maya@example.com",
+            confirmed: true,
+            status: 200,
+            asAuthor: true,
+        },
         {
             name: "Marc's handle with an Apple relay email",
             handle: "marc",
@@ -121,10 +155,12 @@ test("only a trusted admin account can delete feedback", async (t) => {
         },
     ]) {
         await t.test(scenario.name, async () => {
+            const actingUserId = scenario.asAuthor ? authorId : userId;
             const admin = createClient("https://feedback.example", "test-only-key", {
                 auth: { persistSession: false, autoRefreshToken: false },
                 global: {
                     fetch: async (input, init) => {
+                        assert.equal(scenario.asAuthor, undefined);
                         const url = new URL(new Request(input, init).url);
                         if (url.pathname === "/rest/v1/profiles") {
                             assert.equal(url.searchParams.get("user_id"), `eq.${userId}`);
@@ -145,20 +181,102 @@ test("only a trusted admin account can delete feedback", async (t) => {
                     },
                 },
             });
-            const { database, queries, bound } = createDatabaseStub(() => scenario.missing ? [] : [{ id: postId }]);
+            const { database, queries, bound } = createDatabaseStub((sql) => {
+                if (sql === selectPostSql) {
+                    return scenario.missing
+                        ? []
+                        : [{ id: postId, author_id: authorId }];
+                }
+                if (sql === deletePostSql) {
+                    return [{ id: postId }];
+                }
+                return [];
+            });
             if (scenario.status === 200) {
-                await deleteFeedbackPost(userId, postId, admin, database);
+                await deleteFeedbackPost(actingUserId, postId, admin, database);
             } else {
                 await assert.rejects(
-                    deleteFeedbackPost(userId, postId, admin, database),
+                    deleteFeedbackPost(actingUserId, postId, admin, database),
                     (error: unknown) => error instanceof ApiError && error.status === scenario.status,
                 );
             }
-            if (scenario.status === 200 || scenario.status === 404) {
-                assert.deepEqual(queries, ["delete from public.feedback_posts where id = ? returning id"]);
-                assert.deepEqual(bound, [[postId]]);
+            if (scenario.status === 200) {
+                assert.deepEqual(queries, [selectPostSql, deletePostSql]);
+                assert.deepEqual(bound, [[postId], [postId]]);
             } else {
-                assert.deepEqual(queries, []);
+                assert.deepEqual(queries, [selectPostSql]);
+                assert.deepEqual(bound, [[postId]]);
+            }
+        });
+    }
+});
+
+test("only the author can edit feedback", async (t) => {
+    const updatedRow = {
+        ...postRow,
+        author_id: authorId,
+        mine: true,
+        title: "Chart stays blank after sync",
+        body: "Pull to refresh still leaves the live fight chart empty.",
+    };
+    for (const scenario of [
+        { name: "author", actingUserId: authorId, status: 200 },
+        { name: "another account", actingUserId: userId, status: 403 },
+        { name: "missing request", actingUserId: authorId, missing: true, status: 404 },
+    ]) {
+        await t.test(scenario.name, async () => {
+            const { database, queries } = createDatabaseStub((sql) => {
+                if (sql === selectPostSql) {
+                    return scenario.missing
+                        ? []
+                        : [{ id: postId, author_id: authorId }];
+                }
+                if (sql.includes("update public.feedback_posts")) {
+                    return [updatedRow];
+                }
+                if (sql.includes("from public.feedback_post_media")) {
+                    return [];
+                }
+                return [];
+            });
+            if (scenario.status === 200) {
+                const updated = await updateFeedbackPost(
+                    scenario.actingUserId,
+                    postId,
+                    {
+                        kind: "bug",
+                        title: updatedRow.title,
+                        body: updatedRow.body,
+                    },
+                    database,
+                );
+                assert.equal(updated.post.title, updatedRow.title);
+                assert.equal(updated.post.body, updatedRow.body);
+                assert.equal(updated.post.mine, true);
+                assert.equal(updated.post.metadata.app_version, "1.0.0");
+            } else {
+                await assert.rejects(
+                    updateFeedbackPost(
+                        scenario.actingUserId,
+                        postId,
+                        {
+                            kind: "bug",
+                            title: updatedRow.title,
+                            body: updatedRow.body,
+                        },
+                        database,
+                    ),
+                    (error: unknown) =>
+                        error instanceof ApiError && error.status === scenario.status,
+                );
+            }
+            assert.equal(queries[0], selectPostSql);
+            if (scenario.status === 200) {
+                assert.equal(queries.length, 3);
+                assert.match(queries[1] ?? "", /update public.feedback_posts/);
+                assert.match(queries[2] ?? "", /feedback_post_media/);
+            } else {
+                assert.equal(queries.length, 1);
             }
         });
     }
@@ -170,9 +288,13 @@ test("feedback detail keeps legacy responses readable and deletion opt-in", () =
         comments: [],
         can_launch_fix: true,
     };
-    assert.equal(feedbackDetailResponseSchema.parse(legacyDetail).can_delete, false);
+    const parsed = feedbackDetailResponseSchema.parse(legacyDetail);
+    assert.equal(parsed.can_delete, false);
+    assert.equal(parsed.can_edit, false);
     assert.equal(feedbackDetailResponseSchema.parse({ ...legacyDetail, can_delete: true }).can_delete, true);
     assert.equal(feedbackDetailResponseSchema.parse({ ...legacyDetail, can_delete: false }).can_delete, false);
+    assert.equal(feedbackDetailResponseSchema.parse({ ...legacyDetail, can_edit: true }).can_edit, true);
+    assert.equal(feedbackDetailResponseSchema.parse({ ...legacyDetail, can_edit: false }).can_edit, false);
 });
 
 function createDatabaseStub(respond: (query: string) => unknown[]) {
@@ -219,6 +341,26 @@ test("feedback schemas accept a one-character title and details", () => {
             kind: "feature",
             title: "Show weekly totals",
             body: " ",
+        }),
+    );
+    assert.deepEqual(
+        updateFeedbackPostRequestSchema.parse({
+            kind: "feature",
+            title: "Show weekly totals",
+            body: "A weekly Steps total on You would make it easier to plan a fight.",
+        }),
+        {
+            kind: "feature",
+            title: "Show weekly totals",
+            body: "A weekly Steps total on You would make it easier to plan a fight.",
+        },
+    );
+    assert.throws(() =>
+        updateFeedbackPostRequestSchema.parse({
+            kind: "feature",
+            title: "Show weekly totals",
+            body: "A weekly Steps total on You would make it easier to plan a fight.",
+            media_ids: [],
         }),
     );
     assert.throws(() =>

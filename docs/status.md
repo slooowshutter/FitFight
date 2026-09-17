@@ -8,6 +8,47 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
 
+## Author feedback edit and delete: prepared 17 Sep 2026
+
+**Code:** the author of a Bugs & requests post can open its ellipsis menu on the
+board or the detail screen, then Edit request or Delete request. Edit reuses the
+compose sheet for kind, title, and details. Photos, videos, and files stay as they
+are. Delete still asks for confirmation and removes the request for everyone.
+Admins can still delete any request. They cannot edit someone else's request.
+English/French copy and a 1.1.2 release note are included.
+
+**Contract:** `DELETE /api/v1/feedback/{postID}` now succeeds for the author as
+well as an admin. `can_delete` on the existing detail response is true for either
+viewer. Additive `PATCH /api/v1/feedback/{postID}` replaces `kind`, `title`, and
+`body` for the author only and returns `{ post }` in the create shape. Additive
+`can_edit` defaults to false when an older backend omits it. Older native
+decoders ignore the new key. Existing list/create/comment/vote request and
+response fields keep their shape. No database migration or permission change;
+attachments are left in place on edit, and existing foreign keys still cascade
+on delete.
+
+**Checks:** `npm run typecheck` passed. `npm test` passed (297 tests).
+`python3 scripts/check_localizations.py` and
+`python3 scripts/check_native_api_boundary.py` passed. `git diff --check`
+passed. Regression coverage includes missing authentication on DELETE and PATCH,
+author delete, admin delete, regular accounts, spoofed metadata, unconfirmed
+email, deleted accounts, missing requests, author/non-author/missing edits,
+extra PATCH fields, and legacy detail responses without `can_delete` or
+`can_edit`. Database calls were mocked; no cloud deletion or edit integration
+test was run. Native state regressions cover successful and failed edits, and
+editing one request while another is open. Those native regressions have not
+been executed in this Linux workspace. Cloud iOS compilation and signed-in
+device checks of edit, confirmation, cancellation, failure handling, and list
+refresh remain pending.
+
+**Supported builds and rollout:** read-only release checks on 17 Sep 2026
+returned staging latest 1.1.1 (201), review/internal 1.1.2 (203), enforcement
+off, and production latest 1.1.1 (202), enforcement on. Legacy staging users
+remain supported. Source inspection of the current native decoder ignores
+unknown keys and defaults missing `can_delete` / `can_edit` to false. Deploy the
+compatible backend before the native app. No hosted database write or reset.
+Live deletion/edit on staging or production was not performed.
+
 ## Mention notifications: prepared 17 Sep 2026
 
 **Code:** typing `@` in a Feed post or comment shows username typeahead from

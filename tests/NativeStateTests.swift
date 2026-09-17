@@ -92,6 +92,7 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
     static var feedbackLists: [CheckedContinuation<FitFightFeedbackList, Error>] = []
     static var feedbackDetails: [CheckedContinuation<FitFightFeedbackDetail, Error>] = []
     static var feedbackDeletions: [CheckedContinuation<Void, Error>] = []
+    static var feedbackUpdates: [CheckedContinuation<FitFightFeedbackPost, Error>] = []
 
     func listFeedback(kind: String?, accessToken: String) async throws -> FitFightFeedbackList {
         try await withCheckedThrowingContinuation { Self.feedbackLists.append($0) }
@@ -101,6 +102,15 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
     }
     func deleteFeedbackPost(postID: UUID, accessToken: String) async throws {
         try await withCheckedThrowingContinuation { Self.feedbackDeletions.append($0) }
+    }
+    func updateFeedback(
+        postID: UUID,
+        kind: String,
+        title: String,
+        body: String,
+        accessToken: String
+    ) async throws -> FitFightFeedbackPost {
+        try await withCheckedThrowingContinuation { Self.feedbackUpdates.append($0) }
     }
 
     func fightPostComments(
@@ -893,6 +903,64 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
             check(!feedback.isLoading && !feedback.isDeleting, "feedback loading and deletion flags settle after pending requests finish")
         }
 
+        var ownRequest = requestA
+        ownRequest.mine = true
+        ownRequest.title = "Old title"
+        ownRequest.body = "Old details"
+        var editedRequest = ownRequest
+        editedRequest.kind = "bug"
+        editedRequest.title = "New title"
+        editedRequest.body = "New details"
+        for updateFails in [false, true] {
+            let feedback = FeedbackStore()
+            feedback.posts = [ownRequest, requestB]
+            feedback.detail = ownRequest
+            let update = Task {
+                await feedback.update(
+                    session: session,
+                    postID: ownRequest.id,
+                    kind: "bug",
+                    title: "New title",
+                    body: "New details"
+                )
+            }
+            while FitFightAPI.feedbackUpdates.isEmpty { await Task.yield() }
+            if updateFails {
+                FitFightAPI.feedbackUpdates.removeFirst().resume(throwing: TestFailure.offline)
+            } else {
+                FitFightAPI.feedbackUpdates.removeFirst().resume(returning: editedRequest)
+            }
+            check(await update.value == !updateFails, "feedback edit reports its actual result")
+            if updateFails {
+                check(feedback.posts[0].title == "Old title" && feedback.detail?.title == "Old title", "failed edit keeps the original request")
+                check(feedback.error != nil, "failed edit shows its error")
+            } else {
+                check(feedback.posts[0].title == "New title" && feedback.posts[0].body == "New details", "successful edit updates the board row")
+                check(feedback.detail?.title == "New title" && feedback.detail?.body == "New details", "successful edit updates the open request")
+                check(feedback.posts[1] == requestB, "editing one request leaves the other board row alone")
+            }
+            check(!feedback.isSaving && !feedback.isDeleting, "feedback saving and deletion flags settle after an edit")
+        }
+
+        let switched = FeedbackStore()
+        switched.posts = [ownRequest, requestB]
+        switched.detail = requestB
+        switched.error = "New request error"
+        let backgroundEdit = Task {
+            await switched.update(
+                session: session,
+                postID: ownRequest.id,
+                kind: "bug",
+                title: "New title",
+                body: "New details"
+            )
+        }
+        while FitFightAPI.feedbackUpdates.isEmpty { await Task.yield() }
+        FitFightAPI.feedbackUpdates.removeFirst().resume(returning: editedRequest)
+        check(await backgroundEdit.value, "editing a board row succeeds while another request is open")
+        check(switched.detail == requestB, "editing one request cannot replace another request's detail")
+        check(switched.posts[0].title == "New title", "the edited board row still updates in the background")
+
         if failures != 0 { exit(1) }
     }
 }
@@ -903,5 +971,6 @@ extension FitFightFeedbackDetail {
         self.comments = comments
         canLaunchFix = true
         canDelete = true
+        canEdit = post.mine
     }
 }

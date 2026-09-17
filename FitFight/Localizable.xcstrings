@@ -181,6 +181,46 @@
                 }
             }
         },
+        "Edit request": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Modifier la demande"
+                    }
+                }
+            }
+        },
+        "Changes are visible to everyone who can see this request.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les modifications sont visibles par toutes les personnes qui voient cette demande."
+                    }
+                }
+            }
+        },
+        "Photos, videos, and files stay on this request.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les photos, les vidéos et les fichiers restent sur cette demande."
+                    }
+                }
+            }
+        },
+        "You can edit or delete your own request from its menu on Bugs & requests.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tu peux modifier ou supprimer ta propre demande depuis son menu dans Bugs et demandes."
+                    }
+                }
+            }
+        },
         "Delete request?": {
             "localizations": {
                 "fr": {

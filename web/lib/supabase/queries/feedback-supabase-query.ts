@@ -27,6 +27,7 @@ import type {
     ListFeedbackQuery,
     ReportFeedbackPostRequest,
     ReportFeedbackPostResponse,
+    UpdateFeedbackPostRequest,
 } from "@/lib/types/feedback/feedback";
 import { feedbackMetadataSchema } from "@/lib/types/feedback/feedback";
 import type { MediaObject } from "@/lib/types/media/media";
@@ -298,20 +299,30 @@ export async function getFeedbackPost(
     };
 }
 
-/** Admin moderation removes the post; foreign keys remove its comments, votes, reports, and attachment links. */
+/** The author or an admin removes the post; foreign keys remove its comments, votes, reports, and attachment links. */
 export async function deleteFeedbackPost(
     userId: string,
     postId: string,
     admin: SupabaseClient = createAdminClient(),
     database: Sql = createDatabaseClient(),
 ): Promise<void> {
-    const viewer = await readAdminViewer(userId, admin);
-    if (!isFitFightAdmin(viewer)) {
-        throw new ApiError(
-            403,
-            ERROR_CODES.forbidden,
-            "Only the FitFight admin can delete feedback.",
-        );
+    const [post] = await database<{ id: string; author_id: string }[]>`
+        select id, author_id
+        from public.feedback_posts
+        where id = ${postId}
+    `;
+    if (!post) {
+        throw new ApiError(404, ERROR_CODES.not_found, "Request not found");
+    }
+    if (post.author_id !== userId) {
+        const viewer = await readAdminViewer(userId, admin);
+        if (!isFitFightAdmin(viewer)) {
+            throw new ApiError(
+                403,
+                ERROR_CODES.forbidden,
+                "You can only delete your own request.",
+            );
+        }
     }
     const deleted = await database`
         delete from public.feedback_posts
@@ -321,6 +332,81 @@ export async function deleteFeedbackPost(
     if (deleted.length === 0) {
         throw new ApiError(404, ERROR_CODES.not_found, "Request not found");
     }
+}
+
+export async function updateFeedbackPost(
+    userId: string,
+    postId: string,
+    input: UpdateFeedbackPostRequest,
+    database: Sql = createDatabaseClient(),
+): Promise<FeedbackPostResponse> {
+    const [post] = await database<{ id: string; author_id: string }[]>`
+        select id, author_id
+        from public.feedback_posts
+        where id = ${postId}
+    `;
+    if (!post) {
+        throw new ApiError(404, ERROR_CODES.not_found, "Request not found");
+    }
+    if (post.author_id !== userId) {
+        throw new ApiError(
+            403,
+            ERROR_CODES.forbidden,
+            "You can only edit your own request.",
+        );
+    }
+    const [row] = await database<FeedbackPostRow[]>`
+        update public.feedback_posts
+        set
+            kind = ${input.kind}::public.feedback_kind,
+            title = ${input.title},
+            body = ${input.body}
+        where id = ${postId}
+            and author_id = ${userId}
+        returning
+            id,
+            kind::text as kind,
+            title,
+            body,
+            (
+                select count(*)::int
+                from public.feedback_votes as vote
+                where vote.post_id = public.feedback_posts.id
+            ) as vote_count,
+            (
+                select count(*)::int
+                from public.feedback_comments as comment
+                where comment.post_id = public.feedback_posts.id
+            ) as comment_count,
+            exists(
+                select 1
+                from public.feedback_votes as vote
+                where vote.post_id = public.feedback_posts.id
+                    and vote.user_id = ${userId}
+            ) as voted,
+            author_id,
+            (
+                select handle
+                from public.profiles
+                where user_id = ${userId}
+                    and deleted_at is null
+            ) as author_handle,
+            true as mine,
+            created_at,
+            metadata
+    `;
+    if (!row) {
+        throw new ApiError(404, ERROR_CODES.not_found, "Request not found");
+    }
+    if (!row.author_handle) {
+        throw new ApiError(
+            400,
+            ERROR_CODES.profile_missing,
+            "Profile is missing",
+        );
+    }
+    const attachments = await loadFeedbackMedia([row.id], database);
+    return { post: mapPost(row, attachments.get(row.id) ?? []) };
 }
 
 export async function createFeedbackPost(

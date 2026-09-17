@@ -58,6 +58,14 @@ export const createFeedbackPostRequestSchema = z
     })
     .strict();
 
+export const updateFeedbackPostRequestSchema = z
+    .object({
+        kind: feedbackKindSchema,
+        title: z.string().trim().min(1).max(80),
+        body: z.string().trim().min(1).max(2000),
+    })
+    .strict();
+
 export const createFeedbackCommentRequestSchema = z
     .object({
         body: z.string().trim().min(2).max(500),
@@ -155,6 +163,7 @@ export const feedbackDetailResponseSchema = feedbackPostDetailSchema
     .extend({
         can_launch_fix: z.boolean(),
         can_delete: z.boolean().default(false),
+        can_edit: z.boolean().default(false),
     })
     .strict();
 
@@ -200,6 +209,9 @@ export type BlockFeedbackAuthorResponse = z.infer<
 >;
 export type CreateFeedbackPostRequest = z.infer<
     typeof createFeedbackPostRequestSchema
+>;
+export type UpdateFeedbackPostRequest = z.infer<
+    typeof updateFeedbackPostRequestSchema
 >;
 export type CreateFeedbackCommentRequest = z.infer<
     typeof createFeedbackCommentRequestSchema

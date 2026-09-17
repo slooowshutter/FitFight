@@ -108,7 +108,10 @@ permissions remain unchanged. No backfill or client permission cutoff is needed.
 The app caches confirmed values per account and environment for offline launch,
 refreshes on foreground and when opening Preferences, and reports failed saves
 without applying them. Language selection uses an explicit localization bundle
-for Foundation strings and the SwiftUI locale. Installation source is read from
+for Foundation strings and the SwiftUI locale. Apple documents that the
+[Foundation locale parameter](https://developer.apple.com/documentation/swift/string/init(localized:table:bundle:locale:comment:))
+formats interpolated values without selecting the translation bundle.
+Installation source is read from
 StoreKit separately from the configured account environment; it is device
 information, not an account preference. Beta and App Store databases do not sync
 preferences automatically.

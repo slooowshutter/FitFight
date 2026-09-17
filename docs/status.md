@@ -24,16 +24,31 @@ changes to other fields. Settings are cached per account/environment; sign-out,
 account switching, failed writes, and stale reads cannot apply another account's
 preferences. Beta and App Store preferences remain separate.
 
-**Checks:** localization, native API-boundary, and whitespace checks passed.
-Cloud TypeScript, native state/localization, simulator, screenshots, and
-migrated disposable database checks are pending. Existing build 113 fixtures and
-profile/notification contracts are retained. No native build ran on the workstation.
+**Cloud checks:** [TypeScript and all 294 backend tests](https://github.com/slooowshutter/FitFight/actions/runs/35176446458)
+passed. [Disposable database checks](https://github.com/slooowshutter/FitFight/actions/runs/35176526612)
+passed migrations, SQL lint, pgTAP, preserved build 113 fixtures, and all 23
+transaction tests both before and after the existing client-permission cutoff.
+Preference checks cover defaults, persistence, concurrent updates, account
+isolation, grants, constraints, and deletion cleanup. The backend/schema files
+are unchanged since those runs.
 
-**Live:** read-only release checks returned staging latest **1.1.1 (201)**,
-enforcement off, and production latest **1.1.1 (202)**, enforcement on; both
-review/internal candidates are null. Legacy staging clients remain supported.
-Apply the additive migration, deploy the compatible backend, then distribute
-the app. No release-branch merge, hosted database write, or live deployment.
+The final [native regression checks and simulator build](https://github.com/slooowshutter/FitFight/actions/runs/35177250042)
+passed at `38e1d46`. The production preference store was checked for language
+switching, response decoding, partial requests, cache restoration, failed saves,
+stale reads, and account changes. [English/French screen captures](https://github.com/slooowshutter/FitFight/actions/runs/35177250117)
+include Preferences in both themes; the captured layouts were visually checked.
+Localization, native API-boundary, and whitespace checks also passed. No native
+build ran on the workstation. Physical App Store/TestFlight identification and
+signed-in two-device UI checks remain outstanding.
+
+**Live and supported clients:** read-only release checks at **03:20 UTC on
+17 Sep** returned staging latest **1.1.1 (201)**, review/internal **1.1.2 (203)**,
+with enforcement off. Production latest is **1.1.1 (202)**, enforcement on, with
+null review/internal candidates. The profile model is byte-identical in sources
+`d97145a` (201), `e2783be` (202), `83ac0d8` (203), and this branch. Legacy staging
+clients remain supported. Apply the additive migration, deploy the compatible
+backend, then distribute the app. This branch was pushed for hosted checks only;
+no PR, release-branch merge, hosted database write, or live deployment was made.
 
 ## Mention notifications: prepared 17 Sep 2026
 

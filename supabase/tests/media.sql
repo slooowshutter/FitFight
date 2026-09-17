@@ -1,5 +1,5 @@
 begin;
-select plan(18);
+select plan(19);
 
 select has_table('public', 'media_objects', 'media objects exist');
 select has_table('public', 'fight_posts', 'fight posts exist');
@@ -8,6 +8,7 @@ select has_table('public', 'feedback_post_media', 'feedback attachments exist');
 select has_table('public', 'fight_post_tags', 'fight post tags exist');
 select has_table('public', 'fight_post_reactions', 'fight post reactions exist');
 select has_table('public', 'fight_post_comments', 'fight post comments exist');
+select has_table('public', 'fight_post_comment_tags', 'fight post comment tags exist');
 select has_table('private', 'fight_post_reports', 'post reports stay private');
 select has_table('private', 'fight_post_comment_reports', 'comment reports stay private');
 select has_table('private', 'feed_blocks', 'feed blocks stay private');

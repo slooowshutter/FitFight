@@ -4,9 +4,12 @@ import { z } from "zod";
 import { socialNotificationAlert } from "@/lib/notifications/notification-copy";
 import { GET, PATCH } from "@/app/api/v1/notifications/preferences/route";
 import {
+    eligibleMentionUserIds,
     enqueueFightFeedCommentNotifications,
     enqueueFightFeedPostNotifications,
     enqueueFightFeedReactionNotifications,
+    enqueueMentionNotifications,
+    mentionHandlesFromBody,
 } from "./feed-social-notifications-supabase-query";
 import {
     defaultNotificationPreferences,
@@ -102,6 +105,16 @@ function createSql(options: {
     });
     return { database: query, queries, inserted };
 }
+
+test("mention handles come from @tags and ignore emails", () => {
+    assert.deepEqual(mentionHandlesFromBody("hey @Marc and @maya_moves!"), [
+        "marc",
+        "maya_moves",
+    ]);
+    assert.deepEqual(mentionHandlesFromBody("write marc@marclamy.com"), []);
+    assert.deepEqual(mentionHandlesFromBody("@x @ok"), ["ok"]);
+    assert.deepEqual(mentionHandlesFromBody("@marc @Marc"), ["marc"]);
+});
 
 test("social alert copy names the person and stays off health numbers", () => {
     const alert = socialNotificationAlert("feed_post", "Alex", "en");
@@ -412,4 +425,121 @@ test("a comment routes to a fight the recipient can open", async () => {
     assert.ok(access);
     assert.match(access ?? "", /series_id/);
     assert.match(access ?? "", /fight_post_channels/);
+});
+
+test("a mention names the person and skips the author", async () => {
+    const { database, inserted } = createSql({
+        members: [{ user_id: otherId, fight_id: fightId }],
+        actor: { handle: "alex", display_name: "Alex" },
+        recipients: [
+            {
+                user_id: otherId,
+                locale: "en",
+                feed_post: true,
+                post_comment: true,
+                comment_reply: true,
+                post_reaction: true,
+            },
+        ],
+    });
+    await enqueueMentionNotifications(database, {
+        actorId,
+        postId,
+        userIds: [actorId, otherId],
+        preferredFightId: fightId,
+    });
+    assert.equal(inserted.length, 1);
+    const row = inserted[0] as {
+        user_id: string;
+        kind: string;
+        copy_key: string;
+        alert_body: string;
+        route: string;
+    };
+    assert.equal(row.user_id, otherId);
+    assert.equal(row.kind, "mention");
+    assert.equal(row.copy_key, "mention_post");
+    assert.equal(row.alert_body, "Alex tagged you in a post.");
+    assert.doesNotMatch(row.alert_body, /score/i);
+    assert.doesNotMatch(row.alert_body, /step/i);
+    assert.equal(row.route, `/fights/${fightId}?post=${postId}`);
+});
+
+test("a comment mention names the person and skips a matching post-comment alert", async () => {
+    const { database, inserted } = createSql({
+        post: { fight_id: fightId, author_id: otherId },
+        members: [{ user_id: otherId, fight_id: fightId }],
+        actor: { handle: "alex", display_name: "Alex" },
+        recipients: [
+            {
+                user_id: otherId,
+                locale: "fr",
+                feed_post: true,
+                post_comment: true,
+                comment_reply: true,
+                post_reaction: true,
+            },
+        ],
+    });
+    await enqueueMentionNotifications(database, {
+        actorId,
+        postId,
+        commentId,
+        userIds: [otherId],
+        preferredFightId: fightId,
+    });
+    await enqueueFightFeedCommentNotifications(database, {
+        postId,
+        commentId,
+        parentId: null,
+        actorId,
+        skipUserIds: [otherId],
+    });
+    assert.equal(inserted.length, 1);
+    const row = inserted[0] as {
+        kind: string;
+        copy_key: string;
+        alert_body: string;
+        route: string;
+    };
+    assert.equal(row.kind, "mention");
+    assert.equal(row.copy_key, "mention_comment");
+    assert.equal(row.alert_body, "Alex t’a mentionné dans un commentaire.");
+    assert.equal(
+        row.route,
+        `/fights/${fightId}?post=${postId}&comment=${commentId}`,
+    );
+});
+
+test("a tagged fight member is not also sent the generic post alert", async () => {
+    const { database, inserted } = createSql({
+        members: [{ user_id: otherId, fight_id: fightId }],
+        actor: { handle: "alex", display_name: "Alex" },
+        recipients: [
+            {
+                user_id: otherId,
+                locale: "en",
+                feed_post: true,
+                post_comment: true,
+                comment_reply: true,
+                post_reaction: true,
+            },
+        ],
+    });
+    await enqueueFightFeedPostNotifications(database, {
+        fightId,
+        postId,
+        actorId,
+        skipUserIds: [otherId],
+    });
+    assert.equal(inserted.length, 0);
+});
+
+test("mention resolution is skipped when nobody is tagged", async () => {
+    const { database, queries } = createSql({});
+    assert.deepEqual(
+        await eligibleMentionUserIds(database, actorId, [], [], [fightId]),
+        [],
+    );
+    assert.equal(queries.length, 0);
 });

@@ -140,7 +140,7 @@ struct FeedActivityView: View {
                         model.tab = .feed
                         model.openPost = FeedPostLink(id: postID, commentID: event.commentId)
                     } else {
-                        model.openFightFromFeed(id: event.fightId.uuidString)
+                        model.openFight(id: event.fightId.uuidString)
                     }
                 } label: {
                     FFCard(padding: 16) {
@@ -216,7 +216,7 @@ struct FightPostDetailView: View {
                                 }
                             }
                         },
-                        onOpen: post.fightId.map { id in { model.openFightFromFeed(id: id.uuidString) } },
+                        onOpen: post.fightId.map { id in { model.openFight(id: id.uuidString) } },
                         onOpenPhoto: { openedPhoto = FeedOpenedPhoto(url: $0) }
                     )
                 } else if postFeed.isLoading {

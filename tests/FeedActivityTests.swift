@@ -26,7 +26,7 @@ enum Failure: Error { case offline }
     var dailyRecapID: String?
     static let pendingFightRouteKey = "fitfight.tests.activity.route"
     static let pendingDailyStatusKey = "fitfight.tests.activity.daily"
-    func openFightFromFeed(id: String) { openFightID = id; tab = .fights }
+    func openFight(id: String) { openFightID = id; tab = .fights }
     func presentDailyStatusRecap(for id: String) async { dailyRecapID = id }
 }
 

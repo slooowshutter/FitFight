@@ -26,8 +26,11 @@ import {
 } from "./fight-posts-supabase-query";
 import { mapMedia, signMediaUrls, type MediaRow } from "./media-supabase-query";
 import {
+    eligibleMentionUserIds,
     enqueueFightFeedCommentNotifications,
     enqueueFightFeedReactionNotifications,
+    enqueueMentionNotifications,
+    mentionHandlesFromBody,
 } from "./feed-social-notifications-supabase-query";
 
 const COMMENT_LIMIT_PER_DAY = 40;
@@ -478,7 +481,7 @@ export async function createFightPostComment(
     input: CreateFightPostCommentRequest,
     database: Sql = createDatabaseClient(),
 ): Promise<FightPostCommentResponse> {
-    await loadVisiblePost(userId, postId, database);
+    const post = await loadVisiblePost(userId, postId, database);
     const [rate] = await database<{ n: number }[]>`
         select count(*)::int as n
         from public.fight_post_comments
@@ -518,11 +521,26 @@ export async function createFightPostComment(
             "Could not save that comment",
         );
     }
+    const mentionIds = await eligibleMentionUserIds(
+        database,
+        userId,
+        [],
+        mentionHandlesFromBody(input.body),
+        post.fight_id ? [post.fight_id] : [],
+    );
+    await enqueueMentionNotifications(database, {
+        actorId: userId,
+        postId,
+        commentId: created.id,
+        userIds: mentionIds,
+        preferredFightId: post.fight_id,
+    });
     await enqueueFightFeedCommentNotifications(database, {
         postId,
         commentId: created.id,
         parentId: input.parent_id ?? null,
         actorId: userId,
+        skipUserIds: mentionIds,
     });
     const [row] = await database<CommentRow[]>`
         select

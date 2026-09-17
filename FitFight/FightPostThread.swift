@@ -19,6 +19,7 @@ struct FightPostEngagement: View {
     @State private var showingCustomEmoji = false
     @State private var replyTo: FitFightFightPostComment?
     @State private var draft = ""
+    @State private var mentionPeople: [FitFightFightPost.Author] = []
     @State private var customEmoji = ""
     @State private var loading = false
     @State private var loadingComments = false
@@ -74,19 +75,32 @@ struct FightPostEngagement: View {
                             .buttonStyle(FFHapticPlainStyle())
                     }
                 }
-                HStack {
-                    TextField(String(localized: "Write a comment…"), text: $draft, axis: .vertical)
-                        .ffType(.body)
-                        .foregroundStyle(theme.text)
-                        .lineLimit(1...4)
-                    FFButton(
-                        title: loading ? String(localized: "Posting…") : String(localized: "Send"),
-                        kind: .ghost,
-                        fullWidth: false
-                    ) {
-                        Task { await sendComment() }
+                FeedMentionField(
+                    text: $draft,
+                    people: $mentionPeople,
+                    main: post.broadcast || post.audience == "main" || post.fightId == nil,
+                    fightIDs: {
+                        var ids = post.channels.map(\.fightId)
+                        if let fightId = post.fightId, !ids.contains(fightId) {
+                            ids.append(fightId)
+                        }
+                        return ids
+                    }()
+                ) {
+                    HStack {
+                        TextField(String(localized: "Write a comment…"), text: $draft, axis: .vertical)
+                            .ffType(.body)
+                            .foregroundStyle(theme.text)
+                            .lineLimit(1...4)
+                        FFButton(
+                            title: loading ? String(localized: "Posting…") : String(localized: "Send"),
+                            kind: .ghost,
+                            fullWidth: false
+                        ) {
+                            Task { await sendComment() }
+                        }
+                        .disabled(loading || loadingComments || draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
-                    .disabled(loading || loadingComments || draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
         }
@@ -274,19 +288,23 @@ struct FightPostEngagement: View {
     private func commentRow(_ comment: FitFightFightPostComment) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .top, spacing: 8) {
-                CompanionAvatar(
-                    personID: comment.author.userId.uuidString,
-                    companionID: comment.author.companionId,
-                    isYou: comment.mine,
-                    monogram: comment.author.initials,
-                    photoURL: comment.author.avatar?.url,
-                    size: 26
-                )
+                ProfileIdentityLink(userID: comment.author.userId, source: "comments") {
+                    CompanionAvatar(
+                        personID: comment.author.userId.uuidString,
+                        companionID: comment.author.companionId,
+                        isYou: comment.mine,
+                        monogram: comment.author.initials,
+                        photoURL: comment.author.avatar?.url,
+                        size: 26
+                    )
+                }
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(comment.author.atHandle)
-                        .ffType(.caption)
-                        .foregroundStyle(theme.text)
-                        .lineLimit(1)
+                    ProfileIdentityLink(userID: comment.author.userId, source: "comments") {
+                        Text(comment.author.atHandle)
+                            .ffType(.caption)
+                            .foregroundStyle(theme.text)
+                            .lineLimit(1)
+                    }
                     Text(comment.body)
                         .ffType(.body)
                         .foregroundStyle(theme.text)
@@ -503,7 +521,8 @@ private struct FightPostReactionsSheet: View {
             if !people.isEmpty {
                 FFCard {
                     ForEach(people) { person in
-                        HStack(spacing: 12) {
+                        ProfileIdentityLink(userID: person.userId, source: "reactions") {
+                            HStack(spacing: 12) {
                             Text(person.emoji)
                                 .ffType(.title)
                             VStack(alignment: .leading, spacing: 2) {
@@ -516,7 +535,8 @@ private struct FightPostReactionsSheet: View {
                             }
                             Spacer(minLength: 0)
                         }
-                        .padding(.vertical, 4)
+                            .padding(.vertical, 4)
+                        }
                     }
                 }
             } else if !loading && error == nil {

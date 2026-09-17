@@ -1,13 +1,19 @@
 import type { Sql } from "postgres";
-import { socialNotificationAlert } from "@/lib/notifications/notification-copy";
+import {
+    mentionNotificationAlert,
+    socialNotificationAlert,
+} from "@/lib/notifications/notification-copy";
 import type { NotificationLocale } from "@/lib/types/notifications/device-installation";
-import type { NotificationKind } from "@/lib/types/notifications/notification-intent";
+import type {
+    NotificationCopyKey,
+    NotificationKind,
+} from "@/lib/types/notifications/notification-intent";
 
 const HOUR_MS = 3_600_000;
 
 type SocialKind = Extract<
     NotificationKind,
-    "feed_post" | "post_comment" | "comment_reply" | "post_reaction"
+    "feed_post" | "post_comment" | "comment_reply" | "post_reaction" | "mention"
 >;
 
 type Recipient = {
@@ -15,6 +21,7 @@ type Recipient = {
     kind: SocialKind;
     eventId: string;
     fightId: string;
+    copyKey?: NotificationCopyKey;
 };
 
 type RecipientRow = {
@@ -40,6 +47,8 @@ function preferenceOn(kind: SocialKind, row: RecipientRow): boolean {
             return row.comment_reply !== false;
         case "post_reaction":
             return row.post_reaction !== false;
+        case "mention":
+            return true;
         default: {
             const _exhaustive: never = kind;
             return _exhaustive;
@@ -165,6 +174,14 @@ async function insertSocialIntents(
         const row = rowsByUser.get(recipient.userId);
         if (!row || !preferenceOn(recipient.kind, row)) return [];
         const locale = localeFor(row.locale);
+        const alert =
+            recipient.kind === "mention"
+                ? mentionNotificationAlert(
+                      commentId ? "comment" : "post",
+                      actor,
+                      locale,
+                  )
+                : socialNotificationAlert(recipient.kind, actor, locale);
         return [
             {
                 idempotency_key: `${recipient.userId}:${recipient.kind}:${recipient.eventId}`,
@@ -175,12 +192,12 @@ async function insertSocialIntents(
                 not_before: notBefore,
                 expires_at: expiresAt,
                 route: `/fights/${recipient.fightId}?post=${postId}${commentId ? `&comment=${commentId}` : ""}`,
-                copy_key: recipient.kind,
-                alert_body: socialNotificationAlert(
-                    recipient.kind,
-                    actor,
-                    locale,
-                ).body,
+                copy_key:
+                    recipient.copyKey ??
+                    (recipient.kind === "mention"
+                        ? "mention_post"
+                        : recipient.kind),
+                alert_body: alert.body,
             },
         ];
     });
@@ -210,7 +227,12 @@ async function insertSocialIntents(
 
 export async function enqueueFightFeedPostNotifications(
     sql: Sql,
-    input: { fightId: string; postId: string; actorId: string },
+    input: {
+        fightId: string;
+        postId: string;
+        actorId: string;
+        skipUserIds?: string[];
+    },
 ): Promise<void> {
     const members = await sql<{ user_id: string; fight_id: string }[]>`
         select distinct on (member.user_id)
@@ -237,12 +259,16 @@ export async function enqueueFightFeedPostNotifications(
         sql,
         input.actorId,
         await actorName(sql, input.actorId),
-        members.map((member) => ({
-            userId: member.user_id,
-            kind: "feed_post",
-            eventId: input.postId,
-            fightId: member.fight_id,
-        })),
+        members
+            .filter(
+                (member) => !(input.skipUserIds ?? []).includes(member.user_id),
+            )
+            .map((member) => ({
+                userId: member.user_id,
+                kind: "feed_post" as const,
+                eventId: input.postId,
+                fightId: member.fight_id,
+            })),
         input.postId,
     );
 }
@@ -254,6 +280,7 @@ export async function enqueueFightFeedCommentNotifications(
         commentId: string;
         parentId: string | null;
         actorId: string;
+        skipUserIds?: string[];
     },
 ): Promise<void> {
     const [post] = await sql<{ fight_id: string | null; author_id: string }[]>`
@@ -288,9 +315,13 @@ export async function enqueueFightFeedCommentNotifications(
             eventId: input.commentId,
         });
     }
+    const skipped = new Set(input.skipUserIds ?? []);
+    const remaining = wanted.filter(
+        (recipient) => !skipped.has(recipient.userId),
+    );
     const fights = await accessibleFightByUser(
         sql,
-        wanted.map((recipient) => recipient.userId),
+        remaining.map((recipient) => recipient.userId),
         input.postId,
         post.fight_id,
     );
@@ -298,7 +329,7 @@ export async function enqueueFightFeedCommentNotifications(
         sql,
         input.actorId,
         await actorName(sql, input.actorId),
-        wanted.flatMap((recipient) => {
+        remaining.flatMap((recipient) => {
             const fightId = fights.get(recipient.userId);
             return fightId ? [{ ...recipient, fightId }] : [];
         }),
@@ -339,5 +370,147 @@ export async function enqueueFightFeedReactionNotifications(
             },
         ],
         input.postId,
+    );
+}
+
+const mentionHandlePattern = /(^|[^a-zA-Z0-9_])@([a-zA-Z0-9_]{2,30})/g;
+
+export function mentionHandlesFromBody(body: string): string[] {
+    const handles: string[] = [];
+    const seen = new Set<string>();
+    for (const match of body.matchAll(mentionHandlePattern)) {
+        const handle = match[2].toLowerCase();
+        if (seen.has(handle)) continue;
+        seen.add(handle);
+        handles.push(handle);
+        if (handles.length === 20) break;
+    }
+    return handles;
+}
+
+export async function eligibleMentionUserIds(
+    sql: Sql,
+    actorId: string,
+    taggedIds: string[],
+    handles: string[],
+    fightIds: string[],
+): Promise<string[]> {
+    const uniqueTags = [...new Set(taggedIds)].filter((id) => id !== actorId);
+    const uniqueHandles = [
+        ...new Set(handles.map((handle) => handle.toLowerCase())),
+    ];
+    if (uniqueTags.length === 0 && uniqueHandles.length === 0) return [];
+    const tagIds = uniqueTags.length > 0 ? uniqueTags : [actorId];
+    const handleValues = uniqueHandles.length > 0 ? uniqueHandles : ["_"];
+    const rows =
+        fightIds.length > 0
+            ? await sql<{ user_id: string }[]>`
+                select distinct profile.user_id
+                from public.profiles as profile
+                join public.fight_members as membership
+                    on membership.user_id = profile.user_id
+                    and membership.state in ('accepted', 'deferred')
+                    and membership.fight_id in ${sql(fightIds)}
+                where profile.deleted_at is null
+                    and profile.user_id <> ${actorId}
+                    and (
+                        (${uniqueTags.length > 0}::boolean and profile.user_id in ${sql(tagIds)})
+                        or (${uniqueHandles.length > 0}::boolean and profile.handle in ${sql(handleValues)})
+                    )
+                    and exists (
+                        select 1
+                        from public.fight_members as done_me
+                        join public.fight_members as done_them
+                            on done_them.fight_id = done_me.fight_id
+                        join public.fights as done_fight
+                            on done_fight.id = done_me.fight_id
+                        where done_me.user_id = ${actorId}
+                            and done_them.user_id = profile.user_id
+                            and done_me.state = 'accepted'
+                            and done_them.state = 'accepted'
+                            and done_fight.state = 'final'
+                    )
+                limit 20
+            `
+            : await sql<{ user_id: string }[]>`
+                select distinct them.user_id
+                from public.fight_members as me
+                join public.fight_members as them
+                    on them.fight_id = me.fight_id
+                join public.fights as fight
+                    on fight.id = me.fight_id
+                join public.profiles as profile
+                    on profile.user_id = them.user_id
+                    and profile.deleted_at is null
+                where me.user_id = ${actorId}
+                    and them.user_id <> ${actorId}
+                    and me.state = 'accepted'
+                    and them.state = 'accepted'
+                    and fight.state = 'final'
+                    and (
+                        (${uniqueTags.length > 0}::boolean and them.user_id in ${sql(tagIds)})
+                        or (${uniqueHandles.length > 0}::boolean and profile.handle in ${sql(handleValues)})
+                    )
+                limit 20
+            `;
+    return rows.map((row) => row.user_id);
+}
+
+export async function enqueueMentionNotifications(
+    sql: Sql,
+    input: {
+        actorId: string;
+        postId: string;
+        commentId?: string;
+        userIds: string[];
+        preferredFightId: string | null;
+    },
+): Promise<void> {
+    const unique = [...new Set(input.userIds)].filter(
+        (userId) => userId !== input.actorId,
+    );
+    if (unique.length === 0) return;
+    const fights = await accessibleFightByUser(
+        sql,
+        unique,
+        input.postId,
+        input.preferredFightId,
+    );
+    const missing = unique.filter((userId) => !fights.has(userId));
+    if (missing.length > 0) {
+        const fallbacks = await sql<{ user_id: string; fight_id: string }[]>`
+            select distinct on (member.user_id)
+                member.user_id,
+                member.fight_id
+            from public.fight_members as member
+            where member.user_id in ${sql(missing)}
+                and member.state in ('accepted', 'deferred')
+            order by member.user_id, member.fight_id
+        `;
+        for (const row of fallbacks) {
+            fights.set(row.user_id, row.fight_id);
+        }
+    }
+    await insertSocialIntents(
+        sql,
+        input.actorId,
+        await actorName(sql, input.actorId),
+        unique.flatMap((userId) => {
+            const fightId = fights.get(userId);
+            if (!fightId) return [];
+            return [
+                {
+                    userId,
+                    kind: "mention" as const,
+                    eventId: input.commentId ?? input.postId,
+                    fightId,
+                    copyKey: input.commentId
+                        ? "mention_comment"
+                        : "mention_post",
+                },
+            ];
+        }),
+        input.postId,
+        input.commentId,
     );
 }

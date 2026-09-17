@@ -72,6 +72,13 @@ He asks for several designs of a screen. He wants to **tap them on his phone**, 
 - Touch **no** `.swift` file and nothing under `FitFight.xcodeproj/` while proposing. That keeps TestFlight quiet until he picks one. Port the winner separately; open its PR only when Marc explicitly asks for a PR.
 - These pages are proposals, not the approved spec. The approved spec is still `kit/FitFight Design System.dc.html`.
 
+## Cursor Bugbot reviews
+
+- When Marc explicitly asks for a PR, Cursor cloud agents, including Grok, add the `origin:cursor` label. Preserve that label when another agent takes over the work. Conductor/Astra PRs do not get the label just for using AI.
+- The selective review workflow requests Bugbot for ready PRs into `preview` or `main`, PRs labeled `origin:cursor`, and same-repository `cursor/*` branches. It retains the label on detected Cursor branches so a later rename does not lose the review policy.
+- Once selective routing is activated, Conductor/Astra PRs into `develop` do not need to wait for an optional Bugbot run. Cursor-origin PRs and release PRs need their review completed and findings handled before merging. Existing test and merge authorization rules still apply.
+- Activation state, credentials, and release protection are documented in [shipping](docs/shipping.md#selective-cursor-bugbot-reviews). A prepared workflow is not evidence that live routing has been enabled.
+
 ## When you change the native iOS app
 
 1. Branch off `develop`. Only when Marc explicitly asks for a PR, open it **into `develop`**. Do not PR into `preview` or `main` unless Marc is cutting that release.

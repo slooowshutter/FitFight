@@ -46,6 +46,7 @@ if ["configure", "prepare", "submit"].include?(mode)
         health = JSON.parse(Net::HTTP.get(URI("https://fitfight.app/api/health")))
         abort "Production is not ready" unless health["ok"] && health["backend"] == "prod" && health["schema"] == "ready" && health["profile_api"]
     end
+    # Binary uploads skip metadata, so set the release option explicitly before review.
     configured = read.call("appStoreVersions/#{version.fetch('id')}", {
         data: { type: "appStoreVersions", id: version.fetch("id"), attributes: { releaseType: "AFTER_APPROVAL" } }
     })

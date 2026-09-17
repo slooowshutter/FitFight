@@ -31,7 +31,11 @@ native/CI version values also passed validation.
 
 [Cloud configuration](https://github.com/slooowshutter/FitFight/actions/runs/35168925860)
 confirmed 1.1.2 has `releaseType: AFTER_APPROVAL`, state `PREPARE_FOR_SUBMISSION`,
-and no selected build. The setting is saved at Apple. The release defaults and
+and no selected build. A separate [cloud readback](https://github.com/slooowshutter/FitFight/actions/runs/35169051669)
+confirmed automatic publication and exact English/French description and release
+note matches (434 and 529 description characters). The one-time configuration
+trigger was removed; the release-tools workflow is back to its original audit-only
+branch trigger. The setting is saved at Apple. The release defaults and
 1.1.2 build files are pushed on `update-app-store-copy`; they are not merged into
 the release branches. No PR, merge, review submission, or build upload has been
 performed for this update. Native compilation and upload still require the

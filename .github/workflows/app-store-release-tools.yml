@@ -2,7 +2,7 @@ name: App Store release tools
 
 on:
     push:
-        branches: [update-app-store-copy]
+        branches: [fitfight-app-store-review]
         paths:
             - "scripts/app-store-release-audit.rb"
             - ".github/workflows/app-store-release-tools.yml"

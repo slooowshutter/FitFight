@@ -53,6 +53,7 @@ export async function deleteAccount(
             await sql`delete from private.fight_post_reports where reporter_id = ${userId}`;
             await sql`delete from private.fight_post_comment_reports where reporter_id = ${userId}`;
             await sql`delete from private.feed_blocks where blocker_id = ${userId} or blocked_id = ${userId}`;
+            await sql`delete from public.fight_post_comment_tags where user_id = ${userId}`;
             await sql`delete from public.fight_post_comments where author_id = ${userId}`;
             await sql`delete from public.fight_post_reactions where user_id = ${userId}`;
             await sql`delete from public.fight_post_tags where user_id = ${userId}`;

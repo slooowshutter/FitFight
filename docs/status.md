@@ -22,9 +22,14 @@ bodies are unchanged, and a missing mention kind is unused by old backends.
 `mention_comment` copy keys. No app-facing RPC. Preference GET/PATCH shape is
 unchanged. Mentions are not user-toggleable.
 
-**Checks and live deployment:** recorded separately after local backend,
-localization, and native-boundary runs. Deploy the additive migration and
-compatible backend before the native app. No hosted database reset. Physical-device
+**Checks:** `npm run typecheck` passed. `npm test` passed (291 tests).
+`python3 scripts/check_localizations.py` and
+`python3 scripts/check_native_api_boundary.py` passed. Cloud iOS compile,
+screenshots, and disposable-database migration checks are on
+[#275](https://github.com/slooowshutter/FitFight/pull/275).
+
+**Live deployment:** not deployed. No hosted database write or reset. Deploy the
+additive migration and compatible backend before the native app. Physical-device
 two-user mention delivery remains outstanding.
 
 ## In-app beta access: prepared 17 Sep 2026

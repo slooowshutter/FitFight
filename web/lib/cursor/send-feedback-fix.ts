@@ -28,10 +28,15 @@ export async function sendFeedbackFix(
         operation_id: randomUUID(),
     });
     const launched = await launch(detail, fetch, senderMetadata);
-    await changeStatus(userId, detail.post.id, {
-        expected_status: "approved",
-        status: "building",
-        operation_id: randomUUID(),
-    });
+    try {
+        await changeStatus(userId, detail.post.id, {
+            expected_status: "approved",
+            status: "building",
+            operation_id: randomUUID(),
+        });
+    } catch (error) {
+        // A newer status wins, but cannot undo the confirmed external launch.
+        if (!(error instanceof ApiError && error.status === 409 && error.code === ERROR_CODES.conflict)) throw error;
+    }
     return launched;
 }

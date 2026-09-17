@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 17,
+            notes: "Suggested Fight invitations stay joinable, and rematches keep their original number of days across clock changes. Private Fight history protects participant identities, and Send keeps its agent link when progress changes in another session."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
             notes: "Profiles now include Friends, private sharing controls, Fight records and head-to-head rivalries. Tap a person to open their profile or challenge them. Suggested public Fights are optional at the end of onboarding."
         ),
         ReleaseNote(

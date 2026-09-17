@@ -95,7 +95,7 @@ test("suggested and joinable lists load summaries in one bounded read", async ()
                 time_zone: "UTC",
                 action_text: "Cook dinner",
                 roster: [{ count: 3 }],
-                membership: index === 0 ? [{ user_id: userId }] : [],
+                membership: index === 0 ? [{ user_id: userId, state: "accepted" }] : [],
             };
             return {
                 id: index === 0 ? fixture.fights[0].seriesId : randomUUID(),
@@ -193,7 +193,7 @@ test("suggested and joinable lists load summaries in one bounded read", async ()
             },
         );
         const result = await listJoinableFights(userId, admin, now, size === 8);
-        assert.deepEqual({ fights: result.slice(0, 1) }, fixture);
+        assert.deepEqual({ fights: result.slice(0, 1).map(({ membershipState, ...legacy }) => legacy) }, fixture);
         assert.deepEqual(
             result,
             rows.map((row, index) => ({
@@ -208,6 +208,7 @@ test("suggested and joinable lists load summaries in one bounded read", async ()
                 memberCount: 3,
                 recurring: row.recurring,
                 alreadyMember: index === 0,
+                membershipState: index === 0 ? "accepted" : null,
                 canJoinNext: index !== 0 && row.recurring,
             })),
         );

@@ -68,6 +68,23 @@ test("Send preserves a confirmed launch when another session changes progress", 
     assert.deepEqual(result, launched);
     assert.equal(launches, 1);
     assert.equal(updates, 2);
+
+    const conflict = new ApiError(409, "conflict", "Approval is stale.");
+    await assert.rejects(sendFeedbackFix(admin, {
+        ...detail, post: { ...detail.post, workflow_status: "submitted" },
+    }, {}, async () => {
+        launches++;
+        return launched;
+    }, async () => { throw conflict; }), (error: unknown) => error === conflict);
+    assert.equal(launches, 1, "A conflict before approval must not launch work");
+
+    const failure = new ApiError(500, "db_error", "Database unavailable.");
+    await assert.rejects(sendFeedbackFix(admin, {
+        ...detail, post: { ...detail.post, workflow_status: "submitted" },
+    }, {}, async () => launched, async (_userId, _postId, input) => {
+        if (input.status === "building") throw failure;
+        return { workflow_status: input.status };
+    }), (error: unknown) => error === failure);
 });
 
 test("Send includes user context but excludes generated progress comments", async (t) => {

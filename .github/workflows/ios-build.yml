@@ -11,6 +11,7 @@ on:
             - "scripts/check_native_api_boundary.py"
             - "scripts/check_remote_photo_loading.py"
             - "scripts/test_fight_discovery.py"
+            - "scripts/test_profile_challenges.py"
             - "scripts/test_native_state.py"
             - "scripts/test_fight_live_updates.py"
             - "scripts/test_fight_chart_scores.py"
@@ -30,6 +31,7 @@ on:
             - "scripts/check_native_api_boundary.py"
             - "scripts/check_remote_photo_loading.py"
             - "scripts/test_fight_discovery.py"
+            - "scripts/test_profile_challenges.py"
             - "scripts/test_native_state.py"
             - "scripts/test_fight_live_updates.py"
             - "scripts/test_fight_chart_scores.py"
@@ -114,6 +116,9 @@ jobs:
 
             - name: Verify fight discovery caching
               run: python3 scripts/test_fight_discovery.py
+
+            - name: Verify calendar rematches
+              run: python3 scripts/test_profile_challenges.py
 
             - name: Verify native API contracts
               run: |

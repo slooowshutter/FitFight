@@ -53,7 +53,7 @@ struct SuggestedFightsOnboardingView: View {
     }
 
     private func join(_ fight: FitFightJoinableFight) async {
-        guard joining == nil, !fight.alreadyMember else { return }
+        guard joining == nil, !fight.hasJoined else { return }
         let accountID = session.authSession?.user.id
         joining = fight.id
         defer { joining = nil }
@@ -97,9 +97,9 @@ struct SuggestedFightOffer: View {
                 Text(String(localized: "Participants see your identity, Fight Steps, standings, and posts you share in this Fight. Joining does not enable profile or daily-history sharing."))
                     .ffType(.caption).foregroundStyle(theme.textSecondary)
                 FFButton(
-                    title: fight.alreadyMember ? String(localized: "Joined") : String(localized: "Join"),
-                    kind: fight.alreadyMember ? .secondary : .primary,
-                    enabled: !fight.alreadyMember, busy: joining, fullWidth: true, action: onJoin
+                    title: fight.hasJoined ? String(localized: "Joined") : String(localized: "Join"),
+                    kind: fight.hasJoined ? .secondary : .primary,
+                    enabled: !fight.hasJoined, busy: joining, fullWidth: true, action: onJoin
                 )
             }
         }

@@ -138,6 +138,40 @@ test("withdrawal is recorded atomically and later visibility edits never reclass
     assert.equal((await readSharedProfile(owner, owner, undefined, database)).record?.wins, 1);
 });
 
+test("rematches preserve calendar days in the original Fight time zone across both clock changes", async (t) => {
+    const users = [randomUUID(), randomUUID()];
+    const [owner, opponent] = users;
+    const cases = [
+        { start: "2026-03-27T12:00:00+01:00", end: "2026-03-30T12:00:00+02:00", seconds: 71 * 3600, days: 3 },
+        { start: "2026-10-23T12:00:00+02:00", end: "2026-10-26T12:00:00+01:00", seconds: 73 * 3600, days: 3 },
+        { start: "2026-01-10T12:00:00+01:00", end: "2026-01-17T12:00:00+01:00", seconds: 7 * 86400, days: 7 },
+        { start: "2026-10-25T02:45:00+02:00", end: "2026-10-25T02:15:00+01:00", seconds: 1800, days: null },
+    ];
+    const fightId = randomUUID();
+    t.after(async () => {
+        await database`delete from public.fights where id = ${fightId}`;
+        await database`delete from auth.users where id in ${database(users)}`;
+    });
+    for (const userId of users) await database`insert into auth.users(id) values (${userId})`;
+    await updateProfileSettings(owner, { competitive: true, audience: "public" }, database);
+    for (const sample of cases) {
+        await database`insert into public.fights(id, owner_id, name, action_text, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy)
+            values (${fightId}, ${owner}, 'Calendar rematch', 'Make coffee', 'live', ${sample.start}, ${sample.end}, 'Europe/Paris', 'highest_total', 'shared')`;
+        for (const userId of users) {
+            await database`insert into public.fight_members(fight_id, user_id, state, accepted_at)
+                values (${fightId}, ${userId}, 'accepted', ${sample.start})`;
+        }
+        await database`update public.fight_members set current_value = case when user_id = ${owner} then 1000 else 500 end,
+            rank = case when user_id = ${owner} then 1 else 2 end, final_steps_complete = true where fight_id = ${fightId}`;
+        await database`update public.fights set state = 'final' where id = ${fightId}`;
+        const profile = await readSharedProfile(opponent, owner, undefined, database);
+        assert.deepEqual(profile.rivalry?.rematch, {
+            duration_seconds: sample.seconds, duration_days: sample.days, action_text: "Make coffee",
+        });
+        await database`delete from public.fights where id = ${fightId}`;
+    }
+});
+
 test("private history identities and cursors cannot link participants across Profiles", async (t) => {
     const users = [randomUUID(), randomUUID(), randomUUID()];
     const [owner, opponent, stranger] = users;
@@ -167,6 +201,9 @@ test("private history identities and cursors cannot link participants across Pro
     assert.equal(first.results[0].name, null);
     assert.equal(first.next_cursor, first.results[0].id);
     assert.notEqual(first.next_cursor, other.next_cursor);
+    assert.deepEqual(await readProfileHistory(stranger, owner, query, database), first);
+    await database`update public.fight_members set current_value = current_value + 1
+        where fight_id in ${database(fightIds)} and user_id = ${owner}`;
     assert.deepEqual(await readProfileHistory(stranger, owner, query, database), first);
     const own = await readProfileHistory(owner, owner, query, database);
     assert.equal(own.results[0].id, first.results[0].id);

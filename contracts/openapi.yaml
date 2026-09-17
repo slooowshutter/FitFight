@@ -1891,6 +1891,11 @@ components:
                                     "type": "integer",
                                     "minimum": 1
                                 },
+                                "duration_days": {
+                                    "type": ["integer", "null"],
+                                    "minimum": 1,
+                                    "description": "Whole calendar days in the original Fight time zone, when applicable."
+                                },
                                 "action_text": {
                                     "anyOf": [
                                         {
@@ -2094,7 +2099,8 @@ components:
                         "properties": {
                             "id": {
                                 "type": "string",
-                                "format": "uuid"
+                                "format": "uuid",
+                                "description": "Opaque history identifier scoped to this Profile, never a Fight identifier."
                             },
                             "fight_id": {
                                 "anyOf": [

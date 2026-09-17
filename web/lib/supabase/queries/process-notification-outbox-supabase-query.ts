@@ -62,6 +62,7 @@ function isMuted(
         case "daily_status":
             return row.daily_status === false;
         case "fight_invite":
+        case "mention":
             return false;
         default: {
             const _exhaustive: never = kind;

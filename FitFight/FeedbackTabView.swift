@@ -13,8 +13,7 @@ struct FeedbackTabView: View {
             RequestsView(
                 store: requests,
                 chrome: .tab,
-                filter: $model.feedbackRequestFilter,
-                onCompose: { composingRequest = true }
+                filter: $model.feedbackRequestFilter
             )
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

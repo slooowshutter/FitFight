@@ -656,6 +656,7 @@ test("deleting an owner with other participants removes their account and privat
         "private.apple_sign_in_tokens",
         "private.healthkit_sync_diagnostics",
         "private.fight_join_attempts",
+        "private.fight_membership_events",
     ]) {
         const remaining =
             await database`select user_id from ${database(table)} where user_id = ${f.owner}`;

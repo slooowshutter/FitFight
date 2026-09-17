@@ -169,10 +169,18 @@ creates a P0 Inbox row in the Blend HQ Product Backlog (Product FitFight, Source
 App feedback). Vercel holds `NOTION_TOKEN`. A missing token or a Notion failure
 does not fail the in-app post. The token never belongs in iOS, git, or chat.
 
-`GET /api/v1/feedback/{postID}` includes `can_launch_fix` for the signed-in viewer.
-That flag is true only for the FitFight admin: email `marc@marclamy.com`, username
+`GET /api/v1/feedback/{postID}` includes `can_launch_fix` and `can_delete` for the signed-in viewer.
+Those flags are true only for the FitFight admin: confirmed account email `marc@marclamy.com`, username
 `marc`, or extras in `FITFIGHT_ADMIN_EMAILS` / `FITFIGHT_ADMIN_HANDLES`. Apple Sign
-In may store no email, so the username match is required on staging. List, detail,
+In may store no email, so the username match is required on staging. User-editable
+metadata and identity email copies never grant admin access.
+Admin-only `DELETE /api/v1/feedback/{postID}` returns `{ deleted: true }` and
+removes the request plus its comments, votes, reports, and attachment links through
+existing foreign keys. It returns 403 for a regular account and 404 if the request
+is missing. The app asks for confirmation in the request's menu, then returns to
+the board. Older backends omit `can_delete`, which the app treats as false.
+No schema migration is needed. Stored media bytes and external Notion copies are
+outside this deletion, matching existing post deletion behavior. List, detail,
 create, and comment responses keep a `metadata` object for older clients and always
 send `{}` so the board never shows device details. List, detail, and create include
 `media` with signed URLs. Posts and comments still store the
@@ -238,6 +246,74 @@ period remains a product decision; Apple provides no historical immutability dea
 The snapshot fingerprint includes the read's `complete_through` timestamp. Replaying
 the same reading is idempotent, but a later reading that returns to an earlier total
 creates a new snapshot and can become the latest correction at the same Fight end.
+
+## Feed activity and notification destinations (prepared 16 Sep 2026)
+
+`GET /api/v1/posts/{postID}` resolves a single post with the existing `{ post }`
+contract, independently of feed pagination. It checks current membership, recurring
+series/channel access, blocks in either direction, and author deletion. Social
+pushes keep `/fights/{fightID}` as their path and add `?post={postID}`, plus
+`&comment={commentID}` for comments and replies. Released clients that discard the
+query still open the Fight. The new client persists the query across a cold launch,
+handles taps while already foregrounded, and opens a dedicated post screen. Targeted
+comments load through their page before the screen scrolls to them.
+
+`GET /api/v1/feed/activity` supplies You -> Activity. It returns `{ events,
+next_cursor }`, with a default page size of 40 and maximum of 80. The cursor preserves
+microsecond timestamps and an event ID; unknown historical timestamps sort last.
+Post and comment pagination also preserves microseconds so equal timestamps do
+not repeat or skip rows while resolving a notification. Existing opaque cursors
+remain accepted, using the anchor row's exact timestamp when it still exists.
+Events include available posts, comments, replies, reactions, and membership state
+history in the viewer's current Fights. An invited viewer sees only their own
+membership history until joining. Current access, deleted authors, and blocks are
+rechecked on every page. This is product activity, independent of push permissions
+and delivery; deleting a post also removes its comments/reactions from this list.
+
+The additive `20260916210740_feed_activity_updates.sql` migration records membership
+state transitions in a private, RLS-protected audit table. Clients have no table or
+function access. The internal trigger records state transitions, never scores or
+HealthKit data, and does not implement membership decisions. Existing acceptance
+times are backfilled from `accepted_at`. Historical invitations have no recorded
+timestamp and display **Time not recorded**. Future transitions use the committed
+write's timestamp. Account/Fight deletion cascades to this history.
+
+The same migration broadcasts empty `feed_changed` invalidations on the existing
+private per-user topic for posts, comments, reactions, channels, membership events,
+and blocks. App-wide posts invalidate every active profile's private topic,
+including viewers with no shared Fight. Post edits, comments, reactions, and
+deletions use the same recipients. These commit with the write. The native listener
+handles this event separately from standings, coalesces bursts, and reconciles on subscription,
+reconnection and foreground entry. Visible root/Fight feeds, post detail, and
+Activity refetch through the API. Loaded threads refresh even after their first
+comment, and queue another read when an event arrives during a request. A completed
+local write cannot be overwritten by an older comment response. An automatic
+refresh reads through the previously loaded comment IDs, including confirmed
+local comments outside the first ranked page, before replacing the thread.
+Deleted comments disappear after that read; a failed later page retains the
+complete previous thread and cursor. Changing the sort starts a new first page.
+
+The native root feed and Fight feed request `limit=10` using the existing page
+contract. Initial load and pull-to-refresh fetch one page. Pull-to-refresh directly
+awaits the feed request; it no longer waits for a HealthKit/Fight sync first.
+The API already returns `Cache-Control: no-store`. A lazy list loads the next page
+when its footer approaches the viewport, appending unique IDs without reordering
+existing cards or refreshing their threads. Pagination failures retain the cursor
+and show a retry at the bottom.
+
+Live events refresh currently displayed cards through the single-post endpoint,
+preserving their order and the older-page cursor. Offscreen cards are marked stale
+and refreshed when they reappear. New posts enter on initial load or pull-to-refresh.
+Events received during a page request also invalidate cards in the arriving page.
+Pagination queues reconciliation for any visible stale cards, including a live
+read that began before pagination. A manual refresh supersedes older page
+responses. Older clients still use the existing server default of 30; no response
+fields or API versions change for pagination.
+
+Deploy the additive migration and compatible backend before distributing the
+native build. `/api/v1`, old response fields, direct-client grants, and existing
+notification preferences are unchanged. Cloud checks and live rollout status are
+recorded separately in [status.md](status.md).
 
 ## Live standings (prepared 15 Sep 2026)
 

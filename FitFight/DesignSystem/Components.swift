@@ -42,10 +42,6 @@ enum FFHaptics {
     static func button() {
         buttonImpact.impactOccurred(intensity: 0.72)
     }
-
-    static func success() {
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
-    }
 }
 
 /// Same as `.plain`, with a tap tick. Use on controls that should not scale.
@@ -272,12 +268,17 @@ struct FFSlideToConfirm: View {
 
     @Environment(\.ffTheme) private var theme
     @AppStorage(FFSlideHapticRecipe.storageKey) private var selectedRecipeID = FFSlideHapticRecipe.shippedID
+    @AppStorage(FFCustomSlideHaptics.storageKey) private var customHapticData = Data()
     @State private var drag: CGFloat = 0
     @State private var completed = false
     @State private var slideHaptics = FFSlideHapticEngine()
 
     private var resolvedRecipe: FFSlideHapticRecipe {
-        recipe ?? FFSlideHapticRecipe.named(selectedRecipeID)
+        if let recipe { return recipe }
+        if selectedRecipeID == FFCustomSlideHaptics.recipeID {
+            return FFCustomSlideHaptics.restore(from: customHapticData).recipe
+        }
+        return FFSlideHapticRecipe.named(selectedRecipeID)
     }
 
     private let knobSize: CGFloat = 44
@@ -339,6 +340,9 @@ struct FFSlideToConfirm: View {
                 reset()
             }
         }
+        .onChange(of: resolvedRecipe) { _, _ in
+            reset()
+        }
         .onDisappear {
             slideHaptics.stop()
         }
@@ -351,10 +355,11 @@ struct FFSlideToConfirm: View {
                 drag = min(max(0, value.translation.width), travel)
                 slideHaptics.drag(progress: travel == 0 ? 0 : drag / travel, recipe: resolvedRecipe)
             }
-            .onEnded { _ in
+            .onEnded { value in
                 slideHaptics.stop()
                 guard enabled, !busy, !completed else { return }
-                if travel > 0, drag >= travel * 0.85 {
+                drag = min(max(0, value.translation.width), travel)
+                if travel > 0, drag >= travel * resolvedRecipe.confirmationProgress {
                     confirm()
                 } else {
                     withAnimation(.timingCurve(0.16, 1, 0.3, 1, duration: 0.22)) {
@@ -369,7 +374,7 @@ struct FFSlideToConfirm: View {
         completed = true
         slideHaptics.stop()
         if action() {
-            FFHaptics.success()
+            slideHaptics.finish(recipe: resolvedRecipe)
             if resetsAfterSuccess {
                 reset()
             }

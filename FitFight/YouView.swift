@@ -157,7 +157,10 @@ struct YouView: View {
         if session.isSignedIn {
             HStack(spacing: 14) {
                 if companions.hasChosen {
-                    Button { companions.showingPicker = true } label: {
+                    Button {
+                        companions.pickerStartsWithCustom = false
+                        companions.showingPicker = true
+                    } label: {
                         CompanionAvatar(
                             personID: session.profile?.userId.uuidString,
                             companionID: session.profile?.companionId,

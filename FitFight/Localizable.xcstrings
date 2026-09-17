@@ -1,6 +1,56 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Make it yours": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "À ton image"
+                    }
+                }
+            }
+        },
+        "Change animal": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Changer d’animal"
+                    }
+                }
+            }
+        },
+        "This is how other people see you in fights and Feed. You can change your animal anytime.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "C’est ainsi que les autres te voient dans les combats et le fil. Tu peux changer d’animal à tout moment."
+                    }
+                }
+            }
+        },
+        "You can change your animal anytime. Choose another from the grid or describe any animal below.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tu peux changer d’animal à tout moment. Choisis-en un autre dans la grille ou décris l’animal de ton choix ci-dessous."
+                    }
+                }
+            }
+        },
+        "Make it yours opens your animal description, ready to edit and save. Use Change animal to choose another companion anytime.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "À ton image ouvre la description de ton animal pour la modifier et l’enregistrer. Utilise Changer d’animal pour choisir un autre compagnon à tout moment."
+                    }
+                }
+            }
+        },
         "Website download and invitation links open the App Store. The staging website keeps TestFlight access for beta testers.": {
             "localizations": {
                 "fr": {
@@ -1238,16 +1288,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Ensemble."
-                    }
-                }
-            }
-        },
-        "Try another companion": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Essayer un autre compagnon"
                     }
                 }
             }
@@ -8449,16 +8489,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Tu peux prendre une photo avec l’appareil photo quand tu ajoutes des Médias, pas seulement en choisir une dans la photothèque."
-                    }
-                }
-            }
-        },
-        "This is how other people see you in fights and Feed.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "C’est comme ça que les autres te voient dans les défis et le Fil."
                     }
                 }
             }

@@ -163,5 +163,10 @@
     "channel": "prod",
     "version": "1.1.1",
     "build": 202
+  },
+  {
+    "channel": "staging",
+    "version": "1.1.2",
+    "build": 203
   }
 ]

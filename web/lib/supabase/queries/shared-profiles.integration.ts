@@ -161,6 +161,8 @@ test("rematches preserve calendar days in the original Fight time zone across bo
             await database`insert into public.fight_members(fight_id, user_id, state, accepted_at)
                 values (${fightId}, ${userId}, 'accepted', ${sample.start})`;
         }
+        // The capture trigger uses today's clock; this fixture represents the original entry.
+        await database`update private.fight_participation_records set entered_at = ${sample.start} where fight_id = ${fightId}`;
         await database`update public.fight_members set current_value = case when user_id = ${owner} then 1000 else 500 end,
             rank = case when user_id = ${owner} then 1 else 2 end, final_steps_complete = true where fight_id = ${fightId}`;
         await database`update public.fights set state = 'final' where id = ${fightId}`;
@@ -202,7 +204,7 @@ test("private history identities and cursors cannot link participants across Pro
     assert.equal(first.next_cursor, first.results[0].id);
     assert.notEqual(first.next_cursor, other.next_cursor);
     assert.deepEqual(await readProfileHistory(stranger, owner, query, database), first);
-    await database`update public.fight_members set current_value = current_value + 1
+    await database`update public.fight_members set state = 'deferred'
         where fight_id in ${database(fightIds)} and user_id = ${owner}`;
     assert.deepEqual(await readProfileHistory(stranger, owner, query, database), first);
     const own = await readProfileHistory(owner, owner, query, database);

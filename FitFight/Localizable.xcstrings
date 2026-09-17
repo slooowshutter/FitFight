@@ -1,6 +1,56 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Feedback keeps loading correctly when you leave a request while it is being deleted.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les demandes continuent de se charger correctement lorsque vous quittez une demande en cours de suppression."
+                    }
+                }
+            }
+        },
+        "Delete request": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Supprimer la demande"
+                    }
+                }
+            }
+        },
+        "Delete request?": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Supprimer la demande ?"
+                    }
+                }
+            }
+        },
+        "This removes the request, comments, and votes for everyone. This cannot be undone.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "La demande, les commentaires et les votes seront supprimés pour tout le monde. Cette action est irréversible."
+                    }
+                }
+            }
+        },
+        "Admins can delete a feedback request from its menu after confirming.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les administrateurs peuvent supprimer une demande depuis son menu après confirmation."
+                    }
+                }
+            }
+        },
         "Website download and invitation links open the App Store. The staging website keeps TestFlight access for beta testers.": {
             "localizations": {
                 "fr": {

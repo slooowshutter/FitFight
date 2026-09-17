@@ -1,12 +1,52 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **16 Sep 2026**. Production candidate: **1.1.1 (202)**.
+Read this before building. Last updated **17 Sep 2026**. Production candidate: **1.1.1 (202)**.
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
 ---
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
+
+## Admin feedback deletion: prepared 17 Sep 2026
+
+**Code:** admins can open a Feedback request, tap its ellipsis menu, and choose
+Delete request. Confirmation removes the request from the board and returns to
+the list. The server checks the existing admin handle/email allowlist for every
+deletion; regular accounts cannot delete feedback, including their own requests.
+The shared admin reader now accepts only the stored profile handle and confirmed
+Auth account email. User-editable metadata and identity email copies cannot grant
+admin access. English/French copy and a 1.1.1 release note are included.
+The review fix records deleted request IDs so stale list/detail responses cannot
+restore them. Finishing a deletion preserves another request's pending load,
+comments, admin actions, and errors when the user has already navigated away.
+
+**Contract:** additive `DELETE /api/v1/feedback/{postID}` and `can_delete` on the
+existing detail response. Older native decoders ignore the new key; the new app
+defaults to false when an older backend omits it. Existing request fields and
+response fields retain their shape. No database migration or permission change;
+existing foreign keys cascade comments, votes, reports, and attachment links.
+
+**Checks:** TypeScript, all 277 backend tests, localization, native API-boundary,
+and whitespace checks passed. Regression coverage includes missing authentication,
+admin handle/case/confirmed-email access, regular accounts, spoofed metadata,
+unconfirmed email, deleted accounts, missing requests, and legacy detail responses.
+Database calls were mocked; no cloud deletion or cascade integration test was run.
+Native ordering regressions are added to the existing cloud state-test runner for
+both detail/deletion completion orders, stale list/detail responses, and failed
+deletion. Review-fix checks passed for localization, native API-boundary, whitespace,
+and regression-source assembly. The native regressions have not been executed in
+this local workspace, following the cloud-only build rule.
+Cloud iOS compilation and signed-in device checks of confirmation, cancellation,
+failure handling, and list refresh remain pending.
+
+**Supported builds and rollout:** read-only release checks on 17 Sep returned
+staging latest 1.1.1 (201), enforcement off, and production latest 1.1.1 (202),
+enforcement on; both had null review/internal candidates. Legacy staging users
+remain supported. Source inspection at `d97145a` (201) and `e2783be` (202) confirms
+the feedback decoder reads only its named keys; no installed binary was tested.
+Deploy the compatible backend before the native app. No PR,
+push, merge, live deployment, TestFlight upload, or hosted data write was performed.
 
 ## Website download destinations: prepared 17 Sep 2026
 

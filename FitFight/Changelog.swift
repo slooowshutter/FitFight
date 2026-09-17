@@ -29,6 +29,20 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 17,
+            notes: "Feedback keeps loading correctly when you leave a request while it is being deleted."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Admins can delete a feedback request from its menu after confirming."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
             notes: "Website download and invitation links open the App Store. The staging website keeps TestFlight access for beta testers."
         ),
         ReleaseNote(

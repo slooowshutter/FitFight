@@ -24,6 +24,7 @@ export const transferTableValues = [
     "public.fight_post_tags",
     "public.fight_post_reactions",
     "public.fight_post_comments",
+    "public.fight_post_comment_tags",
     "private.fight_post_reports",
     "private.fight_post_comment_reports",
     "private.feed_blocks",

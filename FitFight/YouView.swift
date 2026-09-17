@@ -19,8 +19,8 @@ struct YouView: View {
     @State private var showingOnboardingPreview = false
     @State private var showingSlideHapticsLab = false
     @State private var showingBroadcastCompose = false
-    @State private var showingHealthDetails = false
     @State private var showingNotificationSettings = false
+    @State private var copiedSyncReference = false
     @State private var showingBetaInfo = false
     @State private var showingCompanionPreviewControls = false
 
@@ -241,13 +241,11 @@ struct YouView: View {
     private var health: some View {
         FFGroupedRows {
             Button {
-                Task {
-                    await model.refreshFights(session: session, steps: steps, trigger: .manual, requestAccess: !steps.hasAsked)
-                }
+                Task { await handleHealthRowTap() }
             } label: {
                 FFGroupedRow(
                     title: String(localized: "Apple Health Steps"),
-                    subtitle: steps.connection == .upToDate ? String(localized: "Up to date") : steps.detailText,
+                    subtitle: healthSubtitle,
                     systemImage: "heart",
                     enabled: steps.status != .reading && !model.isRefreshingFights,
                     subtitleTone: healthSubtitleTone,
@@ -256,96 +254,52 @@ struct YouView: View {
             }
             .buttonStyle(FFHapticPlainStyle())
             .disabled(steps.status == .reading || model.isRefreshingFights)
-            FFDivider()
-            FFGroupedRow(
-                title: showingHealthDetails ? String(localized: "Fewer settings") : String(localized: "More settings"),
-                systemImage: "slider.horizontal.3",
-                trailing: AnyView(
-                    Image(systemName: showingHealthDetails ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(theme.textFaint)
-                ),
-                action: { showingHealthDetails.toggle() }
-            )
-            if showingHealthDetails {
+            if steps.hasAsked {
                 FFDivider()
                 FFGroupedRow(
-                    title: String(localized: "Request Health access"),
-                    subtitle: String(localized: "Ask for access to Health types you haven’t reviewed yet. Fights use Steps only."),
+                    title: String(localized: "Sharing"),
+                    subtitle: String(localized: "Choose which Health types FitFight can read. Fights still use Steps."),
                     systemImage: "heart.circle",
                     enabled: steps.status != .reading && !model.isRefreshingFights,
                     subtitleTone: .neutral,
                     trailing: AnyView(
-                        FFPill(String(localized: "Review"), style: .softMoss)
+                        FFPill(String(localized: "Reconnect"), style: .softMoss)
                     ),
                     action: {
-                        Task {
-                            await model.refreshFights(
-                                session: session,
-                                steps: steps,
-                                trigger: .manual,
-                                requestAccess: true
-                            )
-                        }
+                        Task { await reviewHealthSharing() }
                     }
                 )
                 .disabled(steps.status == .reading || model.isRefreshingFights)
-                FFDivider()
-                FFGroupedRow(
-                    title: String(localized: "Change Health permissions"),
-                    subtitle: String(localized: "In Health, tap your profile → Apps → FitFight to turn each type of access on or off."),
-                    systemImage: "hand.raised",
-                    subtitleTone: .neutral
-                )
+            }
+            if steps.diagnostics.backgroundRefreshStatus == .denied {
                 FFDivider()
                 FFGroupedRow(
                     title: String(localized: "Background App Refresh"),
                     subtitle: steps.backgroundRefreshText,
                     systemImage: "arrow.clockwise",
-                    subtitleTone: steps.diagnostics.backgroundRefreshStatus == .available ? .moss : .neutral,
-                    trailing: steps.diagnostics.backgroundRefreshStatus == .denied
-                        ? AnyView(FFPill(String(localized: "Open Settings"), style: .softMoss)) : nil,
-                    action: steps.diagnostics.backgroundRefreshStatus == .denied
-                        ? { UIApplication.shared.open(URL(string: UIApplication.openSettingsURLString)!) }
-                        : nil
+                    subtitleTone: .neutral,
+                    trailing: AnyView(FFPill(String(localized: "Open Settings"), style: .softMoss)),
+                    action: { UIApplication.shared.open(URL(string: UIApplication.openSettingsURLString)!) }
                 )
+            }
+            if let reference = steps.diagnostics.failureReference {
                 FFDivider()
                 FFGroupedRow(
-                    title: String(localized: "HealthKit background delivery"),
-                    subtitle: steps.backgroundDeliveryText,
-                    systemImage: "heart.text.square",
-                    subtitleTone: steps.diagnostics.deliveryRegistrationStatus == .enabled ? .moss : .neutral
+                    title: String(localized: "Sync error reference"),
+                    subtitle: reference,
+                    systemImage: "number",
+                    subtitleTone: .neutral,
+                    trailing: AnyView(
+                        FFPill(
+                            copiedSyncReference ? String(localized: "Copied") : String(localized: "Copy"),
+                            style: .softMoss
+                        )
+                    ),
+                    action: {
+                        UIPasteboard.general.string = reference
+                        copiedSyncReference = true
+                    }
                 )
-                FFDivider()
-                FFGroupedRow(
-                    title: String(localized: "Last automatic sync"),
-                    subtitle: diagnosticDate(steps.diagnostics.lastAutomaticSync),
-                    systemImage: "bolt"
-                )
-                FFDivider()
-                FFGroupedRow(
-                    title: String(localized: "Last manual or foreground sync"),
-                    subtitle: diagnosticDate(steps.diagnostics.lastManualSync),
-                    systemImage: "hand.tap"
-                )
-                if let failure = steps.currentFailureText {
-                    FFDivider()
-                    FFGroupedRow(
-                        title: String(localized: "Current sync issue"),
-                        subtitle: failure,
-                        systemImage: "exclamationmark.triangle",
-                        subtitleTone: .ember
-                    )
-                }
-                if let reference = steps.diagnostics.failureReference {
-                    FFDivider()
-                    FFGroupedRow(
-                        title: String(localized: "Sync error reference"),
-                        subtitle: reference,
-                        systemImage: "number",
-                        subtitleTone: .neutral
-                    )
-                }
             }
         }
     }
@@ -358,16 +312,70 @@ struct YouView: View {
         }
     }
 
+    private var healthSubtitle: String {
+        switch steps.connection {
+        case .upToDate:
+            var parts: [String] = []
+            if !steps.metaText.isEmpty {
+                parts.append(steps.metaText)
+            }
+            if let lastSync = [steps.diagnostics.lastManualSync, steps.diagnostics.lastAutomaticSync]
+                .compactMap { $0 }
+                .max()
+            {
+                parts.append(diagnosticDate(lastSync))
+            } else if parts.isEmpty {
+                return steps.detailText
+            } else {
+                parts.append(String(localized: "Up to date"))
+            }
+            return parts.joined(separator: " · ")
+        case .noAccessibleSteps:
+            return String(localized: "Steps are off in Health. Tap Fix to choose what to share.")
+        case .notConnected, .syncing, .syncFailed:
+            return steps.detailText
+        }
+    }
+
     private var healthPill: FFPill {
         switch steps.connection {
         case .syncFailed:
             return FFPill(String(localized: "Retry"), style: .softEmber)
         case .syncing:
             return FFPill(String(localized: "Syncing"), style: .neutral)
-        case .upToDate, .noAccessibleSteps:
+        case .upToDate:
             return FFPill(String(localized: "Connected"), style: .softMoss)
+        case .noAccessibleSteps:
+            return FFPill(String(localized: "Fix"), style: .softEmber)
         case .notConnected:
             return FFPill(String(localized: "Connect"), style: .solidMoss)
+        }
+    }
+
+    private func handleHealthRowTap() async {
+        switch steps.connection {
+        case .noAccessibleSteps:
+            await reviewHealthSharing()
+        case .notConnected, .syncing, .upToDate, .syncFailed:
+            await model.refreshFights(
+                session: session,
+                steps: steps,
+                trigger: .manual,
+                requestAccess: !steps.hasAsked
+            )
+        }
+    }
+
+    private func reviewHealthSharing() async {
+        if await steps.shouldRequestAuthorization() {
+            await model.refreshFights(
+                session: session,
+                steps: steps,
+                trigger: .manual,
+                requestAccess: true
+            )
+        } else {
+            steps.openHealthApp()
         }
     }
 

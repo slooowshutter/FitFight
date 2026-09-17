@@ -72,6 +72,24 @@ final class HealthKitStepsStore: ObservableObject {
         return UserDefaults.standard.bool(forKey: Self.askedKey(userId: activeUserId))
     }
 
+    func shouldRequestAuthorization() async -> Bool {
+        guard HKHealthStore.isHealthDataAvailable() else { return false }
+        do {
+            let status = try await store.statusForAuthorizationRequest(
+                toShare: [],
+                read: HealthKitActivityAggregates.readTypes
+            )
+            return status == .shouldRequest
+        } catch {
+            return false
+        }
+    }
+
+    func openHealthApp() {
+        guard let url = URL(string: "x-apple-health://") else { return }
+        UIApplication.shared.open(url)
+    }
+
     #if DEBUG && targetEnvironment(simulator)
     func setCompanionPreviewStatus(_ value: Status) {
         guard CompanionPreview.isEnabled else { return }

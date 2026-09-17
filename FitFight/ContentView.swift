@@ -63,12 +63,15 @@ struct ContentView: View {
                     companions.showingPicker = presented
                 }
             }
-        )) {
+        ), onDismiss: {
+            companions.pickerStartsWithCustom = false
+        }) {
             CompanionPicker(
                 selection: companions.selection,
                 required: session.needsCompanionSelection,
                 isCustom: companions.isCustom,
-                prompt: companions.customPrompt
+                prompt: companions.customPrompt,
+                startWithCustom: companions.pickerStartsWithCustom
             )
                 .fitFightTheme(themeStore.theme)
                 .presentationBackground(themeStore.theme.bg)

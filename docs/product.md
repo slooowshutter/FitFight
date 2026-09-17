@@ -28,7 +28,7 @@ Do not rename the bundle ID without Apple + CI updates.
 - Choose **1 hour**, **6 hours**, or **1 day** for testing, or **3 days**, **1 week**, **2 weeks**, or **1 month**.
 - Apple Health sends merged Steps aggregates needed for active fights. It may also store private energy, distance, exercise, stand, flights, and workout summaries. Those extras are not fight options yet.
 - Settings keeps Privacy, Support, Notifications, Versions, Sign out, and Delete account. Bugs & requests lives on the Feedback tab, with a shortcut on You. Look is Night or Day.
-- Companion: pick from a grid of animals, or Custom with one description (species, breed, accessories, colors). That text is stored on the account for later image generation. Generation is not built. Pose and generation controls are not shown.
+- Companion: Change animal opens the animal grid. Make it yours opens and scrolls to one description to edit and save (species, breed or race, accessories, colors, and other details). You can change the animal anytime. That text is stored on the account for later image generation. Generation is not built. Pose and generation controls are not shown.
 - Delete account removes the full account, uploaded Steps, memberships, owned fights, and bugs or requests the User posted; a stored Sign in with Apple authorization is revoked when available.
 - The old Requests tab, money, unsupported metrics, and dead settings are removed.
 

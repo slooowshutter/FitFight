@@ -36,6 +36,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 17,
+            notes: "Make it yours opens your animal description, ready to edit and save. Use Change animal to choose another companion anytime."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
             notes: "Feedback keeps loading correctly when you leave a request while it is being deleted."
         ),
         ReleaseNote(

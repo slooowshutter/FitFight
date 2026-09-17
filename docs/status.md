@@ -8,6 +8,31 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
 
+## Selective Bugbot reviews, prepared 17 Sep 2026
+
+**Code:** the prepared GitHub workflow requests reviews for ready PRs into
+`preview` or `main`, labeled `origin:cursor`, or on same-repository `cursor/*`
+branches. It skips other development PRs and duplicate requests for the same
+diff. Cursor cloud instructions preserve the origin label across agent handoffs.
+The release-ruleset payload targets only `preview` and `main` and starts disabled.
+
+**Checks:** workflow syntax passes `actionlint`. All 20 routing tests passed on
+[GitHub-hosted Ubuntu](https://github.com/slooowshutter/FitFight/actions/runs/35170980509)
+at `09ab408`. They cover selection, forks, drafts, missing credentials, duplicate
+events, changing commits/targets, and trigger failure. The live `Cursor Bugbot`
+check was verified as originating from GitHub App `cursor`, ID `1210556`.
+
+**Activation:** not enabled. The available Cursor key received HTTP 401,
+`Invalid Team API Key`, from the Bugbot settings API; no connected browser is
+available. The GitHub repository has no `BUGBOT_GITHUB_TOKEN` secret. The
+`origin:cursor` label exists, `BUGBOT_ROUTING_ENABLED=false`, and the prepared
+[release ruleset](https://github.com/slooowshutter/FitFight/rules/23573610) is
+disabled. Existing automatic reviews and active branch protections remain unchanged. Activation
+requires the dedicated credential, Cursor manual-only configuration, and the
+workflow on `main` through separately authorized PRs and merges. Live trigger
+delivery and fail-on-unresolved-issues behavior remain unverified. See the
+[activation order](shipping.md#selective-cursor-bugbot-reviews).
+
 ## Mention notifications: prepared 17 Sep 2026
 
 **Code:** typing `@` in a Feed post or comment shows username typeahead from

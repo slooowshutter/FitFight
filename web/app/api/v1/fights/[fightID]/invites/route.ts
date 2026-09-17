@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { z } from "zod";
 import {
     apiRoute,
@@ -31,7 +32,9 @@ export const POST = apiRoute<{ fightID: string }>(
             undefined,
             sql,
         );
-        await processNotificationOutbox(new Date(), sql);
+        after(async () => {
+            await processNotificationOutbox(new Date(), createDatabaseClient());
+        });
         return json(invite);
     },
 );

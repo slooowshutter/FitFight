@@ -1,6 +1,44 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Reactions swipe horizontally, with a visible like button and any emoji. Charts refresh without losing your selection and keep missing history clear. Comments load reliably, and notification failures no longer interrupt saved fights.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les réactions défilent horizontalement, avec un bouton J’aime visible et le choix de tout emoji. Les graphiques s’actualisent sans perdre ta sélection et signalent les données manquantes. Les commentaires se chargent correctement et les échecs de notification n’interrompent plus les fights enregistrés."
+                    }
+                }
+            }
+        },
+        "Cheer this post": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": { "state": "translated", "value": "Encourager cette publication" }
+                }
+            }
+        },
+        "Remove reaction": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": { "state": "translated", "value": "Retirer la réaction" }
+                }
+            }
+        },
+        "React": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": { "state": "translated", "value": "Réagir" }
+                }
+            }
+        },
+        "Other emoji…": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": { "state": "translated", "value": "Autre emoji…" }
+                }
+            }
+        },
         "Feedback no longer shows a duplicate button above the bottom tabs. Use the plus at the top to add a request.": {
             "localizations": {
                 "fr": {

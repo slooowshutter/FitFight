@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 17,
+            notes: "Reactions swipe horizontally, with a visible like button and any emoji. Charts refresh without losing your selection and keep missing history clear. Comments load reliably, and notification failures no longer interrupt saved fights."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
             notes: "Feedback no longer shows a duplicate button above the bottom tabs. Use the plus at the top to add a request."
         ),
         ReleaseNote(

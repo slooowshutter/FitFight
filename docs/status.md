@@ -18,14 +18,18 @@ Suggested Fights retain immutable-admin authorization and transaction locks;
 the same transaction creates upstream's pending invitations and notification
 intents. Acceptance stays explicit. Upstream's approved 1.1.2 version is retained.
 
-**Checks:** the merge passed strict typechecking, 312 backend tests, and the full
-macOS simulator build. Database validation exposed interference between shared
-fixtures once suggestions began inviting all users: the live-update case passed
-in isolation after failing in the parallel suite. Database files now run
-sequentially; explicit concurrent joins, privacy edits, and finalization races
-still run inside their tests. Final cloud database validation is pending.
-Regression coverage includes invitation idempotency, and existing supported-client
-fixtures remain in place.
+**Cloud checks:**
+
+- [Web API at `ab8fe24`](https://github.com/slooowshutter/FitFight/actions/runs/35248653718): strict typechecking, all 312 backend tests, API contract parsing, and English/French privacy-page rendering passed.
+- [Database at `ab8fe24`](https://github.com/slooowshutter/FitFight/actions/runs/35248653719): all 35 integration tests passed before and after the deferred client-permission cutoff, including invitation idempotency and real WebSocket commit/rollback delivery. Build 113 compatibility, 223 pgTAP checks, 18 cutoff checks, and historical deletion/profile-record migration replay passed. Authenticated `/me` fixtures retain builds 113, 190, 200, 201, 202, and 203.
+- [iOS simulator at `f35e254`](https://github.com/slooowshutter/FitFight/actions/runs/35247525681): full compilation on GitHub-hosted `macos-26`, native regression tests, and English/French localizations passed. Native source and fixtures are unchanged in `ab8fe24`.
+
+Database validation exposed interference between shared fixtures once suggestions
+began inviting all users: the live-update case passed in isolation after failing
+in the parallel suite. Database files now run sequentially; explicit concurrent
+joins, privacy edits, and finalization races still run inside their tests. Both
+complete passes now succeed without the temporary diagnostic run or changed
+assertions. Existing supported-client fixtures remain in place.
 
 **Live deployment:** none. The feature branch has Vercel deployment disabled and
 cannot upload TestFlight. No hosted database, `develop`, `preview`, or `main` was

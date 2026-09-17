@@ -26,6 +26,64 @@ Fastlane: `fastlane/Fastfile` lane `beta` uploads staging TestFlight builds. Lan
 
 Build number is not committed; CI sets `CURRENT_PROJECT_VERSION` at archive time from TestFlight (`latest + 1`). The next prepared marketing version is **1.1.1**, requested by Marc on 15 Sep 2026. The last uploaded TestFlight build remains **1.1.0 (200)**. Apple closed the 1.0.0 train, so do not upload 1.0.0.
 
+## Selective Cursor Bugbot reviews
+
+The prepared policy runs Bugbot for ready PRs targeting `preview` or `main`,
+PRs labeled `origin:cursor`, and same-repository branches beginning `cursor/`.
+Other development PRs leave Bugbot optional. Cursor cloud agents add the label
+when opening an authorized PR, including when using Grok. The workflow also adds
+it to detected Cursor branches. The label identifies the workflow that produced
+the work, not a model inferred from the diff or GitHub author.
+
+`.github/workflows/bugbot-review.yml` uses `pull_request_target` and reads code
+only from the trusted default-branch SHA. It never checks out or executes PR
+code. GitHub runs this event from `main`, so merging only into `develop` does
+not activate it. Its repository variable `BUGBOT_ROUTING_ENABLED` must be
+`true`; otherwise it makes no review requests.
+
+The workflow fetches current PR metadata, skips drafts and closed PRs, and
+serializes requests per PR. A marker records the head commit and base branch
+and commit in the trigger comment. Repeated events for that diff do not post
+again. A new commit or changed destination can request another review. Only
+markers posted by the configured trigger account count as previous requests.
+This deduplicates requests, not successful reviews; a failed Bugbot run can be
+retried with a manual `cursor review` comment by an authorized user.
+
+Activation order for an agent with the required access:
+
+1. Store a dedicated GitHub user token as the `BUGBOT_GITHUB_TOKEN` repository
+   secret. Limit it to FitFight with Pull requests read/write access. The user
+   must have access to Bugbot for this repository. Do not reuse an interactive
+   agent's GitHub credential. The normal Actions token is used only to read
+   unselected PRs when this secret is absent; selected reviews fail without it.
+2. Land the workflow and its script on `main` through separately authorized
+   PRs and merges. Marc's authorization is still required for every merge.
+3. Set Bugbot to manual-only while keeping the repository enabled. For a team,
+   the documented admin setting is `manualTriggerOnly: true`. For a personal
+   account, verify that "Run only when mentioned" covers the actual PR authors.
+4. Set `BUGBOT_ROUTING_ENABLED=true`. Verify a Conductor development PR receives
+   no automatic review, a Cursor PR receives one, both release targets receive
+   one, and a new commit requests a fresh review without duplicate comments.
+5. Activate the prepared `Bugbot before release merges` ruleset only after
+   verifying live trigger delivery. Its payload is
+   `.github/bugbot-release-ruleset.json`; it starts disabled and targets only
+   `preview` and `main`. The expected check is `Cursor Bugbot` from Cursor's
+   GitHub App, ID `1210556`, verified on an existing FitFight check run.
+
+The ruleset requires a PR, the Bugbot check, and resolved review threads.
+Bugbot normally reports findings as `neutral`, which GitHub accepts for required
+checks. Enable Cursor's fail-on-unresolved-issues setting if available and verify
+it before claiming findings block a release. Thread resolution is not proof
+that a finding was fixed, and an internal Bugbot error may also be neutral.
+
+If activation fails, restore Cursor's automatic reviews before disabling
+`BUGBOT_ROUTING_ENABLED`. Do not disable Bugbot for the repository, since that
+also removes the ability to request manual reviews.
+
+References: [Cursor Bugbot configuration and check behavior](https://cursor.com/docs/bugbot),
+[GitHub's default-branch execution for pull_request_target](https://github.blog/changelog/2025-11-07-actions-pull_request_target-and-environment-branch-protections-changes/).
+Current activation evidence is recorded in [status](status.md#selective-bugbot-reviews-prepared-17-sep-2026).
+
 ## Versions vs builds (why friends wait)
 
 External TestFlight builds must be submitted for beta review and distributed to their tester groups. Apple fully reviews the first submitted build; later builds of the same marketing version may receive a shorter review, but approval is not guaranteed or immediate. Stay on **1.1.1**. See [Apple's external testing rules](https://developer.apple.com/help/app-store-connect/test-a-beta-version/invite-external-testers).

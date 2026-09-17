@@ -16,6 +16,9 @@ root = Path(__file__).resolve().parents[1]
 app = (root / "FitFight/AppModel.swift").read_text()
 feed = (root / "FitFight/FeedView.swift").read_text()
 thread = (root / "FitFight/FightPostThread.swift").read_text()
+feedback = (root / "FitFight/RequestsView.swift").read_text()
+api = (root / "FitFight/FitFightAPI.swift").read_text()
+metadata = (root / "FitFight/FeedbackClientMetadata.swift").read_text()
 app_methods = (
     app[app.index("    func refreshFights("):app.index("    private func performRefreshFights(")]
     + app[app.index("    private func holdRefreshPhase("):app.index("    func removeCachedFights(")]
@@ -48,6 +51,13 @@ source += "\nextension FightPostThreadState {\n    func countChangedForTest(prev
 sort_change = thread.split(".onChange(of: commentSort) { _, _ in\n", 1)[1].split("\n        }\n", 1)[0]
 source += "\nextension FightPostThreadState {\n    func sortChangedForTest() {\n" + sort_change + "\n    }\n}\n"
 source += thread[thread.index("private struct DisplayedFightComment:"):]
+source += "\n" + feedback[feedback.index("@MainActor\nfinal class FeedbackStore:"):feedback.index("    func vote(")].replace(": ObservableObject", "").replace("@Published ", "")
+source += feedback[feedback.index("    func delete("):feedback.index("    func report(")]
+source += feedback[feedback.index("    private func keepingNewerVote("):feedback.index("    static func previewBoard(")] + "\n}\n"
+source += feedback[feedback.index("private enum RequestAttachment {"):feedback.index("private struct RequestMediaStack:")]
+source += api[api.index("struct FitFightFeedbackPost:"):api.index("struct FitFightFeedbackFixAgent:")]
+source += metadata[metadata.index("struct FitFightFeedbackMetadata:"):metadata.index("    @MainActor")] + "\n}\n"
+source += metadata[metadata.index("extension FitFightFeedbackMetadata: Codable {"):]
 
 with tempfile.TemporaryDirectory(prefix="fitfight-state-tests-") as directory:
     generated = Path(directory) / "NativeStateTests.swift"

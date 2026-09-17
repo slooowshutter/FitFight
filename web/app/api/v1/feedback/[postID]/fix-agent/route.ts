@@ -7,14 +7,14 @@ import {
     readJson,
     requireUuid,
 } from "@/lib/http";
-import {
-    isFitFightAdmin,
-    readAdminViewer,
-} from "@/lib/admin/is-fitfight-admin";
+import { isFitFightAdmin } from "@/lib/admin/is-fitfight-admin";
 import { launchFeedbackFixAgent } from "@/lib/cursor/launch-feedback-fix-agent";
 import { markAppFeedbackBacklogStatus } from "@/lib/notion/create-app-feedback-item";
 import { notionAppFeedbackAgentStatus } from "@/lib/types/notion/product-backlog";
-import { verifyUser } from "@/lib/supabase/queries/auth-supabase-query";
+import {
+    readAdminViewer,
+    verifyUser,
+} from "@/lib/supabase/queries/auth-supabase-query";
 import { getFeedbackPost } from "@/lib/supabase/queries/feedback-supabase-query";
 import {
     feedbackMetadataSchema,

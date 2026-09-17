@@ -1,9 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Sql } from "postgres";
-import {
-    isFitFightAdmin,
-    readAdminViewer,
-} from "@/lib/admin/is-fitfight-admin";
+import { isFitFightAdmin } from "@/lib/admin/is-fitfight-admin";
+import { readAdminViewer } from "@/lib/supabase/queries/auth-supabase-query";
 import { ApiError, ERROR_CODES } from "@/lib/http";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createDatabaseClient } from "@/lib/supabase/postgres";

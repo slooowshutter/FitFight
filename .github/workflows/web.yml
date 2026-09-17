@@ -7,7 +7,7 @@ on:
             - "contracts/**"
             - ".github/workflows/web.yml"
     push:
-        branches: [main, develop, preview, profiles-friends-and-stats]
+        branches: [agent-check/feedback-review-fixes-20260917]
         paths:
             - "web/**"
             - "contracts/**"

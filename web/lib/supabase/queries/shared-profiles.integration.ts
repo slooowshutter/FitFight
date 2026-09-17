@@ -138,6 +138,47 @@ test("withdrawal is recorded atomically and later visibility edits never reclass
     assert.equal((await readSharedProfile(owner, owner, undefined, database)).record?.wins, 1);
 });
 
+test("private history identities and cursors cannot link participants across Profiles", async (t) => {
+    const users = [randomUUID(), randomUUID(), randomUUID()];
+    const [owner, opponent, stranger] = users;
+    const fightIds = [randomUUID(), randomUUID()];
+    t.after(async () => {
+        await database`delete from public.fights where id in ${database(fightIds)}`;
+        await database`delete from auth.users where id in ${database(users)}`;
+    });
+    for (const userId of users) await database`insert into auth.users(id) values (${userId})`;
+    for (const fightId of fightIds) {
+        await database`insert into public.fights(id, owner_id, name, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy)
+            values (${fightId}, ${owner}, 'Private match', 'live', now() - interval '1 hour', now() + interval '1 hour', 'UTC', 'highest_total', 'shared')`;
+        for (const userId of [owner, opponent]) {
+            await database`insert into public.fight_members(fight_id, user_id, state, accepted_at)
+                values (${fightId}, ${userId}, 'accepted', now())`;
+        }
+    }
+    for (const userId of [owner, opponent]) {
+        await updateProfileSettings(userId, { competitive: true, audience: "public" }, database);
+    }
+    const query = profilePageQuerySchema.parse({ limit: 1 });
+    const first = await readProfileHistory(stranger, owner, query, database);
+    const other = await readProfileHistory(stranger, opponent, query, database);
+    assert.notEqual(first.results[0].id, other.results[0].id);
+    assert.equal(fightIds.includes(first.results[0].id), false);
+    assert.equal(first.results[0].fight_id, null);
+    assert.equal(first.results[0].name, null);
+    assert.equal(first.next_cursor, first.results[0].id);
+    assert.notEqual(first.next_cursor, other.next_cursor);
+    assert.deepEqual(await readProfileHistory(stranger, owner, query, database), first);
+    const own = await readProfileHistory(owner, owner, query, database);
+    assert.equal(own.results[0].id, first.results[0].id);
+    assert.ok(own.results[0].fight_id && fightIds.includes(own.results[0].fight_id));
+    const nextQuery = profilePageQuerySchema.parse({ limit: 1, cursor: first.next_cursor });
+    const next = await readProfileHistory(stranger, owner, nextQuery, database);
+    assert.equal(next.results.length, 1);
+    assert.notEqual(next.results[0].id, first.results[0].id);
+    assert.equal(next.next_cursor, null);
+    await assert.rejects(readProfileHistory(stranger, opponent, nextQuery, database), { status: 400 });
+});
+
 test("account deletion preserves a frozen group draw and cannot create a duel", async (t) => {
     const users = [randomUUID(), randomUUID(), randomUUID()];
     const [owner, opponent, departing] = users;

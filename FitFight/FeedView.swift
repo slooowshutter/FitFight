@@ -683,6 +683,7 @@ struct FightPostsSection: View {
     }
 }
 
+@MainActor
 @ViewBuilder
 private func feedPostSections(
     store: FeedStore,

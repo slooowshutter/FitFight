@@ -193,11 +193,11 @@ struct FightPostDetailView: View {
 
     var body: some View {
         ScrollViewReader { reader in
-            FFScreen(pinSectionHeaders: true, refresh: FFRefreshConfig(
+            FFScreen(refresh: FFRefreshConfig(
                 isRefreshing: postFeed.isLoading,
                 message: String(localized: "Loading"),
                 action: { await postFeed.load(session: session, postID: target.id) }
-            )) {
+            ), pinSectionHeaders: true) {
                 if let error = postFeed.error {
                     FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
                     FFButton(title: String(localized: "Try again"), kind: .ghost, fullWidth: true) {

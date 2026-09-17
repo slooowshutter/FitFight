@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.1.1",
             year: 2026,
             month: 9,
+            day: 17,
+            notes: "Requests now show their progress, the next step, and FitFight updates in the discussion."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
             day: 16,
             notes: "Feed comments can be sorted by most comments or most recent. Most comments is the default."
         ),

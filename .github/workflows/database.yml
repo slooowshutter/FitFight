@@ -4,7 +4,7 @@ name: Database
 on:
     pull_request:
     push:
-        branches: [main, develop, preview]
+        branches: [agent-check/feedback-workflow-20260917]
 
 concurrency:
     group: database-${{ github.ref }}

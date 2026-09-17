@@ -1,6 +1,306 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Submitted": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Envoyée"
+                    }
+                }
+            }
+        },
+        "Approved by Marc for build": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Approuvée par Marc pour réalisation"
+                    }
+                }
+            }
+        },
+        "Being built": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "En cours de réalisation"
+                    }
+                }
+            }
+        },
+        "Being reviewed": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "En cours de vérification"
+                    }
+                }
+            }
+        },
+        "Being tested": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "En cours de test"
+                    }
+                }
+            }
+        },
+        "Deployed": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Déployée"
+                    }
+                }
+            }
+        },
+        "Approved by Apple": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Approuvée par Apple"
+                    }
+                }
+            }
+        },
+        "Available on the App Store": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Disponible sur l’App Store"
+                    }
+                }
+            }
+        },
+        "Next: Approval": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ensuite : approbation"
+                    }
+                }
+            }
+        },
+        "Next: Build": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ensuite : réalisation"
+                    }
+                }
+            }
+        },
+        "Next: Review": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ensuite : vérification"
+                    }
+                }
+            }
+        },
+        "Next: Testing": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ensuite : test"
+                    }
+                }
+            }
+        },
+        "Next: Deployment": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ensuite : déploiement"
+                    }
+                }
+            }
+        },
+        "Next: App Store approval": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ensuite : approbation de l’App Store"
+                    }
+                }
+            }
+        },
+        "Next: Available on the App Store": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ensuite : disponibilité sur l’App Store"
+                    }
+                }
+            }
+        },
+        "This request has been submitted for approval.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cette demande a été envoyée pour approbation."
+                    }
+                }
+            }
+        },
+        "Approved by Marc for build.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Approuvée par Marc pour réalisation."
+                    }
+                }
+            }
+        },
+        "This feature is now being built.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cette amélioration est en cours de réalisation."
+                    }
+                }
+            }
+        },
+        "This feature is now being reviewed.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cette amélioration est en cours de vérification."
+                    }
+                }
+            }
+        },
+        "This feature is now being tested.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cette amélioration est en cours de test."
+                    }
+                }
+            }
+        },
+        "This feature has been deployed and is waiting for App Store approval.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cette amélioration a été déployée et attend l’approbation de l’App Store."
+                    }
+                }
+            }
+        },
+        "Apple has approved this feature. It is waiting to become available on the App Store.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Apple a approuvé cette amélioration. Elle sera bientôt disponible sur l’App Store."
+                    }
+                }
+            }
+        },
+        "This feature is now available on the App Store.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cette amélioration est maintenant disponible sur l’App Store."
+                    }
+                }
+            }
+        },
+        "FitFight update": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Actualité FitFight"
+                    }
+                }
+            }
+        },
+        "Change status": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Changer le statut"
+                    }
+                }
+            }
+        },
+        "Update request progress?": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Mettre à jour l’avancement de la demande ?"
+                    }
+                }
+            }
+        },
+        "Confirm the required production backend changes are healthy and the app build has finished upload and processing for Apple review.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Confirme que les changements nécessaires du serveur de production fonctionnent et que l’envoi et le traitement de la version sont terminés pour la vérification par Apple."
+                    }
+                }
+            }
+        },
+        "Confirm the released FitFight app contains this change and is available to install from the App Store.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Confirme que la version publiée de FitFight contient ce changement et peut être installée depuis l’App Store."
+                    }
+                }
+            }
+        },
+        "Request progress changed. Check the latest status and try again.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "L’avancement de la demande a changé. Vérifie son statut et réessaie."
+                    }
+                }
+            }
+        },
+        "Requests now show their progress, the next step, and FitFight updates in the discussion.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les demandes affichent maintenant leur avancement, la prochaine étape et les actualités FitFight dans la discussion."
+                    }
+                }
+            }
+        },
         "Feed comments can be sorted by most comments or most recent. Most comments is the default.": {
             "localizations": {
                 "fr": {

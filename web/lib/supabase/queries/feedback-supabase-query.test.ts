@@ -28,6 +28,7 @@ const postId = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
 const postRow = {
     id: postId,
     kind: "bug" as const,
+    workflow_status: "submitted" as const,
     title: "Steps chart is blank",
     body: "The daily Steps chart on a live fight stays empty after a successful sync.",
     vote_count: 3,
@@ -263,6 +264,7 @@ test("listing feedback posts maps vote counts and the viewer vote", async () => 
             {
                 id: postId,
                 kind: "bug",
+                workflow_status: "submitted",
                 title: postRow.title,
                 body: postRow.body,
                 vote_count: 3,
@@ -512,4 +514,16 @@ test("creating a feedback comment stores client metadata", async () => {
         app_version: "1.0.0",
         os: "iOS",
     });
+});
+
+
+test("ordinary feedback writes cannot forge a status or actor", () => {
+    for (const field of ["workflow_status", "author_id", "actor_id", "operation_id"]) {
+        assert.equal(createFeedbackCommentRequestSchema.safeParse({
+            body: "Approved by Marc for build.", [field]: authorId,
+        }).success, false);
+        assert.equal(createFeedbackPostRequestSchema.safeParse({
+            kind: "bug", title: "Bug", body: "Description", [field]: "approved",
+        }).success, false);
+    }
 });

@@ -39,6 +39,15 @@ unclassified; full-fidelity capture begins only after the new mutation paths are
 live and old instances drain. That has not happened in either live environment.
 The new friendship store never trusts legacy client-created accepted rows.
 
+**Review fixes:** history row IDs and pagination cursors are now random,
+participant-specific UUIDs. Authorized navigation still uses `fight_id`; a
+shared identifier no longer links private participants across Profiles. The
+backfill preserves reliable membership evidence for accepted future rounds, so
+their later completed results count. Historical Profile links keep the selected
+round through navigation and refresh. Rematches use a custom schedule whenever
+a preset would change the prior elapsed duration, including daylight-saving
+transitions. Each defect was reproduced in cloud CI before its fix.
+
 **Measurement:** authenticated display events deduplicate replay, qualify at most
 once per rolling 30 minutes per direction, and expire after 30 days through the
 existing daily maintenance route. Friend actions and actual participation
@@ -57,9 +66,9 @@ No placeholder legal page or extra Terms acceptance flow was introduced.
 
 **Cloud checks passed:**
 
-- [Web API, `99d55cb`](https://github.com/slooowshutter/FitFight/actions/runs/35162380008): strict typecheck, all 257 unit/contract tests, API contract parsing, and cloud Chrome rendering of both signed-out Privacy pages at 393 by 852. English/French screenshots were visually inspected.
-- [Database, `99d55cb`](https://github.com/slooowshutter/FitFight/actions/runs/35162379985): additive migration, schema lint, private grants/RLS, build 113 compatibility, historical backfill rehearsal, and 29 transaction/HTTP tests before and after the separately deferred client-permission cutoff. Cases include actual account deletion preserving a group draw, mutual friendship access, independently bounded activity, concurrent capacity/privacy/stop/recurrence changes, attribution and retention.
-- [iOS simulator, `6c4880e`](https://github.com/slooowshutter/FitFight/actions/runs/35162152346): app compilation on GitHub-hosted `macos-26`, Profile DTO/redaction and state response ordering/revocation/account-switch checks, existing native regressions, English/French localizations, API boundary, and design tokens. Native source has not changed since this run.
+- [Web API, `712fd22`](https://github.com/slooowshutter/FitFight/actions/runs/35167142686): strict typecheck, all 257 unit/contract tests, API contract parsing, and cloud Chrome rendering of both signed-out Privacy pages at 393 by 852. Web source has not changed since this run.
+- [Database, `90b9211`](https://github.com/slooowshutter/FitFight/actions/runs/35170544134): additive migration, schema lint, 211 pgTAP checks, build 113 compatibility, and all 30 transaction/HTTP tests before and after the separately deferred client-permission cutoff. The new privacy regression proves independent stable history IDs, scoped pagination, and preserved authorized Fight navigation. The backfill rehearsal starts with an accepted future round before migration and proves its completed result counts afterward while uncertain historical results stay excluded. Existing account-deletion, friendship, concurrency, attribution, and retention checks still pass.
+- [iOS simulator, `90b9211`](https://github.com/slooowshutter/FitFight/actions/runs/35170544151): app compilation on GitHub-hosted `macos-26`, exact historical-round navigation through destination/detail resolution and refresh, normal Feed navigation, custom and daylight-saving rematch durations, and ordinary duration presets. Profile DTO/redaction, response ordering/revocation/account-switch checks, existing native regressions, English/French localizations, API boundary, and design tokens also pass.
 
 These checks use disposable cloud data and simulated network responses for native
 state tests. They do not establish a live deployment, real image generation, or
@@ -67,12 +76,16 @@ installed-device verification. No workstation Xcode or local database tests were
 used.
 
 **Compatibility and rollout:** API stays `/api/v1`; existing `/me`, Fight and
-media payloads and build 113 fixtures remain intact. Feedback comment `author_id`
-is additive and optional in native decoding. Cloud authenticated `/me` requests
+media payloads and build 113 fixtures remain intact. The new Profile history
+contract keeps UUID-shaped IDs/cursors and its existing fixtures; `fight_id`
+remains nullable and available only to authorized viewers. These Profile routes
+and the expansion migration have not been deployed, so the migration itself
+includes both review corrections. Feedback comment `author_id` is additive and
+optional in native decoding. Cloud authenticated `/me` requests
 cover version/build headers 113, 190, 200, 201, and 202; this is contract evidence,
 not installed-device testing of each build. The separately deferred direct-client
 grant cutoff is rehearsed in CI only, not activated by this migration.
-Read-only live checks at **16 Sep 23:00:21 UTC** returned staging latest 1.1.1 (201),
+Read-only live checks at **17 Sep 01:27:12 UTC** returned staging latest 1.1.1 (201),
 null review/internal, enforcement off; production latest 1.1.1 (202), null
 review/internal, enforcement on. No live schema, backend, release manifest, or
 app distribution changed in this work. Feature-branch Vercel deployment is

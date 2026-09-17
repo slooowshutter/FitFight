@@ -418,11 +418,14 @@ test("omitted comment sort still pages oldest first so installed clients stay co
         seen = sql;
         assert.match(sql, /order by comment.created_at, comment.id/);
         assert.doesNotMatch(sql, /created_at desc/);
-        assert.deepEqual(values.slice(0, 4), [
+        assert.deepEqual(values, [
             postId,
             userId,
+            cursorId,
+            postId,
             "2026-09-15T12:00:00Z",
             cursorId,
+            41,
         ]);
         return Promise.resolve([]);
     }) as unknown as Sql;
@@ -454,11 +457,14 @@ test("recent comment sort pages newest first without changing the omitted contra
         seen = sql;
         assert.match(sql, /order by comment.created_at desc, comment.id desc/);
         assert.match(sql, /\(comment.created_at, comment.id\) < /);
-        assert.deepEqual(values.slice(0, 4), [
+        assert.deepEqual(values, [
             postId,
             userId,
+            cursorId,
+            postId,
             "2026-09-16T12:00:00Z",
             cursorId,
+            41,
         ]);
         return Promise.resolve([]);
     }) as unknown as Sql;

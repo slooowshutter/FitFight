@@ -1,6 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ApiError, ERROR_CODES } from "@/lib/http";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+    fitFightAdminProfileSchema,
+    type FitFightAdminViewer,
+} from "@/lib/types/admin/fitfight-admin";
 import { requireLatestAppRelease } from "@/lib/releases/app-release";
 
 export type AuthedUser = {
@@ -87,4 +91,45 @@ export async function verifyUser(request: Request): Promise<AuthedUser> {
         ERROR_CODES.unauthorized,
         "Invalid or expired token",
     );
+}
+
+export async function readAdminViewer(
+    userId: string,
+    admin: SupabaseClient = createAdminClient(),
+): Promise<FitFightAdminViewer> {
+    const { data, error } = await admin
+        .from("profiles")
+        .select("handle")
+        .eq("user_id", userId)
+        .is("deleted_at", null)
+        .maybeSingle();
+    if (error) {
+        throw new ApiError(
+            500,
+            ERROR_CODES.db_error,
+            "Could not verify account",
+        );
+    }
+    const profile = fitFightAdminProfileSchema.safeParse(data);
+    if (!profile.success) {
+        throw new ApiError(
+            401,
+            ERROR_CODES.profile_missing,
+            "Invalid or deleted account",
+        );
+    }
+
+    const userResult = await admin.auth.admin.getUserById(userId);
+    if (userResult.error || !userResult.data.user) {
+        throw new ApiError(
+            500,
+            ERROR_CODES.db_error,
+            "Could not verify account",
+        );
+    }
+
+    const user = userResult.data.user;
+    // User-editable metadata must never grant admin access.
+    const emails = user.email && user.email_confirmed_at ? [user.email] : [];
+    return { handle: profile.data.handle, emails };
 }

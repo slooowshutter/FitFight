@@ -10,7 +10,7 @@ function TestflightInstallSteps() {
             <li>
                 <strong>First tap installs TestFlight.</strong> If you
                 don&apos;t already have Apple&apos;s TestFlight app, this link
-                installs TestFlight — not FitFight. That is expected.
+                installs TestFlight first. That is expected.
             </li>
             <li>
                 <strong>Tap the same link again to install FitFight.</strong>{" "}
@@ -26,7 +26,13 @@ function TestflightInstallSteps() {
     );
 }
 
-export function InviteDownload() {
+export function InviteDownload({
+    isStaging,
+    url,
+}: {
+    isStaging: boolean;
+    url: string;
+}) {
     useEffect(() => {
         const isIOS =
             /iPhone|iPad|iPod/.test(navigator.userAgent) ||
@@ -34,20 +40,21 @@ export function InviteDownload() {
         if (!isIOS) return;
         const timer = window.setTimeout(() => {
             if (document.visibilityState === "visible") {
-                window.location.assign(TESTFLIGHT_URL);
+                window.location.assign(url);
             }
         }, 5000);
         return () => window.clearTimeout(timer);
-    }, []);
+    }, [url]);
 
     return (
         <section>
             <h2>Get FitFight</h2>
             <p>
-                FitFight is a TestFlight beta, not on the App Store. On iPhone,
-                this page opens the TestFlight link after a few seconds.
+                {isStaging
+                    ? "Try the FitFight beta through TestFlight. On iPhone, this page opens the TestFlight link after a few seconds."
+                    : "Download FitFight from the App Store. On iPhone, this page opens the App Store after a few seconds."}
             </p>
-            <TestflightInstallSteps />
+            {isStaging ? <TestflightInstallSteps /> : null}
             <p>
                 <strong>
                     Once FitFight is installed, return to your friend&apos;s
@@ -58,10 +65,12 @@ export function InviteDownload() {
             </p>
             <a
                 className="primary-action invite-download"
-                href={TESTFLIGHT_URL}
+                href={url}
                 rel="noreferrer"
             >
-                Open this TestFlight link
+                {isStaging
+                    ? "Open this TestFlight link"
+                    : "Download on the App Store"}
             </a>
             <p>
                 Already have FitFight? Reopen the link from your friend&apos;s
@@ -112,8 +121,8 @@ export function TestflightInvite({
                 <p className="eyebrow">BETA ON TESTFLIGHT</p>
                 <h2 id={titleId}>How to install FitFight</h2>
                 <p>
-                    FitFight isn&apos;t on the App Store yet. Apple uses
-                    TestFlight for this beta, and you tap the same link twice.
+                    Try the FitFight beta through TestFlight. Tap the same link
+                    twice to install it.
                 </p>
                 <TestflightInstallSteps />
                 <a

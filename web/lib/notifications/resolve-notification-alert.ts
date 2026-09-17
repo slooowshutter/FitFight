@@ -99,6 +99,20 @@ const staticCopy: Record<
             body: "Tu as été invité à un défi. Ouvre FitFight.",
         },
     },
+    mention_post: {
+        en: { title: "FitFight", body: "Someone tagged you in a post." },
+        fr: {
+            title: "FitFight",
+            body: "Quelqu’un t’a mentionné dans une publication.",
+        },
+    },
+    mention_comment: {
+        en: { title: "FitFight", body: "Someone tagged you in a comment." },
+        fr: {
+            title: "FitFight",
+            body: "Quelqu’un t’a mentionné dans un commentaire.",
+        },
+    },
 };
 
 export function resolveNotificationAlert(input: {

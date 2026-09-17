@@ -1,6 +1,16 @@
 import { TestflightInvite } from "@/components/testflight-invite";
+import { TotalStepsCount } from "@/components/total-steps-count";
+import { appDownload } from "@/lib/releases/app-download";
+import { readCachedTotalSteps } from "@/lib/supabase/queries/total-steps-supabase-query";
 
-export default function HomePage() {
+import "./total-steps.css";
+
+export const revalidate = 3600;
+
+export default async function HomePage() {
+    const { isStaging, url } = appDownload();
+    const { totalSteps } = await readCachedTotalSteps();
+
     return (
         <main>
             <header className="site-header">
@@ -8,7 +18,13 @@ export default function HomePage() {
                     <span className="brand-mark">FF</span>
                     <span>FitFight</span>
                 </a>
-                <TestflightInvite label="Get the app" kind="header" />
+                {isStaging ? (
+                    <TestflightInvite label="Get the app" kind="header" />
+                ) : (
+                    <a className="header-action" href={url}>
+                        Download on the App Store
+                    </a>
+                )}
             </header>
 
             <section className="hero" id="top">
@@ -24,13 +40,21 @@ export default function HomePage() {
                         and see who records the most steps.
                     </p>
                     <div className="hero-actions">
-                        <TestflightInvite label="Get the app" kind="hero" />
+                        {isStaging ? (
+                            <TestflightInvite label="Get the app" kind="hero" />
+                        ) : (
+                            <a className="primary-action" href={url}>
+                                Download on the App Store
+                            </a>
+                        )}
                         <a className="text-action" href="#how-it-works">
                             See how it works <span aria-hidden="true">↓</span>
                         </a>
                     </div>
                     <p className="platform-note">
-                        iPhone · Tap the TestFlight link twice · Apple Health
+                        {isStaging
+                            ? "iPhone · Tap the TestFlight link twice · Apple Health"
+                            : "iPhone · Apple Health"}
                     </p>
                 </div>
 
@@ -98,6 +122,19 @@ export default function HomePage() {
                         </svg>
                     </div>
                 </div>
+            </section>
+
+            <section
+                className="total-steps"
+                aria-label={`${totalSteps.toLocaleString("en-US")} steps recorded since people joined FitFight`}
+            >
+                <p className="eyebrow">STEPS RECORDED</p>
+                <p className="total-steps-value" aria-hidden="true">
+                    <TotalStepsCount totalSteps={totalSteps} />
+                </p>
+                <p className="total-steps-caption">
+                    since people joined FitFight
+                </p>
             </section>
 
             <section className="how" id="how-it-works">

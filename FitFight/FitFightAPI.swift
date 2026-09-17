@@ -476,11 +476,13 @@ struct FitFightFeedbackDetail: Decodable, Equatable {
     var post: FitFightFeedbackPost
     var comments: [FitFightFeedbackComment]
     var canLaunchFix: Bool
+    var canDelete: Bool
 
     enum CodingKeys: String, CodingKey {
         case post
         case comments
         case canLaunchFix = "can_launch_fix"
+        case canDelete = "can_delete"
     }
 
     init(from decoder: Decoder) throws {
@@ -488,6 +490,7 @@ struct FitFightFeedbackDetail: Decodable, Equatable {
         post = try container.decode(FitFightFeedbackPost.self, forKey: .post)
         comments = try container.decode([FitFightFeedbackComment].self, forKey: .comments)
         canLaunchFix = try container.decodeIfPresent(Bool.self, forKey: .canLaunchFix) ?? false
+        canDelete = try container.decodeIfPresent(Bool.self, forKey: .canDelete) ?? false
     }
 }
 
@@ -743,15 +746,45 @@ struct FitFightAPI {
     }
 
     func feed(scope: String? = nil, cursor: String?, accessToken: String) async throws -> FitFightFightPostList {
-        var parts: [String] = []
+        var parts: [String] = ["limit=10"]
         if let scope, let encoded = scope.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
             parts.append("scope=\(encoded)")
         }
         if let cursor, let encoded = cursor.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
             parts.append("cursor=\(encoded)")
         }
-        let path = parts.isEmpty ? "feed" : "feed?\(parts.joined(separator: "&"))"
+        let path = "feed?\(parts.joined(separator: "&"))"
         return try await get(path: path, accessToken: accessToken, expected: [200])
+    }
+
+    func feedActivity(cursor: String?, accessToken: String) async throws -> FeedActivityList {
+        var path = "feed/activity"
+        if let cursor, let encoded = cursor.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
+            path += "?cursor=\(encoded)"
+        }
+        return try await get(path: path, accessToken: accessToken, expected: [200])
+    }
+
+    func feedPeople(
+        main: Bool,
+        fightIDs: [UUID],
+        accessToken: String
+    ) async throws -> [FitFightFightPost.Author] {
+        var parts: [String] = []
+        if main {
+            parts.append("main=true")
+        }
+        if !fightIDs.isEmpty {
+            let ids = fightIDs.map { $0.uuidString.lowercased() }.joined(separator: ",")
+            parts.append("fight_ids=\(ids)")
+        }
+        let path = parts.isEmpty ? "feed/people" : "feed/people?\(parts.joined(separator: "&"))"
+        let response: FitFightFeedPeopleResponse = try await get(
+            path: path,
+            accessToken: accessToken,
+            expected: [200]
+        )
+        return response.people
     }
 
     func createFeedPosts(
@@ -774,6 +807,10 @@ struct FitFightAPI {
         )
     }
 
+
+    func fightPost(postID: UUID, accessToken: String) async throws -> FitFightFightPostResponse {
+        try await get(path: "posts/\(postID.uuidString.lowercased())", accessToken: accessToken, expected: [200])
+    }
 
     func fightPostComments(
         postID: UUID,
@@ -841,9 +878,9 @@ struct FitFightAPI {
     }
 
     func fightPosts(fightID: UUID, cursor: String?, accessToken: String) async throws -> FitFightFightPostList {
-        var path = "fights/\(fightID.uuidString.lowercased())/posts"
+        var path = "fights/\(fightID.uuidString.lowercased())/posts?limit=10"
         if let cursor, let encoded = cursor.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
-            path += "?cursor=\(encoded)"
+            path += "&cursor=\(encoded)"
         }
         return try await get(path: path, accessToken: accessToken, expected: [200])
     }
@@ -1141,6 +1178,14 @@ struct FitFightAPI {
 
     func feedbackDetail(postID: UUID, accessToken: String) async throws -> FitFightFeedbackDetail {
         try await get(
+            path: "feedback/\(postID.uuidString.lowercased())",
+            accessToken: accessToken,
+            expected: [200]
+        )
+    }
+
+    func deleteFeedbackPost(postID: UUID, accessToken: String) async throws {
+        let _: DiscardBody = try await delete(
             path: "feedback/\(postID.uuidString.lowercased())",
             accessToken: accessToken,
             expected: [200]
@@ -1492,6 +1537,10 @@ private struct FightPostBody: Encodable {
 
 private struct FightPostUpdateBody: Encodable {
     let body: String
+}
+
+private struct FitFightFeedPeopleResponse: Decodable {
+    let people: [FitFightFightPost.Author]
 }
 
 private struct FeedPostsBody: Encodable {

@@ -1,9 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Sql } from "postgres";
-import {
-    isFitFightAdmin,
-    readAdminViewer,
-} from "@/lib/admin/is-fitfight-admin";
+import { isFitFightAdmin } from "@/lib/admin/is-fitfight-admin";
+import { readAdminViewer } from "@/lib/supabase/queries/auth-supabase-query";
 import { ApiError, ERROR_CODES } from "@/lib/http";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
@@ -13,7 +11,6 @@ import { inviteEveryoneToOpenFight } from "./app-wide-fight-invite-supabase-quer
 import { currentJoinableFight } from "./join-fight-supabase-query";
 import { loadFight } from "./fight-access-supabase-query";
 import { enqueueFightInviteNotifications } from "./notification-intents-supabase-query";
-import { processNotificationOutbox } from "./process-notification-outbox-supabase-query";
 
 export async function setFightSuggested(
     userId: string,
@@ -88,7 +85,6 @@ export async function setFightSuggested(
                     userIds: invitedIds,
                     now,
                 });
-                await processNotificationOutbox(now, sql);
             }
         }
     }

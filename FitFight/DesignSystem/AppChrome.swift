@@ -73,6 +73,7 @@ struct FFScreen<Content: View>: View {
     var top: AnyView?
     var clearance: Bool = true
     var refresh: FFRefreshConfig? = nil
+    var pinSectionHeaders: Bool = false
     @ViewBuilder var content: () -> Content
 
     @Environment(\.ffStaticRender) private var staticRender
@@ -110,17 +111,30 @@ struct FFScreen<Content: View>: View {
 
     private var liveScroll: some View {
         ScrollView(.vertical) {
-            body(content())
-                // Root screens are one viewport wide. Child HStacks can wrap or
-                // truncate, but can no longer widen the scroll view and rubber-band.
-                .containerRelativeFrame(.horizontal)
-                .background(alignment: .top) {
-                    if refresh != nil {
-                        FFAlwaysBounceVertical(tintColor: UIColor(theme.gold))
+            Group {
+                if pinSectionHeaders {
+                    LazyVStack(alignment: .leading, spacing: theme.space.cardGap, pinnedViews: .sectionHeaders) {
+                        content()
                     }
+                    .padding(.horizontal, theme.space.screenPadding)
+                    .padding(.top, theme.space.base)
+                    .padding(.bottom, clearance ? theme.space.tabBarClearance : theme.space.lg)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    body(content())
                 }
+            }
+            // Root screens are one viewport wide. Child HStacks can wrap or
+            // truncate, but can no longer widen the scroll view and rubber-band.
+            .containerRelativeFrame(.horizontal)
+            .background(alignment: .top) {
+                if refresh != nil {
+                    FFAlwaysBounceVertical(tintColor: UIColor(theme.gold))
+                }
+            }
         }
         .scrollBounceBehavior(.always, axes: .vertical)
+        .coordinateSpace(name: "ffScreen")
         .ffRefreshable(refresh != nil) {
             await runRefresh()
         }

@@ -193,7 +193,7 @@ struct FightPostDetailView: View {
 
     var body: some View {
         ScrollViewReader { reader in
-            FFScreen(refresh: FFRefreshConfig(
+            FFScreen(pinSectionHeaders: true, refresh: FFRefreshConfig(
                 isRefreshing: postFeed.isLoading,
                 message: String(localized: "Loading"),
                 action: { await postFeed.load(session: session, postID: target.id) }

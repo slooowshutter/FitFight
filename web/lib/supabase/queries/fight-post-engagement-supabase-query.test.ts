@@ -234,7 +234,7 @@ test("a created comment returns the authoritative visible count after insertion 
     const result = await createFightPostComment(
         userId,
         postId,
-        { body: fixture.comment.body },
+        { body: fixture.comment.body, tagged_user_ids: [] },
         database,
     );
     assert.deepEqual(result, fixture);
@@ -350,7 +350,7 @@ test("a saved reaction returns to the app without waiting for notification deliv
         throw new Error(`Unexpected query: ${sql}`);
     }) as unknown as Sql;
 
-    for (const emoji of [requestFixture.emoji, "💪", "😂", "❤️", "👏", "😮"]) {
+    for (const emoji of [requestFixture.emoji, "\ud83d\udcaa", "\ud83d\ude02", "\u2764\ufe0f", "\ud83d\udc4f", "\ud83d\ude2e"]) {
         const response = await setFightPostReaction(
             userId,
             postId,

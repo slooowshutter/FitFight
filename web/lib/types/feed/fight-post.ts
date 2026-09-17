@@ -225,6 +225,7 @@ export const createFightPostCommentRequestSchema = z
     .object({
         body: z.string().trim().min(1).max(500),
         parent_id: z.string().uuid().nullable().optional(),
+        tagged_user_ids: z.array(z.string().uuid()).max(20).default([]),
     })
     .strict();
 

@@ -1,6 +1,22 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Suggested Fight invitations stay joinable, and rematches keep their original number of days across clock changes. Private Fight history protects participant identities, and Send keeps its agent link when progress changes in another session.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Suggested Fight invitations stay joinable, and rematches keep their original number of days across clock changes. Private Fight history protects participant identities, and Send keeps its agent link when progress changes in another session."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les invitations aux Fights suggérés restent accessibles et les revanches conservent leur durée en jours malgré les changements d'heure. L'historique des Fights privés protège l'identité des participants et Envoyer conserve le lien vers l'agent si le statut change dans une autre session."
+                    }
+                }
+            }
+        },
         "Last updated": {
             "localizations": {
                 "en": {

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { ApiError } from "@/lib/http";
 import { launchFeedbackFixAgent } from "./launch-feedback-fix-agent";
+import { sendFeedbackFix } from "./send-feedback-fix";
 import type { FeedbackPostDetail } from "@/lib/types/feedback/feedback";
 import {
     fitFightAgentStartingRef,
@@ -38,6 +39,53 @@ const detail: FeedbackPostDetail = {
 const longCursorKey = "cursor_test_key_32_chars_minimum!";
 const agentId = "bc-00000000-0000-0000-0000-000000000001";
 const agentUrl = `https://cursor.com/agents/${agentId}`;
+
+test("Send preserves a confirmed launch when another session changes progress", async (t) => {
+    const admin = "11111111-1111-4111-8111-111111111111";
+    const previousAdmin = process.env.FITFIGHT_ADMIN_USER_ID;
+    const previousEnabled = process.env.FITFIGHT_FEEDBACK_WORKFLOW_ENABLED;
+    process.env.FITFIGHT_ADMIN_USER_ID = admin;
+    process.env.FITFIGHT_FEEDBACK_WORKFLOW_ENABLED = "true";
+    t.after(() => {
+        restoreEnv("FITFIGHT_ADMIN_USER_ID", previousAdmin);
+        restoreEnv("FITFIGHT_FEEDBACK_WORKFLOW_ENABLED", previousEnabled);
+    });
+    let launches = 0;
+    let updates = 0;
+    const launched = { agent_id: agentId, agent_url: agentUrl };
+    const result = await sendFeedbackFix(admin, {
+        ...detail, post: { ...detail.post, workflow_status: "submitted" },
+    }, {}, async () => {
+        launches++;
+        return launched;
+    }, async (_userId, _postId, input) => {
+        updates++;
+        if (input.status === "building") {
+            throw new ApiError(409, "conflict", "Another session moved progress to reviewing.");
+        }
+        return { workflow_status: input.status };
+    });
+    assert.deepEqual(result, launched);
+    assert.equal(launches, 1);
+    assert.equal(updates, 2);
+
+    const conflict = new ApiError(409, "conflict", "Approval is stale.");
+    await assert.rejects(sendFeedbackFix(admin, {
+        ...detail, post: { ...detail.post, workflow_status: "submitted" },
+    }, {}, async () => {
+        launches++;
+        return launched;
+    }, async () => { throw conflict; }), (error: unknown) => error === conflict);
+    assert.equal(launches, 1, "A conflict before approval must not launch work");
+
+    const failure = new ApiError(500, "db_error", "Database unavailable.");
+    await assert.rejects(sendFeedbackFix(admin, {
+        ...detail, post: { ...detail.post, workflow_status: "submitted" },
+    }, {}, async () => launched, async (_userId, _postId, input) => {
+        if (input.status === "building") throw failure;
+        return { workflow_status: input.status };
+    }), (error: unknown) => error === failure);
+});
 
 test("Send includes user context but excludes generated progress comments", async (t) => {
     const previous = process.env.CURSOR_API_KEY;

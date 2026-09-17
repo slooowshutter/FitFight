@@ -11,6 +11,7 @@ api = (root / "FitFight/FitFightAPI.swift").read_text()
 metadata = (root / "FitFight/FeedbackClientMetadata.swift").read_text()
 source = "import Foundation\n"
 source += api[api.index("enum FeedbackWorkflowStatus:"):api.index("struct FitFightReferralLink:")]
+source += api[api.index("private struct FeedbackStatusBody:"):api.index("private struct ProfileSettingsUpdate:")]
 source += metadata[metadata.index("struct FitFightFeedbackMetadata:"):metadata.index("    @MainActor")]
 source += "}\n" + metadata[metadata.index("extension FitFightFeedbackMetadata: Codable"):]
 source += (root / "tests/FeedbackWorkflowTests.swift").read_text()

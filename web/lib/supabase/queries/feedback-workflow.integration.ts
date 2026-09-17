@@ -149,6 +149,24 @@ test("feedback progress preserves legacy writes and commits exactly one public u
         }, database), { workflow_status: "building" });
     });
 
+    await t.test("a launched Send returns its URL and preserves a concurrent progress change", async () => {
+        let launches = 0;
+        const result = await sendFeedbackFix(admin, await getFeedbackPost(admin, postId, database), {}, async () => {
+            launches++;
+            await changeFeedbackStatus(admin, postId, {
+                expected_status: "approved", status: "reviewing", operation_id: randomUUID(),
+            }, database);
+            return { agent_id: "confirmed-agent", agent_url: "https://cursor.com/agents/confirmed-agent" };
+        }, (user, post, input) => changeFeedbackStatus(user, post, input, database));
+        assert.equal(result.agent_url, "https://cursor.com/agents/confirmed-agent");
+        assert.equal(launches, 1);
+        const changed = await getFeedbackPost(admin, postId, database);
+        assert.equal(changed.post.workflow_status, "reviewing");
+        await changeFeedbackStatus(admin, postId, {
+            expected_status: "reviewing", status: "building", operation_id: randomUUID(),
+        }, database);
+    });
+
     await t.test("public updates stay visible while hidden actors and normal comments stay hidden", async () => {
         await createFeedbackComment(admin, postId, { body: "An ordinary admin comment." }, database);
         await database`insert into private.feedback_blocks (blocker_id, blocked_id) values (${viewer}, ${admin})`;

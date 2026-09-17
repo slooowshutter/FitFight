@@ -52,7 +52,9 @@ struct NewFightView: View {
         visibilityJoinable = false
         inviteHandles = [draft.handle]
         actionText = draft.actionText ?? ""
-        if let seconds = draft.durationSeconds, [3, 7, 14, 30].contains(seconds / 86_400), seconds % 86_400 == 0 {
+        if let days = draft.durationDays, [3, 7, 14, 30].contains(days) {
+            durationDays = days
+        } else if let seconds = draft.durationSeconds, [3, 7, 14, 30].contains(seconds / 86_400), seconds % 86_400 == 0 {
             durationDays = seconds / 86_400
         }
         model.profileChallenge = nil

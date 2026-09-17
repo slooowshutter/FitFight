@@ -75,6 +75,56 @@ no review/internal candidates, enforcement **off**; production latest **1.1.1 (2
 no review/internal candidates, enforcement **on**. Recheck before deployment; these
 observations are not proof of supported-client compatibility or individual availability.
 
+### Review fixes, 17 Sep 2026
+
+Suggested Fight cards now distinguish invitations from accepted/deferred membership.
+The `/api/v1` list response adds optional `membershipState` without changing
+`alreadyMember`, so existing clients retain their contract. New native cards keep
+invitations actionable on both New and onboarding.
+
+Rematches add optional `duration_days`, calculated in the original Fight's time
+zone, while preserving `duration_seconds` and `action_text`. Native composition uses
+calendar days for the existing presets, including Fights spanning either clock
+change. Older responses without the new field still decode.
+
+Profile history rows and cursors now use stable, random identifiers for each
+participant's record. The additive `20260917013440_profile_history_identifiers.sql`
+migration backfills existing rows and preserves identifiers during participation
+updates. A reader with Fight access still receives the real `fight_id`; other readers
+cannot correlate participants through identical IDs. Profiles remain an unreleased
+contract; installed builds 113, 190, 200, 201, and 202 do not use these history cursors.
+
+An explicit Send retains the confirmed agent result when its follow-up Being built
+update conflicts with a newer status. The newer status remains intact. Approval
+conflicts still prevent launch, and other errors still reach the API boundary.
+The release note and EN/FR translation use marketing version **1.1.1**.
+
+Cloud verification passed on `1399035`:
+
+- [Web API](https://github.com/slooowshutter/FitFight/actions/runs/35171629415):
+  typecheck, all 280 unit tests, and API contract parsing. Frozen response fixtures
+  remain unchanged; the joinable list retains its single bounded database read.
+- [Database](https://github.com/slooowshutter/FitFight/actions/runs/35171629414):
+  migrations and schema lint, build 113 compatibility, 216 pgTAP assertions, and
+  all 38 integration tests with both staging and closed direct-client permissions.
+  The cutoff checks passed 18 assertions; deletion and historical backfill passed
+  25. New regressions cover invited/accepted/deferred membership, both clock changes,
+  Profile-scoped pagination and identifier stability, and a real concurrent status
+  change during a controlled Send launch. Existing authenticated HTTP fixtures
+  retain build headers 113, 190, 200, 201, and 202.
+- [iOS simulator](https://github.com/slooowshutter/FitFight/actions/runs/35171397944):
+  hosted macOS build, EN/FR validation, invitation/rematch regressions, existing
+  native state checks, and frozen feedback decoders from builds 201 and 202.
+  This run used `8e30574`; the only subsequent snapshot changes were two database
+  test files. App, backend, migration, and native-test source are identical.
+
+Deployment order remains additive migrations, compatible backend readers, then the
+native build through an authorized `develop` and `preview` rollout. The release
+policies observed above admit staging build 201 with enforcement off and production
+build 202 with enforcement on; retain legacy behavior while staging enforcement is
+off. No hosted migration, backend deployment, TestFlight upload, or live agent launch
+was performed for these fixes. Signed-in device verification remains after rollout.
+
 ## Profiles, Friends, and Rivalry implementation, 17 Sep 2026
 
 **Code prepared on `profiles-friends-and-stats`, not deployed.** The

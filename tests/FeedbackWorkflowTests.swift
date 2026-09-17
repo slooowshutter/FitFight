@@ -35,6 +35,18 @@ struct FeedbackWorkflowTests {
         precondition(FeedbackWorkflowStatus.available.next == nil)
         precondition(FeedbackWorkflowStatus.allCases.filter { $0.next == nil } == [.available])
         precondition(FeedbackWorkflowStatus.allCases.count == 8)
-        print("Feedback: new, legacy build 201/202, authorless system updates, and future metadata decode")
+
+        let operationID = UUID(uuidString: "22222222-2222-4222-8222-222222222222")!
+        for status in FeedbackWorkflowStatus.allCases {
+            let command = FeedbackStatusBody(expectedStatus: "building", status: status.rawValue, operationId: operationID)
+            let encoded = try JSONEncoder().encode(command)
+            let body = try JSONDecoder().decode([String: String].self, from: encoded)
+            precondition(body == [
+                "expected_status": "building",
+                "status": status.rawValue,
+                "operation_id": operationID.uuidString,
+            ], "Status commands must use the backend's expected_status and operation_id keys")
+        }
+        print("Feedback: legacy build 201/202 and current decoding, plus all status request contracts")
     }
 }

@@ -303,8 +303,10 @@ struct FitFightJoinableFight: Decodable, Equatable, Identifiable {
     var recurring: Bool
     var alreadyMember: Bool
     var canJoinNext: Bool?
+    var membershipState: String?
 
     var id: UUID { fightId }
+    var hasJoined: Bool { membershipState == "accepted" || membershipState == "deferred" }
 }
 
 private struct FitFightJoinableList: Decodable {

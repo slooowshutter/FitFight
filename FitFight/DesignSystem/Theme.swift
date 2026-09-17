@@ -245,7 +245,9 @@ enum ThemeCatalog {
 }
 
 final class ThemeStore: ObservableObject {
-    @Published var mode: Mode = .night
+    @Published var mode: Mode = .night {
+        didSet { followsSystem = false }
+    }
     @Published var systemMode: Mode = .day
     @Published private(set) var followsSystem = true
 

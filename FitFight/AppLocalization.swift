@@ -6,6 +6,10 @@ enum AppLanguage: String, Codable, CaseIterable, Identifiable {
     case fr
 
     var id: String { rawValue }
+    var languageCode: String {
+        if self != .system { return rawValue }
+        return Bundle.main.preferredLocalizations.first?.hasPrefix("fr") == true ? "fr" : "en"
+    }
     var label: String {
         switch self {
         case .system: return String(appLocalized: "Follow iPhone")
@@ -29,8 +33,7 @@ enum AppLocalization {
         lock.lock()
         let language = selectedLanguage
         lock.unlock()
-        if language != .system { return language.rawValue }
-        return Bundle.main.preferredLocalizations.first?.hasPrefix("fr") == true ? "fr" : "en"
+        return language.languageCode
     }
 
     static var locale: Locale { Locale(identifier: languageCode) }

@@ -270,7 +270,7 @@ struct ContentView: View {
             RequestsOnboardingView()
         } else {
             signedInApp
-                .id(preferences.value.language)
+                .id(preferences.value.language.languageCode)
                 .id(session.authSession?.user.id)
         }
     }

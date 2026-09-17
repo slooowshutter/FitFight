@@ -746,14 +746,22 @@ struct FitFightAPI {
     }
 
     func feed(scope: String? = nil, cursor: String?, accessToken: String) async throws -> FitFightFightPostList {
-        var parts: [String] = []
+        var parts: [String] = ["limit=10"]
         if let scope, let encoded = scope.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
             parts.append("scope=\(encoded)")
         }
         if let cursor, let encoded = cursor.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
             parts.append("cursor=\(encoded)")
         }
-        let path = parts.isEmpty ? "feed" : "feed?\(parts.joined(separator: "&"))"
+        let path = "feed?\(parts.joined(separator: "&"))"
+        return try await get(path: path, accessToken: accessToken, expected: [200])
+    }
+
+    func feedActivity(cursor: String?, accessToken: String) async throws -> FeedActivityList {
+        var path = "feed/activity"
+        if let cursor, let encoded = cursor.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
+            path += "?cursor=\(encoded)"
+        }
         return try await get(path: path, accessToken: accessToken, expected: [200])
     }
 
@@ -777,6 +785,10 @@ struct FitFightAPI {
         )
     }
 
+
+    func fightPost(postID: UUID, accessToken: String) async throws -> FitFightFightPostResponse {
+        try await get(path: "posts/\(postID.uuidString.lowercased())", accessToken: accessToken, expected: [200])
+    }
 
     func fightPostComments(
         postID: UUID,
@@ -844,9 +856,9 @@ struct FitFightAPI {
     }
 
     func fightPosts(fightID: UUID, cursor: String?, accessToken: String) async throws -> FitFightFightPostList {
-        var path = "fights/\(fightID.uuidString.lowercased())/posts"
+        var path = "fights/\(fightID.uuidString.lowercased())/posts?limit=10"
         if let cursor, let encoded = cursor.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
-            path += "?cursor=\(encoded)"
+            path += "&cursor=\(encoded)"
         }
         return try await get(path: path, accessToken: accessToken, expected: [200])
     }

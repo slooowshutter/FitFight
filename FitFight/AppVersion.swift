@@ -15,10 +15,16 @@ enum AppDistribution {
 }
 
 enum AppVersion {
-    static func distribution() async -> AppDistribution {
+    private static var isDevelopmentBuild: Bool {
         #if DEBUG || targetEnvironment(simulator)
-        return .development
+        true
         #else
+        false
+        #endif
+    }
+
+    static func distribution() async -> AppDistribution {
+        guard !isDevelopmentBuild else { return .development }
         do {
             guard case .verified(let transaction) = try await AppTransaction.shared else { return .unknown }
             switch transaction.environment {
@@ -30,7 +36,6 @@ enum AppVersion {
         } catch {
             return .unknown
         }
-        #endif
     }
 
     static var label: String {

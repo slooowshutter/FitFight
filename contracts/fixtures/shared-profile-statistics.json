@@ -49,14 +49,14 @@
                 "day": "2026-09-15",
                 "steps": 9000,
                 "time_zone": "Europe/Paris",
-                "updated_at": "2026-09-16T12:00:00Z",
+                "updated_at": "2026-09-16T12:00:00.000Z",
                 "finalized": true
             },
             {
                 "day": "2026-09-16",
                 "steps": 8000,
                 "time_zone": "Europe/Paris",
-                "updated_at": "2026-09-17T12:00:00Z",
+                "updated_at": "2026-09-17T12:00:00.000Z",
                 "finalized": true
             }
         ]

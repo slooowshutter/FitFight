@@ -160,6 +160,15 @@ test("feedback progress preserves legacy writes and commits exactly one public u
         const listed = await listFeedbackPosts(viewer, {}, database);
         assert.equal(listed.posts.find((post) => post.id === postId)?.comment_count, hidden.comments.length);
         await database`delete from private.feedback_blocks where blocker_id = ${viewer} and blocked_id = ${admin}`;
+        await database`insert into private.profile_blocks (blocker_id, blocked_id) values (${admin}, ${viewer})`;
+        const privateProfile = await getFeedbackPost(viewer, postId, database);
+        assert.ok(privateProfile.comments.some((comment) => comment.workflow_status === "approved"));
+        assert.equal(privateProfile.comments.some((comment) => comment.actor_id === admin), false);
+        await database`delete from private.profile_blocks where blocker_id = ${admin} and blocked_id = ${viewer}`;
+        await database`insert into private.feed_blocks (blocker_id, blocked_id) values (${viewer}, ${admin})`;
+        const hiddenInFeed = await getFeedbackPost(viewer, postId, database);
+        assert.equal(hiddenInFeed.comments.some((comment) => comment.actor_id === admin), false);
+        await database`delete from private.feed_blocks where blocker_id = ${viewer} and blocked_id = ${admin}`;
         await database`update public.profiles set deleted_at = now() where user_id = ${admin}`;
         const deleted = await getFeedbackPost(viewer, postId, database);
         assert.equal(deleted.comments.some((comment) => comment.actor_id === admin), false);

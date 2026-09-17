@@ -1036,7 +1036,9 @@ private struct RequestDetailView: View {
                                 .foregroundStyle(theme.textFaint)
                         }
                         if item.workflowStatus == FeedbackWorkflowStatus.approved.rawValue {
-                            ProfileIdentityLink(userID: item.actorId, source: "feedback") {
+                            ProfileIdentityLink(userID: item.actorId, source: "feedback", onClosed: {
+                                Task { await store.loadDetail(session: session, postID: postID) }
+                            }) {
                                 Text(FeedbackWorkflowStatus.approved.message)
                                     .ffType(.body)
                                     .foregroundStyle(item.actorId == nil ? theme.text : theme.mossText)

@@ -1911,6 +1911,16 @@
                 }
             }
         },
+        "Request status changes now save correctly.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les changements de statut des demandes sont maintenant enregistrés correctement."
+                    }
+                }
+            }
+        },
         "Requests now show their progress, the next step, and FitFight updates in the discussion.": {
             "localizations": {
                 "fr": {

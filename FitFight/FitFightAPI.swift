@@ -1815,6 +1815,12 @@ private struct FeedbackStatusBody: Encodable {
     var expectedStatus: String
     var status: String
     var operationId: UUID
+
+    enum CodingKeys: String, CodingKey {
+        case expectedStatus = "expected_status"
+        case status
+        case operationId = "operation_id"
+    }
 }
 
 private struct ProfileSettingsUpdate: Encodable {

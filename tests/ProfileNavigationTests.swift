@@ -52,7 +52,8 @@ enum FightComposer {
     var durationDays = 7
     var customSchedule = false
     var selectedTimeZone: TimeZone?
-    var fightTimeZone: TimeZone { selectedTimeZone ?? .current }
+    var savedTimeZone = TimeZone(secondsFromGMT: 0)!
+    var fightTimeZone: TimeZone { selectedTimeZone ?? savedTimeZone }
     var customStart = Date()
     var customEnd = Date()
     var recurring = true
@@ -89,6 +90,7 @@ enum FightComposer {
             check(!composer.customSchedule && composer.durationDays == days, "Ordinary \(days)-day rematches retain their preset")
         }
         NSTimeZone.default = TimeZone(identifier: "Europe/Paris")!
+        composer.savedTimeZone = TimeZone(identifier: "Europe/Paris")!
         let beforeDST = ISO8601DateFormatter().date(from: "2026-10-24T12:00:00Z")!
         model.profileChallenge = ProfileChallengeDraft(handle: "opponent", durationSeconds: 3 * 86_400, actionText: nil)
         composer.applyProfileChallenge(now: beforeDST)

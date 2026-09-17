@@ -162,7 +162,7 @@ test("private history identities and cursors cannot link participants across Pro
     const first = await readProfileHistory(stranger, owner, query, database);
     const other = await readProfileHistory(stranger, opponent, query, database);
     assert.notEqual(first.results[0].id, other.results[0].id);
-    assert.equal(fightIds.includes(first.results[0].id), false);
+    assert.equal(fightIds.some((id) => id === first.results[0].id), false);
     assert.equal(first.results[0].fight_id, null);
     assert.equal(first.results[0].name, null);
     assert.equal(first.next_cursor, first.results[0].id);
@@ -170,7 +170,7 @@ test("private history identities and cursors cannot link participants across Pro
     assert.deepEqual(await readProfileHistory(stranger, owner, query, database), first);
     const own = await readProfileHistory(owner, owner, query, database);
     assert.equal(own.results[0].id, first.results[0].id);
-    assert.ok(own.results[0].fight_id && fightIds.includes(own.results[0].fight_id));
+    assert.ok(fightIds.some((id) => id === own.results[0].fight_id));
     const nextQuery = profilePageQuerySchema.parse({ limit: 1, cursor: first.next_cursor });
     const next = await readProfileHistory(stranger, owner, nextQuery, database);
     assert.equal(next.results.length, 1);

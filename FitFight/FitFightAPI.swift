@@ -481,6 +481,7 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
 struct FitFightFeedbackComment: Codable, Identifiable, Equatable, Hashable {
     var id: UUID
     var body: String
+    var authorId: UUID?
     var authorHandle: String
     var createdAt: Date
     var metadata: FitFightFeedbackMetadata
@@ -490,6 +491,7 @@ struct FitFightFeedbackComment: Codable, Identifiable, Equatable, Hashable {
     enum CodingKeys: String, CodingKey {
         case id
         case body
+        case authorId = "author_id"
         case authorHandle = "author_handle"
         case createdAt = "created_at"
         case metadata
@@ -504,10 +506,12 @@ struct FitFightFeedbackComment: Codable, Identifiable, Equatable, Hashable {
         createdAt: Date,
         metadata: FitFightFeedbackMetadata = FitFightFeedbackMetadata(),
         workflowStatus: String? = nil,
-        actorId: UUID? = nil
+        actorId: UUID? = nil,
+        authorId: UUID? = nil
     ) {
         self.id = id
         self.body = body
+        self.authorId = authorId
         self.authorHandle = authorHandle
         self.createdAt = createdAt
         self.metadata = metadata
@@ -519,6 +523,7 @@ struct FitFightFeedbackComment: Codable, Identifiable, Equatable, Hashable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
         body = try container.decode(String.self, forKey: .body)
+        authorId = try container.decodeIfPresent(UUID.self, forKey: .authorId)
         authorHandle = try container.decode(String.self, forKey: .authorHandle)
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         metadata = try container.decodeIfPresent(FitFightFeedbackMetadata.self, forKey: .metadata)
@@ -735,6 +740,68 @@ struct FitFightAPI {
             accessToken: accessToken,
             body: AppleAuthorizationBody(authorizationCode: authorizationCode),
             expected: [200]
+        )
+    }
+
+    func sharedProfile(userID: UUID, preview: String? = nil, accessToken: String) async throws -> SharedProfile {
+        let suffix = preview.map { "?preview=\($0)" } ?? ""
+        return try await get(path: "profiles/\(userID.uuidString.lowercased())\(suffix)", accessToken: accessToken, expected: [200])
+    }
+
+    func ownRivalries(accessToken: String) async throws -> [ProfileRivalrySummary] {
+        try await get(path: "me/rivalries", accessToken: accessToken, expected: [200])
+    }
+
+    func profileSettings(accessToken: String) async throws -> SharedProfileSettings {
+        try await get(path: "me/profile-settings", accessToken: accessToken, expected: [200])
+    }
+
+    func updateProfileSettings(_ settings: SharedProfileSettings, accessToken: String) async throws -> SharedProfileSettings {
+        try await request(
+            path: "me/profile-settings", method: "PATCH", accessToken: accessToken,
+            body: Self.encoder.encode(ProfileSettingsUpdate(settings: settings)), idempotencyKey: nil, expected: [200]
+        )
+    }
+
+    func profileHistory(userID: UUID, shared: Bool, cursor: UUID? = nil, accessToken: String) async throws -> ProfileHistoryPage {
+        let suffix = cursor.map { "&cursor=\($0.uuidString.lowercased())" } ?? ""
+        return try await get(path: "profiles/\(userID.uuidString.lowercased())/history?shared=\(shared)\(suffix)", accessToken: accessToken, expected: [200])
+    }
+
+    func profileFriends(kind: String, cursor: UUID? = nil, accessToken: String) async throws -> ProfileFriendsPage {
+        let suffix = cursor.map { "&cursor=\($0.uuidString.lowercased())" } ?? ""
+        return try await get(path: "friends?kind=\(kind)\(suffix)", accessToken: accessToken, expected: [200])
+    }
+
+    func lookupProfile(handle: String, accessToken: String) async throws -> SharedProfileIdentity {
+        var query = URLComponents()
+        query.queryItems = [URLQueryItem(name: "handle", value: handle)]
+        return try await get(path: "profiles/lookup?\(query.percentEncodedQuery ?? "")", accessToken: accessToken, expected: [200])
+    }
+
+    func changeFriendship(userID: UUID, action: String, accessToken: String) async throws -> ProfileFriendshipResponse {
+        let path = "friends/\(userID.uuidString.lowercased())"
+        if action == "remove" {
+            return try await delete(path: path, accessToken: accessToken, expected: [200])
+        }
+        if action == "request" {
+            return try await post(path: path + "/request", accessToken: accessToken, body: EmptyJSON(), expected: [200])
+        }
+        return try await post(path: path + "/respond", accessToken: accessToken, body: ["action": action], expected: [200])
+    }
+
+    func blockProfile(userID: UUID, accessToken: String) async throws {
+        let _: DiscardBody = try await post(path: "profiles/\(userID.uuidString.lowercased())/block", accessToken: accessToken, body: EmptyJSON(), expected: [200])
+    }
+
+    func reportProfile(userID: UUID, reason: String, accessToken: String) async throws {
+        let _: DiscardBody = try await post(path: "profiles/\(userID.uuidString.lowercased())/report", accessToken: accessToken, body: ["reason": reason], expected: [200])
+    }
+
+    func recordProfileView(userID: UUID, eventID: UUID, source: String, accessToken: String) async throws {
+        let _: DiscardBody = try await post(
+            path: "profiles/\(userID.uuidString.lowercased())/views", accessToken: accessToken,
+            body: ["event_id": eventID.uuidString.lowercased(), "source": source], expected: [200]
         )
     }
 
@@ -1065,6 +1132,15 @@ struct FitFightAPI {
             expected: [200]
         )
         return list.fights
+    }
+
+    func fightAdministrationCapabilities(accessToken: String) async throws -> FightAdministrationCapabilities {
+        try await get(path: "me/capabilities", accessToken: accessToken, expected: [200])
+    }
+
+    func administerFight(fightID: UUID, input: AdministerFightRequest, accessToken: String) async throws -> FitFightSummary {
+        try await request(path: "fights/\(fightID.uuidString.lowercased())/admin", method: "PATCH", accessToken: accessToken,
+                          body: Self.encoder.encode(input), idempotencyKey: nil, expected: [200])
     }
 
     func listSuggestedFights(accessToken: String) async throws -> [FitFightJoinableFight] {
@@ -1737,4 +1813,19 @@ private struct FeedbackStatusBody: Encodable {
     var expectedStatus: String
     var status: String
     var operationId: UUID
+}
+
+private struct ProfileSettingsUpdate: Encodable {
+    let settings: SharedProfileSettings
+    enum CodingKeys: String, CodingKey {
+        case competitive, audience, activityAudience = "activity_audience", activityDays = "activity_days", artworkAllowed = "artwork_allowed"
+    }
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(settings.competitive, forKey: .competitive)
+        try container.encode(settings.audience, forKey: .audience)
+        try container.encode(settings.activityAudience, forKey: .activityAudience)
+        try container.encode(settings.activityDays, forKey: .activityDays)
+        try container.encode(settings.artworkAllowed, forKey: .artworkAllowed)
+    }
 }

@@ -1,5 +1,6 @@
 import { ApiError, ERROR_CODES, apiRoute, json } from "@/lib/http";
 import { closeDueFights } from "@/lib/supabase/queries/close-due-fights-supabase-query";
+import { pruneProfileEvents } from "@/lib/supabase/queries/profile-events-supabase-query";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,6 +23,7 @@ function requireCron(request: Request): void {
 
 async function handle(request: Request) {
     requireCron(request);
+    await pruneProfileEvents();
     const result = await closeDueFights();
     return json({ ok: true, ...result });
 }

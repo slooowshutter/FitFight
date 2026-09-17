@@ -1,12 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import {
-    canDeferFightJoin,
-    fightJoinMemberState,
-} from "@/lib/domain/fights/join-start";
 import { ApiError, ERROR_CODES } from "@/lib/http";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { FightRow, FightSeriesRow } from "@/lib/types/database";
-import type { FightJoinStart } from "@/lib/types/fights/join-start";
 
 export async function loadFight(
     fightId: string,
@@ -62,37 +57,4 @@ export async function loadOwnedFight(
 
 export function fightSummary(fight: Pick<FightRow, "id" | "state">) {
     return { id: fight.id, state: fight.state };
-}
-
-export async function joinMemberStateForFight(
-    fight: FightRow,
-    start: FightJoinStart,
-    now: Date = new Date(),
-    admin: SupabaseClient = createAdminClient(),
-): Promise<"accepted" | "deferred"> {
-    let recurring = false;
-    let paused = false;
-    if (fight.series_id) {
-        const series = await loadSeries(fight.series_id, admin);
-        recurring = series.recurring;
-        paused = Boolean(series.paused_at);
-    }
-    const memberState = fightJoinMemberState(
-        start,
-        canDeferFightJoin({
-            recurring,
-            paused,
-            startsAt: fight.starts_at,
-            timeZone: fight.time_zone,
-            now,
-        }),
-    );
-    if (!memberState) {
-        throw new ApiError(
-            409,
-            ERROR_CODES.conflict,
-            "This fight does not have a next round to join",
-        );
-    }
-    return memberState;
 }

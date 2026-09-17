@@ -16,6 +16,7 @@
     ],
     "git": {
         "deploymentEnabled": {
+            "profiles-friends-and-stats": false,
             "agent-check/feedback-workflow-20260917": false
         }
     }

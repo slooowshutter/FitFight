@@ -79,4 +79,5 @@ The earlier notification inbox, follow/mute settings, and push delivery are defe
 This first version shows system updates inside the existing request discussion. It
 must not claim that people receive separate alerts or unread notifications yet.
 
-Planning only. The SQL is outside `supabase/migrations/` and has not been applied.
+Implementation evidence is recorded in [status.md](../status.md). The linked SQL is
+a design reference; the executable migration has not been applied to a hosted database.

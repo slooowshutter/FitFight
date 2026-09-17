@@ -255,8 +255,8 @@ export async function ensureAppWideFightInvite(
 }
 
 export async function inviteEveryoneToOpenFight(
-    series: FightSeriesRow,
-    fight: FightRow,
+    series: Pick<FightSeriesRow, "id" | "join_code" | "paused_at" | "owner_id">,
+    fight: Pick<FightRow, "id" | "state" | "ends_at">,
     sql: Sql = createDatabaseClient(),
 ): Promise<string[]> {
     if (

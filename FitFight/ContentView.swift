@@ -255,6 +255,8 @@ struct ContentView: View {
             NotificationOnboardingView()
         } else if session.needsRequestsOnboarding {
             RequestsOnboardingView()
+        } else if session.needsSuggestedOnboarding {
+            SuggestedFightsOnboardingView()
         } else {
             signedInApp
         }

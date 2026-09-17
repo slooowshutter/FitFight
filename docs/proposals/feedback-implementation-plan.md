@@ -135,5 +135,6 @@ alerts, followers/mutes, unread tracking, and optional push. None is necessary t
 system comments and request statuses. Likewise, do not build an automated release
 or agent-tracking service as part of this change.
 
-This pass updates the plan and proposed SQL only. SQL syntax and static checks do
-not replace the cloud migration, API, native, and rollout checks listed above.
+Implementation and cloud verification evidence are recorded in [status.md](../status.md).
+The proposed SQL remains a design reference; the executable migration is under
+`supabase/migrations/`. Hosted rollout remains separate from implementation.

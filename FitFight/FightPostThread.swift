@@ -213,18 +213,22 @@ struct FightPostEngagement: View {
     private func commentRow(_ comment: FitFightFightPostComment) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .top, spacing: 8) {
-                CompanionAvatar(
-                    personID: comment.author.userId.uuidString,
-                    companionID: comment.author.companionId,
-                    isYou: comment.mine,
-                    monogram: comment.author.initials,
-                    photoURL: comment.author.avatar?.url,
-                    size: 26
-                )
+                ProfileIdentityLink(userID: comment.author.userId, source: "comments") {
+                    CompanionAvatar(
+                        personID: comment.author.userId.uuidString,
+                        companionID: comment.author.companionId,
+                        isYou: comment.mine,
+                        monogram: comment.author.initials,
+                        photoURL: comment.author.avatar?.url,
+                        size: 26
+                    )
+                }
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(comment.author.atHandle)
-                        .ffType(.caption)
-                        .foregroundStyle(theme.text)
+                    ProfileIdentityLink(userID: comment.author.userId, source: "comments") {
+                        Text(comment.author.atHandle)
+                            .ffType(.caption)
+                            .foregroundStyle(theme.text)
+                    }
                     Text(comment.body)
                         .ffType(.body)
                         .foregroundStyle(theme.text)
@@ -399,7 +403,8 @@ private struct FightPostReactionsSheet: View {
             if !people.isEmpty {
                 FFCard {
                     ForEach(people) { person in
-                        HStack(spacing: 12) {
+                        ProfileIdentityLink(userID: person.userId, source: "reactions") {
+                            HStack(spacing: 12) {
                             Text(person.emoji)
                                 .ffType(.title)
                             VStack(alignment: .leading, spacing: 2) {
@@ -412,7 +417,8 @@ private struct FightPostReactionsSheet: View {
                             }
                             Spacer(minLength: 0)
                         }
-                        .padding(.vertical, 4)
+                            .padding(.vertical, 4)
+                        }
                     }
                 }
             } else if !loading && error == nil {

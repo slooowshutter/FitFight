@@ -11,7 +11,7 @@ export const feedbackWorkflowStatusValues = [
 export const feedbackWorkflowStatusSchema = z.enum(feedbackWorkflowStatusValues);
 
 export const feedbackWorkflowEnvironmentSchema = z.object({
-    FITFIGHT_FEEDBACK_ADMIN_USER_ID: z.string().uuid().optional(),
+    FITFIGHT_ADMIN_USER_ID: z.preprocess((value) => value === "" ? undefined : value, z.string().uuid().optional()),
     FITFIGHT_FEEDBACK_WORKFLOW_ENABLED: z.enum(["true", "false"]).default("false"),
 });
 
@@ -163,6 +163,7 @@ export const feedbackPostSummarySchema = z
 export const feedbackCommentSchema = z
     .object({
         id: z.string().uuid(),
+        author_id: z.string().uuid().optional(),
         body: z.string(),
         author_handle: z.string(),
         created_at: z.string().datetime(),
@@ -179,6 +180,7 @@ export const feedbackPostRowSchema = feedbackPostSummarySchema.omit({ media: tru
 });
 
 export const feedbackCommentRowSchema = feedbackCommentSchema.extend({
+    author_id: z.string().uuid().nullable().optional(),
     created_at: z.union([z.date(), z.string().datetime()]),
     metadata: z.unknown(),
 });

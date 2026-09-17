@@ -27,7 +27,7 @@ export async function loadProfileAccess(sql: TransactionSql, viewerId: string, t
     const [row] = await sql`
         select jsonb_build_object('user_id', profile.user_id, 'handle', profile.handle,
             'display_name', profile.display_name, 'companion_id', profile.companion_id) identity,
-            media.object_path avatar_path,
+            media.object_path avatar_path, profile.time_zone,
             coalesce(to_jsonb(settings), ${sql.json(defaultProfileSettings)}::jsonb) settings,
             jsonb_build_object(
                 'owner', profile.user_id = ${viewerId},
@@ -99,6 +99,10 @@ export async function readSharedProfile(
         } : row.relationship;
         const access = profileAccess(row.settings, relationship);
         const facts = access.record ? await loadProfileFightFacts(sql, targetId) : [];
+        const [contextRow] = await sql`
+            select (now() at time zone ${row.time_zone})::date::text today, ${row.time_zone}::text time_zone
+        `;
+        const context = profileStatisticsContextSchema.parse(contextRow);
         const values = access.activity ? activityDaySchema.array().parse(await sql`
             select distinct on (days.day) days.day::text, days.value::float8 steps,
                 days.time_zone, days.updated_at::text, (days.finalized_at is not null) finalized
@@ -106,8 +110,8 @@ export async function readSharedProfile(
             join public.data_sources source on source.id = days.source_id
             where days.user_id = ${targetId} and days.metric = 'steps'
                 and source.provider = 'apple_health'
-                and days.day >= (now() at time zone coalesce(days.time_zone, 'UTC'))::date - ${row.settings.activity_days - 1}::integer
-                and days.day <= (now() at time zone coalesce(days.time_zone, 'UTC'))::date
+                and days.day >= ${context.today}::date - ${row.settings.activity_days - 1}::integer
+                and days.day <= ${context.today}::date
             order by days.day, days.updated_at desc
         `) : [];
         let statistics: SharedProfile["step_statistics"] = null;
@@ -120,12 +124,6 @@ export async function readSharedProfile(
                 where days.user_id = ${targetId} and days.metric = 'steps' and source.provider = 'apple_health'
                 order by days.day, days.updated_at desc
             `) : values;
-            // The legacy Profile time zone is not updated by current mobile clients.
-            const timeZone = history.findLast((day) => day.time_zone !== null)?.time_zone ?? "UTC";
-            const [contextRow] = await sql`
-                select (now() at time zone ${timeZone})::date::text today, ${timeZone}::text time_zone
-            `;
-            const context = profileStatisticsContextSchema.parse(contextRow);
             statistics = profileStepStatistics(history, context, relationship.owner ? null : row.settings.activity_days);
         }
         return sharedProfileSchema.parse({

@@ -21,6 +21,7 @@ struct NewFightView: View {
     @State private var usernameError: String?
     @State private var durationDays = 7
     @State private var customSchedule = false
+    @State private var selectedTimeZone: TimeZone?
     @State private var customStart = Date(timeIntervalSince1970: ceil(Date().timeIntervalSince1970 / 60) * 60 + 3_600)
     @State private var customEnd = Date(timeIntervalSince1970: ceil(Date().timeIntervalSince1970 / 60) * 60 + 7 * 86_400 + 3_600)
     @State private var fightTitle = ""
@@ -41,11 +42,14 @@ struct NewFightView: View {
         _step = State(initialValue: initialStep)
     }
 
+    private var fightTimeZone: TimeZone { selectedTimeZone ?? session.profile?.calendarTimeZone ?? .current }
+
     private func applyProfileChallenge(now: Date = Date()) {
         guard let draft = model.profileChallenge else { return }
         opening = .create
         step = 0
         durationDays = 7
+        selectedTimeZone = nil
         customSchedule = false
         recurring = true
         fightTitle = ""
@@ -54,7 +58,7 @@ struct NewFightView: View {
         actionText = draft.actionText ?? ""
         if let seconds = draft.durationSeconds {
             if let days = [3, 7, 14, 30].first(where: {
-                FightComposer.endDate(from: now, days: $0).timeIntervalSince(now) == TimeInterval(seconds)
+                FightComposer.endDate(from: now, days: $0, timeZone: fightTimeZone).timeIntervalSince(now) == TimeInterval(seconds)
             }) {
                 durationDays = days
             } else {
@@ -428,6 +432,7 @@ struct NewFightView: View {
                 customStart: $customStart,
                 customEnd: $customEnd,
                 recurring: $recurring,
+                timeZone: Binding(get: { fightTimeZone }, set: { selectedTimeZone = $0 }),
                 canEditStart: true,
                 startsImmediately: true,
                 constrainEnd: false,
@@ -461,6 +466,7 @@ struct NewFightView: View {
                 customEnd: customEnd,
                 durationStart: Date(),
                 durationDays: durationDays,
+                timeZone: fightTimeZone,
                 visibilityJoinable: visibilityJoinable,
                 opponentHandles: inviteHandles,
                 recurring: recurring,
@@ -541,7 +547,7 @@ struct NewFightView: View {
     }
 
     private func endDate(from startsAt: Date) -> Date {
-        FightComposer.endDate(from: startsAt, days: durationDays)
+        FightComposer.endDate(from: startsAt, days: durationDays, timeZone: fightTimeZone)
     }
 
     private func startFight() -> Bool {
@@ -558,6 +564,7 @@ struct NewFightView: View {
                 name: title,
                 startsAt: startsAt,
                 endsAt: endsAt,
+                timeZone: fightTimeZone,
                 actionText: action,
                 inviteHandles: inviteHandles,
                 visibility: visibilityJoinable ? "joinable" : "invite_only",

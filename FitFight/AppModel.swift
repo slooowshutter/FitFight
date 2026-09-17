@@ -136,6 +136,7 @@ struct Fight: Codable, Identifiable, Hashable {
     var suggested: Bool = false
     var pendingJoin: Bool = false
     var offersJoinNext: Bool = false
+    var timeZone: String? = nil
 
     var hasAction: Bool {
         !actionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -689,6 +690,7 @@ final class AppModel: ObservableObject {
         name: String = "",
         startsAt: Date,
         endsAt: Date,
+        timeZone: TimeZone,
         actionText: String,
         inviteHandles: [String],
         visibility: String = "invite_only",
@@ -737,7 +739,7 @@ final class AppModel: ObservableObject {
             name: storedName,
             startsAt: startsAt,
             endsAt: endsAt,
-            timeZone: TimeZone.current.identifier,
+            timeZone: timeZone.identifier,
             outcomeRule: "highest_total",
             goalPolicy: "shared",
             defaultGoalValue: nil,
@@ -776,6 +778,7 @@ final class AppModel: ObservableObject {
         recurring: Bool,
         startsAt: Date?,
         endsAt: Date,
+        timeZone: String?,
         inviteHandles: [String],
         removeUserIds: [String]
     ) async -> Bool {
@@ -834,6 +837,7 @@ final class AppModel: ObservableObject {
                     recurring: recurring,
                     startsAt: startsAt,
                     endsAt: endsAt,
+                    timeZone: timeZone,
                     inviteHandles: handles.isEmpty ? nil : handles,
                     removeUserIds: removals.isEmpty ? nil : removals
                 ),
@@ -1322,7 +1326,8 @@ final class AppModel: ObservableObject {
             windowEnd: ends,
             serverState: created.state,
             recurring: payload.recurring ?? false,
-            visibility: payload.visibility ?? "invite_only"
+            visibility: payload.visibility ?? "invite_only",
+            timeZone: payload.timeZone
         )
     }
 
@@ -1721,7 +1726,8 @@ final class AppModel: ObservableObject {
             suggested: series?.suggested ?? false,
             offersJoinNext: (series?.recurring ?? false)
                 && Self.isAfterFightStartDay(starts)
-                && mine?.state == "invited"
+                && mine?.state == "invited",
+            timeZone: row.timeZone
         )
     }
 

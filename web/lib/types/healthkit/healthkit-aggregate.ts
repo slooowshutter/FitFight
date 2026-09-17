@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { timeZoneSchema } from "@/lib/types/time/time-zone";
 import { civilDayBounds, isCivilDay } from "@/lib/scoring/civil-day";
 import { fightStepCheckpointSchema } from "@/lib/types/fights/fight-step-checkpoint";
 import {
@@ -25,18 +26,6 @@ const uuidV4Schema = z
     .transform((value) => value.toLowerCase());
 const dateTimeSchema = z.string().datetime({ offset: true });
 const civilDaySchema = z.string().refine(isCivilDay, "must be YYYY-MM-DD");
-const timeZoneSchema = z
-    .string()
-    .min(1)
-    .max(100)
-    .refine((value) => {
-        try {
-            Intl.DateTimeFormat("en-US", { timeZone: value }).format();
-            return true;
-        } catch {
-            return false;
-        }
-    }, "invalid time zone");
 const stepCountSchema = z.number().int().min(0).max(MAX_STEP_COUNT);
 
 const healthKitMergedDaySchema = z

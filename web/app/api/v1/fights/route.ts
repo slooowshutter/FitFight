@@ -1,3 +1,4 @@
+import { createFightSchema } from "@/lib/types/fights/create-fight";
 import {
     ApiError,
     ERROR_CODES,
@@ -7,10 +8,7 @@ import {
     readJson,
 } from "@/lib/http";
 import { verifyUser } from "@/lib/supabase/queries/auth-supabase-query";
-import {
-    createFight,
-    createFightSchema,
-} from "@/lib/supabase/queries/create-fight-supabase-query";
+import { createFight } from "@/lib/supabase/queries/create-fight-supabase-query";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

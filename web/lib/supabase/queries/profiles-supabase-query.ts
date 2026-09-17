@@ -2,8 +2,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { ApiError } from "@/lib/http";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
-    profileSchema,
+    profileDatabaseRowSchema,
     type Profile,
+    type ProfileDatabaseRow,
     type UpdateProfileRequest,
 } from "@/lib/types/profiles/profile";
 import {
@@ -14,21 +15,10 @@ import {
 } from "./media-supabase-query";
 
 const PROFILE_COLUMNS =
-    "user_id, handle, display_name, handle_set_at, referral_code, avatar_media_id, companion_id, companion_prompt";
-
-type ProfileRow = {
-    user_id: string;
-    handle: string;
-    display_name: string;
-    handle_set_at: string | null;
-    referral_code: string;
-    avatar_media_id: string | null;
-    companion_id: string | null;
-    companion_prompt: string | null;
-};
+    "user_id, handle, display_name, handle_set_at, referral_code, avatar_media_id, companion_id, companion_prompt, time_zone";
 
 async function asProfile(
-    row: ProfileRow,
+    row: ProfileDatabaseRow,
     admin: SupabaseClient,
 ): Promise<Profile> {
     let avatar = null;
@@ -48,7 +38,7 @@ async function asProfile(
             avatar = mapMedia(media, await signMediaUrl(media.object_path));
         }
     }
-    return profileSchema.parse({
+    return {
         user_id: row.user_id,
         handle: row.handle,
         display_name: row.display_name,
@@ -57,7 +47,8 @@ async function asProfile(
         avatar,
         companion_id: row.companion_id,
         companion_prompt: row.companion_prompt,
-    });
+        time_zone: row.time_zone,
+    };
 }
 
 export async function readProfile(
@@ -77,7 +68,7 @@ export async function readProfile(
             "profile_missing",
             "Invalid or deleted account",
         );
-    return asProfile(data as ProfileRow, admin);
+    return asProfile(profileDatabaseRowSchema.parse(data), admin);
 }
 
 export async function updateProfile(
@@ -111,6 +102,9 @@ export async function updateProfile(
             ...(input.display_name !== undefined
                 ? { display_name: input.display_name }
                 : {}),
+            ...(input.time_zone !== undefined
+                ? { time_zone: input.time_zone }
+                : {}),
             ...(input.avatar_media_id !== undefined
                 ? { avatar_media_id: input.avatar_media_id }
                 : {}),
@@ -141,5 +135,5 @@ export async function updateProfile(
             "profile_missing",
             "Invalid or deleted account",
         );
-    return asProfile(data as ProfileRow, admin);
+    return asProfile(profileDatabaseRowSchema.parse(data), admin);
 }

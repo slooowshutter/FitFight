@@ -51,6 +51,8 @@ enum FightComposer {
     var step = 0
     var durationDays = 7
     var customSchedule = false
+    var selectedTimeZone: TimeZone?
+    var fightTimeZone: TimeZone { selectedTimeZone ?? .current }
     var customStart = Date()
     var customEnd = Date()
     var recurring = true
@@ -92,6 +94,16 @@ enum FightComposer {
         composer.applyProfileChallenge(now: beforeDST)
         check(composer.customSchedule, "A new daylight-saving transition cannot change the rematch duration")
         check(composer.customEnd.timeIntervalSince(composer.customStart) == 3 * 86_400, "The new custom window preserves elapsed time across daylight saving")
+
+        let paris = TimeZone(identifier: "Europe/Paris")!
+        let tokyo = TimeZone(identifier: "Asia/Tokyo")!
+        NSTimeZone.default = tokyo
+        let parisEnd = FightComposer.endDate(from: beforeDST, days: 3, timeZone: paris)
+        check(parisEnd.timeIntervalSince(beforeDST) == 3 * 86_400 + 3600, "Calendar durations use the saved zone across DST")
+        let movedStart = FightComposer.moveWallTime(beforeDST, from: paris, to: tokyo)
+        let movedEnd = FightComposer.moveWallTime(parisEnd, from: paris, to: tokyo)
+        check(movedStart == ISO8601DateFormatter().date(from: "2026-10-24T05:00:00Z")!, "Custom 14:00 stays 14:00 in the selected zone")
+        check(movedEnd.timeIntervalSince(movedStart) == 3 * 86_400, "The selected zone determines the actual custom window")
 
         let historical = Fight(id: UUID().uuidString, seriesId: "series", status: .finished, windowStart: Date(timeIntervalSince1970: 1000))
         let current = Fight(id: UUID().uuidString, seriesId: "series", status: .live, windowStart: Date(timeIntervalSince1970: 2000))

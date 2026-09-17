@@ -270,11 +270,12 @@ struct FitFightUpdateFight: Encodable, Equatable {
     var recurring: Bool?
     var startsAt: Date?
     var endsAt: Date?
+    var timeZone: String? = nil
     var inviteHandles: [String]?
     var removeUserIds: [UUID]?
 
     enum CodingKeys: String, CodingKey {
-        case name, actionText, visibility, recurring, startsAt, endsAt, inviteHandles, removeUserIds
+        case name, actionText, visibility, recurring, startsAt, endsAt, timeZone, inviteHandles, removeUserIds
     }
 
     func encode(to encoder: Encoder) throws {
@@ -285,6 +286,7 @@ struct FitFightUpdateFight: Encodable, Equatable {
         try container.encodeIfPresent(recurring, forKey: .recurring)
         try container.encodeIfPresent(startsAt, forKey: .startsAt)
         try container.encodeIfPresent(endsAt, forKey: .endsAt)
+        try container.encodeIfPresent(timeZone, forKey: .timeZone)
         try container.encodeIfPresent(inviteHandles, forKey: .inviteHandles)
         try container.encodeIfPresent(removeUserIds, forKey: .removeUserIds)
     }
@@ -752,6 +754,7 @@ struct FitFightAPI {
         avatarMediaId: UUID? = nil,
         companionId: String? = nil,
         companionPrompt: String? = nil,
+        timeZone: String? = nil,
         accessToken: String
     ) async throws -> FitFightProfile {
         try await request(
@@ -763,7 +766,8 @@ struct FitFightAPI {
                 displayName: displayName,
                 avatarMediaId: avatarMediaId,
                 companionId: companionId,
-                companionPrompt: companionPrompt
+                companionPrompt: companionPrompt,
+                timeZone: timeZone
             )),
             idempotencyKey: nil,
             expected: [200]
@@ -1470,6 +1474,7 @@ private struct ProfileUpdate: Encodable {
     let avatarMediaId: UUID?
     let companionId: String?
     let companionPrompt: String?
+    let timeZone: String?
 
     enum CodingKeys: String, CodingKey {
         case handle
@@ -1477,6 +1482,7 @@ private struct ProfileUpdate: Encodable {
         case avatarMediaId = "avatar_media_id"
         case companionId = "companion_id"
         case companionPrompt = "companion_prompt"
+        case timeZone = "time_zone"
     }
 
     func encode(to encoder: Encoder) throws {
@@ -1485,6 +1491,7 @@ private struct ProfileUpdate: Encodable {
         try container.encodeIfPresent(displayName, forKey: .displayName)
         try container.encodeIfPresent(avatarMediaId, forKey: .avatarMediaId)
         try container.encodeIfPresent(companionId, forKey: .companionId)
+        try container.encodeIfPresent(timeZone, forKey: .timeZone)
         if companionId != nil {
             try container.encode(companionPrompt, forKey: .companionPrompt)
         }

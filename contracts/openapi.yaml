@@ -2446,6 +2446,9 @@ components:
                                 }
                             starts_at: { type: string, format: date-time }
                             ends_at: { type: string, format: date-time }
+                            time_zone:
+                                type: string
+                                description: Fight calendar time zone; optional for older responses.
                             grace_ends_at: { type: string, format: date-time }
                             action_text: { type: [string, "null"] }
                             series_id: { type: [string, "null"], format: uuid }
@@ -2547,11 +2550,17 @@ components:
                 display_name: { type: string }
                 handle_set_at: { type: [string, "null"], format: date-time }
                 referral_code: { type: string, format: uuid }
+                time_zone:
+                    type: string
+                    description: Saved personal IANA time zone; optional for older responses.
         UpdateProfile:
             type: object
             additionalProperties: false
             minProperties: 1
             properties:
+                time_zone:
+                    type: string
+                    description: Save a personal IANA time zone. Omission preserves the existing setting.
                 handle:
                     type: string
                     description: Trimmed, surrounding @ removed, lowercased, then validated as 2–30 letters, numbers, or underscores.

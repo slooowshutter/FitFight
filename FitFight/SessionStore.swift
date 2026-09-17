@@ -277,6 +277,7 @@ final class SessionStore: ObservableObject {
             let updated = try await api.updateProfile(
                 handle: handle,
                 avatarMediaId: avatarMediaId,
+                timeZone: TimeZone.current.identifier,
                 accessToken: token
             )
             UserDefaults.standard.set(true, forKey: Self.handleChosenKey)
@@ -307,10 +308,10 @@ final class SessionStore: ObservableObject {
         }
     }
 
-    func updateIdentity(displayName: String, handle: String) async throws {
+    func updateIdentity(displayName: String, handle: String, timeZone: TimeZone) async throws {
         guard let userId = authSession?.user.id else { throw HandleError.notSignedIn }
         let token = try await freshAccessToken()
-        let updated = try await api.updateProfile(handle: handle, displayName: displayName, accessToken: token)
+        let updated = try await api.updateProfile(handle: handle, displayName: displayName, timeZone: timeZone.identifier, accessToken: token)
         try Task.checkCancellation()
         guard authSession?.user.id == userId else { throw CancellationError() }
         profile = updated

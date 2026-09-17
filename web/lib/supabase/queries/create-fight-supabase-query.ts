@@ -1,23 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { z } from "zod";
 import { randomJoinCode } from "@/lib/domain/fights/join-code";
 import { ApiError, ERROR_CODES } from "@/lib/http";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { FightRow, ProfileRow } from "@/lib/types/database";
-import { fightVisibilitySchema } from "@/lib/types/fights/joinable-fight";
+import type { CreateFightInput } from "@/lib/types/fights/create-fight";
 import { ensureAppleHealthSource } from "./apple-health-source-supabase-query";
 import {
     createInvite,
     lookupProfileByHandle,
 } from "./create-invite-supabase-query";
 import { fightSummary } from "./fight-access-supabase-query";
-
-const dateTime = z
-    .string()
-    .refine(
-        (value) => Number.isFinite(Date.parse(value)),
-        "must be a date-time",
-    );
 
 export function storedFightIdentity(
     name: string | undefined,
@@ -30,45 +22,6 @@ export function storedFightIdentity(
         actionText: action.length > 0 ? action : null,
     };
 }
-
-export const createFightSchema = z
-    .object({
-        name: z.string().trim().max(120).optional(),
-        startsAt: dateTime,
-        endsAt: dateTime,
-        timeZone: z.string().min(1),
-        outcomeRule: z.enum(["highest_total", "proportional", "hit_your_goal"]),
-        goalPolicy: z.enum(["shared", "personal"]).default("shared"),
-        defaultGoalValue: z.number().optional(),
-        stakeKind: z.enum(["bragging", "money", "action"]),
-        stakeMinor: z.number().int().min(0).optional(),
-        currency: z.string().default("USD"),
-        actionText: z.string().trim().max(120).optional(),
-        inviteHandles: z.array(z.string()).optional(),
-        start: z.enum(["now", "scheduled"]).default("now"),
-        metric: z.literal("steps").optional(),
-        visibility: fightVisibilitySchema.default("invite_only"),
-        recurring: z.boolean().default(true),
-    })
-    .superRefine((value, ctx) => {
-        const starts = Date.parse(value.startsAt);
-        const ends = Date.parse(value.endsAt);
-        if (!Number.isFinite(starts) || !Number.isFinite(ends)) {
-            ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message: "startsAt and endsAt must be dates",
-            });
-            return;
-        }
-        if (ends <= starts) {
-            ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message: "endsAt must be after startsAt",
-            });
-        }
-    });
-
-export type CreateFightInput = z.infer<typeof createFightSchema>;
 
 const IDEMPOTENCY_WINDOW_MS = 2 * 60 * 1000;
 const JOIN_CODE_ATTEMPTS = 8;

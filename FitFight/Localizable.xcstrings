@@ -1,6 +1,91 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Search time zones": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Search time zones"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Rechercher un fuseau horaire"
+                    }
+                }
+            }
+        },
+        "Time zone": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Time zone"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Fuseau horaire"
+                    }
+                }
+            }
+        },
+        "Your daily Steps and new Fights use this time zone, even when you travel.": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Your daily Steps and new Fights use this time zone, even when you travel."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Vos pas quotidiens et vos nouveaux défis utilisent ce fuseau horaire, même en voyage."
+                    }
+                }
+            }
+        },
+        "Your time zone stays fixed when you travel and can be changed in Edit profile. Custom Fights let you choose their time zone. Profile statistics refresh after Health sync, and Feedback comment counts open the discussion.": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Your time zone stays fixed when you travel and can be changed in Edit profile. Custom Fights let you choose their time zone. Profile statistics refresh after Health sync, and Feedback comment counts open the discussion."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Votre fuseau horaire reste fixe en voyage et peut être modifié dans Modifier le profil. Les défis personnalisés permettent de choisir leur fuseau horaire. Les statistiques du profil sont actualisées après la synchronisation Santé et le nombre de commentaires ouvre la discussion dans Feedback."
+                    }
+                }
+            }
+        },
+        "feedback.comment-count": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld comments"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld commentaires"
+                    }
+                }
+            }
+        },
         "Steps and streaks": {
             "localizations": {
                 "en": {

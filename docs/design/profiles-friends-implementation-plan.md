@@ -38,9 +38,11 @@ Only finalized days with a known historical time zone count, through yesterday.
 Today, partial days and missing days do not count as zero or establish streaks.
 A missing date interrupts the verified sequence. If yesterday is unavailable,
 the current streak is unknown. Weekly statistics run Monday through yesterday
-in the latest available recorded day's time zone and show the recorded/elapsed-day
-denominator. The legacy Profile time zone is not updated by current clients. An
-empty history uses UTC only to anchor the empty calendar period.
+in the person's saved Profile time zone and show the recorded/elapsed-day
+denominator. Edit profile can change the saved zone; travel leaves it unchanged.
+New account onboarding initializes it from the phone. Custom Fights may choose a
+separate zone; existing daily rows retain their original zones and finalized totals.
+Empty history uses the same saved zone to anchor its calendar period.
 They are not represented as a complete weekly average when days are missing.
 
 The owner sees available recorded history, not a claim of complete lifetime

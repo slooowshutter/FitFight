@@ -10,6 +10,40 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ## Profiles, Friends, and Rivalry implementation, 17 Sep 2026
 
+**Review fixes and saved time zones, 17 Sep:** prepared on this branch, not deployed.
+You waits for Health upload completion before reloading statistics on first load,
+foregrounding, pull to refresh, and Health actions. Feedback usernames open Profile;
+comment counts open the discussion. Shared activity and statistics use one saved
+personal date boundary, including audience previews, so a seven-day grant cannot
+expose an eighth date after travel.
+
+The existing `profiles.time_zone` column is now exposed as optional `/api/v1/me`
+`time_zone` and an optional PATCH input. Existing values are preserved; new username
+onboarding saves the phone's zone, and Edit profile can change it. Daily Health
+aggregates and new Fight durations use the saved zone. Custom Fight date pickers
+and review use a selectable Fight zone; changing it preserves the entered local
+times and recalculates their UTC instants. The zone can be edited before a Fight
+starts and is locked afterward. Snapshot Fight rows gain optional `time_zone`.
+Old fixtures still omit these fields. No database migration is needed for these
+fixes, and no finalized daily totals are relabeled.
+
+**Cloud checks:** the new regression commit `c07ad09` reproduced both defects:
+[iOS refresh](https://github.com/slooowshutter/FitFight/actions/runs/35239173445)
+failed all three upload-order checks, and the
+[database test](https://github.com/slooowshutter/FitFight/actions/runs/35239173174)
+returned eight dates for a seven-day grant. Verification of the fixes is pending.
+Additional coverage includes saved-zone travel, daylight-saving custom/preset
+windows, optional native decoding, and authenticated legacy `/me` requests with
+build headers 113, 190, 200, 201, 202, and 203.
+
+**Live and rollout:** read-only `/api/app-release` checks at **17 Sep 15:14:57 UTC**
+show staging latest 1.1.1 (201), review/internal 1.1.2 (203), enforcement off;
+production latest 1.1.1 (202), review/internal null, enforcement on. Those live
+candidates do not contain this branch. Deploy the compatible backend after the
+branch's existing Profile expansion migration, then distribute the native app.
+No merge, deployment, TestFlight upload, or change to the live database was made.
+Installed-device verification remains outstanding.
+
 **Steps statistics extension, 17 Sep:** prepared on this branch. You and Profile
 sheets now show best recorded day, average per recorded day, weekly average and
 total, and day distributions/current/longest recorded streaks across five activity
@@ -17,8 +51,8 @@ levels. Levels use the companion's existing 2k/4k/6k/8k thresholds. The owner's
 avatar opens their Profile. Only finalized days with known time zones count,
 through yesterday; missing days are unknown. Exact-category streaks cannot bridge
 unknown days. Weekly summaries disclose their recorded-day denominator and use
-the latest available recorded day's time zone. The unused legacy Profile time
-zone does not determine the date boundary.
+the person's saved Profile time zone. Travel does not change that setting; existing
+recorded days retain their original zone and finalized value.
 
 Owners see available recorded history. Other viewers and previews receive only
 statistics within their explicit activity audience and 7/30-day period. Earlier

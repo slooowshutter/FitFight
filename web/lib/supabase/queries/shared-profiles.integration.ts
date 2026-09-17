@@ -189,10 +189,10 @@ test("step statistics keep owner records private and clip every shared aggregate
     await blockProfile(friend, owner, database);
     await assert.rejects(readSharedProfile(friend, owner, undefined, database), (error) => error instanceof ApiError && error.status === 404);
     for (const zone of ["Pacific/Kiritimati", "Etc/GMT+12"]) {
-        await database`update public.metric_days set time_zone = ${zone} where user_id = ${owner}`;
+        await database`update public.profiles set time_zone = ${zone} where user_id = ${owner}`;
         const [expected] = await database`select ((now() at time zone ${zone})::date - 1)::text yesterday`;
         const local = await readSharedProfile(owner, owner, undefined, database);
-        assert.equal(local.step_statistics?.time_zone, zone, "Use uploaded history rather than the unused profile time zone");
+        assert.equal(local.step_statistics?.time_zone, zone, "Use the saved personal time zone even when stored days have another zone");
         assert.equal(local.step_statistics?.through, expected.yesterday);
     }
 });

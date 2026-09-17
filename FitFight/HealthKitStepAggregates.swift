@@ -21,9 +21,11 @@ enum HealthKitStepAggregates {
         store: HKHealthStore,
         type: HKQuantityType,
         context: FitFightHealthKitContext,
-        trace: HealthKitSyncTrace
+        trace: HealthKitSyncTrace,
+        timeZone: TimeZone = .current
     ) async throws -> FitFightHealthKitStepSync {
-        let calendar = Calendar.current
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
         let earliestDay = context.fightWindows
             .map { calendar.startOfDay(for: $0.startsAt) }
             .min()

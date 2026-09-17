@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 17,
+            notes: "Your time zone stays fixed when you travel and can be changed in Edit profile. Custom Fights let you choose their time zone. Profile statistics refresh after Health sync, and Feedback comment counts open the discussion."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
             notes: "Profiles now show your best recorded step day, weekly averages, activity-level distribution and streaks. Shared statistics respect your chosen audience and history period."
         ),
         ReleaseNote(

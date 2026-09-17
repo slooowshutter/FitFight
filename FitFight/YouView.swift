@@ -109,17 +109,13 @@ struct YouView: View {
                 }
             }
         }
-        .task {
-            guard !staticRender else { return }
-            await model.refreshFights(session: session, steps: steps)
-        }
-        .task(id: session.authSession?.user.id) { await loadOwnProfile() }
+        .task(id: session.authSession?.user.id) { await refreshOwnProfile() }
         .onChange(of: scenePhase) { _, phase in
             profileLoadGeneration += 1
             profileStore.clear()
             rivals = []
             incomingFriends = 0
-            if phase == .active { Task { await loadOwnProfile() } }
+            if phase == .active { Task { await refreshOwnProfile() } }
         }
         .sheet(isPresented: $showingEditProfile, onDismiss: { Task { await loadOwnProfile() } }) {
             EditProfileView().fitFightTheme(theme).presentationBackground(theme.bg)
@@ -189,7 +185,7 @@ struct YouView: View {
             isRefreshing: model.isRefreshingFights,
             message: model.refreshStatusText,
             action: {
-                await model.refreshFights(session: session, steps: steps, trigger: .manual)
+                await refreshOwnProfile(trigger: .manual)
             }
         )
     }
@@ -231,6 +227,13 @@ struct YouView: View {
         }
     }
 
+    private func refreshOwnProfile(trigger: HealthKitStepsStore.SyncTrigger = .foreground, requestAccess: Bool = false) async {
+        guard !staticRender else { return }
+        await model.refreshFights(session: session, steps: steps, trigger: trigger, requestAccess: requestAccess)
+        guard !Task.isCancelled else { return }
+        await loadOwnProfile()
+    }
+
     private func loadOwnProfile() async {
         profileLoadGeneration += 1
         let requestGeneration = profileLoadGeneration
@@ -260,7 +263,7 @@ struct YouView: View {
         FFGroupedRows {
             Button {
                 Task {
-                    await model.refreshFights(session: session, steps: steps, trigger: .manual, requestAccess: !steps.hasAsked)
+                    await refreshOwnProfile(trigger: .manual, requestAccess: !steps.hasAsked)
                 }
             } label: {
                 FFGroupedRow(
@@ -298,12 +301,7 @@ struct YouView: View {
                     ),
                     action: {
                         Task {
-                            await model.refreshFights(
-                                session: session,
-                                steps: steps,
-                                trigger: .manual,
-                                requestAccess: true
-                            )
+                            await refreshOwnProfile(trigger: .manual, requestAccess: true)
                         }
                     }
                 )

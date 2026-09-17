@@ -19,7 +19,13 @@ release note includes English and French copy.
 **Checks:** the new regressions reproduced both defects in
 [cloud native checks](https://github.com/slooowshutter/FitFight/actions/runs/35166089672)
 with `python3 scripts/test_native_state.py`. Localization and native API-boundary
-checks pass in the workspace. Cloud verification of the fixes is pending.
+checks pass in the workspace. At `0e4e631`, the
+[cloud iOS build and native regressions](https://github.com/slooowshutter/FitFight/actions/runs/35166290185)
+passed. The cases cover queued refreshes after failures, failures without queued
+work, pagination interrupted by successful or failed reads, and sort changes
+during pagination. [Backend checks](https://github.com/slooowshutter/FitFight/actions/runs/35166290196)
+and [disposable database checks](https://github.com/slooowshutter/FitFight/actions/runs/35166290204)
+also passed. Physical-device verification remains pending.
 
 **Deployment:** native UI state only, with no API contract or schema changes.
 No merge into develop, preview, or main, and no TestFlight or production upload.

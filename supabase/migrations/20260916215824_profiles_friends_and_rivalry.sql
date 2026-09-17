@@ -127,6 +127,8 @@ create table private.fight_record_contexts (
     captured_at timestamptz not null default now()
 );
 create table private.fight_participation_records (
+    -- Separate row IDs prevent correlating private Fight participants across Profiles.
+    history_id uuid not null default gen_random_uuid() unique,
     fight_id uuid not null references public.fights(id) on delete cascade,
     user_id uuid not null references public.profiles(user_id) on delete cascade,
     entered_at timestamptz,

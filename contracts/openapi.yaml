@@ -2093,6 +2093,7 @@ components:
                         ],
                         "properties": {
                             "id": {
+                                "description": "Opaque identifier scoped to this Profile. Use fight_id for authorized Fight navigation.",
                                 "type": "string",
                                 "format": "uuid"
                             },
@@ -2181,6 +2182,7 @@ components:
                     }
                 },
                 "next_cursor": {
+                    "description": "Opaque cursor scoped to this Profile; not a Fight ID.",
                     "anyOf": [
                         {
                             "type": "string",

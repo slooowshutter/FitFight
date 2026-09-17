@@ -69,7 +69,7 @@ export async function loadProfileAccess(sql: TransactionSql, viewerId: string, t
 /** Captured member facts remain readable after leaving a recurring series. */
 export async function loadProfileFightFacts(sql: TransactionSql, userId: string): Promise<FightRecordFact[]> {
     return fightRecordFactSchema.array().parse(await sql`
-        select fight.id, fight.state::text, fight.starts_at::text, fight.ends_at::text,
+        select mine.history_id, fight.id, fight.state::text, fight.starts_at::text, fight.ends_at::text,
             context.category, context.result_summary summary, fight.name, fight.action_text, fight.outcome_rule::text,
             (select jsonb_agg(jsonb_build_object(
                 'user_id', member.user_id, 'entered_at', member.entered_at,
@@ -134,7 +134,7 @@ export async function readProfileHistory(
         const facts = await loadProfileFightFacts(sql, targetId);
         const eligible = facts.filter((fight) => query.shared !== "true" || fight.members.some((member) => member.user_id === viewerId
             && member.entered_at !== null));
-        const cursorIndex = query.cursor ? eligible.findIndex((fight) => fight.id === query.cursor) : -1;
+        const cursorIndex = query.cursor ? eligible.findIndex((fight) => fight.history_id === query.cursor) : -1;
         if (query.cursor && cursorIndex === -1) throw new ApiError(400, "validation", "Invalid history cursor");
         const page = eligible.slice(cursorIndex + 1, cursorIndex + 1 + query.limit);
         const visible = profileIdentifierRowSchema.array().parse(await sql`
@@ -148,14 +148,14 @@ export async function readProfileHistory(
                 const result = classifyFightResult(fight, targetId);
                 const hasDetail = visibleIds.has(fight.id);
                 return {
-                    id: fight.id, fight_id: hasDetail ? fight.id : null, name: hasDetail ? fight.name : null,
+                    id: fight.history_id, fight_id: hasDetail ? fight.id : null, name: hasDetail ? fight.name : null,
                     starts_at: fight.starts_at, ends_at: fight.ends_at, category: fight.category,
                     result: result.result, placement: result.placement, field_size: result.fieldSize,
                     counted: result.counted,
                     complete: fight.members.find((member) => member.user_id === targetId)!.complete,
                 };
             }),
-            next_cursor: cursorIndex + 1 + query.limit < eligible.length ? page[page.length - 1].id : null,
+            next_cursor: cursorIndex + 1 + query.limit < eligible.length ? page[page.length - 1].history_id : null,
         };
     });
 }

@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import {
     apiRoute,
     corsPreflight,
@@ -28,7 +29,9 @@ export const PATCH = apiRoute<{ fightID: string }>(
             undefined,
             sql,
         );
-        await processNotificationOutbox(new Date(), sql);
+        after(async () => {
+            await processNotificationOutbox(new Date(), createDatabaseClient());
+        });
         return json(fight);
     },
 );

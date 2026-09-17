@@ -1,12 +1,60 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **16 Sep 2026**. Production candidate: **1.1.1 (202)**.
+Read this before building. Last updated **17 Sep 2026**. Production candidate: **1.1.1 (202)**.
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
 ---
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
+
+## Review fixes: prepared 17 Sep 2026
+
+**Code:** reaction chips remain a swipeable horizontal carousel, as Marc requested.
+A separate actions row provides like, comments, preset reactions, and an Other emoji
+entry. The newer comment sorting and request sequencing are retained. Chart refresh
+recreates only the progress fill, preserving the chart picker and selected day.
+Pace keeps missing or stale participant history unavailable instead of showing zero.
+Legacy cumulative uploads no longer become invented daily checkpoints; confirmed
+totals still appear under So far when no daily history exists. Most comments uses
+the same timestamp precision for sorting and pagination. Create, edit, invite, and
+suggest commands deliver notifications after their successful HTTP response.
+
+**Contract and supported builds:** `/api/v1` routes, request/response fields, scores,
+and legacy `step_days` are unchanged. `step_checkpoints` was already nullable.
+Read-only release checks on 17 Sep returned staging `latest` 1.1.1 (201), enforcement
+off, and production `latest` 1.1.1 (202), enforcement on; both had null review/internal
+candidates. The native decoders from build 201 (`d97145a`) and 202 (`e2783be`) accept
+null/missing checkpoints. Existing API fixtures and build 113 SQL compatibility
+checks are retained because staging still admits older clients. No migration or
+client-permission change is required.
+
+**Cloud checks:** the regressions first failed against the reviewed code on
+GitHub-hosted runners: all four saved commands returned HTTP 500 on delivery failure,
+Pace drew unavailable history as zero, comment pagination skipped roots, and sparse
+legacy uploads with a downward correction fabricated checkpoints. At `d14671c`,
+[web checks](https://github.com/slooowshutter/FitFight/actions/runs/35158343483)
+passed typecheck and all 270 tests. The
+[disposable database checks](https://github.com/slooowshutter/FitFight/actions/runs/35158343440)
+passed migrations/RLS, build 113 compatibility, and all 21 integration tests both
+before and after the deferred client-permission cutoff, with no skips. The
+[iOS checks](https://github.com/slooowshutter/FitFight/actions/runs/35158343485)
+passed chart/HealthKit, native state, API fixtures, localization, and the simulator
+build on `macos-26`. The
+[running simulator captures](https://github.com/slooowshutter/FitFight/actions/runs/35160392966)
+show visible reaction chips, the emoji menu icon, and unclipped like/comment actions
+in English and French, Night and Day. Static export omitted the scroll contents and
+menu, so it was not used to verify those controls. Captures verify layout, not swipe
+or menu interactions. Validation-only workflow triggers were confined to a temporary
+branch; all 17 changed application and test files match the passing revision
+byte-for-byte. No app tests ran on the workstation.
+
+**Rollout:** compatible backend fixes can land on staging through an authorized
+`develop` merge before the native update. A later authorized `preview` merge ships
+the native changes with a 1.1.1 release note. Production still requires its separate
+authorized `preview` to `main` promotion. This work has not opened a PR, merged a
+release branch, changed the hosted database, or uploaded a TestFlight build. Physical
+device interaction and HealthKit verification remain separate from cloud checks.
 
 ## Marc broadcast posts, 16 Sep 2026
 

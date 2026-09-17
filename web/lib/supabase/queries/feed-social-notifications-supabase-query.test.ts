@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { z } from "zod";
 import { socialNotificationAlert } from "@/lib/notifications/notification-copy";
 import { GET, PATCH } from "@/app/api/v1/notifications/preferences/route";
 import {
@@ -21,6 +22,26 @@ const siblingFightId = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
 const postId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const commentId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 const parentId = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+
+test("comment alerts identify the exact post and comment", async () => {
+    const { database, inserted } = createSql({
+        post: { fight_id: fightId, author_id: otherId },
+        members: [{ user_id: otherId, fight_id: fightId }],
+        actor: { handle: "alex", display_name: "Alex" },
+        recipients: [{
+            user_id: otherId, locale: "en", feed_post: true,
+            post_comment: true, comment_reply: true, post_reaction: true,
+        }],
+    });
+    await enqueueFightFeedCommentNotifications(database, {
+        postId, commentId, parentId: null, actorId,
+    });
+    const row = z.object({ route: z.string() }).parse(inserted[0]);
+    const target = new URL(row.route, "https://fitfight.app");
+    assert.equal(target.pathname, `/fights/${fightId}`);
+    assert.equal(target.searchParams.get("post"), postId);
+    assert.equal(target.searchParams.get("comment"), commentId);
+});
 
 function createSql(options: {
     members?: Array<{ user_id: string; fight_id: string }>;
@@ -162,7 +183,7 @@ test("a fight post notifies other members and skips the author", async () => {
     assert.equal(row.kind, "feed_post");
     assert.equal(row.alert_body, "Alex posted in the feed.");
     assert.equal(row.fight_id, fightId);
-    assert.equal(row.route, `/fights/${fightId}`);
+    assert.equal(row.route, `/fights/${fightId}?post=${postId}`);
 });
 
 test("a series-sibling member is routed to their own fight", async () => {
@@ -188,7 +209,8 @@ test("a series-sibling member is routed to their own fight", async () => {
     assert.equal(inserted.length, 1);
     const row = inserted[0] as { fight_id: string; route: string };
     assert.equal(row.fight_id, siblingFightId);
-    assert.equal(row.route, `/fights/${siblingFightId}`);
+    assert.equal(new URL(row.route, "https://fitfight.app").pathname, `/fights/${siblingFightId}`);
+    assert.equal(new URL(row.route, "https://fitfight.app").searchParams.get("post"), postId);
     assert.ok(queries.some((sql) => sql.includes("series_id")));
 });
 
@@ -380,7 +402,8 @@ test("a comment routes to a fight the recipient can open", async () => {
     assert.equal(inserted.length, 1);
     const row = inserted[0] as { fight_id: string; route: string };
     assert.equal(row.fight_id, siblingFightId);
-    assert.equal(row.route, `/fights/${siblingFightId}`);
+    assert.equal(new URL(row.route, "https://fitfight.app").pathname, `/fights/${siblingFightId}`);
+    assert.equal(new URL(row.route, "https://fitfight.app").searchParams.get("post"), postId);
     const access = queries.find(
         (sql) =>
             sql.includes("from public.fight_members") &&

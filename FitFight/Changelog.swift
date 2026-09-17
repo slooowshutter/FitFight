@@ -25,6 +25,76 @@ enum Changelog {
     /// Newest first. Add a row here whenever we ship a user-facing change.
     static let releases: [ReleaseNote] = [
         ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "A refreshed App Store description explaining how to start a private step challenge and follow the standings."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Feedback keeps loading correctly when you leave a request while it is being deleted."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Admins can delete a feedback request from its menu after confirming."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Comment refreshes are more reliable after connection errors. Live updates no longer interrupt loading more comments."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Reactions swipe horizontally, with a visible like button and any emoji. Charts refresh without losing your selection and keep missing history clear. Comments load reliably, and notification failures no longer interrupt saved fights."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Feedback no longer shows a duplicate button above the bottom tabs. Use the plus at the top to add a request."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Live feed updates keep loaded comments in place and refresh posts reliably while scrolling. Broadcast posts now update live too."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Comments and reactions refresh live. Feed loads ten posts at a time and loads more as you scroll. Pull down to fetch the latest posts. Notifications open the exact post. You now has Activity with posts, comments, reactions and timestamped membership history."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Website download and invitation links open the App Store. The staging website keeps TestFlight access for beta testers."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 16,
+            notes: "Posts and comments in another language now have a translation icon beside their actions on iOS 17.4 or later."
+        ),
+        ReleaseNote(
             version: "1.1.1",
             year: 2026,
             month: 9,

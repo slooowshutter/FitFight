@@ -15,12 +15,14 @@ struct FFProgressBar: View {
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
+        let fraction = min(max(value, 0), 1)
         GeometryReader { geo in
             ZStack(alignment: .leading) {
                 Capsule().fill(track ?? theme.track)
                 Capsule()
                     .fill(fill ?? theme.mossFill)
-                    .frame(width: geo.size.width * min(max(value, 0), 1))
+                    .frame(width: geo.size.width * fraction)
+                    .id(fraction)
             }
         }
         .frame(height: height)

@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import {
     ApiError,
     ERROR_CODES,
@@ -32,7 +33,9 @@ export const POST = apiRoute(async (request) => {
     const body = createFightSchema.parse(await readJson(request));
     const sql = createDatabaseClient();
     const fight = await createFight(userId, body, sql);
-    await processNotificationOutbox(new Date(), sql);
+    after(async () => {
+        await processNotificationOutbox(new Date(), createDatabaseClient());
+    });
     return json(fight, 201);
 });
 

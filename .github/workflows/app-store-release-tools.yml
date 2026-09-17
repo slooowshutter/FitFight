@@ -21,6 +21,7 @@ jobs:
                   bundler-cache: true
             - name: Audit current release metadata and screenshots
               env:
+                  FITFIGHT_RELEASE_VERSION: "1.1.2"
                   APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
                   APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
                   APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}

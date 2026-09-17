@@ -1,6 +1,9 @@
 import { TestflightInvite } from "@/components/testflight-invite";
+import { appDownload } from "@/lib/releases/app-download";
 
 export default function HomePage() {
+    const { isStaging, url } = appDownload();
+
     return (
         <main>
             <header className="site-header">
@@ -8,7 +11,13 @@ export default function HomePage() {
                     <span className="brand-mark">FF</span>
                     <span>FitFight</span>
                 </a>
-                <TestflightInvite label="Get the app" kind="header" />
+                {isStaging ? (
+                    <TestflightInvite label="Get the app" kind="header" />
+                ) : (
+                    <a className="header-action" href={url}>
+                        Download on the App Store
+                    </a>
+                )}
             </header>
 
             <section className="hero" id="top">
@@ -24,13 +33,21 @@ export default function HomePage() {
                         and see who records the most steps.
                     </p>
                     <div className="hero-actions">
-                        <TestflightInvite label="Get the app" kind="hero" />
+                        {isStaging ? (
+                            <TestflightInvite label="Get the app" kind="hero" />
+                        ) : (
+                            <a className="primary-action" href={url}>
+                                Download on the App Store
+                            </a>
+                        )}
                         <a className="text-action" href="#how-it-works">
                             See how it works <span aria-hidden="true">↓</span>
                         </a>
                     </div>
                     <p className="platform-note">
-                        iPhone · Tap the TestFlight link twice · Apple Health
+                        {isStaging
+                            ? "iPhone · Tap the TestFlight link twice · Apple Health"
+                            : "iPhone · Apple Health"}
                     </p>
                 </div>
 

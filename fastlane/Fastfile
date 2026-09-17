@@ -477,7 +477,7 @@ platform :ios do
             skip_metadata: true,
             skip_screenshots: true,
             submit_for_review: false,
-            automatic_release: false,
+            automatic_release: true,
             run_precheck_before_submit: false,
             force: true
         )

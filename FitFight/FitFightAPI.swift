@@ -765,6 +765,28 @@ struct FitFightAPI {
         return try await get(path: path, accessToken: accessToken, expected: [200])
     }
 
+    func feedPeople(
+        main: Bool,
+        fightIDs: [UUID],
+        accessToken: String
+    ) async throws -> [FitFightFightPost.Author] {
+        var parts: [String] = []
+        if main {
+            parts.append("main=true")
+        }
+        if !fightIDs.isEmpty {
+            let ids = fightIDs.map { $0.uuidString.lowercased() }.joined(separator: ",")
+            parts.append("fight_ids=\(ids)")
+        }
+        let path = parts.isEmpty ? "feed/people" : "feed/people?\(parts.joined(separator: "&"))"
+        let response: FitFightFeedPeopleResponse = try await get(
+            path: path,
+            accessToken: accessToken,
+            expected: [200]
+        )
+        return response.people
+    }
+
     func createFeedPosts(
         body: String,
         mediaIDs: [UUID],
@@ -1515,6 +1537,10 @@ private struct FightPostBody: Encodable {
 
 private struct FightPostUpdateBody: Encodable {
     let body: String
+}
+
+private struct FitFightFeedPeopleResponse: Decodable {
+    let people: [FitFightFightPost.Author]
 }
 
 private struct FeedPostsBody: Encodable {

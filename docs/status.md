@@ -8,6 +8,30 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
 
+## Mention notifications: prepared 17 Sep 2026
+
+**Code:** typing `@` in a Feed post or comment shows username typeahead from
+`GET /api/v1/feed/people`. The backend parses `@handle` tags (and existing
+`tagged_user_ids` on posts), persists eligible post tags, and enqueues a
+FitFight-sent `mention` alert that names the author. Copy has no scores. Tagged
+people skip the generic fight-post or comment alert for that event. Older create
+post/comment requests stay valid: `tagged_user_ids` remains optional, comment
+bodies are unchanged, and a missing mention kind is unused by old backends.
+
+**Contract:** additive `mention` outbox kind plus `mention_post` /
+`mention_comment` copy keys. No app-facing RPC. Preference GET/PATCH shape is
+unchanged. Mentions are not user-toggleable.
+
+**Checks:** `npm run typecheck` passed. `npm test` passed (291 tests).
+`python3 scripts/check_localizations.py` and
+`python3 scripts/check_native_api_boundary.py` passed. Cloud iOS compile,
+screenshots, and disposable-database migration checks are on
+[#275](https://github.com/slooowshutter/FitFight/pull/275).
+
+**Live deployment:** not deployed. No hosted database write or reset. Deploy the
+additive migration and compatible backend before the native app. Physical-device
+two-user mention delivery remains outstanding.
+
 ## In-app beta access: prepared 17 Sep 2026
 
 **Code:** You → Settings → Try the beta opens a scrollable sheet in English or

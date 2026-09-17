@@ -19,6 +19,7 @@ struct FightPostEngagement: View {
     @State private var showingCustomEmoji = false
     @State private var replyTo: FitFightFightPostComment?
     @State private var draft = ""
+    @State private var mentionPeople: [FitFightFightPost.Author] = []
     @State private var customEmoji = ""
     @State private var loading = false
     @State private var loadingComments = false
@@ -74,19 +75,32 @@ struct FightPostEngagement: View {
                             .buttonStyle(FFHapticPlainStyle())
                     }
                 }
-                HStack {
-                    TextField(String(localized: "Write a comment…"), text: $draft, axis: .vertical)
-                        .ffType(.body)
-                        .foregroundStyle(theme.text)
-                        .lineLimit(1...4)
-                    FFButton(
-                        title: loading ? String(localized: "Posting…") : String(localized: "Send"),
-                        kind: .ghost,
-                        fullWidth: false
-                    ) {
-                        Task { await sendComment() }
+                FeedMentionField(
+                    text: $draft,
+                    people: $mentionPeople,
+                    main: post.broadcast || post.audience == "main" || post.fightId == nil,
+                    fightIDs: {
+                        var ids = post.channels.map(\.fightId)
+                        if let fightId = post.fightId, !ids.contains(fightId) {
+                            ids.append(fightId)
+                        }
+                        return ids
+                    }()
+                ) {
+                    HStack {
+                        TextField(String(localized: "Write a comment…"), text: $draft, axis: .vertical)
+                            .ffType(.body)
+                            .foregroundStyle(theme.text)
+                            .lineLimit(1...4)
+                        FFButton(
+                            title: loading ? String(localized: "Posting…") : String(localized: "Send"),
+                            kind: .ghost,
+                            fullWidth: false
+                        ) {
+                            Task { await sendComment() }
+                        }
+                        .disabled(loading || loadingComments || draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
-                    .disabled(loading || loadingComments || draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
         }

@@ -8,7 +8,14 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
 
-## App Store description draft: saved 17 Sep 2026
+## App Store descriptions: saved for the next release, 17 Sep 2026
+
+**Latest decision:** Marc deferred the description update to the next normal app
+release. Do not continue the standalone release promotion. Both descriptions stay
+saved in the 1.1.2 App Store draft, and automatic publication after approval remains
+the default. [Release PR #270](https://github.com/slooowshutter/FitFight/pull/270)
+is closed. No preview/main merge, 1.1.2 upload, or review submission was performed
+for this update. The next release still needs its own normal authorization.
 
 Marc authorized the English/French description refresh, creation of the 1.1.2
 App Store version, and publication. Both descriptions and the required localized
@@ -37,14 +44,16 @@ note matches (434 and 529 description characters). The one-time configuration
 trigger was removed; the release-tools workflow is back to its original audit-only
 branch trigger. The setting is saved at Apple.
 
-Marc authorized the release PR and promotion through develop, preview, and main,
-followed by review submission. [Release PR #268](https://github.com/slooowshutter/FitFight/pull/268)
-contains the 1.1.2 build files and automatic-release defaults, integrated with
-develop through `2b4859d`, including the approved admin feedback deletion.
-Standards and spec reviews found no actionable issues; post-merge localization
-and all 20 release tests passed. Cloud simulator, screenshot, and disposable
-database checks passed at `1a41380`; checks for the latest integration are pending. No release-branch merge,
-1.1.2 upload, or review submission has happened yet.
+[Release PR #268](https://github.com/slooowshutter/FitFight/pull/268) merged the
+1.1.2 build files and automatic-release defaults into develop as `85d054f` before
+the deferral. Standards and spec reviews found no actionable issues. All 20 release
+tests passed. The final integrated revision passed the
+[cloud simulator and native regressions](https://github.com/slooowshutter/FitFight/actions/runs/35170672471),
+[English/French screenshot checks](https://github.com/slooowshutter/FitFight/actions/runs/35170672595),
+and [disposable database compatibility checks](https://github.com/slooowshutter/FitFight/actions/runs/35170672460).
+The closed release branch preserves preview's internal-only TestFlight lane from
+[#257](https://github.com/slooowshutter/FitFight/pull/257); its 18 release tests also
+passed (69 assertions). Production remains on 1.1.1 (202).
 
 **Compatibility and order:** the metadata/version change adds no API or schema
 change. The release also carries the previously merged compatible Feed, chart,

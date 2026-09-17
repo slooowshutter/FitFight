@@ -19,6 +19,53 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = env.SUPABASE_TEST_SERVICE_KEY;
 const database = postgres(env.DATABASE_URL, { max: 5 });
 after(() => database.end());
 
+test("private history IDs and cursors cannot correlate participants across profiles", async (t) => {
+    const users = [randomUUID(), randomUUID(), randomUUID()];
+    const [owner, opponent, stranger] = users;
+    const fightIds = [randomUUID(), randomUUID()];
+    t.after(async () => {
+        await database`delete from public.fights where owner_id = ${owner}`;
+        await database`delete from auth.users where id = any(${database.array(users)}::uuid[])`;
+    });
+    for (const id of users) await database`insert into auth.users(id) values (${id})`;
+    for (const fightId of fightIds) {
+        await database`insert into public.fights(id, owner_id, name, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy)
+            values (${fightId}, ${owner}, 'Private pair', 'live', now() - interval '1 hour', now() + interval '1 hour', 'UTC', 'highest_total', 'shared')`;
+        for (const userId of [owner, opponent]) {
+            await database`insert into public.fight_members(fight_id, user_id, state, accepted_at)
+                values (${fightId}, ${userId}, 'accepted', now())`;
+        }
+        await database`update public.fight_members set rank = 1, current_value = 1000, final_steps_complete = true where fight_id = ${fightId}`;
+        await database`update public.fights set state = 'final' where id = ${fightId}`;
+    }
+    for (const userId of [owner, opponent]) await updateProfileSettings(userId, { competitive: true, audience: "public" }, database);
+
+    const query = profilePageQuerySchema.parse({ limit: 1 });
+    const first = await readProfileHistory(stranger, owner, query, database);
+    const other = await readProfileHistory(stranger, opponent, query, database);
+    assert.equal(first.results[0].fight_id, null);
+    assert.equal(first.results[0].name, null);
+    assert.equal(first.results[0].field_size, 2);
+    assert.notEqual(first.results[0].id, other.results[0].id);
+    assert.ok(first.next_cursor && other.next_cursor);
+    assert.equal(fightIds.includes(first.results[0].id), false);
+    assert.equal(fightIds.includes(first.next_cursor), false);
+    assert.notEqual(first.next_cursor, other.next_cursor);
+    assert.deepEqual(await readProfileHistory(stranger, owner, query, database), first);
+    const next = await readProfileHistory(stranger, owner, { ...query, cursor: first.next_cursor }, database);
+    assert.equal(next.results.length, 1);
+    assert.notEqual(next.results[0].id, first.results[0].id);
+    assert.equal(next.next_cursor, null);
+    for (const cursor of [other.next_cursor, fightIds[0]]) {
+        await assert.rejects(readProfileHistory(stranger, owner, { ...query, cursor }, database),
+            (error: unknown) => error instanceof ApiError && error.status === 400);
+    }
+    const own = await readProfileHistory(owner, owner, query, database);
+    assert.equal(own.results[0].id, first.results[0].id);
+    assert.ok(own.results[0].fight_id && fightIds.includes(own.results[0].fight_id));
+    assert.equal(own.results[0].name, "Private pair");
+});
+
 test("private profiles require mutual acceptance and enforce sharing on every read", async (t) => {
     const users = [randomUUID(), randomUUID(), randomUUID()];
     const [viewer, target, stranger] = users;

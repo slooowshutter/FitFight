@@ -11,6 +11,7 @@ on:
             - "scripts/check_native_api_boundary.py"
             - "scripts/check_remote_photo_loading.py"
             - "scripts/test_fight_discovery.py"
+            - "scripts/test_profile_navigation.py"
             - "scripts/test_native_state.py"
             - "scripts/test_fight_live_updates.py"
             - "scripts/test_fight_chart_scores.py"
@@ -29,6 +30,7 @@ on:
             - "scripts/check_native_api_boundary.py"
             - "scripts/check_remote_photo_loading.py"
             - "scripts/test_fight_discovery.py"
+            - "scripts/test_profile_navigation.py"
             - "scripts/test_native_state.py"
             - "scripts/test_fight_live_updates.py"
             - "scripts/test_fight_chart_scores.py"
@@ -122,6 +124,9 @@ jobs:
               run: |
                   swiftc -swift-version 5 -target "$(uname -m)-apple-macosx13.0" FitFight/SharedProfile.swift FitFight/ProfileScreenStore.swift tests/ProfileScreenStoreTests.swift -o /tmp/fitfight-profile-tests
                   /tmp/fitfight-profile-tests contracts/fixtures
+
+            - name: Verify profile history navigation and rematches
+              run: python3 scripts/test_profile_navigation.py
 
             - name: Build for iOS Simulator
               run: |

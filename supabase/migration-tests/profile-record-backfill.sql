@@ -1,7 +1,7 @@
 begin;
 select plan(8);
 select is((select count(*)::int from private.fight_record_contexts where fight_id in ('72000000-0000-4000-8000-000000000001', '72000000-0000-4000-8000-000000000002', '72000000-0000-4000-8000-000000000003')), 3, 'each prior Fight has one category context');
-select is((select count(*)::int from private.fight_participation_records where user_id in ('71000000-0000-4000-8000-000000000001', '71000000-0000-4000-8000-000000000002')), 6, 'every prior membership has one evidence row');
+select is((select count(*)::int from private.fight_participation_records where user_id in ('71000000-0000-4000-8000-000000000001', '71000000-0000-4000-8000-000000000002')), 8, 'every prior membership has one evidence row');
 select is((select category from private.fight_record_contexts where fight_id = '72000000-0000-4000-8000-000000000001'), 'unknown', 'past visibility is not invented');
 select ok((select bool_and(reliable and finalized_at is not null) from private.fight_participation_records where fight_id = '72000000-0000-4000-8000-000000000001'), 'frozen final data is reliable');
 select is((select final_value from private.fight_participation_records where fight_id = '72000000-0000-4000-8000-000000000001' and user_id = '71000000-0000-4000-8000-000000000001'), 3000::numeric, 'historical final score is preserved');

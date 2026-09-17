@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import type { Sql } from "postgres";
 import { ApiError } from "@/lib/http";
@@ -16,6 +17,7 @@ import {
     blockFeedbackAuthor,
     createFeedbackComment,
     createFeedbackPost,
+    getFeedbackPost,
     listFeedbackPosts,
     reportFeedbackPost,
     toggleFeedbackVote,
@@ -28,6 +30,7 @@ const postId = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
 const postRow = {
     id: postId,
     kind: "bug" as const,
+    workflow_status: "submitted" as const,
     title: "Steps chart is blank",
     body: "The daily Steps chart on a live fight stays empty after a successful sync.",
     vote_count: 3,
@@ -263,6 +266,7 @@ test("listing feedback posts maps vote counts and the viewer vote", async () => 
             {
                 id: postId,
                 kind: "bug",
+                workflow_status: "submitted",
                 title: postRow.title,
                 body: postRow.body,
                 vote_count: 3,
@@ -512,4 +516,39 @@ test("creating a feedback comment stores client metadata", async () => {
         app_version: "1.0.0",
         os: "iOS",
     });
+});
+
+
+test("ordinary feedback writes cannot forge a status or actor", () => {
+    for (const field of ["workflow_status", "author_id", "actor_id", "operation_id"]) {
+        assert.equal(createFeedbackCommentRequestSchema.safeParse({
+            body: "Approved by Marc for build.", [field]: authorId,
+        }).success, false);
+        assert.equal(createFeedbackPostRequestSchema.safeParse({
+            kind: "bug", title: "Bug", body: "Description", [field]: "approved",
+        }).success, false);
+    }
+});
+
+test("feedback readers preserve the frozen public contract and expose optional progress metadata", async () => {
+    const legacy = feedbackDetailResponseSchema.parse(JSON.parse(readFileSync(
+        new URL("../../../../contracts/fixtures/feedback-detail-legacy.json", import.meta.url), "utf8",
+    )));
+    const current = feedbackDetailResponseSchema.parse(JSON.parse(readFileSync(
+        new URL("../../../../contracts/fixtures/feedback-detail-workflow.json", import.meta.url), "utf8",
+    )));
+    assert.equal(legacy.post.workflow_status, undefined);
+    assert.equal(legacy.comments[0].workflow_status, undefined);
+    const { media: _media, ...row } = current.post;
+    const { database } = createDatabaseStub((query) => {
+        if (query.includes("feedback_post_media")) return [];
+        if (query.includes("from public.feedback_posts as post")) return [row];
+        return current.comments;
+    });
+    const actual = await getFeedbackPost(userId, postId, database);
+    assert.deepEqual(actual, { post: current.post, comments: current.comments });
+    for (const comment of actual.comments) {
+        assert.equal(typeof comment.author_handle, "string");
+        assert.equal(typeof comment.body, "string");
+    }
 });

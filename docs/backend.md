@@ -188,6 +188,46 @@ Vercel holds `CURSOR_API_KEY` and reuses it to sign the webhook when the key is
 at least 32 characters. A missing key returns `503 config` to the admin and does
 not affect other people. The key never belongs in iOS, git, or chat.
 
+## Request progress (prepared 17 Sep 2026)
+
+The additive `20260917001638_feedback_workflow_status.sql` migration extends the
+existing requests and comments. Old inserts default to Submitted and ordinary
+comments. No new tables, RPCs, functions, indexes, or background jobs are added.
+
+`POST /api/v1/feedback/{postID}/status` accepts `expected_status`, `status`, and an
+`operation_id` UUID. It authorizes only `FITFIGHT_ADMIN_USER_ID`, the immutable Auth
+UUID configured separately in each environment. Mutable handles and user metadata
+never authorize workflow writes. `FITFIGHT_FEEDBACK_WORKFLOW_ENABLED` defaults to
+false; while false the existing explicit Send behavior remains intact and the new
+status control is unavailable. When enabled, Send also requires that immutable UUID,
+records approval before the provider call, and records Being built only after success.
+A failed Send retains approval. Provider calls never run inside a database transaction.
+
+The command locks the request, validates replay and expected status, and commits the
+status and generated public comment together. Its UUID is the comment ID. A replay
+returns current progress without moving it backward. Selecting the current status
+adds no comment; a stale selection returns 409. Only an actual approval update stores
+Marc's actor ID. Other updates have no author. Account deletion still cascades authored
+comments and preserves progress on requests owned by other people.
+
+Feedback list/detail/create responses add optional `workflow_status`. Detail adds
+`can_manage_status`; discussion comments add optional historical `workflow_status`
+and nullable `actor_id`. System updates retain non-null `author_handle: "FitFight"`
+and readable English bodies for installed clients. New native clients translate the
+known update copy. Hidden/deleted actors have no active identity link; normal comment
+visibility remains unchanged. Counts include visible system comments, while ordinary
+comment limits exclude them. Normal comment creation retains its response shape.
+Progress comments are excluded from the explicit Send context and never store provider
+IDs, private logs, or prompt snapshots. Detail reads use one repeatable-read snapshot.
+
+Rollout: recheck each `/api/app-release`; apply the additive migration with writes off;
+deploy compatible readers and writers; verify installed-client responses and drain old
+backend instances; configure Marc's UUID and enable the workflow; then distribute the
+native change through the separately authorized develop/preview flow. Production needs
+its own authorization. Deployed and Available are manual confirmed progress states,
+never inferred from merges, agent completion, or an upload alone. This workspace has
+not changed hosted configuration or data. See [status.md](status.md) for check results.
+
 Native Sign in with Apple sends its short-lived authorization code to authenticated
 `POST /api/v1/auth/apple`. The server exchanges it with Apple, checks the returned Apple
 subject against the User's Supabase Apple identity, encrypts the refresh token, and stores

@@ -4,6 +4,43 @@ import { mediaObjectSchema } from "@/lib/types/media/media";
 export const feedbackKindValues = ["bug", "feature"] as const;
 export const feedbackKindSchema = z.enum(feedbackKindValues);
 
+export const feedbackWorkflowStatusValues = [
+    "submitted", "approved", "building", "reviewing",
+    "testing", "deployed", "apple_approved", "available",
+] as const;
+export const feedbackWorkflowStatusSchema = z.enum(feedbackWorkflowStatusValues);
+
+export const feedbackWorkflowEnvironmentSchema = z.object({
+    FITFIGHT_ADMIN_USER_ID: z.string().uuid().optional(),
+    FITFIGHT_FEEDBACK_WORKFLOW_ENABLED: z.enum(["true", "false"]).default("false"),
+});
+
+export const feedbackWorkflowMessages = {
+    submitted: "This request has been submitted for approval.",
+    approved: "Approved by Marc for build.",
+    building: "This feature is now being built.",
+    reviewing: "This feature is now being reviewed.",
+    testing: "This feature is now being tested.",
+    deployed: "This feature has been deployed and is waiting for App Store approval.",
+    apple_approved: "Apple has approved this feature. It is waiting to become available on the App Store.",
+    available: "This feature is now available on the App Store.",
+} satisfies Record<FeedbackWorkflowStatus, string>;
+
+export const changeFeedbackStatusRequestSchema = z.object({
+    expected_status: feedbackWorkflowStatusSchema,
+    status: feedbackWorkflowStatusSchema,
+    operation_id: z.string().uuid(),
+}).strict();
+
+export const changeFeedbackStatusResponseSchema = z.object({
+    workflow_status: feedbackWorkflowStatusSchema,
+}).strict();
+
+export const feedbackStatusOperationSchema = z.object({
+    post_id: z.string().uuid(),
+    workflow_status: feedbackWorkflowStatusSchema.nullable(),
+});
+
 const feedbackMetadataTextSchema = z.string().trim().min(1).max(120);
 
 export const feedbackMetadataSchema = z
@@ -119,6 +156,7 @@ export const feedbackPostSummarySchema = z
         created_at: z.string().datetime(),
         metadata: feedbackMetadataSchema,
         media: z.array(mediaObjectSchema).default([]),
+        workflow_status: feedbackWorkflowStatusSchema.optional(),
     })
     .strict();
 
@@ -129,8 +167,21 @@ export const feedbackCommentSchema = z
         author_handle: z.string(),
         created_at: z.string().datetime(),
         metadata: feedbackMetadataSchema,
+        workflow_status: feedbackWorkflowStatusSchema.nullable().optional(),
+        actor_id: z.string().uuid().nullable().optional(),
     })
     .strict();
+
+export const feedbackPostRowSchema = feedbackPostSummarySchema.omit({ media: true }).extend({
+    created_at: z.union([z.date(), z.string().datetime()]),
+    metadata: z.unknown(),
+    workflow_status: feedbackWorkflowStatusSchema,
+});
+
+export const feedbackCommentRowSchema = feedbackCommentSchema.extend({
+    created_at: z.union([z.date(), z.string().datetime()]),
+    metadata: z.unknown(),
+});
 
 export const feedbackListResponseSchema = z
     .object({
@@ -154,6 +205,7 @@ export const feedbackPostDetailSchema = z
 export const feedbackDetailResponseSchema = feedbackPostDetailSchema
     .extend({
         can_launch_fix: z.boolean(),
+        can_manage_status: z.boolean().optional(),
     })
     .strict();
 
@@ -184,6 +236,13 @@ export const feedbackCommentResponseSchema = z
     .strict();
 
 export type FeedbackKind = z.infer<typeof feedbackKindSchema>;
+export type FeedbackWorkflowStatus = z.infer<typeof feedbackWorkflowStatusSchema>;
+export type FeedbackWorkflowEnvironment = z.infer<typeof feedbackWorkflowEnvironmentSchema>;
+export type ChangeFeedbackStatusRequest = z.infer<typeof changeFeedbackStatusRequestSchema>;
+export type ChangeFeedbackStatusResponse = z.infer<typeof changeFeedbackStatusResponseSchema>;
+export type FeedbackStatusOperation = z.infer<typeof feedbackStatusOperationSchema>;
+export type FeedbackPostRow = z.infer<typeof feedbackPostRowSchema>;
+export type FeedbackCommentRow = z.infer<typeof feedbackCommentRowSchema>;
 export type FeedbackMetadata = z.infer<typeof feedbackMetadataSchema>;
 export type ReportFeedbackPostRequest = z.infer<
     typeof reportFeedbackPostRequestSchema

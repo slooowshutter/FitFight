@@ -12,6 +12,8 @@ final class FeedbackStore: ObservableObject {
     @Published var isSaving = false
     @Published var isLaunchingFix = false
     @Published var canLaunchFix = false
+    @Published var canManageStatus = false
+    @Published var isChangingStatus = false
     @Published var error: String?
 
     private let api = FitFightAPI()
@@ -23,6 +25,7 @@ final class FeedbackStore: ObservableObject {
     private var commentClock = 0
     private var postedComments: [UUID: [(clock: Int, comment: FitFightFeedbackComment)]] = [:]
     private var commentsFor: UUID?
+    private var pendingStatusChange: (postID: UUID, expected: String, target: FeedbackWorkflowStatus, operationID: UUID)?
 
     func load(session: SessionStore, kind: String?) async {
         #if DEBUG && targetEnvironment(simulator)
@@ -34,7 +37,7 @@ final class FeedbackStore: ObservableObject {
         listLoad += 1
         let load = listLoad
         let voteStartedAt = voteClock
-        let localCounts = Dictionary(uniqueKeysWithValues: posts.map { ($0.id, $0.commentCount) })
+        let commentStartedAt = commentClock
         isLoading = true
         defer {
             if load == listLoad { isLoading = false }
@@ -45,8 +48,9 @@ final class FeedbackStore: ObservableObject {
             guard load == listLoad else { return }
             self.posts = posts.map { fetched in
                 var post = keepingNewerVote(fetched, startedAt: voteStartedAt)
-                if let local = localCounts[post.id] {
-                    post.commentCount = max(post.commentCount, local)
+                if !postedAfter(postID: post.id, startedAt: commentStartedAt).isEmpty,
+                   let local = self.posts.first(where: { $0.id == post.id }) {
+                    post.commentCount = max(post.commentCount, local.commentCount)
                 }
                 return post
             }
@@ -70,6 +74,7 @@ final class FeedbackStore: ObservableObject {
             detail = Self.previewPosts.first { $0.id == postID }
             comments = Self.previewComments
             canLaunchFix = false
+            canManageStatus = false
             return
         }
         #endif
@@ -100,6 +105,7 @@ final class FeedbackStore: ObservableObject {
             self.comments = comments
             commentsFor = post.id
             canLaunchFix = result.canLaunchFix
+            canManageStatus = result.canManageStatus
             RemoteImageLoader.shared.prefetch(
                 post.media.compactMap { media in
                     RequestAttachment.showsPhoto(media) ? media.url : nil
@@ -181,6 +187,7 @@ final class FeedbackStore: ObservableObject {
     }
 
     func launchFix(session: SessionStore, postID: UUID) async -> URL? {
+        guard !isLaunchingFix && !isChangingStatus else { return nil }
         isLaunchingFix = true
         defer { isLaunchingFix = false }
         do {
@@ -190,11 +197,42 @@ final class FeedbackStore: ObservableObject {
                 metadata: .current(),
                 accessToken: token
             )
-            error = nil
+            await loadDetail(session: session, postID: postID)
             return launched.agentURL
         } catch {
+            await loadDetail(session: session, postID: postID)
             self.error = error.localizedDescription
             return nil
+        }
+    }
+
+    func changeStatus(session: SessionStore, postID: UUID, status: FeedbackWorkflowStatus) async {
+        guard !isChangingStatus && !isLaunchingFix,
+              detail?.id == postID, let expected = detail?.workflowStatus else { return }
+        isChangingStatus = true
+        defer { isChangingStatus = false }
+        if pendingStatusChange?.postID != postID || pendingStatusChange?.target != status {
+            pendingStatusChange = (postID, expected, status, UUID())
+        }
+        guard let operation = pendingStatusChange else { return }
+        do {
+            let token = try await session.freshAccessToken()
+            try await api.changeFeedbackStatus(
+                postID: postID, expectedStatus: operation.expected, status: status,
+                operationID: operation.operationID, accessToken: token
+            )
+            pendingStatusChange = nil
+            await loadDetail(session: session, postID: postID)
+        } catch {
+            let message: String
+            if let apiError = error as? FitFightAPIError, case .http(409, _, _) = apiError {
+                pendingStatusChange = nil
+                message = String(localized: "Request progress changed. Check the latest status and try again.")
+            } else {
+                message = error.localizedDescription
+            }
+            await loadDetail(session: session, postID: postID)
+            self.error = message
         }
     }
 
@@ -391,6 +429,7 @@ struct RequestsView: View {
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
     @ObservedObject var store: FeedbackStore
     var chrome: RequestsChrome
     var filterSource: Binding<RequestFilter>?
@@ -422,8 +461,7 @@ struct RequestsView: View {
                         .navigationDestination(item: $openPostID) { postID in
                             RequestDetailView(
                                 postID: postID,
-                                store: store,
-                                showsVersionBanner: chrome == .sheet
+                                store: store
                             )
                                 .toolbar(.hidden, for: .navigationBar)
                         }
@@ -435,6 +473,11 @@ struct RequestsView: View {
         .task(id: activeFilter) {
             guard !staticRender else { return }
             await store.load(session: session, kind: activeFilter.kind)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active && !staticRender {
+                Task { await store.load(session: session, kind: activeFilter.kind) }
+            }
         }
         .sheet(isPresented: $composing, onDismiss: {
             guard !staticRender else { return }
@@ -458,7 +501,6 @@ struct RequestsView: View {
     private var list: some View {
         VStack(spacing: 0) {
             if chrome == .sheet {
-                VersionBanner()
                 HStack {
                     Text("Bugs & requests")
                         .ffType(.title)
@@ -708,6 +750,16 @@ private struct RequestRow: View {
                             .foregroundStyle(theme.textSecondary)
                             .lineLimit(2)
                             .multilineTextAlignment(.leading)
+                        if let value = post.workflowStatus, let status = FeedbackWorkflowStatus(rawValue: value) {
+                            Text(status.title)
+                                .ffType(.caption)
+                                .foregroundStyle(theme.gold)
+                            if let next = status.next {
+                                Text(next)
+                                    .ffType(.micro)
+                                    .foregroundStyle(theme.textSecondary)
+                            }
+                        }
                         RequestMediaStack(media: post.media, compact: true)
                         Text(
                             String(
@@ -752,14 +804,15 @@ private struct RequestRow: View {
 private struct RequestDetailView: View {
     let postID: UUID
     @ObservedObject var store: FeedbackStore
-    var showsVersionBanner: Bool = true
     @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
+    @Environment(\.scenePhase) private var scenePhase
     @State private var comment = ""
     @State private var launchedAgentURL: URL?
+    @State private var confirmingStatus: FeedbackWorkflowStatus?
     @FocusState private var commentFocused: Bool
 
     private var post: FitFightFeedbackPost? {
@@ -768,9 +821,6 @@ private struct RequestDetailView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if showsVersionBanner {
-                VersionBanner()
-            }
             HStack(alignment: .top, spacing: 10) {
                 FFNavDetail(
                     title: post?.title ?? String(localized: "Request"),
@@ -809,6 +859,7 @@ private struct RequestDetailView: View {
                         detailStack
                     }
                     .scrollDismissesKeyboard(.interactively)
+                    .refreshable { await store.loadDetail(session: session, postID: postID) }
                 }
             }
 
@@ -855,6 +906,28 @@ private struct RequestDetailView: View {
             guard !staticRender else { return }
             await store.loadDetail(session: session, postID: postID)
         }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active && !staticRender {
+                Task { await store.loadDetail(session: session, postID: postID) }
+            }
+        }
+        .confirmationDialog(
+            String(localized: "Update request progress?"),
+            isPresented: Binding(get: { confirmingStatus != nil }, set: { if !$0 { confirmingStatus = nil } }),
+            titleVisibility: .visible
+        ) {
+            if let status = confirmingStatus {
+                Button(status.title) {
+                    Task { await store.changeStatus(session: session, postID: postID, status: status) }
+                }
+            }
+        } message: {
+            if confirmingStatus == .deployed {
+                Text("Confirm the required production backend changes are healthy and the app build has finished upload and processing for Apple review.")
+            } else {
+                Text("Confirm the released FitFight app contains this change and is available to install from the App Store.")
+            }
+        }
     }
 
     private var detailStack: some View {
@@ -884,6 +957,24 @@ private struct RequestDetailView: View {
                     Spacer()
                 }
 
+                if let value = post.workflowStatus, let status = FeedbackWorkflowStatus(rawValue: value) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(status.title)
+                            .ffType(.label)
+                            .foregroundStyle(theme.gold)
+                        if let next = status.next {
+                            Text(next)
+                                .ffType(.caption)
+                                .foregroundStyle(theme.textSecondary)
+                        } else if status == .available {
+                            Link(String(localized: "Update FitFight"), destination: URL(string: "https://apps.apple.com/app/id6804230516")!)
+                                .ffType(.label)
+                                .foregroundStyle(theme.mossText)
+                                .frame(minHeight: 44)
+                        }
+                    }
+                }
+
                 Text(post.body)
                     .ffType(.body)
                     .foregroundStyle(theme.text)
@@ -891,6 +982,32 @@ private struct RequestDetailView: View {
                     .fixedSize(horizontal: false, vertical: true)
 
                 RequestMediaStack(media: post.media)
+
+                if store.canManageStatus, let current = post.workflowStatus {
+                    Menu {
+                        ForEach(FeedbackWorkflowStatus.allCases, id: \.rawValue) { status in
+                            Button {
+                                if status == .deployed || status == .available {
+                                    confirmingStatus = status
+                                } else {
+                                    Task { await store.changeStatus(session: session, postID: postID, status: status) }
+                                }
+                            } label: {
+                                if status.rawValue == current {
+                                    Label(status.title, systemImage: "checkmark")
+                                } else {
+                                    Text(status.title)
+                                }
+                            }
+                        }
+                    } label: {
+                        Label(String(localized: "Change status"), systemImage: "list.bullet")
+                            .ffType(.label)
+                            .foregroundStyle(theme.gold)
+                            .frame(minHeight: 44)
+                    }
+                    .disabled(store.isChangingStatus || store.isLaunchingFix)
+                }
 
                 if store.canLaunchFix {
                     if launchedAgentURL != nil {
@@ -911,7 +1028,7 @@ private struct RequestDetailView: View {
                             ? String(localized: "Sending…")
                             : String(localized: "Send to Cursor"),
                         kind: .secondary,
-                        enabled: !store.isLaunchingFix && !store.isSaving,
+                        enabled: !store.isLaunchingFix && !store.isSaving && !store.isChangingStatus,
                         fullWidth: true,
                         action: {
                             Task { await sendToCursor() }
@@ -933,15 +1050,21 @@ private struct RequestDetailView: View {
                 ForEach(store.comments) { item in
                     VStack(alignment: .leading, spacing: 4) {
                         HStack {
-                            Text(verbatim: "@\(item.authorHandle)")
-                                .ffType(.label)
-                                .foregroundStyle(theme.mossText)
+                            if item.workflowStatus != nil {
+                                Label(String(localized: "FitFight update"), systemImage: "arrow.trianglehead.2.clockwise")
+                                    .ffType(.label)
+                                    .foregroundStyle(theme.gold)
+                            } else {
+                                Text(verbatim: "@\(item.authorHandle)")
+                                    .ffType(.label)
+                                    .foregroundStyle(theme.mossText)
+                            }
                             Spacer()
                             Text(item.createdAt, format: .relative(presentation: .named))
                                 .ffType(.caption)
                                 .foregroundStyle(theme.textFaint)
                         }
-                        Text(item.body)
+                        Text(item.workflowStatus.flatMap(FeedbackWorkflowStatus.init(rawValue:))?.message ?? item.body)
                             .ffType(.body)
                             .foregroundStyle(theme.text)
                             .fixedSize(horizontal: false, vertical: true)
@@ -951,7 +1074,7 @@ private struct RequestDetailView: View {
                         theme.card,
                         in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous)
                     )
-                    .ffBorder(theme.hairline, radius: theme.radius.field)
+                    .ffBorder(item.workflowStatus == nil ? theme.hairline : theme.gold.opacity(0.4), radius: theme.radius.field)
                 }
             }
         }

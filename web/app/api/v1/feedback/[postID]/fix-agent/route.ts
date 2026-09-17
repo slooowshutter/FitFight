@@ -11,7 +11,8 @@ import {
     isFitFightAdmin,
     readAdminViewer,
 } from "@/lib/admin/is-fitfight-admin";
-import { launchFeedbackFixAgent } from "@/lib/cursor/launch-feedback-fix-agent";
+import { feedbackWorkflowAccess } from "@/lib/admin/feedback-workflow-access";
+import { sendFeedbackFix } from "@/lib/cursor/send-feedback-fix";
 import { markAppFeedbackBacklogStatus } from "@/lib/notion/create-app-feedback-item";
 import { notionAppFeedbackAgentStatus } from "@/lib/types/notion/product-backlog";
 import { verifyUser } from "@/lib/supabase/queries/auth-supabase-query";
@@ -30,7 +31,8 @@ export const POST = apiRoute<{ postID: string }>(
     async (request, { params }) => {
         const { userId } = await verifyUser(request);
         const viewer = await readAdminViewer(userId);
-        if (!isFitFightAdmin(viewer)) {
+        const workflow = feedbackWorkflowAccess(userId);
+        if (!(workflow.enabled ? workflow.isAdmin : isFitFightAdmin(viewer))) {
             throw new ApiError(
                 403,
                 ERROR_CODES.forbidden,
@@ -55,9 +57,9 @@ export const POST = apiRoute<{ postID: string }>(
             ...parsed.data.metadata,
         };
         const detail = await getFeedbackPost(userId, postId);
-        const launched = await launchFeedbackFixAgent(
+        const launched = await sendFeedbackFix(
+            userId,
             detail,
-            fetch,
             senderMetadata,
         );
         await markAppFeedbackBacklogStatus(

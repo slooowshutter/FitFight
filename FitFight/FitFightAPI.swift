@@ -348,6 +348,51 @@ struct FitFightAccountDeletion: Decodable, Equatable {
     }
 }
 
+enum FeedbackWorkflowStatus: String, CaseIterable {
+    case submitted, approved, building, reviewing, testing, deployed
+    case appleApproved = "apple_approved"
+    case available
+
+    var title: String {
+        switch self {
+        case .submitted: String(localized: "Submitted")
+        case .approved: String(localized: "Approved by Marc for build")
+        case .building: String(localized: "Being built")
+        case .reviewing: String(localized: "Being reviewed")
+        case .testing: String(localized: "Being tested")
+        case .deployed: String(localized: "Deployed")
+        case .appleApproved: String(localized: "Approved by Apple")
+        case .available: String(localized: "Available on the App Store")
+        }
+    }
+
+    var next: String? {
+        switch self {
+        case .submitted: String(localized: "Next: Approval")
+        case .approved: String(localized: "Next: Build")
+        case .building: String(localized: "Next: Review")
+        case .reviewing: String(localized: "Next: Testing")
+        case .testing: String(localized: "Next: Deployment")
+        case .deployed: String(localized: "Next: App Store approval")
+        case .appleApproved: String(localized: "Next: Available on the App Store")
+        case .available: nil
+        }
+    }
+
+    var message: String {
+        switch self {
+        case .submitted: String(localized: "This request has been submitted for approval.")
+        case .approved: String(localized: "Approved by Marc for build.")
+        case .building: String(localized: "This feature is now being built.")
+        case .reviewing: String(localized: "This feature is now being reviewed.")
+        case .testing: String(localized: "This feature is now being tested.")
+        case .deployed: String(localized: "This feature has been deployed and is waiting for App Store approval.")
+        case .appleApproved: String(localized: "Apple has approved this feature. It is waiting to become available on the App Store.")
+        case .available: String(localized: "This feature is now available on the App Store.")
+        }
+    }
+}
+
 struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
     var id: UUID
     var kind: String
@@ -362,6 +407,7 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
     var createdAt: Date
     var metadata: FitFightFeedbackMetadata
     var media: [FitFightMedia]
+    var workflowStatus: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -377,6 +423,7 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
         case createdAt = "created_at"
         case metadata
         case media
+        case workflowStatus = "workflow_status"
     }
 
     init(
@@ -392,7 +439,8 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
         mine: Bool,
         createdAt: Date,
         metadata: FitFightFeedbackMetadata = FitFightFeedbackMetadata(),
-        media: [FitFightMedia] = []
+        media: [FitFightMedia] = [],
+        workflowStatus: String? = nil
     ) {
         self.id = id
         self.kind = kind
@@ -407,6 +455,7 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
         self.createdAt = createdAt
         self.metadata = metadata
         self.media = media
+        self.workflowStatus = workflowStatus
     }
 
     init(from decoder: Decoder) throws {
@@ -425,6 +474,7 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
         metadata = try container.decodeIfPresent(FitFightFeedbackMetadata.self, forKey: .metadata)
             ?? FitFightFeedbackMetadata()
         media = try container.decodeIfPresent([FitFightMedia].self, forKey: .media) ?? []
+        workflowStatus = try container.decodeIfPresent(String.self, forKey: .workflowStatus)
     }
 }
 
@@ -434,6 +484,8 @@ struct FitFightFeedbackComment: Codable, Identifiable, Equatable, Hashable {
     var authorHandle: String
     var createdAt: Date
     var metadata: FitFightFeedbackMetadata
+    var workflowStatus: String?
+    var actorId: UUID?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -441,6 +493,8 @@ struct FitFightFeedbackComment: Codable, Identifiable, Equatable, Hashable {
         case authorHandle = "author_handle"
         case createdAt = "created_at"
         case metadata
+        case workflowStatus = "workflow_status"
+        case actorId = "actor_id"
     }
 
     init(
@@ -448,13 +502,17 @@ struct FitFightFeedbackComment: Codable, Identifiable, Equatable, Hashable {
         body: String,
         authorHandle: String,
         createdAt: Date,
-        metadata: FitFightFeedbackMetadata = FitFightFeedbackMetadata()
+        metadata: FitFightFeedbackMetadata = FitFightFeedbackMetadata(),
+        workflowStatus: String? = nil,
+        actorId: UUID? = nil
     ) {
         self.id = id
         self.body = body
         self.authorHandle = authorHandle
         self.createdAt = createdAt
         self.metadata = metadata
+        self.workflowStatus = workflowStatus
+        self.actorId = actorId
     }
 
     init(from decoder: Decoder) throws {
@@ -465,6 +523,8 @@ struct FitFightFeedbackComment: Codable, Identifiable, Equatable, Hashable {
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         metadata = try container.decodeIfPresent(FitFightFeedbackMetadata.self, forKey: .metadata)
             ?? FitFightFeedbackMetadata()
+        workflowStatus = try container.decodeIfPresent(String.self, forKey: .workflowStatus)
+        actorId = try container.decodeIfPresent(UUID.self, forKey: .actorId)
     }
 }
 
@@ -476,11 +536,13 @@ struct FitFightFeedbackDetail: Decodable, Equatable {
     var post: FitFightFeedbackPost
     var comments: [FitFightFeedbackComment]
     var canLaunchFix: Bool
+    var canManageStatus: Bool
 
     enum CodingKeys: String, CodingKey {
         case post
         case comments
         case canLaunchFix = "can_launch_fix"
+        case canManageStatus = "can_manage_status"
     }
 
     init(from decoder: Decoder) throws {
@@ -488,6 +550,7 @@ struct FitFightFeedbackDetail: Decodable, Equatable {
         post = try container.decode(FitFightFeedbackPost.self, forKey: .post)
         comments = try container.decode([FitFightFeedbackComment].self, forKey: .comments)
         canLaunchFix = try container.decodeIfPresent(Bool.self, forKey: .canLaunchFix) ?? false
+        canManageStatus = try container.decodeIfPresent(Bool.self, forKey: .canManageStatus) ?? false
     }
 }
 
@@ -1185,6 +1248,21 @@ struct FitFightAPI {
         )
     }
 
+    func changeFeedbackStatus(
+        postID: UUID,
+        expectedStatus: String,
+        status: FeedbackWorkflowStatus,
+        operationID: UUID,
+        accessToken: String
+    ) async throws {
+        let _: DiscardBody = try await post(
+            path: "feedback/\(postID.uuidString.lowercased())/status",
+            accessToken: accessToken,
+            body: FeedbackStatusBody(expectedStatus: expectedStatus, status: status.rawValue, operationId: operationID),
+            expected: [200]
+        )
+    }
+
     func launchFeedbackFix(
         postID: UUID,
         metadata: FitFightFeedbackMetadata,
@@ -1653,4 +1731,10 @@ private struct FitFightDeviceInstallationBody: Encodable {
 
 private struct FitFightDeviceInstallationRegistered: Decodable {
     var registered: Bool
+}
+
+private struct FeedbackStatusBody: Encodable {
+    var expectedStatus: String
+    var status: String
+    var operationId: UUID
 }

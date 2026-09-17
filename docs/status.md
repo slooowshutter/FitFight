@@ -8,6 +8,38 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
 
+## Feedback status and system comments: proposed 17 Sep 2026
+
+Marc clarified that the first version needs a workflow status on the existing request
+and system comments in its existing discussion. The revised
+[specification](proposals/feedback-workflow.md), [implementation plan](proposals/feedback-implementation-plan.md),
+and [SQL](proposals/feedback-workflow.sql) replace the earlier multi-table proposal.
+**Zero new tables:** extend `feedback_posts` and `feedback_comments` only.
+Plan review removed the redundant comment-type flag: just two new columns, a current
+status on the request and a nullable status on its system update. Keep atomic writes,
+duplicate protection, authorization, and compatible handling of authorless comments.
+
+The public flow is Approved by Marc for build, Being built, Being reviewed, Being
+tested, Deployed, Approved by Apple, and Available on the App Store. A small Next line
+shows the next step; the last state shows the app update link. Marc's name in the
+approval comment opens the shared Profile from `profiles-friends-and-stats`.
+Separate notification delivery, follow/mute settings, and automation tracking are
+explicitly deferred from this first implementation.
+The existing explicit Send action records approval and, on success, Being built;
+later steps use Marc's status control. Deployed requires a successful production
+promotion and processed app upload, not merely a prepared change.
+
+Planning only, outside the migration directory. No API, native code, hosted schema,
+or live notification behavior changed. Static SQL checks passed; cloud database,
+legacy-client, and native checks remain required. Nullable-author system comments
+must stay disabled until compatible backend readers are deployed and old instances
+have drained. Production rollout requires separate authorization and verification.
+
+Last read-only release-policy observation on 17 Sep: staging latest **1.1.1 (201)**,
+no review/internal candidates, enforcement **off**; production latest **1.1.1 (202)**,
+no review/internal candidates, enforcement **on**. Recheck before deployment; these
+observations are not proof of supported-client compatibility or individual availability.
+
 ## Marc broadcast posts, 16 Sep 2026
 
 **Contract:** `POST /api/v1/feed/posts` accepts `{ "type": "broadcast" }` as a

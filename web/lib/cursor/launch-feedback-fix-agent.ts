@@ -34,10 +34,11 @@ export async function launchFeedbackFixAgent(
         );
     }
 
+    const userComments = detail.comments.filter((comment) => !comment.workflow_status);
     const commentBlock =
-        detail.comments.length === 0
+        userComments.length === 0
             ? "No comments."
-            : detail.comments
+            : userComments
                   .map(
                       (comment, index) =>
                           `${index + 1}. @${comment.author_handle} (${comment.created_at})\n${comment.body}\nDevice: ${deviceSnapshot(comment.metadata)}`,

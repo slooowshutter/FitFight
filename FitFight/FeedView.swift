@@ -181,7 +181,8 @@ final class FeedStore: ObservableObject {
         destinations: [FeedPostDestination],
         body: String,
         images: [UIImage],
-        videoURL: URL? = nil
+        videoURL: URL? = nil,
+        taggedUserIDs: [UUID] = []
     ) async -> Bool {
         guard let userID = session.authSession?.user.id, cachedUserID == userID else { return false }
         isSaving = true
@@ -202,7 +203,7 @@ final class FeedStore: ObservableObject {
                 body: body,
                 mediaIDs: mediaIDs,
                 destinations: destinations,
-                taggedUserIDs: [],
+                taggedUserIDs: taggedUserIDs,
                 accessToken: token
             )
             guard session.authSession?.user.id == userID, cachedUserID == userID else { return false }
@@ -735,6 +736,7 @@ struct FightPostComposer: View {
     @Environment(\.ffStaticRender) private var staticRender
 
     @State private var bodyText = ""
+    @State private var mentionPeople: [FitFightFightPost.Author] = []
     @State private var mediaItems: [PhotosPickerItem] = []
     @State private var isLoadingMedia = false
     @State private var images: [UIImage] = []
@@ -758,15 +760,22 @@ struct FightPostComposer: View {
                         .foregroundStyle(theme.textTertiary)
                         .frame(maxWidth: .infinity, minHeight: 63, alignment: .topLeading)
                 } else {
-                    TextField(String(localized: "Add a note or some proof…"), text: $bodyText, axis: .vertical)
-                        .ffType(.body)
-                        .foregroundStyle(theme.text)
-                        .lineLimit(3...6)
-                        .onChange(of: bodyText) { _, value in
-                            if value.count > 500 {
-                                bodyText = String(value.prefix(500))
+                    FeedMentionField(
+                        text: $bodyText,
+                        people: $mentionPeople,
+                        main: destinations.contains { $0.type == "main" || $0.type == "broadcast" },
+                        fightIDs: destinations.compactMap(\.fightId)
+                    ) {
+                        TextField(String(localized: "Add a note or some proof…"), text: $bodyText, axis: .vertical)
+                            .ffType(.body)
+                            .foregroundStyle(theme.text)
+                            .lineLimit(3...6)
+                            .onChange(of: bodyText) { _, value in
+                                if value.count > 500 {
+                                    bodyText = String(value.prefix(500))
+                                }
                             }
-                        }
+                    }
                 }
                 if !images.isEmpty {
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -951,7 +960,8 @@ struct FightPostComposer: View {
             destinations: destinations,
             body: note,
             images: images,
-            videoURL: videoURL
+            videoURL: videoURL,
+            taggedUserIDs: FeedMention.taggedUserIDs(in: note, people: mentionPeople)
         ) {
             bodyText = ""
             images = []
@@ -1078,12 +1088,23 @@ struct FightPostCard: View {
             Button(String(localized: "Cancel"), role: .cancel) {}
         }
         .sheet(isPresented: $editing) {
-            FightPostEditSheet(draft: $draft) {
+            FightPostEditSheet(
+                draft: $draft,
+                main: post.broadcast || post.audience == "main" || post.fightId == nil,
+                fightIDs: {
+                    var ids = post.channels.map(\.fightId)
+                    if let fightId = post.fightId, !ids.contains(fightId) {
+                        ids.append(fightId)
+                    }
+                    return ids
+                }()
+            ) {
                 let note = draft.trimmingCharacters(in: .whitespacesAndNewlines)
                 if await feed.update(session: session, post: post, body: note) {
                     editing = false
                 }
             }
+            .environmentObject(session)
             .environmentObject(feed)
             .fitFightTheme(theme)
             .presentationBackground(theme.bg)
@@ -1093,11 +1114,14 @@ struct FightPostCard: View {
 
 private struct FightPostEditSheet: View {
     @Binding var draft: String
+    var main: Bool
+    var fightIDs: [UUID]
     var onSave: () async -> Void
 
     @EnvironmentObject private var feed: FeedStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.dismiss) private var dismiss
+    @State private var mentionPeople: [FitFightFightPost.Author] = []
 
     var body: some View {
         FFScreen(clearance: false) {
@@ -1111,15 +1135,17 @@ private struct FightPostEditSheet: View {
                     .foregroundStyle(theme.mossText)
             }
             FFCard {
-                TextField(String(localized: "Add a note or some proof…"), text: $draft, axis: .vertical)
-                    .ffType(.body)
-                    .foregroundStyle(theme.text)
-                    .lineLimit(3...8)
-                    .onChange(of: draft) { _, value in
-                        if value.count > 500 {
-                            draft = String(value.prefix(500))
+                FeedMentionField(text: $draft, people: $mentionPeople, main: main, fightIDs: fightIDs) {
+                    TextField(String(localized: "Add a note or some proof…"), text: $draft, axis: .vertical)
+                        .ffType(.body)
+                        .foregroundStyle(theme.text)
+                        .lineLimit(3...8)
+                        .onChange(of: draft) { _, value in
+                            if value.count > 500 {
+                                draft = String(value.prefix(500))
+                            }
                         }
-                    }
+                }
             }
             if let error = feed.error, !error.isEmpty {
                 FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")

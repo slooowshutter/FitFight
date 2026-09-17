@@ -25,6 +25,27 @@ enum Changelog {
     /// Newest first. Add a row here whenever we ship a user-facing change.
     static let releases: [ReleaseNote] = [
         ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Type @ to tag someone in a post or comment. They get a FitFight notification with your name."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "A refreshed App Store description explaining how to start a private step challenge and follow the standings."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Make it yours opens your animal description, ready to edit and save. Use Change animal to choose another companion anytime."
+        ),
+        ReleaseNote(
             version: "1.1.1",
             year: 2026,
             month: 9,
@@ -50,7 +71,28 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 17,
+            notes: "You can open the TestFlight beta or return to the App Store from You → Settings. Before switching, see how installing the beta replaces the app and keeps accounts, fights, and progress in a separate database."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
             notes: "Reactions swipe horizontally, with a visible like button and any emoji. Charts refresh without losing your selection and keep missing history clear. Comments load reliably, and notification failures no longer interrupt saved fights."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "The slide haptics lab has a Custom option for tuning rumble, pulses, ramp shapes, the finishing hit, and confirmation distance. Your settings save automatically on this phone."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Slide to start builds from soft feedback to full-strength vibration, with a heavy finish even on a quick swipe. The 20 haptic tests now have wider ramps and a 0-100 scale."
         ),
         ReleaseNote(
             version: "1.1.1",

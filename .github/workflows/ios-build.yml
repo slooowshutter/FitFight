@@ -15,6 +15,7 @@ on:
             - "scripts/test_fight_live_updates.py"
             - "scripts/test_fight_chart_scores.py"
             - "scripts/test_push_state.py"
+            - "scripts/test_slide_haptics.py"
             - "scripts/test_feed_activity.py"
             - "docs/design/source/tokens.json"
             - "scripts/check_localizations.py"
@@ -34,6 +35,7 @@ on:
             - "scripts/test_fight_live_updates.py"
             - "scripts/test_fight_chart_scores.py"
             - "scripts/test_push_state.py"
+            - "scripts/test_slide_haptics.py"
             - "scripts/test_feed_activity.py"
             - "docs/design/source/tokens.json"
             - "scripts/check_localizations.py"
@@ -102,6 +104,9 @@ jobs:
 
             - name: Verify Fight charts use confirmed scores
               run: python3 scripts/test_fight_chart_scores.py
+
+            - name: Verify slide haptic ramps and fast swipes
+              run: python3 scripts/test_slide_haptics.py
 
             - name: Verify native refresh and feed state
               run: python3 scripts/test_native_state.py

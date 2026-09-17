@@ -16,7 +16,8 @@ Read this first, then `docs/`. Marc talks from his phone, often transcribing. Be
 - Never use em dashes (U+2014) or en dashes (U+2013). Use a comma, period, colon, or ASCII hyphen `-`. This applies to user-facing copy, docs, comments, and agent writing.
 - Version label shows at the **top of You** only (not the nav bar), e.g. `1.1.1 · build N · staging · 15 Sep`. Do not show it on Fights, New, Feed, or Feedback.
 - Permanent **Versions** button: under You → Settings. Keep the version label on You. Every user-facing ship adds a `ReleaseNote` in `FitFight/Changelog.swift` (same marketing version, new date/notes).
-- Marketing version is **1.1.1**, as requested by Marc on 15 Sep 2026. Apple closed the 1.0.0 train (altool 90062 / 90186). Do not upload 1.0.0. `FITFIGHT_RELEASE_VERSION` and Fastlane must equal 1.1.1. CI still increments the **build number**. Changelog rows reuse `1.1.1` until Marc asks for the next version.
+- Marketing version is **1.1.2**, as requested by Marc on 17 Sep 2026 for the App Store description update. Apple closed the 1.0.0 train (altool 90062 / 90186). Do not upload 1.0.0. `FITFIGHT_RELEASE_VERSION` and Fastlane must equal 1.1.2. CI still increments the **build number**. Changelog rows reuse `1.1.2` until Marc asks for the next version.
+- Every App Store version must **automatically release after Apple approves it** (`AFTER_APPROVAL`), as requested by Marc on 17 Sep 2026. Save that setting when preparing the version and verify it when submitting for review. Existing authorization requirements for PRs, merges, and review submission still apply.
 - Design tokens live in `docs/design/source/tokens.json` and are copied byte-for-byte into `FitFight/DesignSystem/tokens.json` for the app bundle. Don’t hardcode colours. The current system is **Night/Day with fixed semantic families**: Moss is you/winning, Ember is urgency/losing, and Gold is progress only. There is no accent picker.
 - Talk to Marc only for things only he can do: Apple login, GitHub secrets, TestFlight testers, legal, the hosted Supabase dashboard. Agents cannot `workflow_dispatch`. Staging TestFlight uploads only on push/merge to `preview` (plus optional manual `workflow_dispatch` on that branch). Feature-branch, `develop`, and cron do not upload. `main` never uploads to TestFlight. After a `preview` merge, tell Marc a staging build is coming; he opens TestFlight → Update. Do not ask him to Run workflow.
 - Never nuke the hosted database. No `supabase db reset` / `db push` against production or `develop`, no `DROP TABLE` / `TRUNCATE` / `DROP SCHEMA` / `DROP DATABASE` unless Marc asked in that chat and the migration starts with `-- allow-destructive`. Never put `sb_secret_...`, `service_role`, or the database password in git, chat, or iOS. Never merge to `main` unless Marc asked to ship to production. Never merge to `develop` or `preview` unless Marc asked. Production migrations apply only after `preview` is merged to `main`.
@@ -39,7 +40,7 @@ Before changing an API, native API model, or database schema, read [API compatib
 Current map: [`docs/status.md`](docs/status.md). Sign-in, username, direct-username Steps challenges, Apple Health aggregate sync, invitations, and standings work on staging.
 
 - Native SwiftUI iOS app, scheme `FitFight`, bundle ID `com.fitfight.mvp`.
-- First TestFlight upload **succeeded** (build `0.1.0 (1)`). Next prepared release/TestFlight marketing version: **1.1.1**. The last uploaded build is **1.1.0 (200)**; see `docs/status.md` for availability.
+- First TestFlight upload **succeeded** (build `0.1.0 (1)`). Next prepared release/TestFlight marketing version: **1.1.2**. See `docs/status.md` for uploaded builds and availability.
 - Staging TestFlight only on push/merge to `preview` (optional manual `workflow_dispatch` on that branch). No daily cron. Feature branches and `develop` do not upload. `main` never uploads to TestFlight.
 - Simulator compile on every PR.
 - Approved design source remains in `docs/design/source/`. The app uses Night/Day and one fixed semantic palette.
@@ -82,7 +83,7 @@ He asks for several designs of a screen. He wants to **tap them on his phone**, 
 
 1. Branch off `develop`. Only when Marc explicitly asks for a PR, open it **into `develop`**. Do not PR into `preview` or `main` unless Marc is cutting that release.
 2. Add new `.swift` files to `FitFight.xcodeproj/project.pbxproj` (explicit file list, not a synchronized group). JSON in `DesignSystem/` must also be in the Resources build phase.
-3. If users will see it: append a `ReleaseNote` in `Changelog.swift` using the current `MARKETING_VERSION` (`1.1.1`). Do **not** change `MARKETING_VERSION` in `project.pbxproj` unless Marc asks or Apple closed the train. CI bumps the build number.
+3. If users will see it: append a `ReleaseNote` in `Changelog.swift` using the current `MARKETING_VERSION` (`1.1.2`). Do **not** change `MARKETING_VERSION` in `project.pbxproj` unless Marc asks or Apple closed the train. CI bumps the build number.
 4. Don’t ask Marc to open Xcode or his Mac. Feature-branch and `develop` pushes do not upload TestFlight. A staging build uploads when the change lands on `preview`. Then he opens TestFlight → Update. Do not ask him to Run workflow.
 5. Shipping to production is Marc merging `preview` → `main`. Agents do not do that unless he said so in that chat.
 6. Merged feature branches are deleted by CI. `main`, `develop`, `preview`, and `testflight-latest` stay. Do not enable GitHub’s “Automatically delete head branches.”

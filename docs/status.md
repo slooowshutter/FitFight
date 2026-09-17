@@ -33,6 +33,174 @@ workflow on `main` through separately authorized PRs and merges. Live trigger
 delivery and fail-on-unresolved-issues behavior remain unverified. See the
 [activation order](shipping.md#selective-cursor-bugbot-reviews).
 
+## Mention notifications: prepared 17 Sep 2026
+
+**Code:** typing `@` in a Feed post or comment shows username typeahead from
+`GET /api/v1/feed/people`. The backend parses `@handle` tags (and existing
+`tagged_user_ids` on posts), persists eligible post tags, and enqueues a
+FitFight-sent `mention` alert that names the author. Copy has no scores. Tagged
+people skip the generic fight-post or comment alert for that event. Older create
+post/comment requests stay valid: `tagged_user_ids` remains optional, comment
+bodies are unchanged, and a missing mention kind is unused by old backends.
+
+**Contract:** additive `mention` outbox kind plus `mention_post` /
+`mention_comment` copy keys. No app-facing RPC. Preference GET/PATCH shape is
+unchanged. Mentions are not user-toggleable.
+
+**Checks:** `npm run typecheck` passed. `npm test` passed (291 tests).
+`python3 scripts/check_localizations.py` and
+`python3 scripts/check_native_api_boundary.py` passed. Cloud iOS compile,
+screenshots, and disposable-database migration checks are on
+[#275](https://github.com/slooowshutter/FitFight/pull/275).
+
+**Live deployment:** not deployed. No hosted database write or reset. Deploy the
+additive migration and compatible backend before the native app. Physical-device
+two-user mention delivery remains outstanding.
+
+## In-app beta access: prepared 17 Sep 2026
+
+**Code:** You → Settings → Try the beta opens a scrollable sheet in English or
+French. It includes the existing Friends Beta TestFlight invite and App Store
+listing, warns that accounts, fights, and progress use separate databases without
+automatic syncing, and explains how to reinstall the App Store version to return.
+Both links remain available in both builds. The version banner stays on You, and
+a 1.1.1 release note is included. Apple's [TestFlight guidance](https://testflight.apple.com/)
+confirms that installing a beta replaces the installed App Store app.
+
+**Checks:** localization, native API-boundary, download-link consistency, and
+whitespace checks passed. All seven new catalog entries have French translations;
+existing entries and pre-existing duplicate keys are unchanged. The public beta
+invite returned HTTP 200. Apple's App Store endpoint rate-limited the automated
+check with HTTP 429; its URL matches the existing website destination. Cloud iOS
+compilation and device checks remain pending, including sheet scrolling at large
+text sizes, dismissal, and opening both stores. No app build ran on the workstation.
+
+**Rollout:** UI only, with no API, native API model, database, or supported-client
+contract changes. No PR, merge, cloud CI run, TestFlight upload, or live deployment
+was made. Merging code does not synchronize user data between the databases; the
+existing [data transfer](../scripts/data-transfer/README.md) is a separate,
+explicitly authorized maintenance operation.
+
+## Stronger slide haptics: prepared 17 Sep 2026
+
+**Code:** The existing 20 slide presets now cover soft starts, early builds, late
+surges, and accelerating pulses, with strength displayed on a 0-100 scale. Every
+preset reaches its maximum intensity at the existing 85% confirmation threshold.
+Saved recipe IDs and the on-device selection are preserved. Continuous patterns
+use neutral base parameters so the starting intensity no longer caps their
+output, following [Apple's dynamic parameter semantics](https://developer.apple.com/documentation/corehaptics/updating-continuous-and-transient-haptic-parameters-in-real-time).
+Timed pulses also respond immediately to track movement. Confirmation uses the
+final finger position and plays a full-strength heavy impact only when the action
+succeeds.
+
+The lab also has a **Custom** editor with a test slider pinned below its controls.
+It exposes rumble strength/crispness endpoints and separate ramp powers; ticks
+with texture or five system impact styles; track counts or clock frequency
+endpoints; extra movement ticks; tick strength/crispness endpoints and ramp power;
+and the finishing hit's enablement, style, and strength. Confirmation distance is
+adjustable from 50-100% of the track, and its haptic ramp reaches the selected end
+values there. Changing a recipe resets any active test.
+
+Every control edit immediately saves the full custom configuration in this
+phone's app preferences, including settings hidden by disabled controls. The
+custom draft survives switching presets, closing the lab, and app relaunch.
+**Use custom on Slide to start** persists the selection; the New fight slider
+observes the saved configuration, including its confirmation point and finishing
+hit. Saved values are range-checked when restored. Save errors keep the previous
+record and appear in the editor. Localized 1.1.1 release notes cover both changes.
+
+**Checks:** The regression harness compiles the production recipes, engine, and
+gesture/confirmation methods against recording hardware/UI boundaries. Cloud
+Swift 6.2.4 in Swift 5 mode reproduced the old weak-output and missed-pulse
+behavior; the final harness passed 182/182 checks for ramps, fast swipes,
+reversal/cancellation, held pulses, recipe changes, repeated lab tests, accessible
+confirmation, failed actions, disabled/busy controls, and the existing UIKit
+fallback. Custom checks cover all persisted fields, immediate editor binding
+saves, reopening preferences, retaining inactive settings, malformed saved data,
+failed-save preservation, recipe edits with the same ID, and applying the saved
+confirmation point and finishing hit to the production control. The harness is
+included in hosted iOS CI. Localization, native API boundary, saved preset IDs,
+and whitespace checks passed.
+
+**Cloud iOS and live:** The [hosted iOS build and native checks](https://github.com/slooowshutter/FitFight/actions/runs/35166645031)
+and [simulator screen export](https://github.com/slooowshutter/FitFight/actions/runs/35166645125)
+passed for `04e5cc1`, before merging the newer `develop` changes. CI for the
+combined revision and physical iPhone vibration verification are pending.
+Recording boundaries verify hardware commands, not perceived strength or latency.
+The haptics change adds no API contract, native API model, database, deployment
+order, or supported-client requirement changes. No release-branch promotion,
+TestFlight upload, or production deployment was performed.
+
+## App Store description draft: saved 17 Sep 2026
+
+Marc authorized the English/French description refresh, creation of the 1.1.2
+App Store version, and publication. Both descriptions and the required localized
+release notes in [App Store metadata](app-store/metadata.md) are saved in App Store
+Connect under **1.1.2, Prepare for Submission**. The new version inherited the
+English/French screenshots; its promotional-text fields are blank.
+
+Apple's Add for Review validation now reports only **You must choose a build**.
+No 1.1.2 build is available, so nothing was submitted or published. The current
+App Store version is **1.1.1 (202), Ready for Distribution**. A compatible 1.1.2
+production build and Apple review are still required.
+
+Marc also requested automatic publication after every approved App Store review.
+The workspace prepares native/CI version 1.1.2, an English/French release note,
+and Fastlane/release-tool defaults for `AFTER_APPROVAL`. The release tool targets
+`FITFIGHT_RELEASE_VERSION` and verifies Apple's saved release mode. Local release
+regressions passed (20 tests, 92 assertions), as did localization, Ruby syntax,
+project-file syntax, and whitespace checks. The release workflow YAML and all
+native/CI version values also passed validation.
+
+[Cloud configuration](https://github.com/slooowshutter/FitFight/actions/runs/35168925860)
+confirmed 1.1.2 has `releaseType: AFTER_APPROVAL`, state `PREPARE_FOR_SUBMISSION`,
+and no selected build. A separate [cloud readback](https://github.com/slooowshutter/FitFight/actions/runs/35169051669)
+confirmed automatic publication and exact English/French description and release
+note matches (434 and 529 description characters). The one-time configuration
+trigger was removed; the release-tools workflow is back to its original audit-only
+branch trigger. The setting is saved at Apple.
+
+Marc authorized the release PR and promotion through develop, preview, and main,
+followed by review submission. [Release PR #268](https://github.com/slooowshutter/FitFight/pull/268)
+contains the 1.1.2 build files and automatic-release defaults, integrated with
+develop through `2b4859d`, including the approved admin feedback deletion.
+Standards and spec reviews found no actionable issues; post-merge localization
+and all 20 release tests passed. Cloud simulator, screenshot, and disposable
+database checks passed at `1a41380`; checks for the latest integration are pending. No release-branch merge,
+1.1.2 upload, or review submission has happened yet.
+
+**Compatibility and order:** the metadata/version change adds no API or schema
+change. The release also carries the previously merged compatible Feed, chart,
+notification, and Activity work documented below. At 01:14 UTC on 17 Sep, staging
+reported latest **1.1.1 (201)** with enforcement off; production reported latest
+**1.1.1 (202)** with enforcement on. Both had null review/internal candidates and
+healthy profile APIs. Staging's Supabase integration and Vercel deployment at
+`511f400` succeeded. The three additive migrations retain existing client grants
+and `/api/v1` contracts; preserved build 113 fixtures and 201/202 native contracts
+remain in the cloud checks. Verify those checks before promotion. Production's
+migration and backend deployment must succeed after the authorized main merge,
+before submitting the production candidate. Physical-device checks remain
+separate from the cloud evidence.
+
+## Companion customization: prepared 17 Sep 2026
+
+**Code:** You has Make it yours, which opens the companion picker at the expanded
+description, and Change animal, which opens the animal grid. The former Custom
+button is now Make it yours. The description explains that any animal can be
+chosen and keeps guidance for species, breed or race, accessories, colors, and
+other details. Change animal within the form returns to the grid without clearing
+the draft. Save companion keeps the existing account save, blank-input validation,
+and 1,000-character limit; save errors appear beside the form. English/French copy
+and a 1.1.1 release note are included. Custom image generation is still not built.
+
+**Checks:** localization, native API-boundary, and whitespace checks passed.
+Cloud iOS compilation and device interaction checks remain pending. Verify both
+entry buttons, scrolling to and from the description, editing a saved description,
+Save and failed-save feedback, and English/French layouts at larger text sizes.
+
+**Live deployment:** not deployed. No API contract, native API model, or database
+change. No PR, merge, TestFlight upload, or production deployment was made.
+
 ## Admin feedback deletion: prepared 17 Sep 2026
 
 **Code:** admins can open a Feedback request, tap its ellipsis menu, and choose
@@ -975,7 +1143,7 @@ The native Fight path uses the API to create and join; Apple Health synchronizat
 | Bugs & requests         | Works on the Feedback tab (Bugs, Top, and Report), with a shortcut still on You above Settings. Signed-in people can post a bug or a feature request, attach a photo, a video, or any file, browse the board, upvote, and comment with their username. Device/debug metadata is stored when someone posts or comments, omitted from the board API, and attached again when Marc taps Send to Cursor (original snapshot plus the phone that sent it, plus attachment links). After `NOTION_TOKEN` is on Vercel, each new post also lands as a P0 Inbox row in the Product Backlog. After `CURSOR_API_KEY` is on Vercel, Marc sees **Send to Cursor** on a post and can start a cloud agent with the post, comments, those device snapshots, and attachment URLs. A successful send moves the matching Notion Product Backlog row to Building; when that agent finishes and opens a PR, FitFight marks the same row Done.                                                                                                                                                                                                                                                                                                                                                                           |
 | Privacy / Support       | Pages are implemented and linked under You → Settings. Staging uses `staging.fitfight.app`; production uses `fitfight.app`. Each route must be deployed before that build is tested or submitted.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | Fight posts / Feed      | Marc (username `marc`, You → Developer) can post one Broadcast that every signed-in user sees on the Feed tab; it is a normal post, not copied into each Fight, and it does not send a new lock-screen alert. Accepted and waiting-next-round members can post a short note, up to four photos, or one short video. Root Feedback → Feed is the same fight posts list as before (not a Recent/Top ranking of loaded posts). Root + chooses a new post or a new request. Media can take a photo with the camera or pick photos and video from the library. Posting to several fights keeps one post and shows those fight names; All fights shows Public. A fight’s Feed tab starts on that fight and can add other channels. There is no Main destination or tag-people picker. Each card puts its plain channel label, then the relative time, beneath the author, with actions at the top right. Posts support emoji reactions, nested comments, editing/deleting your own post, reporting another post and hiding its author. Other members of that fight can get a push when you post in that fight’s Feed; the post author can get comments and reactions; a reply notifies the parent commenter, not sibling commenters. You → Settings → Notifications turns each of those on or off, plus challenge reminders and daily status. Fight detail opens on Stats, with Feed, Share and recurring History alongside it. Recurring fights retain earlier posts; invited-only people gain access after joining. |
-| Companion               | Saved on the account. Pick from a grid of animals, or Custom with one description (species, breed, accessories, colors). That text is stored for later image generation; generation is not built. Other people see the stock animal, or initials until a custom image exists. People who have not chosen an animal are asked the next time they open a build that includes this. Pose and generation controls are not shown.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Companion               | Saved on the account. Change animal opens the animal grid. Make it yours opens a description to edit and save (species, breed or race, accessories, colors, and other details). You can change animals anytime. That text is stored for later image generation; generation is not built. Other people see the stock animal, or initials until a custom image exists. People who have not chosen an animal are asked the next time they open a build that includes this. Pose and generation controls are not shown.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | Account deletion        | Permanently deletes the profile, photos, username, authentication, Health/Steps data, relationships, invitations, memberships, scores, owned Fights, fight posts, and bugs/requests the User posted; removes participation from other Fights; clears local Health sync state; and revokes a stored Apple credential when available.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | WHOOP / Strava          | Not built                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | Removed scope           | No persistent friends, Requests tab, money/payouts, bragging-rights option, other Metrics, goals, or dead settings/actions.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |

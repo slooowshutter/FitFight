@@ -1,6 +1,166 @@
 {
     "sourceLanguage": "en",
     "strings": {
+    "Try the beta": {
+        "localizations": {
+            "fr": {
+                "stringUnit": {
+                    "state": "translated",
+                    "value": "Essayer la bêta"
+                }
+            }
+        }
+    },
+    "Try upcoming features in TestFlight. Beta builds may have bugs.": {
+        "localizations": {
+            "fr": {
+                "stringUnit": {
+                    "state": "translated",
+                    "value": "Essaie les prochaines fonctionnalités dans TestFlight. Les versions bêta peuvent contenir des bugs."
+                }
+            }
+        }
+    },
+    "The beta uses a separate database. Accounts, fights, and progress do not sync automatically with the App Store version, even when you use the same Apple ID.": {
+        "localizations": {
+            "fr": {
+                "stringUnit": {
+                    "state": "translated",
+                    "value": "La bêta utilise une base de données séparée. Les comptes, les fights et la progression ne se synchronisent pas automatiquement avec la version App Store, même avec le même identifiant Apple."
+                }
+            }
+        }
+    },
+    "Installing the beta replaces the App Store app on this device. To switch back, reinstall FitFight from the App Store.": {
+        "localizations": {
+            "fr": {
+                "stringUnit": {
+                    "state": "translated",
+                    "value": "Installer la bêta remplace l’app App Store sur cet appareil. Pour revenir à la version publique, réinstalle FitFight depuis l’App Store."
+                }
+            }
+        }
+    },
+    "Open TestFlight": {
+        "localizations": {
+            "fr": {
+                "stringUnit": {
+                    "state": "translated",
+                    "value": "Ouvrir TestFlight"
+                }
+            }
+        }
+    },
+    "Return to the App Store": {
+        "localizations": {
+            "fr": {
+                "stringUnit": {
+                    "state": "translated",
+                    "value": "Revenir à l’App Store"
+                }
+            }
+        }
+    },
+    "You can open the TestFlight beta or return to the App Store from You → Settings. Before switching, see how installing the beta replaces the app and keeps accounts, fights, and progress in a separate database.": {
+        "localizations": {
+            "fr": {
+                "stringUnit": {
+                    "state": "translated",
+                    "value": "Tu peux ouvrir la bêta TestFlight ou revenir à l’App Store depuis Toi → Réglages. Avant de changer de version, découvre comment la bêta remplace l’app et conserve les comptes, les fights et la progression dans une base de données séparée."
+                }
+            }
+        }
+    },
+        "The slide haptics lab has a Custom option for tuning rumble, pulses, ramp shapes, the finishing hit, and confirmation distance. Your settings save automatically on this phone.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Le laboratoire haptique propose une option Custom pour régler les vibrations continues, les impulsions, leur progression, l’impact final et la distance de confirmation. Vos réglages sont enregistrés automatiquement sur ce téléphone."
+                    }
+                }
+            }
+        },
+        "Slide to start builds from soft feedback to full-strength vibration, with a heavy finish even on a quick swipe. The 20 haptic tests now have wider ramps and a 0-100 scale.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Glisser pour démarrer passe de vibrations douces à la puissance maximale, avec un impact final puissant même lors d’un geste rapide. Les 20 tests haptiques proposent des montées plus marquées et une échelle de 0 à 100."
+                    }
+                }
+            }
+        },
+        "Type @ to tag someone in a post or comment. They get a FitFight notification with your name.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tape @ pour mentionner quelqu’un dans une publication ou un commentaire. FitFight lui envoie une notification avec ton nom."
+                    }
+                }
+            }
+        },
+        "A refreshed App Store description explaining how to start a private step challenge and follow the standings.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Une description App Store actualisée pour découvrir comment lancer un défi de pas privé et suivre le classement."
+                    }
+                }
+            }
+        },
+        "Make it yours": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "À ton image"
+                    }
+                }
+            }
+        },
+        "Change animal": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Changer d’animal"
+                    }
+                }
+            }
+        },
+        "This is how other people see you in fights and Feed. You can change your animal anytime.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "C’est ainsi que les autres te voient dans les combats et le fil. Tu peux changer d’animal à tout moment."
+                    }
+                }
+            }
+        },
+        "You can change your animal anytime. Choose another from the grid or describe any animal below.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tu peux changer d’animal à tout moment. Choisis-en un autre dans la grille ou décris l’animal de ton choix ci-dessous."
+                    }
+                }
+            }
+        },
+        "Make it yours opens your animal description, ready to edit and save. Use Change animal to choose another companion anytime.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "À ton image ouvre la description de ton animal pour la modifier et l’enregistrer. Utilise Changer d’animal pour choisir un autre compagnon à tout moment."
+                    }
+                }
+            }
+        },
         "Feedback keeps loading correctly when you leave a request while it is being deleted.": {
             "localizations": {
                 "fr": {
@@ -1672,16 +1832,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Ensemble."
-                    }
-                }
-            }
-        },
-        "Try another companion": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Essayer un autre compagnon"
                     }
                 }
             }
@@ -8883,16 +9033,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Tu peux prendre une photo avec l’appareil photo quand tu ajoutes des Médias, pas seulement en choisir une dans la photothèque."
-                    }
-                }
-            }
-        },
-        "This is how other people see you in fights and Feed.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "C’est comme ça que les autres te voient dans les défis et le Fil."
                     }
                 }
             }

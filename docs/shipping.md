@@ -24,7 +24,7 @@ The iOS workflows **must** stay GitHub-hosted. Never `self-hosted`. Apple requir
 
 Fastlane: `fastlane/Fastfile` lane `beta` uploads staging TestFlight builds. Lane `app_store_candidate` is CI- and `main`-only, archives Release with production configuration, and uploads the binary to App Store Connect without selecting it or submitting it for review. Both use automatic signing + App Store Connect API key (`-allowProvisioningUpdates`) and share one non-cancelling concurrency group so signing and build-number allocation cannot race. The production lane does not revoke team certificates; it fails safely if automatic signing cannot create one. Do **not** also set `export_xcargs` to the same `-authenticationKeyPath` flags — gym passes `xcargs` into export and duplicates the flag.
 
-Build number is not committed; CI sets `CURRENT_PROJECT_VERSION` at archive time from TestFlight (`latest + 1`). The next prepared marketing version is **1.1.1**, requested by Marc on 15 Sep 2026. The last uploaded TestFlight build remains **1.1.0 (200)**. Apple closed the 1.0.0 train, so do not upload 1.0.0.
+Build number is not committed; CI sets `CURRENT_PROJECT_VERSION` at archive time from TestFlight (`latest + 1`). The next prepared marketing version is **1.1.2**, requested by Marc on 17 Sep 2026 for the App Store description update. See `status.md` for uploaded builds. Apple closed the 1.0.0 train, so do not upload 1.0.0.
 
 ## Selective Cursor Bugbot reviews
 
@@ -86,23 +86,23 @@ Current activation evidence is recorded in [status](status.md#selective-bugbot-r
 
 ## Versions vs builds (why friends wait)
 
-External TestFlight builds must be submitted for beta review and distributed to their tester groups. Apple fully reviews the first submitted build; later builds of the same marketing version may receive a shorter review, but approval is not guaranteed or immediate. Stay on **1.1.1**. See [Apple's external testing rules](https://developer.apple.com/help/app-store-connect/test-a-beta-version/invite-external-testers).
+External TestFlight builds must be submitted for beta review and distributed to their tester groups. Apple fully reviews the first submitted build; later builds of the same marketing version may receive a shorter review, but approval is not guaranteed or immediate. Stay on **1.1.2** for follow-up builds. See [Apple's external testing rules](https://developer.apple.com/help/app-store-connect/test-a-beta-version/invite-external-testers).
 
-We used to bump 0.4.1, 0.4.2, 0.5.0 on every feature, so friends waited every time. Stay on **1.1.1** until Marc asks or Apple closes that train.
+We used to bump 0.4.1, 0.4.2, 0.5.0 on every feature, so friends waited every time. Stay on **1.1.2** until Marc asks or Apple closes that train.
 
 | What                        | Who sets it                              | When it changes                                               |
 | --------------------------- | ---------------------------------------- | ------------------------------------------------------------- |
-| Marketing version (`1.1.1`) | `MARKETING_VERSION` in `project.pbxproj` | App Store ship, Apple closed the train, or Marc asked         |
+| Marketing version (`1.1.2`) | `MARKETING_VERSION` in `project.pbxproj` | App Store ship, Apple closed the train, or Marc asked         |
 | Build number (`105`)        | CI / Fastlane at archive time            | Every distribution upload                                     |
 | Versions list               | `FitFight/Changelog.swift`               | Every user-facing change; reuse the current marketing version |
 
-The next version label is `1.1.1 · build N · staging`. Testers tap Update after upload and availability; ordinary follow-up builds keep `1.1.1` and only increment the build number.
+The next version label is `1.1.2 · build N · staging`. Testers tap Update after upload and availability; ordinary follow-up builds keep `1.1.2` and only increment the build number.
 
 ### Everyone: Internal, External, Friends Beta
 
 The beta lane waits for build processing, then assigns **every** TestFlight group: Internal testers (automatic after processing; Apple rejects assigning them by hand), every External group, and **Friends Beta** (`https://testflight.apple.com/join/wcZKdwVZ`). Missing Internal testers, missing Friends Beta, or missing all External groups fails CI. Uploaded builds are registered separately from the latest _installable_ (external) release. The advertised public release advances only after a build is `IN_BETA_TESTING` on every external group. TestFlight update prompts are optional in the prepared 1.1.1 app, so Friends can keep using their installed build.
 
-Marc must be on **Internal Testing** in App Store Connect (Users and Access) to see new preview uploads. External testers and Friends wait for Apple beta review on the first 1.1.1 build, then later 1.1.1 builds of the same version.
+Marc must be on **Internal Testing** in App Store Connect (Users and Access) to see new preview uploads. External testers and Friends wait for Apple beta review on the first 1.1.2 build, then later 1.1.2 builds of the same version.
 
 Apple allows only one build per version in beta review at a time and up to six beta review submissions in 24 hours. Upload limits are separate: the 5 Sep runs failed with `Upload limit reached` after build **153** uploaded successfully. Creating more builds does not release one already waiting for external review.
 
@@ -180,7 +180,20 @@ An app change merged to `main` starts `.github/workflows/ios-app-store.yml`. It 
 
 The workflow injects the production Supabase project, its iOS publishable key, and `https://fitfight.app` into `BuildEnv.swift`. Before upload it verifies the production Supabase URL/key, confirms its Apple provider is enabled, and requires the API health check to prove the production database, latest deletion migration, server key, and Apple server credentials are ready. It then checks the signed IPA for HealthKit background delivery, a valid privacy manifest, and the production configuration, and rejects any generated staging configuration. The public defaults match the values already compiled in the app; optional repository variables `SUPABASE_PRODUCTION_URL` and `SUPABASE_PRODUCTION_PUBLISHABLE_KEY` can rotate them, but the URL must remain the documented production project and the key must validate against it.
 
-Fastlane increments only the build number. The workflow requires the project marketing version to equal `FITFIGHT_RELEASE_VERSION` (`1.1.1`) and requires a matching `1.1.1` release note. The reviewed App Store release PR into `develop` carries that version and launch note. Marc then merges `develop` → `preview` when he wants a TestFlight, and `preview` → `main` when he approves the production ship. The workflow does not change `MARKETING_VERSION`, upload metadata or screenshots, submit the build for review, or release it. After it succeeds, the candidate waits in App Store Connect for the separate metadata, review-information, build-selection, and submission steps.
+Fastlane increments only the build number. The workflow requires the project marketing version to equal `FITFIGHT_RELEASE_VERSION` (`1.1.2`) and requires a matching `1.1.2` release note. The reviewed App Store release PR into `develop` carries that version and launch note. Marc then merges `develop` → `preview` when he wants a TestFlight, and `preview` → `main` when he approves the production ship. The workflow does not change `MARKETING_VERSION`, upload metadata or screenshots, submit the build for review, or release it. After it succeeds, the candidate waits in App Store Connect for the separate metadata, review-information, build-selection, and submission steps.
+
+**Automatic publication is the standing default**, requested by Marc on 17 Sep
+2026. For every App Store version, select **Automatically release this version**
+and verify it before submitting. Apple publishes the approved version without a
+manual Release action. See [Apple's release options](https://developer.apple.com/help/app-store-connect/manage-your-apps-availability/select-an-app-store-version-release-option).
+
+`scripts/app-store-release-audit.rb` reads the target version from
+`FITFIGHT_RELEASE_VERSION`. Its authorized `configure`, `prepare`, and `submit`
+modes set `releaseType: AFTER_APPROVAL`; `configure` stops after saving that
+setting. Submission still requires an explicit registered
+production build and a healthy production backend. The script verifies automatic
+publication after submission. The push-triggered release-tools workflow remains
+an audit. Existing PR, merge, and submission authorization rules still apply.
 
 Vercel also needs `CRON_SECRET` (Preview + Production). Vercel Cron sends it as `Authorization: Bearer …` to `/api/internal/close-fights` once daily at **03:00 UTC**, which is compatible with Hobby. **Hosted Supabase Cron** on develop and production should call the same route every **15 minutes** so fight-end sync reminders (T+0, 12h, 6h, 1h left) fire on time; the daily Vercel job stays a backup closer. Opening the app also closes due fights and drains the notification outbox, so neither cron is the only path. Never put this value in git or chat.
 

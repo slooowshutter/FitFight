@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { companionIdSchema } from "@/lib/types/companions/companion";
 import { recordTimestampSchema } from "./profile-results";
+import { profileStepStatisticsSchema } from "./profile-step-statistics";
 
 export const profileCountRowSchema = z.object({ n: z.number().int().nonnegative() });
 export const profileIdentifierRowSchema = z.object({ id: z.string().uuid() });
@@ -69,7 +70,7 @@ export const rivalryRecordSchema = z.object({
 export const profileRivalrySummarySchema = z.object({ identity: sharedIdentitySchema, rivalry: rivalryRecordSchema });
 
 export const activityDaySchema = z.object({
-    day: z.string(),
+    day: z.string().date(),
     steps: z.number().nonnegative(),
     time_zone: z.string().nullable(),
     updated_at: recordTimestampSchema,
@@ -88,6 +89,7 @@ export const sharedProfileSchema = z.object({
         days: z.union([z.literal(7), z.literal(30)]),
         values: z.array(activityDaySchema),
     }).nullable(),
+    step_statistics: profileStepStatisticsSchema.nullable().optional(),
     artwork: z.object({ id: z.string().uuid(), image_path: z.string() }).nullable(),
     view_measurement_enabled: z.boolean(),
 });
@@ -136,6 +138,7 @@ export const profileFeatureConfigSchema = z.object({
 });
 
 export type ProfileSettings = z.infer<typeof profileSettingsSchema>;
+export type ProfileActivityDay = z.infer<typeof activityDaySchema>;
 export type UpdateProfileSettings = z.infer<typeof updateProfileSettingsSchema>;
 export type SharedIdentity = z.infer<typeof sharedIdentitySchema>;
 export type ProfileCounts = z.infer<typeof profileCountsSchema>;

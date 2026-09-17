@@ -10,6 +10,27 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ## Profiles, Friends, and Rivalry implementation, 17 Sep 2026
 
+**Steps statistics extension, 17 Sep:** prepared on this branch. You and Profile
+sheets now show best recorded day, average per recorded day, weekly average and
+total, and day distributions/current/longest recorded streaks across five activity
+levels. Levels use the companion's existing 2k/4k/6k/8k thresholds. The owner's
+avatar opens their Profile. Only finalized days with known time zones count,
+through yesterday; missing days are unknown. Exact-category streaks cannot bridge
+unknown days. Weekly summaries disclose their recorded-day denominator.
+
+Owners see available recorded history. Other viewers and previews receive only
+statistics within their explicit activity audience and 7/30-day period. Earlier
+records and streak lengths remain private. The existing v1 Profile response gains
+optional `step_statistics`; existing daily-history and legacy `/me` contracts stay
+intact. No new schema or HealthKit collection is added by this extension. Cloud
+verification is pending for these new changes; the earlier runs below describe the
+preceding Profile implementation only. No live deployment or app distribution has
+occurred. Read-only manifests at **17 Sep 01:45:27 UTC** still list staging 1.1.1
+(201), enforcement off, and production 1.1.1 (202), enforcement on, with null
+review/internal in both. Backend support precedes native distribution, after the
+already-required Profile expansion rollout. Installed-device verification remains
+outstanding.
+
 **Code prepared on `profiles-friends-and-stats`, not deployed.** The
 [implementation plan](design/profiles-friends-implementation-plan.md) now has
 native Profile sheets and editing, mutually accepted Friends and request lists,

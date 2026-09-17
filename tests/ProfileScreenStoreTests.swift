@@ -32,6 +32,11 @@ struct TestSession { let user: TestUser }
         let shared = try decoder.decode(SharedProfile.self, from: Data(contentsOf: fixtures.appendingPathComponent("shared-profile.json")))
         let privateProfile = try decoder.decode(SharedProfile.self, from: Data(contentsOf: fixtures.appendingPathComponent("shared-profile-private.json")))
         let history = try decoder.decode(ProfileHistoryPage.self, from: Data(contentsOf: fixtures.appendingPathComponent("profile-history.json")))
+        let withStatistics = try decoder.decode(SharedProfile.self, from: Data(contentsOf: fixtures.appendingPathComponent("shared-profile-statistics.json")))
+        precondition(shared.stepStatistics == nil && privateProfile.stepStatistics == nil, "Older responses remain decodable")
+        precondition(withStatistics.stepStatistics?.bestDay?.steps == 9_000)
+        precondition(withStatistics.stepStatistics?.week.averageSteps == 8_500)
+        precondition(withStatistics.stepStatistics?.levels.last?.currentStreak == 2)
         precondition(shared.record?.played == 10 && shared.record?.winRate == 0.3)
         precondition(privateProfile.record == nil && privateProfile.activity == nil)
         precondition(history.results[0].fightId == nil && history.results[0].name == nil)
@@ -44,14 +49,14 @@ struct TestSession { let user: TestUser }
         await until { FitFightAPI.profiles.count == 2 }
         FitFightAPI.profiles.removeLast().resume(returning: privateProfile)
         await second.value
-        FitFightAPI.profiles.removeFirst().resume(returning: shared)
+        FitFightAPI.profiles.removeFirst().resume(returning: withStatistics)
         await first.value
         precondition(store.profile == privateProfile, "Late private data cannot replace a newer response")
 
         let load = Task { await store.load(userID: shared.identity.userId, session: session) }
         await until { FitFightAPI.profiles.count == 1 }
         precondition(store.profile == nil && store.history.isEmpty)
-        FitFightAPI.profiles.removeFirst().resume(returning: shared)
+        FitFightAPI.profiles.removeFirst().resume(returning: withStatistics)
         await until { FitFightAPI.histories.count == 1 }
         FitFightAPI.histories.removeFirst().resume(returning: history)
         await load.value

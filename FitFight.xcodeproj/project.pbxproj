@@ -83,6 +83,7 @@
         093BD4214450F0E24E960170 /* SharedProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6E984145AFCC236130CABCD /* SharedProfile.swift */; };
         C52EBF93D4D91888A73FA9FA /* ProfileScreenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F63B0748E91625E789AE99FD /* ProfileScreenStore.swift */; };
         5893F862B25C0EBA522F8DFA /* ProfileSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1FE342B3DFF37CEFC227E1 /* ProfileSheet.swift */; };
+        AA532C5D188C47359C573714 /* ProfileStepStatisticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F6BE97D8DAC482CA45D6032 /* ProfileStepStatisticsView.swift */; };
         99AAAB8BD6F184E568149D1D /* EditProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41EE371C708EECCC762EB820 /* EditProfileView.swift */; };
         61856F7155495A28A4B93A60 /* FriendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C2AC1044B8F11786123D48E /* FriendsView.swift */; };
         A0573E386FD2FA2A4A357CC4 /* SuggestedFightsOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AD1CDE4182F6C6E52321063 /* SuggestedFightsOnboardingView.swift */; };
@@ -168,6 +169,7 @@
         D6E984145AFCC236130CABCD /* SharedProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedProfile.swift; sourceTree = "<group>"; };
         F63B0748E91625E789AE99FD /* ProfileScreenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileScreenStore.swift; sourceTree = "<group>"; };
         1A1FE342B3DFF37CEFC227E1 /* ProfileSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSheet.swift; sourceTree = "<group>"; };
+        7F6BE97D8DAC482CA45D6032 /* ProfileStepStatisticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileStepStatisticsView.swift; sourceTree = "<group>"; };
         41EE371C708EECCC762EB820 /* EditProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditProfileView.swift; sourceTree = "<group>"; };
         2C2AC1044B8F11786123D48E /* FriendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendsView.swift; sourceTree = "<group>"; };
         7AD1CDE4182F6C6E52321063 /* SuggestedFightsOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestedFightsOnboardingView.swift; sourceTree = "<group>"; };
@@ -216,6 +218,7 @@
                 2C2AC1044B8F11786123D48E /* FriendsView.swift */,
                 41EE371C708EECCC762EB820 /* EditProfileView.swift */,
                 1A1FE342B3DFF37CEFC227E1 /* ProfileSheet.swift */,
+                7F6BE97D8DAC482CA45D6032 /* ProfileStepStatisticsView.swift */,
                 F63B0748E91625E789AE99FD /* ProfileScreenStore.swift */,
                 D6E984145AFCC236130CABCD /* SharedProfile.swift */,
                 A10000000000000000000352 /* FightSnapshot.swift */,
@@ -428,6 +431,7 @@
                 61856F7155495A28A4B93A60 /* FriendsView.swift in Sources */,
                 99AAAB8BD6F184E568149D1D /* EditProfileView.swift in Sources */,
                 5893F862B25C0EBA522F8DFA /* ProfileSheet.swift in Sources */,
+                AA532C5D188C47359C573714 /* ProfileStepStatisticsView.swift in Sources */,
                 C52EBF93D4D91888A73FA9FA /* ProfileScreenStore.swift in Sources */,
                 093BD4214450F0E24E960170 /* SharedProfile.swift in Sources */,
                 A10000000000000000000353 /* FightSnapshot.swift in Sources */,

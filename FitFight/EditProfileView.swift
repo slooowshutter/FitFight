@@ -68,6 +68,8 @@ struct EditProfileView: View {
                                 VStack(alignment: .leading, spacing: 12) {
                                     Text(String(localized: "Optional. Choose who can see your stored daily Steps and for how long. Fight participation shares its own results separately."))
                                         .ffType(.caption).foregroundStyle(theme.textSecondary)
+                                    Text(String(localized: "This also shares step records, averages, activity levels and streaks for that period. Your full recorded history stays private."))
+                                        .ffType(.caption).foregroundStyle(theme.textSecondary)
                                     Picker(String(localized: "Audience"), selection: Binding(
                                         get: { settings?.activityAudience ?? "off" }, set: { settings?.activityAudience = $0 }
                                     )) {

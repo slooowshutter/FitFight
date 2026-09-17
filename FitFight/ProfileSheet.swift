@@ -148,6 +148,9 @@ struct ProfileSheet: View {
                 }
             }
         }
+        if let statistics = profile.stepStatistics {
+            ProfileStepStatisticsView(statistics: statistics)
+        }
         if let activity = profile.activity {
             FFSection(title: String(format: String(localized: "profile.steps-period"), activity.days)) {
                 FFCard {

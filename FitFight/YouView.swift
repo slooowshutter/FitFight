@@ -44,6 +44,9 @@ struct YouView: View {
                 ProfileRecordCard(record: record)
                 FFButton(title: String(localized: "Fight history"), kind: .ghost) { showingProfileHistory = true }
             }
+            if let statistics = profileStore.profile?.stepStatistics {
+                ProfileStepStatisticsView(statistics: statistics)
+            }
             ForEach(rivals) { rival in
                 ProfileIdentityLink(userID: rival.id, source: "friends", onClosed: { Task { await loadOwnProfile() } }) {
                     FFCard {
@@ -195,11 +198,15 @@ struct YouView: View {
     private var profile: some View {
         if session.isSignedIn {
             HStack(alignment: .top, spacing: 14) {
-                CompanionAvatar(
-                    personID: session.profile?.userId.uuidString,
-                    companionID: session.profile?.companionId, isYou: true,
-                    monogram: session.profile?.initials ?? "FF", photoURL: session.profile?.avatar?.url, size: 68
-                )
+                Button { showingProfileHistory = true } label: {
+                    CompanionAvatar(
+                        personID: session.profile?.userId.uuidString,
+                        companionID: session.profile?.companionId, isYou: true,
+                        monogram: session.profile?.initials ?? "FF", photoURL: session.profile?.avatar?.url, size: 68
+                    )
+                }
+                .buttonStyle(FFHapticPlainStyle())
+                .accessibilityLabel(String(localized: "Open profile"))
                 VStack(alignment: .leading, spacing: 4) {
                     Text(verbatim: session.profile?.displayName ?? String(localized: "Signed in"))
                         .ffType(.heading).foregroundStyle(theme.text)

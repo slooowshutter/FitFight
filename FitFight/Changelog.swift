@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 17,
+            notes: "Profiles now show your best recorded step day, weekly averages, activity-level distribution and streaks. Shared statistics respect your chosen audience and history period."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
             notes: "Profile history keeps private Fight participants hidden and opens the selected round. Scheduled Fight records and rematch durations are now preserved."
         ),
         ReleaseNote(

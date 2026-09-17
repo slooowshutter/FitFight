@@ -1,6 +1,438 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Steps and streaks": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Steps and streaks"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Pas et séries"
+                    }
+                }
+            }
+        },
+        "Your recorded history": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Your recorded history"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Votre historique enregistré"
+                    }
+                }
+            }
+        },
+        "Completed days only, through yesterday. Missing or partial days never count as zero.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Completed days only, through yesterday. Missing or partial days never count as zero."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Journées complètes uniquement, jusqu’à hier. Les journées manquantes ou partielles ne comptent jamais comme un zéro."
+                    }
+                }
+            }
+        },
+        "Best recorded day": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Best recorded day"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Meilleure journée enregistrée"
+                    }
+                }
+            }
+        },
+        "Average per recorded day": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Average per recorded day"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Moyenne par journée enregistrée"
+                    }
+                }
+            }
+        },
+        "No completed days recorded yet": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "No completed days recorded yet"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Aucune journée complète enregistrée pour le moment"
+                    }
+                }
+            }
+        },
+        "profile.stats-coverage": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld complete days · %lld unknown days"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld jours complets · %lld jours inconnus"
+                    }
+                }
+            }
+        },
+        "This week": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "This week"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cette semaine"
+                    }
+                }
+            }
+        },
+        "Average steps per day": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Average steps per day"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Moyenne de pas par jour"
+                    }
+                }
+            }
+        },
+        "Recorded steps": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Recorded steps"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Pas enregistrés"
+                    }
+                }
+            }
+        },
+        "profile.stats-week-coverage": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld of %lld elapsed days recorded"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld jours enregistrés sur %lld jours écoulés"
+                    }
+                }
+            }
+        },
+        "Monday to yesterday. Averages use recorded days only.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Monday to yesterday. Averages use recorded days only."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "De lundi à hier. Les moyennes utilisent uniquement les journées enregistrées."
+                    }
+                }
+            }
+        },
+        "Days by activity level": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Days by activity level"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Journées par niveau d’activité"
+                    }
+                }
+            }
+        },
+        "profile.stats-level-days": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld days"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld jours"
+                    }
+                }
+            }
+        },
+        "8,000+ steps": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "8,000+ steps"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "8 000 pas et plus"
+                    }
+                }
+            }
+        },
+        "profile.stats-level-range": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld to %lld steps"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld à %lld pas"
+                    }
+                }
+            }
+        },
+        "profile.stats-streak-best": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Best recorded streak: %lld days"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Meilleure série enregistrée : %lld jours"
+                    }
+                }
+            }
+        },
+        "profile.stats-streak-current": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Current streak: %lld days"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Série actuelle : %lld jours"
+                    }
+                }
+            }
+        },
+        "A streak is consecutive recorded days in the same level. Unknown days interrupt the record.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "A streak is consecutive recorded days in the same level. Unknown days interrupt the record."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Une série compte les journées enregistrées consécutives au même niveau. Les journées inconnues interrompent le suivi."
+                    }
+                }
+            }
+        },
+        "Current streak unavailable until yesterday is complete.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Current streak unavailable until yesterday is complete."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "La série actuelle sera disponible lorsque la journée d’hier sera complète."
+                    }
+                }
+            }
+        },
+        "profile.stats-level-couch": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Couch"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Canapé"
+                    }
+                }
+            }
+        },
+        "profile.stats-level-warming-up": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Warming up"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Échauffement"
+                    }
+                }
+            }
+        },
+        "profile.stats-level-moving": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Moving"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "En mouvement"
+                    }
+                }
+            }
+        },
+        "profile.stats-level-active": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Active"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Actif"
+                    }
+                }
+            }
+        },
+        "profile.stats-level-ripped": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ripped"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Musclé"
+                    }
+                }
+            }
+        },
+        "This also shares step records, averages, activity levels and streaks for that period. Your full recorded history stays private.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "This also shares step records, averages, activity levels and streaks for that period. Your full recorded history stays private."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les records de pas, moyennes, niveaux d’activité et séries de cette période sont aussi partagés. Votre historique complet reste privé."
+                    }
+                }
+            }
+        },
+        "Profiles now show your best recorded step day, weekly averages, activity-level distribution and streaks. Shared statistics respect your chosen audience and history period.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Profiles now show your best recorded step day, weekly averages, activity-level distribution and streaks. Shared statistics respect your chosen audience and history period."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les profils affichent votre meilleure journée de pas enregistrée, les moyennes hebdomadaires, la répartition des niveaux d’activité et les séries. Les statistiques partagées respectent le public et la période choisis."
+                    }
+                }
+            }
+        },
         "Profile history keeps private Fight participants hidden and opens the selected round. Scheduled Fight records and rematch durations are now preserved.": {
             "localizations": {
                 "en": {

@@ -91,6 +91,16 @@
                 }
             }
         },
+        "Type @ to tag someone in a post or comment. They get a FitFight notification with your name.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tape @ pour mentionner quelqu’un dans une publication ou un commentaire. FitFight lui envoie une notification avec ton nom."
+                    }
+                }
+            }
+        },
         "A refreshed App Store description explaining how to start a private step challenge and follow the standings.": {
             "localizations": {
                 "fr": {

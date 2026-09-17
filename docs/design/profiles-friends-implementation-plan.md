@@ -38,7 +38,9 @@ Only finalized days with a known historical time zone count, through yesterday.
 Today, partial days and missing days do not count as zero or establish streaks.
 A missing date interrupts the verified sequence. If yesterday is unavailable,
 the current streak is unknown. Weekly statistics run Monday through yesterday
-in the Profile's time zone and show the recorded/elapsed-day denominator.
+in the latest available recorded day's time zone and show the recorded/elapsed-day
+denominator. The legacy Profile time zone is not updated by current clients. An
+empty history uses UTC only to anchor the empty calendar period.
 They are not represented as a complete weekly average when days are missing.
 
 The owner sees available recorded history, not a claim of complete lifetime

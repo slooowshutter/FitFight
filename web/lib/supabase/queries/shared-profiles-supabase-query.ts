@@ -112,20 +112,20 @@ export async function readSharedProfile(
         `) : [];
         let statistics: SharedProfile["step_statistics"] = null;
         if (access.activity) {
-            const [contextRow] = await sql`
-                select (now() at time zone coalesce(time_zone, 'UTC'))::date::text today,
-                    coalesce(time_zone, 'UTC') time_zone from public.profiles where user_id = ${targetId}
-            `;
-            const context = profileStatisticsContextSchema.parse(contextRow);
             const history = relationship.owner ? activityDaySchema.array().parse(await sql`
                 select distinct on (days.day) days.day::text, days.value::float8 steps,
                     days.time_zone, days.updated_at::text, (days.finalized_at is not null) finalized
                 from public.metric_days days
                 join public.data_sources source on source.id = days.source_id
                 where days.user_id = ${targetId} and days.metric = 'steps' and source.provider = 'apple_health'
-                    and days.day < ${context.today}::date
                 order by days.day, days.updated_at desc
             `) : values;
+            // The legacy Profile time zone is not updated by current mobile clients.
+            const timeZone = history.findLast((day) => day.time_zone !== null)?.time_zone ?? "UTC";
+            const [contextRow] = await sql`
+                select (now() at time zone ${timeZone})::date::text today, ${timeZone}::text time_zone
+            `;
+            const context = profileStatisticsContextSchema.parse(contextRow);
             statistics = profileStepStatistics(history, context, relationship.owner ? null : row.settings.activity_days);
         }
         return sharedProfileSchema.parse({

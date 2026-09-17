@@ -260,6 +260,7 @@ struct ContentView: View {
             RequestsOnboardingView()
         } else {
             signedInApp
+                .id(session.authSession?.user.id)
         }
     }
 
@@ -286,11 +287,24 @@ struct ContentView: View {
         case .newFight:
             NewFightView()
         case .feed:
-            FeedView()
+            NavigationStack {
+                FeedView()
+                    .toolbar(.hidden, for: .navigationBar)
+                    .navigationDestination(item: $model.openPost) { target in
+                        FightPostDetailView(target: target)
+                            .id(target)
+                    }
+            }
         case .feedback:
             FeedbackTabView()
         case .you:
-            YouView()
+            NavigationStack {
+                YouView()
+                    .toolbar(.hidden, for: .navigationBar)
+                    .navigationDestination(isPresented: $model.showingActivity) {
+                        FeedActivityView()
+                    }
+            }
         }
     }
 

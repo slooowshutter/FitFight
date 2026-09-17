@@ -13,7 +13,10 @@ struct UNNotificationContent { var userInfo: [String: Any] = [:] }
 struct UNNotificationRequest { var content = UNNotificationContent() }
 struct UNNotification { var request = UNNotificationRequest() }
 struct UNNotificationResponse { var notification = UNNotification() }
-@MainActor enum AppModel { static func storePendingFightRoute(_ route: String) {} }
+@MainActor enum AppModel {
+    static var pendingRoute: String?
+    static func storePendingFightRoute(_ route: String) { pendingRoute = route }
+}
 struct PermissionOptions: OptionSet { let rawValue: Int; static let alert = Self(rawValue: 1); static let sound = Self(rawValue: 2) }
 @MainActor final class UNUserNotificationCenter {
     static let shared = UNUserNotificationCenter()
@@ -103,7 +106,8 @@ enum AuthEvent { case initialSession, tokenRefreshed, signedOut }
         let userA = User(id: UUID()), userB = User(id: UUID())
         session.authSession = Session(user: userA, accessToken: "A")
         let push = PushNotificationService()
-        push.configure(session: session)
+        var notifications = 0
+        push.configure(session: session, onNotification: { notifications += 1 })
         await push.refreshServerStatus()
         await push.refreshAuthorizationStatus()
         await push.registerIfAuthorized()
@@ -119,6 +123,7 @@ enum AuthEvent { case initialSession, tokenRefreshed, signedOut }
         precondition(UNUserNotificationCenter.shared.cleared == 1)
         let signedOutPresentation = await push.userNotificationCenter(.current(), willPresent: UNNotification())
         precondition(signedOutPresentation.isEmpty, "A late foreground notification must stay hidden during signout")
+        precondition(notifications == 0, "Signed-out notifications must not refresh content")
         session.authSession = nil
         await push.registerIfAuthorized()
         precondition(UIApplication.shared.registers == 1, "Signed-out state must not register with APNs")
@@ -136,6 +141,12 @@ enum AuthEvent { case initialSession, tokenRefreshed, signedOut }
         precondition(UIApplication.shared.registers == 2)
         let signedInPresentation = await push.userNotificationCenter(.current(), willPresent: UNNotification())
         precondition(signedInPresentation == [.banner, .sound])
+        precondition(notifications == 1, "A foreground notification refreshes the visible feed")
+        let route = "/fights/\(UUID())?post=\(UUID())"
+        await push.userNotificationCenter(.current(), didReceive: UNNotificationResponse(
+            notification: UNNotification(request: UNNotificationRequest(content: UNNotificationContent(userInfo: ["fitfight": ["route": route]])))
+        ))
+        precondition(AppModel.pendingRoute == route && notifications == 2, "A tap while already foregrounded must persist and consume its post route")
 
         recorder.failRevoke = true
         await push.revokeLocalRegistration()

@@ -32,12 +32,16 @@ fixes, and no finalized daily totals are relabeled.
 [iOS refresh](https://github.com/slooowshutter/FitFight/actions/runs/35239173445)
 failed all three upload-order checks, and the
 [database test](https://github.com/slooowshutter/FitFight/actions/runs/35239173174)
-returned eight dates for a seven-day grant. Verification of the fixes is pending.
-Additional coverage includes saved-zone travel, daylight-saving custom/preset
-windows, optional native decoding, and authenticated legacy `/me` requests with
-build headers 113, 190, 200, 201, 202, and 203.
+returned eight dates for a seven-day grant. Both regressions pass with the fixes.
 
-**Live and rollout:** read-only `/api/app-release` checks at **17 Sep 15:14:57 UTC**
+- [Web API, `613b388`](https://github.com/slooowshutter/FitFight/actions/runs/35241578740): strict typecheck, all 268 unit/contract tests, API contract parsing, and privacy-page rendering passed. Coverage includes valid/invalid zones, unset legacy accounts, and rejecting a zone edit once the Fight's start instant has passed.
+- [Database, `613b388`](https://github.com/slooowshutter/FitFight/actions/runs/35241578761): all 32 transaction/HTTP tests passed both before and after the deferred client-permission cutoff. The mixed-zone sharing regression returns exactly seven dates; owner statistics and previews use the same saved zone. Authenticated `/me` requests cover build headers 113, 190, 200, 201, 202, and 203, including legacy PATCH requests that omit and preserve the zone. The 211 pgTAP checks, 18 cutoff checks, and historical backfill/deletion rehearsal also passed.
+- [iOS simulator, `733f642`](https://github.com/slooowshutter/FitFight/actions/runs/35241180293): full app compilation on GitHub-hosted `macos-26`, Health upload/refresh ordering, saved-zone travel, daylight-saving custom/preset windows and rematches, old/new optional-field decoding, and English/French localizations passed. Native source and fixtures are unchanged in `613b388`.
+
+These are disposable cloud database and simulated native checks. They do not
+replace installed-device verification or prove live deployment.
+
+**Live and rollout:** read-only `/api/app-release` checks at **17 Sep 15:41:31 UTC**
 show staging latest 1.1.1 (201), review/internal 1.1.2 (203), enforcement off;
 production latest 1.1.1 (202), review/internal null, enforcement on. Those live
 candidates do not contain this branch. Deploy the compatible backend after the
@@ -65,7 +69,7 @@ intact. No new schema or HealthKit collection is added by this extension.
 
 - [Web API, `9513ee6`](https://github.com/slooowshutter/FitFight/actions/runs/35172085761): strict typecheck, all 265 unit/contract tests, API contract parsing, and the existing Privacy-page rendering checks. Eight new calculation tests cover thresholds, exact-category streaks, gaps, partial days, observed weekly denominators, sharing windows, empty history, DST, leap days, and year boundaries.
 - [Database, `9513ee6`](https://github.com/slooowshutter/FitFight/actions/runs/35172085773): all 31 transaction/HTTP tests pass before and after the separately deferred grant cutoff, alongside 211 pgTAP checks, build 113 compatibility, and the historical backfill/deletion rehearsal. New checks prove older personal records remain owner-only, shared streaks clip to 7/30 days, previews use the same limits, sharing revocation/friend removal/blocking take effect, and recorded time zones govern the date boundary. Existing authenticated `/me` compatibility covers build headers 113, 190, 200, 201, and 202.
-- [iOS simulator, `2ab9359`](https://github.com/slooowshutter/FitFight/actions/runs/35171964316): app compilation on GitHub-hosted `macos-26`, new statistics response decoding, old optional-field compatibility, stale-response/revocation/account-switch tests, and English/French localizations. Native source and fixtures are unchanged since this run.
+- [iOS simulator, `2ab9359`](https://github.com/slooowshutter/FitFight/actions/runs/35171964316): app compilation on GitHub-hosted `macos-26`, new statistics response decoding, old optional-field compatibility, stale-response/revocation/account-switch tests, and English/French localizations. The later review-fix checks above cover the current native source and fixtures.
 
 The checks use disposable cloud data and simulated native responses, not installed
 versions of every supported build. No live deployment or app distribution has

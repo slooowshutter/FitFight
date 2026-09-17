@@ -29,6 +29,20 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 17,
+            notes: "The slide haptics lab has a Custom option for tuning rumble, pulses, ramp shapes, the finishing hit, and confirmation distance. Your settings save automatically on this phone."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Slide to start builds from soft feedback to full-strength vibration, with a heavy finish even on a quick swipe. The 20 haptic tests now have wider ramps and a 0-100 scale."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
             notes: "Feedback no longer shows a duplicate button above the bottom tabs. Use the plus at the top to add a request."
         ),
         ReleaseNote(

@@ -1,12 +1,59 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **16 Sep 2026**. Production candidate: **1.1.1 (202)**.
+Read this before building. Last updated **17 Sep 2026**. Production candidate: **1.1.1 (202)**.
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
 ---
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
+
+## Stronger slide haptics: prepared 17 Sep 2026
+
+**Code:** The existing 20 slide presets now cover soft starts, early builds, late
+surges, and accelerating pulses, with strength displayed on a 0-100 scale. Every
+preset reaches its maximum intensity at the existing 85% confirmation threshold.
+Saved recipe IDs and the on-device selection are preserved. Continuous patterns
+use neutral base parameters so the starting intensity no longer caps their
+output, following [Apple's dynamic parameter semantics](https://developer.apple.com/documentation/corehaptics/updating-continuous-and-transient-haptic-parameters-in-real-time).
+Timed pulses also respond immediately to track movement. Confirmation uses the
+final finger position and plays a full-strength heavy impact only when the action
+succeeds.
+
+The lab also has a **Custom** editor with a test slider pinned below its controls.
+It exposes rumble strength/crispness endpoints and separate ramp powers; ticks
+with texture or five system impact styles; track counts or clock frequency
+endpoints; extra movement ticks; tick strength/crispness endpoints and ramp power;
+and the finishing hit's enablement, style, and strength. Confirmation distance is
+adjustable from 50-100% of the track, and its haptic ramp reaches the selected end
+values there. Changing a recipe resets any active test.
+
+Every control edit immediately saves the full custom configuration in this
+phone's app preferences, including settings hidden by disabled controls. The
+custom draft survives switching presets, closing the lab, and app relaunch.
+**Use custom on Slide to start** persists the selection; the New fight slider
+observes the saved configuration, including its confirmation point and finishing
+hit. Saved values are range-checked when restored. Save errors keep the previous
+record and appear in the editor. Localized 1.1.1 release notes cover both changes.
+
+**Checks:** The regression harness compiles the production recipes, engine, and
+gesture/confirmation methods against recording hardware/UI boundaries. Cloud
+Swift 6.2.4 in Swift 5 mode reproduced the old weak-output and missed-pulse
+behavior; the final harness passed 182/182 checks for ramps, fast swipes,
+reversal/cancellation, held pulses, recipe changes, repeated lab tests, accessible
+confirmation, failed actions, disabled/busy controls, and the existing UIKit
+fallback. Custom checks cover all persisted fields, immediate editor binding
+saves, reopening preferences, retaining inactive settings, malformed saved data,
+failed-save preservation, recipe edits with the same ID, and applying the saved
+confirmation point and finishing hit to the production control. The harness is
+included in hosted iOS CI. Localization, native API boundary, saved preset IDs,
+and whitespace checks passed.
+
+**Cloud iOS and live:** The full iOS build and physical iPhone vibration test are
+pending. Recording boundaries verify the commands sent to the hardware, not their
+perceived strength or latency. No API contract, native API model, database,
+deployment order, or supported-client requirement changed. No merge,
+TestFlight upload, or production deployment was performed.
 
 ## Website download destinations: prepared 17 Sep 2026
 

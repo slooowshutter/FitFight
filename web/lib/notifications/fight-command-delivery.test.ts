@@ -105,7 +105,10 @@ for (const entry of [
                         };
                     }
                     if (specifier.endsWith("/auth-supabase-query")) {
-                        return { verifyUser: async () => ({ userId }) };
+                        return {
+                            verifyUser: async () => ({ userId }),
+                            readAdminViewer: async () => ({}),
+                        };
                     }
                     if (specifier.endsWith("/supabase/postgres")) {
                         return { createDatabaseClient: () => ({}) };
@@ -126,7 +129,6 @@ for (const entry of [
                     }
                     if (specifier.endsWith("/is-fitfight-admin")) {
                         return {
-                            readAdminViewer: async () => ({}),
                             isFitFightAdmin: () => true,
                         };
                     }

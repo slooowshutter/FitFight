@@ -89,6 +89,19 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
     static var commentDeletions: [CheckedContinuation<FitFightFightPostCommentDeletion, Error>] = []
     static var commentReports: [CheckedContinuation<Void, Error>] = []
     static var commentPages: [String: FitFightFightPostCommentList]?
+    static var feedbackLists: [CheckedContinuation<FitFightFeedbackList, Error>] = []
+    static var feedbackDetails: [CheckedContinuation<FitFightFeedbackDetail, Error>] = []
+    static var feedbackDeletions: [CheckedContinuation<Void, Error>] = []
+
+    func listFeedback(kind: String?, accessToken: String) async throws -> FitFightFeedbackList {
+        try await withCheckedThrowingContinuation { Self.feedbackLists.append($0) }
+    }
+    func feedbackDetail(postID: UUID, accessToken: String) async throws -> FitFightFeedbackDetail {
+        try await withCheckedThrowingContinuation { Self.feedbackDetails.append($0) }
+    }
+    func deleteFeedbackPost(postID: UUID, accessToken: String) async throws {
+        try await withCheckedThrowingContinuation { Self.feedbackDeletions.append($0) }
+    }
 
     func fightPostComments(
         postID: UUID,
@@ -809,6 +822,86 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
         await tokenReport.value
         check(!sentAfterSignOut, "comment operations stop after sign-out during token refresh")
 
+        let requestA = FitFightFeedbackPost(
+            id: UUID(), kind: "feature", title: "First request", body: "Delete this request",
+            voteCount: 0, commentCount: 0, voted: false,
+            authorId: UUID(), authorHandle: "test", mine: false, createdAt: Date()
+        )
+        var requestB = requestA
+        requestB.id = UUID()
+        requestB.kind = "bug"
+        let requestComment = FitFightFeedbackComment(id: UUID(), body: "Keep this comment", authorHandle: "test", createdAt: Date())
+        for detailFinishesFirst in [false, true] {
+            let feedback = FeedbackStore()
+            feedback.posts = [requestA, requestB]
+            let initialDetail = Task { await feedback.loadDetail(session: session, postID: requestA.id) }
+            while FitFightAPI.feedbackDetails.isEmpty { await Task.yield() }
+            FitFightAPI.feedbackDetails.removeFirst().resume(returning: .init(post: requestA, comments: []))
+            await initialDetail.value
+
+            let deletion = Task { await feedback.delete(session: session, postID: requestA.id) }
+            while FitFightAPI.feedbackDeletions.isEmpty { await Task.yield() }
+            let nextDetail = Task { await feedback.loadDetail(session: session, postID: requestB.id) }
+            while FitFightAPI.feedbackDetails.isEmpty { await Task.yield() }
+            if detailFinishesFirst {
+                FitFightAPI.feedbackDetails.removeFirst().resume(returning: .init(post: requestB, comments: [requestComment]))
+                await nextDetail.value
+                feedback.error = "New request error"
+            }
+            FitFightAPI.feedbackDeletions.removeFirst().resume()
+            check(await deletion.value, "feedback deletion succeeds after navigating to another request")
+            check(feedback.posts == [requestB], "feedback deletion removes only its own board row")
+            if detailFinishesFirst {
+                check(feedback.error == "New request error", "deletion preserves an error on the newly opened request")
+            } else {
+                check(feedback.isLoading, "deletion keeps the new request's pending loading state")
+                FitFightAPI.feedbackDetails.removeFirst().resume(returning: .init(post: requestB, comments: [requestComment]))
+                await nextDetail.value
+            }
+            check(feedback.detail == requestB && feedback.comments == [requestComment], "new request detail and comments survive either deletion completion order")
+            check(feedback.canDelete && feedback.canLaunchFix && !feedback.isLoading, "new request admin actions load and its spinner settles")
+        }
+
+        for deletionFails in [false, true] {
+            let feedback = FeedbackStore()
+            feedback.posts = [requestA]
+            let initialDetail = Task { await feedback.loadDetail(session: session, postID: requestA.id) }
+            while FitFightAPI.feedbackDetails.isEmpty { await Task.yield() }
+            FitFightAPI.feedbackDetails.removeFirst().resume(returning: .init(post: requestA, comments: []))
+            await initialDetail.value
+            let deletion = Task { await feedback.delete(session: session, postID: requestA.id) }
+            let staleDetail = Task { await feedback.loadDetail(session: session, postID: requestA.id) }
+            let listReload = Task { await feedback.load(session: session, kind: nil) }
+            while FitFightAPI.feedbackDeletions.isEmpty || FitFightAPI.feedbackDetails.isEmpty || FitFightAPI.feedbackLists.isEmpty {
+                await Task.yield()
+            }
+            if deletionFails {
+                FitFightAPI.feedbackDeletions.removeFirst().resume(throwing: TestFailure.offline)
+            } else {
+                FitFightAPI.feedbackDeletions.removeFirst().resume()
+            }
+            check(await deletion.value == !deletionFails, "feedback deletion reports its actual result")
+            if deletionFails {
+                check(feedback.detail == requestA && feedback.error != nil, "failed deletion retains the request and shows its error")
+            }
+            FitFightAPI.feedbackDetails.removeFirst().resume(returning: .init(post: requestA, comments: [requestComment]))
+            await staleDetail.value
+            FitFightAPI.feedbackLists.removeFirst().resume(returning: .init(posts: [requestA, requestB]))
+            await listReload.value
+            check(feedback.posts == (deletionFails ? [requestA, requestB] : [requestB]), "list reload excludes a deleted request but still accepts other rows")
+            check(feedback.detail == (deletionFails ? requestA : nil), "stale detail cannot restore a successfully deleted request")
+            check(!feedback.isLoading && !feedback.isDeleting, "feedback loading and deletion flags settle after pending requests finish")
+        }
+
         if failures != 0 { exit(1) }
+    }
+}
+
+extension FitFightFeedbackDetail {
+    init(post: FitFightFeedbackPost, comments: [FitFightFeedbackComment]) {
+        self.post = post
+        self.comments = comments
+        canLaunchFix = true
+        canDelete = true
     }
 }

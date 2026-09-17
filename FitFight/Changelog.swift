@@ -29,6 +29,20 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 17,
+            notes: "Feedback keeps loading correctly when you leave a request while it is being deleted."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Admins can delete a feedback request from its menu after confirming."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
             notes: "Comment refreshes are more reliable after connection errors. Live updates no longer interrupt loading more comments."
         ),
         ReleaseNote(

@@ -76,7 +76,7 @@ struct FightDetailView: View {
     }
 
     var body: some View {
-        FFScreen(top: AnyView(nav), refresh: pendingJoin ? nil : fightsRefresh) {
+        FFScreen(top: AnyView(nav), refresh: pendingJoin ? nil : fightsRefresh, pinSectionHeaders: true) {
             if pendingJoin {
                 JoinFightPreview(
                     fight: fight,

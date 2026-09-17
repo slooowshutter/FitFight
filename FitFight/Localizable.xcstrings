@@ -91,6 +91,16 @@
                 }
             }
         },
+        "Each Feed post keeps the person, channel, time, and hearts at the top while you scroll the rest of the post.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Chaque publication du fil garde la personne, le canal, l’heure et les cœurs en haut pendant que tu fais défiler le reste."
+                    }
+                }
+            }
+        },
         "Type @ to tag someone in a post or comment. They get a FitFight notification with your name.": {
             "localizations": {
                 "fr": {

@@ -364,7 +364,7 @@ struct FeedView: View {
     @State private var isRefreshingFeed = false
 
     var body: some View {
-        FFScreen(refresh: feedRefresh) {
+        FFScreen(refresh: feedRefresh, pinSectionHeaders: true) {
             if showsChrome {
                 FFScreenTitle(
                     title: String(localized: "Feed"),
@@ -387,7 +387,13 @@ struct FeedView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            FeedPostList(store: feed, onOpenPhoto: { openedPhoto = FeedOpenedPhoto(url: $0) })
+            feedPostSections(
+                store: feed,
+                model: model,
+                session: session,
+                theme: theme,
+                onOpenPhoto: { openedPhoto = FeedOpenedPhoto(url: $0) }
+            )
         }
         .task {
             guard !staticRender, !CompanionPreview.isEnabled else { return }
@@ -628,7 +634,7 @@ struct FightPostsSection: View {
     @State private var openedPhoto: FeedOpenedPhoto?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: theme.space.cardGap) {
+        Group {
             HStack(alignment: .center, spacing: 12) {
                 if fightFeed.posts.isEmpty && !fightFeed.isLoading {
                     Text(String(localized: "Tap + to post to this fight."))
@@ -643,7 +649,14 @@ struct FightPostsSection: View {
                     .ffType(.caption)
                     .foregroundStyle(theme.emberText)
             }
-            FeedPostList(store: fightFeed, fightID: fightID, onOpenPhoto: { openedPhoto = FeedOpenedPhoto(url: $0) })
+            feedPostSections(
+                store: fightFeed,
+                model: model,
+                session: session,
+                theme: theme,
+                fightID: fightID,
+                onOpenPhoto: { openedPhoto = FeedOpenedPhoto(url: $0) }
+            )
         }
         .environmentObject(fightFeed)
         .task(id: fightID) {
@@ -670,58 +683,54 @@ struct FightPostsSection: View {
     }
 }
 
-private struct FeedPostList: View {
-    @ObservedObject var store: FeedStore
-    var fightID: UUID? = nil
-    let onOpenPhoto: (URL) -> Void
-
-    @EnvironmentObject private var model: AppModel
-    @EnvironmentObject private var session: SessionStore
-    @Environment(\.ffTheme) private var theme
-
-    var body: some View {
-        LazyVStack(alignment: .leading, spacing: theme.space.cardGap) {
-            ForEach(store.posts) { post in
-                FightPostCard(
-                    post: post,
-                    onOpen: fightID == nil ? post.fightId.map { id in { model.openFightFromFeed(id: id.uuidString) } } : nil,
-                    onOpenPhoto: onOpenPhoto
-                )
-                .onAppear {
-                    store.visiblePostIDs.insert(post.id)
-                    if store.stalePostIDs.contains(post.id) {
-                        Task { await store.refreshVisible(session: session, fightID: fightID, invalidate: false) }
-                    }
+@MainActor
+@ViewBuilder
+private func feedPostSections(
+    store: FeedStore,
+    model: AppModel,
+    session: SessionStore,
+    theme: Theme,
+    fightID: UUID? = nil,
+    onOpenPhoto: @escaping (URL) -> Void
+) -> some View {
+    ForEach(store.posts) { post in
+        FightPostCard(
+            post: post,
+            onOpen: fightID == nil ? post.fightId.map { id in { model.openFightFromFeed(id: id.uuidString) } } : nil,
+            onOpenPhoto: onOpenPhoto,
+            onVisible: {
+                store.visiblePostIDs.insert(post.id)
+                if store.stalePostIDs.contains(post.id) {
+                    Task { await store.refreshVisible(session: session, fightID: fightID, invalidate: false) }
                 }
-                .onDisappear { store.visiblePostIDs.remove(post.id) }
-            }
-            if store.nextCursor != nil {
-                HStack(spacing: 12) {
-                    if let error = store.moreError {
-                        Text(error)
-                            .ffType(.caption)
-                            .foregroundStyle(theme.emberText)
-                            .lineLimit(2)
-                        Button(String(localized: "Try again")) {
-                            Task { await store.load(session: session, fightID: fightID, more: true) }
-                        }
-                        .ffType(.label)
-                        .foregroundStyle(theme.mossText)
-                        .buttonStyle(FFHapticPlainStyle())
-                    } else if store.isLoadingMore {
-                        ProgressView()
-                            .tint(theme.textSecondary)
-                            .accessibilityLabel(String(localized: "Loading"))
-                    }
+            },
+            onHidden: { store.visiblePostIDs.remove(post.id) }
+        )
+    }
+    if store.nextCursor != nil {
+        HStack(spacing: 12) {
+            if let error = store.moreError {
+                Text(error)
+                    .ffType(.caption)
+                    .foregroundStyle(theme.emberText)
+                    .lineLimit(2)
+                Button(String(localized: "Try again")) {
+                    Task { await store.load(session: session, fightID: fightID, more: true) }
                 }
-                .frame(maxWidth: .infinity, minHeight: 44)
-                .task {
-                    guard store.moreError == nil else { return }
-                    await store.load(session: session, fightID: fightID, more: true)
-                }
+                .ffType(.label)
+                .foregroundStyle(theme.mossText)
+                .buttonStyle(FFHapticPlainStyle())
+            } else if store.isLoadingMore {
+                ProgressView()
+                    .tint(theme.textSecondary)
+                    .accessibilityLabel(String(localized: "Loading"))
             }
         }
-        .animation(nil, value: store.posts.map(\.id))
+        .frame(maxWidth: .infinity, minHeight: 44)
+        .task {
+            guard store.moreError == nil else { return }
+            await store.load(session: session, fightID: fightID, more: true)
+        }
     }
 }
 
@@ -971,12 +980,192 @@ struct FightPostComposer: View {
     }
 }
 
+private struct FightPostHeartBurst: View {
+    var trigger: Int
+
+    @Environment(\.ffTheme) private var theme
+    @State private var flying = false
+    @State private var shown = false
+
+    var body: some View {
+        ZStack {
+            ForEach(0..<5, id: \.self) { index in
+                Text("❤️")
+                    .font(.system(size: 12 + CGFloat(index % 3)))
+                    .offset(
+                        x: flying ? CGFloat([-16, -7, 2, 11, 18][index]) : CGFloat([-4, -2, 0, 3, 5][index]),
+                        y: flying ? -30 - CGFloat(index * 2) : 0
+                    )
+                    .opacity(shown ? (flying ? 0 : 1) : 0)
+                    .scaleEffect(flying ? 1.2 : 0.7)
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+        .onChange(of: trigger) { _, value in
+            guard value > 0 else { return }
+            var reset = Transaction()
+            reset.disablesAnimations = true
+            withTransaction(reset) {
+                flying = false
+                shown = true
+            }
+            withAnimation(theme.motion.celebrate.animation) {
+                flying = true
+            }
+        }
+    }
+}
+
+private struct FightPostStatusHeader: View {
+    let post: FitFightFightPost
+    var onOpen: (() -> Void)?
+    var onActions: () -> Void
+
+    @Environment(\.ffTheme) private var theme
+    @EnvironmentObject private var session: SessionStore
+    @EnvironmentObject private var feed: FeedStore
+    @State private var isPinned = false
+    @State private var heartBurst = 0
+
+    var body: some View {
+        HStack(alignment: isPinned ? .center : .top, spacing: 10) {
+            CompanionAvatar(
+                personID: post.author.userId.uuidString,
+                companionID: post.author.companionId,
+                isYou: post.mine,
+                monogram: post.author.initials,
+                photoURL: post.author.avatar?.url,
+                size: isPinned ? 32 : 38
+            )
+            VStack(alignment: .leading, spacing: 3) {
+                Text(verbatim: post.author.atHandle)
+                    .ffType(.rowTitle)
+                    .foregroundStyle(theme.text)
+                    .lineLimit(1)
+                HStack(spacing: 5) {
+                    Text(post.channelLabel)
+                        .lineLimit(1)
+                    Text("·")
+                    Text(post.createdDate, format: .relative(presentation: .named, unitsStyle: .abbreviated))
+                        .fixedSize()
+                }
+                .ffType(.micro)
+                .foregroundStyle(theme.textTertiary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                onOpen?()
+            }
+            reactionStatus
+            HStack(alignment: .top, spacing: 0) {
+                TextTranslationButton(text: post.body)
+                Button(action: onActions) {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(theme.textFaint)
+                        .frame(height: 20)
+                        .frame(width: 44, height: 44, alignment: .top)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(FFHapticPlainStyle())
+                .accessibilityLabel(String(localized: "Post actions"))
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, isPinned ? 10 : 16)
+        .padding(.bottom, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            ZStack {
+                if isPinned {
+                    theme.bg.opacity(0.9)
+                    Rectangle().fill(.ultraThinMaterial)
+                }
+                theme.card.opacity(isPinned ? 0.72 : 1)
+            }
+        }
+        .clipShape(headerShape)
+        .overlay {
+            headerShape.strokeBorder(theme.hairline, lineWidth: 1)
+        }
+        .overlay(alignment: .trailing) {
+            FightPostHeartBurst(trigger: heartBurst)
+                .padding(.trailing, 92)
+                .padding(.top, 4)
+        }
+        .background {
+            GeometryReader { geo in
+                let minY = geo.frame(in: .named("ffScreen")).minY
+                Color.clear
+                    .onAppear { updatePinned(minY) }
+                    .onChange(of: minY) { _, y in updatePinned(y) }
+            }
+        }
+        .animation(theme.motion.quick.animation, value: isPinned)
+        .onChange(of: heartCount) { previous, count in
+            if count > previous {
+                heartBurst += 1
+            }
+        }
+        .zIndex(1)
+    }
+
+    private var headerShape: UnevenRoundedRectangle {
+        UnevenRoundedRectangle(
+            topLeadingRadius: isPinned ? 0 : theme.radius.card,
+            bottomLeadingRadius: 0,
+            bottomTrailingRadius: 0,
+            topTrailingRadius: isPinned ? 0 : theme.radius.card,
+            style: .continuous
+        )
+    }
+
+    @ViewBuilder
+    private var reactionStatus: some View {
+        if !post.reactions.isEmpty {
+            HStack(spacing: 4) {
+                ForEach(Array(post.reactions.prefix(3)), id: \.emoji) { reaction in
+                    Button {
+                        Task { await feed.react(session: session, post: post, emoji: reaction.emoji) }
+                    } label: {
+                        Text(reaction.count > 1 ? "\(reaction.emoji) \(reaction.count)" : reaction.emoji)
+                            .ffType(.micro)
+                            .foregroundStyle(reaction.mine ? theme.mossOn : theme.text)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 4)
+                            .background(reaction.mine ? theme.mossFill : theme.control, in: Capsule())
+                    }
+                    .buttonStyle(FFHapticPlainStyle())
+                    .disabled(feed.reactingPostIDs.contains(post.id))
+                    .accessibilityLabel(reaction.emoji)
+                    .accessibilityValue(String(reaction.count))
+                }
+            }
+        }
+    }
+
+    private var heartCount: Int {
+        post.reactions.first(where: { $0.emoji.contains("❤") })?.count ?? 0
+    }
+
+    private func updatePinned(_ minY: CGFloat) {
+        let pinned = minY <= 8
+        if pinned != isPinned {
+            isPinned = pinned
+        }
+    }
+}
+
 struct FightPostCard: View {
     let post: FitFightFightPost
     var targetCommentID: UUID? = nil
     var onTargetCommentLoaded: (() -> Void)? = nil
     var onOpen: (() -> Void)?
     var onOpenPhoto: (URL) -> Void
+    var onVisible: (() -> Void)? = nil
+    var onHidden: (() -> Void)? = nil
 
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var feed: FeedStore
@@ -987,53 +1176,8 @@ struct FightPostCard: View {
     @State private var draft = ""
 
     var body: some View {
-        FFCard(padding: 16) {
+        Section {
             VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .top, spacing: 10) {
-                    CompanionAvatar(
-                        personID: post.author.userId.uuidString,
-                        companionID: post.author.companionId,
-                        isYou: post.mine,
-                        monogram: post.author.initials,
-                        photoURL: post.author.avatar?.url,
-                        size: 38
-                    )
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(verbatim: post.author.atHandle)
-                            .ffType(.rowTitle)
-                            .foregroundStyle(theme.text)
-                            .lineLimit(1)
-                        HStack(spacing: 5) {
-                            Text(post.channelLabel)
-                                .lineLimit(1)
-                            Text("·")
-                            Text(post.createdDate, format: .relative(presentation: .named, unitsStyle: .abbreviated))
-                                .fixedSize()
-                        }
-                        .ffType(.micro)
-                        .foregroundStyle(theme.textTertiary)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        onOpen?()
-                    }
-                    HStack(alignment: .top, spacing: 0) {
-                        TextTranslationButton(text: post.body)
-                        Button {
-                            showActions = true
-                        } label: {
-                            Image(systemName: "ellipsis")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundStyle(theme.textFaint)
-                                .frame(height: 20)
-                                .frame(width: 44, height: 44, alignment: .top)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(FFHapticPlainStyle())
-                        .accessibilityLabel(String(localized: "Post actions"))
-                    }
-                }
                 if !post.tags.isEmpty {
                     Text(post.tags.map { "@\($0.handle)" }.joined(separator: " "))
                         .ffType(.caption)
@@ -1061,54 +1205,80 @@ struct FightPostCard: View {
                 }
                 FightPostEngagement(post: post, targetCommentID: targetCommentID, onTargetCommentLoaded: onTargetCommentLoaded)
             }
-        }
-        .confirmationDialog(String(localized: "Post"), isPresented: $showActions, titleVisibility: .hidden) {
-            if post.mine {
-                Button(String(localized: "Edit")) {
-                    draft = post.body
-                    editing = true
-                }
-                Button(String(localized: "Delete"), role: .destructive) {
-                    confirmDelete = true
-                }
-            } else {
-                Button(String(localized: "Report")) {
-                    Task { await feed.report(session: session, post: post) }
-                }
-                Button(String(localized: "Hide this person"), role: .destructive) {
-                    Task { await feed.hide(session: session, authorID: post.author.userId) }
-                }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 16)
+            .padding(.top, 10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(theme.card, in: bodyShape)
+            .overlay {
+                bodyShape.strokeBorder(theme.hairline, lineWidth: 1)
             }
-            Button(String(localized: "Cancel"), role: .cancel) {}
-        }
-        .alert(String(localized: "Delete this post?"), isPresented: $confirmDelete) {
-            Button(String(localized: "Delete"), role: .destructive) {
-                Task { await feed.delete(session: session, post: post) }
-            }
-            Button(String(localized: "Cancel"), role: .cancel) {}
-        }
-        .sheet(isPresented: $editing) {
-            FightPostEditSheet(
-                draft: $draft,
-                main: post.broadcast || post.audience == "main" || post.fightId == nil,
-                fightIDs: {
-                    var ids = post.channels.map(\.fightId)
-                    if let fightId = post.fightId, !ids.contains(fightId) {
-                        ids.append(fightId)
+            .onAppear { onVisible?() }
+            .onDisappear { onHidden?() }
+            .confirmationDialog(String(localized: "Post"), isPresented: $showActions, titleVisibility: .hidden) {
+                if post.mine {
+                    Button(String(localized: "Edit")) {
+                        draft = post.body
+                        editing = true
                     }
-                    return ids
-                }()
-            ) {
-                let note = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-                if await feed.update(session: session, post: post, body: note) {
-                    editing = false
+                    Button(String(localized: "Delete"), role: .destructive) {
+                        confirmDelete = true
+                    }
+                } else {
+                    Button(String(localized: "Report")) {
+                        Task { await feed.report(session: session, post: post) }
+                    }
+                    Button(String(localized: "Hide this person"), role: .destructive) {
+                        Task { await feed.hide(session: session, authorID: post.author.userId) }
+                    }
                 }
+                Button(String(localized: "Cancel"), role: .cancel) {}
             }
-            .environmentObject(session)
-            .environmentObject(feed)
-            .fitFightTheme(theme)
-            .presentationBackground(theme.bg)
+            .alert(String(localized: "Delete this post?"), isPresented: $confirmDelete) {
+                Button(String(localized: "Delete"), role: .destructive) {
+                    Task { await feed.delete(session: session, post: post) }
+                }
+                Button(String(localized: "Cancel"), role: .cancel) {}
+            }
+            .sheet(isPresented: $editing) {
+                FightPostEditSheet(
+                    draft: $draft,
+                    main: post.broadcast || post.audience == "main" || post.fightId == nil,
+                    fightIDs: {
+                        var ids = post.channels.map(\.fightId)
+                        if let fightId = post.fightId, !ids.contains(fightId) {
+                            ids.append(fightId)
+                        }
+                        return ids
+                    }()
+                ) {
+                    let note = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if await feed.update(session: session, post: post, body: note) {
+                        editing = false
+                    }
+                }
+                .environmentObject(session)
+                .environmentObject(feed)
+                .fitFightTheme(theme)
+                .presentationBackground(theme.bg)
+            }
+        } header: {
+            FightPostStatusHeader(
+                post: post,
+                onOpen: onOpen,
+                onActions: { showActions = true }
+            )
         }
+    }
+
+    private var bodyShape: UnevenRoundedRectangle {
+        UnevenRoundedRectangle(
+            topLeadingRadius: 0,
+            bottomLeadingRadius: theme.radius.card,
+            bottomTrailingRadius: theme.radius.card,
+            topTrailingRadius: 0,
+            style: .continuous
+        )
     }
 }
 

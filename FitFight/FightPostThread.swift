@@ -7,7 +7,7 @@ struct FightPostEngagement: View {
 
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var feed: FeedStore
-    @Environment(\ .ffTheme) private var theme
+    @Environment(\.ffTheme) private var theme
 
     @State private var comments: [FitFightFightPostComment] = []
     @State private var nextCursor: String?
@@ -27,7 +27,7 @@ struct FightPostEngagement: View {
     @State private var commentsVersion = 0
     @State private var didRevealTarget = false
 
-    private let quickEmoji = ["\ud83d\udd25", "\ud83d\udcaa", "\ud83d\ude02", "\u2764\ufe0f", "\ud83d\udc4f", "\ud83d\ude2e"]
+    private let quickEmoji = ["🔥", "💪", "😂", "❤️", "👏", "😮"]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -88,12 +88,12 @@ struct FightPostEngagement: View {
                     }()
                 ) {
                     HStack {
-                        TextField(String(localized: "Write a comment\u2026"), text: $draft, axis: .vertical)
+                        TextField(String(localized: "Write a comment…"), text: $draft, axis: .vertical)
                             .ffType(.body)
                             .foregroundStyle(theme.text)
                             .lineLimit(1...4)
                         FFButton(
-                            title: loading ? String(localized: "Posting\u2026") : String(localized: "Send"),
+                            title: loading ? String(localized: "Posting…") : String(localized: "Send"),
                             kind: .ghost,
                             fullWidth: false
                         ) {
@@ -157,11 +157,11 @@ struct FightPostEngagement: View {
             FFDivider(inset: 0)
             HStack(spacing: 16) {
                 Button {
-                    let emoji = mine?.emoji ?? "\ud83d\udc4f"
+                    let emoji = mine?.emoji ?? "👏"
                     Task { await feed.react(session: session, post: post, emoji: emoji) }
                 } label: {
                     HStack(spacing: 6) {
-                        Text(mine?.emoji ?? "\ud83d\udc4f")
+                        Text(mine?.emoji ?? "👏")
                         if count > 0 { Text(verbatim: "\(count)") }
                     }
                     .ffType(.caption)
@@ -199,7 +199,7 @@ struct FightPostEngagement: View {
                             Task { await feed.react(session: session, post: post, emoji: emoji) }
                         }
                     }
-                    Button(String(localized: "Other emoji\u2026")) {
+                    Button(String(localized: "Other emoji…")) {
                         showingCustomEmoji = true
                     }
                 } label: {
@@ -216,7 +216,7 @@ struct FightPostEngagement: View {
             }
         }
         .disabled(feed.reactingPostIDs.contains(post.id))
-        .accessibilityValue(feed.reactingPostIDs.contains(post.id) ? String(localized: "Saving\u2026") : "")
+        .accessibilityValue(feed.reactingPostIDs.contains(post.id) ? String(localized: "Saving…") : "")
     }
 
     private var reactionChips: some View {
@@ -240,7 +240,7 @@ struct FightPostEngagement: View {
             }
         }
         .disabled(feed.reactingPostIDs.contains(post.id))
-        .accessibilityValue(feed.reactingPostIDs.contains(post.id) ? String(localized: "Saving\u2026") : "")
+        .accessibilityValue(feed.reactingPostIDs.contains(post.id) ? String(localized: "Saving…") : "")
     }
 
     private var displayedComments: [DisplayedFightComment] {
@@ -495,8 +495,8 @@ private struct FightPostReactionsSheet: View {
     let post: FitFightFightPost
 
     @EnvironmentObject private var session: SessionStore
-    @Environment(\ .ffTheme) private var theme
-    @Environment(\ .dismiss) private var dismiss
+    @Environment(\.ffTheme) private var theme
+    @Environment(\.dismiss) private var dismiss
 
     @State private var people: [FitFightFightPostReactionPerson] = []
     @State private var nextCursor: String?

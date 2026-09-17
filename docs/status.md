@@ -16,15 +16,24 @@ total, and day distributions/current/longest recorded streaks across five activi
 levels. Levels use the companion's existing 2k/4k/6k/8k thresholds. The owner's
 avatar opens their Profile. Only finalized days with known time zones count,
 through yesterday; missing days are unknown. Exact-category streaks cannot bridge
-unknown days. Weekly summaries disclose their recorded-day denominator.
+unknown days. Weekly summaries disclose their recorded-day denominator and use
+the latest available recorded day's time zone. The unused legacy Profile time
+zone does not determine the date boundary.
 
 Owners see available recorded history. Other viewers and previews receive only
 statistics within their explicit activity audience and 7/30-day period. Earlier
 records and streak lengths remain private. The existing v1 Profile response gains
 optional `step_statistics`; existing daily-history and legacy `/me` contracts stay
-intact. No new schema or HealthKit collection is added by this extension. Cloud
-verification is pending for these new changes; the earlier runs below describe the
-preceding Profile implementation only. No live deployment or app distribution has
+intact. No new schema or HealthKit collection is added by this extension.
+
+**Cloud checks for the statistics extension:**
+
+- [Web API, `9513ee6`](https://github.com/slooowshutter/FitFight/actions/runs/35172085761): strict typecheck, all 265 unit/contract tests, API contract parsing, and the existing Privacy-page rendering checks. Eight new calculation tests cover thresholds, exact-category streaks, gaps, partial days, observed weekly denominators, sharing windows, empty history, DST, leap days, and year boundaries.
+- [Database, `9513ee6`](https://github.com/slooowshutter/FitFight/actions/runs/35172085773): all 31 transaction/HTTP tests pass before and after the separately deferred grant cutoff, alongside 211 pgTAP checks, build 113 compatibility, and the historical backfill/deletion rehearsal. New checks prove older personal records remain owner-only, shared streaks clip to 7/30 days, previews use the same limits, sharing revocation/friend removal/blocking take effect, and recorded time zones govern the date boundary. Existing authenticated `/me` compatibility covers build headers 113, 190, 200, 201, and 202.
+- [iOS simulator, `2ab9359`](https://github.com/slooowshutter/FitFight/actions/runs/35171964316): app compilation on GitHub-hosted `macos-26`, new statistics response decoding, old optional-field compatibility, stale-response/revocation/account-switch tests, and English/French localizations. Native source and fixtures are unchanged since this run.
+
+The checks use disposable cloud data and simulated native responses, not installed
+versions of every supported build. No live deployment or app distribution has
 occurred. Read-only manifests at **17 Sep 01:45:27 UTC** still list staging 1.1.1
 (201), enforcement off, and production 1.1.1 (202), enforcement on, with null
 review/internal in both. Backend support precedes native distribution, after the

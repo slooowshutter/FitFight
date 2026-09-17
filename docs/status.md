@@ -18,7 +18,8 @@ personal date boundary, including audience previews, so a seven-day grant cannot
 expose an eighth date after travel.
 
 The existing `profiles.time_zone` column is now exposed as optional `/api/v1/me`
-`time_zone` and an optional PATCH input. Existing values are preserved; new username
+`time_zone` and an optional PATCH input. Existing values are preserved; accounts
+without a stored zone use fixed UTC until they choose one. New username
 onboarding saves the phone's zone, and Edit profile can change it. Daily Health
 aggregates and new Fight durations use the saved zone. Custom Fight date pickers
 and review use a selectable Fight zone; changing it preserves the entered local

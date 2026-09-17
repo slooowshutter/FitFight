@@ -27,7 +27,7 @@ export async function loadProfileAccess(sql: TransactionSql, viewerId: string, t
     const [row] = await sql`
         select jsonb_build_object('user_id', profile.user_id, 'handle', profile.handle,
             'display_name', profile.display_name, 'companion_id', profile.companion_id) identity,
-            media.object_path avatar_path, profile.time_zone,
+            media.object_path avatar_path, coalesce(profile.time_zone, 'UTC') time_zone,
             coalesce(to_jsonb(settings), ${sql.json(defaultProfileSettings)}::jsonb) settings,
             jsonb_build_object(
                 'owner', profile.user_id = ${viewerId},

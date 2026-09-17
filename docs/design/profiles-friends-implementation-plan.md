@@ -40,6 +40,7 @@ A missing date interrupts the verified sequence. If yesterday is unavailable,
 the current streak is unknown. Weekly statistics run Monday through yesterday
 in the person's saved Profile time zone and show the recorded/elapsed-day
 denominator. Edit profile can change the saved zone; travel leaves it unchanged.
+Existing accounts without a saved zone use fixed UTC until they choose one.
 New account onboarding initializes it from the phone. Custom Fights may choose a
 separate zone; existing daily rows retain their original zones and finalized totals.
 Empty history uses the same saved zone to anchor its calendar period.

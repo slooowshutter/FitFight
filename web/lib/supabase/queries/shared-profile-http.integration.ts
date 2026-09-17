@@ -39,6 +39,9 @@ test("authenticated legacy /me and new mutual-profile contracts coexist before a
     const [viewer, target] = sessions;
     const context = { params: Promise.resolve({ userID: target.userId }) };
     const headers = { authorization: `Bearer ${viewer.token}`, "content-type": "application/json" };
+    const unsetProfile = await readMe(new Request("https://staging.fitfight.app/api/v1/me", { headers }), { params: Promise.resolve({}) });
+    assert.equal(unsetProfile.status, 200);
+    assert.equal(profileSchema.parse(await unsetProfile.json()).time_zone, "UTC");
     const zoneResponse = await updateMe(new Request("https://staging.fitfight.app/api/v1/me", {
         method: "PATCH", headers, body: JSON.stringify({ time_zone: "Pacific/Kiritimati" }),
     }), { params: Promise.resolve({}) });

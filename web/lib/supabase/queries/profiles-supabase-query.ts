@@ -47,7 +47,7 @@ async function asProfile(
         avatar,
         companion_id: row.companion_id,
         companion_prompt: row.companion_prompt,
-        time_zone: row.time_zone,
+        time_zone: row.time_zone ?? "UTC",
     };
 }
 

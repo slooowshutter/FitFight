@@ -184,6 +184,18 @@ test("profile reads filter by the authenticated owner and expose only the API fi
     assert.deepEqual(await readProfile(profile.user_id, admin), profile);
 });
 
+test("legacy accounts without a saved zone use a fixed UTC calendar", async () => {
+    const admin = createClient("https://profiles.example", "test-only-key", {
+        auth: { persistSession: false, autoRefreshToken: false },
+        global: {
+            fetch: async () => Response.json([{
+                ...legacyProfile, avatar_media_id: null, time_zone: null,
+            }]),
+        },
+    });
+    assert.deepEqual(await readProfile(profile.user_id, admin), { ...legacyProfile, time_zone: "UTC" });
+});
+
 test("profile updates supply the handle timestamp and leave omitted fields untouched", async () => {
     const before = Date.now();
     const admin = createClient("https://profiles.example", "test-only-key", {

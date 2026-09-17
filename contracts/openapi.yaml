@@ -2552,7 +2552,7 @@ components:
                 referral_code: { type: string, format: uuid }
                 time_zone:
                     type: string
-                    description: Saved personal IANA time zone; optional for older responses.
+                    description: Saved personal IANA time zone, or UTC for legacy unset accounts; optional for older responses.
         UpdateProfile:
             type: object
             additionalProperties: false

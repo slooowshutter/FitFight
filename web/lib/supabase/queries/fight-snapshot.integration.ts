@@ -385,9 +385,9 @@ test("Fight chart and score share a revision through corrections, legacy uploads
     );
     assert.equal(legacyMember?.current_value, 6500);
     assert.equal(
-        legacyMember?.step_checkpoints?.at(-1)?.steps,
-        6500,
-        "Score-only uploads still chart the stored Fight total",
+        legacyMember?.step_checkpoints,
+        null,
+        "Score-only uploads keep their total without inventing daily checkpoints",
     );
     assert.notDeepEqual(
         legacyMember?.step_checkpoints,
@@ -411,7 +411,7 @@ test("Fight chart and score share a revision through corrections, legacy uploads
     );
 });
 
-test("Fight charts reuse stored scores when a revision has no HealthKit day curve", async (t) => {
+test("legacy uploads on different days retain totals without fabricating daily history", async (t) => {
     const f = await fixture(t);
     await database`delete from public.fights where id = any(${database.array([f.ownerOnly, f.unrelated])}::uuid[])`;
     await database`update public.fights set starts_at = '2026-03-29T10:00:00Z', ends_at = '2026-04-01T10:00:00Z'
@@ -426,7 +426,7 @@ test("Fight charts reuse stored scores when a revision has no HealthKit day curv
                 starts_at: "2026-03-29T10:00:00Z",
                 ends_at: "2026-04-01T10:00:00Z",
                 cutoff_at: "2026-03-29T18:00:00Z",
-                steps: 4000,
+                steps: 10000,
             },
         ],
     };
@@ -436,9 +436,9 @@ test("Fight charts reuse stored scores when a revision has no HealthKit day curv
         database,
     );
     const second = structuredClone(first);
-    second.complete_through = "2026-03-30T18:00:00Z";
-    second.fight_aggregates[0].cutoff_at = "2026-03-30T18:00:00Z";
-    second.fight_aggregates[0].steps = 9000;
+    second.complete_through = "2026-03-30T21:00:00Z";
+    second.fight_aggregates[0].cutoff_at = "2026-03-30T21:00:00Z";
+    second.fight_aggregates[0].steps = 8000;
     await syncHealthKitAggregates(
         f.owner,
         healthKitAggregateSyncSchema.parse(second),
@@ -446,14 +446,33 @@ test("Fight charts reuse stored scores when a revision has no HealthKit day curv
     );
     const snapshot = await readFightSnapshot(f.owner, "UTC", database);
     const member = snapshot.members.find((row) => row.user_id === f.owner);
-    assert.equal(member?.current_value, 9000);
-    assert.deepEqual(
-        member?.step_checkpoints?.map((point) => point.steps),
-        [4000, 9000],
-        "Each stored Fight score day becomes a chart point",
+    assert.equal(member?.current_value, 8000);
+    assert.equal(
+        member?.step_checkpoints,
+        null,
+        "Downward corrections and sparse sync times are not daily activity",
     );
     assert.ok(
         snapshot.step_days.every((day) => day.steps === 123),
         "Calendar step_days stay unused",
+    );
+    const third = structuredClone(second);
+    third.complete_through = "2026-03-31T12:00:00Z";
+    third.fight_aggregates[0].cutoff_at = third.complete_through;
+    third.fight_aggregates[0].steps = 12000;
+    await syncHealthKitAggregates(
+        f.owner,
+        healthKitAggregateSyncSchema.parse(third),
+        database,
+    );
+    const afterIncrease = await readFightSnapshot(f.owner, "UTC", database);
+    const increased = afterIncrease.members.find(
+        (row) => row.user_id === f.owner,
+    );
+    assert.equal(increased?.current_value, 12000);
+    assert.equal(
+        increased?.step_checkpoints,
+        null,
+        "An increase cannot fill missing day boundaries either",
     );
 });

@@ -435,9 +435,9 @@ async function listDiscussedFightPostComments(
         const leftCount = replyCount(left);
         const rightCount = replyCount(right);
         if (leftCount !== rightCount) return rightCount - leftCount;
-        const leftTime = Date.parse(isoUtc(left.created_at));
-        const rightTime = Date.parse(isoUtc(right.created_at));
-        if (leftTime !== rightTime) return rightTime - leftTime;
+        const leftTime = cursorStamp(left.created_at);
+        const rightTime = cursorStamp(right.created_at);
+        if (leftTime !== rightTime) return leftTime < rightTime ? 1 : -1;
         return right.id.localeCompare(left.id);
     });
     let offset = 0;

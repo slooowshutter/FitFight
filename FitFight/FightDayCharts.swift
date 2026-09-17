@@ -177,7 +177,7 @@ private struct FightDayChartSeries: Identifiable {
     var person: Person
     var color: Color
     var daily: [Double?]
-    var cumulative: [Double]
+    var cumulative: [Double?]
     var total: Double
 
     var id: String { person.id }
@@ -204,9 +204,9 @@ private struct FightDayChartModel {
                 }
                 return score.value
             }
-            var running = 0.0
-            let cumulative = daily.map { value -> Double in
-                if let value { running += value }
+            var running: Double?
+            let cumulative = daily.map { value -> Double? in
+                if let value { running = (running ?? 0) + value }
                 return running
             }
             let color: Color
@@ -227,9 +227,9 @@ private struct FightDayChartModel {
         // A curve must belong to the same score revision. Missing history is a gap, not a wipe.
         for index in series.indices {
             let hasPoints = series[index].daily.contains { $0 != nil }
-            if hasPoints && series[index].cumulative.last != series[index].total {
+            if hasPoints && (series[index].cumulative.last ?? nil) != series[index].total {
                 series[index].daily = Array(repeating: nil, count: series[index].daily.count)
-                series[index].cumulative = Array(repeating: 0, count: series[index].cumulative.count)
+                series[index].cumulative = Array(repeating: nil, count: series[index].cumulative.count)
             }
         }
         if !labels.isEmpty, series.allSatisfy({ $0.daily.allSatisfy { $0 == nil } }) {
@@ -263,7 +263,7 @@ private struct FightDayChartModel {
     }
 
     func values(_ series: FightDayChartSeries, cumulative: Bool) -> [Double?] {
-        cumulative ? series.cumulative.map(Optional.some) : series.daily
+        cumulative ? series.cumulative : series.daily
     }
 
     func peak(cumulative: Bool) -> Double {

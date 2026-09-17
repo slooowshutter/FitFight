@@ -8,6 +8,22 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
 
+## Interrupted comment requests, prepared 17 Sep 2026
+
+**Code:** a comment refresh queued behind a failed read now runs after that failure.
+Failures without queued work still surface their error without another request.
+Live updates retain the requested page count for More comments while refreshing
+the loaded thread. Changing the sort still starts at the first page. The 1.1.1
+release note includes English and French copy.
+
+**Checks:** the new regressions reproduced both defects in
+[cloud native checks](https://github.com/slooowshutter/FitFight/actions/runs/35166089672)
+with `python3 scripts/test_native_state.py`. Localization and native API-boundary
+checks pass in the workspace. Cloud verification of the fixes is pending.
+
+**Deployment:** native UI state only, with no API contract or schema changes.
+No merge into develop, preview, or main, and no TestFlight or production upload.
+
 ## Feed review fixes, prepared 17 Sep 2026
 
 **Code:** automatic thread refresh preserves all previously loaded comments,

@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 17,
+            notes: "Comment refreshes are more reliable after connection errors. Live updates no longer interrupt loading more comments."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
             notes: "Feedback no longer shows a duplicate button above the bottom tabs. Use the plus at the top to add a request."
         ),
         ReleaseNote(

@@ -1,6 +1,22 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Comment refreshes are more reliable after connection errors. Live updates no longer interrupt loading more comments.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Comment refreshes are more reliable after connection errors. Live updates no longer interrupt loading more comments."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "L’actualisation des commentaires est plus fiable après une erreur de connexion. Les mises à jour en direct n’interrompent plus le chargement de commentaires supplémentaires."
+                    }
+                }
+            }
+        },
         "Feedback no longer shows a duplicate button above the bottom tabs. Use the plus at the top to add a request.": {
             "localizations": {
                 "fr": {

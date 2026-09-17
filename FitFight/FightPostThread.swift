@@ -13,6 +13,7 @@ struct FightPostEngagement: View {
     @State private var nextCursor: String?
     @State private var commentSort = FightPostCommentSort.comments
     @State private var loadedCommentSort = FightPostCommentSort.comments
+    @State private var loadedCommentPages = 0
     @State private var open = false
     @State private var showingReactions = false
     @State private var replyTo: FitFightFightPostComment?
@@ -299,14 +300,17 @@ struct FightPostEngagement: View {
         loadingComments = true
         defer { if session.authSession?.user.id == userID { loadingComments = false } }
         var append = more
-        do {
-            repeat {
-                reloadComments = false
-                let version = commentsVersion
-                let sort = commentSort
-                let retainedIDs = loadedCommentSort == sort ? Set(comments.map(\.id)) : []
-                var refreshed = append && loadedCommentSort == sort ? comments : []
-                var cursor = append && loadedCommentSort == sort ? nextCursor : nil
+        let requestedSort = commentSort
+        let requestedPages = loadedCommentSort == requestedSort ? max(1, loadedCommentPages + (more ? 1 : 0)) : 1
+        repeat {
+            reloadComments = false
+            let version = commentsVersion
+            let sort = commentSort
+            let retainedIDs = loadedCommentSort == sort ? Set(comments.map(\.id)) : []
+            var refreshed = append && loadedCommentSort == sort ? comments : []
+            var cursor = append && loadedCommentSort == sort ? nextCursor : nil
+            var pages = append && loadedCommentSort == sort ? loadedCommentPages : 0
+            do {
                 let token = try await session.freshAccessToken()
                 guard !Task.isCancelled, session.authSession?.user.id == userID else { return }
                 repeat {
@@ -324,8 +328,10 @@ struct FightPostEngagement: View {
                     }
                     refreshed += result.comments.filter { comment in !refreshed.contains(where: { $0.id == comment.id }) }
                     cursor = result.nextCursor
+                    pages += 1
                     if cursor == nil { break }
-                    if retainedIDs.isSubset(of: Set(refreshed.map(\.id))) {
+                    if pages >= (sort == requestedSort ? requestedPages : 1),
+                       retainedIDs.isSubset(of: Set(refreshed.map(\.id))) {
                         if let targetCommentID, !refreshed.contains(where: { $0.id == targetCommentID }) { continue }
                         break
                     }
@@ -335,14 +341,15 @@ struct FightPostEngagement: View {
                     comments = refreshed
                     nextCursor = cursor
                     loadedCommentSort = sort
+                    loadedCommentPages = pages
                 }
-                append = false
-            } while reloadComments
-        } catch {
-            if Task.isCancelled || error is CancellationError { return }
-            guard session.authSession?.user.id == userID else { return }
-            feed.error = error.localizedDescription
-        }
+            } catch {
+                if Task.isCancelled || error is CancellationError { return }
+                guard session.authSession?.user.id == userID else { return }
+                if !reloadComments { feed.error = error.localizedDescription }
+            }
+            append = false
+        } while reloadComments
     }
 
     private func sendComment() async {

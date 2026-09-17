@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { createFightSchema } from "@/lib/types/fights/create-fight";
 import {
     ApiError,
@@ -9,6 +10,8 @@ import {
 } from "@/lib/http";
 import { verifyUser } from "@/lib/supabase/queries/auth-supabase-query";
 import { createFight } from "@/lib/supabase/queries/create-fight-supabase-query";
+import { createDatabaseClient } from "@/lib/supabase/postgres";
+import { processNotificationOutbox } from "@/lib/supabase/queries/process-notification-outbox-supabase-query";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,7 +29,11 @@ export const POST = apiRoute(async (request) => {
         );
     }
     const body = createFightSchema.parse(await readJson(request));
-    const fight = await createFight(userId, body);
+    const sql = createDatabaseClient();
+    const fight = await createFight(userId, body, sql);
+    after(async () => {
+        await processNotificationOutbox(new Date(), createDatabaseClient());
+    });
     return json(fight, 201);
 });
 

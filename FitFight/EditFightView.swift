@@ -124,6 +124,7 @@ struct EditFightView: View {
                 }
             }
             .padding(.horizontal, theme.space.screenPadding)
+            .padding(.top, theme.space.base)
         }
         .background(theme.bg)
     }
@@ -176,7 +177,7 @@ struct EditFightView: View {
                 durationDays: durationDays,
                 timeZone: timeZone,
                 visibilityJoinable: visibilityJoinable,
-                opponentHandles: people.filter { !$0.isOwner }.map(\.handle),
+                opponentHandles: people.filter { !$0.isOwner }.map { $0.handle },
                 recurring: recurring,
                 healthConnected: steps.hasAsked,
                 healthBusy: model.isRefreshingFights,
@@ -277,13 +278,13 @@ struct EditFightView: View {
         guard canSave else { return }
         let startsAt = durationStart
         let endsAt = customSchedule ? customEnd : FightComposer.endDate(from: startsAt, days: durationDays, timeZone: timeZone)
-        let originalIDs = Set(fight.standings.map(\.person.id))
-        let remainingIDs = Set(people.filter { !$0.pendingAdd }.map(\.id))
+        let originalIDs = Set(fight.standings.map { $0.person.id })
+        let remainingIDs = Set(people.filter { !$0.pendingAdd }.map { $0.id })
         let removeUserIds = originalIDs.subtracting(remainingIDs).filter { id in
             people.first(where: { $0.id == id })?.isOwner != true
                 && fight.standings.first(where: { $0.person.id == id })?.person.isYou != true
         }
-        let inviteHandles = people.filter(\.pendingAdd).map(\.handle)
+        let inviteHandles = people.filter { $0.pendingAdd }.map { $0.handle }
         Task {
             let saved = await model.updateFight(
                 id: fight.id,

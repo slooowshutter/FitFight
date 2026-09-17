@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Sql } from "postgres";
 import { ApiError, ERROR_CODES } from "@/lib/http";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { FightState } from "@/lib/types/database";
@@ -25,6 +26,7 @@ export async function updateFight(
     input: UpdateFightRequest,
     admin: SupabaseClient = createAdminClient(),
     now: Date = new Date(),
+    sql?: Sql,
 ) {
     const fight = await loadOwnedFight(fightId, userId, admin);
     switch (fight.state) {
@@ -194,7 +196,7 @@ export async function updateFight(
     for (const changedId of changedMemberships) await recalculateFight(changedId, now);
 
     for (const handle of inviteHandles) {
-        await createInvite(userId, fightId, handle, admin);
+        await createInvite(userId, fightId, handle, admin, sql);
     }
 
     if (windowChanged) {

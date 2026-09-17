@@ -88,6 +88,30 @@ const copy: Record<
         en: { title: "FitFight", body: "Someone reacted to your post." },
         fr: { title: "FitFight", body: "Quelqu’un a réagi à ta publication." },
     },
+    fight_invite: {
+        en: {
+            title: "FitFight",
+            body: "You were invited to a fight. Open FitFight.",
+        },
+        fr: {
+            title: "FitFight",
+            body: "Tu as été invité à un défi. Ouvre FitFight.",
+        },
+    },
+    mention_post: {
+        en: { title: "FitFight", body: "Someone tagged you in a post." },
+        fr: {
+            title: "FitFight",
+            body: "Quelqu’un t’a mentionné dans une publication.",
+        },
+    },
+    mention_comment: {
+        en: { title: "FitFight", body: "Someone tagged you in a comment." },
+        fr: {
+            title: "FitFight",
+            body: "Quelqu’un t’a mentionné dans un commentaire.",
+        },
+    },
 };
 
 const socialKinds = [
@@ -132,6 +156,58 @@ export function socialNotificationAlert(
         },
     };
     return { title: "FitFight", body: bodies[kind][language] };
+}
+
+const mentionSurfaces = ["post", "comment"] as const;
+
+export function mentionNotificationAlert(
+    surface: (typeof mentionSurfaces)[number],
+    actorName: string,
+    locale: NotificationLocale | null | undefined,
+): { title: string; body: string } {
+    const language: NotificationLocale = locale === "fr" ? "fr" : "en";
+    const name = actorLabel(actorName, language);
+    switch (surface) {
+        case "post":
+            return {
+                title: "FitFight",
+                body:
+                    language === "fr"
+                        ? `${name} t’a mentionné dans une publication.`
+                        : `${name} tagged you in a post.`,
+            };
+        case "comment":
+            return {
+                title: "FitFight",
+                body:
+                    language === "fr"
+                        ? `${name} t’a mentionné dans un commentaire.`
+                        : `${name} tagged you in a comment.`,
+            };
+        default: {
+            const _exhaustive: never = surface;
+            return _exhaustive;
+        }
+    }
+}
+
+export function inviteNotificationAlert(
+    actorName: string,
+    fightName: string,
+    locale: NotificationLocale | null | undefined,
+): { title: string; body: string } {
+    const language: NotificationLocale = locale === "fr" ? "fr" : "en";
+    const name = actorLabel(actorName, language);
+    const fight = fightName.replace(/\s+/g, " ").trim().slice(0, 40);
+    const labeled =
+        fight.length > 0 ? fight : language === "fr" ? "un défi" : "a fight";
+    return {
+        title: "FitFight",
+        body:
+            language === "fr"
+                ? `${name} t'a invité à ${labeled}.`
+                : `${name} invited you to ${labeled}.`,
+    };
 }
 
 export function notificationAlert(

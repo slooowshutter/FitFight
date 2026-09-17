@@ -18,6 +18,7 @@ detail = (root / "FitFight/FightDetailView.swift").read_text()
 composer = (root / "FitFight/FightComposer.swift").read_text()
 new_fight = (root / "FitFight/NewFightView.swift").read_text()
 feed = (root / "FitFight/FeedView.swift").read_text()
+activity = (root / "FitFight/FeedActivity.swift").read_text()
 
 state = app[app.index("    @Published var tab:"):app.index("    @Published var dailyStatusRecap:")].replace("@Published ", "")
 selection = app[app.index("    func fight(id:"):app.index("    func seriesHistory(for fight:")]
@@ -26,12 +27,14 @@ opening = app[app.index("    func openFight"):app.index("    func presentDailySt
 history = profile[profile.index("                ForEach(store.history)"):]
 history_action = history[history.index("                        Button {") + len("                        Button {"):history.index("                        } label:")]
 destination = re.search(r"if let fight = (.+) \{", content[content.index(".navigationDestination(for: String.self)"):]).group(1)
-feed_action = re.search(r"\{ (model\.openFight.+) \}", feed).group(1)
+feed_action = re.search(r"model\.openFight\(id: (\w+)\.uuidString\)", feed)
+feed_action = feed_action.group(0).replace(feed_action.group(1) + ".uuidString", "fightID.uuidString")
 display = detail[detail.index("    private var fight:"):detail.index("    private var panes:")].replace("private var fight:", "var fight:")
 prepare = new_fight[new_fight.index("    private func applyProfileChallenge("):new_fight.index("    private var duration:")].replace("private func", "func")
 end_date = composer[composer.index("    static func endDate("):composer.index("\n}\n\nstruct FightComposerMetricPage:")]
 
 source = (root / "tests/ProfileNavigationTests.swift").read_text()
+source = source.replace("import Foundation", "import Foundation\n\n" + activity[activity.index("struct FeedPostLink:"):activity.index("struct FeedActivityItem:")])
 for marker, implementation in {
     "// MODEL_STATE": state,
     "// MODEL_METHODS": selection + priority + opening,

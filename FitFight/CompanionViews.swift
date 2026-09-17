@@ -160,6 +160,7 @@ final class CompanionStore: ObservableObject {
     @Published var customPrompt = ""
     @Published private(set) var hasChosen = false
     @Published var showingPicker = false
+    @Published var pickerStartsWithCustom = false
 
     private var isRestoring = false
     private static let pendingPrefix = "ff.companion.pending."
@@ -505,7 +506,7 @@ struct CompanionIntroduction: View {
         switch surface {
         case .fights: 156
         case .newFight: 210
-        case .you: 190
+        case .you: 240
         }
     }
 
@@ -535,7 +536,16 @@ struct CompanionIntroduction: View {
                         .font(.custom("Nunito-Bold", size: 12, relativeTo: .caption))
                         .foregroundStyle(theme.textSecondary)
                 }
-                Button(String(localized: "Try another companion")) {
+                Button(String(localized: "Make it yours")) {
+                    companions.pickerStartsWithCustom = true
+                    companions.showingPicker = true
+                }
+                .ffType(.buttonSmall)
+                .foregroundStyle(theme.mossText)
+                .frame(minHeight: 44)
+                .buttonStyle(FFHapticPlainStyle())
+                Button(String(localized: "Change animal")) {
+                    companions.pickerStartsWithCustom = false
                     companions.showingPicker = true
                 }
                 .ffType(.buttonSmall)
@@ -726,9 +736,11 @@ struct CompanionPicker: View {
     @FocusState private var promptFocused: Bool
 
     private let promptLimit = 1000
+    private let startWithCustom: Bool
 
-    init(selection: StockCompanion, required: Bool = false, isCustom: Bool = false, prompt: String = "") {
-        if isCustom {
+    init(selection: StockCompanion, required: Bool = false, isCustom: Bool = false, prompt: String = "", startWithCustom: Bool = false) {
+        self.startWithCustom = startWithCustom
+        if isCustom || startWithCustom {
             _draft = State(initialValue: nil)
             _pickingCustom = State(initialValue: true)
             _customPrompt = State(initialValue: prompt)
@@ -740,129 +752,159 @@ struct CompanionPicker: View {
     }
 
     var body: some View {
-        FFScreen(clearance: false) {
-            HStack(alignment: .top) {
-                Text("Choose your companion")
-                    .font(.custom("Nunito-ExtraBold", size: 26, relativeTo: .title))
-                    .foregroundStyle(theme.text)
-                Spacer()
-                if !session.needsCompanionSelection {
-                    Button(String(localized: "Close")) { dismiss() }
-                        .ffType(.label)
-                        .foregroundStyle(theme.mossText)
-                        .frame(minHeight: 44)
-                }
-            }
-            Text("This is how other people see you in fights and Feed.")
-                .font(.custom("Nunito-Bold", size: 13, relativeTo: .body))
-                .foregroundStyle(theme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-            if !error.isEmpty {
-                Text(error)
-                    .ffType(.caption)
-                    .foregroundStyle(theme.emberText)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 150 : 96), spacing: 10)], spacing: 10) {
-                ForEach(StockCompanion.allCases) { animal in
-                    Button {
-                        Task { await saveStock(animal) }
-                    } label: {
-                        VStack(spacing: 3) {
-                            Image(animal.image)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 104)
-                                .clipped()
-                            Text(animal.name)
-                                .font(.custom("Nunito-ExtraBold", size: 12, relativeTo: .caption))
-                                .foregroundStyle(draft == animal && !pickingCustom ? theme.mossText : theme.text)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .padding(8)
-                        .frame(maxWidth: .infinity)
-                        .background(draft == animal && !pickingCustom ? theme.mossWash : theme.card,
-                                    in: RoundedRectangle(cornerRadius: theme.radius.card))
-                        .ffBorder(draft == animal && !pickingCustom ? theme.mossEdge : theme.hairline, radius: theme.radius.card)
-                        .contentShape(RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
+        ScrollViewReader { scroll in
+            FFScreen(clearance: false) {
+                HStack(alignment: .top) {
+                    Text("Choose your companion")
+                        .font(.custom("Nunito-ExtraBold", size: 26, relativeTo: .title))
+                        .foregroundStyle(theme.text)
+                    Spacer()
+                    if !session.needsCompanionSelection {
+                        Button(String(localized: "Close")) { dismiss() }
+                            .ffType(.label)
+                            .foregroundStyle(theme.mossText)
+                            .frame(minHeight: 44)
                     }
+                }
+                Text("This is how other people see you in fights and Feed. You can change your animal anytime.")
+                    .font(.custom("Nunito-Bold", size: 13, relativeTo: .body))
+                    .foregroundStyle(theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if !error.isEmpty && !pickingCustom {
+                    Text(error)
+                        .ffType(.caption)
+                        .foregroundStyle(theme.emberText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 150 : 96), spacing: 10)], spacing: 10) {
+                    ForEach(StockCompanion.allCases) { animal in
+                        Button {
+                            Task { await saveStock(animal) }
+                        } label: {
+                            VStack(spacing: 3) {
+                                Image(animal.image)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 104)
+                                    .clipped()
+                                Text(animal.name)
+                                    .font(.custom("Nunito-ExtraBold", size: 12, relativeTo: .caption))
+                                    .foregroundStyle(draft == animal && !pickingCustom ? theme.mossText : theme.text)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .padding(8)
+                            .frame(maxWidth: .infinity)
+                            .background(draft == animal && !pickingCustom ? theme.mossWash : theme.card,
+                                        in: RoundedRectangle(cornerRadius: theme.radius.card))
+                            .ffBorder(draft == animal && !pickingCustom ? theme.mossEdge : theme.hairline, radius: theme.radius.card)
+                            .contentShape(RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
+                        }
+                        .buttonStyle(FFHapticPlainStyle())
+                        .disabled(isSaving)
+                        .accessibilityAddTraits(draft == animal && !pickingCustom ? .isSelected : [])
+                    }
+                }
+                .id("companion-animals")
+                Button {
+                    pickingCustom = true
+                    draft = nil
+                    error = ""
+                    scroll.scrollTo("companion-customization", anchor: .top)
+                } label: {
+                    Text("Make it yours")
+                        .font(.custom("Nunito-ExtraBold", size: 16, relativeTo: .body))
+                        .foregroundStyle(pickingCustom ? theme.mossText : theme.text)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .padding(.vertical, 10)
+                        .background(pickingCustom ? theme.mossWash : theme.card,
+                                    in: RoundedRectangle(cornerRadius: theme.radius.card))
+                        .ffBorder(pickingCustom ? theme.mossEdge : theme.hairline, radius: theme.radius.card)
+                }
+                .buttonStyle(FFHapticPlainStyle())
+                .disabled(isSaving)
+                .accessibilityAddTraits(pickingCustom ? .isSelected : [])
+                .id("companion-customization")
+                if pickingCustom {
+                    Text("You can change your animal anytime. Choose another from the grid or describe any animal below.")
+                        .ffType(.body)
+                        .foregroundStyle(theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Button(String(localized: "Change animal")) {
+                        promptFocused = false
+                        scroll.scrollTo("companion-animals", anchor: .top)
+                    }
+                    .ffType(.buttonSmall)
+                    .foregroundStyle(theme.mossText)
+                    .frame(minHeight: 44)
                     .buttonStyle(FFHapticPlainStyle())
                     .disabled(isSaving)
-                    .accessibilityAddTraits(draft == animal && !pickingCustom ? .isSelected : [])
-                }
-            }
-            Button {
-                pickingCustom = true
-                draft = nil
-                error = ""
-            } label: {
-                Text("Custom")
-                    .font(.custom("Nunito-ExtraBold", size: 16, relativeTo: .body))
-                    .foregroundStyle(pickingCustom ? theme.mossText : theme.text)
-                    .frame(maxWidth: .infinity, minHeight: 44)
-                    .padding(.vertical, 10)
-                    .background(pickingCustom ? theme.mossWash : theme.card,
-                                in: RoundedRectangle(cornerRadius: theme.radius.card))
-                    .ffBorder(pickingCustom ? theme.mossEdge : theme.hairline, radius: theme.radius.card)
-            }
-            .buttonStyle(FFHapticPlainStyle())
-            .disabled(isSaving)
-            .accessibilityAddTraits(pickingCustom ? .isSelected : [])
-            if pickingCustom {
-                FFField(
-                    label: String(localized: "Your animal"),
-                    state: promptFocused ? .focused : .normal,
-                    help: String(localized: "Write the species, breed or race, accessories, colors, and anything else that should appear."),
-                    counter: "\(customPrompt.count)/\(promptLimit)",
-                    minHeight: 140
-                ) {
-                    if staticRender {
-                        Text("Species, breed, accessories, colors…")
-                            .foregroundStyle(theme.textFaint)
-                            .frame(maxWidth: .infinity, minHeight: 88, alignment: .topLeading)
-                    } else {
-                        TextField(
-                            String(localized: "Species, breed, accessories, colors…"),
-                            text: $customPrompt,
-                            axis: .vertical
-                        )
-                        .focused($promptFocused)
-                        .lineLimit(5...12)
-                        .textInputAutocapitalization(.sentences)
-                        .onChange(of: customPrompt) { _, value in
-                            if value.count > promptLimit { customPrompt = String(value.prefix(promptLimit)) }
+                    FFField(
+                        label: String(localized: "Your animal"),
+                        state: promptFocused ? .focused : .normal,
+                        help: String(localized: "Write the species, breed or race, accessories, colors, and anything else that should appear."),
+                        counter: "\(customPrompt.count)/\(promptLimit)",
+                        minHeight: 140
+                    ) {
+                        if staticRender {
+                            Text("Species, breed, accessories, colors…")
+                                .foregroundStyle(theme.textFaint)
+                                .frame(maxWidth: .infinity, minHeight: 88, alignment: .topLeading)
+                        } else {
+                            TextField(
+                                String(localized: "Species, breed, accessories, colors…"),
+                                text: $customPrompt,
+                                axis: .vertical
+                            )
+                            .focused($promptFocused)
+                            .accessibilityLabel(String(localized: "Your animal"))
+                            .lineLimit(5...12)
+                            .textInputAutocapitalization(.sentences)
+                            .onChange(of: customPrompt) { _, value in
+                                if value.count > promptLimit { customPrompt = String(value.prefix(promptLimit)) }
+                            }
                         }
                     }
-                }
-                FFButton(
-                    title: String(localized: "Save companion"),
-                    kind: .primary,
-                    enabled: canSaveCustom,
-                    busy: isSaving,
-                    fullWidth: true,
-                    action: { Task { await saveCustom() } }
-                )
-            } else if let draft {
-                Text(isSaving ? String(localized: "Saving…") : draft.caption)
-                    .ffType(.body)
-                    .foregroundStyle(theme.textSecondary)
-                    .frame(maxWidth: .infinity)
-            }
-            #if DEBUG && targetEnvironment(simulator)
-            if CompanionPreview.isEnabled {
-                FFSection(title: String(localized: "Artwork study")) {
-                    CompanionScene(name: "tennis")
-                    Text("Fixed demo cast. Artwork study only; this is not a Feed post.")
-                        .ffType(.caption)
+                    if !error.isEmpty {
+                        Text(error)
+                            .ffType(.caption)
+                            .foregroundStyle(theme.emberText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    FFButton(
+                        title: String(localized: "Save companion"),
+                        kind: .primary,
+                        enabled: canSaveCustom,
+                        busy: isSaving,
+                        fullWidth: true,
+                        action: { Task { await saveCustom() } }
+                    )
+                } else if let draft {
+                    Text(isSaving ? String(localized: "Saving…") : draft.caption)
+                        .ffType(.body)
                         .foregroundStyle(theme.textSecondary)
+                        .frame(maxWidth: .infinity)
+                }
+                #if DEBUG && targetEnvironment(simulator)
+                if CompanionPreview.isEnabled {
+                    FFSection(title: String(localized: "Artwork study")) {
+                        CompanionScene(name: "tennis")
+                        Text("Fixed demo cast. Artwork study only; this is not a Feed post.")
+                            .ffType(.caption)
+                            .foregroundStyle(theme.textSecondary)
+                    }
+                }
+                #endif
+            }
+            .onChange(of: pickingCustom, initial: true) { wasCustom, isCustom in
+                if isCustom && (!wasCustom || startWithCustom) {
+                    scroll.scrollTo("companion-customization", anchor: .top)
                 }
             }
-            #endif
         }
         .interactiveDismissDisabled(session.needsCompanionSelection)
         .onAppear {
-            if companions.isCustom {
+            if companions.isCustom || startWithCustom {
                 pickingCustom = true
                 draft = nil
                 customPrompt = companions.customPrompt

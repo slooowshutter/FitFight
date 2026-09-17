@@ -25,6 +25,139 @@ enum Changelog {
     /// Newest first. Add a row here whenever we ship a user-facing change.
     static let releases: [ReleaseNote] = [
         ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Type @ to tag someone in a post or comment. They get a FitFight notification with your name."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "A refreshed App Store description explaining how to start a private step challenge and follow the standings."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Make it yours opens your animal description, ready to edit and save. Use Change animal to choose another companion anytime."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Feedback keeps loading correctly when you leave a request while it is being deleted."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Admins can delete a feedback request from its menu after confirming."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Comment refreshes are more reliable after connection errors. Live updates no longer interrupt loading more comments."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "You can open the TestFlight beta or return to the App Store from You → Settings. Before switching, see how installing the beta replaces the app and keeps accounts, fights, and progress in a separate database."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Reactions swipe horizontally, with a visible like button and any emoji. Charts refresh without losing your selection and keep missing history clear. Comments load reliably, and notification failures no longer interrupt saved fights."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "The slide haptics lab has a Custom option for tuning rumble, pulses, ramp shapes, the finishing hit, and confirmation distance. Your settings save automatically on this phone."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Slide to start builds from soft feedback to full-strength vibration, with a heavy finish even on a quick swipe. The 20 haptic tests now have wider ramps and a 0-100 scale."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Feedback no longer shows a duplicate button above the bottom tabs. Use the plus at the top to add a request."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Live feed updates keep loaded comments in place and refresh posts reliably while scrolling. Broadcast posts now update live too."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Comments and reactions refresh live. Feed loads ten posts at a time and loads more as you scroll. Pull down to fetch the latest posts. Notifications open the exact post. You now has Activity with posts, comments, reactions and timestamped membership history."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Website download and invitation links open the App Store. The staging website keeps TestFlight access for beta testers."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 16,
+            notes: "Posts and comments in another language now have a translation icon beside their actions on iOS 17.4 or later."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 16,
+            notes: "Feed comments can be sorted by most comments or most recent. Most comments is the default."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 16,
+            notes: "The Feed can show a post to everyone signed in, not only people in your fights."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 16,
+            notes: "Opening FitFight invites you to the shared Steps fight and any suggested fights. They show on New. You get a notification with the name, no scores, and you can accept when you are ready."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 16,
+            notes: "Bars, line, histogram, and pace now use the same confirmed Fight scores as the oval. A teammate without daily history is a gap, not a blank graph."
+        ),
+        ReleaseNote(
             version: "1.1.1",
             year: 2026,
             month: 9,

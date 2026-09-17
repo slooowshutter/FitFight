@@ -143,7 +143,7 @@ test("suggested and joinable lists load summaries in one bounded read", async ()
                             );
                             assert.equal(
                                 url.searchParams.get("fight.membership.state"),
-                                "in.(accepted,deferred)",
+                                "in.(accepted,deferred,invited)",
                             );
                             assert.equal(
                                 url.searchParams.get(

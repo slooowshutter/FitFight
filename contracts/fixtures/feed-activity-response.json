@@ -1,0 +1,29 @@
+{
+    "events": [
+        {
+            "id": "comment:cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+            "kind": "post_comment",
+            "occurred_at": "2026-09-16T12:13:14.123456Z",
+            "actor": { "user_id": "11111111-1111-4111-8111-111111111111", "handle": "alex" },
+            "subject": null,
+            "fight_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            "fight_name": "Goodwin",
+            "post_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+            "comment_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+            "body": "See you tomorrow"
+        },
+        {
+            "id": "membership:dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+            "kind": "invited",
+            "occurred_at": null,
+            "actor": { "user_id": "11111111-1111-4111-8111-111111111111", "handle": "alex" },
+            "subject": { "user_id": "22222222-2222-4222-8222-222222222222", "handle": "sam" },
+            "fight_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            "fight_name": "Goodwin",
+            "post_id": null,
+            "comment_id": null,
+            "body": ""
+        }
+    ],
+    "next_cursor": null
+}

@@ -1,0 +1,11 @@
+begin;
+select plan(7);
+select has_table('private', 'fight_membership_events', 'Membership history is private');
+select ok((select relrowsecurity and relforcerowsecurity from pg_class where oid = 'private.fight_membership_events'::regclass), 'History forces RLS');
+select is(has_table_privilege('anon', 'private.fight_membership_events', 'SELECT,INSERT,UPDATE,DELETE'), false, 'Anonymous clients cannot read or change history');
+select is(has_table_privilege('authenticated', 'private.fight_membership_events', 'SELECT,INSERT,UPDATE,DELETE'), false, 'App clients cannot read or change history directly');
+select ok(has_table_privilege('service_role', 'private.fight_membership_events', 'SELECT'), 'Backend can read history');
+select is(has_function_privilege('authenticated', 'private.record_fight_membership_event()', 'EXECUTE'), false, 'Clients cannot write audit history through a function');
+select is(has_function_privilege('authenticated', 'private.broadcast_feed_changes()', 'EXECUTE'), false, 'Clients cannot publish feed invalidations');
+select * from finish();
+rollback;

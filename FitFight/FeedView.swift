@@ -9,14 +9,21 @@ final class FeedStore: ObservableObject {
     @Published var posts: [FitFightFightPost] = []
     @Published var nextCursor: String?
     @Published var isLoading = false
+    @Published var isLoadingMore = false
     @Published var isSaving = false
     @Published var error: String?
+    @Published var moreError: String?
+    @Published var revision = 0
     @Published private(set) var reactingPostIDs: Set<UUID> = []
 
     private let api = FitFightAPI()
     private var listLoad = 0
     private var lastFightID: UUID?
     private var cachedUserID: UUID?
+    var visiblePostIDs: Set<UUID> = []
+    private(set) var stalePostIDs: Set<UUID> = []
+    private var liveLoad = 0
+    private var needsLiveRefresh = false
 
     func activate(userID: UUID?) {
         guard cachedUserID != userID else { return }
@@ -27,11 +34,17 @@ final class FeedStore: ObservableObject {
         lastFightID = nil
         error = nil
         isLoading = false
+        isLoadingMore = false
+        moreError = nil
+        visiblePostIDs = []
+        stalePostIDs = []
+        needsLiveRefresh = false
+        liveLoad += 1
         isSaving = false
         reactingPostIDs = []
     }
 
-    func load(session: SessionStore, fightID: UUID? = nil, more: Bool = false) async {
+    func load(session: SessionStore, fightID: UUID? = nil, postID: UUID? = nil, more: Bool = false) async {
         #if DEBUG && targetEnvironment(simulator)
         if CompanionPreview.isEnabled {
             posts = CompanionPreview.posts(fightID: fightID)
@@ -42,23 +55,35 @@ final class FeedStore: ObservableObject {
         let userID = session.authSession?.user.id
         activate(userID: userID)
         guard let userID else { return }
+        guard !more || (!isLoading && nextCursor != nil) else { return }
         lastFightID = fightID
+        if more && !stalePostIDs.isDisjoint(with: visiblePostIDs) {
+            needsLiveRefresh = true
+        }
         listLoad += 1
         let load = listLoad
         isLoading = true
+        isLoadingMore = more
+        moreError = nil
         defer {
-            if load == listLoad { isLoading = false }
+            if load == listLoad {
+                isLoading = false
+                isLoadingMore = false
+            }
         }
         do {
             let token = try await session.freshAccessToken()
             guard session.authSession?.user.id == userID, cachedUserID == userID else { return }
             let result: FitFightFightPostList
-            if let fightID {
+            if let postID {
+                let detail = try await api.fightPost(postID: postID, accessToken: token)
+                result = FitFightFightPostList(posts: [detail.post], nextCursor: nil)
+            } else if let fightID {
                 result = try await api.fightPosts(fightID: fightID, cursor: more ? nextCursor : nil, accessToken: token)
             } else {
                 result = try await api.feed(cursor: more ? nextCursor : nil, accessToken: token)
             }
-            guard load == listLoad, session.authSession?.user.id == userID, cachedUserID == userID else { return }
+            guard !Task.isCancelled, load == listLoad, session.authSession?.user.id == userID, cachedUserID == userID else { return }
             let pendingReactions = Dictionary(
                 posts.filter { reactingPostIDs.contains($0.id) }.map { ($0.id, $0.reactions) },
                 uniquingKeysWith: { _, last in last }
@@ -67,19 +92,86 @@ final class FeedStore: ObservableObject {
                 post.updating(reactions: pendingReactions[post.id])
             }
             posts = more ? posts + refreshed.filter { post in !posts.contains(where: { $0.id == post.id }) } : refreshed
+            stalePostIDs.formIntersection(posts.map(\.id))
+            if needsLiveRefresh {
+                stalePostIDs.formUnion(refreshed.map(\.id))
+            } else {
+                stalePostIDs.subtract(refreshed.map(\.id))
+            }
             nextCursor = result.nextCursor
-            error = nil
+            if !more {
+                revision += 1
+                error = nil
+            }
             RemoteImageLoader.shared.prefetch(
-                posts.compactMap { $0.author.avatar?.url },
+                refreshed.compactMap { $0.author.avatar?.url },
                 kind: .avatar
             )
             RemoteImageLoader.shared.prefetch(
-                posts.flatMap { $0.media }.compactMap { $0.kind == "video" ? nil : $0.url },
+                refreshed.flatMap { $0.media }.compactMap { $0.kind == "video" ? nil : $0.url },
                 kind: .photo
             )
         } catch {
             if Task.isCancelled || error is CancellationError { return }
             guard load == listLoad, session.authSession?.user.id == userID, cachedUserID == userID else { return }
+            if case FitFightAPIError.http(let status, _, _) = error, status == 403 || status == 404 {
+                posts = []
+                nextCursor = nil
+            }
+            if more {
+                moreError = error.localizedDescription
+            } else {
+                self.error = error.localizedDescription
+            }
+        }
+        if load == listLoad, needsLiveRefresh {
+            isLoading = false
+            isLoadingMore = false
+            needsLiveRefresh = false
+            await refreshVisible(session: session, fightID: fightID, invalidate: false)
+        }
+    }
+
+    func refreshVisible(session: SessionStore, fightID: UUID? = nil, invalidate: Bool = true) async {
+        if invalidate { stalePostIDs.formUnion(posts.map(\.id)) }
+        if isLoading {
+            needsLiveRefresh = true
+            return
+        }
+        if posts.isEmpty {
+            await load(session: session, fightID: fightID)
+            return
+        }
+        guard let userID = session.authSession?.user.id, cachedUserID == userID else { return }
+        let ids = posts.map(\.id).filter { visiblePostIDs.contains($0) && stalePostIDs.contains($0) }
+        guard !ids.isEmpty else { return }
+        liveLoad += 1
+        let request = liveLoad
+        let generation = listLoad
+        do {
+            let token = try await session.freshAccessToken()
+            for id in ids {
+                guard !Task.isCancelled, request == liveLoad, generation == listLoad,
+                      session.authSession?.user.id == userID, cachedUserID == userID else { return }
+                do {
+                    let result = try await api.fightPost(postID: id, accessToken: token)
+                    guard !Task.isCancelled, request == liveLoad, generation == listLoad,
+                          session.authSession?.user.id == userID, cachedUserID == userID else { return }
+                    // Updating the existing slot keeps pagination and the reading position intact.
+                    replace(result.post)
+                    stalePostIDs.remove(id)
+                } catch FitFightAPIError.http(let status, _, _) where status == 403 || status == 404 {
+                    guard !Task.isCancelled, request == liveLoad, generation == listLoad,
+                          session.authSession?.user.id == userID, cachedUserID == userID else { return }
+                    posts.removeAll { $0.id == id }
+                    stalePostIDs.remove(id)
+                }
+            }
+            revision += 1
+            error = nil
+        } catch {
+            guard !Task.isCancelled, request == liveLoad, generation == listLoad,
+                  session.authSession?.user.id == userID, cachedUserID == userID else { return }
             self.error = error.localizedDescription
         }
     }
@@ -89,7 +181,8 @@ final class FeedStore: ObservableObject {
         destinations: [FeedPostDestination],
         body: String,
         images: [UIImage],
-        videoURL: URL? = nil
+        videoURL: URL? = nil,
+        taggedUserIDs: [UUID] = []
     ) async -> Bool {
         guard let userID = session.authSession?.user.id, cachedUserID == userID else { return false }
         isSaving = true
@@ -110,12 +203,13 @@ final class FeedStore: ObservableObject {
                 body: body,
                 mediaIDs: mediaIDs,
                 destinations: destinations,
-                taggedUserIDs: [],
+                taggedUserIDs: taggedUserIDs,
                 accessToken: token
             )
             guard session.authSession?.user.id == userID, cachedUserID == userID else { return false }
             error = nil
-            await load(session: session, fightID: lastFightID)
+            let reloadFightID = destinations.contains(where: { $0.type == "broadcast" }) ? nil : lastFightID
+            await load(session: session, fightID: reloadFightID)
             return true
         } catch {
             if Task.isCancelled || error is CancellationError { return false }
@@ -262,7 +356,6 @@ struct FeedView: View {
 
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var session: SessionStore
-    @EnvironmentObject private var steps: HealthKitStepsStore
     @EnvironmentObject private var feed: FeedStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
@@ -283,7 +376,7 @@ struct FeedView: View {
                 FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
             }
             if feed.posts.isEmpty && feed.isLoading {
-                if !model.isRefreshingFights && !isRefreshingFeed {
+                if !isRefreshingFeed {
                     FFLoadingBlock()
                 }
             } else if feed.posts.isEmpty && !feed.isLoading {
@@ -294,25 +387,15 @@ struct FeedView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            ForEach(feed.posts) { post in
-                FightPostCard(
-                    post: post,
-                    onOpen: post.fightId.map { fightID in
-                        { model.openFight(id: fightID.uuidString) }
-                    },
-                    onOpenPhoto: { openedPhoto = FeedOpenedPhoto(url: $0) }
-                )
-            }
-            if feed.nextCursor != nil {
-                FFButton(title: String(localized: "More"), kind: .ghost, fullWidth: true) {
-                    Task { await feed.load(session: session, more: true) }
-                }
-                .disabled(feed.isLoading)
-            }
+            FeedPostList(store: feed, onOpenPhoto: { openedPhoto = FeedOpenedPhoto(url: $0) })
         }
         .task {
             guard !staticRender, !CompanionPreview.isEnabled else { return }
             await feed.load(session: session)
+        }
+        .onChange(of: model.feedRevision) { _, _ in
+            guard !staticRender, !CompanionPreview.isEnabled else { return }
+            Task { await feed.refreshVisible(session: session) }
         }
         .sheet(isPresented: $composing) {
             FeedComposeSheet()
@@ -331,12 +414,11 @@ struct FeedView: View {
 
     private var feedRefresh: FFRefreshConfig {
         FFRefreshConfig(
-            isRefreshing: model.isRefreshingFights || isRefreshingFeed,
-            message: model.isRefreshingFights ? model.refreshStatusText : String(localized: "Loading"),
+            isRefreshing: isRefreshingFeed,
+            message: String(localized: "Loading"),
             action: {
                 isRefreshingFeed = true
                 defer { isRefreshingFeed = false }
-                await model.refreshFights(session: session, steps: steps, trigger: .manual)
                 await feed.load(session: session)
             }
         )
@@ -349,6 +431,7 @@ struct FeedView: View {
 
 struct FeedComposeSheet: View {
     var defaultFightID: UUID? = nil
+    var broadcastOnly: Bool = false
     var onPosted: (() -> Void)? = nil
 
     @EnvironmentObject private var model: AppModel
@@ -358,11 +441,14 @@ struct FeedComposeSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var destinations: Set<FeedPostDestination>
 
-    init(defaultFightID: UUID? = nil, onPosted: (() -> Void)? = nil) {
+    init(defaultFightID: UUID? = nil, broadcastOnly: Bool = false, onPosted: (() -> Void)? = nil) {
         self.defaultFightID = defaultFightID
+        self.broadcastOnly = broadcastOnly
         self.onPosted = onPosted
         _destinations = State(
-            initialValue: defaultFightID.map { Set([FeedPostDestination.fight($0)]) } ?? []
+            initialValue: broadcastOnly
+                ? Set([FeedPostDestination.broadcast])
+                : defaultFightID.map { Set([FeedPostDestination.fight($0)]) } ?? []
         )
     }
 
@@ -373,7 +459,7 @@ struct FeedComposeSheet: View {
     var body: some View {
         FFScreen(clearance: false) {
             HStack {
-                Text(String(localized: "New post"))
+                Text(broadcastOnly ? String(localized: "Broadcast") : String(localized: "New post"))
                     .ffType(.title)
                     .foregroundStyle(theme.text)
                 Spacer()
@@ -381,11 +467,20 @@ struct FeedComposeSheet: View {
                     .ffType(.label)
                     .foregroundStyle(theme.mossText)
             }
-            Text("Your post will only appear in the channels you select. You can choose more than one.")
+            Text(
+                broadcastOnly
+                    ? String(localized: "This post appears on Feed for everyone signed in.")
+                    : "Your post will only appear in the channels you select. You can choose more than one."
+            )
                 .ffType(.caption)
                 .foregroundStyle(theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
-            if fights.isEmpty && defaultFightID == nil {
+            if broadcastOnly {
+                FightPostComposer(destinations: Array(destinations)) {
+                    onPosted?()
+                    dismiss()
+                }
+            } else if fights.isEmpty && defaultFightID == nil {
                 FFCard {
                     Text(String(localized: "Join a fight first, then post from here."))
                         .ffType(.body)
@@ -548,17 +643,14 @@ struct FightPostsSection: View {
                     .ffType(.caption)
                     .foregroundStyle(theme.emberText)
             }
-            ForEach(fightFeed.posts) { post in
-                FightPostCard(
-                    post: post,
-                    onOpen: nil,
-                    onOpenPhoto: { openedPhoto = FeedOpenedPhoto(url: $0) }
-                )
-            }
+            FeedPostList(store: fightFeed, fightID: fightID, onOpenPhoto: { openedPhoto = FeedOpenedPhoto(url: $0) })
         }
         .environmentObject(fightFeed)
         .task(id: fightID) {
             await fightFeed.load(session: session, fightID: fightID)
+        }
+        .onChange(of: model.feedRevision) { _, _ in
+            Task { await fightFeed.refreshVisible(session: session, fightID: fightID) }
         }
         .sheet(isPresented: $composing) {
             FeedComposeSheet(defaultFightID: fightID) {
@@ -578,6 +670,61 @@ struct FightPostsSection: View {
     }
 }
 
+private struct FeedPostList: View {
+    @ObservedObject var store: FeedStore
+    var fightID: UUID? = nil
+    let onOpenPhoto: (URL) -> Void
+
+    @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var session: SessionStore
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        LazyVStack(alignment: .leading, spacing: theme.space.cardGap) {
+            ForEach(store.posts) { post in
+                FightPostCard(
+                    post: post,
+                    onOpen: fightID == nil ? post.fightId.map { id in { model.openFight(id: id.uuidString) } } : nil,
+                    onOpenPhoto: onOpenPhoto
+                )
+                .onAppear {
+                    store.visiblePostIDs.insert(post.id)
+                    if store.stalePostIDs.contains(post.id) {
+                        Task { await store.refreshVisible(session: session, fightID: fightID, invalidate: false) }
+                    }
+                }
+                .onDisappear { store.visiblePostIDs.remove(post.id) }
+            }
+            if store.nextCursor != nil {
+                HStack(spacing: 12) {
+                    if let error = store.moreError {
+                        Text(error)
+                            .ffType(.caption)
+                            .foregroundStyle(theme.emberText)
+                            .lineLimit(2)
+                        Button(String(localized: "Try again")) {
+                            Task { await store.load(session: session, fightID: fightID, more: true) }
+                        }
+                        .ffType(.label)
+                        .foregroundStyle(theme.mossText)
+                        .buttonStyle(FFHapticPlainStyle())
+                    } else if store.isLoadingMore {
+                        ProgressView()
+                            .tint(theme.textSecondary)
+                            .accessibilityLabel(String(localized: "Loading"))
+                    }
+                }
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .task {
+                    guard store.moreError == nil else { return }
+                    await store.load(session: session, fightID: fightID, more: true)
+                }
+            }
+        }
+        .animation(nil, value: store.posts.map(\.id))
+    }
+}
+
 struct FightPostComposer: View {
     let destinations: [FeedPostDestination]
     var destination: AnyView? = nil
@@ -589,6 +736,7 @@ struct FightPostComposer: View {
     @Environment(\.ffStaticRender) private var staticRender
 
     @State private var bodyText = ""
+    @State private var mentionPeople: [FitFightFightPost.Author] = []
     @State private var mediaItems: [PhotosPickerItem] = []
     @State private var isLoadingMedia = false
     @State private var images: [UIImage] = []
@@ -612,15 +760,22 @@ struct FightPostComposer: View {
                         .foregroundStyle(theme.textTertiary)
                         .frame(maxWidth: .infinity, minHeight: 63, alignment: .topLeading)
                 } else {
-                    TextField(String(localized: "Add a note or some proof…"), text: $bodyText, axis: .vertical)
-                        .ffType(.body)
-                        .foregroundStyle(theme.text)
-                        .lineLimit(3...6)
-                        .onChange(of: bodyText) { _, value in
-                            if value.count > 500 {
-                                bodyText = String(value.prefix(500))
+                    FeedMentionField(
+                        text: $bodyText,
+                        people: $mentionPeople,
+                        main: destinations.contains { $0.type == "main" || $0.type == "broadcast" },
+                        fightIDs: destinations.compactMap(\.fightId)
+                    ) {
+                        TextField(String(localized: "Add a note or some proof…"), text: $bodyText, axis: .vertical)
+                            .ffType(.body)
+                            .foregroundStyle(theme.text)
+                            .lineLimit(3...6)
+                            .onChange(of: bodyText) { _, value in
+                                if value.count > 500 {
+                                    bodyText = String(value.prefix(500))
+                                }
                             }
-                        }
+                    }
                 }
                 if !images.isEmpty {
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -805,7 +960,8 @@ struct FightPostComposer: View {
             destinations: destinations,
             body: note,
             images: images,
-            videoURL: videoURL
+            videoURL: videoURL,
+            taggedUserIDs: FeedMention.taggedUserIDs(in: note, people: mentionPeople)
         ) {
             bodyText = ""
             images = []
@@ -817,6 +973,8 @@ struct FightPostComposer: View {
 
 struct FightPostCard: View {
     let post: FitFightFightPost
+    var targetCommentID: UUID? = nil
+    var onTargetCommentLoaded: (() -> Void)? = nil
     var onOpen: (() -> Void)?
     var onOpenPhoto: (URL) -> Void
 
@@ -862,18 +1020,21 @@ struct FightPostCard: View {
                         .onTapGesture { onOpen?() }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    Button {
-                        showActions = true
-                    } label: {
-                        Image(systemName: "ellipsis")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(theme.textFaint)
-                            .frame(width: 32, height: 20)
-                            .frame(height: 38, alignment: .top)
-                            .contentShape(Rectangle())
+                    HStack(alignment: .top, spacing: 0) {
+                        TextTranslationButton(text: post.body)
+                        Button {
+                            showActions = true
+                        } label: {
+                            Image(systemName: "ellipsis")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(theme.textFaint)
+                                .frame(height: 20)
+                                .frame(width: 44, height: 44, alignment: .top)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(FFHapticPlainStyle())
+                        .accessibilityLabel(String(localized: "Post actions"))
                     }
-                    .buttonStyle(FFHapticPlainStyle())
-                    .accessibilityLabel(String(localized: "Post actions"))
                 }
                 if !post.tags.isEmpty {
                     Text(post.tags.map { "@\($0.handle)" }.joined(separator: " "))
@@ -900,7 +1061,7 @@ struct FightPostCard: View {
                         }
                     }
                 }
-                FightPostEngagement(post: post)
+                FightPostEngagement(post: post, targetCommentID: targetCommentID, onTargetCommentLoaded: onTargetCommentLoaded)
             }
         }
         .confirmationDialog(String(localized: "Post"), isPresented: $showActions, titleVisibility: .hidden) {
@@ -929,12 +1090,23 @@ struct FightPostCard: View {
             Button(String(localized: "Cancel"), role: .cancel) {}
         }
         .sheet(isPresented: $editing) {
-            FightPostEditSheet(draft: $draft) {
+            FightPostEditSheet(
+                draft: $draft,
+                main: post.broadcast || post.audience == "main" || post.fightId == nil,
+                fightIDs: {
+                    var ids = post.channels.map(\.fightId)
+                    if let fightId = post.fightId, !ids.contains(fightId) {
+                        ids.append(fightId)
+                    }
+                    return ids
+                }()
+            ) {
                 let note = draft.trimmingCharacters(in: .whitespacesAndNewlines)
                 if await feed.update(session: session, post: post, body: note) {
                     editing = false
                 }
             }
+            .environmentObject(session)
             .environmentObject(feed)
             .fitFightTheme(theme)
             .presentationBackground(theme.bg)
@@ -944,11 +1116,14 @@ struct FightPostCard: View {
 
 private struct FightPostEditSheet: View {
     @Binding var draft: String
+    var main: Bool
+    var fightIDs: [UUID]
     var onSave: () async -> Void
 
     @EnvironmentObject private var feed: FeedStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.dismiss) private var dismiss
+    @State private var mentionPeople: [FitFightFightPost.Author] = []
 
     var body: some View {
         FFScreen(clearance: false) {
@@ -962,15 +1137,17 @@ private struct FightPostEditSheet: View {
                     .foregroundStyle(theme.mossText)
             }
             FFCard {
-                TextField(String(localized: "Add a note or some proof…"), text: $draft, axis: .vertical)
-                    .ffType(.body)
-                    .foregroundStyle(theme.text)
-                    .lineLimit(3...8)
-                    .onChange(of: draft) { _, value in
-                        if value.count > 500 {
-                            draft = String(value.prefix(500))
+                FeedMentionField(text: $draft, people: $mentionPeople, main: main, fightIDs: fightIDs) {
+                    TextField(String(localized: "Add a note or some proof…"), text: $draft, axis: .vertical)
+                        .ffType(.body)
+                        .foregroundStyle(theme.text)
+                        .lineLimit(3...8)
+                        .onChange(of: draft) { _, value in
+                            if value.count > 500 {
+                                draft = String(value.prefix(500))
+                            }
                         }
-                    }
+                }
             }
             if let error = feed.error, !error.isEmpty {
                 FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
@@ -987,7 +1164,7 @@ private struct FightPostEditSheet: View {
     }
 }
 
-private struct FeedOpenedPhoto: Identifiable {
+struct FeedOpenedPhoto: Identifiable {
     let url: URL
     var id: String { url.absoluteString }
 }
@@ -1023,7 +1200,7 @@ private struct FightPostPhoto: View {
     }
 }
 
-private struct FightPostPhotoViewer: View {
+struct FightPostPhotoViewer: View {
     let url: URL
     @Environment(\.ffTheme) private var theme
     @Environment(\.dismiss) private var dismiss

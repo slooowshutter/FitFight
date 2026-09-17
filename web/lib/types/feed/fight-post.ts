@@ -97,6 +97,7 @@ export const updateFightPostRequestSchema = z
 
 export const feedDestinationSchema = z.discriminatedUnion("type", [
     z.object({ type: z.literal("main") }).strict(),
+    z.object({ type: z.literal("broadcast") }).strict(),
     z
         .object({
             type: z.literal("fight"),
@@ -115,7 +116,19 @@ export const createFeedPostsRequestSchema = z
     .strict()
     .refine((input) => input.body.length > 0 || input.media_ids.length > 0, {
         message: "Add a photo, a video, or a short note",
-    });
+    })
+    .refine(
+        (input) => {
+            const broadcasts = input.destinations.filter(
+                (destination) => destination.type === "broadcast",
+            );
+            return (
+                broadcasts.length === 0 ||
+                (broadcasts.length === 1 && input.destinations.length === 1)
+            );
+        },
+        { message: "Broadcast is its own post" },
+    );
 
 export const listFightPostsQuerySchema = z
     .object({
@@ -215,10 +228,14 @@ export const createFightPostCommentRequestSchema = z
     })
     .strict();
 
+export const fightPostCommentSortValues = ["recent", "comments"] as const;
+export const fightPostCommentSortSchema = z.enum(fightPostCommentSortValues);
+
 export const listFightPostCommentsQuerySchema = z
     .object({
         cursor: z.string().min(1).max(120).optional(),
         limit: z.coerce.number().int().min(1).max(80).default(40),
+        sort: fightPostCommentSortSchema.optional(),
     })
     .strict();
 
@@ -331,6 +348,7 @@ export type DeleteFightPostCommentResponse = z.infer<
 export type CreateFightPostCommentRequest = z.infer<
     typeof createFightPostCommentRequestSchema
 >;
+export type FightPostCommentSort = z.infer<typeof fightPostCommentSortSchema>;
 export type ListFightPostCommentsQuery = z.infer<
     typeof listFightPostCommentsQuerySchema
 >;

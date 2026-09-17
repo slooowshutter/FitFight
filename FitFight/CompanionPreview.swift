@@ -176,9 +176,10 @@ extension CompanionPreview {
         let postFightID = fightID ?? UUID(uuidString: groupID)!
         let fightName = model().fight(id: postFightID.uuidString)!.listTitle
         let authors = [people[1], people[3], people[0]]
+        // Keep a French post in the English preview so the translation icon can be inspected.
         let bodies = french
             ? ["Le grand détour par la boulangerie valait le coup.", "Qui est partant pour une balade dimanche ?", "Une petite pause dehors entre deux réunions."]
-            : ["The long way to the bakery was worth it.", "Who’s up for a walk on Sunday?", "A little time outside between meetings."]
+            : ["Le grand détour par la boulangerie valait le coup.", "Who’s up for a walk on Sunday?", "A little time outside between meetings."]
         return authors.enumerated().map { index, person in
             FitFightFightPost(
                 id: UUID(uuidString: "D0000000-0000-4000-8000-\(String(format: "%012d", index + 1))")!,

@@ -1,4 +1,5 @@
 import type { Sql } from "postgres";
+import { isFitFightAdmin } from "@/lib/admin/is-fitfight-admin";
 import { ApiError, ERROR_CODES } from "@/lib/http";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import type {
@@ -20,7 +21,12 @@ import type {
     UpdateFightPostRequest,
 } from "@/lib/types/feed/fight-post";
 import { companionIdSchema } from "@/lib/types/companions/companion";
-import { enqueueFightFeedPostNotifications } from "./feed-social-notifications-supabase-query";
+import {
+    eligibleMentionUserIds,
+    enqueueFightFeedPostNotifications,
+    enqueueMentionNotifications,
+    mentionHandlesFromBody,
+} from "./feed-social-notifications-supabase-query";
 import {
     loadReadyMedia,
     mapMedia,
@@ -35,6 +41,7 @@ export type VisibleFightPost = {
     audience: FeedAudience;
     fight_id: string | null;
     author_id: string;
+    app_wide: boolean;
 };
 
 type PostRow = {
@@ -90,7 +97,7 @@ function isoUtc(value: Date | string): string {
 }
 
 function cursorStamp(value: Date | string): string {
-    return new Date(value).toISOString();
+    return value instanceof Date ? value.toISOString() : value;
 }
 
 function parseCursor(
@@ -139,12 +146,15 @@ export async function loadVisiblePost(
     database: Sql = createDatabaseClient(),
 ): Promise<VisibleFightPost> {
     const [post] = await database<VisibleFightPost[]>`
-        select id, audience::text as audience, fight_id, author_id
+        select id, audience::text as audience, fight_id, author_id, app_wide
         from public.fight_posts
         where id = ${postId}
     `;
     if (!post) {
         throw new ApiError(404, ERROR_CODES.not_found, "Post not found");
+    }
+    if (post.app_wide) {
+        return post;
     }
     if (post.audience === "main") {
         if (post.author_id === userId) return post;
@@ -436,7 +446,8 @@ export async function listFightPosts(
         ? await database<PostRow[]>`
                 select
                     post.id, post.audience::text as audience, post.fight_id, post.broadcast,
-                    coalesce(fight.name, '') as fight_name, post.body, post.created_at,
+                    coalesce(fight.name, '') as fight_name, post.body,
+                    to_char(post.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as created_at,
                     post.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
                     profile.companion_id as author_companion_id,
                     avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
@@ -455,7 +466,10 @@ export async function listFightPosts(
                         select 1 from private.feed_blocks as blocked
                         where blocked.blocker_id = ${userId} and blocked.blocked_id = post.author_id
                     )
-                    and (post.created_at, post.id) < (${cursor.createdAt}::timestamptz, ${cursor.id}::uuid)
+                    and (post.created_at, post.id) < (coalesce(
+                        (select anchor.created_at from public.fight_posts anchor where anchor.id = ${cursor.id}::uuid),
+                        ${cursor.createdAt}::text::timestamptz
+                    ), ${cursor.id}::uuid)
                     and (
                         (
                             ${fightId ?? null}::uuid is not null
@@ -551,6 +565,10 @@ export async function listFightPosts(
                                         )
                                     )
                             )
+                        )
+                        or (
+                            ${fightId ?? null}::uuid is null
+                            and post.app_wide
                         )
                     )
                 order by post.created_at desc, post.id desc
@@ -559,7 +577,8 @@ export async function listFightPosts(
         : await database<PostRow[]>`
                 select
                     post.id, post.audience::text as audience, post.fight_id, post.broadcast,
-                    coalesce(fight.name, '') as fight_name, post.body, post.created_at,
+                    coalesce(fight.name, '') as fight_name, post.body,
+                    to_char(post.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as created_at,
                     post.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
                     profile.companion_id as author_companion_id,
                     avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
@@ -673,6 +692,10 @@ export async function listFightPosts(
                                         )
                                     )
                             )
+                        )
+                        or (
+                            ${fightId ?? null}::uuid is null
+                            and post.app_wide
                         )
                     )
                 order by post.created_at desc, post.id desc
@@ -698,11 +721,16 @@ async function insertFightPost(
     tagIds: string[],
     channelIds: string[],
     broadcast: boolean,
+    appWide: boolean,
     database: Sql,
 ): Promise<string> {
     const [created] = await database<{ id: string }[]>`
-        insert into public.fight_posts (fight_id, author_id, body, audience, broadcast)
-        values (${fightId}, ${userId}, ${body}, ${audience}, ${broadcast})
+        insert into public.fight_posts (
+            fight_id, author_id, body, audience, broadcast, app_wide
+        )
+        values (
+            ${fightId}, ${userId}, ${body}, ${audience}, ${broadcast}, ${appWide}
+        )
         returning id
     `;
     if (!created) {
@@ -804,6 +832,30 @@ async function preparePostMedia(
     return uniqueMediaIds;
 }
 
+/** Resolves a notification target independently of the feed's loaded pages. */
+export async function getFightPost(
+    userId: string,
+    postId: string,
+    database: Sql = createDatabaseClient(),
+): Promise<FightPostResponse> {
+    return database.begin("isolation level repeatable read read only", async (sql) => {
+        await loadVisiblePost(userId, postId, sql);
+        const [blocked] = await sql`
+            select 1 from private.feed_blocks as blocked
+            join public.fight_posts as post on post.id = ${postId}
+            where (blocked.blocker_id = ${userId} and blocked.blocked_id = post.author_id)
+                or (blocked.blocked_id = ${userId} and blocked.blocker_id = post.author_id)
+            limit 1
+        `;
+        const [row] = await loadPostRows([postId], sql);
+        if (blocked || !row) {
+            throw new ApiError(404, ERROR_CODES.not_found, "Post not found");
+        }
+        const [post] = await mapPosts(userId, [row], sql);
+        return { post };
+    });
+}
+
 export async function createFightPost(
     userId: string,
     fightId: string,
@@ -827,21 +879,36 @@ export async function createFightPost(
 
     const createdId = await database.begin("read write", async (sql) => {
         const mediaIds = await preparePostMedia(userId, input.media_ids, sql);
+        const mentionIds = await eligibleMentionUserIds(
+            sql,
+            userId,
+            [],
+            mentionHandlesFromBody(input.body),
+            [fightId],
+        );
         const id = await insertFightPost(
             userId,
             "fight",
             fightId,
             input.body,
             mediaIds,
-            [],
+            mentionIds,
             [fightId],
+            false,
             false,
             sql,
         );
+        await enqueueMentionNotifications(sql, {
+            actorId: userId,
+            postId: id,
+            userIds: mentionIds,
+            preferredFightId: fightId,
+        });
         await enqueueFightFeedPostNotifications(sql, {
             fightId,
             postId: id,
             actorId: userId,
+            skipUserIds: mentionIds,
         });
         return id;
     });
@@ -871,11 +938,15 @@ export async function createFeedPosts(
     database: Sql = createDatabaseClient(),
 ): Promise<FightPostBatchResponse> {
     let includeMain = false;
+    let includeBroadcast = false;
     const fightIds: string[] = [];
     for (const destination of input.destinations) {
         switch (destination.type) {
             case "main":
                 includeMain = true;
+                break;
+            case "broadcast":
+                includeBroadcast = true;
                 break;
             case "fight":
                 if (!fightIds.includes(destination.fight_id)) {
@@ -892,12 +963,37 @@ export async function createFeedPosts(
             }
         }
     }
-    if (!includeMain && fightIds.length === 0) {
+    if (includeBroadcast && (includeMain || fightIds.length > 0)) {
+        throw new ApiError(
+            400,
+            ERROR_CODES.validation,
+            "Broadcast is its own post",
+        );
+    }
+    if (!includeBroadcast && !includeMain && fightIds.length === 0) {
         throw new ApiError(
             400,
             ERROR_CODES.validation,
             "Pick at least one place to post",
         );
+    }
+    if (includeBroadcast) {
+        const [profile] = await database<{ handle: string }[]>`
+            select handle
+            from public.profiles
+            where user_id = ${userId}
+                and deleted_at is null
+        `;
+        if (
+            !profile ||
+            !isFitFightAdmin({ handle: profile.handle, emails: [] })
+        ) {
+            throw new ApiError(
+                403,
+                ERROR_CODES.forbidden,
+                "Only Marc can broadcast",
+            );
+        }
     }
     for (const fightId of fightIds) {
         await requireRosterMember(userId, fightId, database);
@@ -932,82 +1028,70 @@ export async function createFeedPosts(
         );
     }
 
-    const broadcast = includeMain;
-    const wantedTags = [...new Set(input.tagged_user_ids)].filter(
-        (id) => id !== userId,
-    );
+    const broadcast = includeMain || includeBroadcast;
+    const wantedTags = includeBroadcast
+        ? []
+        : [...new Set(input.tagged_user_ids)].filter((id) => id !== userId);
     const createdIds = await database.begin("read write", async (sql) => {
         const mediaIds = await preparePostMedia(userId, input.media_ids, sql);
-        const tagIds =
-            wantedTags.length === 0
-                ? []
-                : fightIds.length > 0
-                  ? (
-                        await sql<{ user_id: string }[]>`
-                        select distinct membership.user_id
-                        from public.fight_members as membership
-                        where membership.fight_id in ${sql(fightIds)}
-                            and membership.user_id in ${sql(wantedTags)}
-                            and membership.state in ('accepted', 'deferred')
-                            and exists (
-                                select 1
-                                from public.fight_members as done_me
-                                join public.fight_members as done_them
-                                    on done_them.fight_id = done_me.fight_id
-                                join public.fights as done_fight
-                                    on done_fight.id = done_me.fight_id
-                                where done_me.user_id = ${userId}
-                                    and done_them.user_id = membership.user_id
-                                    and done_me.state = 'accepted'
-                                    and done_them.state = 'accepted'
-                                    and done_fight.state = 'final'
-                            )
-                    `
-                    ).map((row) => row.user_id)
-                  : (
-                        await sql<{ user_id: string }[]>`
-                        select distinct them.user_id
-                        from public.fight_members as me
-                        join public.fight_members as them
-                            on them.fight_id = me.fight_id
-                        join public.fights as fight
-                            on fight.id = me.fight_id
-                        where me.user_id = ${userId}
-                            and them.user_id in ${sql(wantedTags)}
-                            and me.state = 'accepted'
-                            and them.state = 'accepted'
-                            and fight.state = 'final'
-                    `
-                    ).map((row) => row.user_id);
-        const createdId =
-            fightIds.length > 0
-                ? await insertFightPost(
-                      userId,
-                      "fight",
-                      fightIds[0] ?? null,
-                      input.body,
-                      mediaIds,
-                      tagIds,
-                      fightIds,
-                      broadcast,
-                      sql,
-                  )
-                : await insertFightPost(
-                      userId,
-                      "main",
-                      null,
-                      input.body,
-                      mediaIds,
-                      tagIds,
-                      [],
-                      broadcast,
-                      sql,
-                  );
+        const mentionIds = await eligibleMentionUserIds(
+            sql,
+            userId,
+            wantedTags,
+            mentionHandlesFromBody(input.body),
+            fightIds,
+        );
+        const tagIds = includeBroadcast ? [] : mentionIds;
+        const createdId = includeBroadcast
+            ? await insertFightPost(
+                  userId,
+                  "main",
+                  null,
+                  input.body,
+                  mediaIds,
+                  [],
+                  [],
+                  true,
+                  true,
+                  sql,
+              )
+            : fightIds.length > 0
+              ? await insertFightPost(
+                    userId,
+                    "fight",
+                    fightIds[0] ?? null,
+                    input.body,
+                    mediaIds,
+                    tagIds,
+                    fightIds,
+                    broadcast,
+                    false,
+                    sql,
+                )
+              : await insertFightPost(
+                    userId,
+                    "main",
+                    null,
+                    input.body,
+                    mediaIds,
+                    tagIds,
+                    [],
+                    broadcast,
+                    false,
+                    sql,
+                );
+        await enqueueMentionNotifications(sql, {
+            actorId: userId,
+            postId: createdId,
+            userIds: mentionIds,
+            preferredFightId: fightIds[0] ?? null,
+        });
         for (const destinationFightId of fightIds) {
             await enqueueFightFeedPostNotifications(sql, {
                 fightId: destinationFightId,
                 postId: createdId,
                 actorId: userId,
+                skipUserIds: mentionIds,
             });
         }
         return [createdId];

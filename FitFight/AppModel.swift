@@ -225,6 +225,8 @@ final class AppModel: ObservableObject {
         didSet {
             if oldValue != tab {
                 openFightID = nil
+                openPost = nil
+                showingActivity = false
             }
         }
     }
@@ -235,6 +237,9 @@ final class AppModel: ObservableObject {
         }
     }
     private var selectedHistoryFightID: String?
+    @Published var openPost: FeedPostLink?
+    @Published var showingActivity = false
+    @Published var feedRevision = 0
     @Published var dailyStatusRecap: DailyStatusRecap?
     @Published var showingVersions = false
     @Published var showingDebugMenu = false
@@ -296,7 +301,8 @@ final class AppModel: ObservableObject {
         let queryDailyStatus = components?.queryItems?.contains { item in
             item.name == "daily_status" && (item.value == "1" || item.value?.lowercased() == "true")
         } ?? false
-        UserDefaults.standard.set(path, forKey: pendingFightRouteKey)
+        let query = components?.percentEncodedQuery.map { "?\($0)" } ?? ""
+        UserDefaults.standard.set(path + query, forKey: pendingFightRouteKey)
         UserDefaults.standard.set(dailyStatus || queryDailyStatus, forKey: pendingDailyStatusKey)
     }
 
@@ -1145,7 +1151,7 @@ final class AppModel: ObservableObject {
                 item.name == "daily_status" && (item.value == "1" || item.value?.lowercased() == "true")
             }
             Self.storePendingFightRoute(
-                "/fights/\(fightID.uuidString.lowercased())",
+                "/fights/\(fightID.uuidString.lowercased())" + (url.query.map { "?\($0)" } ?? ""),
                 dailyStatus: dailyStatus
             )
             await consumePendingLinks(session: session)
@@ -1387,10 +1393,12 @@ final class AppModel: ObservableObject {
         let racers = standings.filter { !$0.invited && !$0.deferred }
         var histories: [String: [FightStepCheckpoint]] = [:]
         for row in racers {
-            guard let points = members.first(where: { $0.userId.uuidString == row.person.id })?.stepCheckpoints,
-                  let last = points.last, Double(last.steps) == row.score else { return [] }
+            guard let personID = UUID(uuidString: row.person.id),
+                  let points = members.first(where: { $0.userId == personID })?.stepCheckpoints,
+                  let last = points.last, Double(last.steps) == row.score else { continue }
             histories[row.person.id] = points
         }
+        guard !histories.isEmpty else { return [] }
         let days = Set(histories.values.flatMap { $0.map(\.day) }).sorted()
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
@@ -1430,11 +1438,11 @@ final class AppModel: ObservableObject {
     }
 
     func openFight(id: String, preserveRound: Bool = false) {
-        guard let fight = preserveRound ? fight(id: id) : canonicalFight(for: id) else { return }
+        let destination = (preserveRound ? fight(id: id) : canonicalFight(for: id))?.id ?? id
         tab = .fights
         Task { @MainActor in
-            self.selectedHistoryFightID = preserveRound ? fight.id : nil
-            self.openFightID = fight.id
+            self.selectedHistoryFightID = preserveRound ? destination : nil
+            self.openFightID = destination
         }
     }
 
@@ -1454,8 +1462,15 @@ final class AppModel: ObservableObject {
         guard let route = UserDefaults.standard.string(forKey: Self.pendingFightRouteKey) else { return }
         UserDefaults.standard.removeObject(forKey: Self.pendingFightRouteKey)
         UserDefaults.standard.removeObject(forKey: Self.pendingDailyStatusKey)
-        let parts = route.split(separator: "/").map(String.init)
+        guard let components = URLComponents(string: route) else { return }
+        let parts = components.path.split(separator: "/").map(String.init)
         guard parts.count == 2, parts[0] == "fights", UUID(uuidString: parts[1]) != nil else { return }
+        if let postID = components.queryItems?.first(where: { $0.name == "post" })?.value.flatMap(UUID.init(uuidString:)) {
+            let commentID = components.queryItems?.first(where: { $0.name == "comment" })?.value.flatMap(UUID.init(uuidString:))
+            tab = .feed
+            openPost = FeedPostLink(id: postID, commentID: commentID)
+            return
+        }
         openFight(id: parts[1])
         if showDailyStatusRecap {
             Task { await presentDailyStatusRecap(for: parts[1]) }

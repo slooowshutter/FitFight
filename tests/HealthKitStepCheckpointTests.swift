@@ -72,6 +72,10 @@ enum HealthKitStepAggregates {
         context.serverNow = context.fightWindows[0].cutoffAt
         let midnight = try await HealthKitStepAggregates.read(store: store, type: HKQuantityType(), context: context, trace: HealthKitSyncTrace())
         precondition(midnight.fightAggregates[0].stepCheckpoints?.map(\.day) == ["2026-03-28", "2026-03-29"], "Midnight has no extra zero day")
+        context.fightWindows[0].cutoffAt = parser.date(from: "2026-03-29T22:00:00Z")!.addingTimeInterval(0.001)
+        context.serverNow = context.fightWindows[0].cutoffAt
+        let afterMidnight = try await HealthKitStepAggregates.read(store: store, type: HKQuantityType(), context: context, trace: HealthKitSyncTrace())
+        precondition(afterMidnight.fightAggregates[0].stepCheckpoints?.map(\.day) == ["2026-03-28", "2026-03-29", "2026-03-30"], "A cutoff just after midnight keeps increasing Fight days")
         context.fightWindows[0].timeZone = nil
         let legacy = try await HealthKitStepAggregates.read(store: store, type: HKQuantityType(), context: context, trace: HealthKitSyncTrace())
         precondition(legacy.fightAggregates[0].stepCheckpoints == nil, "An older backend receives its original upload contract")

@@ -155,6 +155,7 @@ export const feedbackPostDetailSchema = z
 export const feedbackDetailResponseSchema = feedbackPostDetailSchema
     .extend({
         can_launch_fix: z.boolean(),
+        can_delete: z.boolean().default(false),
     })
     .strict();
 

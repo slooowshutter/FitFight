@@ -1,4 +1,6 @@
-import type { Sql } from "postgres";
+import type { Sql, TransactionSql } from "postgres";
+import { inviteNotificationAlert } from "@/lib/notifications/notification-copy";
+import type { NotificationLocale } from "@/lib/types/notifications/device-installation";
 import type {
     NotificationCopyKey,
     NotificationKind,
@@ -202,5 +204,82 @@ export async function skipGraceNotificationsForMember(
             and user_id = ${userId}
             and status = 'pending'
             and slot in ('t12', 't18', 't23')
+    `;
+}
+
+export async function enqueueFightInviteNotifications(
+    sql: Sql | TransactionSql,
+    input: {
+        fightId: string;
+        fightName: string;
+        actorName: string;
+        userIds: string[];
+        now?: Date;
+    },
+): Promise<void> {
+    if (input.userIds.length === 0) return;
+    const now = input.now ?? new Date();
+    const notBefore = now.toISOString();
+    const expiresAt = new Date(now.getTime() + 24 * HOUR_MS).toISOString();
+    const recipients = await sql<
+        { user_id: string; locale: string | null }[]
+    >`
+        select distinct on (profile.user_id)
+            profile.user_id,
+            installation.locale
+        from public.profiles as profile
+        left join private.device_installations as installation
+            on installation.user_id = profile.user_id
+            and installation.revoked_at is null
+        where profile.user_id in ${sql(input.userIds)}
+            and profile.deleted_at is null
+        order by profile.user_id, installation.last_registered_at desc nulls last
+    `;
+    const rows = recipients.map((recipient) => {
+        const locale: NotificationLocale =
+            recipient.locale === "fr" ? "fr" : "en";
+        return {
+            idempotency_key: idempotencyKey(
+                input.fightId,
+                recipient.user_id,
+                "fight_invite",
+                "event",
+            ),
+            user_id: recipient.user_id,
+            fight_id: input.fightId,
+            kind: "fight_invite" as const,
+            slot: "event" as const,
+            not_before: notBefore,
+            expires_at: expiresAt,
+            route: routeForFight(input.fightId),
+            copy_key: "fight_invite" as const,
+            alert_body: inviteNotificationAlert(
+                input.actorName,
+                input.fightName,
+                locale,
+            ).body,
+        };
+    });
+    if (rows.length === 0) return;
+    await sql`
+        insert into private.notification_intents (
+            idempotency_key, user_id, fight_id, kind, slot,
+            not_before, expires_at, route, copy_key, alert_body
+        )
+        select row.idempotency_key, row.user_id, row.fight_id, row.kind, row.slot,
+            row.not_before::timestamptz, row.expires_at::timestamptz, row.route, row.copy_key, row.alert_body
+        from jsonb_to_recordset(${sql.json(rows)}::jsonb) as row (
+            idempotency_key text,
+            user_id uuid,
+            fight_id uuid,
+            kind text,
+            slot text,
+            not_before text,
+            expires_at text,
+            route text,
+            copy_key text,
+            alert_body text
+        )
+        on conflict (idempotency_key) do nothing
     `;
 }

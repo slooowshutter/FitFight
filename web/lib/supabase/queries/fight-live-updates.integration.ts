@@ -100,6 +100,7 @@ test(
         where fight_id = ${fightId}`;
 
         const received = [0, 0, 0];
+        const feedReceived = [0, 0, 0];
         const replicationReady = new Set<number>();
         const channels = clients.map((client, index) =>
             client
@@ -125,6 +126,10 @@ test(
                         ![fightId, ...users].includes(message.payload.id),
                     );
                     received[index]++;
+                })
+                .on("broadcast", { event: "feed_changed" }, (message) => {
+                    assert.deepEqual(Object.keys(message.payload), ["id"]);
+                    feedReceived[index]++;
                 }),
         );
         await Promise.all(channels.map((channel) => subscribe(channel, true)));
@@ -197,6 +202,56 @@ test(
             await database`select count(*)::int as count from realtime.messages
         where topic = ${"fitfight:fights:" + peer} and event = 'fights_changed'`;
         assert.equal(afterRollback.count, before[0].count);
+
+        const postId = randomUUID();
+        await database`insert into public.fight_posts (id, fight_id, audience, author_id, body)
+            values (${postId}, ${fightId}, 'fight', ${owner}, 'Live comment regression')`;
+        await delay(500);
+        feedReceived.fill(0);
+        await assert.rejects(database.begin(async (sql) => {
+            await sql`insert into public.fight_post_comments (post_id, author_id, body)
+                values (${postId}, ${peer}, 'Rolled back comment')`;
+            throw new Error('rollback comment');
+        }), /rollback comment/);
+        await delay(300);
+        assert.deepEqual(feedReceived, [0, 0, 0]);
+        await database`insert into public.fight_post_comments (post_id, author_id, body)
+            values (${postId}, ${peer}, 'Committed comment')`;
+        for (let attempt = 0; attempt < 100 && (feedReceived[0] === 0 || feedReceived[1] === 0); attempt++) await delay(50);
+        assert.ok(feedReceived[0] > 0 && feedReceived[1] > 0, 'Both phones receive a committed comment invalidation');
+        assert.equal(feedReceived[2], 0, 'Unrelated users receive no comment invalidation');
+
+        const broadcastId = randomUUID();
+        for (const change of ["post", "edit", "comment", "reaction", "delete"]) {
+            feedReceived.fill(0);
+            switch (change) {
+                case "post":
+                    await database`insert into public.fight_posts (id, audience, app_wide, author_id, body)
+                        values (${broadcastId}, 'main', true, ${owner}, 'App-wide live updates')`;
+                    break;
+                case "edit":
+                    await database`update public.fight_posts set body = 'Edited broadcast' where id = ${broadcastId}`;
+                    break;
+                case "comment":
+                    await database`insert into public.fight_post_comments (post_id, author_id, body)
+                        values (${broadcastId}, ${peer}, 'Broadcast reply')`;
+                    break;
+                case "reaction":
+                    await database`insert into public.fight_post_reactions (post_id, user_id, emoji)
+                        values (${broadcastId}, ${outsider}, '🔥')`;
+                    break;
+                case "delete":
+                    await database`delete from public.fight_posts where id = ${broadcastId}`;
+                    break;
+            }
+            for (let attempt = 0; attempt < 100 && feedReceived.some((count) => count === 0); attempt++) {
+                await delay(50);
+            }
+            assert.ok(
+                feedReceived.every((count) => count > 0),
+                `A broadcast ${change} invalidates every signed-in viewer, including users with no shared Fight`,
+            );
+        }
 
         const cutoff = new Date().toISOString();
         await syncHealthKitAggregates(

@@ -1,96 +1,60 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { profileCountRowSchema } from "@/lib/types/profiles/shared-profile";
+import { lockFightSeries } from "./fight-series-lock-supabase-query";
 import type { Sql } from "postgres";
-import {
-    isFitFightAdmin,
-    readAdminViewer,
-} from "@/lib/admin/is-fitfight-admin";
-import { ApiError, ERROR_CODES } from "@/lib/http";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { canAdministerFights } from "@/lib/admin/can-administer-fights";
+import { ApiError } from "@/lib/http";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
-import type { FightSeriesRow } from "@/lib/types/database";
+import { administeredFightSchema } from "@/lib/types/admin/fight-administration";
+import { suggestedSeriesRowSchema } from "@/lib/types/fights/suggest-fight";
 import type { SuggestFightResponse } from "@/lib/types/fights/suggest-fight";
 import { inviteEveryoneToOpenFight } from "./app-wide-fight-invite-supabase-query";
-import { currentJoinableFight } from "./join-fight-supabase-query";
-import { loadFight } from "./fight-access-supabase-query";
 import { enqueueFightInviteNotifications } from "./notification-intents-supabase-query";
 import { processNotificationOutbox } from "./process-notification-outbox-supabase-query";
 
-export async function setFightSuggested(
-    userId: string,
-    fightId: string,
-    suggested: boolean,
-    admin: SupabaseClient = createAdminClient(),
-    sql: Sql = createDatabaseClient(),
-    now: Date = new Date(),
-): Promise<SuggestFightResponse> {
-    const viewer = await readAdminViewer(userId, admin);
-    if (!isFitFightAdmin(viewer)) {
-        throw new ApiError(
-            403,
-            ERROR_CODES.forbidden,
-            "Only Marc can suggest a fight",
-        );
-    }
-    const fight = await loadFight(fightId, admin);
-    if (!fight.series_id) {
-        throw new ApiError(
-            409,
-            ERROR_CODES.conflict,
-            "This fight cannot be suggested",
-        );
-    }
-    const { data: seriesData, error: seriesError } = await admin
-        .from("fight_series")
-        .select("*")
-        .eq("id", fight.series_id)
-        .maybeSingle();
-    if (seriesError || !seriesData) {
-        throw new ApiError(500, ERROR_CODES.db_error, "Could not load series");
-    }
-    const series = seriesData as FightSeriesRow;
-    const wasSuggested = series.suggested;
-    const { error } = await admin
-        .from("fight_series")
-        .update({
-            suggested,
-            suggested_at: suggested ? now.toISOString() : null,
-        })
-        .eq("id", fight.series_id);
-    if (error) {
-        throw new ApiError(
-            500,
-            ERROR_CODES.db_error,
-            "Could not update that suggestion",
-        );
-    }
-    if (suggested && !wasSuggested) {
-        const current = await currentJoinableFight(series, admin, now);
-        if (current) {
+export async function setFightSuggested(userId: string, fightId: string, suggested: boolean, database: Sql = createDatabaseClient()): Promise<SuggestFightResponse> {
+    if (!canAdministerFights(userId)) throw new ApiError(403, "forbidden", "Only Marc can suggest a fight");
+    let invited = false;
+    const now = new Date();
+    const result = await database.begin(async (sql) => {
+        await lockFightSeries(sql, fightId);
+        const [row] = await sql`select id, state::text, series_id, ends_at from public.fights where id = ${fightId} for update`;
+        if (!row) throw new ApiError(404, "not_found", "Fight not found");
+        const fight = administeredFightSchema.parse(row);
+        if (!fight.series_id) throw new ApiError(409, "conflict", "This fight cannot be suggested");
+        const [seriesRow] = await sql`
+            select series.id, series.visibility::text, series.paused_at, series.current_fight_id,
+                series.owner_id, series.join_code, series.name, series.suggested,
+                coalesce(nullif(trim(regexp_replace(owner.display_name, '\\s+', ' ', 'g')), ''), owner.handle) as actor_name
+            from public.fight_series as series
+            join public.profiles as owner on owner.user_id = series.owner_id
+            where series.id = ${fight.series_id} for update of series
+        `;
+        const series = suggestedSeriesRowSchema.parse(seriesRow);
+        if (suggested && (series.visibility !== "joinable" || series.paused_at !== null || series.current_fight_id !== fight.id
+            || !["live", "scheduled", "inviting"].includes(fight.state) || fight.ends_at.getTime() <= Date.now())) {
+            throw new ApiError(409, "conflict", "Only an active public fight can be suggested");
+        }
+        if (suggested) {
+            const [capacity] = await sql`select count(*)::int n from public.fight_members where fight_id = ${fightId} and state in ('accepted', 'deferred')`;
+            if (profileCountRowSchema.parse(capacity).n >= 50) throw new ApiError(409, "conflict", "This fight is full");
+        }
+        await sql`update public.fight_series set suggested = ${suggested}, suggested_at = ${suggested ? new Date() : null} where id = ${series.id}`;
+        await sql`insert into private.fight_admin_actions(actor_id, fight_id, changes) values (${userId}, ${fightId}, ${sql.json({ suggested })})`;
+        if (suggested && !series.suggested && (fight.state === "live" || fight.state === "scheduled" || fight.state === "inviting")) {
             const invitedIds = await inviteEveryoneToOpenFight(
-                series,
-                current,
+                { ...series, paused_at: null },
+                { id: fight.id, state: fight.state, ends_at: fight.ends_at.toISOString() },
                 sql,
             );
             if (invitedIds.length > 0) {
-                const { data: owner } = await admin
-                    .from("profiles")
-                    .select("handle, display_name")
-                    .eq("user_id", series.owner_id)
-                    .maybeSingle();
-                const display = owner?.display_name?.replace(/\s+/g, " ").trim();
                 await enqueueFightInviteNotifications(sql, {
-                    fightId: current.id,
-                    fightName: series.name,
-                    actorName:
-                        display && display.length > 0
-                            ? display
-                            : (owner?.handle ?? "user"),
-                    userIds: invitedIds,
-                    now,
+                    fightId, fightName: series.name, actorName: series.actor_name, userIds: invitedIds, now,
                 });
-                await processNotificationOutbox(now, sql);
+                invited = true;
             }
         }
-    }
-    return { suggested };
+        return { suggested };
+    });
+    if (invited) await processNotificationOutbox(now, database);
+    return result;
 }

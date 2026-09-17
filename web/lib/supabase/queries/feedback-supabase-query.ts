@@ -148,6 +148,7 @@ function mapComment(row: FeedbackCommentRow): FeedbackComment {
     return {
         ...(row.workflow_status !== undefined ? { workflow_status: row.workflow_status } : {}),
         ...(row.actor_id !== undefined ? { actor_id: row.actor_id } : {}),
+        ...(row.author_id ? { author_id: row.author_id } : {}),
         id: row.id,
         body: row.body,
         author_handle: row.author_handle,
@@ -286,13 +287,19 @@ export async function getFeedbackPost(
             select
                 comment.id,
                 comment.body,
+                case when comment.workflow_status is null then comment.author_id else null end as author_id,
                 comment.workflow_status,
                 case when comment.workflow_status is not null then 'FitFight'
                     else profile.handle end as author_handle,
                 case when comment.workflow_status = 'approved' and profile.user_id is not null
                     and not exists (
-                        select 1 from private.feedback_blocks as blocked
-                        where blocked.blocker_id = ${userId} and blocked.blocked_id = comment.author_id
+                        select 1 from (
+                            select blocker_id, blocked_id from private.profile_blocks
+                            union all select blocker_id, blocked_id from private.feed_blocks
+                            union all select blocker_id, blocked_id from private.feedback_blocks
+                        ) as blocked
+                        where (blocked.blocker_id = ${userId} and blocked.blocked_id = comment.author_id)
+                            or (blocked.blocker_id = comment.author_id and blocked.blocked_id = ${userId})
                     ) then comment.author_id else null end as actor_id,
                 comment.created_at,
                 coalesce(comment.metadata, '{}'::jsonb) as metadata
@@ -478,6 +485,7 @@ export async function createFeedbackComment(
         returning
             id,
             body,
+            author_id,
             (
                 select handle
                 from public.profiles

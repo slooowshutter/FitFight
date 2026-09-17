@@ -21,7 +21,7 @@ on:
             - "fastlane/**"
             - ".github/workflows/ios-build.yml"
     push:
-        branches: [main, develop, preview]
+        branches: [main, develop, preview, profiles-friends-and-stats]
         paths:
             - "FitFight/**"
             - "FitFight.xcodeproj/**"
@@ -122,6 +122,11 @@ jobs:
 
             - name: Verify feedback and released-client decoding
               run: python3 scripts/test_feedback_workflow.py
+
+            - name: Verify profile access and response ordering
+              run: |
+                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx13.0" FitFight/SharedProfile.swift FitFight/ProfileScreenStore.swift tests/ProfileScreenStoreTests.swift -o /tmp/fitfight-profile-tests
+                  /tmp/fitfight-profile-tests contracts/fixtures
 
             - name: Build for iOS Simulator
               run: |

@@ -80,6 +80,12 @@
         A10000000000000000000413 /* RemoteImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000412 /* RemoteImage.swift */; };
         A10000000000000000000415 /* SlideHaptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000414 /* SlideHaptics.swift */; };
         A10000000000000000000417 /* SlideHapticsLabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000416 /* SlideHapticsLabView.swift */; };
+        093BD4214450F0E24E960170 /* SharedProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6E984145AFCC236130CABCD /* SharedProfile.swift */; };
+        C52EBF93D4D91888A73FA9FA /* ProfileScreenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F63B0748E91625E789AE99FD /* ProfileScreenStore.swift */; };
+        5893F862B25C0EBA522F8DFA /* ProfileSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1FE342B3DFF37CEFC227E1 /* ProfileSheet.swift */; };
+        99AAAB8BD6F184E568149D1D /* EditProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41EE371C708EECCC762EB820 /* EditProfileView.swift */; };
+        61856F7155495A28A4B93A60 /* FriendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C2AC1044B8F11786123D48E /* FriendsView.swift */; };
+        A0573E386FD2FA2A4A357CC4 /* SuggestedFightsOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AD1CDE4182F6C6E52321063 /* SuggestedFightsOnboardingView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -159,6 +165,12 @@
         A10000000000000000000414 /* SlideHaptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlideHaptics.swift; sourceTree = "<group>"; };
         A10000000000000000000416 /* SlideHapticsLabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlideHapticsLabView.swift; sourceTree = "<group>"; };
         A10000000000000000000420 /* CrashReporting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrashReporting.swift; sourceTree = "<group>"; };
+        D6E984145AFCC236130CABCD /* SharedProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedProfile.swift; sourceTree = "<group>"; };
+        F63B0748E91625E789AE99FD /* ProfileScreenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileScreenStore.swift; sourceTree = "<group>"; };
+        1A1FE342B3DFF37CEFC227E1 /* ProfileSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSheet.swift; sourceTree = "<group>"; };
+        41EE371C708EECCC762EB820 /* EditProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditProfileView.swift; sourceTree = "<group>"; };
+        2C2AC1044B8F11786123D48E /* FriendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendsView.swift; sourceTree = "<group>"; };
+        7AD1CDE4182F6C6E52321063 /* SuggestedFightsOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestedFightsOnboardingView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -200,6 +212,12 @@
                 A10000000000000000000307 /* FitFightAPI.swift */,
                 A10000000000000000000388 /* FeedbackClientMetadata.swift */,
                 A10000000000000000000350 /* Profile.swift */,
+                7AD1CDE4182F6C6E52321063 /* SuggestedFightsOnboardingView.swift */,
+                2C2AC1044B8F11786123D48E /* FriendsView.swift */,
+                41EE371C708EECCC762EB820 /* EditProfileView.swift */,
+                1A1FE342B3DFF37CEFC227E1 /* ProfileSheet.swift */,
+                F63B0748E91625E789AE99FD /* ProfileScreenStore.swift */,
+                D6E984145AFCC236130CABCD /* SharedProfile.swift */,
                 A10000000000000000000352 /* FightSnapshot.swift */,
                 A6D25D785CDA4BEDA804E80C /* FightLiveUpdates.swift */,
                 A10000000000000000000360 /* Media.swift */,
@@ -406,6 +424,12 @@
                 A10000000000000000000317 /* FitFightAPI.swift in Sources */,
                 A10000000000000000000389 /* FeedbackClientMetadata.swift in Sources */,
                 A10000000000000000000351 /* Profile.swift in Sources */,
+                A0573E386FD2FA2A4A357CC4 /* SuggestedFightsOnboardingView.swift in Sources */,
+                61856F7155495A28A4B93A60 /* FriendsView.swift in Sources */,
+                99AAAB8BD6F184E568149D1D /* EditProfileView.swift in Sources */,
+                5893F862B25C0EBA522F8DFA /* ProfileSheet.swift in Sources */,
+                C52EBF93D4D91888A73FA9FA /* ProfileScreenStore.swift in Sources */,
+                093BD4214450F0E24E960170 /* SharedProfile.swift in Sources */,
                 A10000000000000000000353 /* FightSnapshot.swift in Sources */,
                 C87245427B08466399BDF753 /* FightLiveUpdates.swift in Sources */,
                 A10000000000000000000361 /* Media.swift in Sources */,

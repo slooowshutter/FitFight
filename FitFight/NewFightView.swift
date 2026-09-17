@@ -41,6 +41,23 @@ struct NewFightView: View {
         _step = State(initialValue: initialStep)
     }
 
+    private func applyProfileChallenge() {
+        guard let draft = model.profileChallenge else { return }
+        opening = .create
+        step = 0
+        durationDays = 7
+        customSchedule = false
+        recurring = true
+        fightTitle = ""
+        visibilityJoinable = false
+        inviteHandles = [draft.handle]
+        actionText = draft.actionText ?? ""
+        if let seconds = draft.durationSeconds, [3, 7, 14, 30].contains(seconds / 86_400), seconds % 86_400 == 0 {
+            durationDays = seconds / 86_400
+        }
+        model.profileChallenge = nil
+    }
+
     private var duration: String {
         FightComposer.durationLabel(days: durationDays, customSchedule: customSchedule)
     }
@@ -78,6 +95,8 @@ struct NewFightView: View {
                 )
             }
         }
+        .onAppear { applyProfileChallenge() }
+        .onChange(of: model.profileChallenge) { _, _ in applyProfileChallenge() }
         .task(id: opening) {
             guard opening != .create, !staticRender else { return }
             await model.loadFightDiscovery(session: session)
@@ -299,28 +318,8 @@ struct NewFightView: View {
                     .ffType(.body)
                     .foregroundStyle(theme.textSecondary)
             } else if !rows.isEmpty {
-                FFGroupedRows {
-                    ForEach(Array(rows.enumerated()), id: \.element.id) { index, item in
-                        if index > 0 { FFDivider() }
-                        FFGroupedRow(
-                            title: Fight.displayTitle(name: item.name, actionText: item.actionText),
-                            subtitle: item.recurring
-                                ? String(
-                                    localized: "fight.joinable-row-repeats",
-                                    defaultValue: "@\(item.ownerHandle) · \(item.memberCount) in · repeats"
-                                )
-                                : String(
-                                    localized: "fight.joinable-row",
-                                    defaultValue: "@\(item.ownerHandle) · \(item.memberCount) in"
-                                ),
-                            systemImage: "figure.walk",
-                            subtitleTone: .neutral,
-                            trailing: AnyView(Text(item.joinCode).ffType(.caption).foregroundStyle(theme.textSecondary)),
-                            action: {
-                                Task { await model.openJoinable(item, session: session) }
-                            }
-                        )
-                    }
+                ForEach(rows) { item in
+                    SuggestedFightOffer(fight: item) { Task { await model.openJoinable(item, session: session) } }
                 }
             }
         }

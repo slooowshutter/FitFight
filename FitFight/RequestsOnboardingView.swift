@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Last onboarding step: the Feedback tab can take a bug or a feature request.
+/// Introduces Feedback before the optional suggested Fights.
 struct RequestsOnboardingView: View {
     var onFinished: (() -> Void)? = nil
 

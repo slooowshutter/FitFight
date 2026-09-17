@@ -298,7 +298,7 @@ struct FeedView: View {
                 FightPostCard(
                     post: post,
                     onOpen: post.fightId.map { fightID in
-                        { model.openFightFromFeed(id: fightID.uuidString) }
+                        { model.openFight(id: fightID.uuidString) }
                     },
                     onOpenPhoto: { openedPhoto = FeedOpenedPhoto(url: $0) }
                 )

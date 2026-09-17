@@ -86,6 +86,12 @@ enum FightComposer {
             composer.applyProfileChallenge()
             check(!composer.customSchedule && composer.durationDays == days, "Ordinary \(days)-day rematches retain their preset")
         }
+        NSTimeZone.default = TimeZone(identifier: "Europe/Paris")!
+        let beforeDST = ISO8601DateFormatter().date(from: "2026-10-24T12:00:00Z")!
+        model.profileChallenge = ProfileChallengeDraft(handle: "opponent", durationSeconds: 3 * 86_400, actionText: nil)
+        composer.applyProfileChallenge(now: beforeDST)
+        check(composer.customSchedule, "A new daylight-saving transition cannot change the rematch duration")
+        check(composer.customEnd.timeIntervalSince(composer.customStart) == 3 * 86_400, "The new custom window preserves elapsed time across daylight saving")
 
         let historical = Fight(id: UUID().uuidString, seriesId: "series", status: .finished, windowStart: Date(timeIntervalSince1970: 1000))
         let current = Fight(id: UUID().uuidString, seriesId: "series", status: .live, windowStart: Date(timeIntervalSince1970: 2000))

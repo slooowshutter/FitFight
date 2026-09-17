@@ -1,6 +1,22 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Profile history keeps private Fight participants hidden and opens the selected round. Scheduled Fight records and rematch durations are now preserved.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Profile history keeps private Fight participants hidden and opens the selected round. Scheduled Fight records and rematch durations are now preserved."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "L'historique des profils garde les participants des Fights privés confidentiels et ouvre la manche sélectionnée. Les résultats des Fights programmés et la durée des revanches sont désormais préservés."
+                    }
+                }
+            }
+        },
     "Last updated": {
         "localizations": {
             "en": {

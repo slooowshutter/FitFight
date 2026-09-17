@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 17,
+            notes: "Profile history keeps private Fight participants hidden and opens the selected round. Scheduled Fight records and rematch durations are now preserved."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
             notes: "Profiles now include Friends, private sharing controls, Fight records and head-to-head rivalries. Tap a person to open their profile or challenge them. Suggested public Fights are optional at the end of onboarding."
         ),
         ReleaseNote(

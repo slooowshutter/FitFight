@@ -46,7 +46,7 @@ struct FightDetailView: View {
     }
 
     private var fight: Fight {
-        model.canonicalFight(for: initialFight.id) ?? initialFight
+        model.detailFight(for: initialFight.id) ?? initialFight
     }
 
     private var panes: [FightDetailPane] {

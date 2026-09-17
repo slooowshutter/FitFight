@@ -41,7 +41,7 @@ struct NewFightView: View {
         _step = State(initialValue: initialStep)
     }
 
-    private func applyProfileChallenge() {
+    private func applyProfileChallenge(now: Date = Date()) {
         guard let draft = model.profileChallenge else { return }
         opening = .create
         step = 0
@@ -52,8 +52,16 @@ struct NewFightView: View {
         visibilityJoinable = false
         inviteHandles = [draft.handle]
         actionText = draft.actionText ?? ""
-        if let seconds = draft.durationSeconds, [3, 7, 14, 30].contains(seconds / 86_400), seconds % 86_400 == 0 {
-            durationDays = seconds / 86_400
+        if let seconds = draft.durationSeconds {
+            if let days = [3, 7, 14, 30].first(where: {
+                FightComposer.endDate(from: now, days: $0).timeIntervalSince(now) == TimeInterval(seconds)
+            }) {
+                durationDays = days
+            } else {
+                customSchedule = true
+                customStart = Date(timeIntervalSince1970: ceil(now.timeIntervalSince1970 / 60) * 60 + 3_600)
+                customEnd = customStart.addingTimeInterval(TimeInterval(seconds))
+            }
         }
         model.profileChallenge = nil
     }

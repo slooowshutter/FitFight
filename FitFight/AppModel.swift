@@ -228,7 +228,12 @@ final class AppModel: ObservableObject {
         }
     }
 
-    @Published var openFightID: String?
+    @Published var openFightID: String? {
+        didSet {
+            if openFightID != selectedHistoryFightID { selectedHistoryFightID = nil }
+        }
+    }
+    private var selectedHistoryFightID: String?
     @Published var dailyStatusRecap: DailyStatusRecap?
     @Published var showingVersions = false
     @Published var showingDebugMenu = false
@@ -350,6 +355,10 @@ final class AppModel: ObservableObject {
         return fights
             .filter { $0.seriesId == seriesId }
             .reduce(fight) { Self.preferredCanonicalFight($0, $1) }
+    }
+
+    func detailFight(for id: String) -> Fight? {
+        selectedHistoryFightID == id ? fight(id: id) : canonicalFight(for: id)
     }
 
     func seriesHistory(for fight: Fight) -> [Fight] {
@@ -1415,10 +1424,11 @@ final class AppModel: ObservableObject {
         )
     }
 
-    func openFightFromFeed(id: String) {
-        guard let fight = canonicalFight(for: id) else { return }
+    func openFight(id: String, preserveRound: Bool = false) {
+        guard let fight = preserveRound ? fight(id: id) : canonicalFight(for: id) else { return }
         tab = .fights
         Task { @MainActor in
+            self.selectedHistoryFightID = preserveRound ? fight.id : nil
             self.openFightID = fight.id
         }
     }
@@ -1441,7 +1451,7 @@ final class AppModel: ObservableObject {
         UserDefaults.standard.removeObject(forKey: Self.pendingDailyStatusKey)
         let parts = route.split(separator: "/").map(String.init)
         guard parts.count == 2, parts[0] == "fights", UUID(uuidString: parts[1]) != nil else { return }
-        openFightFromFeed(id: parts[1])
+        openFight(id: parts[1])
         if showDailyStatusRecap {
             Task { await presentDailyStatusRecap(for: parts[1]) }
         }

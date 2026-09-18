@@ -1,6 +1,6 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **17 Sep 2026**. Production candidate: **1.1.1 (202)**.
+Read this before building. Last updated **18 Sep 2026**. Production candidate: **1.1.1 (202)**.
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
@@ -32,7 +32,7 @@ Preference checks cover defaults, persistence, concurrent updates, account
 isolation, grants, constraints, and deletion cleanup. The backend/schema files
 are unchanged since those runs.
 
-The final [native regression checks and simulator build](https://github.com/slooowshutter/FitFight/actions/runs/35177250042)
+The earlier [native regression checks and simulator build](https://github.com/slooowshutter/FitFight/actions/runs/35177250042)
 passed at `38e1d46`. The production preference store was checked for language
 switching, response decoding, partial requests, cache restoration, failed saves,
 stale reads, and account changes. [English/French screen captures](https://github.com/slooowshutter/FitFight/actions/runs/35177250117)
@@ -40,6 +40,24 @@ include Preferences in both themes; the captured layouts were visually checked.
 Localization, native API-boundary, and whitespace checks also passed. No native
 build ran on the workstation. Physical App Store/TestFlight identification and
 signed-in two-device UI checks remain outstanding.
+
+**Review fixes, 18 Sep:** Follow iPhone preserves the device locale. Explicit
+English/French choices retain its region, calendar, first weekday, and clock
+preferences. SwiftUI observes language selection without recreating the signed-in
+view, so unfinished fights and posts keep their state while text updates. Account
+changes still reset that state. An English/French 1.1.2 release note records the fix.
+
+Hosted regressions [reproduced both review findings](https://github.com/slooowshutter/FitFight/actions/runs/35338416694).
+The corrected preference checks passed for UK English, Canadian French, and US
+English with a 24-hour override. A SwiftUI hosting check exercises the production
+signed-in identity modifiers and preference store, checking draft retention during
+remote refresh and local saves, live translation, and draft isolation on account
+switches. All existing native checks and the iOS simulator build also passed in
+[the cloud verification run](https://github.com/slooowshutter/FitFight/actions/runs/35338717280)
+at `b0c33aa`. App and test sources are unchanged since that run. Normal CI branch
+triggers are restored after the feature-branch verification.
+No API or database contract changed, and no live deployment or TestFlight upload
+was made. These hosted checks do not replace physical signed-in two-device checks.
 
 **Live and supported clients:** read-only release checks at **03:20 UTC on
 17 Sep** returned staging latest **1.1.1 (201)**, review/internal **1.1.2 (203)**,

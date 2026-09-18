@@ -123,6 +123,9 @@ enum Stage { case session }
         precondition(model.fights[1].listSubtitle.hasPrefix("Pending"))
         precondition(model.fights[2].kickerPrefix == "Leading by")
         let original = model.fights
+        var joinPreview = model.fights[3]
+        joinPreview.pendingJoin = true
+        model.pendingJoinable = joinPreview
 
         model.api.snapshot = nil
         AppLocalization.apply(.fr)
@@ -135,6 +138,15 @@ enum Stage { case session }
         precondition(model.fights[2].kickerPrefix == "En tête de")
         precondition(model.fights[2].kickerEmphasis.contains("pas"))
         precondition(model.fights[3].invitePitch == "@leading_by vous a défié")
+        precondition(model.pendingJoinable?.invitePitch == "@leading_by vous a défié")
+        precondition(model.pendingJoinable?.listSubtitle == "@leading_by · \(joinPreview.of)")
+        for (before, after) in zip(original, model.fights) {
+            precondition(after.name == before.name && after.listTitle == before.listTitle,
+                         "French UI must not translate a Fight named Pending")
+            precondition(after.actionText == before.actionText && after.standings == before.standings)
+        }
+        precondition(model.pendingJoinable?.name == joinPreview.name)
+        precondition(model.pendingJoinable?.actionText == joinPreview.actionText)
         precondition(model.api.requests == 1, "A language change must not need a Fight request")
 
         await model.refreshFromServer(session: session, performMaintenance: false)

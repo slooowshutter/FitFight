@@ -131,9 +131,9 @@ struct FitFightApp: App {
                 }
                 .onChange(of: preferences.value.language) { _, _ in
                     guard !CompanionPreview.isEnabled, !ScreenshotExport.isEnabled else { return }
+                    model.relocalizeFights()
                     Task {
                         await push.registerIfAuthorized()
-                        await model.refreshFromServer(session: session, performMaintenance: false)
                     }
                 }
                 .task(id: scenePhase == .active ? session.authSession?.user.id : nil) {

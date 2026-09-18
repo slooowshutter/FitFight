@@ -609,6 +609,21 @@ final class AppModel: ObservableObject {
         }
     }
 
+    func relocalizeFights() {
+        var localized = fights
+        for index in localized.indices {
+            Self.localizeFight(&localized[index], formatScore: formatScore)
+        }
+        fights = localized
+        if var pending = pendingJoinable {
+            Self.localizeFight(&pending, formatScore: formatScore)
+            pendingJoinable = pending
+        }
+        if let userID = cachedUserID, let data = try? JSONEncoder().encode(localized) {
+            UserDefaults.standard.set(data, forKey: Self.fightsCachePrefix + userID.uuidString)
+        }
+    }
+
     func refreshFromServer(
         session: SessionStore, trace: HealthKitSyncTrace? = nil, performMaintenance: Bool = true
     ) async {
@@ -1480,8 +1495,6 @@ final class AppModel: ObservableObject {
         let starts = row.startsAtDate
         let ends = row.endsAtDate
         let lengthDays = max(1, Calendar.current.dateComponents([.day], from: starts, to: ends).day ?? 1)
-        let lengthHours = max(1, Int((ends.timeIntervalSince(starts) / 3_600).rounded()))
-        let durationLabel = localizedDuration(hours: lengthHours, days: lengthDays)
 
         let status: FightStatus
         if mine?.state == "invited" && row.state != "final" && row.state != "cancelled" {
@@ -1506,7 +1519,6 @@ final class AppModel: ObservableObject {
                 || (remaining.second ?? 0) > 0
             daysLeft = max(1, (remaining.day ?? 0) + (hasPartialDay ? 1 : 0))
         }
-        let remainingLabel = RemainingTime.phrase(until: ends)
 
         let peopleUnsorted = members.compactMap { member -> Standing? in
             switch member.state {
@@ -1542,180 +1554,35 @@ final class AppModel: ObservableObject {
         let people = orderedStandings(peopleUnsorted, status: status)
 
         let joined = people.filter { !$0.invited && !$0.deferred }
-        let waiting = people.filter(\.deferred)
         let youRow = people.first { $0.person.isYou }
         let listRank = youRow.flatMap { row in joined.firstIndex { $0.person.id == row.person.id }.map { $0 + 1 } }
             ?? mine?.rank
             ?? 0
         let rank = (status == .finished ? mine?.rank : nil) ?? listRank
-        let tiedForFirst = people.filter { !$0.invited && !$0.deferred && $0.rank == 1 }.count > 1
         let of = max(joined.count, 1)
         let owner = profiles[row.ownerId].map { Self.person(from: $0, isYou: $0.userId == userId) }
-        let ownerName = owner?.name ?? String(appLocalized: "Someone")
 
         let actionText = row.actionText?.trimmingCharacters(in: .whitespacesAndNewlines)
         let action = actionText?.isEmpty == false ? (actionText ?? "") : ""
 
-        var kickerPrefix = ""
-        var kickerEmphasis = ""
-        var kickerRest = ""
-        var listSubtitle = ""
-        var invitePitch: String?
-        var inviteAction: String?
-        var endedLabel: String?
-
-        switch status {
-        case .invited:
-            invitePitch = String(
-                appLocalized: "fight.challenged-you",
-                defaultValue: "\(ownerName) challenged you"
-            )
-            inviteAction = String(appLocalized: "Accept")
-            kickerEmphasis = invitePitch ?? ""
-            listSubtitle = "\(ownerName) · \(durationLabel)"
-        case .finished:
-            endedLabel = String(
-                appLocalized: "fight.ended-on",
-                defaultValue: "Ended \(Fight.deadlineStamp(ends))"
-            )
-            if youRow?.deferred == true {
-                listSubtitle = endedLabel ?? String(appLocalized: "Ended")
-                kickerEmphasis = String(appLocalized: "Started next round")
-            } else if row.state == "final" && tiedForFirst {
-                listSubtitle = String(
-                    appLocalized: "fight.finished-tied",
-                    defaultValue: "\(endedLabel ?? String(appLocalized: "Ended")) · Tied"
-                )
-                kickerEmphasis = String(appLocalized: "Tied")
-            } else {
-                listSubtitle = String(
-                    appLocalized: "fight.finished-position",
-                    defaultValue: "\(endedLabel ?? String(appLocalized: "Ended")) · \(Self.ordinal(rank)) of \(of)"
-                )
-                if row.state == "final" {
-                    kickerPrefix = rank == 1 ? String(appLocalized: "Won by") : String(appLocalized: "Finished")
-                } else {
-                    kickerPrefix = String(appLocalized: "Finished")
-                }
-                kickerEmphasis = Self.ordinal(rank)
-            }
-        case .pending:
-            endedLabel = String(
-                appLocalized: "fight.ended-on",
-                defaultValue: "Ended \(Fight.deadlineStamp(ends))"
-            )
-            listSubtitle = String(
-                appLocalized: "fight.pending-ended-on",
-                defaultValue: "Pending · Ended \(Fight.deadlineStamp(ends))"
-            )
-            if youRow?.deferred == true {
-                kickerEmphasis = String(appLocalized: "Started next round")
-            } else if youRow?.finalStepsComplete == true {
-                let submitted = people.filter { !$0.invited && !$0.deferred && $0.finalStepsComplete == true }
-                let submittedRank = youRow.flatMap { you in
-                    submitted.firstIndex { $0.person.id == you.person.id }.map { $0 + 1 }
-                } ?? 0
-                kickerEmphasis = submittedRank == 1
-                    ? String(appLocalized: "Tentative lead")
-                    : String(appLocalized: "Tentative loss")
-            } else {
-                kickerEmphasis = String(appLocalized: "Pending. Open the app")
-            }
-        case .live:
-            if row.state == "awaiting_final_sync" {
-                kickerEmphasis = String(appLocalized: "Syncing final steps")
-                listSubtitle = kickerEmphasis
-            } else if youRow?.deferred == true {
-                kickerEmphasis = String(appLocalized: "Starts next round")
-                listSubtitle = kickerEmphasis
-            } else if let youRow, let leader = joined.first, !youRow.invited {
-                if youRow.person.id == leader.person.id, let runnerUp = joined.dropFirst().first {
-                    let gap = leader.score - runnerUp.score
-                    kickerPrefix = gap == 0 ? "" : String(appLocalized: "Leading by")
-                    kickerEmphasis = gap == 0
-                        ? String(appLocalized: "Tied")
-                        : String(
-                            appLocalized: "fight.steps-value",
-                            defaultValue: "\(formatScore(gap, .steps)) steps"
-                        )
-                    kickerRest = String(
-                        appLocalized: "fight.time-to-go",
-                        defaultValue: "with \(remainingLabel) to go"
-                    )
-                    listSubtitle = gap == 0
-                        ? String(
-                            appLocalized: "fight.tied-time-to-go",
-                            defaultValue: "Tied with \(remainingLabel) to go"
-                        )
-                        : String(
-                            appLocalized: "fight.leading-time-to-go",
-                            defaultValue: "Leading by \(kickerEmphasis) with \(remainingLabel) to go"
-                        )
-                } else if youRow.person.id == leader.person.id {
-                    kickerEmphasis = String(
-                        appLocalized: "fight.time-left",
-                        defaultValue: "\(remainingLabel) left"
-                    )
-                    listSubtitle = kickerEmphasis
-                } else {
-                    let gap = leader.score - youRow.score
-                    kickerEmphasis = gap == 0
-                        ? String(appLocalized: "Tied")
-                        : String(
-                            appLocalized: "fight.steps-value",
-                            defaultValue: "\(formatScore(gap, .steps)) steps"
-                        )
-                    kickerRest = gap == 0
-                        ? ""
-                        : String(
-                            appLocalized: "fight.behind-person",
-                            defaultValue: "behind \(leader.person.name)"
-                        )
-                    listSubtitle = gap == 0
-                        ? String(appLocalized: "Tied")
-                        : String(
-                            appLocalized: "fight.steps-behind-person",
-                            defaultValue: "\(kickerEmphasis) behind \(leader.person.name)"
-                        )
-                }
-            } else {
-                kickerEmphasis = String(
-                    appLocalized: "fight.time-left",
-                    defaultValue: "\(remainingLabel) left"
-                )
-                listSubtitle = kickerEmphasis
-            }
-        }
-
         let short = row.id.uuidString.replacingOccurrences(of: "-", with: "")
         let code = series?.joinCode ?? ("FIGHT-" + String(short.prefix(3)).uppercased())
 
-        return Fight(
+        var fight = Fight(
             id: row.id.uuidString,
             code: code,
             name: row.name,
             metric: .steps,
             lengthDays: lengthDays,
             daysLeft: daysLeft,
-            endedLabel: endedLabel,
             actionText: action,
             status: status,
             rank: rank,
             of: of,
             pending: pendingMembers.count,
-            kickerPrefix: kickerPrefix,
-            kickerEmphasis: kickerEmphasis,
-            kickerRest: kickerRest,
-            listSubtitle: listSubtitle,
+            kickerEmphasis: "",
+            listSubtitle: "",
             inviter: owner,
-            invitePitch: invitePitch,
-            inviteAction: inviteAction,
-            standingsMeta: waiting.isEmpty
-                ? nil
-                : String(
-                    appLocalized: "fight.standings-next",
-                    defaultValue: "\(joined.count) racing · \(waiting.count) start next"
-                ),
             standings: people,
             windowStart: starts,
             windowEnd: ends,
@@ -1730,6 +1597,164 @@ final class AppModel: ObservableObject {
                 && Self.isAfterFightStartDay(starts)
                 && mine?.state == "invited"
         )
+        localizeFight(&fight, formatScore: formatScore)
+        return fight
+    }
+
+    // Rebuild only app-owned copy from confirmed Fight data, including when refreshes fail.
+    private static func localizeFight(_ fight: inout Fight, formatScore: (Double, MetricKind) -> String) {
+        let status = fight.status
+        let ends = fight.windowEnd
+        let durationLabel = fight.durationLabel
+        let remainingLabel = RemainingTime.phrase(until: ends)
+        let people = fight.standings
+        let joined = people.filter { !$0.invited && !$0.deferred }
+        let waiting = people.filter(\.deferred)
+        let youRow = people.first { $0.person.isYou }
+        let rank = fight.rank
+        let of = fight.of
+        let tiedForFirst = fight.isTiedForFirst
+        let ownerName = fight.inviter?.name ?? String(appLocalized: "Someone")
+
+        fight.kickerPrefix = ""
+        fight.kickerEmphasis = ""
+        fight.kickerRest = ""
+        fight.listSubtitle = ""
+        fight.invitePitch = nil
+        fight.inviteAction = nil
+        fight.endedLabel = nil
+
+        switch status {
+        case .invited:
+            fight.invitePitch = String(
+                appLocalized: "fight.challenged-you",
+                defaultValue: "\(ownerName) challenged you"
+            )
+            fight.inviteAction = fight.pendingJoin ? String(appLocalized: "Join fight") : String(appLocalized: "Accept")
+            fight.kickerEmphasis = fight.invitePitch ?? ""
+            fight.listSubtitle = fight.pendingJoin
+                ? "\(ownerName) · \(fight.of)"
+                : "\(ownerName) · \(durationLabel)"
+        case .finished:
+            fight.endedLabel = String(
+                appLocalized: "fight.ended-on",
+                defaultValue: "Ended \(Fight.deadlineStamp(ends))"
+            )
+            if youRow?.deferred == true {
+                fight.listSubtitle = fight.endedLabel ?? String(appLocalized: "Ended")
+                fight.kickerEmphasis = String(appLocalized: "Started next round")
+            } else if fight.serverState == "final" && tiedForFirst {
+                fight.listSubtitle = String(
+                    appLocalized: "fight.finished-tied",
+                    defaultValue: "\(fight.endedLabel ?? String(appLocalized: "Ended")) · Tied"
+                )
+                fight.kickerEmphasis = String(appLocalized: "Tied")
+            } else {
+                fight.listSubtitle = String(
+                    appLocalized: "fight.finished-position",
+                    defaultValue: "\(fight.endedLabel ?? String(appLocalized: "Ended")) · \(Self.ordinal(rank)) of \(of)"
+                )
+                if fight.serverState == "final" {
+                    fight.kickerPrefix = rank == 1 ? String(appLocalized: "Won by") : String(appLocalized: "Finished")
+                } else {
+                    fight.kickerPrefix = String(appLocalized: "Finished")
+                }
+                fight.kickerEmphasis = Self.ordinal(rank)
+            }
+        case .pending:
+            fight.endedLabel = String(
+                appLocalized: "fight.ended-on",
+                defaultValue: "Ended \(Fight.deadlineStamp(ends))"
+            )
+            fight.listSubtitle = String(
+                appLocalized: "fight.pending-ended-on",
+                defaultValue: "Pending · Ended \(Fight.deadlineStamp(ends))"
+            )
+            if youRow?.deferred == true {
+                fight.kickerEmphasis = String(appLocalized: "Started next round")
+            } else if youRow?.finalStepsComplete == true {
+                let submitted = people.filter { !$0.invited && !$0.deferred && $0.finalStepsComplete == true }
+                let submittedRank = youRow.flatMap { you in
+                    submitted.firstIndex { $0.person.id == you.person.id }.map { $0 + 1 }
+                } ?? 0
+                fight.kickerEmphasis = submittedRank == 1
+                    ? String(appLocalized: "Tentative lead")
+                    : String(appLocalized: "Tentative loss")
+            } else {
+                fight.kickerEmphasis = String(appLocalized: "Pending. Open the app")
+            }
+        case .live:
+            if fight.serverState == "awaiting_final_sync" {
+                fight.kickerEmphasis = String(appLocalized: "Syncing final steps")
+                fight.listSubtitle = fight.kickerEmphasis
+            } else if youRow?.deferred == true {
+                fight.kickerEmphasis = String(appLocalized: "Starts next round")
+                fight.listSubtitle = fight.kickerEmphasis
+            } else if let youRow, let leader = joined.first, !youRow.invited {
+                if youRow.person.id == leader.person.id, let runnerUp = joined.dropFirst().first {
+                    let gap = leader.score - runnerUp.score
+                    fight.kickerPrefix = gap == 0 ? "" : String(appLocalized: "Leading by")
+                    fight.kickerEmphasis = gap == 0
+                        ? String(appLocalized: "Tied")
+                        : String(
+                            appLocalized: "fight.steps-value",
+                            defaultValue: "\(formatScore(gap, .steps)) steps"
+                        )
+                    fight.kickerRest = String(
+                        appLocalized: "fight.time-to-go",
+                        defaultValue: "with \(remainingLabel) to go"
+                    )
+                    fight.listSubtitle = gap == 0
+                        ? String(
+                            appLocalized: "fight.tied-time-to-go",
+                            defaultValue: "Tied with \(remainingLabel) to go"
+                        )
+                        : String(
+                            appLocalized: "fight.leading-time-to-go",
+                            defaultValue: "Leading by \(fight.kickerEmphasis) with \(remainingLabel) to go"
+                        )
+                } else if youRow.person.id == leader.person.id {
+                    fight.kickerEmphasis = String(
+                        appLocalized: "fight.time-left",
+                        defaultValue: "\(remainingLabel) left"
+                    )
+                    fight.listSubtitle = fight.kickerEmphasis
+                } else {
+                    let gap = leader.score - youRow.score
+                    fight.kickerEmphasis = gap == 0
+                        ? String(appLocalized: "Tied")
+                        : String(
+                            appLocalized: "fight.steps-value",
+                            defaultValue: "\(formatScore(gap, .steps)) steps"
+                        )
+                    fight.kickerRest = gap == 0
+                        ? ""
+                        : String(
+                            appLocalized: "fight.behind-person",
+                            defaultValue: "behind \(leader.person.name)"
+                        )
+                    fight.listSubtitle = gap == 0
+                        ? String(appLocalized: "Tied")
+                        : String(
+                            appLocalized: "fight.steps-behind-person",
+                            defaultValue: "\(fight.kickerEmphasis) behind \(leader.person.name)"
+                        )
+                }
+            } else {
+                fight.kickerEmphasis = String(
+                    appLocalized: "fight.time-left",
+                    defaultValue: "\(remainingLabel) left"
+                )
+                fight.listSubtitle = fight.kickerEmphasis
+            }
+        }
+
+        fight.standingsMeta = waiting.isEmpty
+            ? nil
+            : String(
+                appLocalized: "fight.standings-next",
+                defaultValue: "\(joined.count) racing · \(waiting.count) start next"
+            )
     }
 
     private static func isAfterFightStartDay(_ start: Date, now: Date = Date()) -> Bool {

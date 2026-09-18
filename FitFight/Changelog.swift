@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 18,
+            notes: "Fight status labels follow your language immediately, even when a refresh fails. Fight names and user-written stakes stay exactly as entered."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 18,
             notes: "Language changes keep your iPhone’s regional formats and preserve unfinished fights and posts."
         ),
         ReleaseNote(

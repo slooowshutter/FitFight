@@ -54,10 +54,23 @@ signed-in identity modifiers and preference store, checking draft retention duri
 remote refresh and local saves, live translation, and draft isolation on account
 switches. All existing native checks and the iOS simulator build also passed in
 [the cloud verification run](https://github.com/slooowshutter/FitFight/actions/runs/35338717280)
-at `b0c33aa`. App and test sources are unchanged since that run. Normal CI branch
-triggers are restored after the feature-branch verification.
+at `b0c33aa`. That run covers the regional-format and draft-state fixes.
 No API or database contract changed, and no live deployment or TestFlight upload
 was made. These hosted checks do not replace physical signed-in two-device checks.
+
+**Offline Fight copy fix, 18 Sep:** app-generated status, invitation, and end-date
+labels now rebuild from existing confirmed Fight data on a language change. They
+no longer depend on a successful snapshot request. The updated labels are cached
+for offline relaunch. Fight names, user-written stakes, participant names, scores,
+and deadlines are preserved. API and database contracts are unchanged. A 1.1.2
+release note includes English and French copy.
+
+The new `python3 scripts/test_fight_localization.py` regression
+[failed against the previous implementation on hosted macOS](https://github.com/slooowshutter/FitFight/actions/runs/35347152418):
+"Ended must switch to French even when every Fight request fails". It exercises
+the production language-change handler, snapshot mapping, and local cache with
+failed HTTP reads. Verification of the fix and simulator compilation are pending.
+No PR, release-branch merge, live deployment, or TestFlight upload was made.
 
 **Live and supported clients:** read-only release checks at **03:20 UTC on
 17 Sep** returned staging latest **1.1.1 (201)**, review/internal **1.1.2 (203)**,

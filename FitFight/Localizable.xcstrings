@@ -1,6 +1,16 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Fight status labels follow your language immediately, even when a refresh fails. Fight names and user-written stakes stay exactly as entered.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les libellés de statut des fights suivent immédiatement ta langue, même si l’actualisation échoue. Les noms des fights et les gages saisis restent exactement tels quels."
+                    }
+                }
+            }
+        },
         "Language changes keep your iPhone’s regional formats and preserve unfinished fights and posts.": {
             "localizations": {
                 "fr": {

@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 
 enum AppLanguage: String, Codable, CaseIterable, Identifiable {
     case system
@@ -19,26 +20,32 @@ enum AppLanguage: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+// SwiftUI tracks this read even when a view resolves its text through String(appLocalized:).
+@Observable
+private final class AppLanguageSelection {
+    var language: AppLanguage = .system
+}
+
 enum AppLocalization {
     private static let lock = NSLock()
-    private static var selectedLanguage: AppLanguage = .system
+    private static let selection = AppLanguageSelection()
 
     static func apply(_ language: AppLanguage) {
         lock.lock()
         defer { lock.unlock() }
-        selectedLanguage = language
+        selection.language = language
     }
 
     static var languageCode: String {
         lock.lock()
-        let language = selectedLanguage
+        let language = selection.language
         lock.unlock()
         return language.languageCode
     }
 
     static var locale: Locale {
         lock.lock()
-        let language = selectedLanguage
+        let language = selection.language
         lock.unlock()
         guard language != .system else { return .autoupdatingCurrent }
         var components = Locale.Components(locale: .current)

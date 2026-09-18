@@ -96,7 +96,7 @@ jobs:
 
             - name: Verify remaining-time labels
               run: |
-                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx13.0" FitFight/AppLocalization.swift FitFight/RemainingTime.swift tests/RemainingTimeTests.swift -o /tmp/fitfight-remaining-tests
+                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx14.0" FitFight/AppLocalization.swift FitFight/RemainingTime.swift tests/RemainingTimeTests.swift -o /tmp/fitfight-remaining-tests
                   /tmp/fitfight-remaining-tests
 
             - name: Verify remote photo cache keys
@@ -130,7 +130,7 @@ jobs:
 
             - name: Verify native API contracts
               run: |
-                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx13.0" FitFight/AppLocalization.swift FitFight/Media.swift FitFight/Profile.swift FitFight/FightSnapshot.swift tests/APIContractTests.swift -o /tmp/fitfight-contract-tests
+                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx14.0" FitFight/AppLocalization.swift FitFight/Media.swift FitFight/Profile.swift FitFight/FightSnapshot.swift tests/APIContractTests.swift -o /tmp/fitfight-contract-tests
                   /tmp/fitfight-contract-tests contracts/fixtures
 
             - name: Build for iOS Simulator

@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { isApnsConfigured, readApnsEnvironment } from "@/lib/apns/apns-config";
 import {
     inviteNotificationAlert,
+    mentionNotificationAlert,
     notificationAlert,
 } from "@/lib/notifications/notification-copy";
 
@@ -19,6 +20,19 @@ test("notification copy stays generic on the lock screen", () => {
     assert.equal(alert.title, "FitFight");
     assert.match(alert.body, /6 hours left/i);
     assert.doesNotMatch(alert.body, /\$/);
+});
+
+test("mention alerts name the person and stay off scores", () => {
+    const alert = mentionNotificationAlert("post", "Marc", "en");
+    assert.equal(alert.title, "FitFight");
+    assert.equal(alert.body, "Marc tagged you in a post.");
+    assert.doesNotMatch(alert.body, /score/i);
+    assert.doesNotMatch(alert.body, /step/i);
+    assert.doesNotMatch(alert.body, /\d{3,}/);
+    assert.equal(
+        mentionNotificationAlert("comment", "Marc", "fr").body,
+        "Marc t’a mentionné dans un commentaire.",
+    );
 });
 
 test("invite alerts name the person and fight and stay off scores", () => {

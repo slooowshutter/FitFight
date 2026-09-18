@@ -63,7 +63,7 @@ enum CompanionCategory: String, CaseIterable, Identifiable {
         case .forest: String(localized: "Forest")
         case .jungle: String(localized: "Jungle")
         case .yours: String(localized: "Yours")
-        case .custom: String(localized: "Custom")
+        case .custom: String(localized: "Make it yours")
         }
     }
 
@@ -189,6 +189,7 @@ final class CompanionStore: ObservableObject {
     @Published private(set) var savedPrompts: [String] = []
     @Published private(set) var hasChosen = false
     @Published var showingPicker = false
+    @Published var pickerStartsWithCustom = false
 
     private var isRestoring = false
     private var ownerId: UUID?
@@ -571,7 +572,7 @@ struct CompanionIntroduction: View {
         switch surface {
         case .fights: 156
         case .newFight: 210
-        case .you: 190
+        case .you: 240
         }
     }
 
@@ -601,7 +602,16 @@ struct CompanionIntroduction: View {
                         .font(.custom("Nunito-Bold", size: 12, relativeTo: .caption))
                         .foregroundStyle(theme.textSecondary)
                 }
-                Button(String(localized: "Try another companion")) {
+                Button(String(localized: "Make it yours")) {
+                    companions.pickerStartsWithCustom = true
+                    companions.showingPicker = true
+                }
+                .ffType(.buttonSmall)
+                .foregroundStyle(theme.mossText)
+                .frame(minHeight: 44)
+                .buttonStyle(FFHapticPlainStyle())
+                Button(String(localized: "Change animal")) {
+                    companions.pickerStartsWithCustom = false
                     companions.showingPicker = true
                 }
                 .ffType(.buttonSmall)
@@ -795,10 +805,12 @@ struct CompanionPicker: View {
     @FocusState private var promptFocused: Bool
 
     private let promptLimit = 1000
+    private let startWithCustom: Bool
 
-    init(selection: StockCompanion, required: Bool = false, isCustom: Bool = false, prompt: String = "") {
-        _category = State(initialValue: isCustom ? .custom : .all)
-        if isCustom {
+    init(selection: StockCompanion, required: Bool = false, isCustom: Bool = false, prompt: String = "", startWithCustom: Bool = false) {
+        self.startWithCustom = startWithCustom
+        _category = State(initialValue: startWithCustom ? .custom : .all)
+        if isCustom || startWithCustom {
             _draft = State(initialValue: nil)
             _pickingCustom = State(initialValue: true)
             _customPrompt = State(initialValue: prompt)
@@ -823,11 +835,11 @@ struct CompanionPicker: View {
                         .frame(minHeight: 44)
                 }
             }
-            Text("This is how other people see you in fights and Feed.")
+            Text("This is how other people see you in fights and Feed. You can change your animal anytime.")
                 .font(.custom("Nunito-Bold", size: 13, relativeTo: .body))
                 .foregroundStyle(theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
-            if !error.isEmpty {
+            if !error.isEmpty && category != .custom {
                 Text(error)
                     .ffType(.caption)
                     .foregroundStyle(theme.emberText)
@@ -836,7 +848,11 @@ struct CompanionPicker: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(CompanionCategory.allCases) { item in
-                        Button { category = item } label: {
+                        Button {
+                            promptFocused = false
+                            category = item
+                            error = ""
+                        } label: {
                             Text(item.name)
                                 .ffType(.label)
                                 .foregroundStyle(category == item ? theme.mossText : theme.textSecondary)
@@ -853,7 +869,7 @@ struct CompanionPicker: View {
             }
             .disabled(isSaving)
             if category == .yours {
-                Text("Reuse a saved description or write a new one in Custom.")
+                Text("Reuse a saved description or write a new one in Make it yours.")
                     .ffType(.body)
                     .foregroundStyle(theme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -928,6 +944,19 @@ struct CompanionPicker: View {
                 }
             }
             if category == .custom {
+                Text("You can change your animal anytime. Choose another from the grid or describe any animal below.")
+                    .ffType(.body)
+                    .foregroundStyle(theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button(String(localized: "Change animal")) {
+                    promptFocused = false
+                    category = .all
+                }
+                .ffType(.buttonSmall)
+                .foregroundStyle(theme.mossText)
+                .frame(minHeight: 44)
+                .buttonStyle(FFHapticPlainStyle())
+                .disabled(isSaving)
                 FFField(
                     label: String(localized: "Your animal"),
                     state: promptFocused ? .focused : .normal,
@@ -946,12 +975,19 @@ struct CompanionPicker: View {
                             axis: .vertical
                         )
                         .focused($promptFocused)
+                        .accessibilityLabel(String(localized: "Your animal"))
                         .lineLimit(5...12)
                         .textInputAutocapitalization(.sentences)
                         .onChange(of: customPrompt) { _, value in
                             if value.count > promptLimit { customPrompt = String(value.prefix(promptLimit)) }
                         }
                     }
+                }
+                if !error.isEmpty {
+                    Text(error)
+                        .ffType(.caption)
+                        .foregroundStyle(theme.emberText)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 FFButton(
                     title: String(localized: "Save companion"),
@@ -981,10 +1017,9 @@ struct CompanionPicker: View {
         .interactiveDismissDisabled(session.needsCompanionSelection)
         .onAppear {
             if customPrompt.isEmpty { customPrompt = companions.customPrompt }
-            if companions.isCustom {
+            if companions.isCustom || startWithCustom {
                 pickingCustom = true
                 draft = nil
-                category = .custom
             } else if companions.hasChosen {
                 pickingCustom = false
                 draft = companions.selection

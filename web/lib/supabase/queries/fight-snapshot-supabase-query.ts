@@ -36,7 +36,7 @@ export async function readFightSnapshot(
         `;
         const [result] = await sql<{ snapshot: unknown }[]>`
             with visible_fights as materialized (
-                select id, owner_id, name, state, starts_at, ends_at, action_text, series_id,
+                select id, owner_id, name, state, starts_at, ends_at, time_zone, action_text, series_id,
                     (ends_at + (final_sync_grace_seconds * interval '1 second')) as grace_ends_at
                 from public.fights
                 where owner_id = ${userId}

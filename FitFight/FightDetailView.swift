@@ -34,6 +34,9 @@ struct FightDetailView: View {
     @State private var fightsRevision = 0
     @State private var pane: FightDetailPane = .stats
     @State private var showingEdit = false
+    @State private var canAdminister = false
+    @State private var adminBusy = false
+    @State private var adminAction: String? = nil
     @StateObject private var fightFeed = FeedStore()
     @State private var isRefreshingFeed = false
 
@@ -43,7 +46,7 @@ struct FightDetailView: View {
     }
 
     private var fight: Fight {
-        model.canonicalFight(for: initialFight.id) ?? initialFight
+        model.detailFight(for: initialFight.id) ?? initialFight
     }
 
     private var panes: [FightDetailPane] {
@@ -131,6 +134,27 @@ struct FightDetailView: View {
                 .environmentObject(steps)
                 .fitFightTheme(theme)
                 .presentationBackground(theme.bg)
+        }
+        .task(id: session.authSession?.user.id) {
+            canAdminister = false
+            guard let accountID = session.authSession?.user.id else { return }
+            do {
+                let token = try await session.freshAccessToken()
+                let capabilities = try await FitFightAPI().fightAdministrationCapabilities(accessToken: token)
+                guard session.authSession?.user.id == accountID else { return }
+                canAdminister = capabilities.manageFights
+            } catch { }
+        }
+        .confirmationDialog(String(localized: "Stop this Fight?"), isPresented: Binding(
+            get: { adminAction != nil }, set: { if !$0 { adminAction = nil } }
+        ), titleVisibility: .visible) {
+            Button(adminAction == "pause_series" ? String(localized: "Stop future rounds") : String(localized: "Stop current and future rounds"), role: .destructive) {
+                let action = adminAction
+                adminAction = nil
+                Task { await administer(AdministerFightRequest(action: action)) }
+            }
+        } message: {
+            Text(String(localized: "Finalized results are kept. Stopping future rounds lets the current round finish."))
         }
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
@@ -357,16 +381,27 @@ struct FightDetailView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                if session.isFitFightAdmin, !pendingJoin {
-                    Button {
-                        Task { await model.setFightSuggested(id: fight.id, suggested: !fight.suggested) }
+                if canAdminister, !pendingJoin {
+                    Menu {
+                        Button(fight.suggested ? String(localized: "Remove suggestion") : String(localized: "Suggest")) {
+                            Task { await model.setFightSuggested(id: fight.id, suggested: !fight.suggested) }
+                        }
+                        .disabled(!fight.suggested && fight.visibility != "joinable")
+                        if fight.visibility != "joinable" {
+                            Text(String(localized: "Only public Fights can be suggested."))
+                        }
+                        Button(fight.visibility == "joinable" ? String(localized: "Make private") : String(localized: "Make public")) {
+                            Task { await administer(AdministerFightRequest(visibility: fight.visibility == "joinable" ? "invite_only" : "joinable")) }
+                        }
+                        Button(fight.recurring ? String(localized: "Turn recurrence off") : String(localized: "Turn recurrence on")) {
+                            Task { await administer(AdministerFightRequest(recurring: !fight.recurring)) }
+                        }
+                        Button(String(localized: "Stop future rounds"), role: .destructive) { adminAction = "pause_series" }
+                        Button(String(localized: "Stop current and future rounds"), role: .destructive) { adminAction = "stop_round" }
+                            .disabled(fight.status == .finished)
                     } label: {
-                        Text(fight.suggested ? String(localized: "Suggested") : String(localized: "Suggest"))
-                            .ffType(.label)
-                            .foregroundStyle(theme.mossText)
-                            .frame(height: 44)
-                    }
-                    .buttonStyle(FFHapticPlainStyle())
+                        Image(systemName: "slider.horizontal.3").frame(width: 44, height: 44).foregroundStyle(theme.mossText)
+                    }.disabled(adminBusy).accessibilityLabel(String(localized: "Manage Fight"))
                 }
                 if fight.canOwnerEdit, !pendingJoin {
                     Button {
@@ -386,6 +421,17 @@ struct FightDetailView: View {
         .padding(.horizontal, theme.space.screenPadding)
         .padding(.bottom, 4)
         .background(theme.bg)
+    }
+
+    private func administer(_ input: AdministerFightRequest) async {
+        guard !adminBusy, let fightID = UUID(uuidString: fight.id) else { return }
+        adminBusy = true
+        defer { adminBusy = false }
+        do {
+            let token = try await session.freshAccessToken()
+            _ = try await FitFightAPI().administerFight(fightID: fightID, input: input, accessToken: token)
+            await model.refreshFromServer()
+        } catch { model.createError = error.localizedDescription }
     }
 
     private var joinRoundNext: String {
@@ -523,7 +569,7 @@ struct FightDetailView: View {
         contextFight: Fight,
         inWinnerBand: Bool = false
     ) -> some View {
-        Group {
+        ProfileIdentityLink(userID: UUID(uuidString: row.person.id), source: "standings") {
             if row.invited || row.deferred {
                 HStack(spacing: 13) {
                     Text("-")

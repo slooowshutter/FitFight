@@ -1,4 +1,4 @@
-import type { Sql } from "postgres";
+import type { Sql, TransactionSql } from "postgres";
 import { inviteNotificationAlert } from "@/lib/notifications/notification-copy";
 import type { NotificationLocale } from "@/lib/types/notifications/device-installation";
 import type {
@@ -208,7 +208,7 @@ export async function skipGraceNotificationsForMember(
 }
 
 export async function enqueueFightInviteNotifications(
-    sql: Sql,
+    sql: Sql | TransactionSql,
     input: {
         fightId: string;
         fightName: string;

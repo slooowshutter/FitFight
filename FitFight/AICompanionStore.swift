@@ -18,7 +18,14 @@ final class AICompanionStore: ObservableObject {
     var avatars: [FitFightAILibraryEntry] { library.filter { $0.workflow == .avatar } }
 
     func open(session: SessionStore) async {
-        guard let userID = session.profile?.userId else { return }
+        guard let userID = session.profile?.userId else {
+            ownerID = nil
+            library = []
+            allowance = nil
+            action = nil
+            error = ""
+            return
+        }
         if !recoveryBlocked { error = "" }
         if ownerID != userID {
             ownerID = userID
@@ -51,7 +58,9 @@ final class AICompanionStore: ObservableObject {
             guard session.profile?.userId == userID, ownerID == userID else { return }
             allowance = credits
         } catch {
-            if !Task.isCancelled { self.error = error.localizedDescription }
+            if !Task.isCancelled, session.profile?.userId == userID, ownerID == userID {
+                self.error = error.localizedDescription
+            }
         }
     }
 
@@ -87,9 +96,10 @@ final class AICompanionStore: ObservableObject {
                 case .groupPhoto:
                     result = try await api.startGroupPhotoGeneration(characters: pending.characters, scene: pending.description, idempotencyKey: pending.key, accessToken: token)
                 }
+                try Task.checkCancellation()
+                guard session.profile?.userId == userID, ownerID == userID else { return }
                 pending.requestID = result.requestID
                 UserDefaults.standard.set(try JSONEncoder().encode(pending), forKey: Self.pendingPrefix + userID.uuidString)
-                guard session.profile?.userId == userID, ownerID == userID else { return }
                 action = pending
             }
             while result.status == .pending || result.status == .running {
@@ -121,10 +131,10 @@ final class AICompanionStore: ObservableObject {
                 try Task.checkCancellation()
                 guard session.profile?.userId == userID, ownerID == userID else { return }
                 let media = try await MediaUploader.upload(image, purpose: "profile", preserveTransparency: true, session: session)
-                pending.uploaded[stage] = media
-                UserDefaults.standard.set(try JSONEncoder().encode(pending), forKey: Self.pendingPrefix + userID.uuidString)
                 try Task.checkCancellation()
                 guard session.profile?.userId == userID, ownerID == userID else { return }
+                pending.uploaded[stage] = media
+                UserDefaults.standard.set(try JSONEncoder().encode(pending), forKey: Self.pendingPrefix + userID.uuidString)
                 action = pending
             }
             let input = FitFightAISaveImages(

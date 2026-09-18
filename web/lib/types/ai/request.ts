@@ -71,7 +71,7 @@ export const aiPollRecordSchema = aiRequestRecordSchema.extend({
 export const aiRequestUpdateSchema = z.object({
     status: z.enum(aiRequestStateValues).exclude(["starting"]),
     runHandle: blendRunHandleSchema.nullable(),
-    result: z.record(z.unknown()).nullable(),
+    result: z.record(z.string()).nullable(),
     errorCode: aiErrorCodeSchema.nullable(),
     providerCompletedAt: z.string().datetime({ offset: true }).nullish(),
 });

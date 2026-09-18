@@ -15,7 +15,7 @@ export async function insertAiHttpLogs(
             insert into private.ai_http_logs
             select l.id, l.observed_at, l.trace_id, p.user_id, l.request_id, l.leg, l.operation,
                 l.workflow_id, l.version_id, l.run_id, l.status, l.elapsed_ms, l.disposition, l.outcome, l.code, l.upstream_code
-            from jsonb_to_recordset(${JSON.stringify(rows)}::jsonb) as l(
+            from jsonb_to_recordset(${sql.json(rows)}) as l(
                 id uuid, observed_at timestamptz, trace_id uuid, user_id uuid, request_id uuid, leg text,
                 operation text, workflow_id text, version_id text, run_id text, status integer,
                 elapsed_ms integer, disposition text, outcome text, code text, upstream_code text

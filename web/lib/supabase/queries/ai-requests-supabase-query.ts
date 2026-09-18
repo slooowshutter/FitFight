@@ -483,7 +483,7 @@ export async function finishAiRequestAttempt(
                 settled_at = case when ${settles} then clock_timestamp() else settled_at end,
                 status = ${update.status},
                 run_handle = ${update.runHandle === null ? null : sql.json(update.runHandle)},
-                result = ${update.result === null ? null : JSON.stringify(update.result)}::jsonb,
+                result = ${update.result === null ? null : sql.json(update.result)},
                 error_code = ${update.errorCode},
                 lease_token = null,
                 lease_expires_at = null,

@@ -107,7 +107,7 @@ struct UIImage { init?(data: Data) { return nil } }
         precondition(corrupt.recoveryBlocked && FitFightAPI.keys.count == countBefore)
         UserDefaults.standard.removeObject(forKey: storageKey)
 
-        // A delayed start can only update the old account's persisted action.
+        // Signing out clears visible data; delayed starts cannot recreate deleted local data.
         let switched = AICompanionStore()
         await switched.open(session: session)
         FitFightAPI.failure = nil
@@ -115,11 +115,28 @@ struct UIImage { init?(data: Data) { return nil } }
         let task = Task { await switched.begin(workflow: .avatar, description: "Fox", characters: [], session: session) }
         while FitFightAPI.continuation == nil { await Task.yield() }
         session.profile = nil
+        await switched.open(session: session)
+        UserDefaults.standard.removeObject(forKey: storageKey)
         let completed = try decoder.decode(FitFightAIRequest.self, from: Data(contentsOf: fixtures.appendingPathComponent("ai-run-completed.json")))
         FitFightAPI.continuation?.resume(returning: completed)
         await task.value
         precondition(FitFightAPI.saves.count == 1)
         precondition(switched.library.isEmpty)
+        precondition(switched.action == nil && UserDefaults.standard.data(forKey: storageKey) == nil)
+
+        session.profile = profile
+        FitFightAPI.continuation = nil
+        let cancelled = AICompanionStore()
+        await cancelled.open(session: session)
+        let cancelledTask = Task { await cancelled.begin(workflow: .avatar, description: "Fox", characters: [], session: session) }
+        while FitFightAPI.continuation == nil { await Task.yield() }
+        let persistedKey = cancelled.action?.key
+        cancelledTask.cancel()
+        FitFightAPI.continuation?.resume(returning: completed)
+        await cancelledTask.value
+        let afterCancellation = try decoder.decode(AICompanionAction.self, from: UserDefaults.standard.data(forKey: storageKey)!)
+        precondition(afterCancellation.key == persistedKey && afterCancellation.requestID == nil)
+        precondition(FitFightAPI.saves.count == 1, "Dismissal must stop local saving without discarding the paid key")
         print("AI companion recovery, save resumption, and account isolation passed")
     }
 }

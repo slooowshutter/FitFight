@@ -81,10 +81,10 @@ test("durable Blend admission and poll leases", async (t) => {
     const users = Array.from({ length: 4 }, () => randomUUID());
     const [owner, other] = users;
     t.after(async () => {
-        await database`delete from auth.users where id = any(${database.array(users)}::uuid[])`;
+        await database`delete from auth.users where id in ${database(users)}`;
     });
     t.beforeEach(async () => {
-        await database`delete from auth.users where id = any(${database.array(users)}::uuid[])`;
+        await database`delete from auth.users where id in ${database(users)}`;
         for (const user of users) {
             await database`insert into auth.users (id) values (${user})`;
             await adjustAiCredits(
@@ -626,7 +626,7 @@ test("durable Blend admission and poll leases", async (t) => {
                 errorCode: null,
                 providerCompletedAt: "2026-09-18T00:00:00Z",
             };
-            const settlements = await Promise.all(
+            const settlementAttempts = await Promise.allSettled(
                 Array.from({ length: 8 }, () =>
                     finishAiRequestAttempt(
                         owner,
@@ -638,6 +638,13 @@ test("durable Blend admission and poll leases", async (t) => {
                     ),
                 ),
             );
+            const failedSettlement = settlementAttempts.find(
+                (result) => result.status === "rejected",
+            );
+            if (failedSettlement) throw failedSettlement.reason;
+            const settlements = settlementAttempts
+                .filter((result) => result.status === "fulfilled")
+                .map((result) => result.value);
             assert.equal(settlements.filter(Boolean).length, 1);
             const completed = settlements.find((value) => value !== null);
             assert.equal(
@@ -750,8 +757,11 @@ test("durable Blend admission and poll leases", async (t) => {
                 1,
             );
             await assert.rejects(
-                database`update private.ai_credit_balances set available = available + 1 where user_id = ${owner}`,
+                database.begin(async (sql) => {
+                    await sql`update private.ai_credit_balances set available = available + 1 where user_id = ${owner}`;
+                }),
             );
+            assert.deepEqual(await readAiAllowance(owner, database), before);
             await assert.rejects(
                 database`update private.ai_balance_events set reason = 'changed' where user_id = ${owner}`,
             );

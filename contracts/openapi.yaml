@@ -2100,8 +2100,7 @@ components:
                             "id": {
                                 "description": "Opaque identifier scoped to this Profile. Use fight_id for authorized Fight navigation.",
                                 "type": "string",
-                                "format": "uuid",
-                                "description": "Opaque history identifier scoped to this Profile, never a Fight identifier."
+                                "format": "uuid"
                             },
                             "fight_id": {
                                 "anyOf": [

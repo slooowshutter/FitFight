@@ -68,7 +68,8 @@ export function profileRecord(fights: FightRecordFact[], userId: string): Profil
     return record;
 }
 
-export function rivalryRecord(fights: FightRecordFact[], viewerId: string, targetId: string): RivalryRecord {
+/** Historical scores survive departure, but rematch details require current shared membership. */
+export function rivalryRecord(fights: FightRecordFact[], viewerId: string, targetId: string, sharedFightIds: ReadonlySet<string>): RivalryRecord {
     const record: RivalryRecord = { wins: 0, losses: 0, draws: 0, rematch: null };
     for (const fight of fights) {
         const viewer = classifyFightResult(fight, viewerId);
@@ -77,7 +78,7 @@ export function rivalryRecord(fights: FightRecordFact[], viewerId: string, targe
         if (viewer.result === "win") record.wins++;
         else if (target.result === "win") record.losses++;
         else record.draws++;
-        if (record.rematch === null) {
+        if (record.rematch === null && sharedFightIds.has(fight.id)) {
             record.rematch = {
                 duration_seconds: Math.round((Date.parse(fight.ends_at) - Date.parse(fight.starts_at)) / 1000),
                 duration_days: Number.isInteger(fight.calendar_days) && fight.calendar_days > 0 ? fight.calendar_days : null,

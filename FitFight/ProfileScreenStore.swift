@@ -30,7 +30,7 @@ final class ProfileScreenStore: ObservableObject {
             let loaded = try await FitFightAPI().sharedProfile(userID: userID, preview: preview, accessToken: token)
             let page: ProfileHistoryPage?
             if preview == nil {
-                page = try await FitFightAPI().profileHistory(userID: userID, shared: loaded.record == nil, accessToken: token)
+                page = try await FitFightAPI().profileHistory(userID: userID, shared: userID != accountID, accessToken: token)
             } else {
                 page = nil
             }
@@ -47,14 +47,14 @@ final class ProfileScreenStore: ObservableObject {
     }
 
     func loadMore(userID: UUID, session: SessionStore) async {
-        guard let cursor = nextCursor, let profile, !loading else { return }
+        guard let cursor = nextCursor, !loading else { return }
         let requestGeneration = generation
         let accountID = session.authSession?.user.id
         loading = true
         defer { if requestGeneration == generation { loading = false } }
         do {
             let token = try await session.freshAccessToken()
-            let page = try await FitFightAPI().profileHistory(userID: userID, shared: profile.record == nil, cursor: cursor, accessToken: token)
+            let page = try await FitFightAPI().profileHistory(userID: userID, shared: userID != accountID, cursor: cursor, accessToken: token)
             try Task.checkCancellation()
             guard requestGeneration == generation, accountID == session.authSession?.user.id else { return }
             history.append(contentsOf: page.results)

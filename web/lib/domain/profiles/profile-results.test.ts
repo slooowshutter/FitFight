@@ -34,7 +34,7 @@ test("shared first and no complete final data award no wins", () => {
         const tied = { ...fight, members: fight.members.map((member) => ({ ...member, rank: 1, complete })) };
         assert.equal(classifyFightResult(tied, first).result, "draw");
         assert.equal(profileRecord([tied], first).wins, 0);
-        assert.equal(rivalryRecord([tied], first, second).draws, 1);
+        assert.equal(rivalryRecord([tied], first, second, new Set([fight.id])).draws, 1);
     }
 });
 
@@ -42,7 +42,7 @@ test("a missing final sync preserves the actual forfeit without calling it quitt
     const partial = { ...fight, members: [fight.members[0], { ...fight.members[1], complete: false }] };
     assert.equal(classifyFightResult(partial, first).result, "win");
     assert.equal(classifyFightResult(partial, second).result, "incomplete");
-    assert.equal(rivalryRecord([partial], second, first).losses, 1);
+    assert.equal(rivalryRecord([partial], second, first, new Set([fight.id])).losses, 1);
 });
 
 test("withdrawals after starting remain in the denominator; pre-start withdrawals and removal do not", () => {
@@ -74,5 +74,9 @@ test("removal does not turn a group into a duel", () => {
         departed_at: "2026-09-11T00:00:00Z", departure: "removed" as const,
     }] };
     assert.equal(classifyFightResult(group, first).fieldSize, 3);
-    assert.deepEqual(rivalryRecord([group], first, second), { wins: 0, losses: 0, draws: 0, rematch: null });
+    assert.deepEqual(rivalryRecord([group], first, second, new Set([fight.id])), { wins: 0, losses: 0, draws: 0, rematch: null });
+});
+
+test("historical rivalry scores cannot expose rematch details after either person leaves", () => {
+    assert.deepEqual(rivalryRecord([fight], first, second, new Set()), { wins: 1, losses: 0, draws: 0, rematch: null });
 });

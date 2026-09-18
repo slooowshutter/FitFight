@@ -306,7 +306,7 @@ struct ContentView: View {
                 .toolbar(.hidden, for: .navigationBar)
                 .navigationDestination(for: String.self) { id in
                     Group {
-                        if let fight = model.canonicalFight(for: id) {
+                        if let fight = model.fight(id: id) {
                             FightDetailView(fight: fight)
                         } else {
                             VStack(alignment: .leading, spacing: 12) {

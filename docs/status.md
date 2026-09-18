@@ -108,6 +108,25 @@ changes, staging or production deployment, or TestFlight upload was made.
 Physical signed-in two-device checks remain outstanding. The migration, backend,
 then-app rollout order above still applies.
 
+**Further develop integration, 18 Sep:** merged `origin/develop` at `c86d657`
+into the preferences branch in `0d3f08b`. Resolutions preserve shared-membership
+Profile history, invitation-aware join buttons, post-join HealthKit sync, and
+Feedback refresh and comment controls while keeping app copy in the account
+language. Both translation catalogs and all native regressions remain. The new
+feedback decoder runner includes the existing app-localization dependency;
+frozen build 201/202 models and fixtures are unchanged.
+
+Cloud verification of `0d3f08b` passed:
+
+- [Web API](https://github.com/slooowshutter/FitFight/actions/runs/35357049487): strict typechecking, all 318 backend tests, and API contract parsing.
+- [Database](https://github.com/slooowshutter/FitFight/actions/runs/35357049512): migrations, SQL lint, 233 pgTAP checks, legacy build 113 compatibility, and all 41 transaction tests before and after the deferred permission cutoff without skips; historical migration replay also passed. Retained HTTP cases cover builds 113, 190, 200, 201, 202, and 203.
+- [Native](https://github.com/slooowshutter/FitFight/actions/runs/35357049486): all preference, offline localization, Profile interaction, rematch, and frozen build 201/202 feedback checks, plus the full simulator build on hosted `macos-26`.
+- [Screenshots](https://github.com/slooowshutter/FitFight/actions/runs/35357049537): English/French simulator screen exports completed.
+
+These are cloud checks of the combined code. No hosted database change, staging
+or production deployment, release-branch merge, or TestFlight upload was performed.
+Installed-device verification and the existing rollout order remain unchanged.
+
 ## Develop merge verification, 18 Sep 2026
 
 Merged `origin/develop` at `f17a456` into `feedback-status-notifications`. The

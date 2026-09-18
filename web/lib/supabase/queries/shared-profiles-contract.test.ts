@@ -10,7 +10,7 @@ import { profileHistoryPageSchema } from "@/lib/types/profiles/profile-results";
 const userID = "11111111-1111-4111-8111-111111111111";
 
 test("new profile fixtures retain explicit hidden content and redacted Fight details", async () => {
-    for (const name of ["shared-profile", "shared-profile-private"]) {
+    for (const name of ["shared-profile", "shared-profile-private", "shared-profile-statistics"]) {
         const fixture = JSON.parse(await readFile(`../contracts/fixtures/${name}.json`, "utf8"));
         assert.deepEqual(sharedProfileSchema.parse(fixture), fixture);
     }

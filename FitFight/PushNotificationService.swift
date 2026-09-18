@@ -16,10 +16,12 @@ final class PushNotificationService: NSObject, ObservableObject {
     private var deviceToken: String?
     private var installationTask: Task<Void, Never>?
     private var isSignedOut = false
+    private var onNotification: @MainActor () -> Void = {}
     private static let declinedPrePromptKey = "ff.push.declinedPrePrompt"
 
-    func configure(session: SessionStore) {
+    func configure(session: SessionStore, onNotification: @escaping @MainActor () -> Void = {}) {
         self.session = session
+        self.onNotification = onNotification
     }
 
     var canPromptForPermission: Bool {
@@ -159,7 +161,9 @@ extension PushNotificationService: UNUserNotificationCenterDelegate {
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
         await MainActor.run {
-            self.session?.isSignedIn == true && !self.isSignedOut ? [.banner, .sound] : []
+            guard self.session?.isSignedIn == true, !self.isSignedOut else { return [] }
+            self.onNotification()
+            return [.banner, .sound]
         }
     }
 
@@ -172,6 +176,7 @@ extension PushNotificationService: UNUserNotificationCenterDelegate {
         guard let route else { return }
         await MainActor.run {
             AppModel.storePendingFightRoute(route)
+            self.onNotification()
         }
     }
 }

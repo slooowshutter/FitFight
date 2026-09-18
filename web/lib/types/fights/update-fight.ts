@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { fightVisibilitySchema } from "./joinable-fight";
+import { timeZoneSchema } from "@/lib/types/time/time-zone";
 
 const dateTime = z
     .string()
@@ -16,6 +17,7 @@ export const updateFightRequestSchema = z
         recurring: z.boolean().optional(),
         startsAt: dateTime.optional(),
         endsAt: dateTime.optional(),
+        timeZone: timeZoneSchema.optional(),
         inviteHandles: z.array(z.string()).optional(),
         removeUserIds: z.array(z.string().uuid()).optional(),
     })
@@ -27,6 +29,7 @@ export const updateFightRequestSchema = z
             value.recurring !== undefined ||
             value.startsAt !== undefined ||
             value.endsAt !== undefined ||
+            value.timeZone !== undefined ||
             (value.inviteHandles !== undefined &&
                 value.inviteHandles.length > 0) ||
             (value.removeUserIds !== undefined &&

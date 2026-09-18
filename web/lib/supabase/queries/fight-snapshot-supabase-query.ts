@@ -36,7 +36,7 @@ export async function readFightSnapshot(
         `;
         const [result] = await sql<{ snapshot: unknown }[]>`
             with visible_fights as materialized (
-                select id, owner_id, name, state, starts_at, ends_at, action_text, series_id,
+                select id, owner_id, name, state, starts_at, ends_at, time_zone, action_text, series_id,
                     (ends_at + (final_sync_grace_seconds * interval '1 second')) as grace_ends_at
                 from public.fights
                 where owner_id = ${userId}
@@ -48,70 +48,8 @@ export async function readFightSnapshot(
                         then history.step_checkpoints end as step_checkpoints
                 from public.fight_members as member
                 left join lateral (
-                    select snapshot.value,
-                        case
-                            when snapshot.step_checkpoints is not null then snapshot.step_checkpoints
-                            else (
-                                select case
-                                    when points.step_checkpoints is null then null
-                                    when (points.step_checkpoints -> -1 ->> 'steps')::numeric
-                                        = snapshot.value
-                                        then points.step_checkpoints
-                                    else points.step_checkpoints || jsonb_build_array(
-                                        jsonb_build_object(
-                                            'day', to_char(
-                                                (snapshot.cutoff_at
-                                                    at time zone coalesce(fight.time_zone, 'UTC')
-                                                )::date,
-                                                'YYYY-MM-DD'
-                                            ),
-                                            'cutoff_at', trim(both '"' from to_jsonb(snapshot.cutoff_at)::text),
-                                            'steps', round(snapshot.value)::integer
-                                        )
-                                    )
-                                end
-                                from (
-                                    select jsonb_agg(
-                                        jsonb_build_object(
-                                            'day', scored.day,
-                                            'cutoff_at', scored.cutoff_at,
-                                            'steps', scored.steps
-                                        )
-                                        order by scored.day
-                                    ) as step_checkpoints
-                                    from (
-                                        select distinct on (
-                                            (point.cutoff_at
-                                                at time zone coalesce(fight.time_zone, 'UTC')
-                                            )::date
-                                        )
-                                            to_char(
-                                                (point.cutoff_at
-                                                    at time zone coalesce(fight.time_zone, 'UTC')
-                                                )::date,
-                                                'YYYY-MM-DD'
-                                            ) as day,
-                                            trim(both '"' from to_jsonb(point.cutoff_at)::text)
-                                                as cutoff_at,
-                                            round(point.value)::integer as steps
-                                        from private.fight_score_snapshots as point
-                                        where point.fight_id = snapshot.fight_id
-                                            and point.user_id = snapshot.user_id
-                                            and point.source_id = snapshot.source_id
-                                            and (member.finalized_at is null or point.is_final)
-                                        order by
-                                            (point.cutoff_at
-                                                at time zone coalesce(fight.time_zone, 'UTC')
-                                            )::date,
-                                            point.cutoff_at desc,
-                                            point.created_at desc,
-                                            point.id desc
-                                    ) as scored
-                                ) as points
-                            )
-                        end as step_checkpoints
+                    select snapshot.value, snapshot.step_checkpoints
                     from private.fight_score_snapshots as snapshot
-                    join public.fights as fight on fight.id = snapshot.fight_id
                     where snapshot.fight_id = member.fight_id and snapshot.user_id = member.user_id
                         and snapshot.source_id = member.selected_source_id
                         and (member.finalized_at is null or snapshot.is_final)

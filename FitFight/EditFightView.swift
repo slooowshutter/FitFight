@@ -17,6 +17,7 @@ struct EditFightView: View {
     @State private var customSchedule: Bool
     @State private var customStart: Date
     @State private var customEnd: Date
+    @State private var timeZone: TimeZone
     @State private var people: [FightComposerPerson]
     @State private var username = ""
     @State private var usernameError: String?
@@ -27,6 +28,7 @@ struct EditFightView: View {
 
     init(fight: Fight) {
         self.fight = fight
+        _timeZone = State(initialValue: fight.timeZone.flatMap(TimeZone.init(identifier:)) ?? .current)
         let stored = fight.name.trimmingCharacters(in: .whitespacesAndNewlines)
         _fightTitle = State(initialValue: stored == "Steps Fight" || stored == "Défi de pas" ? "" : stored)
         _actionText = State(initialValue: fight.actionText)
@@ -65,7 +67,7 @@ struct EditFightView: View {
 
     private var scheduleError: String? {
         let startsAt = durationStart
-        let endsAt = customSchedule ? customEnd : FightComposer.endDate(from: startsAt, days: durationDays)
+        let endsAt = customSchedule ? customEnd : FightComposer.endDate(from: startsAt, days: durationDays, timeZone: timeZone)
         if canEditStart, customSchedule, customStart <= Date() {
             return String(localized: "Choose a start time in the future.")
         }
@@ -122,6 +124,7 @@ struct EditFightView: View {
                 }
             }
             .padding(.horizontal, theme.space.screenPadding)
+            .padding(.top, theme.space.base)
         }
         .background(theme.bg)
     }
@@ -138,6 +141,7 @@ struct EditFightView: View {
                 customStart: $customStart,
                 customEnd: $customEnd,
                 recurring: $recurring,
+                timeZone: $timeZone,
                 canEditStart: canEditStart,
                 startsImmediately: false,
                 constrainEnd: true,
@@ -171,8 +175,9 @@ struct EditFightView: View {
                 customEnd: customEnd,
                 durationStart: durationStart,
                 durationDays: durationDays,
+                timeZone: timeZone,
                 visibilityJoinable: visibilityJoinable,
-                opponentHandles: people.filter { !$0.isOwner }.map(\.handle),
+                opponentHandles: people.filter { !$0.isOwner }.map { $0.handle },
                 recurring: recurring,
                 healthConnected: steps.hasAsked,
                 healthBusy: model.isRefreshingFights,
@@ -272,14 +277,14 @@ struct EditFightView: View {
     private func save() {
         guard canSave else { return }
         let startsAt = durationStart
-        let endsAt = customSchedule ? customEnd : FightComposer.endDate(from: startsAt, days: durationDays)
-        let originalIDs = Set(fight.standings.map(\.person.id))
-        let remainingIDs = Set(people.filter { !$0.pendingAdd }.map(\.id))
+        let endsAt = customSchedule ? customEnd : FightComposer.endDate(from: startsAt, days: durationDays, timeZone: timeZone)
+        let originalIDs = Set(fight.standings.map { $0.person.id })
+        let remainingIDs = Set(people.filter { !$0.pendingAdd }.map { $0.id })
         let removeUserIds = originalIDs.subtracting(remainingIDs).filter { id in
             people.first(where: { $0.id == id })?.isOwner != true
                 && fight.standings.first(where: { $0.person.id == id })?.person.isYou != true
         }
-        let inviteHandles = people.filter(\.pendingAdd).map(\.handle)
+        let inviteHandles = people.filter { $0.pendingAdd }.map { $0.handle }
         Task {
             let saved = await model.updateFight(
                 id: fight.id,
@@ -289,6 +294,7 @@ struct EditFightView: View {
                 recurring: recurring,
                 startsAt: canEditStart ? startsAt : nil,
                 endsAt: endsAt,
+                timeZone: canEditStart && timeZone.identifier != fight.timeZone ? timeZone.identifier : nil,
                 inviteHandles: inviteHandles,
                 removeUserIds: Array(removeUserIds)
             )

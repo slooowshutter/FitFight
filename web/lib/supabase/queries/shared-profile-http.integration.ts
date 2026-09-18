@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { after, test } from "node:test";
 import { createClient } from "@supabase/supabase-js";
 import postgres from "postgres";
-import { GET as readMe } from "@/app/api/v1/me/route";
+import { GET as readMe, PATCH as updateMe } from "@/app/api/v1/me/route";
 import { GET as readProfile } from "@/app/api/v1/profiles/[userID]/route";
 import { PATCH as updateSettings } from "@/app/api/v1/me/profile-settings/route";
 import { POST as requestFriend } from "@/app/api/v1/friends/[userID]/request/route";
@@ -39,7 +39,15 @@ test("authenticated legacy /me and new mutual-profile contracts coexist before a
     const [viewer, target] = sessions;
     const context = { params: Promise.resolve({ userID: target.userId }) };
     const headers = { authorization: `Bearer ${viewer.token}`, "content-type": "application/json" };
-    for (const [version, build] of [["1.0.0", "113"], ["1.0.0", "190"], ["1.1.0", "200"], ["1.1.1", "201"], ["1.1.1", "202"]]) {
+    const unsetProfile = await readMe(new Request("https://staging.fitfight.app/api/v1/me", { headers }), { params: Promise.resolve({}) });
+    assert.equal(unsetProfile.status, 200);
+    assert.equal(profileSchema.parse(await unsetProfile.json()).time_zone, "UTC");
+    const zoneResponse = await updateMe(new Request("https://staging.fitfight.app/api/v1/me", {
+        method: "PATCH", headers, body: JSON.stringify({ time_zone: "Pacific/Kiritimati" }),
+    }), { params: Promise.resolve({}) });
+    assert.equal(zoneResponse.status, 200);
+    assert.equal(profileSchema.parse(await zoneResponse.json()).time_zone, "Pacific/Kiritimati");
+    for (const [version, build] of [["1.0.0", "113"], ["1.0.0", "190"], ["1.1.0", "200"], ["1.1.1", "201"], ["1.1.1", "202"], ["1.1.2", "203"]]) {
         const response = await readMe(new Request("https://staging.fitfight.app/api/v1/me", {
             headers: { ...headers, "X-FitFight-Version": version, "X-FitFight-Build": build },
         }), { params: Promise.resolve({}) });
@@ -47,6 +55,14 @@ test("authenticated legacy /me and new mutual-profile contracts coexist before a
         const profile = profileSchema.parse(await response.json());
         assert.equal(profile.user_id, viewer.userId);
         assert.ok(profile.referral_code);
+        assert.equal(profile.time_zone, "Pacific/Kiritimati");
+        const legacyPatch = await updateMe(new Request("https://staging.fitfight.app/api/v1/me", {
+            method: "PATCH",
+            headers: { ...headers, "X-FitFight-Version": version, "X-FitFight-Build": build },
+            body: JSON.stringify({ display_name: "Updated by an older app" }),
+        }), { params: Promise.resolve({}) });
+        assert.equal(legacyPatch.status, 200);
+        assert.equal(profileSchema.parse(await legacyPatch.json()).time_zone, "Pacific/Kiritimati", "Omitted zones remain unchanged");
     }
     const request = new Request(`https://staging.fitfight.app/api/v1/profiles/${target.userId}`, { headers });
     const initial = await readProfile(request, context);

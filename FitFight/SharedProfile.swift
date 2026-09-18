@@ -77,6 +77,59 @@ struct ProfileActivityDay: Decodable, Equatable, Identifiable {
     enum CodingKeys: String, CodingKey { case day, steps, finalized, timeZone = "time_zone", updatedAt = "updated_at" }
 }
 
+struct ProfileStepStatistics: Decodable, Equatable {
+    let scopeDays: Int?
+    let from: String?
+    let through: String
+    let timeZone: String
+    let recordedDays: Int
+    let unknownDays: Int
+    let totalSteps: Double
+    let averageSteps: Double?
+    let bestDay: ProfileBestStepDay?
+    let week: ProfileStepWeek
+    let levels: [ProfileActivityLevel]
+
+    enum CodingKeys: String, CodingKey {
+        case from, through, week, levels
+        case scopeDays = "scope_days", timeZone = "time_zone", recordedDays = "recorded_days"
+        case unknownDays = "unknown_days", totalSteps = "total_steps", averageSteps = "average_steps", bestDay = "best_day"
+    }
+}
+
+struct ProfileBestStepDay: Decodable, Equatable {
+    let day: String
+    let steps: Double
+}
+
+struct ProfileStepWeek: Decodable, Equatable {
+    let startsOn: String
+    let elapsedDays: Int
+    let recordedDays: Int
+    let totalSteps: Double
+    let averageSteps: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case startsOn = "starts_on", elapsedDays = "elapsed_days", recordedDays = "recorded_days"
+        case totalSteps = "total_steps", averageSteps = "average_steps"
+    }
+}
+
+struct ProfileActivityLevel: Decodable, Equatable, Identifiable {
+    let level: String
+    let minimumSteps: Int
+    let days: Int
+    let share: Double?
+    let longestStreak: Int
+    let currentStreak: Int?
+    var id: String { level }
+
+    enum CodingKeys: String, CodingKey {
+        case level, days, share
+        case minimumSteps = "minimum_steps", longestStreak = "longest_streak", currentStreak = "current_streak"
+    }
+}
+
 struct SharedProfile: Decodable, Equatable {
     let identity: SharedProfileIdentity
     let access: String
@@ -85,10 +138,12 @@ struct SharedProfile: Decodable, Equatable {
     let record: ProfileRecord?
     let rivalry: ProfileRivalry?
     let activity: ProfileActivity?
+    let stepStatistics: ProfileStepStatistics?
     let viewMeasurementEnabled: Bool
     enum CodingKeys: String, CodingKey {
         case identity, access, competitive, friendship, record, rivalry, activity
         case viewMeasurementEnabled = "view_measurement_enabled"
+        case stepStatistics = "step_statistics"
     }
 }
 

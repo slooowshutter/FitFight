@@ -127,6 +127,8 @@ create table private.fight_record_contexts (
     captured_at timestamptz not null default now()
 );
 create table private.fight_participation_records (
+    -- Separate row IDs prevent correlating private Fight participants across Profiles.
+    history_id uuid not null default gen_random_uuid() unique,
     fight_id uuid not null references public.fights(id) on delete cascade,
     user_id uuid not null references public.profiles(user_id) on delete cascade,
     entered_at timestamptz,
@@ -155,7 +157,9 @@ select member.fight_id, member.user_id,
     member.state, member.rank, member.final_value, member.final_steps_complete, member.finalized_at,
     (member.finalized_at is not null and member.accepted_at is not null)
         or member.state in ('invited', 'declined', 'deferred')
-from public.fight_members member;
+        or (member.state = 'accepted' and member.accepted_at is not null and fight.starts_at > now())
+from public.fight_members member
+join public.fights fight on fight.id = member.fight_id;
 
 -- Anonymous counts preserve ties and original field size after account deletion.
 -- These are frozen evidence aggregates; TypeScript still decides every result.

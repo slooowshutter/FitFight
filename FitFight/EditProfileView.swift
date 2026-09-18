@@ -10,6 +10,7 @@ struct EditProfileView: View {
     @State private var settings: SharedProfileSettings?
     @State private var displayName = ""
     @State private var handle = ""
+    @State private var timeZone = TimeZone.current
     @State private var error: String?
     @State private var saving = false
     @State private var pickerItem: PhotosPickerItem?
@@ -40,6 +41,10 @@ struct EditProfileView: View {
                                     Text(String(localized: "Change profile photo"))
                                 }.frame(minHeight: 44)
                                 Button(String(localized: "Choose your companion")) { showingCompanions = true }.frame(minHeight: 44)
+                                FFDivider()
+                                FitFightTimeZonePicker(selection: $timeZone)
+                                Text(String(localized: "Your daily Steps and new Fights use this time zone, even when you travel."))
+                                    .ffType(.caption).foregroundStyle(theme.textSecondary)
                             }.ffType(.body)
                         }
                         FFSection(title: String(localized: "Profile visibility")) {
@@ -67,6 +72,8 @@ struct EditProfileView: View {
                             FFCard {
                                 VStack(alignment: .leading, spacing: 12) {
                                     Text(String(localized: "Optional. Choose who can see your stored daily Steps and for how long. Fight participation shares its own results separately."))
+                                        .ffType(.caption).foregroundStyle(theme.textSecondary)
+                                    Text(String(localized: "This also shares step records, averages, activity levels and streaks for that period. Your full recorded history stays private."))
                                         .ffType(.caption).foregroundStyle(theme.textSecondary)
                                     Picker(String(localized: "Audience"), selection: Binding(
                                         get: { settings?.activityAudience ?? "off" }, set: { settings?.activityAudience = $0 }
@@ -129,6 +136,7 @@ struct EditProfileView: View {
             settings = loaded
             displayName = session.profile?.displayName ?? ""
             handle = session.profile?.handle ?? ""
+            timeZone = session.profile?.calendarTimeZone ?? .current
             error = nil
         } catch is CancellationError {
         } catch { self.error = error.localizedDescription }
@@ -141,8 +149,8 @@ struct EditProfileView: View {
         saving = true
         defer { saving = false }
         do {
-            if displayName != session.profile?.displayName || handle != session.profile?.handle {
-                try await session.updateIdentity(displayName: displayName, handle: handle)
+            if displayName != session.profile?.displayName || handle != session.profile?.handle || timeZone.identifier != session.profile?.timeZone {
+                try await session.updateIdentity(displayName: displayName, handle: handle, timeZone: timeZone)
             }
             let token = try await session.freshAccessToken()
             let saved = try await FitFightAPI().updateProfileSettings(settings, accessToken: token)

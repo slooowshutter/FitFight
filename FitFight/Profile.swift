@@ -9,6 +9,9 @@ struct FitFightProfile: Codable, Equatable {
     var avatar: FitFightMedia?
     var companionId: String? = nil
     var companionPrompt: String? = nil
+    var timeZone: String? = nil
+
+    var calendarTimeZone: TimeZone { timeZone.flatMap(TimeZone.init(identifier:)) ?? .current }
 
     var atHandle: String { "@\(handle)" }
 
@@ -36,5 +39,6 @@ struct FitFightProfile: Codable, Equatable {
         case avatar
         case companionId = "companion_id"
         case companionPrompt = "companion_prompt"
+        case timeZone = "time_zone"
     }
 }

@@ -12,11 +12,14 @@ final class FeedbackStore: ObservableObject {
     @Published var isSaving = false
     @Published var isLaunchingFix = false
     @Published var canLaunchFix = false
+    @Published var canDelete = false
+    @Published var isDeleting = false
     @Published var error: String?
 
     private let api = FitFightAPI()
     private var listLoad = 0
     private var detailLoad = 0
+    private var deletedPostIDs: Set<UUID> = []
     private var voting: Set<UUID> = []
     private var voteClock = 0
     private var votes: [UUID: (clock: Int, voted: Bool, voteCount: Int)] = [:]
@@ -43,7 +46,7 @@ final class FeedbackStore: ObservableObject {
             let token = try await session.freshAccessToken()
             let posts = try await api.listFeedback(kind: kind, accessToken: token).posts
             guard load == listLoad else { return }
-            self.posts = posts.map { fetched in
+            self.posts = posts.filter { !deletedPostIDs.contains($0.id) }.map { fetched in
                 var post = keepingNewerVote(fetched, startedAt: voteStartedAt)
                 if !postedAfter(postID: post.id, startedAt: commentStartedAt).isEmpty,
                    let local = self.posts.first(where: { $0.id == post.id }) {
@@ -66,6 +69,7 @@ final class FeedbackStore: ObservableObject {
     }
 
     func loadDetail(session: SessionStore, postID: UUID) async {
+        canDelete = false
         #if DEBUG && targetEnvironment(simulator)
         if CompanionPreview.isEnabled {
             detail = Self.previewPosts.first { $0.id == postID }
@@ -89,7 +93,7 @@ final class FeedbackStore: ObservableObject {
         do {
             let token = try await session.freshAccessToken()
             let result = try await api.feedbackDetail(postID: postID, accessToken: token)
-            guard load == detailLoad else { return }
+            guard load == detailLoad, !deletedPostIDs.contains(postID) else { return }
             let extras = postedAfter(postID: result.post.id, startedAt: commentStartedAt)
             var comments = result.comments
             for extra in extras where !comments.contains(where: { $0.id == extra.id }) {
@@ -101,6 +105,7 @@ final class FeedbackStore: ObservableObject {
             self.comments = comments
             commentsFor = post.id
             canLaunchFix = result.canLaunchFix
+            canDelete = result.canDelete
             RemoteImageLoader.shared.prefetch(
                 post.media.compactMap { media in
                     RequestAttachment.showsPhoto(media) ? media.url : nil
@@ -113,7 +118,7 @@ final class FeedbackStore: ObservableObject {
             error = nil
         } catch {
             if Task.isCancelled || error is CancellationError { return }
-            guard load == detailLoad else { return }
+            guard load == detailLoad, !deletedPostIDs.contains(postID) else { return }
             self.error = error.localizedDescription
         }
     }
@@ -198,6 +203,37 @@ final class FeedbackStore: ObservableObject {
             await loadDetail(session: session, postID: postID)
             self.error = error.localizedDescription
             return nil
+        }
+    }
+
+    func delete(session: SessionStore, postID: UUID) async -> Bool {
+        guard !isDeleting else { return false }
+        isDeleting = true
+        defer { isDeleting = false }
+        do {
+            let token = try await session.freshAccessToken()
+            try await api.deleteFeedbackPost(postID: postID, accessToken: token)
+            // Ignore stale copies of this request without cancelling reads for another screen.
+            deletedPostIDs.insert(postID)
+            posts.removeAll { $0.id == postID }
+            if detail?.id == postID {
+                detail = nil
+            }
+            if commentsFor == postID {
+                comments = []
+                commentsFor = nil
+                canDelete = false
+                canLaunchFix = false
+                error = nil
+            }
+            votes.removeValue(forKey: postID)
+            postedComments.removeValue(forKey: postID)
+            return true
+        } catch {
+            if commentsFor == postID {
+                self.error = error.localizedDescription
+            }
+            return false
         }
     }
 
@@ -398,7 +434,6 @@ struct RequestsView: View {
     @ObservedObject var store: FeedbackStore
     var chrome: RequestsChrome
     var filterSource: Binding<RequestFilter>?
-    var onCompose: (() -> Void)?
     @State private var filter: RequestFilter
     @State private var composing = false
     @State private var openPostID: UUID?
@@ -406,13 +441,11 @@ struct RequestsView: View {
     init(
         store: FeedbackStore,
         chrome: RequestsChrome = .sheet,
-        filter: Binding<RequestFilter>? = nil,
-        onCompose: (() -> Void)? = nil
+        filter: Binding<RequestFilter>? = nil
     ) {
         _store = ObservedObject(wrappedValue: store)
         self.chrome = chrome
         self.filterSource = filter
-        self.onCompose = onCompose
         _filter = State(initialValue: filter?.wrappedValue ?? .top)
     }
 
@@ -502,16 +535,14 @@ struct RequestsView: View {
                 }
             }
 
-            FFScreenCTA(title: String(localized: "New request")) {
-                store.error = nil
-                if let onCompose {
-                    onCompose()
-                } else {
+            if chrome == .sheet {
+                FFScreenCTA(title: String(localized: "New request")) {
+                    store.error = nil
                     composing = true
                 }
+                .padding(.horizontal, theme.space.screenPadding)
+                .padding(.bottom, 16)
             }
-            .padding(.horizontal, theme.space.screenPadding)
-            .padding(.bottom, 16)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(theme.bg)
@@ -744,6 +775,7 @@ private struct RequestDetailView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var comment = ""
     @State private var launchedAgentURL: URL?
+    @State private var confirmingDeletion = false
     @FocusState private var commentFocused: Bool
 
     private var post: FitFightFeedbackPost? {
@@ -758,8 +790,9 @@ private struct RequestDetailView: View {
                     subtitle: nil,
                     onBack: { dismiss() }
                 )
-                if let post, !post.mine {
+                if let post, !post.mine || store.canDelete {
                     RequestPostMenu(
+                        canReport: !post.mine,
                         onReport: {
                             Task { await store.report(session: session, post: post) }
                         },
@@ -768,8 +801,10 @@ private struct RequestDetailView: View {
                                 await store.hide(session: session, authorID: post.authorId)
                                 dismiss()
                             }
-                        }
+                        },
+                        onDelete: store.canDelete ? { confirmingDeletion = true } : nil
                     )
+                    .disabled(store.isDeleting || store.isSaving || store.isLaunchingFix)
                     .padding(.top, 4)
                 }
             }
@@ -833,6 +868,18 @@ private struct RequestDetailView: View {
             .padding(.vertical, 12)
         }
         .background(theme.bg.ignoresSafeArea())
+        .confirmationDialog(String(localized: "Delete request?"), isPresented: $confirmingDeletion, titleVisibility: .visible) {
+            Button(String(localized: "Delete"), role: .destructive) {
+                Task {
+                    if await store.delete(session: session, postID: postID) {
+                        dismiss()
+                    }
+                }
+            }
+            Button(String(localized: "Cancel"), role: .cancel) {}
+        } message: {
+            Text("This removes the request, comments, and votes for everyone. This cannot be undone.")
+        }
         .task {
             guard !staticRender else { return }
             await store.loadDetail(session: session, postID: postID)
@@ -902,7 +949,7 @@ private struct RequestDetailView: View {
                             ? String(localized: "Sending…")
                             : String(localized: "Send to Cursor"),
                         kind: .secondary,
-                        enabled: !store.isLaunchingFix && !store.isSaving,
+                        enabled: !store.isLaunchingFix && !store.isSaving && !store.isDeleting,
                         fullWidth: true,
                         action: {
                             Task { await sendToCursor() }
@@ -955,7 +1002,7 @@ private struct RequestDetailView: View {
 
     private var canComment: Bool {
         let trimmed = comment.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.count >= 2 && trimmed.count <= 500 && !store.isSaving
+        return trimmed.count >= 2 && trimmed.count <= 500 && !store.isSaving && !store.isDeleting
     }
 
     private func sendComment() async {
@@ -973,17 +1020,24 @@ private struct RequestDetailView: View {
 }
 
 private struct RequestPostMenu: View {
+    var canReport = true
     let onReport: () -> Void
     let onHide: () -> Void
+    var onDelete: (() -> Void)? = nil
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
         Menu {
-            Button(String(localized: "Report")) {
-                onReport()
+            if canReport {
+                Button(String(localized: "Report")) {
+                    onReport()
+                }
+                Button(String(localized: "Hide this person"), role: .destructive) {
+                    onHide()
+                }
             }
-            Button(String(localized: "Hide this person"), role: .destructive) {
-                onHide()
+            if let onDelete {
+                Button(String(localized: "Delete request"), role: .destructive, action: onDelete)
             }
         } label: {
             Image(systemName: "ellipsis")

@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Sql } from "postgres";
+import { createClient } from "@supabase/supabase-js";
+import { DELETE as deleteFeedbackRoute } from "@/app/api/v1/feedback/[postID]/route";
 import { ApiError } from "@/lib/http";
 import {
     blockFeedbackAuthorRequestSchema,
@@ -16,6 +18,7 @@ import {
     blockFeedbackAuthor,
     createFeedbackComment,
     createFeedbackPost,
+    deleteFeedbackPost,
     listFeedbackPosts,
     reportFeedbackPost,
     toggleFeedbackVote,
@@ -45,6 +48,132 @@ const postRow = {
         language: "fr",
     },
 };
+
+test("feedback deletion authenticates before accessing the database", async () => {
+    const response = await deleteFeedbackRoute(
+        new Request(`https://staging.fitfight.app/api/v1/feedback/${postId}`, {
+            method: "DELETE",
+        }),
+        { params: Promise.resolve({ postID: postId }) },
+    );
+    assert.equal(response.status, 401);
+});
+
+test("only a trusted admin account can delete feedback", async (t) => {
+    for (const scenario of [
+        {
+            name: "Marc's handle with an Apple relay email",
+            handle: "marc",
+            email: "relay@privaterelay.appleid.com",
+            confirmed: true,
+            status: 200,
+        },
+        {
+            name: "case-insensitive admin handle",
+            handle: "MARC",
+            email: "relay@privaterelay.appleid.com",
+            confirmed: true,
+            status: 200,
+        },
+        {
+            name: "confirmed admin email",
+            handle: "owner",
+            email: "marc@marclamy.com",
+            confirmed: true,
+            status: 200,
+        },
+        {
+            name: "regular account",
+            handle: "maya_moves",
+            email: "maya@example.com",
+            confirmed: true,
+            status: 403,
+        },
+        {
+            name: "spoofed user metadata email",
+            handle: "maya_moves",
+            email: "maya@example.com",
+            confirmed: true,
+            spoofed: true,
+            status: 403,
+        },
+        {
+            name: "unconfirmed admin email",
+            handle: "maya_moves",
+            email: "marc@marclamy.com",
+            confirmed: false,
+            status: 403,
+        },
+        {
+            name: "deleted account",
+            handle: null,
+            email: "marc@marclamy.com",
+            confirmed: true,
+            status: 401,
+        },
+        {
+            name: "already deleted request",
+            handle: "marc",
+            email: "relay@privaterelay.appleid.com",
+            confirmed: true,
+            missing: true,
+            status: 404,
+        },
+    ]) {
+        await t.test(scenario.name, async () => {
+            const admin = createClient("https://feedback.example", "test-only-key", {
+                auth: { persistSession: false, autoRefreshToken: false },
+                global: {
+                    fetch: async (input, init) => {
+                        const url = new URL(new Request(input, init).url);
+                        if (url.pathname === "/rest/v1/profiles") {
+                            assert.equal(url.searchParams.get("user_id"), `eq.${userId}`);
+                            assert.equal(url.searchParams.get("deleted_at"), "is.null");
+                            return Response.json(scenario.handle ? [{ handle: scenario.handle }] : []);
+                        }
+                        assert.equal(url.pathname, `/auth/v1/admin/users/${userId}`);
+                        return Response.json({
+                            id: userId,
+                            email: scenario.email,
+                            email_confirmed_at: scenario.confirmed ? "2026-09-01T00:00:00Z" : null,
+                            user_metadata: scenario.spoofed ? { email: "marc@marclamy.com" } : {},
+                            identities: [],
+                            app_metadata: {},
+                            aud: "authenticated",
+                            created_at: "2026-09-01T00:00:00Z",
+                        });
+                    },
+                },
+            });
+            const { database, queries, bound } = createDatabaseStub(() => scenario.missing ? [] : [{ id: postId }]);
+            if (scenario.status === 200) {
+                await deleteFeedbackPost(userId, postId, admin, database);
+            } else {
+                await assert.rejects(
+                    deleteFeedbackPost(userId, postId, admin, database),
+                    (error: unknown) => error instanceof ApiError && error.status === scenario.status,
+                );
+            }
+            if (scenario.status === 200 || scenario.status === 404) {
+                assert.deepEqual(queries, ["delete from public.feedback_posts where id = ? returning id"]);
+                assert.deepEqual(bound, [[postId]]);
+            } else {
+                assert.deepEqual(queries, []);
+            }
+        });
+    }
+});
+
+test("feedback detail keeps legacy responses readable and deletion opt-in", () => {
+    const legacyDetail = {
+        post: { ...postRow, created_at: "2026-09-04T12:00:00Z", media: [] },
+        comments: [],
+        can_launch_fix: true,
+    };
+    assert.equal(feedbackDetailResponseSchema.parse(legacyDetail).can_delete, false);
+    assert.equal(feedbackDetailResponseSchema.parse({ ...legacyDetail, can_delete: true }).can_delete, true);
+    assert.equal(feedbackDetailResponseSchema.parse({ ...legacyDetail, can_delete: false }).can_delete, false);
+});
 
 function createDatabaseStub(respond: (query: string) => unknown[]) {
     const queries: string[] = [];

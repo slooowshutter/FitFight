@@ -50,7 +50,6 @@ struct Fight {
 
 @MainActor final class AppModel {
     var session: SessionStore?
-    var openFightID: String?
     var fights: [Fight] = []
     var pendingJoinable: Fight?
     var snapshotLoads = 0
@@ -190,7 +189,7 @@ struct Fight {
                       "Live updates leave the selected finished round's result unchanged")
             }
             model.openFightID = nil
-            model.openFightFromFeed(id: selected.id)
+            model.openFight(id: selected.id)
             await until { model.openFightID != nil }
             check(model.openFightID == current.id, "Feed links still resolve to the current round")
         }

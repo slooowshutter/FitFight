@@ -48,6 +48,23 @@ struct FitFightAPI {
 struct AccountPreferencesTests {
     @MainActor
     static func main() async throws {
+        let deviceLocale = Locale.current
+        AppLocalization.apply(.system)
+        precondition(AppLocalization.locale.identifier == deviceLocale.identifier,
+                     "Follow iPhone must preserve the full device locale")
+        for language in [AppLanguage.system, .en, .fr] {
+            AppLocalization.apply(language)
+            let locale = AppLocalization.locale
+            precondition(locale.region == deviceLocale.region, "Language changes must preserve the region")
+            precondition(locale.hourCycle == deviceLocale.hourCycle, "Language changes must preserve clock preferences")
+            precondition(locale.firstDayOfWeek == deviceLocale.firstDayOfWeek, "Language changes must preserve the first weekday")
+            precondition(locale.calendar.identifier == deviceLocale.calendar.identifier, "Language changes must preserve the calendar")
+            if language != .system {
+                precondition(locale.language.languageCode?.identifier == language.rawValue)
+            }
+        }
+        AppLocalization.apply(.system)
+
         let fixture = URL(fileURLWithPath: CommandLine.arguments[1])
         let frenchDark = try JSONDecoder().decode(AccountPreferences.self, from: Data(contentsOf: fixture))
         precondition(frenchDark == AccountPreferences(language: .fr, appearance: .dark))

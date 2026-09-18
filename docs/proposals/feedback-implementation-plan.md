@@ -1,5 +1,10 @@
 # Build plan: request status and system comments
 
+**Deferred by Marc on 18 Sep 2026.** This is a future idea, not current release scope.
+The prepared runtime implementation and unapplied migration have been removed.
+Profiles, Friends, rivalries, Suggested Fights, and ordinary feedback remain in scope.
+Revisit the product need before using this historical proposal as an implementation plan.
+
 This replaces the earlier multi-table plan. Scope: a status on each existing request
 and system messages inside its existing comments. **No new tables.**
 See the [public copy and schema](feedback-workflow.md) and [proposed SQL](feedback-workflow.sql).
@@ -135,6 +140,6 @@ alerts, followers/mutes, unread tracking, and optional push. None is necessary t
 system comments and request statuses. Likewise, do not build an automated release
 or agent-tracking service as part of this change.
 
-Implementation and cloud verification evidence are recorded in [status.md](../status.md).
-The proposed SQL remains a design reference; the executable migration is under
-`supabase/migrations/`. Hosted rollout remains separate from implementation.
+The previous implementation was removed before deployment. The proposed SQL is
+a design reference only; there is no executable workflow migration in this branch.
+See [status.md](../status.md) for the deferral and current verification.

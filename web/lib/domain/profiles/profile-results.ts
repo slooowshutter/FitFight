@@ -80,6 +80,7 @@ export function rivalryRecord(fights: FightRecordFact[], viewerId: string, targe
         if (record.rematch === null) {
             record.rematch = {
                 duration_seconds: Math.round((Date.parse(fight.ends_at) - Date.parse(fight.starts_at)) / 1000),
+                duration_days: Number.isInteger(fight.calendar_days) && fight.calendar_days > 0 ? fight.calendar_days : null,
                 action_text: fight.action_text,
             };
         }

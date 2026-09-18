@@ -39,29 +39,6 @@ const longCursorKey = "cursor_test_key_32_chars_minimum!";
 const agentId = "bc-00000000-0000-0000-0000-000000000001";
 const agentUrl = `https://cursor.com/agents/${agentId}`;
 
-test("Send includes user context but excludes generated progress comments", async (t) => {
-    const previous = process.env.CURSOR_API_KEY;
-    process.env.CURSOR_API_KEY = longCursorKey;
-    t.after(() => restoreEnv("CURSOR_API_KEY", previous));
-    let sentBody = "";
-    await launchFeedbackFixAgent({
-        ...detail,
-        comments: [...detail.comments, {
-            id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-            body: "This feature is now being tested.",
-            author_handle: "FitFight",
-            workflow_status: "testing",
-            created_at: "2026-09-17T00:00:00Z",
-            metadata: {},
-        }],
-    }, async (_url, init) => {
-        sentBody = String(init?.body);
-        return v1CreatedResponse();
-    });
-    assert.match(sentBody, /Same here after the Watch catches up/);
-    assert.doesNotMatch(sentBody, /This feature is now being tested/);
-});
-
 function restoreEnv(name: string, previous: string | undefined) {
     if (previous === undefined) delete process.env[name];
     else process.env[name] = previous;

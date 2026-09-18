@@ -229,7 +229,7 @@ struct ProfileSheet: View {
 
     private func challenge(_ profile: SharedProfile, rematch: Bool) {
         let previous = rematch ? profile.rivalry?.rematch : nil
-        model.profileChallenge = ProfileChallengeDraft(handle: profile.identity.handle, durationSeconds: previous?.durationSeconds, actionText: previous?.actionText)
+        model.profileChallenge = ProfileChallengeDraft(handle: profile.identity.handle, durationSeconds: previous?.durationSeconds, actionText: previous?.actionText, durationDays: previous?.durationDays)
         model.pendingJoinable = nil
         model.tab = .newFight
         dismiss()

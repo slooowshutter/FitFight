@@ -1,3 +1,4 @@
+-- Deferred by Marc on 18 Sep 2026. Design reference only, not an executable migration.
 -- Proposal only. No new tables and no hosted database changes.
 -- Enable system-comment writes only after compatible backend readers have deployed.
 

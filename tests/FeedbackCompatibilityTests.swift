@@ -1,0 +1,27 @@
+import Foundation
+
+@main
+struct FeedbackCompatibilityTests {
+    static func main() throws {
+        let fixtures = URL(fileURLWithPath: CommandLine.arguments[1], isDirectory: true)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let oldData = try Data(contentsOf: fixtures.appendingPathComponent("feedback-detail-legacy.json"))
+        let profileData = try Data(contentsOf: fixtures.appendingPathComponent("feedback-detail-profile.json"))
+        let legacy = try decoder.decode(FitFightFeedbackDetail.self, from: oldData)
+        let current = try decoder.decode(FitFightFeedbackDetail.self, from: profileData)
+        precondition(legacy.comments[0].authorId == nil)
+        precondition(current.comments[0].authorId?.uuidString.lowercased() == "33333333-3333-4333-8333-333333333333")
+        precondition(current.post == legacy.post)
+        precondition(current.comments[0].body == legacy.comments[0].body)
+        precondition(current.comments.count == current.post.commentCount)
+        precondition(current.canLaunchFix == legacy.canLaunchFix)
+
+        let oldReader = try decoder.decode(LegacyFeedbackDetail.self, from: oldData)
+        let profileReader = try decoder.decode(LegacyFeedbackDetail.self, from: profileData)
+        precondition(oldReader.post == profileReader.post)
+        precondition(oldReader.comments == profileReader.comments)
+        precondition(oldReader.canLaunchFix == profileReader.canLaunchFix)
+        print("Feedback: frozen build 201/202 and current decoding with optional Profile author IDs")
+    }
+}

@@ -1,6 +1,6 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **17 Sep 2026**. Production candidate: **1.1.1 (202)**.
+Read this before building. Last updated **18 Sep 2026**. Production candidate: **1.1.1 (202)**.
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
@@ -8,72 +8,56 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
 
-## Feedback status and system comments: implementation 17 Sep 2026
+## Feedback progress deferred, 18 Sep 2026
 
-Marc clarified that the first version needs a workflow status on the existing request
-and system comments in its existing discussion. The revised
-[specification](proposals/feedback-workflow.md), [implementation plan](proposals/feedback-implementation-plan.md),
-and [SQL](proposals/feedback-workflow.sql) replace the earlier multi-table proposal.
-**Zero new tables:** extend `feedback_posts` and `feedback_comments` only.
-Plan review removed the redundant comment-type flag: just two new columns, a current
-status on the request and a nullable status on its system update. Keep atomic writes,
-duplicate protection, authorization, and compatible handling of authorless comments.
+Marc deferred request progress tracking. The current branch removes its status and
+Next UI, status command, automatic system comments, Send approval/build transitions,
+workflow configuration, and unapplied two-column migration. Ordinary feedback,
+votes, user comments, author Profile links, and the existing explicit Send to Cursor
+remain. Profiles, Friends, rivalries, Suggested Fights, and their review fixes stay.
+The [proposal](proposals/feedback-workflow.md) and [historical plan](proposals/feedback-implementation-plan.md)
+are marked deferred. A Notion backlog entry is pending a connected Notion account.
 
-The public flow is Approved by Marc for build, Being built, Being reviewed, Being
-tested, Deployed, Approved by Apple, and Available on the App Store. A small Next line
-shows the next step; the last state shows the app update link. Marc's name in the
-approval comment opens the shared Profile from `profiles-friends-and-stats`.
-Separate notification delivery, follow/mute settings, and automation tracking are
-explicitly deferred from this first implementation.
-The existing explicit Send action records approval and, on success, Being built;
-later steps use Marc's status control. Deployed requires a successful production
-promotion and processed app upload, not merely a prepared change.
+**Contract:** `/api/v1` is unchanged. Feedback uses its existing request/response
+contract, with the retained optional comment `author_id` for shared Profiles.
+The removed workflow fields and endpoint were unreleased. Frozen build 201/202
+feedback decoders and the old response fixture remain unchanged; current Profile
+responses receive a separate fixture. No hosted schema or data was changed.
 
-The implementation adds the two-column migration, an admin-only transactional
-status command, replay/conflict handling, compatible left-joined readers, visible
-comment counts, ordinary-comment limits, and explicit Send approval/start updates.
-Workflow authorization uses `FITFIGHT_ADMIN_USER_ID`; writes default off through
-`FITFIGHT_FEEDBACK_WORKFLOW_ENABLED=false`. Normal comments cannot set status or actor.
-Public system rows contain only fixed progress copy, never provider IDs or logs.
+**Live policy observation, 18 Sep:** staging latest **1.1.1 (201)**, review/internal
+**1.1.2 (203)**, enforcement **off**; production latest **1.1.1 (202)**, no
+review/internal candidates, enforcement **on**. These were read-only observations,
+not deployments or installed-client tests. Legacy staging clients still require
+compatibility while enforcement is off.
 
-Native code adds the eight statuses, derived Next copy, FitFight updates, the admin
-status control, and the existing App Store URL only at Available. EN/FR strings and
-a 1.1.1 release note are prepared. Approval uses `ProfileIdentityLink` with source
-`feedback`, imported from the validated Profile dependency snapshot `9b19726`.
-Its sheet preserves the comment draft. Later Profile review work remains in its own
-workspace. The merge retains the current app-wide invitation behavior alongside the
-dependency's transactional suggestion controls.
+**Verification:** current cloud checks are pending. The earlier workflow runs no
+longer describe the current source. Required checks retain ordinary feedback HTTP
+coverage, released-client decoding, the complete backend suite, disposable database
+migrations, and the GitHub-hosted iOS simulator build. No live Cursor launch is needed.
 
-Combined cloud verification passed on `d8b17e1`, including the shared Profile
-dependency and authenticated feedback HTTP regressions:
+**Rollout:** no workflow schema/configuration step is needed. Retained Profile
+migrations still precede compatible backend code and a separately authorized native
+release. No branch merge, PR, TestFlight upload, or production deployment was performed.
+Signed-in device checks remain after rollout.
 
-- [Web API](https://github.com/slooowshutter/FitFight/actions/runs/35168831175):
-  typecheck, all 279 backend unit tests, and API contract parsing.
-- [Database](https://github.com/slooowshutter/FitFight/actions/runs/35168831098):
-  disposable migrations and schema lint, 216 pgTAP assertions, build 113 legacy
-  compatibility, and all 35 integration tests with both staged and closed direct
-  client permissions. The later permission checks and deletion/backfill rehearsal
-  passed 18 and 23 assertions respectively. Test files run sequentially because
-  app-wide invitation fixtures share the database; explicit concurrency tests remain.
-- [iOS simulator](https://github.com/slooowshutter/FitFight/actions/runs/35168831163):
-  GitHub-hosted macOS build, EN/FR validation, native state checks, and frozen identical
-  feedback decoders from build 201 (`d97145a`) and build 202 (`e2783be`) against old
-  and new fixtures. Authenticated HTTP reads also cover build headers 113, 190, 200,
-  201, and 202. Send failure and success use a controlled provider response in tests.
+### Retained Profile review fixes, 17 Sep 2026
 
-Device interaction with the approval Profile sheet, draft preservation, and the
-Available link still needs a signed-in staging pass after an authorized rollout.
-No live Cursor agent was launched for verification.
+Suggested Fight cards now distinguish invitations from accepted/deferred membership.
+The `/api/v1` list response adds optional `membershipState` without changing
+`alreadyMember`, so existing clients retain their contract. New native cards keep
+invitations actionable on both New and onboarding.
 
-No hosted schema, backend configuration, TestFlight, or App Store change occurred.
-Nullable-author system comments must stay disabled until compatible readers deploy
-and older backend instances drain. Configure Marc's environment-specific Auth UUID
-before enabling the workflow. Production promotion needs separate authorization.
+Rematches add optional `duration_days`, calculated in the original Fight's time
+zone, while preserving `duration_seconds` and `action_text`. Native composition uses
+calendar days for the existing presets, including Fights spanning either clock
+change. Older responses without the new field still decode.
 
-Last read-only release-policy observation on 17 Sep: staging latest **1.1.1 (201)**,
-no review/internal candidates, enforcement **off**; production latest **1.1.1 (202)**,
-no review/internal candidates, enforcement **on**. Recheck before deployment; these
-observations are not proof of supported-client compatibility or individual availability.
+Profile history rows and cursors now use stable, random identifiers for each
+participant's record. The additive `20260917013440_profile_history_identifiers.sql`
+migration backfills existing rows and preserves identifiers during participation
+updates. A reader with Fight access still receives the real `fight_id`; other readers
+cannot correlate participants through identical IDs. Profiles remain an unreleased
+contract; installed builds 113, 190, 200, 201, and 202 do not use these history cursors.
 
 ## Profiles, Friends, and Rivalry implementation, 17 Sep 2026
 

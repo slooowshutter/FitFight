@@ -1,5 +1,5 @@
 begin;
-select plan(8);
+select plan(10);
 select is((select count(*)::int from private.fight_record_contexts where fight_id in ('72000000-0000-4000-8000-000000000001', '72000000-0000-4000-8000-000000000002', '72000000-0000-4000-8000-000000000003')), 3, 'each prior Fight has one category context');
 select is((select count(*)::int from private.fight_participation_records where user_id in ('71000000-0000-4000-8000-000000000001', '71000000-0000-4000-8000-000000000002')), 6, 'every prior membership has one evidence row');
 select is((select category from private.fight_record_contexts where fight_id = '72000000-0000-4000-8000-000000000001'), 'unknown', 'past visibility is not invented');
@@ -8,5 +8,7 @@ select is((select final_value from private.fight_participation_records where fig
 select ok((select not reliable and entered_at is null and departed_at is null and departure is null from private.fight_participation_records where fight_id = '72000000-0000-4000-8000-000000000002' and user_id = '71000000-0000-4000-8000-000000000002'), 'withdrawal time and cause remain unknown without evidence');
 select ok((select bool_and(entered_at is null and reliable) from private.fight_participation_records where fight_id = '72000000-0000-4000-8000-000000000003'), 'an invitation is not participation');
 select ok(not has_table_privilege('authenticated', 'private.fight_participation_records', 'SELECT'), 'backfilled facts are server-only');
+select is((select count(distinct history_id)::int from private.fight_participation_records where user_id in ('71000000-0000-4000-8000-000000000001', '71000000-0000-4000-8000-000000000002')), 6, 'backfill gives every prior participant a distinct history identifier');
+select ok((select bool_and(history_id <> fight_id) from private.fight_participation_records), 'history identifiers do not expose Fight identifiers');
 select * from finish();
 rollback;

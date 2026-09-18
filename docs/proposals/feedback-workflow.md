@@ -1,5 +1,10 @@
 # Request status and system comments
 
+**Deferred by Marc on 18 Sep 2026.** This is a future idea, not current release scope.
+The prepared runtime implementation and unapplied migration have been removed.
+Profiles, Friends, rivalries, Suggested Fights, and ordinary feedback remain in scope.
+Revisit the product need before using this historical proposal as an implementation plan.
+
 Revised after Marc clarified the scope: extend the existing requests and comments.
 **Zero new tables.** This replaces the earlier nine-table and four-table proposals.
 Companion [SQL](feedback-workflow.sql) and [implementation plan](feedback-implementation-plan.md).
@@ -79,5 +84,5 @@ The earlier notification inbox, follow/mute settings, and push delivery are defe
 This first version shows system updates inside the existing request discussion. It
 must not claim that people receive separate alerts or unread notifications yet.
 
-Implementation evidence is recorded in [status.md](../status.md). The linked SQL is
-a design reference; the executable migration has not been applied to a hosted database.
+The deferral is recorded in [status.md](../status.md). The linked SQL is a design
+reference only; its executable migration was removed before any hosted deployment.

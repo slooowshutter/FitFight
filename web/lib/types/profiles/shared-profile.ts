@@ -62,6 +62,7 @@ export const rivalryRecordSchema = z.object({
     draws: z.number().int().nonnegative(),
     rematch: z.object({
         duration_seconds: z.number().int().positive(),
+        duration_days: z.number().int().positive().nullable().optional(),
         action_text: z.string().nullable(),
     }).nullable(),
 });

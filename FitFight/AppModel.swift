@@ -692,7 +692,7 @@ final class AppModel: ObservableObject {
         }
         defer { isCreatingFight = false }
         createError = nil
-        guard let access = session?.authSession?.accessToken, api.isConfigured else {
+        guard let session, let access = session.authSession?.accessToken, api.isConfigured else {
             createError = String(localized: "Sign in to start a fight.")
             return
         }
@@ -748,7 +748,7 @@ final class AppModel: ObservableObject {
                 accessToken: access,
                 idempotencyKey: UUID().uuidString
             )
-            await syncStepsAfterMembershipChange()
+            await syncStepsAfterMembershipChange(session: session)
             keepCreatedFight(created, payload: payload)
             tab = .fights
             openFightID = created.id.uuidString
@@ -875,12 +875,12 @@ final class AppModel: ObservableObject {
     func acceptInvite(token: String, start: String = "now") async throws {
         guard !CompanionPreview.isEnabled else { throw CompanionPreview.WriteUnavailable() }
         createError = nil
-        guard let access = session?.authSession?.accessToken else {
+        guard let session, let access = session.authSession?.accessToken else {
             throw FitFightAPIError.notConfigured
         }
         let summary = try await api.accept(token: token, accessToken: access, start: start)
         inviteTokens[summary.id.uuidString] = token
-        await syncStepsAfterMembershipChange()
+        await syncStepsAfterMembershipChange(session: session)
     }
 
     func acceptFight(id: String, start: String = "now") async {
@@ -910,7 +910,7 @@ final class AppModel: ObservableObject {
             let token = try await session.freshAccessToken()
             _ = try await api.acceptFight(fightID: fightID, accessToken: token, start: start)
             joined.insert(id)
-            await syncStepsAfterMembershipChange()
+            await syncStepsAfterMembershipChange(session: session)
         } catch {
             createError = String(localized: "Couldn’t accept.")
         }
@@ -1203,12 +1203,8 @@ final class AppModel: ObservableObject {
         }
     }
 
-    private func syncStepsAfterMembershipChange() async {
+    func syncStepsAfterMembershipChange(session: SessionStore) async {
         invalidateFightDiscovery()
-        guard let session else {
-            await refreshFromServer()
-            return
-        }
         let steps = HealthKitStepsStore.shared
         let trace = HealthKitSyncTrace(trigger: .manual)
         _ = await steps.syncToBackend(
@@ -1222,7 +1218,7 @@ final class AppModel: ObservableObject {
     }
 
     private func joinPendingFight(_ fight: Fight, start: String = "now") async {
-        guard let access = session?.authSession?.accessToken, api.isConfigured else {
+        guard let session, let access = session.authSession?.accessToken, api.isConfigured else {
             createError = String(localized: "Sign in to join this fight.")
             return
         }
@@ -1233,7 +1229,7 @@ final class AppModel: ObservableObject {
         do {
             _ = try await api.joinFight(code: fight.joinCode, fightID: fightID, accessToken: access, start: start)
             joined.insert(fight.id)
-            await syncStepsAfterMembershipChange()
+            await syncStepsAfterMembershipChange(session: session)
             pendingJoinable = nil
             tab = .fights
             openFightID = fight.id

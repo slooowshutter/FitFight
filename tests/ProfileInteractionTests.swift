@@ -138,11 +138,12 @@ struct Fight {
               "A successful onboarding join syncs, refreshes standings, and reloads offers")
         check(view.joining == nil && view.error == nil, "Join settles after the refresh")
 
+        let snapshotsBeforeFailure = model.snapshotLoads
         let failed = Task { await view.joinForTest(offer) }
         await until { FitFightAPI.joins.count == 1 }
         FitFightAPI.joins.removeFirst().resume(throwing: TestFailure.offline)
         await failed.value
-        check(steps.pending.isEmpty && model.snapshotLoads == 1 && view.error != nil, "A rejected join reports the error without syncing")
+        check(steps.pending.isEmpty && model.snapshotLoads == snapshotsBeforeFailure && view.error != nil, "A rejected join reports the error without syncing")
 
         let previousAccount = Task { await view.joinForTest(offer) }
         await until { FitFightAPI.joins.count == 1 }
@@ -151,6 +152,15 @@ struct Fight {
         FitFightAPI.joins.removeFirst().resume()
         await previousAccount.value
         check(FitFightAPI.offerLoads == loads && steps.pending.isEmpty, "An old account's join response cannot start a new account's sync")
+
+        let switchingDuringSync = Task { await view.joinForTest(offer) }
+        await until { FitFightAPI.joins.count == 1 }
+        FitFightAPI.joins.removeFirst().resume()
+        await until { !steps.pending.isEmpty }
+        session.authSession = TestSession(user: TestUser(id: UUID()))
+        steps.pending.removeFirst().resume()
+        await switchingDuringSync.value
+        check(FitFightAPI.offerLoads == loads, "An account change during Steps sync cannot reload the previous onboarding screen")
 
         let series = UUID().uuidString
         let pastID = UUID()
@@ -169,9 +179,16 @@ struct Fight {
             let detail = ProfileNavigationProbe(model: model, fight: destination)
             check(model.tab == .fights && detail.displayed.id == selected.id && detail.displayed.score == selected.score,
                   "A Profile history tap opens the selected \(status) round and its own score")
-            model.fights[0].score = 52000
-            check(detail.displayed.id == selected.id && detail.displayed.score == 52000,
-                  "Refreshing the detail updates that round without switching to the current round")
+            if status == .pending {
+                model.fights[0].score = 52000
+                model.fights[0].status = .finished
+                check(detail.displayed.id == selected.id && detail.displayed.score == 52000 && detail.displayed.status == .finished,
+                      "Final sync updates the selected pending round without switching to the current round")
+            } else {
+                model.fights[1].score = 2000
+                check(detail.displayed.id == selected.id && detail.displayed.score == selected.score,
+                      "Live updates leave the selected finished round's result unchanged")
+            }
             model.openFightID = nil
             model.openFightFromFeed(id: selected.id)
             await until { model.openFightID != nil }

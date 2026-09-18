@@ -182,9 +182,10 @@ struct ProfileSheet: View {
                         .ffType(.body).foregroundStyle(theme.textSecondary)
                 }
                 ForEach(store.history) { row in
-                    if let fightID = row.fightId, model.canonicalFight(for: fightID.uuidString) != nil {
+                    if let fightID = row.fightId, model.fight(id: fightID.uuidString) != nil {
                         Button {
-                            model.openFightFromFeed(id: fightID.uuidString)
+                            model.tab = .fights
+                            Task { @MainActor in model.openFightID = fightID.uuidString }
                             dismiss()
                         } label: { FFCard { ProfileHistoryContent(row: row) } }
                         .buttonStyle(FFHapticPlainStyle())

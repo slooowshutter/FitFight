@@ -3,6 +3,7 @@ import SwiftUI
 struct SuggestedFightsOnboardingView: View {
     var onFinished: (() -> Void)? = nil
     @EnvironmentObject private var session: SessionStore
+    @EnvironmentObject private var model: AppModel
     @Environment(\.ffTheme) private var theme
     @State private var fights: [FitFightJoinableFight] = []
     @State private var loading = true
@@ -25,7 +26,9 @@ struct SuggestedFightsOnboardingView: View {
                         .disabled(joining != nil)
                 }
                 FFButton(title: String(localized: "Continue"), fullWidth: true) { finish() }
+                    .disabled(joining != nil)
                 FFButton(title: String(localized: "Skip"), kind: .ghost, fullWidth: true) { finish() }
+                    .disabled(joining != nil)
             }.padding(theme.space.screenPadding)
         }.foregroundStyle(theme.text).background(theme.bg.ignoresSafeArea())
         .task { await load() }
@@ -60,6 +63,9 @@ struct SuggestedFightsOnboardingView: View {
         do {
             let token = try await session.freshAccessToken()
             _ = try await FitFightAPI().joinFight(fightID: fight.fightId, accessToken: token)
+            try Task.checkCancellation()
+            guard accountID == session.authSession?.user.id else { return }
+            await model.syncStepsAfterMembershipChange(session: session)
             try Task.checkCancellation()
             guard accountID == session.authSession?.user.id else { return }
             await load()

@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 18,
+            notes: "Joining a suggested Fight now syncs your steps. Profile history opens the selected round, and Feedback comment counts open the discussion."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 18,
             notes: "Profiles now show the Fights you both still belong to. Leaving a Fight removes it from Fights together."
         ),
         ReleaseNote(

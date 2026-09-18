@@ -713,10 +713,18 @@ private struct RequestRow: View {
                         RequestMediaStack(media: post.media, compact: true)
                     }.multilineTextAlignment(.leading).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
                 }.buttonStyle(FFHapticPlainStyle())
-                ProfileIdentityLink(userID: post.authorId, source: "feedback") {
-                    Text(String(localized: "feedback.meta", defaultValue: "@\(post.authorHandle) · \(post.commentCount) comments"))
-                        .ffType(.micro).foregroundStyle(theme.textFaint)
+                HStack(spacing: 4) {
+                    ProfileIdentityLink(userID: post.authorId, source: "feedback") {
+                        Text(verbatim: "@\(post.authorHandle)")
+                    }
+                    Text(verbatim: "·")
+                    Button(action: onOpen) {
+                        Text(post.commentCount == 1 ? String(localized: "1 comment") : String(localized: "\(post.commentCount) comments"))
+                            .frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
+                    }
+                    .buttonStyle(FFHapticPlainStyle())
                 }
+                .ffType(.micro).foregroundStyle(theme.textFaint)
             }.frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(14)

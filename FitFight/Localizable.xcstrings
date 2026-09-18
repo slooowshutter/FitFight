@@ -1,6 +1,16 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Language changes keep your iPhone’s regional formats and preserve unfinished fights and posts.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les changements de langue conservent les formats régionaux de ton iPhone et tes brouillons de fights et de publications."
+                    }
+                }
+            }
+        },
         "Preferences": {
             "localizations": {
                 "fr": {

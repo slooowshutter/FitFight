@@ -12,7 +12,6 @@ struct ContentView: View {
     @EnvironmentObject private var push: PushNotificationService
     @EnvironmentObject private var steps: HealthKitStepsStore
     @EnvironmentObject private var companions: CompanionStore
-    @EnvironmentObject private var preferences: AccountPreferencesStore
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
@@ -270,7 +269,6 @@ struct ContentView: View {
             RequestsOnboardingView()
         } else {
             signedInApp
-                .id(preferences.value.language.languageCode)
                 .id(session.authSession?.user.id)
         }
     }

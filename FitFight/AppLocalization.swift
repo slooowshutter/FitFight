@@ -36,7 +36,18 @@ enum AppLocalization {
         return language.languageCode
     }
 
-    static var locale: Locale { Locale(identifier: languageCode) }
+    static var locale: Locale {
+        lock.lock()
+        let language = selectedLanguage
+        lock.unlock()
+        guard language != .system else { return .autoupdatingCurrent }
+        var components = Locale.Components(locale: .current)
+        components.languageComponents = Locale.Language.Components(
+            languageCode: Locale.LanguageCode(language.rawValue),
+            region: components.languageComponents.region
+        )
+        return Locale(components: components)
+    }
 
     static var bundle: Bundle {
         guard let path = Bundle.main.path(forResource: languageCode, ofType: "lproj"),

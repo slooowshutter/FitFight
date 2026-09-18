@@ -33,7 +33,7 @@ export const JOINABLE_MEMBER_CAP = 50;
 const JOIN_ATTEMPTS_PER_USER_HOUR = 10;
 const JOIN_ATTEMPTS_PER_IP_HOUR = 30;
 const JOINABLE_FIGHT_SELECT =
-    "id,state,starts_at,ends_at,time_zone,action_text,roster:fight_members(count),membership:fight_members(user_id)";
+    "id,state,starts_at,ends_at,time_zone,action_text,roster:fight_members(count),membership:fight_members(user_id,state)";
 
 async function recordJoinAttempt(
     userId: string,
@@ -302,6 +302,7 @@ export async function listJoinableFights(
             memberCount: fight.roster[0].count,
             recurring: row.recurring,
             alreadyMember,
+            membershipState: fight.membership[0]?.state ?? null,
             canJoinNext:
                 !alreadyMember &&
                 canDeferFightJoin({

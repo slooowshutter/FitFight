@@ -140,6 +140,34 @@ enum Changelog {
             version: "1.1.1",
             year: 2026,
             month: 9,
+            day: 18,
+            notes: "Joining a suggested Fight now syncs your steps. Profile history opens the selected round, and Feedback comment counts open the discussion."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 18,
+            notes: "Profiles now show the Fights you both still belong to. Leaving a Fight removes it from Fights together."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Suggested Fight invitations stay joinable, and rematches keep their original number of days across clock changes. Private Fight history protects participant identities."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Profiles now include Friends, private sharing controls, Fight records and head-to-head rivalries. Tap a person to open their profile or challenge them. Suggested public Fights are optional at the end of onboarding."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
             day: 16,
             notes: "Feed comments can be sorted by most comments or most recent. Most comments is the default."
         ),

@@ -29,6 +29,7 @@ export const fightRecordFactSchema = z.object({
     state: z.string(),
     starts_at: recordTimestampSchema,
     ends_at: recordTimestampSchema,
+    calendar_days: z.number(),
     category: z.enum(recordCategoryValues),
     name: z.string(),
     action_text: z.string().nullable(),

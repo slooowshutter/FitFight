@@ -37,7 +37,7 @@ final class FeedbackStore: ObservableObject {
         listLoad += 1
         let load = listLoad
         let voteStartedAt = voteClock
-        let localCounts = Dictionary(uniqueKeysWithValues: posts.map { ($0.id, $0.commentCount) })
+        let commentStartedAt = commentClock
         isLoading = true
         defer {
             if load == listLoad { isLoading = false }
@@ -48,8 +48,9 @@ final class FeedbackStore: ObservableObject {
             guard load == listLoad else { return }
             self.posts = posts.filter { !deletedPostIDs.contains($0.id) }.map { fetched in
                 var post = keepingNewerVote(fetched, startedAt: voteStartedAt)
-                if let local = localCounts[post.id] {
-                    post.commentCount = max(post.commentCount, local)
+                if !postedAfter(postID: post.id, startedAt: commentStartedAt).isEmpty,
+                   let local = self.posts.first(where: { $0.id == post.id }) {
+                    post.commentCount = max(post.commentCount, local.commentCount)
                 }
                 return post
             }
@@ -186,6 +187,7 @@ final class FeedbackStore: ObservableObject {
     }
 
     func launchFix(session: SessionStore, postID: UUID) async -> URL? {
+        guard !isLaunchingFix else { return nil }
         isLaunchingFix = true
         defer { isLaunchingFix = false }
         do {
@@ -195,9 +197,10 @@ final class FeedbackStore: ObservableObject {
                 metadata: .current(),
                 accessToken: token
             )
-            error = nil
+            await loadDetail(session: session, postID: postID)
             return launched.agentURL
         } catch {
+            await loadDetail(session: session, postID: postID)
             self.error = error.localizedDescription
             return nil
         }
@@ -427,6 +430,7 @@ struct RequestsView: View {
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
     @ObservedObject var store: FeedbackStore
     var chrome: RequestsChrome
     var filterSource: Binding<RequestFilter>?
@@ -455,8 +459,7 @@ struct RequestsView: View {
                         .navigationDestination(item: $openPostID) { postID in
                             RequestDetailView(
                                 postID: postID,
-                                store: store,
-                                showsVersionBanner: chrome == .sheet
+                                store: store
                             )
                                 .toolbar(.hidden, for: .navigationBar)
                         }
@@ -468,6 +471,11 @@ struct RequestsView: View {
         .task(id: activeFilter) {
             guard !staticRender else { return }
             await store.load(session: session, kind: activeFilter.kind)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active && !staticRender {
+                Task { await store.load(session: session, kind: activeFilter.kind) }
+            }
         }
         .sheet(isPresented: $composing, onDismiss: {
             guard !staticRender else { return }
@@ -491,7 +499,6 @@ struct RequestsView: View {
     private var list: some View {
         VStack(spacing: 0) {
             if chrome == .sheet {
-                VersionBanner()
                 HStack {
                     Text("Bugs & requests")
                         .ffType(.title)
@@ -737,15 +744,16 @@ private struct RequestRow: View {
                         RequestMediaStack(media: post.media, compact: true)
                     }.multilineTextAlignment(.leading).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
                 }.buttonStyle(FFHapticPlainStyle())
-                HStack(spacing: 10) {
+                HStack(spacing: 4) {
                     ProfileIdentityLink(userID: post.authorId, source: "feedback") {
                         Text(verbatim: "@\(post.authorHandle)")
                     }
+                    Text(verbatim: "·")
                     Button(action: onOpen) {
-                        Text(String(localized: "feedback.comment-count", defaultValue: "\(post.commentCount) comments"))
-                            .frame(minHeight: 44)
-                            .contentShape(Rectangle())
-                    }.buttonStyle(FFHapticPlainStyle())
+                        Text(post.commentCount == 1 ? String(localized: "1 comment") : String(localized: "\(post.commentCount) comments"))
+                            .frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
+                    }
+                    .buttonStyle(FFHapticPlainStyle())
                 }
                 .ffType(.micro).foregroundStyle(theme.textFaint)
             }.frame(maxWidth: .infinity, alignment: .leading)
@@ -759,12 +767,12 @@ private struct RequestRow: View {
 private struct RequestDetailView: View {
     let postID: UUID
     @ObservedObject var store: FeedbackStore
-    var showsVersionBanner: Bool = true
     @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
+    @Environment(\.scenePhase) private var scenePhase
     @State private var comment = ""
     @State private var launchedAgentURL: URL?
     @State private var confirmingDeletion = false
@@ -776,9 +784,6 @@ private struct RequestDetailView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if showsVersionBanner {
-                VersionBanner()
-            }
             HStack(alignment: .top, spacing: 10) {
                 FFNavDetail(
                     title: post?.title ?? String(localized: "Request"),
@@ -820,6 +825,7 @@ private struct RequestDetailView: View {
                         detailStack
                     }
                     .scrollDismissesKeyboard(.interactively)
+                    .refreshable { await store.loadDetail(session: session, postID: postID) }
                 }
             }
 
@@ -877,6 +883,11 @@ private struct RequestDetailView: View {
         .task {
             guard !staticRender else { return }
             await store.loadDetail(session: session, postID: postID)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active && !staticRender {
+                Task { await store.loadDetail(session: session, postID: postID) }
+            }
         }
     }
 
@@ -999,6 +1010,7 @@ private struct RequestDetailView: View {
         guard await store.comment(session: session, postID: postID, body: trimmed) else { return }
         comment = ""
         commentFocused = false
+        await store.loadDetail(session: session, postID: postID)
     }
 
     private func sendToCursor() async {

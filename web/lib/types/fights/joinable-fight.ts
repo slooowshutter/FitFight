@@ -17,6 +17,7 @@ export const joinableFightSummarySchema = z.object({
     memberCount: z.number().int().nonnegative(),
     recurring: z.boolean(),
     alreadyMember: z.boolean(),
+    membershipState: z.enum(fightMemberStateValues).nullable().optional(),
     canJoinNext: z.boolean(),
 });
 

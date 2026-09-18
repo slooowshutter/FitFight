@@ -66,10 +66,16 @@ and deadlines are preserved. API and database contracts are unchanged. A 1.1.2
 release note includes English and French copy.
 
 The new `python3 scripts/test_fight_localization.py` regression
-[failed against the previous implementation on hosted macOS](https://github.com/slooowshutter/FitFight/actions/runs/35347152418):
+[failed against the previous implementation on hosted macOS](https://github.com/slooowshutter/FitFight/actions/runs/35347152418/job/105606316598):
 "Ended must switch to French even when every Fight request fails". It exercises
 the production language-change handler, snapshot mapping, and local cache with
-failed HTTP reads. Verification of the fix and simulator compilation are pending.
+failed HTTP reads. The corrected regression, all existing native checks, and the
+iOS simulator build passed in [hosted verification](https://github.com/slooowshutter/FitFight/actions/runs/35347513091)
+at `8d76256`. Checks cover English/French switching, invitation previews, preserved
+names and stakes, unchanged scores and deadlines, and offline cache restoration.
+Localization, native API-boundary, and whitespace checks also passed. App and test
+sources are unchanged since that run; normal CI branch triggers are restored.
+Physical-device verification remains outstanding.
 No PR, release-branch merge, live deployment, or TestFlight upload was made.
 
 **Live and supported clients:** read-only release checks at **03:20 UTC on

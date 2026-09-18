@@ -14,6 +14,7 @@ on:
             - "scripts/test_profile_navigation.py"
             - "scripts/test_profile_refresh.py"
             - "scripts/test_native_state.py"
+            - "scripts/test_companion_state.py"
             - "scripts/test_fight_live_updates.py"
             - "scripts/test_fight_chart_scores.py"
             - "scripts/test_push_state.py"
@@ -36,6 +37,7 @@ on:
             - "scripts/test_profile_navigation.py"
             - "scripts/test_profile_refresh.py"
             - "scripts/test_native_state.py"
+            - "scripts/test_companion_state.py"
             - "scripts/test_fight_live_updates.py"
             - "scripts/test_fight_chart_scores.py"
             - "scripts/test_push_state.py"
@@ -114,6 +116,9 @@ jobs:
 
             - name: Verify native refresh and feed state
               run: python3 scripts/test_native_state.py
+
+            - name: Verify companion prompt retention and reuse
+              run: python3 scripts/test_companion_state.py
 
             - name: Verify remote photo loading
               run: python3 scripts/check_remote_photo_loading.py

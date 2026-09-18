@@ -77,7 +77,7 @@ struct ContentView: View {
                 .presentationBackground(themeStore.theme.bg)
                 .interactiveDismissDisabled(session.needsCompanionSelection)
         }
-        .onChange(of: session.profile?.companionId) { _, _ in
+        .onChange(of: session.profile) { _, _ in
             companions.apply(session.profile)
             Task { await companions.publishPending(session: session) }
         }

@@ -751,6 +751,10 @@ struct FitFightAPI {
         try await get(path: "me", accessToken: accessToken, expected: [200])
     }
 
+    func companionPrompts(accessToken: String) async throws -> [String] {
+        try await get(path: "me/companions", accessToken: accessToken, expected: [200])
+    }
+
     func updateProfile(
         handle: String? = nil,
         displayName: String? = nil,

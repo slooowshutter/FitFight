@@ -1,6 +1,126 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "All": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tous"
+                    }
+                }
+            }
+        },
+        "Mountains": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Montagnes"
+                    }
+                }
+            }
+        },
+        "Water": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Eau"
+                    }
+                }
+            }
+        },
+        "Forest": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Forêt"
+                    }
+                }
+            }
+        },
+        "Jungle": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Jungle"
+                    }
+                }
+            }
+        },
+        "Yours": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les tiens"
+                    }
+                }
+            }
+        },
+        "Loading saved descriptions": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Chargement des descriptions enregistrées"
+                    }
+                }
+            }
+        },
+        "Your saved descriptions will appear here.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tes descriptions enregistrées apparaîtront ici."
+                    }
+                }
+            }
+        },
+        "Use this saved description": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Utiliser cette description enregistrée"
+                    }
+                }
+            }
+        },
+        "Couldn’t load your saved descriptions.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Impossible de charger tes descriptions enregistrées."
+                    }
+                }
+            }
+        },
+        "Companion descriptions stay saved when you change animals. Browse habitats and reuse your saved descriptions from Yours.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les descriptions de compagnons restent enregistrées quand tu changes d’animal. Explore les habitats et réutilise tes descriptions dans Les tiens."
+                    }
+                }
+            }
+        },
+        "Reuse a saved description or write a new one in Make it yours.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Réutilise une description enregistrée ou écris-en une nouvelle dans À ton image."
+                    }
+                }
+            }
+        },
         "Search time zones": {
             "extractionState": "manual",
             "localizations": {

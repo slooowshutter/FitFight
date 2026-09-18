@@ -1,6 +1,10 @@
 import type { Sql } from "postgres";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { isFitFightAdmin } from "@/lib/admin/is-fitfight-admin";
 import { ApiError, ERROR_CODES } from "@/lib/http";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
+import { readAdminViewer } from "@/lib/supabase/queries/auth-supabase-query";
 import {
     loadReadyMedia,
     mapMedia,
@@ -274,6 +278,31 @@ export async function getFeedbackPost(
         post: mapPost(row, attachments.get(row.id) ?? []),
         comments: comments.map(mapComment),
     };
+}
+
+/** Admin moderation removes the post; foreign keys remove its comments, votes, reports, and attachment links. */
+export async function deleteFeedbackPost(
+    userId: string,
+    postId: string,
+    admin: SupabaseClient = createAdminClient(),
+    database: Sql = createDatabaseClient(),
+): Promise<void> {
+    const viewer = await readAdminViewer(userId, admin);
+    if (!isFitFightAdmin(viewer)) {
+        throw new ApiError(
+            403,
+            ERROR_CODES.forbidden,
+            "Only the FitFight admin can delete feedback.",
+        );
+    }
+    const deleted = await database`
+        delete from public.feedback_posts
+        where id = ${postId}
+        returning id
+    `;
+    if (deleted.length === 0) {
+        throw new ApiError(404, ERROR_CODES.not_found, "Request not found");
+    }
 }
 
 export async function createFeedbackPost(

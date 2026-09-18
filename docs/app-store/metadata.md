@@ -1,6 +1,10 @@
 # App Store metadata
 
-Prepared English (U.S.) and French (France) copy for the authorized 1.1.1 production update. Keep the existing approved app name, contact details, territories, and seller settings unless Marc requests a change. This file is a draft until saved in App Store Connect.
+English (U.S.) and French (France) App Store copy. Keep the existing approved app name, contact details, territories, and seller settings unless Marc requests a change.
+
+**Deferred to the next normal app release, 17 Sep 2026:** Marc chose to keep these descriptions saved instead of shipping a separate update for them. Release PR #270 is closed. No preview/main promotion, new build upload, or review submission should proceed for this standalone update. The descriptions and automatic-publication setting remain saved in the 1.1.2 draft; use them when Marc authorizes the next app release.
+
+Description refresh saved 17 Sep 2026 from Marc's supplied copy, with a French translation. Marc authorized creating the 1.1.2 App Store draft, submitting the update, and automatic publication after approval for every future release. Both descriptions and the required localized release notes below are saved in that draft. Apple blocks review submission because no 1.1.2 build is available. The public version remains 1.1.1 (202); these descriptions are not live. The branch prepares the 1.1.2 native and CI versions and automatic-release defaults. [Cloud configuration](https://github.com/slooowshutter/FitFight/actions/runs/35168925860) confirmed the live 1.1.2 draft has `releaseType: AFTER_APPROVAL` and no selected build. Other fields below remain the 1.1.1 reference metadata; promotional text is blank in the new draft.
 
 ## App information
 
@@ -20,7 +24,7 @@ Prepared English (U.S.) and French (France) copy for the authorized 1.1.1 produc
 | Support URL        | `https://fitfight.app/support`  |
 | Marketing URL      | `https://fitfight.app`          |
 | Copyright          | `2026 Marc Lamy`                |
-| Release method     | Manually release after approval |
+| Release method     | Automatically release after approval |
 
 ## Promotional text
 
@@ -28,34 +32,35 @@ Prepared English (U.S.) and French (France) copy for the authorized 1.1.1 produc
 
 ## Description
 
-> Turn everyday walking into a private challenge with friends.
+> YOUR STEP COMPETITION SCOREKEEPER
 >
-> Create a Fight, add people by their exact FitFight username, choose a duration, and agree on the action the loser will do. FitFight reads Step Count from Apple Health and keeps the standings together in one place.
+> Let friendly competition move you.
 >
-> PRIVATE STEPS FIGHTS
+> Connect Apple Health, start a private group challenge, and see who records the most steps.
 >
-> • Challenge one or more people you know
-> • Choose a duration from 1 hour to 1 month
-> • Compare Steps recorded by Apple Health
-> • See totals, daily progress, rank, and the final result
-> • Accept or decline invitations inside the app
-> • Schedule challenges or repeat them automatically
-> • Share photos and posts with your chosen audience
-> • Choose a companion and manage optional notifications
+> HOW IT WORKS
 >
-> BUILT AROUND PRIVACY
+> Three steps to start. One winner to finish.
 >
-> Fights are private to their participants. Apple Health access is read-only. Steps fights share only step totals with accepted participants. FitFight does not sell your data, show advertising, or track you across apps and websites. You can permanently delete your account and associated FitFight data from Settings.
+> 01
+> Add your friends
+> Search by username and add to any fight.
 >
-> FitFight is free. There are no purchases, entry fees, money wagers, payouts, or prizes. FitFight is for friendly fitness competition and is not a medical service.
+> 02
+> Move to win
+> Apple Health securely keeps the score while you live your day.
+>
+> 03
+> Claim the win
+> Watch the standings, close the gap, and finish on top.
 
 ## Keywords
 
 `step challenge,walking,fitness,friends,competition,pedometer,health`
 
-## What is new in 1.1.1
+## What is new in 1.1.2
 
-> Meet your companion, share photos and posts, schedule or repeat challenges, and choose your notifications. This update also brings the new FitFight icon and improvements to Health sync and standings.
+> A refreshed App Store description explaining how to start a private step challenge and follow the standings.
 
 ## Screenshot set
 
@@ -90,33 +95,34 @@ Keep English (U.S.) as the primary App Store language and add French (France) as
 
 ### Description
 
-> Transformez vos pas quotidiens en défi privé entre amis.
+> LE COMPTEUR DE VOS DÉFIS DE PAS
 >
-> Créez un défi, ajoutez des personnes avec leur nom d’utilisateur FitFight exact, choisissez une durée et convenez du gage que fera le perdant. FitFight lit le nombre de pas dans Santé d’Apple et rassemble le classement au même endroit.
+> Bougez plus grâce aux défis entre amis.
 >
-> DÉFIS DE PAS PRIVÉS
+> Connectez Santé d’Apple, lancez un défi privé en groupe et découvrez qui fait le plus de pas.
 >
-> • Défiez une ou plusieurs personnes que vous connaissez
-> • Choisissez une durée d’une heure à un mois
-> • Comparez les pas enregistrés par Santé d’Apple
-> • Consultez les totaux, la progression quotidienne, le classement et le résultat final
-> • Acceptez ou refusez les invitations dans l’app
-> • Programmez des défis ou répétez-les automatiquement
-> • Partagez des photos et publications avec le public choisi
-> • Choisissez un compagnon et gérez les notifications facultatives
+> COMMENT ÇA MARCHE
 >
-> CONÇU POUR LA CONFIDENTIALITÉ
+> Trois étapes pour se lancer. Un seul gagnant à l’arrivée.
 >
-> Les défis sont privés et réservés à leurs participants. L’accès à Santé d’Apple est en lecture seule. Les défis de pas partagent uniquement les totaux de pas avec les participants ayant accepté. FitFight ne vend pas vos données, n’affiche aucune publicité et ne vous suit pas entre les apps et les sites. Vous pouvez supprimer définitivement votre compte et les données FitFight associées depuis les Réglages.
+> 01
+> Ajoutez vos amis
+> Recherchez-les par nom d’utilisateur et invitez-les à un défi.
 >
-> FitFight est gratuit. Il ne propose aucun achat, frais d’inscription, pari, paiement ni prix. FitFight est destiné aux défis sportifs amicaux et n’est pas un service médical.
+> 02
+> Bougez pour gagner
+> Santé d’Apple comptabilise vos pas en toute sécurité pendant que vous vivez votre journée.
+>
+> 03
+> Décrochez la victoire
+> Suivez le classement, réduisez l’écart et terminez en tête.
 
 ### Keywords
 
 `défi de pas,marche,fitness,amis,compétition,podomètre,santé`
 
-### Nouveautés de la version 1.1.1
+### Nouveautés de la version 1.1.2
 
-> Découvrez votre compagnon, partagez des photos et des publications, programmez ou répétez vos défis et choisissez vos notifications. Cette mise à jour apporte aussi la nouvelle icône FitFight et des améliorations de la synchronisation Santé et des classements.
+> Une description App Store actualisée pour découvrir comment lancer un défi de pas privé et suivre le classement.
 
 Use the same six screenshot subjects as English, rendered with the app language set to French and fictional usernames and Health data.

@@ -10,6 +10,10 @@ private final class Composer {
     var step = 2
     var durationDays = 30
     var customSchedule = true
+    var selectedTimeZone: TimeZone?
+    var fightTimeZone: TimeZone { selectedTimeZone ?? TimeZone(secondsFromGMT: 0)! }
+    var customStart = Date()
+    var customEnd = Date()
     var recurring = false
     var fightTitle = "An earlier draft"
     var visibilityJoinable = true

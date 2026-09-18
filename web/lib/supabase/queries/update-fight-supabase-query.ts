@@ -75,6 +75,13 @@ export async function updateFight(
     const nextEnds = input.endsAt
         ? new Date(input.endsAt)
         : new Date(fight.ends_at);
+    if (input.timeZone !== undefined && (fight.state !== "scheduled" || Date.parse(fight.starts_at) <= now.getTime())) {
+        throw new ApiError(
+            400,
+            ERROR_CODES.validation,
+            "Time zone can only change before the fight begins",
+        );
+    }
     if (input.startsAt !== undefined && fight.state !== "scheduled") {
         throw new ApiError(
             400,
@@ -129,6 +136,9 @@ export async function updateFight(
     if (input.endsAt !== undefined) {
         fightPatch.ends_at = nextEnds.toISOString();
     }
+    if (input.timeZone !== undefined) {
+        fightPatch.time_zone = input.timeZone;
+    }
     if (Object.keys(fightPatch).length > 0) {
         const { error } = await admin
             .from("fights")
@@ -154,6 +164,9 @@ export async function updateFight(
         }
         if (input.recurring !== undefined) {
             seriesPatch.recurring = input.recurring;
+        }
+        if (input.timeZone !== undefined) {
+            seriesPatch.time_zone = input.timeZone;
         }
         if (windowChanged) {
             seriesPatch.duration_seconds = Math.round(

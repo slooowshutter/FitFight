@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { InviteDownload } from "@/components/testflight-invite";
+import { appDownload } from "@/lib/releases/app-download";
 import { isJoinCode, normalizeJoinCode } from "@/lib/domain/fights/join-code";
 
 export const metadata: Metadata = {
@@ -36,7 +37,7 @@ export default async function JoinPage({
                     FitFight to join, even if the fight is private. Scores stay
                     in the app.
                 </p>
-                <InviteDownload />
+                <InviteDownload {...appDownload()} />
             </article>
         </main>
     );

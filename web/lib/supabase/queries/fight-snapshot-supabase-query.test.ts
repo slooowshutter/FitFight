@@ -128,7 +128,7 @@ test("snapshot establishes transaction-local caller permissions before its singl
     assert.match(calls[2].query, /as grace_ends_at/);
     assert.match(calls[2].query, /avatar_media_id/);
     assert.match(calls[2].query, /companion_id/);
-    assert.match(calls[2].query, /round\(point.value\)::integer as steps/);
+    assert.match(calls[2].query, /select snapshot.value, snapshot.step_checkpoints/);
     assert.doesNotMatch(calls[2].query, /as final_sync_grace_seconds/);
 });
 

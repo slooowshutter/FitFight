@@ -8,9 +8,11 @@ import tempfile
 
 root = Path(__file__).resolve().parents[1]
 view = (root / "FitFight/NewFightView.swift").read_text()
-method = view[view.index("    private func applyProfileChallenge()"):view.index("    private var duration:")]
+composer = (root / "FitFight/FightComposer.swift").read_text()
+method = view[view.index("    private func applyProfileChallenge("):view.index("    private var duration:")]
 source = (root / "tests/ProfileChallengeTests.swift").read_text().replace("// PROFILE_CHALLENGE_METHOD", method)
 source += "\n" + view[view.index("enum NewFightOpening"):view.index("struct NewFightView:")]
+source += "\nenum FightComposer {\n" + composer[composer.index("    static func endDate("):composer.index("\n}\n\nstruct FightComposerMetricPage:")] + "\n}\n"
 with tempfile.TemporaryDirectory(prefix="fitfight-profile-challenge-tests-") as directory:
     swift = Path(directory) / "ProfileChallengeTests.swift"
     binary = Path(directory) / "profile-challenge-tests"

@@ -10,7 +10,7 @@ Status: core implementation prepared on `profiles-friends-and-stats` on 17 Septe
 | --- | --- | --- |
 | Contracts and foundations | Additive v1 routes/fixtures, private sharing/friendship tables, request acceptance and privacy enforcement | Live schema/backend deployment is not authorized |
 | Records | Captured departures/final evidence, evidence-limited historical backfill, frozen categories, anonymous tie/field counts after deletion | Old backend drain and actual hosted history coverage must be recorded on deployment |
-| Native Profiles | Sheets, owner editing, Friends, record/history, rivalry summaries, challenges/rematches, explicit Steps-sharing previews | Installed-device accessibility and two-account checks |
+| Native Profiles | Sheets, owner editing, Friends, record/history, rivalry summaries, challenges, exact-round navigation, explicit Steps-sharing previews | Installed-device accessibility and two-account checks; per-Fight replay choice below |
 | Suggestions/admin | Optional final onboarding, real offers/join responses, immutable admin UUID, locked lifecycle changes | Configure the UUID and verify on staging after authorized deployment |
 | Measurement | Display-event deduplication, actual friendship/participation attribution, 30-day cleanup, anonymous aggregate retention, operator report | Disabled until Privacy is published |
 | Artwork | Private metadata and a disabled preference only | Provider/model, secure credentials, budgets, approved inputs, implementation and real cloud output test |
@@ -20,6 +20,43 @@ No feature is live from this branch. The remaining provider/legal inputs are not
 assumed defaults. The artwork runner, image delivery, Terms pages and sign-in
 notice are not represented as complete. Privacy is prepared for the actual
 available behavior, explicitly stating that pair generation is unavailable.
+
+### Steps records and activity levels, added 17 September 2026
+
+Marc requested Profile statistics alongside the existing record and optional
+Steps history. The implementation adds the best recorded Steps day and its date,
+average per recorded day, this week's average and total, and a five-level day
+distribution with current and longest recorded streaks. The owner's avatar on
+You opens their Profile sheet; both You and Profile sheets show the statistics.
+
+The levels reuse the live companion thresholds: Couch below 2,000, Warming up
+from 2,000, Moving from 4,000, Active from 6,000, and Ripped from 8,000 Steps.
+Working choice: a streak means consecutive dates in exactly that level. Doing
+more moves the day into the higher category. Each day belongs to one category.
+
+Only finalized days with a known historical time zone count, through yesterday.
+Today, partial days and missing days do not count as zero or establish streaks.
+A missing date interrupts the verified sequence. If yesterday is unavailable,
+the current streak is unknown. Weekly statistics run Monday through yesterday
+in the person's saved Profile time zone and show the recorded/elapsed-day
+denominator. Edit profile can change the saved zone; travel leaves it unchanged.
+Existing accounts without a saved zone use fixed UTC until they choose one.
+New account onboarding initializes it from the phone. Custom Fights may choose a
+separate zone; existing daily rows retain their original zones and finalized totals.
+Empty history uses the same saved zone to anchor its calendar period.
+They are not represented as a complete weekly average when days are missing.
+
+The owner sees available recorded history, not a claim of complete lifetime
+tracking. Other viewers and sharing previews use only the selected 7/30-day
+activity period, including clipping the start of a streak. Their records cannot
+reveal older activity. Sharing remains off by default and uses the existing
+activity audience, separately from Competitive/Public. This extension adds no
+new HealthKit collection, automatic posts, or external share export.
+
+The v1 Profile response adds optional `step_statistics`; old fixtures and daily
+history fields retain their meaning. No additional migration is needed beyond
+the existing Profile expansion. Deploy compatible backend support before the
+native app. See status.md for the separate cloud-check and deployment evidence.
 
 ## 1. Outcome and fixed scope
 

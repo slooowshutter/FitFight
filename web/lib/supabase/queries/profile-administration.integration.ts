@@ -23,8 +23,8 @@ const admin = createClient(env.SUPABASE_TEST_URL, env.SUPABASE_TEST_SERVICE_KEY,
 after(() => database.end());
 
 test("suggestions serialize privacy, joining, stopping and recurring roster changes", async (t) => {
-    const users = [randomUUID(), randomUUID(), randomUUID()];
-    const [owner, guest, outsider] = users;
+    const users = [randomUUID(), randomUUID(), randomUUID(), randomUUID()];
+    const [owner, guest, outsider, uninvited] = users;
     const fightId = randomUUID();
     const seriesId = randomUUID();
     const now = new Date();
@@ -36,7 +36,7 @@ test("suggestions serialize privacy, joining, stopping and recurring roster chan
         await database`delete from public.fight_series where id = ${seriesId}`;
         await database`delete from auth.users where id = any(${database.array(users)}::uuid[])`;
     });
-    for (const id of users) await database`insert into auth.users(id) values (${id})`;
+    for (const id of users.slice(0, 3)) await database`insert into auth.users(id) values (${id})`;
     await database`update auth.users set raw_user_meta_data = '{"email":"marc@marclamy.com","admin":true}'::jsonb where id = ${outsider}`;
     assert.equal(canAdministerFights(outsider), false);
     await assert.rejects(setFightSuggested(outsider, fightId, true, database));
@@ -50,16 +50,25 @@ test("suggestions serialize privacy, joining, stopping and recurring roster chan
     await database`insert into public.fight_series_members(series_id, user_id, state) values (${seriesId}, ${owner}, 'accepted')`;
     await assert.rejects(setFightSuggested(owner, fightId, true, database));
     await administerFight(owner, fightId, { visibility: "joinable" }, database);
-    await database`insert into public.fight_members(fight_id, user_id, state) values (${fightId}, ${outsider}, 'declined')`;
     await setFightSuggested(owner, fightId, true, database);
-    const [invitation] = await database`select state::text from public.fight_members where fight_id = ${fightId} and user_id = ${guest}`;
-    assert.equal(invitation.state, "invited");
+    await setFightSuggested(owner, fightId, true, database);
+    for (const id of [guest, outsider]) {
+        const [member] = await database`select state::text from public.fight_members where fight_id = ${fightId} and user_id = ${id}`;
+        const [seriesMember] = await database`select state::text from public.fight_series_members where series_id = ${seriesId} and user_id = ${id}`;
+        const [invites] = await database`select count(*)::int n from public.fight_invites where fight_id = ${fightId} and invited_user_id = ${id}`;
+        const [notifications] = await database`select count(*)::int n from private.notification_intents where fight_id = ${fightId} and user_id = ${id} and kind = 'fight_invite'`;
+        assert.equal(member.state, "invited");
+        assert.equal(seriesMember.state, "invited");
+        assert.equal(invites.n, 1);
+        assert.equal(notifications.n, 1);
+    }
+    await database`insert into auth.users(id) values (${uninvited})`;
     process.env.FITFIGHT_PROFILE_MEASUREMENT_ENABLED = "true";
     await updateProfileSettings(owner, { audience: "public" }, database);
     await recordProfileView(guest, owner, { event_id: randomUUID(), source: "standings" }, database);
     await acceptFightParticipation(guest, fightId, undefined, "now", now, undefined, database, admin);
     await acceptFightParticipation(guest, fightId, undefined, "now", now, undefined, database, admin);
-    await assert.rejects(acceptFightParticipation(outsider, fightId, undefined, "now", now, undefined, database, admin));
+    await assert.rejects(acceptFightParticipation(uninvited, fightId, undefined, "now", now, undefined, database, admin));
     assert.ok((await listJoinableFights(guest, admin, now, true)).some((fight) => fight.fightId === fightId));
     await Promise.allSettled([
         setFightSuggested(owner, fightId, true, database),
@@ -69,8 +78,8 @@ test("suggestions serialize privacy, joining, stopping and recurring roster chan
     const [privateSeries] = await database`select visibility, suggested from public.fight_series where id = ${seriesId}`;
     assert.equal(privateSeries.visibility, "invite_only");
     assert.equal(privateSeries.suggested, false);
-    await assert.rejects(joinFight(outsider, { fightId, start: "now" }, null, admin, now, database));
-    assert.equal((await listJoinableFights(outsider, admin, now, true)).some((fight) => fight.fightId === fightId), false);
+    await assert.rejects(joinFight(uninvited, { fightId, start: "now" }, null, admin, now, database));
+    assert.equal((await listJoinableFights(uninvited, admin, now, true)).some((fight) => fight.fightId === fightId), false);
     await administerFight(owner, fightId, { visibility: "joinable" }, database);
     const [publicSeries] = await database`select suggested from public.fight_series where id = ${seriesId}`;
     assert.equal(publicSeries.suggested, false);

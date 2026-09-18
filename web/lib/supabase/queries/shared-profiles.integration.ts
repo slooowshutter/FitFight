@@ -19,6 +19,79 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = env.SUPABASE_TEST_SERVICE_KEY;
 const database = postgres(env.DATABASE_URL, { max: 5 });
 after(() => database.end());
 
+test("shared activity uses one saved personal time zone across travel", async (t) => {
+    const users = [randomUUID(), randomUUID()];
+    const [owner, friend] = users;
+    const sourceId = randomUUID();
+    t.after(async () => {
+        await database`delete from auth.users where id = any(${database.array(users)}::uuid[])`;
+    });
+    for (const id of users) await database`insert into auth.users(id) values (${id})`;
+    await database`update public.profiles set time_zone = 'Pacific/Kiritimati' where user_id = ${owner}`;
+    await database`insert into public.data_sources(id, user_id, provider, source_label, connection_route)
+        values (${sourceId}, ${owner}, 'apple_health', 'Apple Health', 'healthkit')`;
+    await database`insert into public.metric_days(user_id, source_id, metric, day, value, time_zone, unit, input_hash, normalization_version, calculation_version, finalized_at)
+        select ${owner}, ${sourceId}, 'steps', (now() at time zone 'Pacific/Kiritimati')::date - day,
+            8000, case when day >= 7 then 'Etc/GMT+12' else 'Pacific/Kiritimati' end,
+            'steps', repeat('0', 64), 1, 1, case when day > 0 then now() else null end
+        from generate_series(0, 8) day`;
+    await changeFriendship(friend, owner, "request", database);
+    await changeFriendship(owner, friend, "accept", database);
+    await updateProfileSettings(owner, { activity_audience: "friends", activity_days: 7 }, database);
+    const shared = await readSharedProfile(friend, owner, undefined, database);
+    assert.equal(shared.activity?.values.length, 7, "A seven-day grant must not reveal an eighth date from an earlier time zone");
+    const [period] = await database`select ((now() at time zone 'Pacific/Kiritimati')::date - 6)::text first_day`;
+    assert.equal(shared.activity?.values[0].day, period.first_day);
+    assert.deepEqual((await readSharedProfile(owner, owner, "friend", database)).activity, shared.activity);
+});
+
+test("private history IDs and cursors cannot correlate participants across profiles", async (t) => {
+    const users = [randomUUID(), randomUUID(), randomUUID()];
+    const [owner, opponent, stranger] = users;
+    const fightIds: string[] = [randomUUID(), randomUUID()];
+    t.after(async () => {
+        await database`delete from public.fights where owner_id = ${owner}`;
+        await database`delete from auth.users where id = any(${database.array(users)}::uuid[])`;
+    });
+    for (const id of users) await database`insert into auth.users(id) values (${id})`;
+    for (const fightId of fightIds) {
+        await database`insert into public.fights(id, owner_id, name, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy)
+            values (${fightId}, ${owner}, 'Private pair', 'live', now() - interval '1 hour', now() + interval '1 hour', 'UTC', 'highest_total', 'shared')`;
+        for (const userId of [owner, opponent]) {
+            await database`insert into public.fight_members(fight_id, user_id, state, accepted_at)
+                values (${fightId}, ${userId}, 'accepted', now())`;
+        }
+        await database`update public.fight_members set rank = 1, current_value = 1000, final_steps_complete = true where fight_id = ${fightId}`;
+        await database`update public.fights set state = 'final' where id = ${fightId}`;
+    }
+    for (const userId of [owner, opponent]) await updateProfileSettings(userId, { competitive: true, audience: "public" }, database);
+
+    const query = profilePageQuerySchema.parse({ limit: 1 });
+    const first = await readProfileHistory(stranger, owner, query, database);
+    const other = await readProfileHistory(stranger, opponent, query, database);
+    assert.equal(first.results[0].fight_id, null);
+    assert.equal(first.results[0].name, null);
+    assert.equal(first.results[0].field_size, 2);
+    assert.notEqual(first.results[0].id, other.results[0].id);
+    assert.ok(first.next_cursor && other.next_cursor);
+    assert.equal(fightIds.includes(first.results[0].id), false);
+    assert.equal(fightIds.includes(first.next_cursor), false);
+    assert.notEqual(first.next_cursor, other.next_cursor);
+    assert.deepEqual(await readProfileHistory(stranger, owner, query, database), first);
+    const next = await readProfileHistory(stranger, owner, { ...query, cursor: first.next_cursor }, database);
+    assert.equal(next.results.length, 1);
+    assert.notEqual(next.results[0].id, first.results[0].id);
+    assert.equal(next.next_cursor, null);
+    for (const cursor of [other.next_cursor, fightIds[0]]) {
+        await assert.rejects(readProfileHistory(stranger, owner, { ...query, cursor }, database),
+            (error: unknown) => error instanceof ApiError && error.status === 400);
+    }
+    const own = await readProfileHistory(owner, owner, query, database);
+    assert.equal(own.results[0].id, first.results[0].id);
+    assert.ok(own.results[0].fight_id && fightIds.includes(own.results[0].fight_id));
+    assert.equal(own.results[0].name, "Private pair");
+});
+
 test("private profiles require mutual acceptance and enforce sharing on every read", async (t) => {
     const users = [randomUUID(), randomUUID(), randomUUID()];
     const [viewer, target, stranger] = users;
@@ -72,6 +145,56 @@ test("private profiles require mutual acceptance and enforce sharing on every re
     await assert.rejects(readSharedProfile(viewer, target, undefined, database));
     await assert.rejects(readSharedProfile(target, viewer, undefined, database));
     assert.equal((await listProfileFriends(viewer, friendsQuerySchema.parse({ kind: "outgoing" }), database)).people.length, 0);
+});
+
+test("step statistics keep owner records private and clip every shared aggregate to its allowed period", async (t) => {
+    const users = [randomUUID(), randomUUID(), randomUUID()];
+    const [owner, friend, stranger] = users;
+    const sourceId = randomUUID();
+    t.after(async () => {
+        await database`delete from auth.users where id = any(${database.array(users)}::uuid[])`;
+    });
+    for (const id of users) await database`insert into auth.users(id) values (${id})`;
+    await database`update public.profiles set time_zone = 'UTC' where user_id = ${owner}`;
+    await database`insert into public.data_sources(id, user_id, provider, source_label, connection_route)
+        values (${sourceId}, ${owner}, 'apple_health', 'Apple Health', 'healthkit')`;
+    await database`insert into public.metric_days(user_id, source_id, metric, day, value, time_zone, unit, input_hash, normalization_version, calculation_version, finalized_at)
+        select ${owner}, ${sourceId}, 'steps', current_date - day,
+            case when day = 40 then 50000 else 8000 end, 'UTC', 'steps', repeat('0', 64), 1, 1,
+            case when day > 0 then now() else null end from generate_series(0, 40) day`;
+    const own = await readSharedProfile(owner, owner, undefined, database);
+    assert.equal(own.step_statistics?.scope_days, null);
+    assert.equal(own.step_statistics?.best_day?.steps, 50_000);
+    assert.equal(own.step_statistics?.levels[4].longest_streak, 40);
+    assert.equal(own.activity?.values.length, 7, "Existing owner daily-history contract stays bounded");
+    assert.equal((await readSharedProfile(friend, owner, undefined, database)).step_statistics, null);
+    await changeFriendship(friend, owner, "request", database);
+    await changeFriendship(owner, friend, "accept", database);
+    assert.equal((await readSharedProfile(friend, owner, undefined, database)).step_statistics, null, "Friendship alone does not enable sharing");
+    await updateProfileSettings(owner, { activity_audience: "friends", activity_days: 7 }, database);
+    const shared = await readSharedProfile(friend, owner, undefined, database);
+    assert.equal(shared.step_statistics?.scope_days, 7);
+    assert.equal(shared.step_statistics?.recorded_days, 6);
+    assert.equal(shared.step_statistics?.best_day?.steps, 8_000);
+    assert.equal(shared.step_statistics?.levels[4].longest_streak, 6);
+    assert.deepEqual((await readSharedProfile(owner, owner, "friend", database)).step_statistics, shared.step_statistics);
+    assert.equal((await readSharedProfile(stranger, owner, undefined, database)).step_statistics, null);
+    await updateProfileSettings(owner, { activity_days: 30 }, database);
+    assert.equal((await readSharedProfile(friend, owner, undefined, database)).step_statistics?.recorded_days, 29);
+    await updateProfileSettings(owner, { activity_audience: "off" }, database);
+    assert.equal((await readSharedProfile(friend, owner, undefined, database)).step_statistics, null);
+    await updateProfileSettings(owner, { activity_audience: "friends" }, database);
+    await changeFriendship(owner, friend, "remove", database);
+    assert.equal((await readSharedProfile(friend, owner, undefined, database)).step_statistics, null);
+    await blockProfile(friend, owner, database);
+    await assert.rejects(readSharedProfile(friend, owner, undefined, database), (error) => error instanceof ApiError && error.status === 404);
+    for (const zone of ["Pacific/Kiritimati", "Etc/GMT+12"]) {
+        await database`update public.profiles set time_zone = ${zone} where user_id = ${owner}`;
+        const [expected] = await database`select ((now() at time zone ${zone})::date - 1)::text yesterday`;
+        const local = await readSharedProfile(owner, owner, undefined, database);
+        assert.equal(local.step_statistics?.time_zone, zone, "Use the saved personal time zone even when stored days have another zone");
+        assert.equal(local.step_statistics?.through, expected.yesterday);
+    }
 });
 
 test("new profile tables reject mobile reads and writes; deletion cascades both sides", async (t) => {

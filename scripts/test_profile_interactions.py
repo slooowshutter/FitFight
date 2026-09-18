@@ -14,6 +14,7 @@ profile = (root / "FitFight/ProfileSheet.swift").read_text()
 content = (root / "FitFight/ContentView.swift").read_text()
 detail = (root / "FitFight/FightDetailView.swift").read_text()
 api = (root / "FitFight/FitFightAPI.swift").read_text()
+activity = (root / "FitFight/FeedActivity.swift").read_text()
 
 sync_start = re.search(r"^    (?:private )?func syncStepsAfterMembershipChange\(", app, re.M).start()
 profile_rows = profile[profile.index("ForEach(store.history)"):profile.index("if store.nextCursor != nil")]
@@ -28,11 +29,11 @@ source = source.replace("    // ONBOARDING_METHODS", onboarding[
 source = source.replace("    // APP_METHODS", "\n".join([
     app[sync_start:app.index("    private func joinPendingFight(")],
     app[app.index("    func fight(id:"):app.index("    func seriesHistory(")],
-    app[app.index("    func openFightFromFeed("):app.index("    func presentDailyStatusRecap(")],
+    app[app.index("    func openFight("):app.index("    func presentDailyStatusRecap(")],
     app[app.index("    private static func fightStatusPriority("):app.index("    private static func ordinal(")],
 ]))
 source = source.replace("    // TAB_STATE", app[
-    app.index("    @Published var tab:"):app.index("    @Published var openFightID:")
+    app.index("    @Published var tab:"):app.index("    @Published var dailyStatusRecap:")
 ].replace("@Published ", ""))
 source = source.replace("        // HISTORY_TAP", history_tap)
 source = source.replace("        // DESTINATION_LOOKUP", destination_lookup)
@@ -40,6 +41,7 @@ source = source.replace("    // DETAIL_FIGHT", detail[
     detail.index("    private var fight:"):detail.index("    private var panes:")
 ])
 source += "\n" + api[api.index("struct FitFightJoinableFight:"):api.index("private struct FitFightJoinableList:")]
+source += "\n" + activity[activity.index("struct FeedPostLink:"):activity.index("struct FeedActivityItem:")]
 
 with tempfile.TemporaryDirectory(prefix="fitfight-profile-interactions-") as directory:
     swift = Path(directory) / "ProfileInteractionTests.swift"

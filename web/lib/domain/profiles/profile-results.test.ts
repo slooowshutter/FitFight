@@ -6,9 +6,10 @@ import { fightRecordFactSchema } from "@/lib/types/profiles/profile-results";
 const first = "00000000-0000-4000-8000-000000000001";
 const second = "00000000-0000-4000-8000-000000000002";
 const fight = fightRecordFactSchema.parse({
+    history_id: "00000000-0000-4000-8000-000000000005",
     summary: null,
     id: "00000000-0000-4000-8000-000000000003", state: "final",
-    history_id: "00000000-0000-4000-8000-000000000004", calendar_days: 3,
+    calendar_days: 3,
     starts_at: "2026-09-10T00:00:00Z", ends_at: "2026-09-13T00:00:00Z", category: "unknown",
     name: "Private title", action_text: "Make coffee", outcome_rule: "highest_total",
     members: [first, second].map((user_id, index) => ({

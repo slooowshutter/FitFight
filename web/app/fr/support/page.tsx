@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { appDownload } from "@/lib/releases/app-download";
 
 export const metadata: Metadata = {
     title: "Assistance | FitFight",
@@ -9,6 +10,8 @@ export const metadata: Metadata = {
 };
 
 export default function SupportPage() {
+    const { isStaging, url } = appDownload();
+
     return (
         <main className="legal-page" lang="fr">
             <header className="legal-header">
@@ -49,37 +52,44 @@ export default function SupportPage() {
                 <section>
                     <h2>Comment installer</h2>
                     <p>
-                        FitFight est une bêta TestFlight, pas encore sur l’App
-                        Store. Utilisez le même lien TestFlight deux fois.
+                        {isStaging
+                            ? "Essayez la bêta de FitFight sur TestFlight. Utilisez le même lien TestFlight deux fois."
+                            : "Téléchargez FitFight sur l’App Store depuis votre iPhone."}
                     </p>
-                    <ol className="install-steps">
-                        <li>
-                            <strong>Le premier tap installe TestFlight.</strong>{" "}
-                            Si vous n’avez pas encore l’app TestFlight d’Apple,
-                            le lien installe TestFlight — pas FitFight. C’est
-                            normal.
-                        </li>
-                        <li>
-                            <strong>
-                                Rouvrez le même lien pour installer FitFight.
-                            </strong>{" "}
-                            Une fois TestFlight sur l’iPhone, ouvrez ce même
-                            lien une deuxième fois. C’est ce second tap qui
-                            ajoute FitFight.
-                        </li>
-                        <li>
-                            <strong>Vous n’avez pas besoin de code.</strong> Si
-                            TestFlight demande un code, vous avez sauté le
-                            second tap. Fermez cet écran et rouvrez le même lien
-                            TestFlight.
-                        </li>
-                    </ol>
+                    {isStaging ? (
+                        <ol className="install-steps">
+                            <li>
+                                <strong>
+                                    Le premier tap installe TestFlight.
+                                </strong>{" "}
+                                Si vous n’avez pas encore l’app TestFlight d’Apple,
+                                le lien installe TestFlight en premier. C’est
+                                normal.
+                            </li>
+                            <li>
+                                <strong>
+                                    Rouvrez le même lien pour installer FitFight.
+                                </strong>{" "}
+                                Une fois TestFlight sur l’iPhone, ouvrez ce même
+                                lien une deuxième fois. C’est ce second tap qui
+                                ajoute FitFight.
+                            </li>
+                            <li>
+                                <strong>Vous n’avez pas besoin de code.</strong> Si
+                                TestFlight demande un code, vous avez sauté le
+                                second tap. Fermez cet écran et rouvrez le même
+                                lien TestFlight.
+                            </li>
+                        </ol>
+                    ) : null}
                     <a
                         className="primary-action invite-download"
-                        href="https://testflight.apple.com/join/wcZKdwVZ"
+                        href={url}
                         rel="noreferrer"
                     >
-                        Ouvrir ce lien TestFlight
+                        {isStaging
+                            ? "Ouvrir ce lien TestFlight"
+                            : "Télécharger sur l’App Store"}
                     </a>
                 </section>
 

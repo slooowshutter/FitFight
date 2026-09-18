@@ -56,6 +56,18 @@ enum HealthKitStepAggregates {
         let aggregates = encoded["fight_aggregates"] as! [[String: Any]]
         precondition((aggregates[0]["step_checkpoints"] as? [[String: Any]])?.count == 3)
 
+        let savedZone = TimeZone(identifier: "America/New_York")!
+        NSTimeZone.default = TimeZone(identifier: "Asia/Tokyo")!
+        let atHome = try await HealthKitStepAggregates.read(store: store, type: HKQuantityType(), context: context, trace: HealthKitSyncTrace(), timeZone: savedZone)
+        precondition(atHome.timeZone == "America/New_York")
+        precondition(atHome.mergedDays.first?.startsAt == "2026-03-28T04:00:00.000Z", "Daily Steps start at midnight in the saved zone")
+        NSTimeZone.default = TimeZone(identifier: "Pacific/Kiritimati")!
+        let traveling = try await HealthKitStepAggregates.read(store: store, type: HKQuantityType(), context: context, trace: HealthKitSyncTrace(), timeZone: savedZone)
+        precondition(traveling.mergedDays.map(\.startsAt) == atHome.mergedDays.map(\.startsAt))
+        precondition(traveling.mergedDays.map(\.steps) == atHome.mergedDays.map(\.steps), "Device travel cannot shift personal days")
+        precondition(traveling.fightAggregates[0].steps == fight.steps)
+        precondition(traveling.fightAggregates[0].stepCheckpoints == fight.stepCheckpoints, "Fight days keep their separate time zone")
+
         context.fightWindows[0].cutoffAt = parser.date(from: "2026-03-29T22:00:00Z")!
         context.serverNow = context.fightWindows[0].cutoffAt
         let midnight = try await HealthKitStepAggregates.read(store: store, type: HKQuantityType(), context: context, trace: HealthKitSyncTrace())

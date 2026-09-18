@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Sql } from "postgres";
+import type { Sql, TransactionSql } from "postgres";
 import {
     APP_WIDE_JOIN_CODE,
     normalizeJoinCode,
@@ -255,9 +255,9 @@ export async function ensureAppWideFightInvite(
 }
 
 export async function inviteEveryoneToOpenFight(
-    series: Pick<FightSeriesRow, "id" | "join_code" | "paused_at" | "owner_id">,
+    series: Pick<FightSeriesRow, "id" | "owner_id" | "join_code" | "paused_at">,
     fight: Pick<FightRow, "id" | "state" | "ends_at">,
-    sql: Sql = createDatabaseClient(),
+    sql: Sql | TransactionSql = createDatabaseClient(),
 ): Promise<string[]> {
     if (
         !series.join_code ||

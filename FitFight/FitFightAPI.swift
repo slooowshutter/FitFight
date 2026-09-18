@@ -270,11 +270,12 @@ struct FitFightUpdateFight: Encodable, Equatable {
     var recurring: Bool?
     var startsAt: Date?
     var endsAt: Date?
+    var timeZone: String? = nil
     var inviteHandles: [String]?
     var removeUserIds: [UUID]?
 
     enum CodingKeys: String, CodingKey {
-        case name, actionText, visibility, recurring, startsAt, endsAt, inviteHandles, removeUserIds
+        case name, actionText, visibility, recurring, startsAt, endsAt, timeZone, inviteHandles, removeUserIds
     }
 
     func encode(to encoder: Encoder) throws {
@@ -285,6 +286,7 @@ struct FitFightUpdateFight: Encodable, Equatable {
         try container.encodeIfPresent(recurring, forKey: .recurring)
         try container.encodeIfPresent(startsAt, forKey: .startsAt)
         try container.encodeIfPresent(endsAt, forKey: .endsAt)
+        try container.encodeIfPresent(timeZone, forKey: .timeZone)
         try container.encodeIfPresent(inviteHandles, forKey: .inviteHandles)
         try container.encodeIfPresent(removeUserIds, forKey: .removeUserIds)
     }
@@ -483,11 +485,13 @@ struct FitFightFeedbackDetail: Decodable, Equatable {
     var post: FitFightFeedbackPost
     var comments: [FitFightFeedbackComment]
     var canLaunchFix: Bool
+    var canDelete: Bool
 
     enum CodingKeys: String, CodingKey {
         case post
         case comments
         case canLaunchFix = "can_launch_fix"
+        case canDelete = "can_delete"
     }
 
     init(from decoder: Decoder) throws {
@@ -495,6 +499,7 @@ struct FitFightFeedbackDetail: Decodable, Equatable {
         post = try container.decode(FitFightFeedbackPost.self, forKey: .post)
         comments = try container.decode([FitFightFeedbackComment].self, forKey: .comments)
         canLaunchFix = try container.decodeIfPresent(Bool.self, forKey: .canLaunchFix) ?? false
+        canDelete = try container.decodeIfPresent(Bool.self, forKey: .canDelete) ?? false
     }
 }
 
@@ -748,12 +753,17 @@ struct FitFightAPI {
         try await get(path: "me", accessToken: accessToken, expected: [200])
     }
 
+    func companionPrompts(accessToken: String) async throws -> [String] {
+        try await get(path: "me/companions", accessToken: accessToken, expected: [200])
+    }
+
     func updateProfile(
         handle: String? = nil,
         displayName: String? = nil,
         avatarMediaId: UUID? = nil,
         companionId: String? = nil,
         companionPrompt: String? = nil,
+        timeZone: String? = nil,
         accessToken: String
     ) async throws -> FitFightProfile {
         try await request(
@@ -765,7 +775,8 @@ struct FitFightAPI {
                 displayName: displayName,
                 avatarMediaId: avatarMediaId,
                 companionId: companionId,
-                companionPrompt: companionPrompt
+                companionPrompt: companionPrompt,
+                timeZone: timeZone
             )),
             idempotencyKey: nil,
             expected: [200]
@@ -812,15 +823,45 @@ struct FitFightAPI {
     }
 
     func feed(scope: String? = nil, cursor: String?, accessToken: String) async throws -> FitFightFightPostList {
-        var parts: [String] = []
+        var parts: [String] = ["limit=10"]
         if let scope, let encoded = scope.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
             parts.append("scope=\(encoded)")
         }
         if let cursor, let encoded = cursor.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
             parts.append("cursor=\(encoded)")
         }
-        let path = parts.isEmpty ? "feed" : "feed?\(parts.joined(separator: "&"))"
+        let path = "feed?\(parts.joined(separator: "&"))"
         return try await get(path: path, accessToken: accessToken, expected: [200])
+    }
+
+    func feedActivity(cursor: String?, accessToken: String) async throws -> FeedActivityList {
+        var path = "feed/activity"
+        if let cursor, let encoded = cursor.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
+            path += "?cursor=\(encoded)"
+        }
+        return try await get(path: path, accessToken: accessToken, expected: [200])
+    }
+
+    func feedPeople(
+        main: Bool,
+        fightIDs: [UUID],
+        accessToken: String
+    ) async throws -> [FitFightFightPost.Author] {
+        var parts: [String] = []
+        if main {
+            parts.append("main=true")
+        }
+        if !fightIDs.isEmpty {
+            let ids = fightIDs.map { $0.uuidString.lowercased() }.joined(separator: ",")
+            parts.append("fight_ids=\(ids)")
+        }
+        let path = parts.isEmpty ? "feed/people" : "feed/people?\(parts.joined(separator: "&"))"
+        let response: FitFightFeedPeopleResponse = try await get(
+            path: path,
+            accessToken: accessToken,
+            expected: [200]
+        )
+        return response.people
     }
 
     func createFeedPosts(
@@ -843,6 +884,10 @@ struct FitFightAPI {
         )
     }
 
+
+    func fightPost(postID: UUID, accessToken: String) async throws -> FitFightFightPostResponse {
+        try await get(path: "posts/\(postID.uuidString.lowercased())", accessToken: accessToken, expected: [200])
+    }
 
     func fightPostComments(
         postID: UUID,
@@ -910,9 +955,9 @@ struct FitFightAPI {
     }
 
     func fightPosts(fightID: UUID, cursor: String?, accessToken: String) async throws -> FitFightFightPostList {
-        var path = "fights/\(fightID.uuidString.lowercased())/posts"
+        var path = "fights/\(fightID.uuidString.lowercased())/posts?limit=10"
         if let cursor, let encoded = cursor.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
-            path += "?cursor=\(encoded)"
+            path += "&cursor=\(encoded)"
         }
         return try await get(path: path, accessToken: accessToken, expected: [200])
     }
@@ -1225,6 +1270,14 @@ struct FitFightAPI {
         )
     }
 
+    func deleteFeedbackPost(postID: UUID, accessToken: String) async throws {
+        let _: DiscardBody = try await delete(
+            path: "feedback/\(postID.uuidString.lowercased())",
+            accessToken: accessToken,
+            expected: [200]
+        )
+    }
+
     func createFeedback(
         _ payload: FitFightCreateFeedback,
         accessToken: String
@@ -1481,6 +1534,7 @@ private struct ProfileUpdate: Encodable {
     let avatarMediaId: UUID?
     let companionId: String?
     let companionPrompt: String?
+    let timeZone: String?
 
     enum CodingKeys: String, CodingKey {
         case handle
@@ -1488,6 +1542,7 @@ private struct ProfileUpdate: Encodable {
         case avatarMediaId = "avatar_media_id"
         case companionId = "companion_id"
         case companionPrompt = "companion_prompt"
+        case timeZone = "time_zone"
     }
 
     func encode(to encoder: Encoder) throws {
@@ -1496,6 +1551,7 @@ private struct ProfileUpdate: Encodable {
         try container.encodeIfPresent(displayName, forKey: .displayName)
         try container.encodeIfPresent(avatarMediaId, forKey: .avatarMediaId)
         try container.encodeIfPresent(companionId, forKey: .companionId)
+        try container.encodeIfPresent(timeZone, forKey: .timeZone)
         if companionId != nil {
             try container.encode(companionPrompt, forKey: .companionPrompt)
         }
@@ -1570,6 +1626,10 @@ private struct FightPostBody: Encodable {
 
 private struct FightPostUpdateBody: Encodable {
     let body: String
+}
+
+private struct FitFightFeedPeopleResponse: Decodable {
+    let people: [FitFightFightPost.Author]
 }
 
 private struct FeedPostsBody: Encodable {

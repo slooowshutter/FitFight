@@ -8,12 +8,20 @@ import {
 import { verifyUser } from "@/lib/supabase/queries/auth-supabase-query";
 import {
     deleteFightPost,
+    getFightPost,
     updateFightPost,
 } from "@/lib/supabase/queries/fight-posts-supabase-query";
 import { updateFightPostRequestSchema } from "@/lib/types/feed/fight-post";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+export const GET = apiRoute<{ postID: string }>(
+    async (request, { params }) => {
+        const { userId } = await verifyUser(request);
+        return json(await getFightPost(userId, requireUuid(params.postID, "postID")));
+    },
+);
 
 export const PATCH = apiRoute<{ postID: string }>(
     async (request, { params }) => {

@@ -8,6 +8,46 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
 
+## Profile interaction fixes, 18 Sep 2026
+
+**Code prepared, not deployed.** Joining a Suggested Fight during onboarding now
+waits for the existing post-membership HealthKit sync, standings refresh, and offer
+reload. The sync reads the newly joined Fight windows instead of coalescing with an
+earlier sync. Continue and Skip stay disabled during the join; account changes stop
+the old screen from publishing a later response.
+
+Profile history opens the exact selected round through navigation and subsequent
+refreshes. The main Fight list and Feed/deep links still select the current round
+when opening it. In Feedback, the author opens their Profile and the separate
+comment-count button opens the request discussion, both with 44-point tap targets.
+
+**Contract:** these are native interaction changes using existing `/api/v1` requests
+and models. No API field, database schema, or frozen client fixture changed. The
+previous release-policy observations and backend compatibility checks below still
+apply. The new English/French release note keeps marketing version **1.1.1**.
+
+**Cloud checks passed on `b5b6bf2`:**
+
+- [iOS simulator](https://github.com/slooowshutter/FitFight/actions/runs/35349335903):
+  the GitHub-hosted `macos-26` app build, English/French validation, existing native
+  regressions, and the new onboarding/navigation interaction checks passed.
+  Suspended API and HealthKit boundaries verify join-before-sync ordering, no
+  coalescing with earlier windows, repeated taps, rejected joins, account changes,
+  selected finished/pending rounds, final-sync refreshes, and current-round Feed links.
+- [Database](https://github.com/slooowshutter/FitFight/actions/runs/35349335792):
+  all 35 integration tests passed before and after the deferred client-permission
+  cutoff, with schema lint, pgTAP, build 113 compatibility, and deletion rehearsals.
+  Supported-build HTTP coverage remains unchanged.
+- Backend code is unchanged from the [277-test Web API run](https://github.com/slooowshutter/FitFight/actions/runs/35347391067)
+  recorded below, including its strict typecheck and contract parsing.
+
+The [initial interaction run](https://github.com/slooowshutter/FitFight/actions/runs/35349065629)
+reproduced the missing sync and wrong-round navigation before the fixes. The passing
+snapshot matches the workspace's app, backend, and test contents; only documentation
+and isolated CI/deployment configuration differ. Feedback tap routing was checked
+in the view code. Real-device HealthKit, tap, and VoiceOver checks remain after an
+authorized release. No PR, merge, TestFlight upload, or deployment was performed.
+
 ## Shared Fight list correction, 18 Sep 2026
 
 **Code prepared, not deployed.** Another person's Profile now requests **Fights
@@ -39,15 +79,15 @@ No database schema change or fixture replacement is required for this correction
 The new regressions cover departure by either person, series departure with retained
 old-round membership, scheduled/final/cancelled rounds, private/Casual profiles, and
 pagination. The first cloud run reproduced the shared-history and native filter
-failures before implementation. The validation snapshot matches current code and
-tests; only this documentation and its isolated CI/deployment configuration differ.
+failures before implementation. This snapshot checked the shared-list changes;
+the subsequent native interaction fixes are recorded above.
 The live release policies remain as recorded below. These are cloud test results,
 not installed-client or live deployment evidence.
 
 **Remaining:** the per-Fight new-week action is not implemented while the choice
 between another round in the original series and a separate Fight is pending.
-The other review findings remain separate. Deploy the branch's existing additive
-Profile migrations, then the compatible backend, then an authorized native release.
+The three other review findings are addressed above. Deploy the branch's existing
+additive Profile migrations, then the compatible backend, then an authorized native release.
 Neither environment was changed; installed-device checks remain after rollout.
 
 ## Feedback progress deferred, 18 Sep 2026
@@ -112,13 +152,673 @@ calendar days for the existing presets, including Fights spanning either clock
 change. Older responses without the new field still decode.
 
 Profile history rows and cursors now use stable, random identifiers for each
-participant's record. The additive `20260917013440_profile_history_identifiers.sql`
-migration backfills existing rows and preserves identifiers during participation
-updates. A reader with Fight access still receives the real `fight_id`; other readers
+participant's record. After merging `develop` on 18 Sep, these identifiers are part
+of the original Profile expansion migration. The redundant, undeployed follow-up
+migration was removed. Identifiers remain stable during participation updates.
+A reader with Fight access still receives the real `fight_id`; other readers
 cannot correlate participants through identical IDs. Profiles remain an unreleased
 contract; installed builds 113, 190, 200, 201, and 202 do not use these history cursors.
 
+## Companion descriptions and habitat tabs: prepared 17 Sep 2026
+
+**Code:** choosing a stock animal keeps the saved custom description. The picker
+has All, Yours, Make it yours, Mountains, Water, Forest, and Jungle tabs using
+the 12 existing animals. Yours reuses saved descriptions without duplicates; the account library
+also works on another device. Local caches are scoped to the user, hidden while
+signed out, and removed on account deletion. English/French copy and a 1.1.2 release
+note are included. This is a description library, not image generation. Additional
+species and their artwork are not implemented. Previously erased descriptions
+cannot be reconstructed from the current profile.
+
+**Contract and rollout:** `GET /api/v1/me/companions` is a new authenticated read
+returning a string array. Existing profile requests/responses and `/api/v1` remain
+unchanged, including null `companion_prompt` for stock animals. The additive
+`20260917010915_saved_companion_prompts.sql` migration backfills current descriptions
+into a private library. An internal capture trigger preserves subsequent writes
+from both older and newer backends; there is no app-facing RPC or client grant.
+Deploy the migration, then the backend, then distribute the native build through
+an authorized preview promotion. Read-only release checks on 17 Sep returned
+staging latest 1.1.1 (201), enforcement off, and production latest 1.1.1 (202),
+enforcement on; review/internal were null in both. Those builds' profile decoders
+were inspected; their contract is unchanged. Legacy build 113 fixtures are retained.
+
+**Cloud checks:** the [native regression](https://github.com/slooowshutter/FitFight/actions/runs/35169363752)
+reproduced the erased prompt before the fix. [Web checks](https://github.com/slooowshutter/FitFight/actions/runs/35170095838)
+pass TypeScript and all 272 tests. [Disposable database checks](https://github.com/slooowshutter/FitFight/actions/runs/35170095821)
+pass migrations/RLS, build 113 compatibility, and all 21 integration tests before
+and after the deferred permission cutoff, without skips. The companion assertions
+cover legacy stock requests with an explicit null prompt, reuse, concurrent saves,
+failed writes, owner isolation, and account deletion. A separate migration rehearsal
+preserved a pre-existing prompt through backfill and a subsequent old backend write.
+The [iOS checks](https://github.com/slooowshutter/FitFight/actions/runs/35170180506)
+pass the actual companion-store regressions, existing native/API checks, localization,
+and a simulator build on `macos-26`. Seventeen running simulator captures were
+inspected: All, Yours, Custom, and Mountains in English/French and Day/Night, plus
+Yours at the largest French accessibility text size. The retained prompt is visible
+in Custom and prior descriptions are visible in Yours. These use isolated preview
+fixtures and verify layout, not touch interactions or live signed-in writes.
+Validation-only workflow triggers and screenshot fixture injection stayed on a
+temporary branch. These checks preceded integration with develop at `85d054f`;
+PR CI verifies the combined branch. No app tests ran on the workstation.
+
+**Live deployment:** none. No hosted database changes, release-branch merge,
+TestFlight upload, or production deployment. Physical-device interaction remains
+separate from cloud state and layout checks.
+
+**Develop integration, 18 Sep:** merged `origin/develop` at `51e777f`, retaining
+the direct Make it yours and Change animal entry points, editor guidance,
+accessible field label, and save errors beside the editor. Tabs handle the
+switch between the animal grid and editor without clearing the draft. Both
+sets of translations and release notes are retained. Cloud checks for the
+combined revision run on PR #272; no API or schema contract was changed
+while resolving this merge.
+
+## Develop merge into Profiles branch, 17 Sep 2026
+
+**Code:** merged `develop` at `88c5932` into `profiles-friends-and-stats`.
+Profile identity links, exact historical-round navigation, saved personal and
+Fight time zones, and the Health upload/refresh ordering remain alongside the
+new Feed activity, notification targets, pagination, and companion controls.
+Suggested Fights retain immutable-admin authorization and transaction locks;
+the same transaction creates upstream's pending invitations and notification
+intents. Acceptance stays explicit. Upstream's approved 1.1.2 version is retained.
+
+**Cloud checks:**
+
+- [Web API at `ab8fe24`](https://github.com/slooowshutter/FitFight/actions/runs/35248653718): strict typechecking, all 312 backend tests, API contract parsing, and English/French privacy-page rendering passed.
+- [Database at `ab8fe24`](https://github.com/slooowshutter/FitFight/actions/runs/35248653719): all 35 integration tests passed before and after the deferred client-permission cutoff, including invitation idempotency and real WebSocket commit/rollback delivery. Build 113 compatibility, 223 pgTAP checks, 18 cutoff checks, and historical deletion/profile-record migration replay passed. Authenticated `/me` fixtures retain builds 113, 190, 200, 201, 202, and 203.
+- [iOS simulator at `f35e254`](https://github.com/slooowshutter/FitFight/actions/runs/35247525681): full compilation on GitHub-hosted `macos-26`, native regression tests, and English/French localizations passed. Native source and fixtures are unchanged in `ab8fe24`.
+
+Database validation exposed interference between shared fixtures once suggestions
+began inviting all users: the live-update case passed in isolation after failing
+in the parallel suite. Database files now run sequentially; explicit concurrent
+joins, privacy edits, and finalization races still run inside their tests. Both
+complete passes now succeed without the temporary diagnostic run or changed
+assertions. Existing supported-client fixtures remain in place.
+
+**Live deployment:** none. The feature branch has Vercel deployment disabled and
+cannot upload TestFlight. No hosted database, `develop`, `preview`, or `main` was
+changed. The documented additive-migration, compatible-backend, then-app rollout
+and separate permission-cutoff requirements still apply.
+
+## Selective Bugbot reviews, prepared 17 Sep 2026
+
+**Code:** the prepared GitHub workflow requests reviews for ready PRs into
+`preview` or `main`, labeled `origin:cursor`, or on same-repository `cursor/*`
+branches. It skips other development PRs and duplicate requests for the same
+diff. Cursor cloud instructions preserve the origin label across agent handoffs.
+The release-ruleset payload targets only `preview` and `main` and starts disabled.
+
+**Checks:** workflow syntax passes `actionlint`. All 20 routing tests passed on
+[GitHub-hosted Ubuntu](https://github.com/slooowshutter/FitFight/actions/runs/35170980509)
+at `09ab408`. They cover selection, forks, drafts, missing credentials, duplicate
+events, changing commits/targets, and trigger failure. The live `Cursor Bugbot`
+check was verified as originating from GitHub App `cursor`, ID `1210556`.
+
+**Activation:** not enabled. The available Cursor key received HTTP 401,
+`Invalid Team API Key`, from the Bugbot settings API; no connected browser is
+available. The GitHub repository has no `BUGBOT_GITHUB_TOKEN` secret. The
+`origin:cursor` label exists, `BUGBOT_ROUTING_ENABLED=false`, and the prepared
+[release ruleset](https://github.com/slooowshutter/FitFight/rules/23573610) is
+disabled. Existing automatic reviews and active branch protections remain unchanged. Activation
+requires the dedicated credential, Cursor manual-only configuration, and the
+workflow on `main` through separately authorized PRs and merges. Live trigger
+delivery and fail-on-unresolved-issues behavior remain unverified. See the
+[activation order](shipping.md#selective-cursor-bugbot-reviews).
+
+## Mention notifications: prepared 17 Sep 2026
+
+**Code:** typing `@` in a Feed post or comment shows username typeahead from
+`GET /api/v1/feed/people`. The backend parses `@handle` tags (and existing
+`tagged_user_ids` on posts), persists eligible post tags, and enqueues a
+FitFight-sent `mention` alert that names the author. Copy has no scores. Tagged
+people skip the generic fight-post or comment alert for that event. Older create
+post/comment requests stay valid: `tagged_user_ids` remains optional, comment
+bodies are unchanged, and a missing mention kind is unused by old backends.
+
+**Contract:** additive `mention` outbox kind plus `mention_post` /
+`mention_comment` copy keys. No app-facing RPC. Preference GET/PATCH shape is
+unchanged. Mentions are not user-toggleable.
+
+**Checks:** `npm run typecheck` passed. `npm test` passed (291 tests).
+`python3 scripts/check_localizations.py` and
+`python3 scripts/check_native_api_boundary.py` passed. Cloud iOS compile,
+screenshots, and disposable-database migration checks are on
+[#275](https://github.com/slooowshutter/FitFight/pull/275).
+
+**Live deployment:** not deployed. No hosted database write or reset. Deploy the
+additive migration and compatible backend before the native app. Physical-device
+two-user mention delivery remains outstanding.
+
+## In-app beta access: prepared 17 Sep 2026
+
+**Code:** You → Settings → Try the beta opens a scrollable sheet in English or
+French. It includes the existing Friends Beta TestFlight invite and App Store
+listing, warns that accounts, fights, and progress use separate databases without
+automatic syncing, and explains how to reinstall the App Store version to return.
+Both links remain available in both builds. The version banner stays on You, and
+a 1.1.1 release note is included. Apple's [TestFlight guidance](https://testflight.apple.com/)
+confirms that installing a beta replaces the installed App Store app.
+
+**Checks:** localization, native API-boundary, download-link consistency, and
+whitespace checks passed. All seven new catalog entries have French translations;
+existing entries and pre-existing duplicate keys are unchanged. The public beta
+invite returned HTTP 200. Apple's App Store endpoint rate-limited the automated
+check with HTTP 429; its URL matches the existing website destination. Cloud iOS
+compilation and device checks remain pending, including sheet scrolling at large
+text sizes, dismissal, and opening both stores. No app build ran on the workstation.
+
+**Rollout:** UI only, with no API, native API model, database, or supported-client
+contract changes. No PR, merge, cloud CI run, TestFlight upload, or live deployment
+was made. Merging code does not synchronize user data between the databases; the
+existing [data transfer](../scripts/data-transfer/README.md) is a separate,
+explicitly authorized maintenance operation.
+
+## Stronger slide haptics: prepared 17 Sep 2026
+
+**Code:** The existing 20 slide presets now cover soft starts, early builds, late
+surges, and accelerating pulses, with strength displayed on a 0-100 scale. Every
+preset reaches its maximum intensity at the existing 85% confirmation threshold.
+Saved recipe IDs and the on-device selection are preserved. Continuous patterns
+use neutral base parameters so the starting intensity no longer caps their
+output, following [Apple's dynamic parameter semantics](https://developer.apple.com/documentation/corehaptics/updating-continuous-and-transient-haptic-parameters-in-real-time).
+Timed pulses also respond immediately to track movement. Confirmation uses the
+final finger position and plays a full-strength heavy impact only when the action
+succeeds.
+
+The lab also has a **Custom** editor with a test slider pinned below its controls.
+It exposes rumble strength/crispness endpoints and separate ramp powers; ticks
+with texture or five system impact styles; track counts or clock frequency
+endpoints; extra movement ticks; tick strength/crispness endpoints and ramp power;
+and the finishing hit's enablement, style, and strength. Confirmation distance is
+adjustable from 50-100% of the track, and its haptic ramp reaches the selected end
+values there. Changing a recipe resets any active test.
+
+Every control edit immediately saves the full custom configuration in this
+phone's app preferences, including settings hidden by disabled controls. The
+custom draft survives switching presets, closing the lab, and app relaunch.
+**Use custom on Slide to start** persists the selection; the New fight slider
+observes the saved configuration, including its confirmation point and finishing
+hit. Saved values are range-checked when restored. Save errors keep the previous
+record and appear in the editor. Localized 1.1.1 release notes cover both changes.
+
+**Checks:** The regression harness compiles the production recipes, engine, and
+gesture/confirmation methods against recording hardware/UI boundaries. Cloud
+Swift 6.2.4 in Swift 5 mode reproduced the old weak-output and missed-pulse
+behavior; the final harness passed 182/182 checks for ramps, fast swipes,
+reversal/cancellation, held pulses, recipe changes, repeated lab tests, accessible
+confirmation, failed actions, disabled/busy controls, and the existing UIKit
+fallback. Custom checks cover all persisted fields, immediate editor binding
+saves, reopening preferences, retaining inactive settings, malformed saved data,
+failed-save preservation, recipe edits with the same ID, and applying the saved
+confirmation point and finishing hit to the production control. The harness is
+included in hosted iOS CI. Localization, native API boundary, saved preset IDs,
+and whitespace checks passed.
+
+**Cloud iOS and live:** The [hosted iOS build and native checks](https://github.com/slooowshutter/FitFight/actions/runs/35166645031)
+and [simulator screen export](https://github.com/slooowshutter/FitFight/actions/runs/35166645125)
+passed for `04e5cc1`, before merging the newer `develop` changes. CI for the
+combined revision and physical iPhone vibration verification are pending.
+Recording boundaries verify hardware commands, not perceived strength or latency.
+The haptics change adds no API contract, native API model, database, deployment
+order, or supported-client requirement changes. No release-branch promotion,
+TestFlight upload, or production deployment was performed.
+
+## App Store descriptions: saved for the next release, 17 Sep 2026
+
+**Latest decision:** Marc deferred the description update to the next normal app
+release. Do not continue the standalone release promotion. Both descriptions stay
+saved in the 1.1.2 App Store draft, and automatic publication after approval remains
+the default. [Release PR #270](https://github.com/slooowshutter/FitFight/pull/270)
+is closed. No preview/main merge, 1.1.2 upload, or review submission was performed
+for this update. The next release still needs its own normal authorization.
+
+Marc authorized the English/French description refresh, creation of the 1.1.2
+App Store version, and publication. Both descriptions and the required localized
+release notes in [App Store metadata](app-store/metadata.md) are saved in App Store
+Connect under **1.1.2, Prepare for Submission**. The new version inherited the
+English/French screenshots; its promotional-text fields are blank.
+
+Apple's Add for Review validation now reports only **You must choose a build**.
+No 1.1.2 build is available, so nothing was submitted or published. The current
+App Store version is **1.1.1 (202), Ready for Distribution**. A compatible 1.1.2
+production build and Apple review are still required.
+
+Marc also requested automatic publication after every approved App Store review.
+The workspace prepares native/CI version 1.1.2, an English/French release note,
+and Fastlane/release-tool defaults for `AFTER_APPROVAL`. The release tool targets
+`FITFIGHT_RELEASE_VERSION` and verifies Apple's saved release mode. Local release
+regressions passed (20 tests, 92 assertions), as did localization, Ruby syntax,
+project-file syntax, and whitespace checks. The release workflow YAML and all
+native/CI version values also passed validation.
+
+[Cloud configuration](https://github.com/slooowshutter/FitFight/actions/runs/35168925860)
+confirmed 1.1.2 has `releaseType: AFTER_APPROVAL`, state `PREPARE_FOR_SUBMISSION`,
+and no selected build. A separate [cloud readback](https://github.com/slooowshutter/FitFight/actions/runs/35169051669)
+confirmed automatic publication and exact English/French description and release
+note matches (434 and 529 description characters). The one-time configuration
+trigger was removed; the release-tools workflow is back to its original audit-only
+branch trigger. The setting is saved at Apple.
+
+[Release PR #268](https://github.com/slooowshutter/FitFight/pull/268) merged the
+1.1.2 build files and automatic-release defaults into develop as `85d054f` before
+the deferral. Standards and spec reviews found no actionable issues. All 20 release
+tests passed. The final integrated revision passed the
+[cloud simulator and native regressions](https://github.com/slooowshutter/FitFight/actions/runs/35170672471),
+[English/French screenshot checks](https://github.com/slooowshutter/FitFight/actions/runs/35170672595),
+and [disposable database compatibility checks](https://github.com/slooowshutter/FitFight/actions/runs/35170672460).
+The closed release branch preserves preview's internal-only TestFlight lane from
+[#257](https://github.com/slooowshutter/FitFight/pull/257); its 18 release tests also
+passed (69 assertions). Production remains on 1.1.1 (202).
+
+**Compatibility and order:** the metadata/version change adds no API or schema
+change. The release also carries the previously merged compatible Feed, chart,
+notification, and Activity work documented below. At 01:14 UTC on 17 Sep, staging
+reported latest **1.1.1 (201)** with enforcement off; production reported latest
+**1.1.1 (202)** with enforcement on. Both had null review/internal candidates and
+healthy profile APIs. Staging's Supabase integration and Vercel deployment at
+`511f400` succeeded. The three additive migrations retain existing client grants
+and `/api/v1` contracts; preserved build 113 fixtures and 201/202 native contracts
+remain in the cloud checks. Verify those checks before promotion. Production's
+migration and backend deployment must succeed after the authorized main merge,
+before submitting the production candidate. Physical-device checks remain
+separate from the cloud evidence.
+
+## Companion customization: prepared 17 Sep 2026
+
+**Code:** You has Make it yours, which opens the companion picker at the expanded
+description, and Change animal, which opens the animal grid. The former Custom
+button is now Make it yours. The description explains that any animal can be
+chosen and keeps guidance for species, breed or race, accessories, colors, and
+other details. Change animal within the form returns to the grid without clearing
+the draft. Save companion keeps the existing account save, blank-input validation,
+and 1,000-character limit; save errors appear beside the form. English/French copy
+and a 1.1.1 release note are included. Custom image generation is still not built.
+
+**Checks:** localization, native API-boundary, and whitespace checks passed.
+Cloud iOS compilation and device interaction checks remain pending. Verify both
+entry buttons, scrolling to and from the description, editing a saved description,
+Save and failed-save feedback, and English/French layouts at larger text sizes.
+
+**Live deployment:** not deployed. No API contract, native API model, or database
+change. No PR, merge, TestFlight upload, or production deployment was made.
+
+## Admin feedback deletion: prepared 17 Sep 2026
+
+**Code:** admins can open a Feedback request, tap its ellipsis menu, and choose
+Delete request. Confirmation removes the request from the board and returns to
+the list. The server checks the existing admin handle/email allowlist for every
+deletion; regular accounts cannot delete feedback, including their own requests.
+The shared admin reader now accepts only the stored profile handle and confirmed
+Auth account email. User-editable metadata and identity email copies cannot grant
+admin access. English/French copy and a 1.1.1 release note are included.
+The review fix records deleted request IDs so stale list/detail responses cannot
+restore them. Finishing a deletion preserves another request's pending load,
+comments, admin actions, and errors when the user has already navigated away.
+
+**Contract:** additive `DELETE /api/v1/feedback/{postID}` and `can_delete` on the
+existing detail response. Older native decoders ignore the new key; the new app
+defaults to false when an older backend omits it. Existing request fields and
+response fields retain their shape. No database migration or permission change;
+existing foreign keys cascade comments, votes, reports, and attachment links.
+
+**Checks:** TypeScript, all 277 backend tests, localization, native API-boundary,
+and whitespace checks passed. Regression coverage includes missing authentication,
+admin handle/case/confirmed-email access, regular accounts, spoofed metadata,
+unconfirmed email, deleted accounts, missing requests, and legacy detail responses.
+Database calls were mocked; no cloud deletion or cascade integration test was run.
+Native ordering regressions are added to the existing cloud state-test runner for
+both detail/deletion completion orders, stale list/detail responses, and failed
+deletion. Review-fix checks passed for localization, native API-boundary, whitespace,
+and regression-source assembly. The native regressions have not been executed in
+this local workspace, following the cloud-only build rule.
+Cloud iOS compilation and signed-in device checks of confirmation, cancellation,
+failure handling, and list refresh remain pending.
+
+**Supported builds and rollout:** read-only release checks on 17 Sep returned
+staging latest 1.1.1 (201), enforcement off, and production latest 1.1.1 (202),
+enforcement on; both had null review/internal candidates. Legacy staging users
+remain supported. Source inspection at `d97145a` (201) and `e2783be` (202) confirms
+the feedback decoder reads only its named keys; no installed binary was tested.
+Deploy the compatible backend before the native app. No PR,
+push, merge, live deployment, TestFlight upload, or hosted data write was performed.
+
+## Interrupted comment requests, prepared 17 Sep 2026
+
+**Code:** a comment refresh queued behind a failed read now runs after that failure.
+Failures without queued work still surface their error without another request.
+Live updates retain the requested page count for More comments while refreshing
+the loaded thread. Changing the sort still starts at the first page. The 1.1.1
+release note includes English and French copy.
+
+**Checks:** the new regressions reproduced both defects in
+[cloud native checks](https://github.com/slooowshutter/FitFight/actions/runs/35166089672)
+with `python3 scripts/test_native_state.py`. Localization and native API-boundary
+checks pass in the workspace. At `0e4e631`, the
+[cloud iOS build and native regressions](https://github.com/slooowshutter/FitFight/actions/runs/35166290185)
+passed. The cases cover queued refreshes after failures, failures without queued
+work, pagination interrupted by successful or failed reads, and sort changes
+during pagination. [Backend checks](https://github.com/slooowshutter/FitFight/actions/runs/35166290196)
+and [disposable database checks](https://github.com/slooowshutter/FitFight/actions/runs/35166290204)
+also passed. Physical-device verification remains pending.
+
+**Deployment:** native UI state only, with no API contract or schema changes.
+No merge into develop, preview, or main, and no TestFlight or production upload.
+
+## Feed review fixes, prepared 17 Sep 2026
+
+**Code:** automatic thread refresh preserves all previously loaded comments,
+including confirmed local comments below the first ranked page. It publishes the
+refreshed pages together, removes deleted comments, and preserves the previous
+thread and cursor if a later page fails. Changing the comment sort starts at its
+first page. Feed events invalidate posts returned by an in-flight page, and
+pagination reconciles visible stale cards when it supersedes an earlier live read.
+App-wide post writes now send empty invalidations to every active profile's
+existing private topic, including users with no shared Fight. The 1.1.1 release
+note has English and French copy.
+
+**Cloud checks:** at `b1efa8d`, the
+[iOS simulator build and native regressions](https://github.com/slooowshutter/FitFight/actions/runs/35160730520)
+passed on GitHub-hosted macOS. The regressions cover loaded comment pages,
+confirmed lower-ranked comments, deleted comments, later-page failures, sort
+changes, arriving-card invalidation, and both live read/pagination completion
+orders. [TypeScript and all 270 backend tests](https://github.com/slooowshutter/FitFight/actions/runs/35160730532)
+passed. [English/French screen rendering and screenshot asset checks](https://github.com/slooowshutter/FitFight/actions/runs/35160730592)
+also passed. The [disposable database checks](https://github.com/slooowshutter/FitFight/actions/runs/35160730447)
+passed all 21 transaction tests before and after the deferred client-permission
+cutoff, pgTAP, the preserved build 113 fixture, and legacy migration replay. Real
+WebSocket checks cover app-wide post creation, edits, comments, reactions, and
+deletion, including a user with no shared Fight. Private Fight events still
+exclude that user.
+
+Before the fixes,
+[native regression tests](https://github.com/slooowshutter/FitFight/actions/runs/35160578605)
+reproduced the loaded-comment loss, arriving-page invalidation gap, and both live
+read/pagination completion orders. The
+[disposable database test](https://github.com/slooowshutter/FitFight/actions/runs/35160359036)
+reproduced the missing app-wide invalidation.
+
+**Compatibility and live evidence:** `/api/v1`, post/comment request and response
+fields, private topic names, and existing client permissions are unchanged. This
+adjusts the pending additive feed migration, with no new app-facing RPC. At 22:57
+UTC on 16 September, staging `/api/app-release` listed latest **1.1.1 (201)**,
+review/internal null, enforcement off. Production listed latest **1.1.1 (202)**,
+review/internal null, enforcement on. Legacy clients remain supported in staging.
+
+**Deployment:** code only. No hosted migration, backend promotion, TestFlight
+upload, or production deployment. After authorized merges, deploy the additive
+migration and compatible backend before the native app. Physical-device and
+two-user live verification remain outstanding.
+
+## Feed pagination and direct refresh, prepared 17 Sep 2026
+
+**Code:** root Feed and each Fight's feed now request ten posts per page through
+the existing `limit` parameter. A lazy list automatically appends the next page at
+the bottom. Stable post IDs, reserved photo dimensions, and unchanged existing
+rows preserve the reading position. Page requests deduplicate overlapping triggers;
+failed pages keep their cursor and offer a retry at the bottom. Pagination does not
+reload comments on earlier cards.
+
+Pull-to-refresh fetches the latest ten posts and supersedes older page responses.
+It awaits the feed request directly, without first waiting for HealthKit/Fight
+sync. Server feed responses already use `Cache-Control: no-store`; this corrects
+the refresh sequencing and stale thread state. Background events refresh displayed
+cards in place and mark offscreen cards for refresh on reappearance, preserving
+the reading order and pagination cursor. New posts appear on initial load or pull.
+
+**Cloud checks:** [iOS build and native regression checks](https://github.com/slooowshutter/FitFight/actions/runs/35157007769)
+passed on GitHub-hosted macOS. The actual API methods request ten posts and retain
+opaque cursors. Suspended-request tests verify direct pull-to-refresh and its
+indicator, one request per page, stable append order, no reload of earlier threads,
+refresh/page races, error recovery, end-of-feed behavior, visible/offscreen live
+updates, and account isolation.
+
+The [hosted iOS simulator scroll check](https://github.com/slooowshutter/FitFight/actions/runs/35157007857)
+also passed with the actual feed layout and an isolated 25-post fixture. Initial
+load stopped at ten posts; scrolling requested exactly two more pages, reaching
+20 and then 25 posts. The same visible card moved **0 points** on both appends.
+The final page stopped pagination. This measures fixture layout on iOS 26.5;
+physical-device and two-user live verification remain separate.
+
+**Compatibility and deployment:** no additional API or schema changes. Older
+clients retain the default 30-post page and existing response fields. The earlier
+single-post endpoint and feed invalidation migration below still deploy before the
+native app. No hosted promotion or TestFlight upload was performed.
+
+## Feed refresh, notification targets and Activity, prepared 16 Sep 2026
+
+**Code:** reproduced two defects in cloud regression checks: a loaded thread did
+not refresh when its comment count changed from one positive number to another,
+and social pushes carried only a Fight destination. Existing Realtime covered
+standings, not feed content. The prepared change adds private `feed_changed`
+invalidations, refreshes visible posts and threads, and retains post/comment
+targets through foreground taps, cold starts and sign-in. A dedicated post read
+resolves targets outside the feed's loaded pages. Equal-timestamp post/comment
+pagination preserves microseconds and accepts existing opaque cursors.
+
+You -> Activity lists currently accessible Fight posts, comments, reactions and
+membership history, with timestamps and links. New membership transitions are
+recorded privately. Existing acceptance times are backfilled; older invitations
+display **Time not recorded**. This is available product activity, not a push
+delivery log. Deleted/blocked content and inaccessible Fights are excluded.
+
+**Cloud checks:** [iOS simulator build and native regressions](https://github.com/slooowshutter/FitFight/actions/runs/35153263762)
+passed on GitHub-hosted macOS. Tests cover comment refresh during another read,
+confirmed local writes, retained feed pages, independent live-update streams,
+exact post/comment routes, account changes, and shared Swift/API fixtures.
+[TypeScript and all 251 backend tests](https://github.com/slooowshutter/FitFight/actions/runs/35153836885)
+passed. The [disposable database checks](https://github.com/slooowshutter/FitFight/actions/runs/35153836954)
+passed before and after the deferred client-permission cutoff, including legacy
+migration replay. They cover real WebSocket commit/rollback behavior, membership history, blocks,
+withdrawals, deletion, private-table permissions, and pagination beyond 40
+equal-timestamp comments. Compatibility includes the preserved build 113 SQL
+fixture and the unchanged notification parsers from builds 201 and 202.
+
+**Live evidence:** at 21:02 UTC on 16 September, staging `/api/app-release`
+advertised latest **1.1.1 (201)**, no review/internal candidates, enforcement off.
+Production advertised latest **1.1.1 (202)**, no review/internal candidates,
+enforcement on. These reads supersede the older manifest observations below.
+`/api/v1`, existing post/comment response fields, and direct-client permissions
+remain unchanged. Notification URLs retain `/fights/{id}` and add query targets;
+installed 201/202 clients still open the Fight.
+
+**Deployment:** no hosted schema/backend promotion, TestFlight upload, production
+deployment was performed. After authorized merges, apply the additive
+`20260916210740_feed_activity_updates.sql` migration, deploy the compatible backend,
+then distribute the native build through preview. Production needs its own
+authorized rollout and checks. A two-device live comment/tap check remains.
+The specific reported missing comment is not confirmed without both phones'
+build/environment labels; staging and production use separate databases.
+
+## Review fixes: prepared 17 Sep 2026
+
+**Code:** reaction chips remain a swipeable horizontal carousel, as Marc requested.
+A separate actions row provides like, comments, preset reactions, and an Other emoji
+entry. The newer comment sorting and request sequencing are retained. Chart refresh
+recreates only the progress fill, preserving the chart picker and selected day.
+Pace keeps missing or stale participant history unavailable instead of showing zero.
+Legacy cumulative uploads no longer become invented daily checkpoints; confirmed
+totals still appear under So far when no daily history exists. Most comments uses
+the same timestamp precision for sorting and pagination. Create, edit, invite, and
+suggest commands deliver notifications after their successful HTTP response.
+
+**Contract and supported builds:** `/api/v1` routes, request/response fields, scores,
+and legacy `step_days` are unchanged. `step_checkpoints` was already nullable.
+Read-only release checks on 17 Sep returned staging `latest` 1.1.1 (201), enforcement
+off, and production `latest` 1.1.1 (202), enforcement on; both had null review/internal
+candidates. The native decoders from build 201 (`d97145a`) and 202 (`e2783be`) accept
+null/missing checkpoints. Existing API fixtures and build 113 SQL compatibility
+checks are retained because staging still admits older clients. No migration or
+client-permission change is required.
+
+**Cloud checks:** the regressions first failed against the reviewed code on
+GitHub-hosted runners: all four saved commands returned HTTP 500 on delivery failure,
+Pace drew unavailable history as zero, comment pagination skipped roots, and sparse
+legacy uploads with a downward correction fabricated checkpoints. At `d14671c`,
+[web checks](https://github.com/slooowshutter/FitFight/actions/runs/35158343483)
+passed typecheck and all 270 tests. The
+[disposable database checks](https://github.com/slooowshutter/FitFight/actions/runs/35158343440)
+passed migrations/RLS, build 113 compatibility, and all 21 integration tests both
+before and after the deferred client-permission cutoff, with no skips. The
+[iOS checks](https://github.com/slooowshutter/FitFight/actions/runs/35158343485)
+passed chart/HealthKit, native state, API fixtures, localization, and the simulator
+build on `macos-26`. The
+[running simulator captures](https://github.com/slooowshutter/FitFight/actions/runs/35160392966)
+show visible reaction chips, the emoji menu icon, and unclipped like/comment actions
+in English and French, Night and Day. Static export omitted the scroll contents and
+menu, so it was not used to verify those controls. Captures verify layout, not swipe
+or menu interactions. Validation-only workflow triggers were confined to a temporary
+branch; all 17 changed application and test files matched the passing revision
+byte-for-byte before PR preparation integrated the newer `develop` changes.
+PR CI will verify the combined branch. No app tests ran on the workstation.
+
+**Rollout:** compatible backend fixes can land on staging through an authorized
+`develop` merge before the native update. A later authorized `preview` merge ships
+the native changes with a 1.1.1 release note. Production still requires its separate
+authorized `preview` to `main` promotion. This work has not merged a release branch,
+changed the hosted database, or uploaded a TestFlight build. Physical
+device interaction and HealthKit verification remain separate from cloud checks.
+
+## Website download destinations: prepared 17 Sep 2026
+
+The homepage, fight/referral invite pages, and English/French support pages use
+the configured backend environment to choose the download destination.
+Production links to `https://apps.apple.com/app/id6804230516`. Staging keeps the
+Friends Beta TestFlight link and installation instructions. Invite pages retain
+their five-second iOS redirect and original-link reopening instructions. The
+App Store destination returned HTTP 200. A 1.1.1 release note is included.
+
+Workspace checks passed: TypeScript, all 266 existing tests, optimized builds for
+both environments, and HTTP-rendered link/copy checks for all five affected routes
+in each environment. Browser redirect execution and native compilation were not
+run. No API contract or database change, cloud CI run, PR, merge, or live deployment
+was performed. The live sites still need the normal authorized promotions.
+
+## Post and comment translation prepared, 16 Sep 2026
+
+**Code:** Feed and fight-thread posts, comments, and replies have an A speech-bubble
+translation icon at the top right, immediately left of the ellipsis. Apple's
+[`NLLanguageRecognizer`](https://developer.apple.com/documentation/naturallanguage/nllanguagerecognizer) detects the text's language on device before displaying the
+icon. It appears only when the detected language differs from the first language
+in `Locale.preferredLanguages`; regional variants count as the same language.
+Empty text, text without letters, and unrecognized languages have no icon.
+Detection is best-effort for short or mixed-language text. Tapping opens Apple's system translation sheet,
+which chooses a target from the reader's language preferences and lets them change
+it. Original content stays intact. The control uses the existing theme, a 44-point
+tap target, an English/French accessibility label, and a `1.1.1` release note. It is
+available on iOS 17.4+ and hidden on earlier supported iOS versions, matching
+[Apple's translation API](https://developer.apple.com/documentation/swiftui/view/translationpresentation(ispresented:text:attachmentanchor:arrowedge:replacementaction:)).
+The English simulator preview keeps Bertille's first post in French so the icon
+can be inspected alongside English posts where it stays hidden.
+
+**Checks:** localization, native API-boundary, Xcode project-file syntax, and
+whitespace checks passed. Cloud iOS compilation and physical-device translation
+checks are pending. Verify icon visibility for same/different languages and regional
+variants, both English/French translation directions, target-language changes, and
+dismissal back to the unchanged post or comment on a device.
+
+**Live deployment:** not deployed. No API contract, native API model, or database
+schema changed. No merge, TestFlight upload, or production deployment was made.
+
+## Marc broadcast posts, 16 Sep 2026
+
+**Contract:** `POST /api/v1/feed/posts` accepts `{ "type": "broadcast" }` as a
+lone destination. Only username `marc` (same You → Developer gate) can create
+it. The row is `audience=main`, `app_wide=true`, no fight channels. `GET /api/v1/feed`
+with no scope now also returns those rows to every signed-in caller. Old
+`main` / `fight` requests and response shapes stay the same. No lock-screen
+intent is queued; existing `feed_post` alerts still cover fight-channel posts
+only.
+
+**Checks:** workspace TypeScript and feed unit tests. Migration is additive.
+No hosted `db push`. Not on TestFlight until an authorized `preview` merge.
+
+## PGG7 app-wide invite: prepared 16 Sep 2026
+
+**Contract:** `POST /api/v1/fights/refresh` and `POST /api/v1/fights/snapshot` stay on `/api/v1`. Request and response shapes are unchanged except `alreadyMember` on joinable/suggested summaries is now true for pending invitees as well as accepted/deferred members. Older apps already treat `alreadyMember` as "open this fight," so a tap on New opens the existing Accept invitation. After auth, the backend invites the caller to `PGG7` and every currently suggested fight when they have no membership row. Marking a series suggested invites every active profile the same way.
+
+**Choice:** join-by-code still requires an explicit Join. Auto-invite creates the same pending invite the username-invite path already shows on Fights. Suggested fights were already listed on New from `GET /api/v1/fights/suggested`.
+
+**Notifications:** invite pushes did not exist (feed post/reaction kinds did). Additive migration `20260916210000_fight_invite_notifications.sql` allows `fight_invite` outbox rows with a personalized `alert_body` that names the person and fight and includes no scores. Existing clients already open `/fights/{id}` from the payload. No new preference toggle.
+
+**Supported builds checked:** read-only `https://staging.fitfight.app/api/app-release` on 16 Sep 2026 returned `latest` 1.1.1 (201) with `enforced: false` (`review`/`internal` null). Staging still has installed users on older binaries while enforcement is off. Those clients already render `invited` rows and suggested New rows. No required request field.
+
+**Staging evidence:** series `PGG7` exists as `EVERYBODY ON THE APP`, `joinable`, recurring, suggested, current fight `live`. Production was not queried from this change. If that code is absent in an environment, the lookup is a no-op and no fight is invented.
+
+**Deployment order:** apply the additive invite-notification migration and this backend to staging with `develop` first. Existing TestFlight builds pick up invites and the New-tab tap behavior on the next open/sync. The 1.1.1 changelog row ships only when this native change later reaches `preview`. No production deploy, `preview` merge, hosted `db push`, or TestFlight upload from this work.
+
+**Cloud checks vs live:** unit tests cover missing/closed/already-member/new-invite/suggested-everyone paths and invite copy against mocks. No hosted write, disposable migrated-database check, or signed-in device verification was run here.
+
 ## Profiles, Friends, and Rivalry implementation, 17 Sep 2026
+
+**Review fixes and saved time zones, 17 Sep:** prepared on this branch, not deployed.
+You waits for Health upload completion before reloading statistics on first load,
+foregrounding, pull to refresh, and Health actions. Feedback usernames open Profile;
+comment counts open the discussion. Shared activity and statistics use one saved
+personal date boundary, including audience previews, so a seven-day grant cannot
+expose an eighth date after travel.
+
+The existing `profiles.time_zone` column is now exposed as optional `/api/v1/me`
+`time_zone` and an optional PATCH input. Existing values are preserved; accounts
+without a stored zone use fixed UTC until they choose one. New username
+onboarding saves the phone's zone, and Edit profile can change it. Daily Health
+aggregates and new Fight durations use the saved zone. Custom Fight date pickers
+and review use a selectable Fight zone; changing it preserves the entered local
+times and recalculates their UTC instants. The zone can be edited before a Fight
+starts and is locked afterward. Snapshot Fight rows gain optional `time_zone`.
+Old fixtures still omit these fields. No database migration is needed for these
+fixes, and no finalized daily totals are relabeled.
+
+**Cloud checks:** the new regression commit `c07ad09` reproduced both defects:
+[iOS refresh](https://github.com/slooowshutter/FitFight/actions/runs/35239173445)
+failed all three upload-order checks, and the
+[database test](https://github.com/slooowshutter/FitFight/actions/runs/35239173174)
+returned eight dates for a seven-day grant. Both regressions pass with the fixes.
+
+- [Web API, `613b388`](https://github.com/slooowshutter/FitFight/actions/runs/35241578740): strict typecheck, all 268 unit/contract tests, API contract parsing, and privacy-page rendering passed. Coverage includes valid/invalid zones, unset legacy accounts, and rejecting a zone edit once the Fight's start instant has passed.
+- [Database, `613b388`](https://github.com/slooowshutter/FitFight/actions/runs/35241578761): all 32 transaction/HTTP tests passed both before and after the deferred client-permission cutoff. The mixed-zone sharing regression returns exactly seven dates; owner statistics and previews use the same saved zone. Authenticated `/me` requests cover build headers 113, 190, 200, 201, 202, and 203, including legacy PATCH requests that omit and preserve the zone. The 211 pgTAP checks, 18 cutoff checks, and historical backfill/deletion rehearsal also passed.
+- [iOS simulator, `733f642`](https://github.com/slooowshutter/FitFight/actions/runs/35241180293): full app compilation on GitHub-hosted `macos-26`, Health upload/refresh ordering, saved-zone travel, daylight-saving custom/preset windows and rematches, old/new optional-field decoding, and English/French localizations passed. Native source and fixtures are unchanged in `613b388`.
+
+These are disposable cloud database and simulated native checks. They do not
+replace installed-device verification or prove live deployment.
+
+**Live and rollout:** read-only `/api/app-release` checks at **17 Sep 15:41:31 UTC**
+show staging latest 1.1.1 (201), review/internal 1.1.2 (203), enforcement off;
+production latest 1.1.1 (202), review/internal null, enforcement on. Those live
+candidates do not contain this branch. Deploy the compatible backend after the
+branch's existing Profile expansion migration, then distribute the native app.
+No merge, deployment, TestFlight upload, or change to the live database was made.
+Installed-device verification remains outstanding.
+
+**Steps statistics extension, 17 Sep:** prepared on this branch. You and Profile
+sheets now show best recorded day, average per recorded day, weekly average and
+total, and day distributions/current/longest recorded streaks across five activity
+levels. Levels use the companion's existing 2k/4k/6k/8k thresholds. The owner's
+avatar opens their Profile. Only finalized days with known time zones count,
+through yesterday; missing days are unknown. Exact-category streaks cannot bridge
+unknown days. Weekly summaries disclose their recorded-day denominator and use
+the person's saved Profile time zone. Travel does not change that setting; existing
+recorded days retain their original zone and finalized value.
+
+Owners see available recorded history. Other viewers and previews receive only
+statistics within their explicit activity audience and 7/30-day period. Earlier
+records and streak lengths remain private. The existing v1 Profile response gains
+optional `step_statistics`; existing daily-history and legacy `/me` contracts stay
+intact. No new schema or HealthKit collection is added by this extension.
+
+**Cloud checks for the statistics extension:**
+
+- [Web API, `9513ee6`](https://github.com/slooowshutter/FitFight/actions/runs/35172085761): strict typecheck, all 265 unit/contract tests, API contract parsing, and the existing Privacy-page rendering checks. Eight new calculation tests cover thresholds, exact-category streaks, gaps, partial days, observed weekly denominators, sharing windows, empty history, DST, leap days, and year boundaries.
+- [Database, `9513ee6`](https://github.com/slooowshutter/FitFight/actions/runs/35172085773): all 31 transaction/HTTP tests pass before and after the separately deferred grant cutoff, alongside 211 pgTAP checks, build 113 compatibility, and the historical backfill/deletion rehearsal. New checks prove older personal records remain owner-only, shared streaks clip to 7/30 days, previews use the same limits, sharing revocation/friend removal/blocking take effect, and recorded time zones govern the date boundary. Existing authenticated `/me` compatibility covers build headers 113, 190, 200, 201, and 202.
+- [iOS simulator, `2ab9359`](https://github.com/slooowshutter/FitFight/actions/runs/35171964316): app compilation on GitHub-hosted `macos-26`, new statistics response decoding, old optional-field compatibility, stale-response/revocation/account-switch tests, and English/French localizations. The later review-fix checks above cover the current native source and fixtures.
+
+The checks use disposable cloud data and simulated native responses, not installed
+versions of every supported build. No live deployment or app distribution has
+occurred. Read-only manifests at **17 Sep 01:45:27 UTC** still list staging 1.1.1
+(201), enforcement off, and production 1.1.1 (202), enforcement on, with null
+review/internal in both. Backend support precedes native distribution, after the
+already-required Profile expansion rollout. Installed-device verification remains
+outstanding.
 
 **Code prepared on `profiles-friends-and-stats`, not deployed.** The
 [implementation plan](design/profiles-friends-implementation-plan.md) now has
@@ -149,6 +849,15 @@ unclassified; full-fidelity capture begins only after the new mutation paths are
 live and old instances drain. That has not happened in either live environment.
 The new friendship store never trusts legacy client-created accepted rows.
 
+**Review fixes:** history row IDs and pagination cursors are now random,
+participant-specific UUIDs. Authorized navigation still uses `fight_id`; a
+shared identifier no longer links private participants across Profiles. The
+backfill preserves reliable membership evidence for accepted future rounds, so
+their later completed results count. Historical Profile links keep the selected
+round through navigation and refresh. Rematches use a custom schedule whenever
+a preset would change the prior elapsed duration, including daylight-saving
+transitions. Each defect was reproduced in cloud CI before its fix.
+
 **Measurement:** authenticated display events deduplicate replay, qualify at most
 once per rolling 30 minutes per direction, and expire after 30 days through the
 existing daily maintenance route. Friend actions and actual participation
@@ -167,9 +876,9 @@ No placeholder legal page or extra Terms acceptance flow was introduced.
 
 **Cloud checks passed:**
 
-- [Web API, `99d55cb`](https://github.com/slooowshutter/FitFight/actions/runs/35162380008): strict typecheck, all 257 unit/contract tests, API contract parsing, and cloud Chrome rendering of both signed-out Privacy pages at 393 by 852. English/French screenshots were visually inspected.
-- [Database, `99d55cb`](https://github.com/slooowshutter/FitFight/actions/runs/35162379985): additive migration, schema lint, private grants/RLS, build 113 compatibility, historical backfill rehearsal, and 29 transaction/HTTP tests before and after the separately deferred client-permission cutoff. Cases include actual account deletion preserving a group draw, mutual friendship access, independently bounded activity, concurrent capacity/privacy/stop/recurrence changes, attribution and retention.
-- [iOS simulator, `6c4880e`](https://github.com/slooowshutter/FitFight/actions/runs/35162152346): app compilation on GitHub-hosted `macos-26`, Profile DTO/redaction and state response ordering/revocation/account-switch checks, existing native regressions, English/French localizations, API boundary, and design tokens. Native source has not changed since this run.
+- [Web API, `712fd22`](https://github.com/slooowshutter/FitFight/actions/runs/35167142686): strict typecheck, all 257 unit/contract tests, API contract parsing, and cloud Chrome rendering of both signed-out Privacy pages at 393 by 852. Web source has not changed since this run.
+- [Database, `90b9211`](https://github.com/slooowshutter/FitFight/actions/runs/35170544134): additive migration, schema lint, 211 pgTAP checks, build 113 compatibility, and all 30 transaction/HTTP tests before and after the separately deferred client-permission cutoff. The new privacy regression proves independent stable history IDs, scoped pagination, and preserved authorized Fight navigation. The backfill rehearsal starts with an accepted future round before migration and proves its completed result counts afterward while uncertain historical results stay excluded. Existing account-deletion, friendship, concurrency, attribution, and retention checks still pass.
+- [iOS simulator, `90b9211`](https://github.com/slooowshutter/FitFight/actions/runs/35170544151): app compilation on GitHub-hosted `macos-26`, exact historical-round navigation through destination/detail resolution and refresh, normal Feed navigation, custom and daylight-saving rematch durations, and ordinary duration presets. Profile DTO/redaction, response ordering/revocation/account-switch checks, existing native regressions, English/French localizations, API boundary, and design tokens also pass.
 
 These checks use disposable cloud data and simulated network responses for native
 state tests. They do not establish a live deployment, real image generation, or
@@ -177,12 +886,16 @@ installed-device verification. No workstation Xcode or local database tests were
 used.
 
 **Compatibility and rollout:** API stays `/api/v1`; existing `/me`, Fight and
-media payloads and build 113 fixtures remain intact. Feedback comment `author_id`
-is additive and optional in native decoding. Cloud authenticated `/me` requests
+media payloads and build 113 fixtures remain intact. The new Profile history
+contract keeps UUID-shaped IDs/cursors and its existing fixtures; `fight_id`
+remains nullable and available only to authorized viewers. These Profile routes
+and the expansion migration have not been deployed, so the migration itself
+includes both review corrections. Feedback comment `author_id` is additive and
+optional in native decoding. Cloud authenticated `/me` requests
 cover version/build headers 113, 190, 200, 201, and 202; this is contract evidence,
 not installed-device testing of each build. The separately deferred direct-client
 grant cutoff is rehearsed in CI only, not activated by this migration.
-Read-only live checks at **16 Sep 23:00:21 UTC** returned staging latest 1.1.1 (201),
+Read-only live checks at **17 Sep 01:27:12 UTC** returned staging latest 1.1.1 (201),
 null review/internal, enforcement off; production latest 1.1.1 (202), null
 review/internal, enforcement on. No live schema, backend, release manifest, or
 app distribution changed in this work. Feature-branch Vercel deployment is
@@ -862,7 +1575,7 @@ The native Fight path uses the API to create and join; Apple Health synchronizat
 | Bugs & requests         | Works on the Feedback tab (Bugs, Top, and Report), with a shortcut still on You above Settings. Signed-in people can post a bug or a feature request, attach a photo, a video, or any file, browse the board, upvote, and comment with their username. Device/debug metadata is stored when someone posts or comments, omitted from the board API, and attached again when Marc taps Send to Cursor (original snapshot plus the phone that sent it, plus attachment links). After `NOTION_TOKEN` is on Vercel, each new post also lands as a P0 Inbox row in the Product Backlog. After `CURSOR_API_KEY` is on Vercel, Marc sees **Send to Cursor** on a post and can start a cloud agent with the post, comments, those device snapshots, and attachment URLs. A successful send moves the matching Notion Product Backlog row to Building; when that agent finishes and opens a PR, FitFight marks the same row Done.                                                                                                                                                                                                                                                                                                                                                                           |
 | Privacy / Support       | Pages are implemented and linked under You → Settings. Staging uses `staging.fitfight.app`; production uses `fitfight.app`. Each route must be deployed before that build is tested or submitted.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | Fight posts / Feed      | Marc (username `marc`, You → Developer) can post one Broadcast that every signed-in user sees on the Feed tab; it is a normal post, not copied into each Fight, and it does not send a new lock-screen alert. Accepted and waiting-next-round members can post a short note, up to four photos, or one short video. Root Feedback → Feed is the same fight posts list as before (not a Recent/Top ranking of loaded posts). Root + chooses a new post or a new request. Media can take a photo with the camera or pick photos and video from the library. Posting to several fights keeps one post and shows those fight names; All fights shows Public. A fight’s Feed tab starts on that fight and can add other channels. There is no Main destination or tag-people picker. Each card puts its plain channel label, then the relative time, beneath the author, with actions at the top right. Posts support emoji reactions, nested comments, editing/deleting your own post, reporting another post and hiding its author. Other members of that fight can get a push when you post in that fight’s Feed; the post author can get comments and reactions; a reply notifies the parent commenter, not sibling commenters. You → Settings → Notifications turns each of those on or off, plus challenge reminders and daily status. Fight detail opens on Stats, with Feed, Share and recurring History alongside it. Recurring fights retain earlier posts; invited-only people gain access after joining. |
-| Companion               | Saved on the account. Pick from a grid of animals, or Custom with one description (species, breed, accessories, colors). That text is stored for later image generation; generation is not built. Other people see the stock animal, or initials until a custom image exists. People who have not chosen an animal are asked the next time they open a build that includes this. Pose and generation controls are not shown.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Companion               | Saved on the account. Change animal opens the animal grid. Make it yours opens a description to edit and save (species, breed or race, accessories, colors, and other details). You can change animals anytime. That text is stored for later image generation; generation is not built. Other people see the stock animal, or initials until a custom image exists. People who have not chosen an animal are asked the next time they open a build that includes this. Pose and generation controls are not shown.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | Account deletion        | Permanently deletes the profile, photos, username, authentication, Health/Steps data, relationships, invitations, memberships, scores, owned Fights, fight posts, and bugs/requests the User posted; removes participation from other Fights; clears local Health sync state; and revokes a stored Apple credential when available.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | WHOOP / Strava          | Not built                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | Removed scope           | No persistent friends, Requests tab, money/payouts, bragging-rights option, other Metrics, goals, or dead settings/actions.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |

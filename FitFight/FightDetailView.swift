@@ -46,7 +46,7 @@ struct FightDetailView: View {
     }
 
     private var fight: Fight {
-        model.fight(id: initialFight.id) ?? initialFight
+        model.detailFight(for: initialFight.id) ?? initialFight
     }
 
     private var panes: [FightDetailPane] {
@@ -162,14 +162,15 @@ struct FightDetailView: View {
 
     private var fightsRefresh: FFRefreshConfig {
         FFRefreshConfig(
-            isRefreshing: model.isRefreshingFights || isRefreshingFeed,
-            message: model.isRefreshingFights ? model.refreshStatusText : String(localized: "Loading"),
+            isRefreshing: pane == .feed ? isRefreshingFeed : model.isRefreshingFights,
+            message: pane == .feed ? String(localized: "Loading") : model.refreshStatusText,
             action: {
-                await model.refreshFights(session: session, steps: steps, trigger: .manual)
                 if pane == .feed, let fightID = UUID(uuidString: fight.id) {
                     isRefreshingFeed = true
                     defer { isRefreshingFeed = false }
                     await fightFeed.load(session: session, fightID: fightID)
+                } else {
+                    await model.refreshFights(session: session, steps: steps, trigger: .manual)
                 }
             }
         )

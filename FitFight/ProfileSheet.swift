@@ -145,6 +145,9 @@ struct ProfileSheet: View {
                 }
             }
         }
+        if let statistics = profile.stepStatistics {
+            ProfileStepStatisticsView(statistics: statistics)
+        }
         if let activity = profile.activity {
             FFSection(title: String(format: String(localized: "profile.steps-period"), activity.days)) {
                 FFCard {
@@ -184,8 +187,7 @@ struct ProfileSheet: View {
                 ForEach(store.history) { row in
                     if let fightID = row.fightId, model.fight(id: fightID.uuidString) != nil {
                         Button {
-                            model.tab = .fights
-                            Task { @MainActor in model.openFightID = fightID.uuidString }
+                            model.openFight(id: fightID.uuidString, preserveRound: true)
                             dismiss()
                         } label: { FFCard { ProfileHistoryContent(row: row) } }
                         .buttonStyle(FFHapticPlainStyle())

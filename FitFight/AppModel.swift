@@ -136,6 +136,7 @@ struct Fight: Codable, Identifiable, Hashable {
     var suggested: Bool = false
     var pendingJoin: Bool = false
     var offersJoinNext: Bool = false
+    var timeZone: String? = nil
 
     var hasAction: Bool {
         !actionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -224,11 +225,21 @@ final class AppModel: ObservableObject {
         didSet {
             if oldValue != tab {
                 openFightID = nil
+                openPost = nil
+                showingActivity = false
             }
         }
     }
 
-    @Published var openFightID: String?
+    @Published var openFightID: String? {
+        didSet {
+            if openFightID != selectedHistoryFightID { selectedHistoryFightID = nil }
+        }
+    }
+    private var selectedHistoryFightID: String?
+    @Published var openPost: FeedPostLink?
+    @Published var showingActivity = false
+    @Published var feedRevision = 0
     @Published var dailyStatusRecap: DailyStatusRecap?
     @Published var showingVersions = false
     @Published var showingDebugMenu = false
@@ -290,7 +301,8 @@ final class AppModel: ObservableObject {
         let queryDailyStatus = components?.queryItems?.contains { item in
             item.name == "daily_status" && (item.value == "1" || item.value?.lowercased() == "true")
         } ?? false
-        UserDefaults.standard.set(path, forKey: pendingFightRouteKey)
+        let query = components?.percentEncodedQuery.map { "?\($0)" } ?? ""
+        UserDefaults.standard.set(path + query, forKey: pendingFightRouteKey)
         UserDefaults.standard.set(dailyStatus || queryDailyStatus, forKey: pendingDailyStatusKey)
     }
 
@@ -350,6 +362,10 @@ final class AppModel: ObservableObject {
         return fights
             .filter { $0.seriesId == seriesId }
             .reduce(fight) { Self.preferredCanonicalFight($0, $1) }
+    }
+
+    func detailFight(for id: String) -> Fight? {
+        selectedHistoryFightID == id ? fight(id: id) : canonicalFight(for: id)
     }
 
     func seriesHistory(for fight: Fight) -> [Fight] {
@@ -680,6 +696,7 @@ final class AppModel: ObservableObject {
         name: String = "",
         startsAt: Date,
         endsAt: Date,
+        timeZone: TimeZone,
         actionText: String,
         inviteHandles: [String],
         visibility: String = "invite_only",
@@ -728,7 +745,7 @@ final class AppModel: ObservableObject {
             name: storedName,
             startsAt: startsAt,
             endsAt: endsAt,
-            timeZone: TimeZone.current.identifier,
+            timeZone: timeZone.identifier,
             outcomeRule: "highest_total",
             goalPolicy: "shared",
             defaultGoalValue: nil,
@@ -767,6 +784,7 @@ final class AppModel: ObservableObject {
         recurring: Bool,
         startsAt: Date?,
         endsAt: Date,
+        timeZone: String?,
         inviteHandles: [String],
         removeUserIds: [String]
     ) async -> Bool {
@@ -825,6 +843,7 @@ final class AppModel: ObservableObject {
                     recurring: recurring,
                     startsAt: startsAt,
                     endsAt: endsAt,
+                    timeZone: timeZone,
                     inviteHandles: handles.isEmpty ? nil : handles,
                     removeUserIds: removals.isEmpty ? nil : removals
                 ),
@@ -1132,7 +1151,7 @@ final class AppModel: ObservableObject {
                 item.name == "daily_status" && (item.value == "1" || item.value?.lowercased() == "true")
             }
             Self.storePendingFightRoute(
-                "/fights/\(fightID.uuidString.lowercased())",
+                "/fights/\(fightID.uuidString.lowercased())" + (url.query.map { "?\($0)" } ?? ""),
                 dailyStatus: dailyStatus
             )
             await consumePendingLinks(session: session)
@@ -1309,7 +1328,8 @@ final class AppModel: ObservableObject {
             windowEnd: ends,
             serverState: created.state,
             recurring: payload.recurring ?? false,
-            visibility: payload.visibility ?? "invite_only"
+            visibility: payload.visibility ?? "invite_only",
+            timeZone: payload.timeZone
         )
     }
 
@@ -1413,11 +1433,12 @@ final class AppModel: ObservableObject {
         )
     }
 
-    func openFightFromFeed(id: String) {
-        guard let fight = canonicalFight(for: id) else { return }
+    func openFight(id: String, preserveRound: Bool = false) {
+        let destination = (preserveRound ? fight(id: id) : canonicalFight(for: id))?.id ?? id
         tab = .fights
         Task { @MainActor in
-            self.openFightID = fight.id
+            self.selectedHistoryFightID = preserveRound ? destination : nil
+            self.openFightID = destination
         }
     }
 
@@ -1437,9 +1458,16 @@ final class AppModel: ObservableObject {
         guard let route = UserDefaults.standard.string(forKey: Self.pendingFightRouteKey) else { return }
         UserDefaults.standard.removeObject(forKey: Self.pendingFightRouteKey)
         UserDefaults.standard.removeObject(forKey: Self.pendingDailyStatusKey)
-        let parts = route.split(separator: "/").map(String.init)
+        guard let components = URLComponents(string: route) else { return }
+        let parts = components.path.split(separator: "/").map(String.init)
         guard parts.count == 2, parts[0] == "fights", UUID(uuidString: parts[1]) != nil else { return }
-        openFightFromFeed(id: parts[1])
+        if let postID = components.queryItems?.first(where: { $0.name == "post" })?.value.flatMap(UUID.init(uuidString:)) {
+            let commentID = components.queryItems?.first(where: { $0.name == "comment" })?.value.flatMap(UUID.init(uuidString:))
+            tab = .feed
+            openPost = FeedPostLink(id: postID, commentID: commentID)
+            return
+        }
+        openFight(id: parts[1])
         if showDailyStatusRecap {
             Task { await presentDailyStatusRecap(for: parts[1]) }
         }
@@ -1709,7 +1737,8 @@ final class AppModel: ObservableObject {
             suggested: series?.suggested ?? false,
             offersJoinNext: (series?.recurring ?? false)
                 && Self.isAfterFightStartDay(starts)
-                && mine?.state == "invited"
+                && mine?.state == "invited",
+            timeZone: row.timeZone
         )
     }
 

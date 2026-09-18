@@ -13,11 +13,16 @@ on:
             - "scripts/test_fight_discovery.py"
             - "scripts/test_profile_challenges.py"
             - "scripts/test_profile_interactions.py"
+            - "scripts/test_profile_navigation.py"
+            - "scripts/test_profile_refresh.py"
             - "scripts/test_native_state.py"
+            - "scripts/test_companion_state.py"
             - "scripts/test_fight_live_updates.py"
             - "scripts/test_fight_chart_scores.py"
             - "scripts/test_push_state.py"
             - "scripts/test_feedback_compatibility.py"
+            - "scripts/test_slide_haptics.py"
+            - "scripts/test_feed_activity.py"
             - "docs/design/source/tokens.json"
             - "scripts/check_localizations.py"
             - "fastlane/**"
@@ -34,11 +39,16 @@ on:
             - "scripts/test_fight_discovery.py"
             - "scripts/test_profile_challenges.py"
             - "scripts/test_profile_interactions.py"
+            - "scripts/test_profile_navigation.py"
+            - "scripts/test_profile_refresh.py"
             - "scripts/test_native_state.py"
+            - "scripts/test_companion_state.py"
             - "scripts/test_fight_live_updates.py"
             - "scripts/test_fight_chart_scores.py"
             - "scripts/test_push_state.py"
             - "scripts/test_feedback_compatibility.py"
+            - "scripts/test_slide_haptics.py"
+            - "scripts/test_feed_activity.py"
             - "docs/design/source/tokens.json"
             - "scripts/check_localizations.py"
             - "fastlane/**"
@@ -107,14 +117,23 @@ jobs:
             - name: Verify Fight charts use confirmed scores
               run: python3 scripts/test_fight_chart_scores.py
 
+            - name: Verify slide haptic ramps and fast swipes
+              run: python3 scripts/test_slide_haptics.py
+
             - name: Verify native refresh and feed state
               run: python3 scripts/test_native_state.py
+
+            - name: Verify companion prompt retention and reuse
+              run: python3 scripts/test_companion_state.py
 
             - name: Verify remote photo loading
               run: python3 scripts/check_remote_photo_loading.py
 
             - name: Verify push signout and session restoration
               run: python3 scripts/test_push_state.py
+
+            - name: Verify notification targets and activity loading
+              run: python3 scripts/test_feed_activity.py
 
             - name: Verify fight discovery caching
               run: python3 scripts/test_fight_discovery.py
@@ -137,6 +156,12 @@ jobs:
               run: |
                   swiftc -swift-version 5 -target "$(uname -m)-apple-macosx13.0" FitFight/SharedProfile.swift FitFight/ProfileScreenStore.swift tests/ProfileScreenStoreTests.swift -o /tmp/fitfight-profile-tests
                   /tmp/fitfight-profile-tests contracts/fixtures
+
+            - name: Verify profile history navigation and rematches
+              run: python3 scripts/test_profile_navigation.py
+
+            - name: Verify Profile refresh after HealthKit upload
+              run: python3 scripts/test_profile_refresh.py
 
             - name: Build for iOS Simulator
               run: |

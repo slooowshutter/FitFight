@@ -72,12 +72,14 @@ enum HealthKitActivityAggregates {
 
     static func read(
         store: HKHealthStore,
-        context: FitFightHealthKitContext
+        context: FitFightHealthKitContext,
+        timeZone: TimeZone = .current
     ) async -> (
         days: [FitFightHealthKitStepSync.ActivityDay],
         workouts: [FitFightHealthKitStepSync.Workout]?
     ) {
-        let calendar = Calendar.current
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
         let today = calendar.startOfDay(for: context.serverNow)
         let lookback = calendar.date(byAdding: .day, value: -lookbackDays, to: today) ?? today
         let fightStart = context.fightWindows.map { calendar.startOfDay(for: $0.startsAt) }.min()

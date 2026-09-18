@@ -1,6 +1,5 @@
 import type { Sql } from "postgres";
 import { ApiError, ERROR_CODES } from "@/lib/http";
-import { feedbackWorkflowAccess } from "@/lib/admin/feedback-workflow-access";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import {
     loadReadyMedia,
@@ -13,11 +12,9 @@ import type {
     CreateFeedbackCommentRequest,
     CreateFeedbackPostRequest,
     FeedbackComment,
+    FeedbackCommentRow,
     FeedbackCommentResponse,
     FeedbackPostRow,
-    FeedbackCommentRow,
-    ChangeFeedbackStatusRequest,
-    ChangeFeedbackStatusResponse,
     FeedbackListResponse,
     FeedbackMetadata,
     FeedbackPostDetail,
@@ -28,14 +25,7 @@ import type {
     ReportFeedbackPostRequest,
     ReportFeedbackPostResponse,
 } from "@/lib/types/feedback/feedback";
-import {
-    feedbackMetadataSchema,
-    feedbackPostRowSchema,
-    feedbackCommentRowSchema,
-    feedbackWorkflowStatusSchema,
-    feedbackStatusOperationSchema,
-    feedbackWorkflowMessages,
-} from "@/lib/types/feedback/feedback";
+import { feedbackCommentRowSchema, feedbackMetadataSchema, feedbackPostRowSchema } from "@/lib/types/feedback/feedback";
 import type { MediaObject } from "@/lib/types/media/media";
 
 const POST_LIMIT_PER_DAY = 8;
@@ -51,12 +41,11 @@ function mapMetadata(value: unknown): FeedbackMetadata {
 }
 
 function mapPost(
-    row: FeedbackPostRow,
+    value: FeedbackPostRow,
     media: MediaObject[] = [],
 ): FeedbackPostSummary {
-    row = feedbackPostRowSchema.parse(row);
+    const row = feedbackPostRowSchema.parse(value);
     return {
-        workflow_status: row.workflow_status,
         id: row.id,
         kind: row.kind,
         title: row.title,
@@ -143,11 +132,9 @@ async function prepareFeedbackMedia(
     return uniqueMediaIds;
 }
 
-function mapComment(row: FeedbackCommentRow): FeedbackComment {
-    row = feedbackCommentRowSchema.parse(row);
+function mapComment(value: FeedbackCommentRow): FeedbackComment {
+    const row = feedbackCommentRowSchema.parse(value);
     return {
-        ...(row.workflow_status !== undefined ? { workflow_status: row.workflow_status } : {}),
-        ...(row.actor_id !== undefined ? { actor_id: row.actor_id } : {}),
         ...(row.author_id ? { author_id: row.author_id } : {}),
         id: row.id,
         body: row.body,
@@ -173,7 +160,6 @@ export async function listFeedbackPosts(
             post.kind::text as kind,
             post.title,
             post.body,
-            post.workflow_status,
             (
                 select count(*)::int
                 from public.feedback_votes as vote
@@ -182,16 +168,7 @@ export async function listFeedbackPosts(
             (
                 select count(*)::int
                 from public.feedback_comments as comment
-                left join public.profiles as commenter
-                    on commenter.user_id = comment.author_id and commenter.deleted_at is null
                 where comment.post_id = post.id
-                    and (comment.workflow_status is not null or (
-                        commenter.user_id is not null and not exists (
-                            select 1 from private.feedback_blocks as blocked
-                            where blocked.blocker_id = ${userId}
-                                and blocked.blocked_id = comment.author_id
-                        )
-                    ))
             ) as comment_count,
             exists(
                 select 1
@@ -231,98 +208,72 @@ export async function getFeedbackPost(
     postId: string,
     database: Sql = createDatabaseClient(),
 ): Promise<FeedbackPostDetail> {
-    return database.begin("isolation level repeatable read read only", async (sql) => {
-        const [row] = await sql<FeedbackPostRow[]>`
-            select
-                post.id,
-                post.kind::text as kind,
-                post.title,
-                post.body,
-                post.workflow_status,
-                (
-                    select count(*)::int
-                    from public.feedback_votes as vote
-                    where vote.post_id = post.id
-                ) as vote_count,
-                (
-                    select count(*)::int
-                    from public.feedback_comments as comment
-                    left join public.profiles as commenter
-                        on commenter.user_id = comment.author_id and commenter.deleted_at is null
-                    where comment.post_id = post.id
-                        and (comment.workflow_status is not null or (
-                            commenter.user_id is not null and not exists (
-                                select 1 from private.feedback_blocks as blocked
-                                where blocked.blocker_id = ${userId}
-                                    and blocked.blocked_id = comment.author_id
-                            )
-                        ))
-                ) as comment_count,
-                exists(
-                    select 1
-                    from public.feedback_votes as vote
-                    where vote.post_id = post.id
-                        and vote.user_id = ${userId}
-                ) as voted,
-                post.author_id,
-                profile.handle as author_handle,
-                post.author_id = ${userId} as mine,
-                post.created_at,
-                coalesce(post.metadata, '{}'::jsonb) as metadata
-            from public.feedback_posts as post
-            join public.profiles as profile
-                on profile.user_id = post.author_id
-              and profile.deleted_at is null
-            where post.id = ${postId}
-                and not exists (
-                    select 1 from private.feedback_blocks as blocked
-                    where blocked.blocker_id = ${userId}
-                        and blocked.blocked_id = post.author_id
-                )
-        `;
-        if (!row) {
-            throw new ApiError(404, ERROR_CODES.not_found, "Request not found");
-        }
-        const comments = await sql<FeedbackCommentRow[]>`
-            select
-                comment.id,
-                comment.body,
-                case when comment.workflow_status is null then comment.author_id else null end as author_id,
-                comment.workflow_status,
-                case when comment.workflow_status is not null then 'FitFight'
-                    else profile.handle end as author_handle,
-                case when comment.workflow_status = 'approved' and profile.user_id is not null
-                    and not exists (
-                        select 1 from (
-                            select blocker_id, blocked_id from private.profile_blocks
-                            union all select blocker_id, blocked_id from private.feed_blocks
-                            union all select blocker_id, blocked_id from private.feedback_blocks
-                        ) as blocked
-                        where (blocked.blocker_id = ${userId} and blocked.blocked_id = comment.author_id)
-                            or (blocked.blocker_id = comment.author_id and blocked.blocked_id = ${userId})
-                    ) then comment.author_id else null end as actor_id,
-                comment.created_at,
-                coalesce(comment.metadata, '{}'::jsonb) as metadata
-            from public.feedback_comments as comment
-            left join public.profiles as profile
-                on profile.user_id = comment.author_id
-              and profile.deleted_at is null
-            where comment.post_id = ${postId}
-                and (comment.workflow_status is not null or (
-                    profile.user_id is not null and not exists (
-                        select 1 from private.feedback_blocks as blocked
-                        where blocked.blocker_id = ${userId}
-                            and blocked.blocked_id = comment.author_id
-                    )
-                ))
-            order by comment.created_at, comment.id
-        `;
-        const attachments = await loadFeedbackMedia([row.id], sql);
-        return {
-            post: mapPost(row, attachments.get(row.id) ?? []),
-            comments: comments.map(mapComment),
-        };
-    });
+    const [row] = await database<FeedbackPostRow[]>`
+        select
+            post.id,
+            post.kind::text as kind,
+            post.title,
+            post.body,
+            (
+                select count(*)::int
+                from public.feedback_votes as vote
+                where vote.post_id = post.id
+            ) as vote_count,
+            (
+                select count(*)::int
+                from public.feedback_comments as comment
+                where comment.post_id = post.id
+            ) as comment_count,
+            exists(
+                select 1
+                from public.feedback_votes as vote
+                where vote.post_id = post.id
+                    and vote.user_id = ${userId}
+            ) as voted,
+            post.author_id,
+            profile.handle as author_handle,
+            post.author_id = ${userId} as mine,
+            post.created_at,
+            coalesce(post.metadata, '{}'::jsonb) as metadata
+        from public.feedback_posts as post
+        join public.profiles as profile
+            on profile.user_id = post.author_id
+          and profile.deleted_at is null
+        where post.id = ${postId}
+            and not exists (
+                select 1 from private.feedback_blocks as blocked
+                where blocked.blocker_id = ${userId}
+                    and blocked.blocked_id = post.author_id
+            )
+    `;
+    if (!row) {
+        throw new ApiError(404, ERROR_CODES.not_found, "Request not found");
+    }
+    const comments = await database<FeedbackCommentRow[]>`
+        select
+            comment.id,
+            comment.body,
+            comment.author_id,
+            profile.handle as author_handle,
+            comment.created_at,
+            coalesce(comment.metadata, '{}'::jsonb) as metadata
+        from public.feedback_comments as comment
+        join public.profiles as profile
+            on profile.user_id = comment.author_id
+          and profile.deleted_at is null
+        where comment.post_id = ${postId}
+            and not exists (
+                select 1 from private.feedback_blocks as blocked
+                where blocked.blocker_id = ${userId}
+                    and blocked.blocked_id = comment.author_id
+            )
+        order by comment.created_at
+    `;
+    const attachments = await loadFeedbackMedia([row.id], database);
+    return {
+        post: mapPost(row, attachments.get(row.id) ?? []),
+        comments: comments.map(mapComment),
+    };
 }
 
 export async function createFeedbackPost(
@@ -402,7 +353,6 @@ async function insertFeedbackPost(
             kind::text as kind,
             title,
             body,
-            workflow_status,
             0 as vote_count,
             0 as comment_count,
             false as voted,
@@ -465,7 +415,6 @@ export async function createFeedbackComment(
         select count(*)::int as n
         from public.feedback_comments
         where author_id = ${userId}
-            and workflow_status is null
             and created_at > now() - interval '24 hours'
     `;
     if ((rate?.n ?? 0) >= COMMENT_LIMIT_PER_DAY) {
@@ -543,69 +492,6 @@ export async function reportFeedbackPost(
         on conflict (post_id, reporter_id) do update set reason = excluded.reason
     `;
     return { reported: true };
-}
-
-/** Locks progress and commits its public comment together; replay never reapplies an old status. */
-export async function changeFeedbackStatus(
-    userId: string,
-    postId: string,
-    input: ChangeFeedbackStatusRequest,
-    database: Sql = createDatabaseClient(),
-): Promise<ChangeFeedbackStatusResponse> {
-    const access = feedbackWorkflowAccess(userId);
-    if (!access.isAdmin) {
-        throw new ApiError(403, ERROR_CODES.forbidden, "Only Marc can change request progress.");
-    }
-    if (!access.enabled) {
-        throw new ApiError(503, ERROR_CODES.config, "Request progress is not enabled yet.");
-    }
-    return database.begin("read write", async (sql) => {
-        const [row] = await sql`
-            select post.workflow_status from public.feedback_posts as post
-            join public.profiles as author on author.user_id = post.author_id and author.deleted_at is null
-            where post.id = ${postId}
-                and exists (select 1 from public.profiles where user_id = ${userId} and deleted_at is null)
-                and not exists (
-                    select 1 from private.feedback_blocks
-                    where blocker_id = ${userId} and blocked_id = post.author_id
-                )
-            for update of post
-        `;
-        if (!row) throw new ApiError(404, ERROR_CODES.not_found, "Request not found");
-        const current = feedbackWorkflowStatusSchema.parse(row.workflow_status);
-        const [previous] = await sql`
-            select post_id, workflow_status from public.feedback_comments where id = ${input.operation_id}
-        `;
-        if (previous) {
-            const operation = feedbackStatusOperationSchema.parse(previous);
-            if (operation.post_id !== postId || operation.workflow_status !== input.status) {
-                throw new ApiError(409, ERROR_CODES.conflict, "This operation was already used for another update.");
-            }
-            return { workflow_status: current };
-        }
-        if (current !== input.expected_status) {
-            throw new ApiError(409, ERROR_CODES.conflict, "Request progress changed. Refresh and try again.");
-        }
-        if (current === input.status) return { workflow_status: current };
-
-        await sql`
-            update public.feedback_posts set workflow_status = ${input.status} where id = ${postId}
-        `;
-        const inserted = await sql`
-            insert into public.feedback_comments (id, post_id, author_id, body, workflow_status)
-            values (
-                ${input.operation_id}, ${postId}, ${input.status === "approved" ? userId : null},
-                ${feedbackWorkflowMessages[input.status]}, ${input.status}
-            )
-            on conflict (id) do nothing
-            returning id
-        `;
-        // Another request can claim the UUID after our lookup; rollback its status too.
-        if (inserted.length === 0) {
-            throw new ApiError(409, ERROR_CODES.conflict, "This operation was already used for another update.");
-        }
-        return { workflow_status: input.status };
-    });
 }
 
 export async function blockFeedbackAuthor(

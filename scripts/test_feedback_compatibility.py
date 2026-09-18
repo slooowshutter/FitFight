@@ -10,13 +10,13 @@ root = Path(__file__).resolve().parents[1]
 api = (root / "FitFight/FitFightAPI.swift").read_text()
 metadata = (root / "FitFight/FeedbackClientMetadata.swift").read_text()
 source = "import Foundation\n"
-source += api[api.index("enum FeedbackWorkflowStatus:"):api.index("struct FitFightReferralLink:")]
+source += api[api.index("struct FitFightFeedbackPost:"):api.index("struct FitFightReferralLink:")]
 source += metadata[metadata.index("struct FitFightFeedbackMetadata:"):metadata.index("    @MainActor")]
 source += "}\n" + metadata[metadata.index("extension FitFightFeedbackMetadata: Codable"):]
-source += (root / "tests/FeedbackWorkflowTests.swift").read_text()
+source += (root / "tests/FeedbackCompatibilityTests.swift").read_text()
 
 with tempfile.TemporaryDirectory(prefix="fitfight-feedback-tests-") as directory:
-    generated = Path(directory) / "FeedbackWorkflowTests.swift"
+    generated = Path(directory) / "FeedbackCompatibilityTests.swift"
     generated.write_text(source)
     executable = Path(directory) / "feedback-tests"
     subprocess.run([

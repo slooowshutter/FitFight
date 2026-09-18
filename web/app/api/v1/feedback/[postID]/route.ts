@@ -1,5 +1,4 @@
 import { apiRoute, corsPreflight, json, requireUuid } from "@/lib/http";
-import { feedbackWorkflowAccess } from "@/lib/admin/feedback-workflow-access";
 import {
     isFitFightAdmin,
     readAdminViewer,
@@ -15,15 +14,13 @@ export const GET = apiRoute<{ postID: string }>(async (request, { params }) => {
     const postId = requireUuid(params.postID, "postID");
     const detail = await getFeedbackPost(userId, postId);
     const viewer = await readAdminViewer(userId);
-    const workflow = feedbackWorkflowAccess(userId);
     return json({
         post: { ...detail.post, metadata: {} },
         comments: detail.comments.map((comment) => ({
             ...comment,
             metadata: {},
         })),
-        can_launch_fix: workflow.enabled ? workflow.isAdmin : isFitFightAdmin(viewer),
-        can_manage_status: workflow.enabled && workflow.isAdmin,
+        can_launch_fix: isFitFightAdmin(viewer),
     });
 });
 

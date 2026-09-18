@@ -25,9 +25,11 @@ export const resultEvidenceSummarySchema = z.object({
 export const fightRecordFactSchema = z.object({
     summary: resultEvidenceSummarySchema.nullable(),
     id: z.string().uuid(),
+    history_id: z.string().uuid(),
     state: z.string(),
     starts_at: recordTimestampSchema,
     ends_at: recordTimestampSchema,
+    calendar_days: z.number(),
     category: z.enum(recordCategoryValues),
     name: z.string(),
     action_text: z.string().nullable(),

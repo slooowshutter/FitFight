@@ -11,11 +11,12 @@ on:
             - "scripts/check_native_api_boundary.py"
             - "scripts/check_remote_photo_loading.py"
             - "scripts/test_fight_discovery.py"
+            - "scripts/test_profile_challenges.py"
             - "scripts/test_native_state.py"
             - "scripts/test_fight_live_updates.py"
             - "scripts/test_fight_chart_scores.py"
             - "scripts/test_push_state.py"
-            - "scripts/test_feedback_workflow.py"
+            - "scripts/test_feedback_compatibility.py"
             - "docs/design/source/tokens.json"
             - "scripts/check_localizations.py"
             - "fastlane/**"
@@ -30,11 +31,12 @@ on:
             - "scripts/check_native_api_boundary.py"
             - "scripts/check_remote_photo_loading.py"
             - "scripts/test_fight_discovery.py"
+            - "scripts/test_profile_challenges.py"
             - "scripts/test_native_state.py"
             - "scripts/test_fight_live_updates.py"
             - "scripts/test_fight_chart_scores.py"
             - "scripts/test_push_state.py"
-            - "scripts/test_feedback_workflow.py"
+            - "scripts/test_feedback_compatibility.py"
             - "docs/design/source/tokens.json"
             - "scripts/check_localizations.py"
             - "fastlane/**"
@@ -115,13 +117,16 @@ jobs:
             - name: Verify fight discovery caching
               run: python3 scripts/test_fight_discovery.py
 
+            - name: Verify calendar rematches
+              run: python3 scripts/test_profile_challenges.py
+
             - name: Verify native API contracts
               run: |
                   swiftc -swift-version 5 -target "$(uname -m)-apple-macosx13.0" FitFight/Media.swift FitFight/Profile.swift FitFight/FightSnapshot.swift tests/APIContractTests.swift -o /tmp/fitfight-contract-tests
                   /tmp/fitfight-contract-tests contracts/fixtures
 
             - name: Verify feedback and released-client decoding
-              run: python3 scripts/test_feedback_workflow.py
+              run: python3 scripts/test_feedback_compatibility.py
 
             - name: Verify profile access and response ordering
               run: |

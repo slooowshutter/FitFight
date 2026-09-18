@@ -159,21 +159,3 @@ _Avoid_: Last refresh, cursor
 **Data freshness**:
 The age and completeness of the observations behind a displayed Score projection.
 _Avoid_: Online status, sync status
-
-## Feedback
-
-**Feedback request**:
-A bug report or feature request with a discussion and a visible path from submission to release.
-_Avoid_: Fight request, support ticket
-
-**System comment**:
-A FitFight-generated message in a Feedback request's discussion that records progress, such as approval or the start of testing.
-_Avoid_: Agent log, separate activity feed
-
-**Request progress**:
-The current user-visible step toward delivering a Feedback request, accompanied by the next expected step. It describes the work in everyday language, independently of the tools doing it.
-_Avoid_: Agent status, pipeline status
-
-**Release availability**:
-Whether a version containing a change can actually be installed by a User.
-_Avoid_: Build uploaded, Apple approved

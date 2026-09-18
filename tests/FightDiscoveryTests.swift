@@ -53,6 +53,21 @@ private enum Failure: Error { case offline }
             endsAt: "2026-09-22T00:00:00Z", memberCount: 2,
             recurring: false, alreadyMember: false
         )
+        for state in ["invited", "accepted", "deferred", "declined", "withdrawn"] {
+            var suggestion = first
+            suggestion.alreadyMember = ["invited", "accepted", "deferred"].contains(state)
+            suggestion.membershipState = state
+            precondition(suggestion.hasJoined == ["accepted", "deferred"].contains(state),
+                         "An invitation must remain actionable until it is accepted")
+        }
+        let legacyData = Data("""
+        {"fightId":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","seriesId":"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+         "name":"Legacy suggestion","joinCode":"K7M2","ownerHandle":"walker","startsAt":"2026-09-15T00:00:00Z",
+         "endsAt":"2026-09-22T00:00:00Z","memberCount":2,"recurring":false,"alreadyMember":true}
+        """.utf8)
+        let legacy = try! JSONDecoder().decode(FitFightJoinableFight.self, from: legacyData)
+        precondition(legacy.membershipState == nil && !legacy.hasJoined,
+                     "Older servers must not disable an invitation based on ambiguous membership")
         let task = Task { await model.loadFightDiscovery(session: session) }
         while model.api.pending.count < 2 { await Task.yield() }
         let overlapping = Task { await model.loadFightDiscovery(session: session) }

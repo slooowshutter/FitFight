@@ -1,7 +1,9 @@
 {
     "$schema": "https://openapi.vercel.sh/vercel.json",
     "framework": "nextjs",
-    "regions": ["iad1"],
+    "regions": [
+        "iad1"
+    ],
     "crons": [
         {
             "path": "/api/internal/close-fights",
@@ -14,7 +16,8 @@
     ],
     "git": {
         "deploymentEnabled": {
-            "profiles-friends-and-stats": false
+            "profiles-friends-and-stats": false,
+            "agent-check/profile-shared-fights-20260918": false
         }
     }
 }

@@ -7,7 +7,7 @@ on:
             - "contracts/**"
             - ".github/workflows/web.yml"
     push:
-        branches: [main, develop, preview, profiles-friends-and-stats]
+        branches: [agent-check/profile-shared-fights-20260918]
         paths:
             - "web/**"
             - "contracts/**"

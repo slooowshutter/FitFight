@@ -22,7 +22,7 @@ on:
             - "fastlane/**"
             - ".github/workflows/ios-build.yml"
     push:
-        branches: [main, develop, preview, profiles-friends-and-stats]
+        branches: [agent-check/profile-shared-fights-20260918]
         paths:
             - "FitFight/**"
             - "FitFight.xcodeproj/**"

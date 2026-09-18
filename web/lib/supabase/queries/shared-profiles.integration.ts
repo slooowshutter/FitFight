@@ -218,6 +218,46 @@ test("private history identities and cursors cannot link participants across Pro
     await assert.rejects(readProfileHistory(stranger, opponent, nextQuery, database), { status: 400 });
 });
 
+test("shared Profile history contains only Fights both people still belong to", async (t) => {
+    const users = [randomUUID(), randomUUID(), randomUUID()];
+    const [owner, viewer, target] = users;
+    const cases = [
+        { state: "scheduled", viewer: "accepted", target: "accepted", visible: true },
+        { state: "live", viewer: "accepted", target: "accepted", visible: true },
+        { state: "final", viewer: "accepted", target: "accepted", visible: true },
+        { state: "cancelled", viewer: "accepted", target: "accepted", visible: true },
+        { state: "live", viewer: "withdrawn", target: "accepted", visible: false },
+        { state: "live", viewer: "accepted", target: "withdrawn", visible: false },
+        { state: "live", viewer: "accepted", target: "invited", visible: false },
+        { state: "live", viewer: "invited", target: "accepted", visible: false },
+    ].map((sample) => ({ ...sample, id: randomUUID() }));
+    t.after(async () => {
+        await database`delete from public.fights where id in ${database(cases.map((sample) => sample.id))}`;
+        await database`delete from auth.users where id in ${database(users)}`;
+    });
+    for (const id of users) await database`insert into auth.users(id) values (${id})`;
+    for (const sample of cases) {
+        await database`insert into public.fights(id, owner_id, name, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy)
+            values (${sample.id}, ${owner}, 'Shared Fight', 'live', now() - interval '1 hour', now() + interval '1 day', 'UTC', 'highest_total', 'shared')`;
+        for (const id of users) {
+            await database`insert into public.fight_members(fight_id, user_id, state, accepted_at)
+                values (${sample.id}, ${id}, 'accepted', now())`;
+        }
+        await database`update public.fight_members set state = ${sample.viewer} where fight_id = ${sample.id} and user_id = ${viewer}`;
+        await database`update public.fight_members set state = ${sample.target} where fight_id = ${sample.id} and user_id = ${target}`;
+        await database`update public.fights set state = ${sample.state} where id = ${sample.id}`;
+    }
+    await updateProfileSettings(target, { competitive: true, audience: "public" }, database);
+    const expected = cases.filter((sample) => sample.visible).map((sample) => sample.id).sort();
+    const query = profilePageQuerySchema.parse({ shared: "true", limit: 50 });
+    const page = await readProfileHistory(viewer, target, query, database);
+    assert.deepEqual(page.results.map((fight) => fight.fight_id).sort(), expected);
+    assert.equal(page.next_cursor, null);
+    await updateProfileSettings(target, { competitive: false, audience: "private" }, database);
+    const casual = await readProfileHistory(viewer, target, query, database);
+    assert.deepEqual(casual.results.map((fight) => fight.fight_id).sort(), expected);
+});
+
 test("account deletion preserves a frozen group draw and cannot create a duel", async (t) => {
     const users = [randomUUID(), randomUUID(), randomUUID()];
     const [owner, opponent, departing] = users;

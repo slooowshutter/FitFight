@@ -74,7 +74,7 @@ enum MediaUploader {
         }
     }
 
-    static func prepare(_ image: UIImage, filename: String = "photo.jpg") throws -> PreparedPhoto {
+    static func prepare(_ image: UIImage, filename: String = "photo.jpg", preserveTransparency: Bool = false) throws -> PreparedPhoto {
         let maxDimension: CGFloat = 2048
         let longest = max(image.size.width, image.size.height)
         let scale = longest > 0 ? min(1, maxDimension / longest) : 1
@@ -84,10 +84,11 @@ enum MediaUploader {
         )
         let format = UIGraphicsImageRendererFormat.default()
         format.scale = 1
+        if preserveTransparency { format.opaque = false }
         let rendered = UIGraphicsImageRenderer(size: size, format: format).image { _ in
             image.draw(in: CGRect(origin: .zero, size: size))
         }
-        guard let data = rendered.jpegData(compressionQuality: 0.82) else {
+        guard let data = preserveTransparency ? rendered.pngData() : rendered.jpegData(compressionQuality: 0.82) else {
             throw UploadError.invalidImage
         }
         if data.count > 8_388_608 {
@@ -97,7 +98,7 @@ enum MediaUploader {
         return PreparedPhoto(
             data: data,
             filename: filename,
-            contentType: "image/jpeg",
+            contentType: preserveTransparency ? "image/png" : "image/jpeg",
             byteSize: data.count,
             width: Int(rendered.size.width * rendered.scale),
             height: Int(rendered.size.height * rendered.scale),
@@ -155,10 +156,11 @@ enum MediaUploader {
     static func upload(
         _ image: UIImage,
         purpose: String,
+        preserveTransparency: Bool = false,
         session: SessionStore,
         api: FitFightAPI = FitFightAPI()
     ) async throws -> FitFightMedia {
-        let prepared = try prepare(image)
+        let prepared = try prepare(image, filename: preserveTransparency ? "companion.png" : "photo.jpg", preserveTransparency: preserveTransparency)
         return try await put(
             data: prepared.data,
             purpose: purpose,

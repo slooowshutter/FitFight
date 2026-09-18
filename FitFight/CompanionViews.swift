@@ -176,7 +176,7 @@ private struct CompanionIdentityRecord: Codable {
     var isCustom: Bool?
 }
 
-/// Account-backed companion. Custom descriptions are stored on the profile for later generation.
+/// Account-backed companion selection and reusable custom descriptions.
 @MainActor
 final class CompanionStore: ObservableObject {
     @Published var selection: StockCompanion = .badger
@@ -209,6 +209,7 @@ final class CompanionStore: ObservableObject {
     }
 
     static func deleteLocalLibrary(for userId: UUID) {
+        UserDefaults.standard.removeObject(forKey: "ff.ai.pending." + userId.uuidString)
         UserDefaults.standard.removeObject(forKey: libraryPrefix + userId.uuidString)
         UserDefaults.standard.removeObject(forKey: pendingPrefix + userId.uuidString)
         UserDefaults.standard.removeObject(forKey: pendingPromptPrefix + userId.uuidString)
@@ -507,6 +508,7 @@ struct CompanionIntroduction: View {
     enum Surface { case fights, newFight, you }
     let surface: Surface
     @EnvironmentObject private var companions: CompanionStore
+    @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var steps: HealthKitStepsStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -631,7 +633,7 @@ struct CompanionIntroduction: View {
     @ViewBuilder
     private var youCharacter: some View {
         if companions.isCustom {
-            Color.clear
+            RemotePhoto(url: session.profile?.avatar?.url, contentMode: .fit) { Color.clear }
         } else {
             CompanionCharacter(animal: companions.selection, sport: companions.sport, effort: youEffort)
         }
@@ -802,6 +804,7 @@ struct CompanionPicker: View {
     @State private var error = ""
     @State private var libraryError = ""
     @State private var loadingLibrary = false
+    @State private var showingGeneration = false
     @FocusState private var promptFocused: Bool
 
     private let promptLimit = 1000
@@ -997,6 +1000,15 @@ struct CompanionPicker: View {
                     fullWidth: true,
                     action: { Task { await saveCustom() } }
                 )
+                FFButton(
+                    title: String(localized: "Generate images"),
+                    kind: .secondary,
+                    enabled: !isSaving && !CompanionPreview.isEnabled,
+                    fullWidth: true
+                ) {
+                    promptFocused = false
+                    showingGeneration = true
+                }
             } else if let draft, category.animals.contains(draft) {
                 Text(isSaving ? String(localized: "Saving…") : draft.caption)
                     .ffType(.body)
@@ -1015,6 +1027,9 @@ struct CompanionPicker: View {
             #endif
         }
         .interactiveDismissDisabled(session.needsCompanionSelection)
+        .sheet(isPresented: $showingGeneration) {
+            AICompanionView(initialDescription: customPrompt)
+        }
         .onAppear {
             if customPrompt.isEmpty { customPrompt = companions.customPrompt }
             if companions.isCustom || startWithCustom {

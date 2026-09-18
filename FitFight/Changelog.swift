@@ -25,6 +25,13 @@ enum Changelog {
     /// Newest first. Add a row here whenever we ship a user-facing change.
     static let releases: [ReleaseNote] = [
         ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 18,
+            notes: "Generate companion avatars, five fitness levels, and group photos. See your credits, return to interrupted generations, and keep your images in your account."
+        ),
+        ReleaseNote(
             version: "1.1.2",
             year: 2026,
             month: 9,

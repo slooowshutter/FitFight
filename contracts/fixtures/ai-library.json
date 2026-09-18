@@ -1,0 +1,149 @@
+[
+    {
+        "request_id": "11111111-1111-4111-8111-000000000001",
+        "workflow": "avatar",
+        "description": "A fox with green glasses.",
+        "images": [
+            {
+                "stage": "image_url",
+                "media": {
+                    "id": "22222222-2222-4222-8222-000000000001",
+                    "kind": "photo",
+                    "purpose": "profile",
+                    "status": "ready",
+                    "original_filename": "companion.png",
+                    "content_type": "image/png",
+                    "byte_size": 120000,
+                    "width": 1024,
+                    "height": 1024,
+                    "duration_ms": null,
+                    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "url": "https://example.supabase.co/storage/v1/object/sign/user-media/22222222-2222-4222-8222-000000000001.png?token=fixture",
+                    "created_at": "2026-09-18T12:00:00Z"
+                }
+            }
+        ]
+    },
+    {
+        "request_id": "11111111-1111-4111-8111-000000000002",
+        "workflow": "fitness",
+        "description": "A fox with green glasses.",
+        "images": [
+            {
+                "stage": "resting",
+                "media": {
+                    "id": "22222222-2222-4222-8222-000000000002",
+                    "kind": "photo",
+                    "purpose": "profile",
+                    "status": "ready",
+                    "original_filename": "companion.png",
+                    "content_type": "image/png",
+                    "byte_size": 120000,
+                    "width": 1024,
+                    "height": 1024,
+                    "duration_ms": null,
+                    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "url": "https://example.supabase.co/storage/v1/object/sign/user-media/22222222-2222-4222-8222-000000000002.png?token=fixture",
+                    "created_at": "2026-09-18T12:00:00Z"
+                }
+            },
+            {
+                "stage": "soft",
+                "media": {
+                    "id": "22222222-2222-4222-8222-000000000003",
+                    "kind": "photo",
+                    "purpose": "profile",
+                    "status": "ready",
+                    "original_filename": "companion.png",
+                    "content_type": "image/png",
+                    "byte_size": 120000,
+                    "width": 1024,
+                    "height": 1024,
+                    "duration_ms": null,
+                    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "url": "https://example.supabase.co/storage/v1/object/sign/user-media/22222222-2222-4222-8222-000000000003.png?token=fixture",
+                    "created_at": "2026-09-18T12:00:00Z"
+                }
+            },
+            {
+                "stage": "average",
+                "media": {
+                    "id": "22222222-2222-4222-8222-000000000004",
+                    "kind": "photo",
+                    "purpose": "profile",
+                    "status": "ready",
+                    "original_filename": "companion.png",
+                    "content_type": "image/png",
+                    "byte_size": 120000,
+                    "width": 1024,
+                    "height": 1024,
+                    "duration_ms": null,
+                    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "url": "https://example.supabase.co/storage/v1/object/sign/user-media/22222222-2222-4222-8222-000000000004.png?token=fixture",
+                    "created_at": "2026-09-18T12:00:00Z"
+                }
+            },
+            {
+                "stage": "fit",
+                "media": {
+                    "id": "22222222-2222-4222-8222-000000000005",
+                    "kind": "photo",
+                    "purpose": "profile",
+                    "status": "ready",
+                    "original_filename": "companion.png",
+                    "content_type": "image/png",
+                    "byte_size": 120000,
+                    "width": 1024,
+                    "height": 1024,
+                    "duration_ms": null,
+                    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "url": "https://example.supabase.co/storage/v1/object/sign/user-media/22222222-2222-4222-8222-000000000005.png?token=fixture",
+                    "created_at": "2026-09-18T12:00:00Z"
+                }
+            },
+            {
+                "stage": "strong",
+                "media": {
+                    "id": "22222222-2222-4222-8222-000000000006",
+                    "kind": "photo",
+                    "purpose": "profile",
+                    "status": "ready",
+                    "original_filename": "companion.png",
+                    "content_type": "image/png",
+                    "byte_size": 120000,
+                    "width": 1024,
+                    "height": 1024,
+                    "duration_ms": null,
+                    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "url": "https://example.supabase.co/storage/v1/object/sign/user-media/22222222-2222-4222-8222-000000000006.png?token=fixture",
+                    "created_at": "2026-09-18T12:00:00Z"
+                }
+            }
+        ]
+    },
+    {
+        "request_id": "11111111-1111-4111-8111-000000000003",
+        "workflow": "group_photo",
+        "description": "A fox with green glasses.",
+        "images": [
+            {
+                "stage": "image_url",
+                "media": {
+                    "id": "22222222-2222-4222-8222-000000000007",
+                    "kind": "photo",
+                    "purpose": "profile",
+                    "status": "ready",
+                    "original_filename": "companion.png",
+                    "content_type": "image/png",
+                    "byte_size": 120000,
+                    "width": 1024,
+                    "height": 1024,
+                    "duration_ms": null,
+                    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "url": "https://example.supabase.co/storage/v1/object/sign/user-media/22222222-2222-4222-8222-000000000007.png?token=fixture",
+                    "created_at": "2026-09-18T12:00:00Z"
+                }
+            }
+        ]
+    }
+]

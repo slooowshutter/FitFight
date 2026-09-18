@@ -1102,6 +1102,161 @@ paths:
             }
         }
     }
+
+    /ai/library:
+        get:
+            operationId: readAiLibrary
+            summary: Read the authenticated account's saved generation images.
+            description: Images use refreshed private Storage URLs and outlive provider request retention.
+            security: [{ bearerAuth: [] }]
+            responses:
+                "200":
+                    description: Complete saved image sets, newest first.
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items: { $ref: "#/components/schemas/AiLibraryEntry" }
+                default:
+                    description: Standard API error.
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/ApiError" }
+    /ai/runs/{requestID}/images:
+        post:
+            operationId: saveAiImages
+            summary: Attach owned committed image uploads to a completed owned generation.
+            description: >
+                Avatar and Group Photo require image_url. Fitness requires resting, soft, average,
+                fit and strong. Saves are atomic and idempotent for the same media IDs.
+                First saves require a retained completed request. This operation never generates or charges credits.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - in: path
+                  name: requestID
+                  required: true
+                  schema: { $ref: "#/components/schemas/UUIDv4" }
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            additionalProperties: false
+                            required: [description, images]
+                            properties:
+                                description: { type: string, minLength: 1, maxLength: 1000 }
+                                images:
+                                    type: array
+                                    minItems: 1
+                                    maxItems: 5
+                                    items:
+                                        type: object
+                                        additionalProperties: false
+                                        required: [stage, media_id]
+                                        properties:
+                                            stage: { enum: [image_url, resting, soft, average, fit, strong] }
+                                            media_id: { $ref: "#/components/schemas/UUIDv4" }
+            responses:
+                "200":
+                    description: Images saved, or the same save already completed.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [saved]
+                                properties:
+                                    saved: { const: true }
+                default:
+                    description: Standard API error. Missing owned media returns 404; a different completed save returns 409.
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/ApiError" }
+    /ai/allowance:
+        get:
+            operationId: readAiAllowance
+            summary: Read the authenticated account's available and reserved generation credits.
+            description: Zero credits until an explicit operator grant. The price is server-owned.
+            security: [{ bearerAuth: [] }]
+            responses:
+                "200":
+                    description: Current allowance; reservations are separate from consumed credits.
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/AiAllowance" }
+                "401":
+                    description: Authentication is required.
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/ApiError" }
+    /ai/runs:
+        post:
+            operationId: startAiRun
+            summary: Start or recover an owned avatar, fitness-level, or group-photo request.
+            description: >
+                Server selects the published Blend version. Reuse one UUID Idempotency-Key
+                per action; changing parameters under the same key returns 409.
+                An uncertain start must be checked by request ID, never automatically replayed.
+                The feature is disabled until configured. No health data is submitted.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+                - in: header
+                  name: Idempotency-Key
+                  required: true
+                  schema: { type: string, format: uuid }
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema: { $ref: "#/components/schemas/CreateAiRun" }
+            responses:
+                "202":
+                    description: Accepted or already pending. Poll after poll_after_seconds.
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/AiRun" }
+                "200":
+                    description: Existing terminal request, including an unresolved start.
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/AiRun" }
+                default:
+                    description: >
+                        Standard API error. 409 for conflict or unresolved work; 429 for caller
+                        limits; 503 for disabled service, shared limits or uncertain starts.
+                        Retry-After is present when retry_after_seconds is known.
+                    headers:
+                        Retry-After: { schema: { type: integer, minimum: 1 } }
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/ApiError" }
+    /ai/runs/{requestID}:
+        get:
+            operationId: readAiRun
+            summary: Read an owned AI request, coalescing upstream polls.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+                - in: path
+                  name: requestID
+                  required: true
+                  schema: { $ref: "#/components/schemas/UUIDv4" }
+            responses:
+                "200":
+                    description: Current state. Failed and cancelled runs are typed terminal states.
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/AiRun" }
+                default:
+                    description: Standard API error. Another user's request also returns 404.
+                    headers:
+                        Retry-After: { schema: { type: integer, minimum: 1 } }
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/ApiError" }
     /fights/snapshot:
         post:
             operationId: readFightSnapshot
@@ -2411,6 +2566,151 @@ components:
                 }
             }
         }
+
+        AiLibraryEntry:
+            type: object
+            required: [request_id, workflow, description, images]
+            properties:
+                request_id: { $ref: "#/components/schemas/UUIDv4" }
+                workflow: { enum: [avatar, fitness, group_photo] }
+                description: { type: string }
+                images:
+                    type: array
+                    items:
+                        type: object
+                        required: [stage, media]
+                        properties:
+                            stage: { enum: [image_url, resting, soft, average, fit, strong] }
+                            media:
+                                type: object
+                                required: [id, kind, purpose, status, original_filename, content_type, byte_size, width, height, duration_ms, sha256, url, created_at]
+                                properties:
+                                    id: { $ref: "#/components/schemas/UUIDv4" }
+                                    kind: { const: photo }
+                                    purpose: { const: profile }
+                                    status: { const: ready }
+                                    original_filename: { type: string }
+                                    content_type: { enum: [image/jpeg, image/png, image/webp] }
+                                    byte_size: { type: integer, minimum: 1 }
+                                    width: { type: integer, minimum: 1 }
+                                    height: { type: integer, minimum: 1 }
+                                    duration_ms: { type: "null" }
+                                    sha256: { type: string }
+                                    url: { type: [string, "null"], format: uri }
+                                    created_at: { type: string, format: date-time }
+        AiAllowance:
+            type: object
+            required: [available, reserved, avatar_price]
+            properties:
+                available: { type: integer, minimum: 0 }
+                reserved: { type: integer, minimum: 0 }
+                avatar_price: { type: integer, minimum: 1 }
+                fitness_price: { type: [integer, "null"], minimum: 1, description: Null until an explicit price is configured. }
+                group_photo_price: { type: [integer, "null"], minimum: 1, description: Null until an explicit price is configured. }
+        AiGroupCharacter:
+            type: object
+            additionalProperties: false
+            required: [avatar_request_id, identity_details]
+            properties:
+                avatar_request_id:
+                    $ref: "#/components/schemas/UUIDv4"
+                    description: Completed avatar generation owned by the caller; raw image URLs and Blend file IDs are not accepted.
+                identity_details: { type: string, minLength: 1, maxLength: 1000 }
+        CreateAiRun:
+            oneOf:
+                - type: object
+                  additionalProperties: false
+                  required: [workflow, parameters]
+                  properties:
+                      workflow: { const: avatar }
+                      parameters:
+                          type: object
+                          additionalProperties: false
+                          required: [description]
+                          properties:
+                              description: { type: string, minLength: 1, maxLength: 1000 }
+                - type: object
+                  additionalProperties: false
+                  required: [workflow, parameters]
+                  properties:
+                      workflow: { const: fitness }
+                      parameters: { $ref: "#/components/schemas/AiGroupCharacter" }
+                - type: object
+                  additionalProperties: false
+                  required: [workflow, parameters]
+                  properties:
+                      workflow: { const: group_photo }
+                      parameters:
+                          type: object
+                          additionalProperties: false
+                          required: [characters, scene]
+                          properties:
+                              characters:
+                                  type: array
+                                  minItems: 2
+                                  maxItems: 5
+                                  description: Distinct avatar request IDs, in cast order.
+                                  items: { $ref: "#/components/schemas/AiGroupCharacter" }
+                              scene: { type: string, minLength: 1, maxLength: 1000 }
+        AiRun:
+            oneOf:
+                - type: object
+                  required: [request_id, workflow, status, poll_after_seconds]
+                  properties:
+                      request_id: { $ref: "#/components/schemas/UUIDv4" }
+                      workflow: { enum: [avatar, fitness, group_photo] }
+                      status: { type: string, enum: [pending, running] }
+                      poll_after_seconds: { type: integer, minimum: 1 }
+                - type: object
+                  required: [request_id, workflow, status, data]
+                  properties:
+                      request_id: { $ref: "#/components/schemas/UUIDv4" }
+                      workflow: { enum: [avatar, group_photo] }
+                      status: { const: completed }
+                      data:
+                          type: object
+                          required: [image_url]
+                          properties:
+                              image_url: { type: string, format: uri }
+                - type: object
+                  required: [request_id, workflow, status, data]
+                  properties:
+                      request_id: { $ref: "#/components/schemas/UUIDv4" }
+                      workflow: { const: fitness }
+                      status: { const: completed }
+                      data:
+                          type: object
+                          required: [resting, soft, average, fit, strong]
+                          properties:
+                              resting: { type: string, format: uri }
+                              soft: { type: string, format: uri }
+                              average: { type: string, format: uri }
+                              fit: { type: string, format: uri }
+                              strong: { type: string, format: uri }
+                - type: object
+                  required: [request_id, workflow, status, code, error]
+                  properties:
+                      request_id: { $ref: "#/components/schemas/UUIDv4" }
+                      workflow: { enum: [avatar, fitness, group_photo] }
+                      status: { type: string, enum: [failed, cancelled, start_unconfirmed] }
+                      code: { $ref: "#/components/schemas/AiErrorCode" }
+                      error: { type: string }
+        AiErrorCode:
+            type: string
+            enum:
+                - ai_insufficient_credits
+                - ai_request_expired
+                - ai_rate_limited
+                - ai_daily_limit
+                - ai_in_progress
+                - ai_request_conflict
+                - ai_busy
+                - ai_unavailable
+                - ai_failed
+                - ai_invalid_result
+                - ai_status_unavailable
+                - ai_start_unconfirmed
+                - ai_cancelled
         FightSnapshot:
             type: object
             required: [fights, members, profiles, series, step_days]
@@ -2609,6 +2909,8 @@ components:
             properties:
                 error: { type: string }
                 code: { type: string }
+                request_id: { type: string, format: uuid }
+                retry_after_seconds: { type: integer, minimum: 1, maximum: 86400 }
         UUIDv4:
             type: string
             format: uuid

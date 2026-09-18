@@ -17,6 +17,7 @@ on:
             - "scripts/test_profile_refresh.py"
             - "scripts/test_native_state.py"
             - "scripts/test_companion_state.py"
+            - "scripts/test_ai_companion_state.py"
             - "scripts/test_fight_live_updates.py"
             - "scripts/test_fight_chart_scores.py"
             - "scripts/test_push_state.py"
@@ -28,7 +29,7 @@ on:
             - "fastlane/**"
             - ".github/workflows/ios-build.yml"
     push:
-        branches: [main, develop, preview, profiles-friends-and-stats]
+        branches: [main, develop, preview, profiles-friends-and-stats, blend-backend-client]
         paths:
             - "FitFight/**"
             - "FitFight.xcodeproj/**"
@@ -43,6 +44,7 @@ on:
             - "scripts/test_profile_refresh.py"
             - "scripts/test_native_state.py"
             - "scripts/test_companion_state.py"
+            - "scripts/test_ai_companion_state.py"
             - "scripts/test_fight_live_updates.py"
             - "scripts/test_fight_chart_scores.py"
             - "scripts/test_push_state.py"
@@ -146,8 +148,11 @@ jobs:
 
             - name: Verify native API contracts
               run: |
-                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx13.0" FitFight/Media.swift FitFight/Profile.swift FitFight/FightSnapshot.swift tests/APIContractTests.swift -o /tmp/fitfight-contract-tests
+                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx13.0" FitFight/Media.swift FitFight/Profile.swift FitFight/FightSnapshot.swift FitFight/AIWorkflowRequest.swift tests/APIContractTests.swift -o /tmp/fitfight-contract-tests
                   /tmp/fitfight-contract-tests contracts/fixtures
+
+            - name: Verify generation recovery and account isolation
+              run: python3 scripts/test_ai_companion_state.py
 
             - name: Verify feedback and released-client decoding
               run: python3 scripts/test_feedback_compatibility.py

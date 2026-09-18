@@ -719,6 +719,85 @@ authorized `preview` to `main` promotion. This work has not merged a release bra
 changed the hosted database, or uploaded a TestFlight build. Physical
 device interaction and HealthKit verification remain separate from cloud checks.
 
+## Blend workflow completion: prepared 18 Sep 2026
+
+**Code:** Integrated `origin/develop` at `c86d657` into the existing
+`blend-backend-client` branch, preserving the uncommitted foundation. Implemented
+backend completion steps 1-5 and Marc's follow-up request for all three published
+workflows: Avatar, Five Fitness Levels and Group Photo. Marc then requested the
+remaining app flow. You -> Make it yours -> Generate images now includes all three
+workflows, credit display, account-scoped action recovery, PNG uploads, a durable
+private image library and avatar/fitness-image companion assignment. Group photos
+remain in the account library. Automatic fitness-pose switching and fight-image
+assignment are outside this change. A 1.1.1 release note was added; project version
+settings were preserved.
+
+| Area | Implemented behavior |
+| --- | --- |
+| Allowance | Private available/reserved balances, zero until an explicit operator grant; authenticated `GET /api/v1/ai/allowance` and native decoding |
+| Accounting | Immutable events with before/change/after amounts, per-user sequences, operation keys, request links and actor/reason; atomic reservation and once-only consumption/release |
+| Integrity | SQL arithmetic/uniqueness/nonnegative checks and deferred history-chain checks; compensation creates a new event; account deletion cascades while ordinary request pruning preserves history |
+| Recovery | Existing action recovery with starts disabled or configuration removed; pruned paid action keys cannot be replayed; unknown starts retain holds |
+| Observability | Durable admission/submission/acknowledgement/completion/settlement milestones; provider completion time separate from observation; safe correlated status/timing logs with seven-day/100,000-row bounds |
+| Reconciliation | Authenticated bounded endpoint, four known runs per invocation; daily production Vercel backup and a separately required frequent staging scheduler; documented operator recovery |
+| Workflows | Exact published input mappings and saved version pins; all five Fitness results required; Group Photo accepts two to five distinct owned Avatar generations or saved library entries and preserves cast order |
+| Native and media | Persist paid action keys before submission; resume uploads without regenerating; atomically attach complete owned media sets; saved private images survive request pruning and receive refreshed signed URLs |
+
+Avatar costs one credit on a valid saved result. Fitness and Group Photo have
+explicit deployment prices with no default, so their new starts remain unavailable
+until configured. `BLEND_ENABLED=false` remains the default. No automatic grants,
+refill, credit purchase or expiry was added. Media inputs currently use only the
+caller's Avatar generation IDs, resolved from retained requests or saved library
+images, not arbitrary media IDs/URLs or other users' images. See [workflow contracts and operator procedure](blend-workflows.md).
+
+**Contract and supported clients:** Additive `/api/v1/ai` routes and optional error
+fields; old Avatar fixtures and existing app API fixtures are preserved. New
+workflow names/results are returned only for their new explicit requests. Read-only
+release checks at **14:46 UTC on 18 Sep** returned staging `latest` **1.1.1 (201)**,
+`review`/`internal` **1.1.2 (203)**, enforcement false; production `latest`
+**1.1.1 (202)**, review/internal null, enforcement true. Legacy staging clients
+remain supported. These are manifest observations and source/fixture regressions,
+not tests on those installed binaries.
+
+**Executed workspace checks:** TypeScript and all **391 backend tests** passed.
+They cover all three adapters, old/new fixtures, disabled and unpriced recovery,
+unknown/stale responses, output validation, operator authorization, safe logs and
+reconciliation, plus the existing backend regression suite. Localization, native
+API boundary, OpenAPI YAML parsing, destructive-SQL guard, Xcode project syntax and
+whitespace checks passed. The optimized Next.js build compiled and typechecked,
+then failed homepage prerendering with `Missing DATABASE_URL` after integration of
+develop's public total-steps query. No database credential was invented or hosted
+connection used to bypass that failure. No local Swift/iOS or database runtime ran.
+
+**Cloud and live verification remaining:** Added real database tests for concurrent
+last-credit spending, repeated grants/reservations/settlements, rollback, event
+arithmetic and complete chain reconstruction, compensation, portrait ownership,
+stored prices, abandoned completion, retention and deletion. pgTAP now covers all
+seven private tables and integrity-function privileges. New tests cover atomic
+image-set attachment, private ownership, retention, reusable saved portraits and
+account deletion. Native tests exercise lost responses, persisted keys, admitted
+action recovery, committed-upload resumption and account switching. The existing
+disposable Database and hosted macOS jobs include these checks. Their branch
+filters now include blend-backend-client so a feature push can run them without a
+PR, release-branch push or workflow dispatch. Cloud results will be recorded after
+the feature push. Automatic Vercel deployment is disabled for this feature branch.
+
+Read-only Blend inspection confirmed all three publications validate, their exact
+pinned versions and expected image output envelopes. The inspected Fitness run was
+a draft run. Marc reports successful local-branch image tests, with fresh production
+generations still unverified. No paid generation or enabled FitFight staging request
+was run, and deployment key permissions/limits and hosted migration history were
+not audited. The scheduled endpoint needs hosting support/configuration verification
+in each environment, including staging, before enabling starts.
+
+**Deployment:** Not deployed. Read-only checks on 18 Sep returned HTML 404 for
+`GET /api/v1/ai/allowance` on both staging and production. No hosted migration,
+release-branch merge, PR, TestFlight upload or production change. Rollout order is all three additive private migrations, compatible
+backend with starts disabled and old writers drained, cloud database/native checks,
+configured scheduler/limits/prices and explicit grants, then an authorized staging
+generation before activation. Production requires its own authorized rollout and
+release-manifest check. A staging pass is not production readiness.
+
 ## Website download destinations: prepared 17 Sep 2026
 
 The homepage, fight/referral invite pages, and English/French support pages use

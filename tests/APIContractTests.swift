@@ -7,6 +7,43 @@ struct APIContractTests {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
 
+        let allowance = try decoder.decode(FitFightAIAllowance.self,
+            from: Data(contentsOf: fixtures.appendingPathComponent("ai-allowance.json")))
+        precondition(allowance.available == 2 && allowance.reserved == 1 && allowance.avatarPrice == 1)
+        let pendingAI = try decoder.decode(FitFightAIRequest.self,
+            from: Data(contentsOf: fixtures.appendingPathComponent("ai-run-pending.json")))
+        precondition(pendingAI.status == .pending && pendingAI.pollAfterSeconds == 3)
+        precondition(pendingAI.failure == nil && pendingAI.imageURL == nil)
+        let completedAI = try decoder.decode(FitFightAIRequest.self,
+            from: Data(contentsOf: fixtures.appendingPathComponent("ai-run-completed.json")))
+        precondition(completedAI.status == .completed && completedAI.imageURL?.scheme == "https")
+        precondition(completedAI.pollAfterSeconds == nil && completedAI.failure == nil)
+        let fitnessAI = try decoder.decode(FitFightAIRequest.self,
+            from: Data(contentsOf: fixtures.appendingPathComponent("ai-run-fitness.json")))
+        precondition(fitnessAI.workflow == .fitness && fitnessAI.status == .completed)
+        precondition(fitnessAI.imageURL == nil && fitnessAI.fitnessImages?.strong.lastPathComponent == "strong.png")
+        let groupAI = try decoder.decode(FitFightAIRequest.self,
+            from: Data(contentsOf: fixtures.appendingPathComponent("ai-run-group-photo.json")))
+        precondition(groupAI.workflow == .groupPhoto && groupAI.imageURL?.lastPathComponent == "photo.png")
+        precondition(groupAI.fitnessImages == nil)
+        precondition(allowance.fitnessPrice == nil && allowance.groupPhotoPrice == nil)
+        let aiLibrary = try decoder.decode([FitFightAILibraryEntry].self,
+            from: Data(contentsOf: fixtures.appendingPathComponent("ai-library.json")))
+        precondition(aiLibrary.map(\.workflow) == [.avatar, .fitness, .groupPhoto])
+        precondition(aiLibrary[1].images.map(\.stage) == ["resting", "soft", "average", "fit", "strong"])
+        precondition(aiLibrary[0].images[0].media.contentType == "image/png")
+        let unconfirmedAI = try decoder.decode(FitFightAIRequest.self,
+            from: Data(contentsOf: fixtures.appendingPathComponent("ai-run-unconfirmed.json")))
+        precondition(unconfirmedAI.failure?.code == "ai_start_unconfirmed")
+        precondition(unconfirmedAI.failure?.requestID == unconfirmedAI.requestID)
+        let busyAI = try decoder.decode(FitFightAIError.self,
+            from: Data(contentsOf: fixtures.appendingPathComponent("ai-error.json")))
+        precondition(busyAI.retryAfterSeconds == 30 && busyAI.requestID == pendingAI.requestID)
+        // Older errors remain decodable without the additive recovery fields.
+        let olderAI = try decoder.decode(FitFightAIError.self,
+            from: Data("{\"code\":\"ai_failed\",\"error\":\"Try again later.\"}".utf8))
+        precondition(olderAI.retryAfterSeconds == nil && olderAI.requestID == nil)
+
         let reactionPeopleData = try Data(contentsOf: fixtures.appendingPathComponent("post-reaction-people-response.json"))
         let reactionPeople = try decoder.decode(FitFightFightPostReactionPeople.self, from: reactionPeopleData)
         precondition(reactionPeople.people.count == 2)

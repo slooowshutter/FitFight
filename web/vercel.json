@@ -10,11 +10,16 @@
         {
             "path": "/api/internal/daily-status-notifications",
             "schedule": "0 9 * * *"
+        },
+        {
+            "path": "/api/internal/ai/reconcile",
+            "schedule": "15 3 * * *"
         }
     ],
     "git": {
         "deploymentEnabled": {
-            "profiles-friends-and-stats": false
+            "profiles-friends-and-stats": false,
+            "blend-backend-client": false
         }
     }
 }

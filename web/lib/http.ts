@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { randomUUID } from "node:crypto";
+import { ERROR_CODES, type ErrorCode } from "@/lib/types/http/error";
 import { recordApiFailure } from "@/lib/observability/server-error-log";
+import type { AiErrorContext } from "@/lib/types/ai/error";
 import {
     requestTraceIdSchema,
     type RequestOperation,
@@ -9,61 +11,28 @@ import {
     type RequestTimingPhase,
 } from "@/lib/types/observability/request-timing";
 
-export const ERROR_CODES = {
-    unauthorized: "unauthorized",
-    forbidden: "forbidden",
-    not_found: "not_found",
-    validation: "validation",
-    invalid_json: "invalid_json",
-    conflict: "conflict",
-    invalid_metric: "invalid_metric",
-    fight_not_startable: "fight_not_startable",
-    fight_not_cancellable: "fight_not_cancellable",
-    invite_expired: "invite_expired",
-    invite_revoked: "invite_revoked",
-    invite_wrong_user: "invite_wrong_user",
-    handle_not_found: "handle_not_found",
-    handle_taken: "handle_taken",
-    already_member: "already_member",
-    fight_not_joinable: "fight_not_joinable",
-    fight_full: "fight_full",
-    join_rate_limited: "join_rate_limited",
-    profile_missing: "profile_missing",
-    missing_idempotency_key: "missing_idempotency_key",
-    rate_limited: "rate_limited",
-    payload_too_large: "payload_too_large",
-    archive_too_large: "archive_too_large",
-    archive_not_found: "archive_not_found",
-    archive_size_mismatch: "archive_size_mismatch",
-    archive_checksum_mismatch: "archive_checksum_mismatch",
-    archive_invalid: "archive_invalid",
-    upload_busy: "upload_busy",
-    storage_error: "storage_error",
-    db_error: "db_error",
-    config: "config",
-    update_required: "update_required",
-    release_unavailable: "release_unavailable",
-    internal: "internal",
-} as const;
-
-export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
+export { ERROR_CODES } from "@/lib/types/http/error";
+export type { ErrorCode } from "@/lib/types/http/error";
 
 export class ApiError extends Error {
     readonly status: number;
     readonly code: ErrorCode;
     readonly detail: unknown;
+    readonly clientContext: AiErrorContext;
 
     constructor(
         status: number,
         code: ErrorCode,
         message: string,
         detail?: unknown,
+        clientContext: AiErrorContext = {},
     ) {
         super(message);
         this.name = "ApiError";
         this.status = status;
         this.code = code;
         this.detail = detail;
+        this.clientContext = clientContext;
     }
 }
 
@@ -97,7 +66,7 @@ export function corsHeaders(request: Request): Headers {
     );
     headers.set(
         "Access-Control-Expose-Headers",
-        "Server-Timing, X-FitFight-Trace-ID",
+        "Server-Timing, X-FitFight-Trace-ID, Retry-After",
     );
     headers.set("Access-Control-Max-Age", "86400");
     headers.set("Vary", "Origin");
@@ -172,7 +141,23 @@ export async function readJson(
 
 export function errorResponse(error: unknown): NextResponse {
     if (error instanceof ApiError) {
-        return jsonError(error.message, error.code, error.status);
+        const context = error.clientContext;
+        const response = NextResponse.json(
+            {
+                error: error.message,
+                code: error.code,
+                request_id: context.request_id,
+                retry_after_seconds: context.retry_after_seconds,
+            },
+            { status: error.status },
+        );
+        if (context.retry_after_seconds !== undefined) {
+            response.headers.set(
+                "Retry-After",
+                String(context.retry_after_seconds),
+            );
+        }
+        return response;
     }
     if (error instanceof ZodError) {
         const first = error.issues[0];

@@ -320,13 +320,18 @@ final class SessionStore: ObservableObject {
         }
     }
 
-    func setAvatar(_ media: FitFightMedia) async throws {
+    func setAvatar(_ media: FitFightMedia, companionPrompt: String? = nil) async throws {
         guard !screenshotSignedIn else { throw CompanionPreview.WriteUnavailable() }
         guard let userId = authSession?.user.id ?? client.auth.currentUser?.id else {
             throw HandleError.notSignedIn
         }
         let token = try await freshAccessToken()
-        let updated = try await api.updateProfile(avatarMediaId: media.id, accessToken: token)
+        let updated = try await api.updateProfile(
+            avatarMediaId: media.id,
+            companionId: companionPrompt == nil ? nil : "custom",
+            companionPrompt: companionPrompt,
+            accessToken: token
+        )
         try Task.checkCancellation()
         guard authSession?.user.id == userId else { throw CancellationError() }
         profile = updated

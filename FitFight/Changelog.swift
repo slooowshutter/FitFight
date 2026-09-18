@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.1.1",
             year: 2026,
             month: 9,
+            day: 18,
+            notes: "Profiles now show the Fights you both still belong to. Leaving a Fight removes it from Fights together."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
             day: 17,
             notes: "Suggested Fight invitations stay joinable, and rematches keep their original number of days across clock changes. Private Fight history protects participant identities."
         ),

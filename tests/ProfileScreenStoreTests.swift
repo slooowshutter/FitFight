@@ -66,6 +66,14 @@ struct TestSession { let user: TestUser }
         await more.value
         precondition(store.profile == nil && store.history.isEmpty && store.error != nil)
 
+        let own = Task { await store.load(userID: session.authSession!.user.id, session: session) }
+        await until { FitFightAPI.profiles.count == 1 }
+        FitFightAPI.profiles.removeFirst().resume(returning: shared)
+        await until { FitFightAPI.histories.count == 1 }
+        precondition(FitFightAPI.sharedHistoryRequests.last == false, "Your own Profile keeps your full result history")
+        FitFightAPI.histories.removeFirst().resume(returning: history)
+        await own.value
+
         let accountSwitch = Task { await store.load(userID: shared.identity.userId, session: session, preview: "friend") }
         await until { FitFightAPI.profiles.count == 1 }
         session.authSession = TestSession(user: TestUser(id: UUID()))

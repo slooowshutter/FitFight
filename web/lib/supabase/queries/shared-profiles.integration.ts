@@ -256,6 +256,62 @@ test("shared Profile history contains only Fights both people still belong to", 
     await updateProfileSettings(target, { competitive: false, audience: "private" }, database);
     const casual = await readProfileHistory(viewer, target, query, database);
     assert.deepEqual(casual.results.map((fight) => fight.fight_id).sort(), expected);
+    const first = await readProfileHistory(viewer, target, profilePageQuerySchema.parse({ shared: "true", limit: 2 }), database);
+    assert.ok(first.next_cursor);
+    const second = await readProfileHistory(viewer, target, profilePageQuerySchema.parse({ shared: "true", limit: 2, cursor: first.next_cursor }), database);
+    assert.deepEqual([...first.results, ...second.results].map((fight) => fight.fight_id).sort(), expected);
+    assert.equal(second.next_cursor, null);
+});
+
+test("leaving a series hides its past rounds and rematch details from both Profiles", async (t) => {
+    const users = [randomUUID(), randomUUID()];
+    const [owner, opponent] = users;
+    const seriesId = randomUUID();
+    const fightIds = [randomUUID(), randomUUID()];
+    const [previousId, currentId] = fightIds;
+    t.after(async () => {
+        await database`delete from public.fights where id in ${database(fightIds)}`;
+        await database`delete from public.fight_series where id = ${seriesId}`;
+        await database`delete from auth.users where id in ${database(users)}`;
+    });
+    for (const id of users) {
+        await database`insert into auth.users(id) values (${id})`;
+        await updateProfileSettings(id, { competitive: true, audience: "public" }, database);
+    }
+    await database`insert into public.fight_series(id, owner_id, visibility, recurring, duration_seconds, name, time_zone, join_code)
+        values (${seriesId}, ${owner}, 'invite_only', true, 86400, 'Weekly Fight', 'UTC', ${randomJoinCode()})`;
+    for (const id of users) {
+        await database`insert into public.fight_series_members(series_id, user_id, state) values (${seriesId}, ${id}, 'accepted')`;
+    }
+    for (const [index, id] of fightIds.entries()) {
+        await database`insert into public.fights(id, owner_id, name, action_text, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy, series_id)
+            values (${id}, ${owner}, 'Weekly Fight', 'Make coffee', 'live', now() - interval '2 days' + ${index} * interval '1 day',
+                now() - interval '1 day' + ${index} * interval '1 day', 'UTC', 'highest_total', 'shared', ${seriesId})`;
+        for (const userId of users) {
+            await database`insert into public.fight_members(fight_id, user_id, state, accepted_at)
+                values (${id}, ${userId}, 'accepted', now() - interval '2 days')`;
+        }
+        // Historical entrants predate the capture trigger's current clock.
+        await database`update private.fight_participation_records member set entered_at = fight.starts_at
+            from public.fights fight where member.fight_id = fight.id and fight.id = ${id}`;
+    }
+    await database`update public.fight_members set rank = case when user_id = ${owner} then 1 else 2 end,
+        current_value = case when user_id = ${owner} then 1000 else 500 end, final_steps_complete = true where fight_id = ${previousId}`;
+    await database`update public.fights set state = 'final' where id = ${previousId}`;
+    await database`update public.fight_series set current_fight_id = ${currentId} where id = ${seriesId}`;
+    const query = profilePageQuerySchema.parse({ shared: "true" });
+    const before = await readSharedProfile(opponent, owner, undefined, database);
+    assert.equal(before.rivalry?.rematch?.action_text, "Make coffee");
+    assert.equal((await readProfileHistory(opponent, owner, query, database)).results.length, 2);
+    await departFightMemberships(opponent, currentId, opponent, database);
+    const [historical] = await database`select state::text from public.fight_members where fight_id = ${previousId} and user_id = ${opponent}`;
+    assert.equal(historical.state, "accepted");
+    for (const [viewer, target] of [[owner, opponent], [opponent, owner]]) {
+        assert.deepEqual((await readProfileHistory(viewer, target, query, database)).results, []);
+        const profile = await readSharedProfile(viewer, target, undefined, database);
+        assert.equal(profile.record?.played, 1);
+        assert.equal(profile.rivalry?.rematch, null);
+    }
 });
 
 test("account deletion preserves a frozen group draw and cannot create a duel", async (t) => {

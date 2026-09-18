@@ -769,10 +769,11 @@ then failed homepage prerendering with `Missing DATABASE_URL` after integration 
 develop's public total-steps query. No database credential was invented or hosted
 connection used to bypass that failure. No local Swift/iOS or database runtime ran.
 
-**Cloud verification:** Commit `f5a24cb` passed all three GitHub-hosted workflows:
+**Cloud verification:** Commit `70915e5` passed the backend and database workflows.
+Native code is unchanged from the passing `f5a24cb` simulator run:
 
-- [Web API](https://github.com/slooowshutter/FitFight/actions/runs/35367180624): TypeScript, all 391 backend tests and contract parsing.
-- [Database](https://github.com/slooowshutter/FitFight/actions/runs/35367180623): migrations, schema lint, pgTAP including 43 AI privilege checks, transaction tests before and after the deferred client-permission cutoff, legacy build 113 compatibility and deletion/backfill migrations.
+- [Web API](https://github.com/slooowshutter/FitFight/actions/runs/35367925840): TypeScript, all 391 backend tests and contract parsing.
+- [Database](https://github.com/slooowshutter/FitFight/actions/runs/35367925857): migrations, schema lint, pgTAP including 43 AI privilege checks, transaction tests before and after the deferred client-permission cutoff, legacy build 113 compatibility and deletion/backfill migrations.
 - [iOS simulator](https://github.com/slooowshutter/FitFight/actions/runs/35367180648): full app compilation, native/API fixtures, design/localization checks, and generation recovery, upload resumption, cancellation and account-isolation tests.
 
 Real database coverage includes concurrent last-credit spending, repeated
@@ -786,9 +787,9 @@ commit, and concurrent test operations drain before fixture cleanup.
 
 The feature branch is enabled for these cloud checks and has automatic Vercel
 deployment disabled. The final review keeps row validation at its database boundary
-and removes repeated validation of an already typed library response. Its feature
-push reruns the applicable Web API and Database workflows. No PR, release-branch
-push or workflow dispatch is involved.
+and removes repeated validation of an already typed library response. Those changes
+passed the Web API and Database runs above. Only documentation changed afterward.
+No PR, release-branch push or workflow dispatch is involved.
 
 Read-only Blend inspection confirmed all three publications validate, their exact
 pinned versions and expected image output envelopes. The inspected Fitness run was

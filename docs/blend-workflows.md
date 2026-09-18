@@ -273,10 +273,11 @@ support conversations. Do not put tokens in shell history or documentation.
 
 ## Configuration and rollout
 
-Apply both private migrations through the authorized pipeline:
+Apply the three private migrations through the authorized pipeline:
 
 1. `20260917003356_blend_workflow_requests.sql`
 2. `20260918142724_blend_credit_history.sql`
+3. `20260918154236_ai_companion_library.sql`
 
 Then deploy compatible backend code with starts disabled, configure and verify the
 scheduler, perform the required cloud checks, authorize explicit grants and verify

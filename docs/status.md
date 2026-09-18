@@ -753,7 +753,7 @@ images, not arbitrary media IDs/URLs or other users' images. See [workflow contr
 **Contract and supported clients:** Additive `/api/v1/ai` routes and optional error
 fields; old Avatar fixtures and existing app API fixtures are preserved. New
 workflow names/results are returned only for their new explicit requests. Read-only
-release checks at **14:46 UTC on 18 Sep** returned staging `latest` **1.1.1 (201)**,
+release checks repeated at **16:19 UTC on 18 Sep** returned staging `latest` **1.1.1 (201)**,
 `review`/`internal` **1.1.2 (203)**, enforcement false; production `latest`
 **1.1.1 (202)**, review/internal null, enforcement true. Legacy staging clients
 remain supported. These are manifest observations and source/fixture regressions,
@@ -769,18 +769,26 @@ then failed homepage prerendering with `Missing DATABASE_URL` after integration 
 develop's public total-steps query. No database credential was invented or hosted
 connection used to bypass that failure. No local Swift/iOS or database runtime ran.
 
-**Cloud and live verification remaining:** Added real database tests for concurrent
-last-credit spending, repeated grants/reservations/settlements, rollback, event
-arithmetic and complete chain reconstruction, compensation, portrait ownership,
-stored prices, abandoned completion, retention and deletion. pgTAP now covers all
-seven private tables and integrity-function privileges. New tests cover atomic
-image-set attachment, private ownership, retention, reusable saved portraits and
-account deletion. Native tests exercise lost responses, persisted keys, admitted
-action recovery, committed-upload resumption and account switching. The existing
-disposable Database and hosted macOS jobs include these checks. Their branch
-filters now include blend-backend-client so a feature push can run them without a
-PR, release-branch push or workflow dispatch. Cloud results will be recorded after
-the feature push. Automatic Vercel deployment is disabled for this feature branch.
+**Cloud verification:** Commit `f5a24cb` passed all three GitHub-hosted workflows:
+
+- [Web API](https://github.com/slooowshutter/FitFight/actions/runs/35367180624): TypeScript, all 391 backend tests and contract parsing.
+- [Database](https://github.com/slooowshutter/FitFight/actions/runs/35367180623): migrations, schema lint, pgTAP including 43 AI privilege checks, transaction tests before and after the deferred client-permission cutoff, legacy build 113 compatibility and deletion/backfill migrations.
+- [iOS simulator](https://github.com/slooowshutter/FitFight/actions/runs/35367180648): full app compilation, native/API fixtures, design/localization checks, and generation recovery, upload resumption, cancellation and account-isolation tests.
+
+Real database coverage includes concurrent last-credit spending, repeated
+reservations and settlements, complete event-chain reconstruction, compensation,
+rollback, source ownership, abandoned completion, retention and deletion. Library
+checks prove complete atomic image sets, refreshed private media reads, and reusable
+saved avatars after request pruning. The first cloud run exposed JSON parameter
+serialization errors; native JSON binding fixed those, and the unchanged accounting
+assertions passed on the rerun. Deferred-constraint tests now wait for transaction
+commit, and concurrent test operations drain before fixture cleanup.
+
+The feature branch is enabled for these cloud checks and has automatic Vercel
+deployment disabled. The final review keeps row validation at its database boundary
+and removes repeated validation of an already typed library response. Its feature
+push reruns the applicable Web API and Database workflows. No PR, release-branch
+push or workflow dispatch is involved.
 
 Read-only Blend inspection confirmed all three publications validate, their exact
 pinned versions and expected image output envelopes. The inspected Fitness run was
@@ -790,8 +798,10 @@ was run, and deployment key permissions/limits and hosted migration history were
 not audited. The scheduled endpoint needs hosting support/configuration verification
 in each environment, including staging, before enabling starts.
 
-**Deployment:** Not deployed. Read-only checks on 18 Sep returned HTML 404 for
-`GET /api/v1/ai/allowance` on both staging and production. No hosted migration,
+**Deployment:** Not deployed. Read-only checks at **16:19 UTC on 18 Sep** returned
+404 for both `GET /api/v1/ai/allowance` and `GET /api/v1/ai/library` on staging and
+production. Staging prices, grants, key/limits and frequent scheduling still need
+configuration or verification; no prices or grant amounts were selected. No hosted migration,
 release-branch merge, PR, TestFlight upload or production change. Rollout order is all three additive private migrations, compatible
 backend with starts disabled and old writers drained, cloud database/native checks,
 configured scheduler/limits/prices and explicit grants, then an authorized staging

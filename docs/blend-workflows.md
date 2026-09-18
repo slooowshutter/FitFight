@@ -2,8 +2,9 @@
 
 Backend and native generation prepared 18 Sep 2026. Disabled by default, not
 deployed. Marc's follow-up also authorizes the generation screen, phone recovery,
-image saving and companion assignment. Cloud database/native checks and a live
-staging generation must pass before this is described as usable on staging.
+image saving and companion assignment. Cloud database and native checks have passed; the exact run links are in
+status.md. Deployment, configuration and a real staging generation are still
+required before this is described as usable on staging.
 Existing OpenRouter recap behavior is unchanged.
 
 Blend owns execution, models, prompts, monetary costs and detailed workflow traces.

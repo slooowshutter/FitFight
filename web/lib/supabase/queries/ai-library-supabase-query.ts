@@ -7,7 +7,6 @@ import {
     signMediaUrls,
 } from "@/lib/supabase/queries/media-supabase-query";
 import {
-    aiLibraryEntrySchema,
     aiLibraryRowSchema,
     type AiLibraryEntry,
     type SaveAiImages,
@@ -39,7 +38,7 @@ export async function readAiLibrary(
     for (const row of rows) {
         const image = media.find((item) => item.id === row.media_id);
         if (!image) continue;
-        const entry = aiLibraryEntrySchema.parse({
+        const entry: AiLibraryEntry = {
             request_id: row.request_id,
             workflow: row.workflow,
             description: row.description,
@@ -49,7 +48,7 @@ export async function readAiLibrary(
                     media: mapMedia(image, urls.get(image.object_path) ?? null),
                 },
             ],
-        });
+        };
         const existing = entries.get(entry.request_id);
         if (existing) existing.images.push(...entry.images);
         else entries.set(entry.request_id, entry);
@@ -69,9 +68,10 @@ export async function saveAiImages(
 ): Promise<void> {
     await database.begin(async (sql) => {
         await sql`select pg_advisory_xact_lock(hashtext(${`ai-library:${requestId}`}))`;
-        const existing =
-            await sql`select stage, media_id from private.ai_library_images
-            where user_id = ${userId} and request_id = ${requestId}`;
+        const existing = aiLibraryRowSchema.array().parse(
+            await sql`select request_id, workflow, description, stage, media_id from private.ai_library_images
+            where user_id = ${userId} and request_id = ${requestId}`,
+        );
         if (existing.length) {
             if (
                 existing.length !== input.images.length ||

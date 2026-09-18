@@ -8,7 +8,7 @@ import { readAiLibrary, saveAiImages } from "./ai-library-supabase-query";
 import { adjustAiCredits } from "./ai-credits-supabase-query";
 import { reserveAiRequest } from "./ai-requests-supabase-query";
 import type { AiWorkflow } from "@/lib/types/ai/workflow";
-import type { SaveAiImages } from "@/lib/types/ai/library";
+import { aiImageStageValues, type SaveAiImages } from "@/lib/types/ai/library";
 
 const databaseURL = process.env.DATABASE_URL;
 if (
@@ -57,12 +57,23 @@ test("generated account images retain ownership, complete sets, and reusable por
 
     async function completed(workflow: AiWorkflow) {
         const id = randomUUID();
+        const result =
+            workflow === "fitness"
+                ? Object.fromEntries(
+                      aiImageStageValues
+                          .filter((stage) => stage !== "image_url")
+                          .map((stage) => [
+                              stage,
+                              `https://supabase.tryblend.ai/${stage}.png`,
+                          ]),
+                  )
+                : { image_url: "https://supabase.tryblend.ai/avatar.png" };
         await database`insert into private.ai_requests (id, user_id, workflow, idempotency_key, request_hash,
             workflow_version, run_handle, status, result)
             values (${id}, ${owner}, ${workflow}, ${randomUUID()}, ${"a".repeat(64)},
                 ${database.json({ workflowId: "fixture", versionId: "fixture" })},
                 ${database.json({ workflowId: "fixture", versionId: "fixture", runId: randomUUID() })},
-                'completed', ${database.json({ image_url: "https://supabase.tryblend.ai/avatar.png" })})`;
+                'completed', ${database.json(result)})`;
         return id;
     }
     async function image(

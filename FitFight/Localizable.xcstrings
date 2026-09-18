@@ -12557,6 +12557,116 @@
                 }
             }
         },
+        "Joining a suggested Fight now syncs your steps. Profile history opens the selected round, and Feedback comment counts open the discussion.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Joining a suggested Fight now syncs your steps. Profile history opens the selected round, and Feedback comment counts open the discussion."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Rejoindre un Fight suggéré synchronise désormais vos pas. L'historique du profil ouvre la manche choisie, et le nombre de commentaires dans Feedback ouvre la discussion."
+                    }
+                }
+            }
+        },
+        "Profiles now show the Fights you both still belong to. Leaving a Fight removes it from Fights together.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Profiles now show the Fights you both still belong to. Leaving a Fight removes it from Fights together."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les profils affichent les Fights auxquels vous participez encore tous les deux. Quitter un Fight le retire des Fights en commun."
+                    }
+                }
+            }
+        },
+        "Suggested Fight invitations stay joinable, and rematches keep their original number of days across clock changes. Private Fight history protects participant identities.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Suggested Fight invitations stay joinable, and rematches keep their original number of days across clock changes. Private Fight history protects participant identities."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les invitations aux Fights suggérés restent accessibles et les revanches conservent leur durée en jours malgré les changements d'heure. L'historique des Fights privés protège l'identité des participants."
+                    }
+                }
+            }
+        },
+        "Fights together": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Fights together"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Fights en commun"
+                    }
+                }
+            }
+        },
+        "No Fights together yet": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "No Fights together yet"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Aucun Fight en commun pour le moment"
+                    }
+                }
+            }
+        },
+        "This installation": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cette installation"
+                    }
+                }
+            }
+        },
+        "Follow iPhone": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Suivre l’iPhone"
+                    }
+                }
+            }
+        },
+        "Appearance": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Apparence"
+                    }
+                }
+            }
+        },
         "Fight status labels follow your language immediately, even when a refresh fails. Fight names and user-written stakes stay exactly as entered.": {
             "localizations": {
                 "fr": {
@@ -12567,22 +12677,22 @@
                 }
             }
         },
-        "Account environment": {
+        "Development build": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Environnement du compte"
+                        "value": "Version de développement"
                     }
                 }
             }
         },
-        "App Store account": {
+        "Version": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Compte App Store"
+                        "value": "Version"
                     }
                 }
             }
@@ -12599,6 +12709,116 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "%@ · build %@"
+                    }
+                }
+            }
+        },
+        "Dark": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Sombre"
+                    }
+                }
+            }
+        },
+        "The beta uses a separate database. Accounts, fights, progress, and preferences do not sync automatically with the App Store version, even when you use the same Apple ID.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "La bêta utilise une base de données séparée. Les comptes, fights, progrès et préférences ne sont pas synchronisés automatiquement avec la version App Store, même avec le même identifiant Apple."
+                    }
+                }
+            }
+        },
+        "Installed from": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Installée depuis"
+                    }
+                }
+            }
+        },
+        "Language and appearance are saved to your account and follow you on your devices.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "La langue et l’apparence sont enregistrées sur ton compte et te suivent sur tes appareils."
+                    }
+                }
+            }
+        },
+        "Language changes keep your iPhone’s regional formats and preserve unfinished fights and posts.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les changements de langue conservent les formats régionaux de ton iPhone et tes brouillons de fights et de publications."
+                    }
+                }
+            }
+        },
+        "Language": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Langue"
+                    }
+                }
+            }
+        },
+        "Couldn’t save your preferences. Your previous settings are unchanged.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Impossible d’enregistrer tes préférences. Tes réglages précédents sont conservés."
+                    }
+                }
+            }
+        },
+        "App Store account": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Compte App Store"
+                    }
+                }
+            }
+        },
+        "Beta testing": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Test de la bêta"
+                    }
+                }
+            }
+        },
+        "Loading…": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Chargement…"
+                    }
+                }
+            }
+        },
+        "Light": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Clair"
                     }
                 }
             }
@@ -12623,72 +12843,12 @@
                 }
             }
         },
-        "Beta testing": {
+        "Beta account": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Test de la bêta"
-                    }
-                }
-            }
-        },
-        "Version": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Version"
-                    }
-                }
-            }
-        },
-        "Dark": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Sombre"
-                    }
-                }
-            }
-        },
-        "Language and appearance are saved to your account and follow you on your devices.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "La langue et l’apparence sont enregistrées sur ton compte et te suivent sur tes appareils."
-                    }
-                }
-            }
-        },
-        "Light": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Clair"
-                    }
-                }
-            }
-        },
-        "Loading…": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Chargement…"
-                    }
-                }
-            }
-        },
-        "Choose your language and appearance in You → Preferences. Your choices are saved to your account. Find notification settings, beta access, and your installed app details in the same place.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Choisis ta langue et ton apparence dans Toi → Préférences. Tes choix sont enregistrés sur ton compte. Retrouve au même endroit les notifications, l’accès à la bêta et les détails de ton application."
+                        "value": "Compte bêta"
                     }
                 }
             }
@@ -12703,102 +12863,22 @@
                 }
             }
         },
-        "Couldn’t save your preferences. Your previous settings are unchanged.": {
+        "Choose your language and appearance in You → Preferences. Your choices are saved to your account. Find notification settings, beta access, and your installed app details in the same place.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Impossible d’enregistrer tes préférences. Tes réglages précédents sont conservés."
+                        "value": "Choisis ta langue et ton apparence dans Toi → Préférences. Tes choix sont enregistrés sur ton compte. Retrouve au même endroit les notifications, l’accès à la bêta et les détails de ton application."
                     }
                 }
             }
         },
-        "Language changes keep your iPhone’s regional formats and preserve unfinished fights and posts.": {
+        "Account environment": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Les changements de langue conservent les formats régionaux de ton iPhone et tes brouillons de fights et de publications."
-                    }
-                }
-            }
-        },
-        "Appearance": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Apparence"
-                    }
-                }
-            }
-        },
-        "Language": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Langue"
-                    }
-                }
-            }
-        },
-        "This installation": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Cette installation"
-                    }
-                }
-            }
-        },
-        "The beta uses a separate database. Accounts, fights, progress, and preferences do not sync automatically with the App Store version, even when you use the same Apple ID.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "La bêta utilise une base de données séparée. Les comptes, fights, progrès et préférences ne sont pas synchronisés automatiquement avec la version App Store, même avec le même identifiant Apple."
-                    }
-                }
-            }
-        },
-        "Follow iPhone": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Suivre l’iPhone"
-                    }
-                }
-            }
-        },
-        "Installed from": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Installée depuis"
-                    }
-                }
-            }
-        },
-        "Development build": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Version de développement"
-                    }
-                }
-            }
-        },
-        "Beta account": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Compte bêta"
+                        "value": "Environnement du compte"
                     }
                 }
             }

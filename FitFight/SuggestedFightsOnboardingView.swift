@@ -3,6 +3,7 @@ import SwiftUI
 struct SuggestedFightsOnboardingView: View {
     var onFinished: (() -> Void)? = nil
     @EnvironmentObject private var session: SessionStore
+    @EnvironmentObject private var model: AppModel
     @Environment(\.ffTheme) private var theme
     @State private var fights: [FitFightJoinableFight] = []
     @State private var loading = true
@@ -25,7 +26,9 @@ struct SuggestedFightsOnboardingView: View {
                         .disabled(joining != nil)
                 }
                 FFButton(title: String(appLocalized: "Continue"), fullWidth: true) { finish() }
+                    .disabled(joining != nil)
                 FFButton(title: String(appLocalized: "Skip"), kind: .ghost, fullWidth: true) { finish() }
+                    .disabled(joining != nil)
             }.padding(theme.space.screenPadding)
         }.foregroundStyle(theme.text).background(theme.bg.ignoresSafeArea())
         .task { await load() }
@@ -53,13 +56,16 @@ struct SuggestedFightsOnboardingView: View {
     }
 
     private func join(_ fight: FitFightJoinableFight) async {
-        guard joining == nil, !fight.alreadyMember else { return }
+        guard joining == nil, !fight.hasJoined else { return }
         let accountID = session.authSession?.user.id
         joining = fight.id
         defer { joining = nil }
         do {
             let token = try await session.freshAccessToken()
             _ = try await FitFightAPI().joinFight(fightID: fight.fightId, accessToken: token)
+            try Task.checkCancellation()
+            guard accountID == session.authSession?.user.id else { return }
+            await model.syncStepsAfterMembershipChange(session: session)
             try Task.checkCancellation()
             guard accountID == session.authSession?.user.id else { return }
             await load()
@@ -97,9 +103,9 @@ struct SuggestedFightOffer: View {
                 Text(String(appLocalized: "Participants see your identity, Fight Steps, standings, and posts you share in this Fight. Joining does not enable profile or daily-history sharing."))
                     .ffType(.caption).foregroundStyle(theme.textSecondary)
                 FFButton(
-                    title: fight.alreadyMember ? String(appLocalized: "Joined") : String(appLocalized: "Join"),
-                    kind: fight.alreadyMember ? .secondary : .primary,
-                    enabled: !fight.alreadyMember, busy: joining, fullWidth: true, action: onJoin
+                    title: fight.hasJoined ? String(appLocalized: "Joined") : String(appLocalized: "Join"),
+                    kind: fight.hasJoined ? .secondary : .primary,
+                    enabled: !fight.hasJoined, busy: joining, fullWidth: true, action: onJoin
                 )
             }
         }

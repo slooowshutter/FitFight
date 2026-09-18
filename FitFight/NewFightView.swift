@@ -56,7 +56,9 @@ struct NewFightView: View {
         visibilityJoinable = false
         inviteHandles = [draft.handle]
         actionText = draft.actionText ?? ""
-        if let seconds = draft.durationSeconds {
+        if let days = draft.durationDays, [3, 7, 14, 30].contains(days) {
+            durationDays = days
+        } else if let seconds = draft.durationSeconds {
             if let days = [3, 7, 14, 30].first(where: {
                 FightComposer.endDate(from: now, days: $0, timeZone: fightTimeZone).timeIntervalSince(now) == TimeInterval(seconds)
             }) {

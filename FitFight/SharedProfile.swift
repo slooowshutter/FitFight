@@ -54,8 +54,11 @@ struct ProfileRivalry: Decodable, Equatable {
 
 struct ProfileRematch: Decodable, Equatable {
     let durationSeconds: Int
+    let durationDays: Int?
     let actionText: String?
-    enum CodingKeys: String, CodingKey { case durationSeconds = "duration_seconds", actionText = "action_text" }
+    enum CodingKeys: String, CodingKey {
+        case durationSeconds = "duration_seconds", durationDays = "duration_days", actionText = "action_text"
+    }
 }
 
 struct ProfileActivity: Decodable, Equatable {
@@ -181,6 +184,7 @@ struct ProfileChallengeDraft: Equatable {
     let handle: String
     let durationSeconds: Int?
     let actionText: String?
+    var durationDays: Int? = nil
 }
 
 struct FightAdministrationCapabilities: Decodable {

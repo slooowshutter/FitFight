@@ -71,7 +71,9 @@ export async function loadProfileAccess(sql: TransactionSql, viewerId: string, t
 /** Captured member facts remain readable after leaving a recurring series. */
 export async function loadProfileFightFacts(sql: TransactionSql, userId: string): Promise<FightRecordFact[]> {
     return fightRecordFactSchema.array().parse(await sql`
-        select mine.history_id, fight.id, fight.state::text, fight.starts_at::text, fight.ends_at::text,
+        select fight.id, mine.history_id, fight.state::text, fight.starts_at::text, fight.ends_at::text,
+            extract(epoch from ((fight.ends_at at time zone fight.time_zone)
+                - (fight.starts_at at time zone fight.time_zone)))::float8 / 86400 as calendar_days,
             context.category, context.result_summary summary, fight.name, fight.action_text, fight.outcome_rule::text,
             (select jsonb_agg(jsonb_build_object(
                 'user_id', member.user_id, 'entered_at', member.entered_at,
@@ -87,6 +89,24 @@ export async function loadProfileFightFacts(sql: TransactionSql, userId: string)
     `);
 }
 
+async function loadSharedFightIds(sql: TransactionSql, viewerId: string, targetId: string): Promise<Set<string>> {
+    const rows = profileIdentifierRowSchema.array().parse(await sql`
+        select mine.fight_id as id from public.fight_members mine
+        join public.fight_members theirs on theirs.fight_id = mine.fight_id
+        join public.fights fight on fight.id = mine.fight_id
+        where mine.user_id = ${viewerId} and theirs.user_id = ${targetId}
+            and mine.state in ('accepted', 'deferred') and theirs.state in ('accepted', 'deferred')
+            and (fight.series_id is null or exists (
+                select 1 from public.fight_series_members my_series
+                join public.fight_series_members their_series on their_series.series_id = my_series.series_id
+                where my_series.series_id = fight.series_id
+                    and my_series.user_id = ${viewerId} and their_series.user_id = ${targetId}
+                    and my_series.state in ('accepted', 'deferred') and their_series.state in ('accepted', 'deferred')
+            ))
+    `);
+    return new Set(rows.map((row) => row.id));
+}
+
 export async function readSharedProfile(
     viewerId: string, targetId: string, preview?: ProfilePreviewAudience,
     database: Sql = createDatabaseClient(),
@@ -99,6 +119,9 @@ export async function readSharedProfile(
         } : row.relationship;
         const access = profileAccess(row.settings, relationship);
         const facts = access.record ? await loadProfileFightFacts(sql, targetId) : [];
+        const rivalry = access.record && !relationship.owner && !preview
+            ? rivalryRecord(facts, viewerId, targetId, await loadSharedFightIds(sql, viewerId, targetId))
+            : null;
         const [contextRow] = await sql`
             select (now() at time zone ${row.time_zone})::date::text today, ${row.time_zone}::text time_zone
         `;
@@ -132,7 +155,7 @@ export async function readSharedProfile(
             competitive: row.settings.competitive,
             friendship: preview ? "none" : row.friendship,
             record: access.record ? profileRecord(facts, targetId) : null,
-            rivalry: access.record && !relationship.owner && !preview ? rivalryRecord(facts, viewerId, targetId) : null,
+            rivalry,
             activity: access.activity ? { metric: "steps", days: row.settings.activity_days, values } : null,
             step_statistics: statistics,
             artwork: null,
@@ -151,8 +174,8 @@ export async function readProfileHistory(
         const access = profileAccess(row.settings, row.relationship);
         if (!access.record && query.shared !== "true") throw new ApiError(403, "forbidden", "This record is private");
         const facts = await loadProfileFightFacts(sql, targetId);
-        const eligible = facts.filter((fight) => query.shared !== "true" || fight.members.some((member) => member.user_id === viewerId
-            && member.entered_at !== null));
+        const sharedIds = query.shared === "true" ? await loadSharedFightIds(sql, viewerId, targetId) : null;
+        const eligible = sharedIds === null ? facts : facts.filter((fight) => sharedIds.has(fight.id));
         const cursorIndex = query.cursor ? eligible.findIndex((fight) => fight.history_id === query.cursor) : -1;
         if (query.cursor && cursorIndex === -1) throw new ApiError(400, "validation", "Invalid history cursor");
         const page = eligible.slice(cursorIndex + 1, cursorIndex + 1 + query.limit);

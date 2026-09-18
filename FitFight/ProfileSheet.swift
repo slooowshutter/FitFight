@@ -120,7 +120,7 @@ struct ProfileSheet: View {
         }
         if preview == nil && profile.friendship != "self" {
             friendshipActions(profile)
-            FFButton(title: String(appLocalized: "Challenge"), fullWidth: true) { challenge(profile, rematch: false) }
+            FFButton(title: String(appLocalized: "Challenge"), fullWidth: true) { challenge(profile) }
         }
         if profile.access == "private" {
             FFNotice(text: String(appLocalized: "Private profile. Friends and current opponents can see what this person shares."), tone: .neutral, systemImage: "lock")
@@ -140,9 +140,6 @@ struct ProfileSheet: View {
                                 .ffType(.heading)
                             Text(String(appLocalized: "Decided 1v1 Fights only. Group results appear in history."))
                                 .ffType(.caption).foregroundStyle(theme.textSecondary)
-                        }
-                        if rivalry.rematch != nil && preview == nil {
-                            FFButton(title: String(appLocalized: "Rematch"), kind: .secondary) { challenge(profile, rematch: true) }
                         }
                     }
                 }
@@ -182,9 +179,10 @@ struct ProfileSheet: View {
             }
         }
         if preview == nil {
-            FFSection(title: String(appLocalized: "Fight history")) {
+            FFSection(title: profile.friendship == "self" ? String(appLocalized: "Fight history") : String(appLocalized: "Fights together")) {
                 if store.history.isEmpty {
-                    Text(String(appLocalized: "No results yet")).ffType(.body).foregroundStyle(theme.textSecondary)
+                    Text(profile.friendship == "self" ? String(appLocalized: "No results yet") : String(appLocalized: "No Fights together yet"))
+                        .ffType(.body).foregroundStyle(theme.textSecondary)
                 }
                 ForEach(store.history) { row in
                     if let fightID = row.fightId, model.fight(id: fightID.uuidString) != nil {
@@ -230,9 +228,8 @@ struct ProfileSheet: View {
         }
     }
 
-    private func challenge(_ profile: SharedProfile, rematch: Bool) {
-        let previous = rematch ? profile.rivalry?.rematch : nil
-        model.profileChallenge = ProfileChallengeDraft(handle: profile.identity.handle, durationSeconds: previous?.durationSeconds, actionText: previous?.actionText)
+    private func challenge(_ profile: SharedProfile) {
+        model.profileChallenge = ProfileChallengeDraft(handle: profile.identity.handle, durationSeconds: nil, actionText: nil)
         model.pendingJoinable = nil
         model.tab = .newFight
         dismiss()

@@ -8,6 +8,48 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
 
+## Shared Fight list correction, 18 Sep 2026
+
+**Code prepared, not deployed.** Another person's Profile now requests **Fights
+together**, regardless of their Competitive/Public settings. Both people must still
+have accepted or deferred membership in the round and, when present, its series.
+Scheduled, live, finished, and cancelled shared rounds remain eligible. Leaving a
+series hides its older rounds from this list even when their frozen results remain.
+The standalone Rivalry Rematch button is removed. A person's own result history
+and historical competitive totals are unchanged.
+
+**Contract:** `/api/v1/profiles/{userID}/history?shared=true` now applies current
+shared membership before pagination. Response fields and cursors keep their existing
+shapes. The existing nullable `rivalry.rematch` field also requires current shared
+membership, preventing private action text from leaking through historical scores.
+No database schema change or fixture replacement is required for this correction.
+
+**Cloud checks passed on `5119c57`:**
+
+- [Web API](https://github.com/slooowshutter/FitFight/actions/runs/35347391067):
+  strict typecheck, all 277 backend tests, and API contract parsing.
+- [Database](https://github.com/slooowshutter/FitFight/actions/runs/35347391089):
+  disposable migrations, schema lint, pgTAP, build 113 compatibility, and all 35
+  integration tests before and after the deferred client-permission cutoff.
+  The existing HTTP cases for builds 113, 190, 200, 201, 202, and 203 still pass.
+- [iOS simulator](https://github.com/slooowshutter/FitFight/actions/runs/35347391041):
+  GitHub-hosted `macos-26` app build, English/French validation, Profile state tests,
+  unchanged frozen build 201/202 decoders, and existing native regressions.
+
+The new regressions cover departure by either person, series departure with retained
+old-round membership, scheduled/final/cancelled rounds, private/Casual profiles, and
+pagination. The first cloud run reproduced the shared-history and native filter
+failures before implementation. The validation snapshot matches current code and
+tests; only this documentation and its isolated CI/deployment configuration differ.
+The live release policies remain as recorded below. These are cloud test results,
+not installed-client or live deployment evidence.
+
+**Remaining:** the per-Fight new-week action is not implemented while the choice
+between another round in the original series and a separate Fight is pending.
+The other review findings remain separate. Deploy the branch's existing additive
+Profile migrations, then the compatible backend, then an authorized native release.
+Neither environment was changed; installed-device checks remain after rollout.
+
 ## Feedback progress deferred, 18 Sep 2026
 
 Marc deferred request progress tracking. The current branch removes its status and

@@ -136,7 +136,9 @@ For old data:
 4. Do not promise a complete lifetime win rate where the evidence is incomplete. Record backfill coverage and the point from which the ledger is complete.
 5. During overlap with old writers/backends, reconcile possible missed records and mark uncertain intervals. Full-fidelity capture starts only after the new backend mutation paths are in service and old instances have drained. New friendship-based Profile access never relies on legacy `public.friendships` rows.
 
-The Rivalry card shows the pair's 1v1 wins, losses, draws, and recent shared results. Group Fights remain a separate shared-history list. Show "No head-to-head results yet" when appropriate. Rematch preselects the opponent and previous supported duration/action in the existing composer, where the User reviews and starts a new Fight; it does not silently create or join one.
+The Rivalry card shows the pair's 1v1 wins, losses, and draws. Show "No head-to-head results yet" when appropriate. Another person's Profile shows Fights together, including groups, only while both people remain members of the round and its series. This list remains available independently of Competitive/Public settings. Historical competitive totals survive departure. Challenge opens the existing composer with the opponent selected.
+
+The standalone Rivalry Rematch button was removed on 18 Sep. A replacement new-week action must belong to a specific finished or cancelled Fight. Creation is pending the product choice between another round in the original series and a separate Fight with the same setup.
 
 ## 6. Data and module layout
 

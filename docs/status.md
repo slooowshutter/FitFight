@@ -29,8 +29,8 @@ passed. [Disposable database checks](https://github.com/slooowshutter/FitFight/a
 passed migrations, SQL lint, pgTAP, preserved build 113 fixtures, and all 23
 transaction tests both before and after the existing client-permission cutoff.
 Preference checks cover defaults, persistence, concurrent updates, account
-isolation, grants, constraints, and deletion cleanup. The backend/schema files
-are unchanged since those runs.
+isolation, grants, constraints, and deletion cleanup. The account-preference
+backend and migration files are unchanged since those runs.
 
 The earlier [native regression checks and simulator build](https://github.com/slooowshutter/FitFight/actions/runs/35177250042)
 passed at `38e1d46`. The production preference store was checked for language
@@ -73,27 +73,40 @@ failed HTTP reads. The corrected regression, all existing native checks, and the
 iOS simulator build passed in [hosted verification](https://github.com/slooowshutter/FitFight/actions/runs/35347513091)
 at `8d76256`. Checks cover English/French switching, invitation previews, preserved
 names and stakes, unchanged scores and deadlines, and offline cache restoration.
-Localization, native API-boundary, and whitespace checks also passed. App and test
-sources are unchanged since that run; normal CI branch triggers are restored.
+Localization, native API-boundary, and whitespace checks also passed. That run
+predates the develop integration below; normal CI branch triggers are restored.
 Physical-device verification remains outstanding.
-No PR, release-branch merge, live deployment, or TestFlight upload was made.
+At that stage, no PR, release-branch merge, live deployment, or TestFlight upload
+was made.
 
 **Live and supported clients:** read-only release checks at **03:20 UTC on
 17 Sep** returned staging latest **1.1.1 (201)**, review/internal **1.1.2 (203)**,
 with enforcement off. Production latest is **1.1.1 (202)**, enforcement on, with
-null review/internal candidates. The profile model is byte-identical in sources
-`d97145a` (201), `e2783be` (202), `83ac0d8` (203), and this branch. Legacy staging
-clients remain supported. Apply the additive migration, deploy the compatible
-backend, then distribute the app. This branch was pushed for hosted checks only;
-no PR, release-branch merge, hosted database write, or live deployment was made.
+null review/internal candidates. Before the develop integration below, the
+profile model was byte-identical in sources `d97145a` (201), `e2783be` (202),
+`83ac0d8` (203), and the preferences branch. Legacy staging clients remain
+supported. Apply the additive migration, deploy the compatible backend, then
+distribute the app. These release checks made no hosted database writes or live
+deployments.
 
 **Develop integration, 18 Sep:** merged `origin/develop` at `f17a456` into the
 preferences branch, retaining profile navigation, friend controls, saved companion
 descriptions and habitat tabs. Those screens use the account language; the Fight
 composer retains its saved time zone alongside the selected language and device
 region. Both sets of translations, release notes, and native regressions remain.
-PR CI will verify the combined revision. No live migration, deployment, or
-TestFlight upload was made.
+
+Combined revision `9d5b076` passed cloud checks on
+[PR #285](https://github.com/slooowshutter/FitFight/pull/285):
+
+- [Web API](https://github.com/slooowshutter/FitFight/actions/runs/35348759910): strict typechecking, all 317 backend tests, and API contract parsing.
+- [Database](https://github.com/slooowshutter/FitFight/actions/runs/35348760015): migrations, SQL lint, 233 pgTAP checks, build 113 compatibility, and all 36 transaction tests before and after the deferred client-permission cutoff, without skips; historical deletion and profile-record migration replay also passed.
+- [Native](https://github.com/slooowshutter/FitFight/actions/runs/35348760090): preference persistence, regional formats, draft retention, offline Fight localization, existing profile/companion regressions, older API response decoding, and full iOS simulator compilation on hosted `macos-26`.
+- [Screenshots](https://github.com/slooowshutter/FitFight/actions/runs/35348759988): English/French simulator screen exports completed.
+
+Vercel created a Preview deployment automatically for the PR. No hosted database
+changes, staging or production deployment, or TestFlight upload was made.
+Physical signed-in two-device checks remain outstanding. The migration, backend,
+then-app rollout order above still applies.
 
 ## Companion descriptions and habitat tabs: prepared 17 Sep 2026
 

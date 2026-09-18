@@ -12,6 +12,7 @@ struct ContentView: View {
     @EnvironmentObject private var push: PushNotificationService
     @EnvironmentObject private var steps: HealthKitStepsStore
     @EnvironmentObject private var companions: CompanionStore
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         Group {
@@ -23,6 +24,9 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(theme.bg.ignoresSafeArea())
+        .onChange(of: colorScheme, initial: true) { _, scheme in
+            themeStore.systemMode = scheme == .dark ? .night : .day
+        }
         .task(id: scenePhase) {
             guard scenePhase == .active, !ScreenshotExport.isEnabled, !CompanionPreview.isEnabled else { return }
             await appUpdate.check()
@@ -90,16 +94,21 @@ struct ContentView: View {
             companions.apply(session.profile)
             Task { await companions.publishPending(session: session) }
         }
-        .alert(String(localized: "Companion preview"), isPresented: Binding(
+        .alert(String(appLocalized: "Companion preview"), isPresented: Binding(
             get: { model.companionPreviewNotice != nil },
             set: { if !$0 { model.companionPreviewNotice = nil } }
         )) {
-            Button(String(localized: "OK"), role: .cancel) { model.companionPreviewNotice = nil }
+            Button(String(appLocalized: "OK"), role: .cancel) { model.companionPreviewNotice = nil }
         } message: {
             Text(model.companionPreviewNotice ?? "")
         }
         .sheet(isPresented: $model.showingVersions) {
             VersionsView()
+                .fitFightTheme(themeStore.theme)
+                .presentationBackground(themeStore.theme.bg)
+        }
+        .sheet(isPresented: $model.showingPreferences) {
+            PreferencesView()
                 .fitFightTheme(themeStore.theme)
                 .presentationBackground(themeStore.theme.bg)
         }
@@ -133,7 +142,7 @@ struct ContentView: View {
             Text(model.pendingReferralError ?? "")
         }
         .alert(
-            String(localized: "Get fight-end reminders?"),
+            String(appLocalized: "Get fight-end reminders?"),
             isPresented: Binding(
                 get: {
                     push.showPrePrompt
@@ -146,14 +155,14 @@ struct ContentView: View {
                 set: { if !$0 { push.declinePrePrompt() } }
             )
         ) {
-            Button(String(localized: "Allow notifications")) {
+            Button(String(appLocalized: "Allow notifications")) {
                 Task { await push.requestSystemPermission() }
             }
-            Button(String(localized: "Not now"), role: .cancel) {
+            Button(String(appLocalized: "Not now"), role: .cancel) {
                 push.declinePrePrompt()
             }
         } message: {
-            Text(String(localized: "FitFight can remind you when a fight ends and when to sync your steps. Lock-screen alerts never show scores or fight titles."))
+            Text(String(appLocalized: "FitFight can remind you when a fight ends and when to sync your steps. Lock-screen alerts never show scores or fight titles."))
         }
     }
 
@@ -170,14 +179,14 @@ struct ContentView: View {
     private var updateCard: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(appUpdate.isTestFlight
-                 ? String(localized: "A FitFight update is available")
-                 : String(localized: "Update FitFight to continue"))
+                 ? String(appLocalized: "A FitFight update is available")
+                 : String(appLocalized: "Update FitFight to continue"))
                 .font(.ff(18, 800))
                 .tracking(18 * -0.015)
                 .foregroundStyle(theme.text)
             Text(appUpdate.isTestFlight
-                 ? String(localized: "Open TestFlight to check for the update. If it isn’t available yet, cancel and keep using FitFight.")
-                 : String(localized: "You can’t use FitFight until you install the latest version."))
+                 ? String(appLocalized: "Open TestFlight to check for the update. If it isn’t available yet, cancel and keep using FitFight.")
+                 : String(appLocalized: "You can’t use FitFight until you install the latest version."))
                 .ffType(.body)
                 .foregroundStyle(theme.textSecondary)
                 .lineSpacing(3)
@@ -185,13 +194,13 @@ struct ContentView: View {
                 .padding(.top, 7)
             HStack(spacing: 9) {
                 if appUpdate.isTestFlight {
-                    FFButton(title: String(localized: "Cancel"), kind: .secondary, fullWidth: true) {
+                    FFButton(title: String(appLocalized: "Cancel"), kind: .secondary, fullWidth: true) {
                         appUpdate.dismissUpdate()
                     }
                     .accessibilityIdentifier("cancel-update-button")
                 } else {
                     FFButton(
-                        title: String(localized: "Check again"),
+                        title: String(appLocalized: "Check again"),
                         kind: appUpdate.offeredRelease != nil ? .secondary : .primary,
                         fullWidth: true
                     ) {
@@ -200,7 +209,7 @@ struct ContentView: View {
                     .disabled(appUpdate.isChecking)
                 }
                 if let release = appUpdate.offeredRelease {
-                    FFButton(title: String(localized: "Update FitFight"), kind: .primary, fullWidth: true) {
+                    FFButton(title: String(appLocalized: "Update FitFight"), kind: .primary, fullWidth: true) {
                         openURL(release.updateURL)
                     }
                     .accessibilityIdentifier("required-update-button")
@@ -222,8 +231,8 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text(
                     session.profileUnavailable
-                        ? String(localized: "Couldn't load your account")
-                        : String(localized: "Loading your account…")
+                        ? String(appLocalized: "Couldn't load your account")
+                        : String(appLocalized: "Loading your account…")
                 )
                     .ffType(.heading)
                     .foregroundStyle(theme.text)
@@ -242,7 +251,7 @@ struct ContentView: View {
                 if session.profileUnavailable {
                     // Without this the screen is a dead end — you cannot get back to
                     // the welcome screen to sign in as anyone else.
-                    FFButton(title: String(localized: "Sign out"), kind: .secondary) {
+                    FFButton(title: String(appLocalized: "Sign out"), kind: .secondary) {
                         Task { await session.signOut() }
                     }
                     .padding(.top, 4)
@@ -327,10 +336,10 @@ struct ContentView: View {
                             FightDetailView(fight: fight)
                         } else {
                             VStack(alignment: .leading, spacing: 12) {
-                                Text(String(localized: "That fight isn’t on your list."))
+                                Text(String(appLocalized: "That fight isn’t on your list."))
                                     .ffType(.heading)
                                     .foregroundStyle(theme.text)
-                                FFButton(title: String(localized: "Close"), kind: .secondary) {
+                                FFButton(title: String(appLocalized: "Close"), kind: .secondary) {
                                     model.openFightID = nil
                                 }
                             }
@@ -438,6 +447,7 @@ private struct InteractivePopGestureEnabler: UIViewRepresentable {
         .environmentObject(themeStore)
         .environmentObject(AppModel())
         .environmentObject(CompanionStore())
+        .environmentObject(AccountPreferencesStore())
         .environmentObject(session)
         .environmentObject(HealthKitStepsStore())
         .environmentObject(FeedStore())

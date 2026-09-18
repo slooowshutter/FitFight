@@ -1,16 +1,53 @@
 import Foundation
+import StoreKit
+
+enum AppDistribution {
+    case appStore, testFlight, development, unknown
+
+    var label: String {
+        switch self {
+        case .appStore: return "App Store"
+        case .testFlight: return "TestFlight"
+        case .development: return String(appLocalized: "Development build")
+        case .unknown: return String(appLocalized: "Couldn’t verify the installation source")
+        }
+    }
+}
 
 enum AppVersion {
+    private static var isDevelopmentBuild: Bool {
+        #if DEBUG || targetEnvironment(simulator)
+        true
+        #else
+        false
+        #endif
+    }
+
+    static func distribution() async -> AppDistribution {
+        guard !isDevelopmentBuild else { return .development }
+        do {
+            guard case .verified(let transaction) = try await AppTransaction.shared else { return .unknown }
+            switch transaction.environment {
+            case .production: return .appStore
+            case .sandbox: return .testFlight
+            case .xcode: return .development
+            default: return .unknown
+            }
+        } catch {
+            return .unknown
+        }
+    }
+
     static var label: String {
         let date = shippedOn
         if date.isEmpty {
             return String(
-                localized: "version.label",
+                appLocalized: "version.label",
                 defaultValue: "\(marketing) · build \(build) · \(backend)"
             )
         }
         return String(
-            localized: "version.label.with-date",
+            appLocalized: "version.label.with-date",
             defaultValue: "\(marketing) · build \(build) · \(backend) · \(date)"
         )
     }
@@ -20,7 +57,7 @@ enum AppVersion {
         guard let note = Changelog.current else { return "" }
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.locale = .autoupdatingCurrent
+        formatter.locale = AppLocalization.locale
         formatter.timeZone = TimeZone(secondsFromGMT: 0)
         formatter.setLocalizedDateFormatFromTemplate("dMMM")
         return formatter.string(from: note.date)

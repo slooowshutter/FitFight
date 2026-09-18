@@ -180,7 +180,7 @@ struct FitFightFightPost: Codable, Equatable, Hashable, Identifiable {
 
     var channelLabel: String {
         if broadcast || isMain {
-            return String(localized: "Public")
+            return String(appLocalized: "Public")
         }
         let names = channels.map(\.name).filter { !$0.isEmpty }
         if names.isEmpty { return fightName }
@@ -244,9 +244,9 @@ enum FightPostCommentSort: String, CaseIterable, Hashable {
     var title: String {
         switch self {
         case .comments:
-            String(localized: "Most comments")
+            String(appLocalized: "Most comments")
         case .recent:
-            String(localized: "Most recent")
+            String(appLocalized: "Most recent")
         }
     }
 }

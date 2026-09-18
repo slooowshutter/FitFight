@@ -21,7 +21,7 @@ struct TextTranslationButton: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(FFHapticPlainStyle())
-            .accessibilityLabel(String(localized: "Translate"))
+            .accessibilityLabel(String(appLocalized: "Translate"))
             .translationPresentation(isPresented: $showingTranslation, text: text)
         }
     }
@@ -30,9 +30,8 @@ struct TextTranslationButton: View {
         guard text.rangeOfCharacter(from: .letters) != nil,
               let detectedLanguage = NLLanguageRecognizer.dominantLanguage(for: text),
               detectedLanguage != .undetermined,
-              let preferredLanguage = Locale.preferredLanguages.first,
               let source = Locale.Language(identifier: detectedLanguage.rawValue).languageCode,
-              let target = Locale.Language(identifier: preferredLanguage).languageCode else { return false }
+              let target = Locale.Language(identifier: AppLocalization.languageCode).languageCode else { return false }
         return source != target
     }
 }

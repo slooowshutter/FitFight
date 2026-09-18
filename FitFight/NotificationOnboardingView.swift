@@ -23,7 +23,7 @@ struct NotificationOnboardingView: View {
                 .lineSpacing(3)
                 .padding(.top, 10)
             FFScreenCTA(
-                title: String(localized: "Continue"),
+                title: String(appLocalized: "Continue"),
                 enabled: !isAsking,
                 busy: isAsking
             ) {

@@ -8,50 +8,50 @@ enum FitFightAPIError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .notConfigured:
-            return String(localized: "FitFight API is not configured. Set FFAPIBaseURL.")
+            return String(appLocalized: "FitFight API is not configured. Set FFAPIBaseURL.")
         case .http(let status, let code, let message):
             switch code {
             case "update_required":
-                return String(localized: "Update FitFight to continue")
+                return String(appLocalized: "Update FitFight to continue")
             case "release_unavailable":
-                return String(localized: "Couldn’t check for updates")
+                return String(appLocalized: "Couldn’t check for updates")
             case "handle_not_found":
-                return String(localized: "That username does not have a FitFight account yet.")
+                return String(appLocalized: "That username does not have a FitFight account yet.")
             case "already_member":
-                return String(localized: "That person is already in this fight.")
+                return String(appLocalized: "That person is already in this fight.")
             case "fight_not_joinable":
-                return String(localized: "This fight cannot be joined.")
+                return String(appLocalized: "This fight cannot be joined.")
             case "fight_full":
-                return String(localized: "This fight is full.")
+                return String(appLocalized: "This fight is full.")
             case "join_rate_limited":
-                return String(localized: "Too many join attempts. Try again later.")
+                return String(appLocalized: "Too many join attempts. Try again later.")
             case "unauthorized":
-                return String(localized: "Your session expired. Sign in again.")
+                return String(appLocalized: "Your session expired. Sign in again.")
             case "forbidden":
-                return message ?? String(localized: "This is only available to the FitFight admin.")
+                return message ?? String(appLocalized: "This is only available to the FitFight admin.")
             case "config":
-                return message ?? String(localized: "Cursor isn’t configured yet.")
+                return message ?? String(appLocalized: "Cursor isn’t configured yet.")
             case "fight_not_startable", "fight_not_cancellable", "conflict":
-                return String(localized: "This fight changed. Refresh and try again.")
+                return String(appLocalized: "This fight changed. Refresh and try again.")
             case "validation":
-                return message ?? String(localized: "Check the title and details, then try again.")
+                return message ?? String(appLocalized: "Check the title and details, then try again.")
             case "rate_limited":
-                return message ?? String(localized: "You’ve posted a few times recently. Try again later.")
+                return message ?? String(appLocalized: "You’ve posted a few times recently. Try again later.")
             case "not_found":
-                return message ?? String(localized: "That isn’t available anymore.")
+                return message ?? String(appLocalized: "That isn’t available anymore.")
             case "db_error", "internal":
                 return message ?? String(
-                    localized: "api.request-failed",
+                    appLocalized: "api.request-failed",
                     defaultValue: "Request failed (\(status))."
                 )
             default:
                 return message ?? String(
-                    localized: "api.request-failed",
+                    appLocalized: "api.request-failed",
                     defaultValue: "Request failed (\(status))."
                 )
             }
         case .decoding:
-            return String(localized: "Couldn’t read the server response.")
+            return String(appLocalized: "Couldn’t read the server response.")
         }
     }
 }
@@ -1033,6 +1033,24 @@ struct FitFightAPI {
 
     func notificationPreferences(accessToken: String) async throws -> FitFightNotificationPreferences {
         try await get(path: "notifications/preferences", accessToken: accessToken, expected: [200])
+    }
+
+    func accountPreferences(accessToken: String) async throws -> AccountPreferences {
+        try await get(path: "me/preferences", accessToken: accessToken, expected: [200])
+    }
+
+    func updateAccountPreferences(
+        _ preferences: AccountPreferencesUpdate,
+        accessToken: String
+    ) async throws -> AccountPreferences {
+        try await request(
+            path: "me/preferences",
+            method: "PATCH",
+            accessToken: accessToken,
+            body: Self.encoder.encode(preferences),
+            idempotencyKey: nil,
+            expected: [200]
+        )
     }
 
     func updateNotificationPreferences(

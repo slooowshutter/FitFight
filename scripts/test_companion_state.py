@@ -18,7 +18,8 @@ with tempfile.TemporaryDirectory(prefix="fitfight-companion-tests-") as director
     executable = Path(directory) / "companion-state-tests"
     subprocess.run([
         "swiftc", "-swift-version", "5", "-parse-as-library",
-        "-target", f"{platform.machine()}-apple-macosx13.0",
+        "-target", f"{platform.machine()}-apple-macosx14.0",
+        str(root / "FitFight/AppLocalization.swift"),
         str(root / "FitFight/Media.swift"), str(root / "FitFight/Profile.swift"),
         str(generated), "-o", str(executable),
     ], check=True)

@@ -53,6 +53,12 @@ enum ScreenshotExport {
             height: canvas.height,
             to: folder
         )
+        write(
+            sheet(PreferencesView(), themeStore: light, model: model),
+            name: "light-preferences",
+            height: tallHeight,
+            to: folder
+        )
 
         // The design system page is one long scroll. ImageRenderer returns nil well
         // before the texture limit, so it is exported as a run of slices instead of
@@ -108,6 +114,7 @@ enum ScreenshotExport {
                     .environmentObject(steps)
                     .environmentObject(feed)
                     .environmentObject(companions)
+                    .environmentObject(AccountPreferencesStore())
                     .environment(\.ffTheme, store.theme)
                     .environment(\.colorScheme, store.theme.colorScheme)
                     .environment(\.ffStaticRender, true)
@@ -139,7 +146,7 @@ enum ScreenshotExport {
             }
             for kind in FightDayChartKind.allCases {
                 let view = AnyView(FFScreen {
-                    FFSection(title: String(localized: "Every day so far")) {
+                    FFSection(title: String(appLocalized: "Every day so far")) {
                         FFCard {
                             FightDayChartsView(days: group.days, standings: group.standings, initialKind: kind) { value in
                                 model.formatScore(value, metric: group.metric)
@@ -207,6 +214,9 @@ enum ScreenshotExport {
             },
             Shot(name: "05-you") { store, model in
                 frame(YouView(), tab: .you, themeStore: store, model: model)
+            },
+            Shot(name: "05-preferences") { store, model in
+                sheet(PreferencesView(), themeStore: store, model: model)
             },
             Shot(name: "05-feed") { store, model in
                 frame(FeedView(), tab: .feed, themeStore: store, model: model)
@@ -290,6 +300,7 @@ enum ScreenshotExport {
                 .environmentObject(themeStore)
                 .environmentObject(model)
                 .environmentObject(CompanionStore())
+                .environmentObject(AccountPreferencesStore())
                 .environmentObject(SessionStore(screenshot: ()))
                 .environmentObject(HealthKitStepsStore())
                 .environment(\.ffTheme, theme)
@@ -317,6 +328,7 @@ enum ScreenshotExport {
             .environmentObject(themeStore)
             .environmentObject(model)
             .environmentObject(CompanionStore())
+            .environmentObject(AccountPreferencesStore())
             .environmentObject(session)
             .environmentObject(HealthKitStepsStore())
             .environmentObject(FeedStore())

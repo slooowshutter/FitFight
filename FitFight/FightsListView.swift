@@ -5,9 +5,9 @@ enum FightsListFilter: CaseIterable {
 
     var title: String {
         switch self {
-        case .current: String(localized: "Current")
-        case .invited: String(localized: "fights.filter-invited", defaultValue: "Invited")
-        case .past: String(localized: "Past")
+        case .current: String(appLocalized: "Current")
+        case .invited: String(appLocalized: "fights.filter-invited", defaultValue: "Invited")
+        case .past: String(appLocalized: "Past")
         }
     }
 }
@@ -52,24 +52,24 @@ struct FightsListView: View {
                     RoundedRectangle(cornerRadius: theme.radius.card)
                         .fill(theme.skeleton)
                         .frame(height: 76)
-                        .accessibilityLabel(String(localized: "Loading"))
+                        .accessibilityLabel(String(appLocalized: "Loading"))
                 }
             }
 
             if isEmpty, !model.isRefreshingFights {
                 FFEmptyState(
                     systemImage: "trophy",
-                    title: String(localized: "No fights yet"),
-                    message: String(localized: "Start one under New. Add people with their username. They must have signed in once."),
-                    actionTitle: String(localized: "Start one"),
+                    title: String(appLocalized: "No fights yet"),
+                    message: String(appLocalized: "Start one under New. Add people with their username. They must have signed in once."),
+                    actionTitle: String(appLocalized: "Start one"),
                     action: { model.tab = .newFight }
                 )
             }
 
             if !isEmpty, selectedFights.isEmpty {
-                Text(filter == .current ? String(localized: "No current fights")
-                     : filter == .invited ? String(localized: "No invitations")
-                     : String(localized: "No past fights"))
+                Text(filter == .current ? String(appLocalized: "No current fights")
+                     : filter == .invited ? String(appLocalized: "No invitations")
+                     : String(appLocalized: "No past fights"))
                     .ffType(.body)
                     .foregroundStyle(theme.textSecondary)
                     .frame(maxWidth: .infinity, minHeight: 100)
@@ -92,7 +92,7 @@ struct FightsListView: View {
                         monogram: opponent?.initials ?? "?",
                         title: fight.listTitle,
                         subtitle: fight.timeLeftLabel,
-                        metric: fight.isUpcoming ? String(localized: "Scheduled") : standing.text,
+                        metric: fight.isUpcoming ? String(appLocalized: "Scheduled") : standing.text,
                         ahead: standing.ahead,
                         metricIsGap: !fight.isUpcoming && standing.isGap,
                         photoURL: opponent?.photoURL,
@@ -140,7 +140,7 @@ struct FightsListView: View {
     /// Nobody else has a score yet in a fresh fight, so that row shows your total.
     private func difference(in fight: Fight) -> (text: String, ahead: Bool, isGap: Bool) {
         if model.youStanding(in: fight)?.deferred == true {
-            return (String(localized: "Next round"), true, false)
+            return (String(appLocalized: "Next round"), true, false)
         }
         let rivals = fight.standings.filter { !$0.person.isYou && !$0.invited && !$0.deferred }.map(\.score)
         guard let mine = model.youStanding(in: fight)?.score else {
@@ -149,7 +149,7 @@ struct FightsListView: View {
         }
         guard let best = rivals.max() else { return (stepCount(mine), true, false) }
         let gap = mine - best
-        guard gap != 0 else { return (String(localized: "Tied"), true, false) }
+        guard gap != 0 else { return (String(appLocalized: "Tied"), true, false) }
         return ("\(gap < 0 ? "−" : "+")\(stepCount(abs(gap)))", gap > 0, true)
     }
 
@@ -186,7 +186,7 @@ struct InvitationRow: View {
             Button {
                 model.openFightID = fight.id
             } label: {
-                FFPill(String(localized: "Join"), style: .solidMoss)
+                FFPill(String(appLocalized: "Join"), style: .solidMoss)
             }
             .buttonStyle(FFPressStyle())
         }

@@ -14,13 +14,12 @@ struct NotificationSettingsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            VersionBanner()
             HStack {
-                Text(String(localized: "Notifications"))
+                Text(String(appLocalized: "Notifications"))
                     .ffType(.title)
                     .foregroundStyle(theme.text)
                 Spacer()
-                Button(String(localized: "Close")) { dismiss() }
+                Button(String(appLocalized: "Close")) { dismiss() }
                     .ffType(.label)
                     .foregroundStyle(theme.mossText)
             }
@@ -34,56 +33,56 @@ struct NotificationSettingsView: View {
                     }
                     if push.permissionStatus == .denied {
                         FFNotice(
-                            text: String(localized: "iPhone has notifications off for FitFight. Open Settings to allow alerts."),
+                            text: String(appLocalized: "iPhone has notifications off for FitFight. Open Settings to allow alerts."),
                             tone: .ember,
                             systemImage: "bell.slash"
                         )
                         FFButton(
-                            title: String(localized: "Open Settings"),
+                            title: String(appLocalized: "Open Settings"),
                             kind: .ghost,
                             fullWidth: true
                         ) {
                             UIApplication.shared.open(URL(string: UIApplication.openSettingsURLString)!)
                         }
                     }
-                    FFSection(title: String(localized: "Feed")) {
+                    FFSection(title: String(appLocalized: "Feed")) {
                         FFGroupedRows {
                             toggleRow(
-                                title: String(localized: "Fight posts"),
-                                subtitle: String(localized: "When someone posts in a fight you’re in."),
+                                title: String(appLocalized: "Fight posts"),
+                                subtitle: String(appLocalized: "When someone posts in a fight you’re in."),
                                 isOn: $prefs.feedPost
                             )
                             FFDivider()
                             toggleRow(
-                                title: String(localized: "Comments on your posts"),
-                                subtitle: String(localized: "When someone comments on a post you wrote."),
+                                title: String(appLocalized: "Comments on your posts"),
+                                subtitle: String(appLocalized: "When someone comments on a post you wrote."),
                                 isOn: $prefs.postComment
                             )
                             FFDivider()
                             toggleRow(
-                                title: String(localized: "Replies to your comments"),
-                                subtitle: String(localized: "When someone replies to a comment you left."),
+                                title: String(appLocalized: "Replies to your comments"),
+                                subtitle: String(appLocalized: "When someone replies to a comment you left."),
                                 isOn: $prefs.commentReply
                             )
                             FFDivider()
                             toggleRow(
-                                title: String(localized: "Reactions on your posts"),
-                                subtitle: String(localized: "When someone reacts to a post you wrote."),
+                                title: String(appLocalized: "Reactions on your posts"),
+                                subtitle: String(appLocalized: "When someone reacts to a post you wrote."),
                                 isOn: $prefs.postReaction
                             )
                         }
                     }
-                    FFSection(title: String(localized: "Fights")) {
+                    FFSection(title: String(appLocalized: "Fights")) {
                         FFGroupedRows {
                             toggleRow(
-                                title: String(localized: "Challenge reminders"),
-                                subtitle: String(localized: "When a fight ends, when to sync, and when the result is in."),
+                                title: String(appLocalized: "Challenge reminders"),
+                                subtitle: String(appLocalized: "When a fight ends, when to sync, and when the result is in."),
                                 isOn: $prefs.challengeReminder
                             )
                             FFDivider()
                             toggleRow(
-                                title: String(localized: "Daily status"),
-                                subtitle: String(localized: "A daily update on a live fight."),
+                                title: String(appLocalized: "Daily status"),
+                                subtitle: String(appLocalized: "A daily update on a live fight."),
                                 isOn: $prefs.dailyStatus
                             )
                         }
@@ -116,7 +115,7 @@ struct NotificationSettingsView: View {
 
     private func load() async {
         guard let token = try? await session.freshAccessToken() else {
-            error = String(localized: "Sign in to change notification settings.")
+            error = String(appLocalized: "Sign in to change notification settings.")
             return
         }
         do {

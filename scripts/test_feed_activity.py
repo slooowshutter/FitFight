@@ -25,5 +25,5 @@ with tempfile.TemporaryDirectory(prefix="fitfight-activity-tests-") as directory
     generated = Path(directory) / "FeedActivityTests.swift"
     executable = Path(directory) / "feed-activity-tests"
     generated.write_text(source)
-    subprocess.run(["swiftc", "-swift-version", "5", "-parse-as-library", str(generated), "-o", str(executable)], check=True)
+    subprocess.run(["swiftc", "-swift-version", "5", "-parse-as-library", str(root / "FitFight/AppLocalization.swift"), str(generated), "-o", str(executable)], check=True)
     subprocess.run([str(executable), str(root / "contracts/fixtures/feed-activity-response.json")], check=True, timeout=15)

@@ -12636,6 +12636,252 @@
                     }
                 }
             }
+        },
+        "This installation": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cette installation"
+                    }
+                }
+            }
+        },
+        "Follow iPhone": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Suivre l’iPhone"
+                    }
+                }
+            }
+        },
+        "Appearance": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Apparence"
+                    }
+                }
+            }
+        },
+        "Fight status labels follow your language immediately, even when a refresh fails. Fight names and user-written stakes stay exactly as entered.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les libellés de statut des fights suivent immédiatement ta langue, même si l’actualisation échoue. Les noms des fights et les gages saisis restent exactement tels quels."
+                    }
+                }
+            }
+        },
+        "Development build": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Version de développement"
+                    }
+                }
+            }
+        },
+        "Version": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Version"
+                    }
+                }
+            }
+        },
+        "preferences.version": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%@ · build %@"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%@ · build %@"
+                    }
+                }
+            }
+        },
+        "Dark": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Sombre"
+                    }
+                }
+            }
+        },
+        "The beta uses a separate database. Accounts, fights, progress, and preferences do not sync automatically with the App Store version, even when you use the same Apple ID.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "La bêta utilise une base de données séparée. Les comptes, fights, progrès et préférences ne sont pas synchronisés automatiquement avec la version App Store, même avec le même identifiant Apple."
+                    }
+                }
+            }
+        },
+        "Installed from": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Installée depuis"
+                    }
+                }
+            }
+        },
+        "Language and appearance are saved to your account and follow you on your devices.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "La langue et l’apparence sont enregistrées sur ton compte et te suivent sur tes appareils."
+                    }
+                }
+            }
+        },
+        "Language changes keep your iPhone’s regional formats and preserve unfinished fights and posts.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les changements de langue conservent les formats régionaux de ton iPhone et tes brouillons de fights et de publications."
+                    }
+                }
+            }
+        },
+        "Language": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Langue"
+                    }
+                }
+            }
+        },
+        "Couldn’t save your preferences. Your previous settings are unchanged.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Impossible d’enregistrer tes préférences. Tes réglages précédents sont conservés."
+                    }
+                }
+            }
+        },
+        "App Store account": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Compte App Store"
+                    }
+                }
+            }
+        },
+        "Beta testing": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Test de la bêta"
+                    }
+                }
+            }
+        },
+        "Loading…": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Chargement…"
+                    }
+                }
+            }
+        },
+        "Light": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Clair"
+                    }
+                }
+            }
+        },
+        "Couldn’t verify the installation source": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Source de l’installation non vérifiée"
+                    }
+                }
+            }
+        },
+        "Preferences": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Préférences"
+                    }
+                }
+            }
+        },
+        "Beta account": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Compte bêta"
+                    }
+                }
+            }
+        },
+        "Couldn’t load your preferences. Try again.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Impossible de charger tes préférences. Réessaie."
+                    }
+                }
+            }
+        },
+        "Choose your language and appearance in You → Preferences. Your choices are saved to your account. Find notification settings, beta access, and your installed app details in the same place.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Choisis ta langue et ton apparence dans Toi → Préférences. Tes choix sont enregistrés sur ton compte. Retrouve au même endroit les notifications, l’accès à la bêta et les détails de ton application."
+                    }
+                }
+            }
+        },
+        "Account environment": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Environnement du compte"
+                    }
+                }
+            }
         }
     },
     "version": "1.0"

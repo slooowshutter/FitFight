@@ -8,6 +8,125 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
 
+## Account preferences: prepared 17 Sep 2026
+
+**Code:** You → Settings → Preferences appears immediately below Refer a friend.
+It saves language (Follow iPhone, English, French) and appearance (Follow iPhone,
+Light, Dark) to the account. Existing notification settings and beta access are
+available there, alongside installed source, version/build, and account
+environment. Versions remains under Settings and the main version label stays
+at the top of You. A 1.1.2 release note includes English and French copy.
+
+**Contract:** additive `GET/PATCH /api/v1/me/preferences` and private
+`account_preferences` storage. Existing profile, notification, and Fight API
+contracts and client grants are unchanged. Partial updates preserve concurrent
+changes to other fields. Settings are cached per account/environment; sign-out,
+account switching, failed writes, and stale reads cannot apply another account's
+preferences. Beta and App Store preferences remain separate.
+
+**Cloud checks:** [TypeScript and all 294 backend tests](https://github.com/slooowshutter/FitFight/actions/runs/35176446458)
+passed. [Disposable database checks](https://github.com/slooowshutter/FitFight/actions/runs/35176526612)
+passed migrations, SQL lint, pgTAP, preserved build 113 fixtures, and all 23
+transaction tests both before and after the existing client-permission cutoff.
+Preference checks cover defaults, persistence, concurrent updates, account
+isolation, grants, constraints, and deletion cleanup. The account-preference
+backend and migration files are unchanged since those runs.
+
+The earlier [native regression checks and simulator build](https://github.com/slooowshutter/FitFight/actions/runs/35177250042)
+passed at `38e1d46`. The production preference store was checked for language
+switching, response decoding, partial requests, cache restoration, failed saves,
+stale reads, and account changes. [English/French screen captures](https://github.com/slooowshutter/FitFight/actions/runs/35177250117)
+include Preferences in both themes; the captured layouts were visually checked.
+Localization, native API-boundary, and whitespace checks also passed. No native
+build ran on the workstation. Physical App Store/TestFlight identification and
+signed-in two-device UI checks remain outstanding.
+
+**Review fixes, 18 Sep:** Follow iPhone preserves the device locale. Explicit
+English/French choices retain its region, calendar, first weekday, and clock
+preferences. SwiftUI observes language selection without recreating the signed-in
+view, so unfinished fights and posts keep their state while text updates. Account
+changes still reset that state. An English/French 1.1.2 release note records the fix.
+
+Hosted regressions [reproduced both review findings](https://github.com/slooowshutter/FitFight/actions/runs/35338416694).
+The corrected preference checks passed for UK English, Canadian French, and US
+English with a 24-hour override. A SwiftUI hosting check exercises the production
+signed-in identity modifiers and preference store, checking draft retention during
+remote refresh and local saves, live translation, and draft isolation on account
+switches. All existing native checks and the iOS simulator build also passed in
+[the cloud verification run](https://github.com/slooowshutter/FitFight/actions/runs/35338717280)
+at `b0c33aa`. That run covers the regional-format and draft-state fixes.
+No API or database contract changed, and no live deployment or TestFlight upload
+was made. These hosted checks do not replace physical signed-in two-device checks.
+
+**Offline Fight copy fix, 18 Sep:** app-generated status, invitation, and end-date
+labels now rebuild from existing confirmed Fight data on a language change. They
+no longer depend on a successful snapshot request. The updated labels are cached
+for offline relaunch. Fight names, user-written stakes, participant names, scores,
+and deadlines are preserved. API and database contracts are unchanged. A 1.1.2
+release note includes English and French copy.
+
+The new `python3 scripts/test_fight_localization.py` regression
+[failed against the previous implementation on hosted macOS](https://github.com/slooowshutter/FitFight/actions/runs/35347152418/job/105606316598):
+"Ended must switch to French even when every Fight request fails". It exercises
+the production language-change handler, snapshot mapping, and local cache with
+failed HTTP reads. The corrected regression, all existing native checks, and the
+iOS simulator build passed in [hosted verification](https://github.com/slooowshutter/FitFight/actions/runs/35347513091)
+at `8d76256`. Checks cover English/French switching, invitation previews, preserved
+names and stakes, unchanged scores and deadlines, and offline cache restoration.
+Localization, native API-boundary, and whitespace checks also passed. That run
+predates the develop integration below; normal CI branch triggers are restored.
+Physical-device verification remains outstanding.
+At that stage, no PR, release-branch merge, live deployment, or TestFlight upload
+was made.
+
+**Live and supported clients:** read-only release checks at **03:20 UTC on
+17 Sep** returned staging latest **1.1.1 (201)**, review/internal **1.1.2 (203)**,
+with enforcement off. Production latest is **1.1.1 (202)**, enforcement on, with
+null review/internal candidates. Before the develop integration below, the
+profile model was byte-identical in sources `d97145a` (201), `e2783be` (202),
+`83ac0d8` (203), and the preferences branch. Legacy staging clients remain
+supported. Apply the additive migration, deploy the compatible backend, then
+distribute the app. These release checks made no hosted database writes or live
+deployments.
+
+**Develop integration, 18 Sep:** merged `origin/develop` at `f17a456` into the
+preferences branch, retaining profile navigation, friend controls, saved companion
+descriptions and habitat tabs. Those screens use the account language; the Fight
+composer retains its saved time zone alongside the selected language and device
+region. Both sets of translations, release notes, and native regressions remain.
+
+Combined revision `9d5b076` passed cloud checks on
+[PR #285](https://github.com/slooowshutter/FitFight/pull/285):
+
+- [Web API](https://github.com/slooowshutter/FitFight/actions/runs/35348759910): strict typechecking, all 317 backend tests, and API contract parsing.
+- [Database](https://github.com/slooowshutter/FitFight/actions/runs/35348760015): migrations, SQL lint, 233 pgTAP checks, build 113 compatibility, and all 36 transaction tests before and after the deferred client-permission cutoff, without skips; historical deletion and profile-record migration replay also passed.
+- [Native](https://github.com/slooowshutter/FitFight/actions/runs/35348760090): preference persistence, regional formats, draft retention, offline Fight localization, existing profile/companion regressions, older API response decoding, and full iOS simulator compilation on hosted `macos-26`.
+- [Screenshots](https://github.com/slooowshutter/FitFight/actions/runs/35348759988): English/French simulator screen exports completed.
+
+Vercel created a Preview deployment automatically for the PR. No hosted database
+changes, staging or production deployment, or TestFlight upload was made.
+Physical signed-in two-device checks remain outstanding. The migration, backend,
+then-app rollout order above still applies.
+
+**Further develop integration, 18 Sep:** merged `origin/develop` at `c86d657`
+into the preferences branch in `0d3f08b`. Resolutions preserve shared-membership
+Profile history, invitation-aware join buttons, post-join HealthKit sync, and
+Feedback refresh and comment controls while keeping app copy in the account
+language. Both translation catalogs and all native regressions remain. The new
+feedback decoder runner includes the existing app-localization dependency;
+frozen build 201/202 models and fixtures are unchanged.
+
+Cloud verification of `0d3f08b` passed:
+
+- [Web API](https://github.com/slooowshutter/FitFight/actions/runs/35357049487): strict typechecking, all 318 backend tests, and API contract parsing.
+- [Database](https://github.com/slooowshutter/FitFight/actions/runs/35357049512): migrations, SQL lint, 233 pgTAP checks, legacy build 113 compatibility, and all 41 transaction tests before and after the deferred permission cutoff without skips; historical migration replay also passed. Retained HTTP cases cover builds 113, 190, 200, 201, 202, and 203.
+- [Native](https://github.com/slooowshutter/FitFight/actions/runs/35357049486): all preference, offline localization, Profile interaction, rematch, and frozen build 201/202 feedback checks, plus the full simulator build on hosted `macos-26`.
+- [Screenshots](https://github.com/slooowshutter/FitFight/actions/runs/35357049537): English/French simulator screen exports completed.
+
+These are cloud checks of the combined code. No hosted database change, staging
+or production deployment, release-branch merge, or TestFlight upload was performed.
+Installed-device verification and the existing rollout order remain unchanged.
+
 ## Develop merge verification, 18 Sep 2026
 
 Merged `origin/develop` at `f17a456` into `feedback-status-notifications`. The

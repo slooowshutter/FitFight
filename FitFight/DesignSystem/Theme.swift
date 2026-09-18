@@ -11,7 +11,7 @@ enum Mode: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
     var label: String {
-        self == .night ? String(localized: "Night") : String(localized: "Day")
+        self == .night ? String(appLocalized: "Night") : String(appLocalized: "Day")
     }
     var colorScheme: ColorScheme { self == .night ? .dark : .light }
 }
@@ -172,6 +172,7 @@ struct SwatchGroup: Decodable {
 @dynamicMemberLookup
 struct Theme {
     var mode: Mode
+    var followsSystem = false
     var palette: Palette
     var type: TypeScale
     var radius: RadiusScale
@@ -244,25 +245,28 @@ enum ThemeCatalog {
 }
 
 final class ThemeStore: ObservableObject {
-    @Published var mode: Mode {
-        didSet { if persists { UserDefaults.standard.set(mode.rawValue, forKey: Self.key) } }
+    @Published var mode: Mode = .night {
+        didSet { followsSystem = false }
+    }
+    @Published var systemMode: Mode = .day
+    @Published private(set) var followsSystem = true
+
+    var theme: Theme {
+        var theme = ThemeCatalog.theme(followsSystem ? systemMode : mode)
+        theme.followsSystem = followsSystem
+        return theme
     }
 
-    var theme: Theme { ThemeCatalog.theme(mode) }
+    init() {}
 
-    private static let key = "ff.mode"
-    private let persists: Bool
-
-    init() {
-        persists = true
-        let raw = UserDefaults.standard.string(forKey: Self.key) ?? Mode.night.rawValue
-        mode = Mode(rawValue: raw) ?? .night
+    func apply(_ appearance: AppAppearance) {
+        followsSystem = appearance == .system
+        if appearance != .system { mode = appearance == .dark ? .night : .day }
     }
 
-    /// Previews and the screenshot export set a mode to render it, not to choose it —
-    /// without this they would leave the real app in whichever base they rendered last.
+    /// Preview choices do not change the account's saved appearance.
     init(transient mode: Mode) {
-        persists = false
+        followsSystem = false
         self.mode = mode
     }
 }
@@ -282,7 +286,7 @@ extension View {
     func fitFightTheme(_ theme: Theme) -> some View {
         environment(\.ffTheme, theme)
             .tint(theme.mossFill)
-            .preferredColorScheme(theme.colorScheme)
+            .preferredColorScheme(theme.followsSystem ? nil : theme.colorScheme)
     }
 }
 

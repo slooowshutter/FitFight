@@ -15,7 +15,7 @@ struct DailyStatusRecapView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(String(localized: "Today's check-in"))
+            Text(String(appLocalized: "Today's check-in"))
                 .font(.ff(22, 800))
                 .tracking(22 * -0.015)
                 .foregroundStyle(theme.text)
@@ -25,7 +25,7 @@ struct DailyStatusRecapView: View {
                 .lineSpacing(4)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 12)
-            FFButton(title: String(localized: "Got it"), kind: .primary, fullWidth: true) {
+            FFButton(title: String(appLocalized: "Got it"), kind: .primary, fullWidth: true) {
                 onDismiss()
             }
             .padding(.top, 24)

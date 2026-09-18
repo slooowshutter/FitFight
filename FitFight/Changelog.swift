@@ -28,6 +28,27 @@ enum Changelog {
             version: "1.1.2",
             year: 2026,
             month: 9,
+            day: 18,
+            notes: "Fight status labels follow your language immediately, even when a refresh fails. Fight names and user-written stakes stay exactly as entered."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 18,
+            notes: "Language changes keep your iPhone’s regional formats and preserve unfinished fights and posts."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Choose your language and appearance in You → Preferences. Your choices are saved to your account. Find notification settings, beta access, and your installed app details in the same place."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
             day: 17,
             notes: "Companion descriptions stay saved when you change animals. Browse habitats and reuse your saved descriptions from Yours."
         ),

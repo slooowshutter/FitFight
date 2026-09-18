@@ -21,7 +21,8 @@ with tempfile.TemporaryDirectory(prefix="fitfight-feedback-tests-") as directory
     executable = Path(directory) / "feedback-tests"
     subprocess.run([
         "swiftc", "-swift-version", "5", "-parse-as-library",
-        "-target", f"{platform.machine()}-apple-macosx13.0",
+        "-target", f"{platform.machine()}-apple-macosx14.0",
+        str(root / "FitFight/AppLocalization.swift"),
         str(root / "FitFight/Media.swift"),
         str(root / "tests/fixtures/FeedbackBuild201Models.swift"),
         str(generated), "-o", str(executable),

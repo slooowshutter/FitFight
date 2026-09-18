@@ -79,6 +79,9 @@ struct FightsListView: View {
                 ForEach(model.invitations) { fight in
                     InvitationRow(fight: fight)
                 }
+                ForEach(model.suggestedFights.filter { !$0.alreadyMember }) { fight in
+                    SuggestedFightOffer(fight: fight) { Task { await model.openJoinable(fight, session: session) } }
+                }
             }
 
             if filter == .current {
@@ -104,6 +107,9 @@ struct FightsListView: View {
                     FinishedRow(fight: fight)
                 }
             }
+        }
+        .task(id: filter) {
+            if filter == .invited { await model.loadFightDiscovery(session: session) }
         }
     }
 

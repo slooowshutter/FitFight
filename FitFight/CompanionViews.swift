@@ -50,6 +50,35 @@ enum StockCompanion: String, CaseIterable, Identifiable {
     }
 }
 
+enum CompanionCategory: String, CaseIterable, Identifiable {
+    case all, yours, custom, mountains, water, forest, jungle
+
+    var id: String { rawValue }
+
+    var name: String {
+        switch self {
+        case .all: String(appLocalized: "All")
+        case .mountains: String(appLocalized: "Mountains")
+        case .water: String(appLocalized: "Water")
+        case .forest: String(appLocalized: "Forest")
+        case .jungle: String(appLocalized: "Jungle")
+        case .yours: String(appLocalized: "Yours")
+        case .custom: String(appLocalized: "Make it yours")
+        }
+    }
+
+    var animals: [StockCompanion] {
+        switch self {
+        case .all: StockCompanion.allCases
+        case .mountains: [.goat, .bear, .redPanda]
+        case .water: [.otter, .turtle]
+        case .forest: [.badger, .raccoon, .rabbit, .fox, .bear, .boar]
+        case .jungle: [.sloth]
+        case .yours, .custom: []
+        }
+    }
+}
+
 enum CompanionEffortStage: Int, CaseIterable, Identifiable {
     case rest = 1, headingOut, onTheMove, pushing, peak
 
@@ -145,7 +174,6 @@ private struct CompanionIdentityRecord: Codable {
     var breed: String
     var accessories: String
     var isCustom: Bool?
-    var customPrompt: String?
 }
 
 /// Account-backed companion. Custom descriptions are stored on the profile for later generation.
@@ -158,14 +186,17 @@ final class CompanionStore: ObservableObject {
     @Published var accessories = "" { didSet { persist() } }
     @Published var isCustom = false
     @Published var customPrompt = ""
+    @Published private(set) var savedPrompts: [String] = []
     @Published private(set) var hasChosen = false
     @Published var showingPicker = false
     @Published var pickerStartsWithCustom = false
 
     private var isRestoring = false
+    private var ownerId: UUID?
     private static let pendingPrefix = "ff.companion.pending."
     private static let pendingPromptPrefix = "ff.companion.pendingPrompt."
     private static let storageKey = "ff.companion.identity"
+    private static let libraryPrefix = "ff.companion.library."
     static let customId = "custom"
 
     init() {
@@ -177,8 +208,24 @@ final class CompanionStore: ObservableObject {
         return UserDefaults.standard.string(forKey: pendingPrefix + userId.uuidString) != nil
     }
 
+    static func deleteLocalLibrary(for userId: UUID) {
+        UserDefaults.standard.removeObject(forKey: libraryPrefix + userId.uuidString)
+        UserDefaults.standard.removeObject(forKey: pendingPrefix + userId.uuidString)
+        UserDefaults.standard.removeObject(forKey: pendingPromptPrefix + userId.uuidString)
+    }
+
     func apply(_ profile: FitFightProfile?) {
         guard !CompanionPreview.isEnabled else { return }
+        if ownerId != profile?.userId {
+            ownerId = profile?.userId
+            savedPrompts = ownerId.flatMap {
+                UserDefaults.standard.stringArray(forKey: Self.libraryPrefix + $0.uuidString)
+            } ?? []
+            customPrompt = savedPrompts.first ?? ""
+            selection = .badger
+            isCustom = false
+            hasChosen = false
+        }
         if let userId = profile?.userId,
            let pending = UserDefaults.standard.string(forKey: Self.pendingPrefix + userId.uuidString) {
             let pendingPrompt = UserDefaults.standard.string(forKey: Self.pendingPromptPrefix + userId.uuidString)
@@ -191,12 +238,28 @@ final class CompanionStore: ObservableObject {
         } else {
             hasChosen = false
             isCustom = false
-            customPrompt = ""
             if profile == nil {
+                customPrompt = ""
+                savedPrompts = []
                 selection = .badger
                 showingPicker = false
             }
         }
+        persist()
+    }
+
+    func loadSavedPrompts(session: SessionStore) async throws {
+        guard !CompanionPreview.isEnabled, let ownerId,
+              session.profile?.userId == ownerId else { return }
+        let prompts = try await session.companionPrompts()
+        try Task.checkCancellation()
+        guard self.ownerId == ownerId, session.profile?.userId == ownerId else {
+            throw CancellationError()
+        }
+        // Keep locally pending choices while refreshing the account's saved library.
+        savedPrompts = prompts + savedPrompts.filter { !prompts.contains($0) }
+        if customPrompt.isEmpty { customPrompt = savedPrompts.first ?? "" }
+        persist()
     }
 
     func choose(id: String, prompt: String?, session: SessionStore) async throws {
@@ -269,6 +332,10 @@ final class CompanionStore: ObservableObject {
         if id == Self.customId {
             isCustom = true
             customPrompt = (prompt ?? customPrompt).trimmingCharacters(in: .whitespacesAndNewlines)
+            if !customPrompt.isEmpty {
+                savedPrompts.removeAll { $0 == customPrompt }
+                savedPrompts.insert(customPrompt, at: 0)
+            }
             hasChosen = true
             return
         }
@@ -279,7 +346,6 @@ final class CompanionStore: ObservableObject {
         }
         selection = animal
         isCustom = false
-        customPrompt = ""
         hasChosen = true
     }
 
@@ -298,9 +364,7 @@ final class CompanionStore: ObservableObject {
         emotion = CompanionEmotion(rawValue: saved.emotion) ?? .calm
         breed = saved.breed
         accessories = saved.accessories
-        if saved.isCustom == true {
-            applyChoice(id: Self.customId, prompt: saved.customPrompt)
-        } else if let animal = StockCompanion(rawValue: saved.animal) {
+        if saved.isCustom != true, let animal = StockCompanion(rawValue: saved.animal) {
             applyChoice(id: animal.rawValue, prompt: nil)
         }
         isRestoring = false
@@ -314,10 +378,12 @@ final class CompanionStore: ObservableObject {
             emotion: emotion.rawValue,
             breed: breed,
             accessories: accessories,
-            isCustom: isCustom,
-            customPrompt: isCustom ? customPrompt : nil
+            isCustom: isCustom
         )
         UserDefaults.standard.set(try? JSONEncoder().encode(record), forKey: Self.storageKey)
+        if let ownerId {
+            UserDefaults.standard.set(savedPrompts, forKey: Self.libraryPrefix + ownerId.uuidString)
+        }
     }
 }
 
@@ -731,8 +797,11 @@ struct CompanionPicker: View {
     @State private var draft: StockCompanion?
     @State private var pickingCustom: Bool
     @State private var customPrompt: String
+    @State private var category: CompanionCategory
     @State private var isSaving = false
     @State private var error = ""
+    @State private var libraryError = ""
+    @State private var loadingLibrary = false
     @FocusState private var promptFocused: Bool
 
     private let promptLimit = 1000
@@ -740,6 +809,7 @@ struct CompanionPicker: View {
 
     init(selection: StockCompanion, required: Bool = false, isCustom: Bool = false, prompt: String = "", startWithCustom: Bool = false) {
         self.startWithCustom = startWithCustom
+        _category = State(initialValue: startWithCustom ? .custom : .all)
         if isCustom || startWithCustom {
             _draft = State(initialValue: nil)
             _pickingCustom = State(initialValue: true)
@@ -752,32 +822,99 @@ struct CompanionPicker: View {
     }
 
     var body: some View {
-        ScrollViewReader { scroll in
-            FFScreen(clearance: false) {
-                HStack(alignment: .top) {
-                    Text("Choose your companion")
-                        .font(.custom("Nunito-ExtraBold", size: 26, relativeTo: .title))
-                        .foregroundStyle(theme.text)
-                    Spacer()
-                    if !session.needsCompanionSelection {
-                        Button(String(appLocalized: "Close")) { dismiss() }
-                            .ffType(.label)
-                            .foregroundStyle(theme.mossText)
-                            .frame(minHeight: 44)
+        FFScreen(clearance: false) {
+            HStack(alignment: .top) {
+                Text("Choose your companion")
+                    .font(.custom("Nunito-ExtraBold", size: 26, relativeTo: .title))
+                    .foregroundStyle(theme.text)
+                Spacer()
+                if !session.needsCompanionSelection {
+                    Button(String(appLocalized: "Close")) { dismiss() }
+                        .ffType(.label)
+                        .foregroundStyle(theme.mossText)
+                        .frame(minHeight: 44)
+                }
+            }
+            Text("This is how other people see you in fights and Feed. You can change your animal anytime.")
+                .font(.custom("Nunito-Bold", size: 13, relativeTo: .body))
+                .foregroundStyle(theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if !error.isEmpty && category != .custom {
+                Text(error)
+                    .ffType(.caption)
+                    .foregroundStyle(theme.emberText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(CompanionCategory.allCases) { item in
+                        Button {
+                            promptFocused = false
+                            category = item
+                            error = ""
+                        } label: {
+                            Text(item.name)
+                                .ffType(.label)
+                                .foregroundStyle(category == item ? theme.mossText : theme.textSecondary)
+                                .padding(.horizontal, 16)
+                                .frame(minHeight: 44)
+                                .background(category == item ? theme.mossWash : theme.card,
+                                            in: Capsule())
+                                .overlay(Capsule().strokeBorder(category == item ? theme.mossEdge : theme.hairline, lineWidth: 1))
+                        }
+                        .buttonStyle(FFHapticPlainStyle())
+                        .accessibilityAddTraits(category == item ? .isSelected : [])
                     }
                 }
-                Text("This is how other people see you in fights and Feed. You can change your animal anytime.")
-                    .font(.custom("Nunito-Bold", size: 13, relativeTo: .body))
+            }
+            .disabled(isSaving)
+            if category == .yours {
+                Text("Reuse a saved description or write a new one in Make it yours.")
+                    .ffType(.body)
                     .foregroundStyle(theme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
-                if !error.isEmpty && !pickingCustom {
-                    Text(error)
+                if loadingLibrary {
+                    ProgressView().accessibilityLabel(String(appLocalized: "Loading saved descriptions"))
+                }
+                if !libraryError.isEmpty {
+                    Text(libraryError)
                         .ffType(.caption)
                         .foregroundStyle(theme.emberText)
-                        .fixedSize(horizontal: false, vertical: true)
+                } else if !loadingLibrary && companions.savedPrompts.isEmpty {
+                    Text("Your saved descriptions will appear here.")
+                        .ffType(.body)
+                        .foregroundStyle(theme.textSecondary)
                 }
+                ForEach(companions.savedPrompts, id: \.self) { prompt in
+                    Button {
+                        customPrompt = prompt
+                        Task { await saveCustom() }
+                    } label: {
+                        HStack(spacing: 12) {
+                            Text(prompt)
+                                .ffType(.body)
+                                .lineLimit(3)
+                                .multilineTextAlignment(.leading)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            Image(systemName: companions.isCustom && companions.customPrompt == prompt
+                                  ? "checkmark.circle.fill" : "arrow.uturn.backward")
+                        }
+                        .foregroundStyle(theme.mossText)
+                        .padding(16)
+                        .frame(minHeight: 44)
+                        .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.card))
+                        .ffBorder(theme.hairline, radius: theme.radius.card)
+                    }
+                    .buttonStyle(FFHapticPlainStyle())
+                    .disabled(isSaving)
+                    .accessibilityLabel(prompt)
+                    .accessibilityHint(String(appLocalized: "Use this saved description"))
+                    .accessibilityAddTraits(companions.isCustom && companions.customPrompt == prompt ? .isSelected : [])
+                }
+            }
+            if !category.animals.isEmpty {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 150 : 96), spacing: 10)], spacing: 10) {
-                    ForEach(StockCompanion.allCases) { animal in
+                    ForEach(category.animals) { animal in
                         Button {
                             Task { await saveStock(animal) }
                         } label: {
@@ -805,112 +942,100 @@ struct CompanionPicker: View {
                         .accessibilityAddTraits(draft == animal && !pickingCustom ? .isSelected : [])
                     }
                 }
-                .id("companion-animals")
-                Button {
-                    pickingCustom = true
-                    draft = nil
-                    error = ""
-                    scroll.scrollTo("companion-customization", anchor: .top)
-                } label: {
-                    Text("Make it yours")
-                        .font(.custom("Nunito-ExtraBold", size: 16, relativeTo: .body))
-                        .foregroundStyle(pickingCustom ? theme.mossText : theme.text)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                        .padding(.vertical, 10)
-                        .background(pickingCustom ? theme.mossWash : theme.card,
-                                    in: RoundedRectangle(cornerRadius: theme.radius.card))
-                        .ffBorder(pickingCustom ? theme.mossEdge : theme.hairline, radius: theme.radius.card)
+            }
+            if category == .custom {
+                Text("You can change your animal anytime. Choose another from the grid or describe any animal below.")
+                    .ffType(.body)
+                    .foregroundStyle(theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button(String(appLocalized: "Change animal")) {
+                    promptFocused = false
+                    category = .all
                 }
+                .ffType(.buttonSmall)
+                .foregroundStyle(theme.mossText)
+                .frame(minHeight: 44)
                 .buttonStyle(FFHapticPlainStyle())
                 .disabled(isSaving)
-                .accessibilityAddTraits(pickingCustom ? .isSelected : [])
-                .id("companion-customization")
-                if pickingCustom {
-                    Text("You can change your animal anytime. Choose another from the grid or describe any animal below.")
-                        .ffType(.body)
-                        .foregroundStyle(theme.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Button(String(appLocalized: "Change animal")) {
-                        promptFocused = false
-                        scroll.scrollTo("companion-animals", anchor: .top)
-                    }
-                    .ffType(.buttonSmall)
-                    .foregroundStyle(theme.mossText)
-                    .frame(minHeight: 44)
-                    .buttonStyle(FFHapticPlainStyle())
-                    .disabled(isSaving)
-                    FFField(
-                        label: String(appLocalized: "Your animal"),
-                        state: promptFocused ? .focused : .normal,
-                        help: String(appLocalized: "Write the species, breed or race, accessories, colors, and anything else that should appear."),
-                        counter: "\(customPrompt.count)/\(promptLimit)",
-                        minHeight: 140
-                    ) {
-                        if staticRender {
-                            Text("Species, breed, accessories, colors…")
-                                .foregroundStyle(theme.textFaint)
-                                .frame(maxWidth: .infinity, minHeight: 88, alignment: .topLeading)
-                        } else {
-                            TextField(
-                                String(appLocalized: "Species, breed, accessories, colors…"),
-                                text: $customPrompt,
-                                axis: .vertical
-                            )
-                            .focused($promptFocused)
-                            .accessibilityLabel(String(appLocalized: "Your animal"))
-                            .lineLimit(5...12)
-                            .textInputAutocapitalization(.sentences)
-                            .onChange(of: customPrompt) { _, value in
-                                if value.count > promptLimit { customPrompt = String(value.prefix(promptLimit)) }
-                            }
+                FFField(
+                    label: String(appLocalized: "Your animal"),
+                    state: promptFocused ? .focused : .normal,
+                    help: String(appLocalized: "Write the species, breed or race, accessories, colors, and anything else that should appear."),
+                    counter: "\(customPrompt.count)/\(promptLimit)",
+                    minHeight: 140
+                ) {
+                    if staticRender {
+                        Text("Species, breed, accessories, colors…")
+                            .foregroundStyle(theme.textFaint)
+                            .frame(maxWidth: .infinity, minHeight: 88, alignment: .topLeading)
+                    } else {
+                        TextField(
+                            String(appLocalized: "Species, breed, accessories, colors…"),
+                            text: $customPrompt,
+                            axis: .vertical
+                        )
+                        .focused($promptFocused)
+                        .accessibilityLabel(String(appLocalized: "Your animal"))
+                        .lineLimit(5...12)
+                        .textInputAutocapitalization(.sentences)
+                        .onChange(of: customPrompt) { _, value in
+                            if value.count > promptLimit { customPrompt = String(value.prefix(promptLimit)) }
                         }
                     }
-                    if !error.isEmpty {
-                        Text(error)
-                            .ffType(.caption)
-                            .foregroundStyle(theme.emberText)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    FFButton(
-                        title: String(appLocalized: "Save companion"),
-                        kind: .primary,
-                        enabled: canSaveCustom,
-                        busy: isSaving,
-                        fullWidth: true,
-                        action: { Task { await saveCustom() } }
-                    )
-                } else if let draft {
-                    Text(isSaving ? String(appLocalized: "Saving…") : draft.caption)
-                        .ffType(.body)
+                }
+                if !error.isEmpty {
+                    Text(error)
+                        .ffType(.caption)
+                        .foregroundStyle(theme.emberText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                FFButton(
+                    title: String(appLocalized: "Save companion"),
+                    kind: .primary,
+                    enabled: canSaveCustom,
+                    busy: isSaving,
+                    fullWidth: true,
+                    action: { Task { await saveCustom() } }
+                )
+            } else if let draft, category.animals.contains(draft) {
+                Text(isSaving ? String(appLocalized: "Saving…") : draft.caption)
+                    .ffType(.body)
+                    .foregroundStyle(theme.textSecondary)
+                    .frame(maxWidth: .infinity)
+            }
+            #if DEBUG && targetEnvironment(simulator)
+            if CompanionPreview.isEnabled {
+                FFSection(title: String(appLocalized: "Artwork study")) {
+                    CompanionScene(name: "tennis")
+                    Text("Fixed demo cast. Artwork study only; this is not a Feed post.")
+                        .ffType(.caption)
                         .foregroundStyle(theme.textSecondary)
-                        .frame(maxWidth: .infinity)
-                }
-                #if DEBUG && targetEnvironment(simulator)
-                if CompanionPreview.isEnabled {
-                    FFSection(title: String(appLocalized: "Artwork study")) {
-                        CompanionScene(name: "tennis")
-                        Text("Fixed demo cast. Artwork study only; this is not a Feed post.")
-                            .ffType(.caption)
-                            .foregroundStyle(theme.textSecondary)
-                    }
-                }
-                #endif
-            }
-            .onChange(of: pickingCustom, initial: true) { wasCustom, isCustom in
-                if isCustom && (!wasCustom || startWithCustom) {
-                    scroll.scrollTo("companion-customization", anchor: .top)
                 }
             }
+            #endif
         }
         .interactiveDismissDisabled(session.needsCompanionSelection)
         .onAppear {
+            if customPrompt.isEmpty { customPrompt = companions.customPrompt }
             if companions.isCustom || startWithCustom {
                 pickingCustom = true
                 draft = nil
-                customPrompt = companions.customPrompt
             } else if companions.hasChosen {
                 pickingCustom = false
                 draft = companions.selection
+            }
+        }
+        .task(id: session.profile?.userId) {
+            loadingLibrary = true
+            libraryError = ""
+            defer { loadingLibrary = false }
+            do {
+                try await companions.loadSavedPrompts(session: session)
+                if customPrompt.isEmpty { customPrompt = companions.customPrompt }
+            } catch is CancellationError {
+                return
+            } catch {
+                libraryError = String(appLocalized: "Couldn’t load your saved descriptions.")
             }
         }
     }

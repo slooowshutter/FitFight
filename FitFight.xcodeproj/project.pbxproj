@@ -86,6 +86,13 @@
         923EA6A21D2D4018B21AFFD9 /* AppLocalization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77DE13D2DDFE478AAAB22CF3 /* AppLocalization.swift */; };
         68E2E713C10A455189C0B48A /* AccountPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6E9D16C6C534B559C8F0679 /* AccountPreferences.swift */; };
         E8935CD58CBF4714874982FC /* PreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 798E70F7F8A9400EBBF0C8B0 /* PreferencesView.swift */; };
+        093BD4214450F0E24E960170 /* SharedProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6E984145AFCC236130CABCD /* SharedProfile.swift */; };
+        C52EBF93D4D91888A73FA9FA /* ProfileScreenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F63B0748E91625E789AE99FD /* ProfileScreenStore.swift */; };
+        5893F862B25C0EBA522F8DFA /* ProfileSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1FE342B3DFF37CEFC227E1 /* ProfileSheet.swift */; };
+        AA532C5D188C47359C573714 /* ProfileStepStatisticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F6BE97D8DAC482CA45D6032 /* ProfileStepStatisticsView.swift */; };
+        99AAAB8BD6F184E568149D1D /* EditProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41EE371C708EECCC762EB820 /* EditProfileView.swift */; };
+        61856F7155495A28A4B93A60 /* FriendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C2AC1044B8F11786123D48E /* FriendsView.swift */; };
+        A0573E386FD2FA2A4A357CC4 /* SuggestedFightsOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AD1CDE4182F6C6E52321063 /* SuggestedFightsOnboardingView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -171,6 +178,13 @@
         77DE13D2DDFE478AAAB22CF3 /* AppLocalization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLocalization.swift; sourceTree = "<group>"; };
         B6E9D16C6C534B559C8F0679 /* AccountPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountPreferences.swift; sourceTree = "<group>"; };
         798E70F7F8A9400EBBF0C8B0 /* PreferencesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesView.swift; sourceTree = "<group>"; };
+        D6E984145AFCC236130CABCD /* SharedProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedProfile.swift; sourceTree = "<group>"; };
+        F63B0748E91625E789AE99FD /* ProfileScreenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileScreenStore.swift; sourceTree = "<group>"; };
+        1A1FE342B3DFF37CEFC227E1 /* ProfileSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSheet.swift; sourceTree = "<group>"; };
+        7F6BE97D8DAC482CA45D6032 /* ProfileStepStatisticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileStepStatisticsView.swift; sourceTree = "<group>"; };
+        41EE371C708EECCC762EB820 /* EditProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditProfileView.swift; sourceTree = "<group>"; };
+        2C2AC1044B8F11786123D48E /* FriendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendsView.swift; sourceTree = "<group>"; };
+        7AD1CDE4182F6C6E52321063 /* SuggestedFightsOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestedFightsOnboardingView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -215,6 +229,13 @@
                 77DE13D2DDFE478AAAB22CF3 /* AppLocalization.swift */,
                 B6E9D16C6C534B559C8F0679 /* AccountPreferences.swift */,
                 798E70F7F8A9400EBBF0C8B0 /* PreferencesView.swift */,
+                7AD1CDE4182F6C6E52321063 /* SuggestedFightsOnboardingView.swift */,
+                2C2AC1044B8F11786123D48E /* FriendsView.swift */,
+                41EE371C708EECCC762EB820 /* EditProfileView.swift */,
+                1A1FE342B3DFF37CEFC227E1 /* ProfileSheet.swift */,
+                7F6BE97D8DAC482CA45D6032 /* ProfileStepStatisticsView.swift */,
+                F63B0748E91625E789AE99FD /* ProfileScreenStore.swift */,
+                D6E984145AFCC236130CABCD /* SharedProfile.swift */,
                 A10000000000000000000352 /* FightSnapshot.swift */,
                 A6D25D785CDA4BEDA804E80C /* FightLiveUpdates.swift */,
                 A10000000000000000000360 /* Media.swift */,
@@ -427,6 +448,13 @@
                 923EA6A21D2D4018B21AFFD9 /* AppLocalization.swift in Sources */,
                 68E2E713C10A455189C0B48A /* AccountPreferences.swift in Sources */,
                 E8935CD58CBF4714874982FC /* PreferencesView.swift in Sources */,
+                A0573E386FD2FA2A4A357CC4 /* SuggestedFightsOnboardingView.swift in Sources */,
+                61856F7155495A28A4B93A60 /* FriendsView.swift in Sources */,
+                99AAAB8BD6F184E568149D1D /* EditProfileView.swift in Sources */,
+                5893F862B25C0EBA522F8DFA /* ProfileSheet.swift in Sources */,
+                AA532C5D188C47359C573714 /* ProfileStepStatisticsView.swift in Sources */,
+                C52EBF93D4D91888A73FA9FA /* ProfileScreenStore.swift in Sources */,
+                093BD4214450F0E24E960170 /* SharedProfile.swift in Sources */,
                 A10000000000000000000353 /* FightSnapshot.swift in Sources */,
                 C87245427B08466399BDF753 /* FightLiveUpdates.swift in Sources */,
                 A10000000000000000000361 /* Media.swift in Sources */,

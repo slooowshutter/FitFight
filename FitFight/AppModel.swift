@@ -136,6 +136,7 @@ struct Fight: Codable, Identifiable, Hashable {
     var suggested: Bool = false
     var pendingJoin: Bool = false
     var offersJoinNext: Bool = false
+    var timeZone: String? = nil
 
     var hasAction: Bool {
         !actionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -230,7 +231,12 @@ final class AppModel: ObservableObject {
         }
     }
 
-    @Published var openFightID: String?
+    @Published var openFightID: String? {
+        didSet {
+            if openFightID != selectedHistoryFightID { selectedHistoryFightID = nil }
+        }
+    }
+    private var selectedHistoryFightID: String?
     @Published var openPost: FeedPostLink?
     @Published var showingActivity = false
     @Published var feedRevision = 0
@@ -243,6 +249,7 @@ final class AppModel: ObservableObject {
     @Published var joined: Set<String> = []
     @Published var createError: String?
     @Published var pendingJoinable: Fight?
+    @Published var profileChallenge: ProfileChallengeDraft?
     @Published var pendingReferralError: String?
     @Published private(set) var isCreatingFight = false
     @Published private(set) var isUpdatingFight = false
@@ -356,6 +363,10 @@ final class AppModel: ObservableObject {
         return fights
             .filter { $0.seriesId == seriesId }
             .reduce(fight) { Self.preferredCanonicalFight($0, $1) }
+    }
+
+    func detailFight(for id: String) -> Fight? {
+        selectedHistoryFightID == id ? fight(id: id) : canonicalFight(for: id)
     }
 
     func seriesHistory(for fight: Fight) -> [Fight] {
@@ -703,6 +714,7 @@ final class AppModel: ObservableObject {
         name: String = "",
         startsAt: Date,
         endsAt: Date,
+        timeZone: TimeZone,
         actionText: String,
         inviteHandles: [String],
         visibility: String = "invite_only",
@@ -751,7 +763,7 @@ final class AppModel: ObservableObject {
             name: storedName,
             startsAt: startsAt,
             endsAt: endsAt,
-            timeZone: TimeZone.current.identifier,
+            timeZone: timeZone.identifier,
             outcomeRule: "highest_total",
             goalPolicy: "shared",
             defaultGoalValue: nil,
@@ -790,6 +802,7 @@ final class AppModel: ObservableObject {
         recurring: Bool,
         startsAt: Date?,
         endsAt: Date,
+        timeZone: String?,
         inviteHandles: [String],
         removeUserIds: [String]
     ) async -> Bool {
@@ -848,6 +861,7 @@ final class AppModel: ObservableObject {
                     recurring: recurring,
                     startsAt: startsAt,
                     endsAt: endsAt,
+                    timeZone: timeZone,
                     inviteHandles: handles.isEmpty ? nil : handles,
                     removeUserIds: removals.isEmpty ? nil : removals
                 ),
@@ -1336,7 +1350,8 @@ final class AppModel: ObservableObject {
             windowEnd: ends,
             serverState: created.state,
             recurring: payload.recurring ?? false,
-            visibility: payload.visibility ?? "invite_only"
+            visibility: payload.visibility ?? "invite_only",
+            timeZone: payload.timeZone
         )
     }
 
@@ -1440,10 +1455,11 @@ final class AppModel: ObservableObject {
         )
     }
 
-    func openFightFromFeed(id: String) {
-        let destination = canonicalFight(for: id)?.id ?? id
+    func openFight(id: String, preserveRound: Bool = false) {
+        let destination = (preserveRound ? fight(id: id) : canonicalFight(for: id))?.id ?? id
         tab = .fights
         Task { @MainActor in
+            self.selectedHistoryFightID = preserveRound ? destination : nil
             self.openFightID = destination
         }
     }
@@ -1473,7 +1489,7 @@ final class AppModel: ObservableObject {
             openPost = FeedPostLink(id: postID, commentID: commentID)
             return
         }
-        openFightFromFeed(id: parts[1])
+        openFight(id: parts[1])
         if showDailyStatusRecap {
             Task { await presentDailyStatusRecap(for: parts[1]) }
         }
@@ -1595,7 +1611,8 @@ final class AppModel: ObservableObject {
             suggested: series?.suggested ?? false,
             offersJoinNext: (series?.recurring ?? false)
                 && Self.isAfterFightStartDay(starts)
-                && mine?.state == "invited"
+                && mine?.state == "invited",
+            timeZone: row.timeZone
         )
         localizeFight(&fight, formatScore: formatScore)
         return fight

@@ -42,9 +42,19 @@ enum FightComposer {
         }
     }
 
-    static func endDate(from startsAt: Date, days: Int) -> Date {
-        Calendar.current.date(byAdding: .day, value: days, to: startsAt)
+    static func endDate(from startsAt: Date, days: Int, timeZone: TimeZone = .current) -> Date {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        return calendar.date(byAdding: .day, value: days, to: startsAt)
             ?? startsAt.addingTimeInterval(TimeInterval(days * 86_400))
+    }
+
+    static func moveWallTime(_ date: Date, from oldZone: TimeZone, to newZone: TimeZone) -> Date {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = oldZone
+        let components = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: date)
+        calendar.timeZone = newZone
+        return calendar.date(from: components) ?? date
     }
 }
 
@@ -82,6 +92,7 @@ struct FightComposerDurationPage: View {
     @Binding var customStart: Date
     @Binding var customEnd: Date
     @Binding var recurring: Bool
+    @Binding var timeZone: TimeZone
     var canEditStart: Bool
     var startsImmediately: Bool
     var constrainEnd: Bool
@@ -153,13 +164,23 @@ struct FightComposerDurationPage: View {
                         } else {
                             DatePicker("End", selection: $customEnd, displayedComponents: [.date, .hourAndMinute])
                         }
-                        Text(TimeZone.current.identifier)
-                            .ffType(.caption)
-                            .foregroundStyle(theme.textSecondary)
+                        if canEditStart {
+                            FitFightTimeZonePicker(selection: $timeZone)
+                        } else {
+                            Text(verbatim: timeZone.identifier)
+                                .ffType(.caption).foregroundStyle(theme.textSecondary)
+                        }
                     }
                     .ffType(.rowTitle)
                     .foregroundStyle(theme.text)
                     .tint(theme.mossText)
+                    .environment(\.timeZone, timeZone)
+                    .onChange(of: timeZone) { oldZone, newZone in
+                        if canEditStart {
+                            customStart = FightComposer.moveWallTime(customStart, from: oldZone, to: newZone)
+                        }
+                        customEnd = FightComposer.moveWallTime(customEnd, from: oldZone, to: newZone)
+                    }
                 }
                 if let scheduleError {
                     FFNotice(text: scheduleError, tone: .ember, systemImage: "calendar")
@@ -285,14 +306,18 @@ struct FightComposerPeoplePage: View {
                     ForEach(Array(people.enumerated()), id: \.element.id) { index, person in
                         if index > 0 { FFDivider() }
                         HStack(spacing: 12) {
-                            FFAvatar(monogram: String(person.handle.prefix(2)).uppercased(), size: 36)
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(verbatim: person.name)
-                                    .ffType(.rowTitle)
-                                    .foregroundStyle(theme.text)
-                                Text(person.subtitle(createMode: createMode))
-                                    .ffType(.caption)
-                                    .foregroundStyle(person.isOwner ? theme.mossText : (createMode || person.pendingAdd ? theme.mossText : theme.textSecondary))
+                            ProfileIdentityLink(userID: UUID(uuidString: person.id), source: "participants") {
+                                HStack(spacing: 12) {
+                                    FFAvatar(monogram: String(person.handle.prefix(2)).uppercased(), size: 36)
+                                    VStack(alignment: .leading, spacing: 1) {
+                                        Text(verbatim: person.name)
+                                            .ffType(.rowTitle)
+                                            .foregroundStyle(theme.text)
+                                        Text(person.subtitle(createMode: createMode))
+                                            .ffType(.caption)
+                                            .foregroundStyle(person.isOwner ? theme.mossText : (createMode || person.pendingAdd ? theme.mossText : theme.textSecondary))
+                                    }
+                                }
                             }
                             Spacer(minLength: 8)
                             if person.isOwner {
@@ -423,6 +448,7 @@ struct FightComposerReviewPage: View {
     var customEnd: Date
     var durationStart: Date
     var durationDays: Int
+    var timeZone: TimeZone
     var visibilityJoinable: Bool
     var opponentHandles: [String]
     var recurring: Bool
@@ -446,7 +472,9 @@ struct FightComposerReviewPage: View {
             : "\(listing) · \(opponents)"
         let windowEnd = customSchedule
             ? customEnd
-            : FightComposer.endDate(from: durationStart, days: durationDays)
+            : FightComposer.endDate(from: durationStart, days: durationDays, timeZone: timeZone)
+        let dateFormat = Date.FormatStyle(date: .abbreviated, time: .shortened, timeZone: timeZone)
+            .locale(AppLocalization.locale)
 
         return VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
@@ -472,13 +500,13 @@ struct FightComposerReviewPage: View {
                 FFDivider()
                 FFGroupedRow(
                     title: String(appLocalized: "Duration"),
-                    subtitle: customSchedule ? String(
+                    subtitle: (customSchedule ? String(
                         appLocalized: "fight.custom-window",
-                        defaultValue: "\(customStart.formatted(Date.FormatStyle(date: .abbreviated, time: .shortened).locale(AppLocalization.locale))) → \(customEnd.formatted(Date.FormatStyle(date: .abbreviated, time: .shortened).locale(AppLocalization.locale)))"
+                        defaultValue: "\(customStart.formatted(dateFormat)) → \(customEnd.formatted(dateFormat))"
                     ) : String(
                         appLocalized: "fight.duration-end",
-                        defaultValue: "\(duration) · ends \(windowEnd.formatted(Date.FormatStyle(date: .abbreviated, time: .shortened).locale(AppLocalization.locale)))"
-                    ),
+                        defaultValue: "\(duration) · ends \(windowEnd.formatted(dateFormat))"
+                    )) + " · \(timeZone.identifier)",
                     systemImage: "calendar",
                     subtitleTone: .neutral,
                     trailing: AnyView(Text("Change").ffType(.caption).foregroundStyle(theme.mossText)),
@@ -568,6 +596,61 @@ struct FightComposerReviewPage: View {
                     }
                 }
             }
+        }
+    }
+}
+
+struct FitFightTimeZonePicker: View {
+    @Binding var selection: TimeZone
+    @Environment(\.ffTheme) private var theme
+    @State private var showingPicker = false
+    @State private var search = ""
+
+    var body: some View {
+        Button {
+            search = ""
+            showingPicker = true
+        } label: {
+            HStack {
+                Text(String(appLocalized: "Time zone"))
+                Spacer(minLength: 8)
+                Text(verbatim: selection.identifier.replacingOccurrences(of: "_", with: " "))
+                    .foregroundStyle(theme.textSecondary).multilineTextAlignment(.trailing)
+                Image(systemName: "chevron.right").foregroundStyle(theme.textFaint)
+            }.ffType(.body).frame(minHeight: 44).contentShape(Rectangle())
+        }
+        .buttonStyle(FFHapticPlainStyle())
+        .sheet(isPresented: $showingPicker) {
+            NavigationStack {
+                List {
+                    ForEach(Array(Set(TimeZone.knownTimeZoneIdentifiers + ["UTC", selection.identifier])).sorted().filter {
+                        search.isEmpty || $0.replacingOccurrences(of: "_", with: " ").localizedCaseInsensitiveContains(search)
+                    }, id: \.self) { identifier in
+                        if let zone = TimeZone(identifier: identifier) {
+                            Button {
+                                selection = zone
+                                showingPicker = false
+                            } label: {
+                                HStack {
+                                    Text(verbatim: identifier.replacingOccurrences(of: "_", with: " "))
+                                    Spacer()
+                                    if zone == selection { Image(systemName: "checkmark").foregroundStyle(theme.mossText) }
+                                }.ffType(.body).frame(minHeight: 44).foregroundStyle(theme.text)
+                            }.listRowBackground(theme.card)
+                        }
+                    }
+                }
+                .scrollContentBackground(.hidden)
+                .background(theme.bg)
+                .searchable(text: $search, prompt: String(appLocalized: "Search time zones"))
+                .navigationTitle(String(appLocalized: "Time zone"))
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button(String(appLocalized: "Done")) { showingPicker = false }
+                    }
+                }
+            }.tint(theme.mossText).fitFightTheme(theme).presentationBackground(theme.bg)
         }
     }
 }

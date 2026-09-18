@@ -61,30 +61,21 @@ for (const entry of [
             owner_id: userId,
             name: "Walk together",
             suggested: false,
+            visibility: "joinable",
+            current_fight_id: fightId,
+            paused_at: null,
+            join_code: "ABCD",
         };
-        const admin = {
-            from(table: string) {
-                return {
-                    select: () => ({
-                        eq: () => ({
-                            maybeSingle: async () => ({
-                                data:
-                                    table === "fight_series"
-                                        ? series
-                                        : { handle: "marc", display_name: "Marc" },
-                                error: null,
-                            }),
-                        }),
-                    }),
-                    update: () => ({
-                        eq: async () => {
-                            saved = true;
-                            return { error: null };
-                        },
-                    }),
-                };
-            },
-        };
+        const sql = Object.assign(async (strings: TemplateStringsArray) => {
+            const query = strings.join("?");
+            if (query.includes("from public.fights")) {
+                return [{ id: fightId, state: "live", series_id: fightId, ends_at: new Date(Date.now() + 3_600_000) }];
+            }
+            if (query.includes("from public.fight_series")) return [series];
+            if (query.includes("count(*)")) return [{ n: 1 }];
+            if (query.includes("from public.profiles")) return [{ handle: "marc", display_name: "Marc" }];
+            return [];
+        }, { json: (value: unknown) => value });
 
         // Execute the production handlers with only persistence, auth, and delivery boundaries replaced.
         function loadProduction(path: string): Record<string, unknown> {
@@ -111,7 +102,15 @@ for (const entry of [
                         };
                     }
                     if (specifier.endsWith("/supabase/postgres")) {
-                        return { createDatabaseClient: () => ({}) };
+                        return {
+                            createDatabaseClient: () => ({
+                                begin: async (transaction: (database: typeof sql) => Promise<unknown>) => {
+                                    const result = await transaction(sql);
+                                    saved = true;
+                                    return result;
+                                },
+                            }),
+                        };
                     }
                     if (specifier.endsWith("/process-notification-outbox-supabase-query")) {
                         return {
@@ -127,19 +126,13 @@ for (const entry of [
                             "lib/supabase/queries/suggest-fight-supabase-query.ts",
                         );
                     }
-                    if (specifier.endsWith("/is-fitfight-admin")) {
+                    if (specifier.endsWith("/can-administer-fights")) {
                         return {
-                            isFitFightAdmin: () => true,
+                            canAdministerFights: () => true,
                         };
                     }
-                    if (specifier.endsWith("/supabase/admin")) {
-                        return { createAdminClient: () => admin };
-                    }
-                    if (specifier.endsWith("/fight-access-supabase-query")) {
-                        return { loadFight: async () => ({ series_id: fightId }) };
-                    }
-                    if (specifier.endsWith("/join-fight-supabase-query")) {
-                        return { currentJoinableFight: async () => ({ id: fightId }) };
+                    if (specifier.endsWith("/fight-series-lock-supabase-query")) {
+                        return { lockFightSeries: async () => {} };
                     }
                     if (specifier.endsWith("/app-wide-fight-invite-supabase-query")) {
                         return { inviteEveryoneToOpenFight: async () => [userId] };

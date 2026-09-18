@@ -293,7 +293,7 @@ final class HealthKitStepsStore: ObservableObject {
         do {
             try Task.checkCancellation()
             let count = try await trace.measure(.todayTotal) {
-                try await Self.todayTotal(store: store, type: stepsType)
+                try await Self.todayTotal(store: store, type: stepsType, timeZone: session?.profile?.calendarTimeZone ?? .current)
             }
             try Task.checkCancellation()
             guard activeUserId == userID else { trace.fail(.attemptExpired); return }
@@ -364,14 +364,16 @@ final class HealthKitStepsStore: ObservableObject {
             let contextToken = try await trace.measure(.session) { try await session.freshAccessToken() }
             guard activeUserId == userId, session.authSession?.user.id == userId else { throw CancellationError() }
             let context = try await api.healthKitUploadContext(accessToken: contextToken, trace: trace)
+            let timeZone = session.profile?.calendarTimeZone ?? .current
             var sync = try await HealthKitStepAggregates.read(
                 store: store,
                 type: stepsType,
                 context: context,
-                trace: trace
+                trace: trace,
+                timeZone: timeZone
             )
             let activity = await trace.measure(.healthKitActivity) {
-                await HealthKitActivityAggregates.read(store: store, context: context)
+                await HealthKitActivityAggregates.read(store: store, context: context, timeZone: timeZone)
             }
             sync.activityDays = activity.days
             sync.workouts = activity.workouts
@@ -543,10 +545,12 @@ final class HealthKitStepsStore: ObservableObject {
         return String(appLocalized: "Sync failed. Tap to retry.")
     }
 
-    private static func todayTotal(store: HKHealthStore, type: HKQuantityType) async throws -> Int? {
+    private static func todayTotal(store: HKHealthStore, type: HKQuantityType, timeZone: TimeZone) async throws -> Int? {
         let now = Date()
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
         let predicate = HKQuery.predicateForSamples(
-            withStart: Calendar.current.startOfDay(for: now), end: now, options: .strictStartDate
+            withStart: calendar.startOfDay(for: now), end: now, options: .strictStartDate
         )
         let descriptor = HKStatisticsQueryDescriptor(
             predicate: .quantitySample(type: type, predicate: predicate), options: [.cumulativeSum]

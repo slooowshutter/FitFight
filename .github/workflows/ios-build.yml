@@ -11,9 +11,12 @@ on:
             - "scripts/check_native_api_boundary.py"
             - "scripts/check_remote_photo_loading.py"
             - "scripts/test_fight_discovery.py"
+            - "scripts/test_profile_navigation.py"
+            - "scripts/test_profile_refresh.py"
             - "scripts/test_native_state.py"
             - "scripts/test_account_preferences.py"
             - "scripts/test_fight_localization.py"
+            - "scripts/test_companion_state.py"
             - "scripts/test_fight_live_updates.py"
             - "scripts/test_fight_chart_scores.py"
             - "scripts/test_push_state.py"
@@ -24,7 +27,7 @@ on:
             - "fastlane/**"
             - ".github/workflows/ios-build.yml"
     push:
-        branches: [main, develop, preview]
+        branches: [main, develop, preview, profiles-friends-and-stats]
         paths:
             - "FitFight/**"
             - "FitFight.xcodeproj/**"
@@ -33,9 +36,12 @@ on:
             - "scripts/check_native_api_boundary.py"
             - "scripts/check_remote_photo_loading.py"
             - "scripts/test_fight_discovery.py"
+            - "scripts/test_profile_navigation.py"
+            - "scripts/test_profile_refresh.py"
             - "scripts/test_native_state.py"
             - "scripts/test_account_preferences.py"
             - "scripts/test_fight_localization.py"
+            - "scripts/test_companion_state.py"
             - "scripts/test_fight_live_updates.py"
             - "scripts/test_fight_chart_scores.py"
             - "scripts/test_push_state.py"
@@ -121,6 +127,9 @@ jobs:
             - name: Verify native refresh and feed state
               run: python3 scripts/test_native_state.py
 
+            - name: Verify companion prompt retention and reuse
+              run: python3 scripts/test_companion_state.py
+
             - name: Verify remote photo loading
               run: python3 scripts/check_remote_photo_loading.py
 
@@ -137,6 +146,17 @@ jobs:
               run: |
                   swiftc -swift-version 5 -target "$(uname -m)-apple-macosx14.0" FitFight/AppLocalization.swift FitFight/Media.swift FitFight/Profile.swift FitFight/FightSnapshot.swift tests/APIContractTests.swift -o /tmp/fitfight-contract-tests
                   /tmp/fitfight-contract-tests contracts/fixtures
+
+            - name: Verify profile access and response ordering
+              run: |
+                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx13.0" FitFight/SharedProfile.swift FitFight/ProfileScreenStore.swift tests/ProfileScreenStoreTests.swift -o /tmp/fitfight-profile-tests
+                  /tmp/fitfight-profile-tests contracts/fixtures
+
+            - name: Verify profile history navigation and rematches
+              run: python3 scripts/test_profile_navigation.py
+
+            - name: Verify Profile refresh after HealthKit upload
+              run: python3 scripts/test_profile_refresh.py
 
             - name: Build for iOS Simulator
               run: |

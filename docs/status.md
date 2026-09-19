@@ -8,6 +8,59 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
 
+## Feedback filtering and management: prepared 19 Sep 2026
+
+**Code:** the existing Feedback cards and screen styling remain. The filter tabs
+are replaced by the loaded post count and a green, icon-only filter button. Its
+drawer applies status (Open/Archived), type (All/Features/Bugs), and order (Most
+upvoted/Newest first/Oldest first) together. Defaults show both types, hide archives,
+and rank by votes. Authors can delete their own posts; admins can delete any post,
+archive with an optional public reason, and reopen. Archived posts retain their
+votes and discussion while closing new votes/comments. Actions live in the
+existing ellipsis menus. The HTML prototype was removed, and a localized 1.1.2
+release note was added. See [implementation details](proposals/feedback-management.md).
+
+**Contract:** `/api/v1/feedback` adds optional status/sort inputs and additive
+archive/capability fields. Existing DELETE permits authors as well as admins; PATCH
+on the post route archives/reopens for admins only. Migration
+`20260919135803_feedback_archiving.sql` adds archive columns and an index without
+changing client grants or RLS. Sorting/filtering happens before the existing
+100-post limit. Votes/comments serialize against archival; attempts on an already
+archived post use the existing `409 conflict` error shape. Legacy request/response
+fixtures remain intact.
+
+**Supported clients:** read-only release checks on 19 Sep found staging latest
+1.1.1 (201), review/internal 1.1.2 (204), enforcement off; production latest 1.1.1
+(202), enforcement on, no review/internal candidate. Released feedback decoders for
+201 and 202 are identical. Frozen decoders preserve those builds plus 204;
+HTTP/database coverage retains builds 113, 190, 200, 201, 202, 203, and 204.
+Build 204's source is `c80e642a`, confirmed by its
+[TestFlight workflow](https://github.com/slooowshutter/FitFight/actions/runs/35444706489).
+
+**Cloud checks:** [web typecheck, contract parsing, and all 321 tests](https://github.com/slooowshutter/FitFight/actions/runs/35448105709)
+passed at `8433799`. [Disposable database verification](https://github.com/slooowshutter/FitFight/actions/runs/35448105721)
+passed migrations/lint, 233 pgTAP checks, preserved build 113 fixtures, and all 44
+transaction tests both before and after the deferred client-permission cutoff.
+Historical migration replay and deletion checks also passed. New checks cover
+owner/admin permissions, archive/reopen, cascade deletion, ordering, and concurrent
+votes/comments waiting for an archive commit before rejecting the write. Backend
+and migration sources are unchanged since those runs.
+
+The final [native regressions and full simulator build](https://github.com/slooowshutter/FitFight/actions/runs/35448540124)
+passed at `59d8510` on GitHub-hosted macOS, including frozen decoders for builds
+201/202 and 204, archive failure/reopen, and protection against stale responses.
+The [database recheck](https://github.com/slooowshutter/FitFight/actions/runs/35448540159)
+also passed. English/French screenshot inspection is pending. Localization,
+native API-boundary, migration-safety, and whitespace checks passed. No native
+compilation or database testing ran on the workstation.
+
+**Rollout:** apply the additive migration, deploy the compatible backend and drain
+older instances, then distribute the native controls. No hosted database change,
+live deployment, PR, release-branch merge, or TestFlight upload was performed.
+Signed-in device checks for author deletion, admin archive/reopen, VoiceOver, and
+larger text remain outstanding. Cloud screenshots and regressions do not replace
+those device checks or establish production readiness.
+
 ## Notification destinations: prepared 19 Sep 2026
 
 **Code:** Fight notification links now preserve the exact round in their URL.

@@ -464,7 +464,7 @@ enum RequestsScreenshot {
 
     static func filters() -> some View {
         RequestFiltersSheet(draft: RequestFilter(), onApply: { _ in })
-            .frame(height: 520)
+            .frame(height: 560)
     }
 }
 
@@ -515,6 +515,7 @@ private struct RequestFiltersSheet: View {
     let onApply: (RequestFilter) -> Void
     @Environment(\.dismiss) private var dismiss
     @Environment(\.ffTheme) private var theme
+    @Environment(\.ffStaticRender) private var staticRender
 
     var body: some View {
         VStack(spacing: 16) {
@@ -525,28 +526,15 @@ private struct RequestFiltersSheet: View {
                     .ffType(.label).foregroundStyle(theme.mossText)
                     .frame(minWidth: 44, minHeight: 44)
             }
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    FFSection(title: String(appLocalized: "Status")) {
-                        FFSegmented(items: RequestFilter.Status.allCases, selection: $draft.status) { $0.title }
+            if staticRender {
+                Color.clear
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .overlay(alignment: .top) {
+                        choices.fixedSize(horizontal: false, vertical: true)
                     }
-                    FFSection(title: String(appLocalized: "Type")) {
-                        FFSegmented(items: RequestFilter.Kind.allCases, selection: $draft.type) { $0.title }
-                    }
-                    FFSection(title: String(appLocalized: "Sort by")) {
-                        FFGroupedRows {
-                            ForEach(RequestFilter.Sort.allCases, id: \.self) { sort in
-                                if sort != .votes { FFDivider() }
-                                FFGroupedRow(title: sort.title, trailing: AnyView(
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(theme.mossText)
-                                        .opacity(draft.sort == sort ? 1 : 0)
-                                )) { draft.sort = sort }
-                                .accessibilityAddTraits(draft.sort == sort ? .isSelected : [])
-                            }
-                        }
-                    }
-                }
+                    .clipped()
+            } else {
+                ScrollView { choices }
             }
             FFScreenCTA(title: String(appLocalized: "Show feedback")) {
                 onApply(draft)
@@ -560,6 +548,30 @@ private struct RequestFiltersSheet: View {
         .padding(.horizontal, theme.space.screenPadding)
         .padding(.top, 16)
         .padding(.bottom, 12)
+    }
+
+    private var choices: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            FFSection(title: String(appLocalized: "Status"), extraTop: false) {
+                FFSegmented(items: RequestFilter.Status.allCases, selection: $draft.status) { $0.title }
+            }
+            FFSection(title: String(appLocalized: "Type"), extraTop: false) {
+                FFSegmented(items: RequestFilter.Kind.allCases, selection: $draft.type) { $0.title }
+            }
+            FFSection(title: String(appLocalized: "Sort by"), extraTop: false) {
+                FFGroupedRows {
+                    ForEach(RequestFilter.Sort.allCases, id: \.self) { sort in
+                        if sort != .votes { FFDivider() }
+                        FFGroupedRow(title: sort.title, trailing: AnyView(
+                            Image(systemName: "checkmark")
+                                .foregroundStyle(theme.mossText)
+                                .opacity(draft.sort == sort ? 1 : 0)
+                        )) { draft.sort = sort }
+                        .accessibilityAddTraits(draft.sort == sort ? .isSelected : [])
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -690,7 +702,7 @@ struct RequestsView: View {
                 .presentationBackground(theme.overlay)
                 .presentationCornerRadius(theme.radius.shell)
                 .presentationDragIndicator(.visible)
-                .presentationDetents([.height(520), .large])
+                .presentationDetents([.height(560), .large])
         }
         .sheet(item: $archivingPost) { post in
             RequestArchiveSheet(post: post, store: store)

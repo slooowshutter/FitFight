@@ -70,15 +70,55 @@ struct Fight {
         model.consumeForTest()
         precondition(model.openPost == nil && model.openFightID == nil)
 
-        let historical = Fight(id: fight.uuidString, seriesId: "series", status: .finished, windowStart: Date(timeIntervalSince1970: 1000))
         let current = Fight(id: UUID().uuidString, seriesId: "series", status: .live, windowStart: Date(timeIntervalSince1970: 2000))
-        model.fights = [historical, current]
+        for status in [FightStatus.pending, .finished, .invited, .live] {
+            let notified = Fight(id: fight.uuidString, seriesId: "series", status: status, windowStart: Date(timeIntervalSince1970: 1000))
+            for tab in [FFTab.fights, .newFight, .feed, .feedback, .you] {
+                model.fights = [notified, current]
+                model.tab = tab
+                model.openFightID = current.id
+                AppModel.storePendingFightRoute("/fights/\(fight)")
+                model.consumeForTest()
+                for _ in 0..<20 { await Task.yield() }
+                precondition(model.tab == .fights && model.openFightID == notified.id,
+                             "A reminder must open its exact Fight round even after the next round starts")
+                precondition(model.detailFight(for: notified.id)?.id == notified.id,
+                             "The detail screen must display the notified round")
+                let next = Fight(id: UUID().uuidString, seriesId: "series", status: .live, windowStart: Date(timeIntervalSince1970: 3000))
+                model.fights.append(next)
+                precondition(model.detailFight(for: notified.id)?.id == notified.id,
+                             "A background refresh must not replace the notified round")
+            }
+        }
+
+        let pending = Fight(id: fight.uuidString, seriesId: "series", status: .pending, windowStart: Date(timeIntervalSince1970: 1000))
+        model.fights = []
         model.tab = .you
-        AppModel.storePendingFightRoute("/fights/\(fight)")
+        AppModel.storePendingFightRoute("/fights/\(fight.uuidString.lowercased())")
         model.consumeForTest()
         for _ in 0..<20 { await Task.yield() }
-        precondition(model.openFightID == historical.id && model.detailFight(for: historical.id)?.id == historical.id,
-                     "A reminder must open its exact Fight round even after the next round starts")
+        precondition(model.detailFight(for: model.openFightID!) == nil, "An unavailable target must not open another Fight")
+        model.fights = [pending, current]
+        precondition(model.detailFight(for: model.openFightID!)?.id == pending.id,
+                     "Cold-start routing must retain the exact round when the snapshot arrives")
+
+        AppModel.storePendingFightRoute("/fights/\(fight)?daily_status=1")
+        model.consumeForTest(daily: true)
+        for _ in 0..<20 { await Task.yield() }
+        precondition(model.openFightID == pending.id && model.dailyRecapID == pending.id,
+                     "The daily recap and its destination must refer to the same round")
+
+        for tab in [FFTab.fights, .newFight, .feed, .feedback, .you] {
+            for target in [FeedPostLink(id: post), FeedPostLink(id: post, commentID: comment), FeedPostLink(id: post, commentID: UUID())] {
+                model.tab = tab
+                model.openPost = FeedPostLink(id: UUID())
+                let query = target.commentID.map { "&comment=\($0)" } ?? ""
+                AppModel.storePendingFightRoute("/fights/\(fight)?post=\(target.id)\(query)")
+                model.consumeForTest()
+                precondition(model.tab == .feed && model.openPost == target,
+                             "Post, reaction, reply and mention taps must replace any previous post or comment target")
+            }
+        }
 
         let fixture = try Data(contentsOf: URL(fileURLWithPath: CommandLine.arguments[1]))
         let decoded = try FitFightAPI.decodeActivityForTest(fixture)
@@ -110,6 +150,6 @@ struct Fight {
         FitFightAPI.requests.removeFirst().resume(returning: FeedActivityList(events: [event], nextCursor: nil))
         await switched.value
         precondition(store.events.isEmpty, "An old account's response must not repopulate the new account")
-        print("PASS: exact post/comment routes, cold persistence, legacy routes, daily recap, invalid routes, refresh ordering, pagination, account switch")
+        print("PASS: exact Fight rounds in every tab, delayed snapshots, post/comment replacement, cold persistence, legacy routes, daily recap, invalid routes, refresh ordering, pagination, account switch")
     }
 }

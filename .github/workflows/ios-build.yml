@@ -30,7 +30,7 @@ on:
             - "fastlane/**"
             - ".github/workflows/ios-build.yml"
     push:
-        branches: [main, develop, preview, profiles-friends-and-stats, verify-feedback-management-20260919]
+        branches: [main, develop, preview, profiles-friends-and-stats]
         paths:
             - "FitFight/**"
             - "FitFight.xcodeproj/**"

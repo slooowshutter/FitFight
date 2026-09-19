@@ -766,14 +766,14 @@ struct RequestsView: View {
                 Spacer()
                 Button { showingFilters = true } label: {
                     Image(systemName: "slider.horizontal.3")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(theme.mossOn)
-                        .frame(width: 36, height: 36)
-                        .background(theme.mossFill, in: Circle())
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(theme.mossText)
                         .frame(width: 44, height: 44)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(FFHapticPlainStyle())
+                // Match the header action's column without shrinking the label's tap area.
+                .frame(width: 36)
                 .accessibilityLabel(String(appLocalized: "Filter feedback"))
                 .accessibilityValue("\(activeFilter.status.title), \(activeFilter.type.title), \(activeFilter.sort.title)")
             }

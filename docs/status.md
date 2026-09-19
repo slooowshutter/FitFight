@@ -11,7 +11,8 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 ## Feedback filtering and management: prepared 19 Sep 2026
 
 **Code:** the existing Feedback cards and screen styling remain. The filter tabs
-are replaced by the loaded post count and a green, icon-only filter button. Its
+are replaced by the loaded post count and a small, bare filter icon using the
+same `mossText` green as Edit profile, aligned with the header's plus button. Its
 drawer applies status (Open/Archived), type (All/Features/Bugs), and order (Most
 upvoted/Newest first/Oldest first) together. Defaults show both types, hide archives,
 and rank by votes. Authors can delete their own posts; admins can delete any post,
@@ -46,13 +47,18 @@ owner/admin permissions, archive/reopen, cascade deletion, ordering, and concurr
 votes/comments waiting for an archive commit before rejecting the write. Backend
 and migration sources are unchanged since those runs.
 
-The final [native regressions and full simulator build](https://github.com/slooowshutter/FitFight/actions/runs/35448540124)
-passed at `59d8510` on GitHub-hosted macOS, including frozen decoders for builds
+The final [native regressions and full simulator build](https://github.com/slooowshutter/FitFight/actions/runs/35449011830)
+passed at `37f364b` on GitHub-hosted macOS, including frozen decoders for builds
 201/202 and 204, archive failure/reopen, and protection against stale responses.
-The [database recheck](https://github.com/slooowshutter/FitFight/actions/runs/35448540159)
-also passed. English/French screenshot inspection is pending. Localization,
-native API-boundary, migration-safety, and whitespace checks passed. No native
-compilation or database testing ran on the workstation.
+The [database recheck](https://github.com/slooowshutter/FitFight/actions/runs/35449011825)
+also passed. [English/French screen captures](https://github.com/slooowshutter/FitFight/actions/runs/35449011795)
+were inspected in Night and Day: the filter drawer shows every choice at normal
+text size, and the count/icon row uses the existing palette. The capture path
+renders the drawer's scroll content explicitly, matching the existing Preferences
+capture approach. Static ImageRenderer captures still substitute placeholders for
+UIKit menus, so they do not verify menu interaction. Localization, native
+API-boundary, migration-safety, and whitespace checks passed. No native compilation
+or database testing ran on the workstation.
 
 **Rollout:** apply the additive migration, deploy the compatible backend and drain
 older instances, then distribute the native controls. No hosted database change,

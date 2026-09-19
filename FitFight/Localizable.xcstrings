@@ -13158,6 +13158,28 @@
                     }
                 }
             }
+        },
+        "No matching feedback": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Aucun retour correspondant"
+                    }
+                }
+            }
+        },
+        "Try changing the filters to see other feedback.": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Modifiez les filtres pour afficher d’autres retours."
+                    }
+                }
+            }
         }
     },
     "version": "1.0"

@@ -207,17 +207,36 @@ creates a P0 Inbox row in the Blend HQ Product Backlog (Product FitFight, Source
 App feedback). Vercel holds `NOTION_TOKEN`. A missing token or a Notion failure
 does not fail the in-app post. The token never belongs in iOS, git, or chat.
 
-`GET /api/v1/feedback/{postID}` includes `can_launch_fix` and `can_delete` for the signed-in viewer.
-Those flags are true only for the FitFight admin: confirmed account email `marc@marclamy.com`, username
-`marc`, or extras in `FITFIGHT_ADMIN_EMAILS` / `FITFIGHT_ADMIN_HANDLES`. Apple Sign
-In may store no email, so the username match is required on staging. User-editable
-metadata and identity email copies never grant admin access.
-Admin-only `DELETE /api/v1/feedback/{postID}` returns `{ deleted: true }` and
-removes the request plus its comments, votes, reports, and attachment links through
-existing foreign keys. It returns 403 for a regular account and 404 if the request
-is missing. The app asks for confirmation in the request's menu, then returns to
-the board. Older backends omit `can_delete`, which the app treats as false.
-No schema migration is needed. Stored media bytes and external Notion copies are
+`GET /api/v1/feedback` accepts optional `kind=feature|bug`, `status=open|archived`,
+and `sort=votes|newest|oldest`. Defaults include both types, exclude archived posts,
+and sort by votes descending. Date sorting uses creation time. Filters and sorting
+apply before the existing 100-post limit. The response includes `can_archive`.
+Posts include additive `archived` and nullable `archive_reason` fields.
+
+`GET /api/v1/feedback/{postID}` includes `can_launch_fix`, `can_delete`, and
+`can_archive` for the signed-in viewer. Authors can delete their own posts.
+The launch and archive flags require the existing FitFight admin allowlist:
+confirmed account email `marc@marclamy.com`, username `marc`, or extras in
+`FITFIGHT_ADMIN_EMAILS` / `FITFIGHT_ADMIN_HANDLES`. User-editable metadata and
+identity email copies never grant admin access.
+
+Author-or-admin `DELETE /api/v1/feedback/{postID}` returns `{ deleted: true }`
+and removes the post, comments, votes, reports, and attachment links through
+existing foreign keys. An unrelated member receives 403; a missing post returns
+404. The app confirms deletion in the existing ellipsis menu on a card or detail.
+Older backends omit capabilities, which native decoders default to false.
+
+Admin-only `PATCH /api/v1/feedback/{postID}` accepts `{ archived: boolean,
+reason?: string }`, with a trimmed public reason up to 280 characters. It returns
+`{ archived, archive_reason }`. Archive retains content, media, votes, and discussion;
+reopen clears the reason and permits voting/comments again. Archived vote and comment
+commands return the existing `409 conflict` response. Both commands lock the post
+in their transaction so they cannot race an archive into accepting a late write.
+The migration adds two columns and an index; client grants and RLS remain unchanged.
+Apply the migration, deploy and drain the old backend, then distribute the native
+archive controls. Existing `/api/v1` paths and legacy response fields remain supported.
+
+Stored media bytes and external Notion copies are
 outside this deletion, matching existing post deletion behavior. List, detail,
 create, and comment responses keep a `metadata` object for older clients and always
 send `{}` so the board never shows device details. List, detail, and create include

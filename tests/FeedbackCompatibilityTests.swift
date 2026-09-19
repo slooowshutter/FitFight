@@ -30,6 +30,11 @@ struct FeedbackCompatibilityTests {
         let archivedOldReader = try decoder.decode(LegacyFeedbackDetail.self, from: archivedData)
         precondition(archivedOldReader.post == profileReader.post)
         precondition(archivedOldReader.comments == profileReader.comments)
-        print("Feedback: frozen build 201/202 and current decoding with optional Profile author IDs")
+        let build204 = try decoder.decode(Build204FeedbackDetail.self, from: profileData)
+        let build204Archived = try decoder.decode(Build204FeedbackDetail.self, from: archivedData)
+        precondition(build204.post == build204Archived.post)
+        precondition(build204.comments == build204Archived.comments)
+        precondition(build204Archived.canDelete)
+        print("Feedback: frozen builds 201, 202, 204 and current decoding preserve feedback and Profile fields")
     }
 }

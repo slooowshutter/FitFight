@@ -753,7 +753,7 @@ struct RequestsView: View {
                     .foregroundStyle(theme.textSecondary)
                 Spacer()
                 Button { showingFilters = true } label: {
-                    Image(systemName: "line.3.horizontal.decrease")
+                    Image(systemName: "slider.horizontal.3")
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(theme.mossOn)
                         .frame(width: 36, height: 36)
@@ -827,8 +827,10 @@ struct RequestsView: View {
             if store.posts.isEmpty && !store.isLoading {
                 FFEmptyState(
                     systemImage: "bubble.left.and.bubble.right",
-                    title: String(appLocalized: "No requests yet"),
-                    message: String(appLocalized: "Post a bug or a feature request. Other people can upvote and comment with their username.")
+                    title: activeFilter == RequestFilter() ? String(appLocalized: "No requests yet") : String(appLocalized: "No matching feedback"),
+                    message: activeFilter == RequestFilter()
+                        ? String(appLocalized: "Post a bug or a feature request. Other people can upvote and comment with their username.")
+                        : String(appLocalized: "Try changing the filters to see other feedback.")
                 )
             }
         }

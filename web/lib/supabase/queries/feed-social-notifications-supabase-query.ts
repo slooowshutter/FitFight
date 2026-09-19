@@ -60,7 +60,7 @@ async function actorName(sql: Sql, actorId: string): Promise<string> {
     const [profile] = await sql<{ handle: string; display_name: string }[]>`
         select handle, display_name
         from public.profiles
-        where user_id = ${actorId}
+        where id = ${actorId}
             and deleted_at is null
     `;
     if (!profile) return "";
@@ -75,8 +75,8 @@ async function recipientRows(
 ): Promise<RecipientRow[]> {
     if (userIds.length === 0) return [];
     return sql<RecipientRow[]>`
-        select distinct on (profile.user_id)
-            profile.user_id,
+        select distinct on (profile.id)
+            profile.id as user_id,
             installation.locale,
             prefs.feed_post,
             prefs.post_comment,
@@ -84,19 +84,19 @@ async function recipientRows(
             prefs.post_reaction
         from public.profiles as profile
         left join private.notification_preferences as prefs
-            on prefs.user_id = profile.user_id
+            on prefs.user_id = profile.id
         left join private.device_installations as installation
-            on installation.user_id = profile.user_id
+            on installation.user_id = profile.id
             and installation.revoked_at is null
-        where profile.user_id in ${sql(userIds)}
+        where profile.id in ${sql(userIds)}
             and profile.deleted_at is null
             and not exists (
                 select 1
                 from private.feed_blocks as blocked
-                where (blocked.blocker_id = profile.user_id and blocked.blocked_id = ${actorId})
-                    or (blocked.blocker_id = ${actorId} and blocked.blocked_id = profile.user_id)
+                where (blocked.blocker_id = profile.id and blocked.blocked_id = ${actorId})
+                    or (blocked.blocker_id = ${actorId} and blocked.blocked_id = profile.id)
             )
-        order by profile.user_id, installation.last_registered_at desc nulls last
+        order by profile.id, installation.last_registered_at desc nulls last
     `;
 }
 
@@ -405,16 +405,16 @@ export async function eligibleMentionUserIds(
     const rows =
         fightIds.length > 0
             ? await sql<{ user_id: string }[]>`
-                select distinct profile.user_id
+                select distinct profile.id as user_id
                 from public.profiles as profile
                 join public.fight_members as membership
-                    on membership.user_id = profile.user_id
+                    on membership.user_id = profile.id
                     and membership.state in ('accepted', 'deferred')
                     and membership.fight_id in ${sql(fightIds)}
                 where profile.deleted_at is null
-                    and profile.user_id <> ${actorId}
+                    and profile.id <> ${actorId}
                     and (
-                        (${uniqueTags.length > 0}::boolean and profile.user_id in ${sql(tagIds)})
+                        (${uniqueTags.length > 0}::boolean and profile.id in ${sql(tagIds)})
                         or (${uniqueHandles.length > 0}::boolean and profile.handle in ${sql(handleValues)})
                     )
                     and exists (
@@ -425,7 +425,7 @@ export async function eligibleMentionUserIds(
                         join public.fights as done_fight
                             on done_fight.id = done_me.fight_id
                         where done_me.user_id = ${actorId}
-                            and done_them.user_id = profile.user_id
+                            and done_them.user_id = profile.id
                             and done_me.state = 'accepted'
                             and done_them.state = 'accepted'
                             and done_fight.state = 'final'
@@ -440,7 +440,7 @@ export async function eligibleMentionUserIds(
                 join public.fights as fight
                     on fight.id = me.fight_id
                 join public.profiles as profile
-                    on profile.user_id = them.user_id
+                    on profile.id = them.user_id
                     and profile.deleted_at is null
                 where me.user_id = ${actorId}
                     and them.user_id <> ${actorId}

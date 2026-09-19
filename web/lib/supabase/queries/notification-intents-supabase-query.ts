@@ -224,16 +224,16 @@ export async function enqueueFightInviteNotifications(
     const recipients = await sql<
         { user_id: string; locale: string | null }[]
     >`
-        select distinct on (profile.user_id)
-            profile.user_id,
+        select distinct on (profile.id)
+            profile.id as user_id,
             installation.locale
         from public.profiles as profile
         left join private.device_installations as installation
-            on installation.user_id = profile.user_id
+            on installation.user_id = profile.id
             and installation.revoked_at is null
-        where profile.user_id in ${sql(input.userIds)}
+        where profile.id in ${sql(input.userIds)}
             and profile.deleted_at is null
-        order by profile.user_id, installation.last_registered_at desc nulls last
+        order by profile.id, installation.last_registered_at desc nulls last
     `;
     const rows = recipients.map((recipient) => {
         const locale: NotificationLocale =

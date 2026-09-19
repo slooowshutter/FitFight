@@ -69,8 +69,8 @@ export async function createFight(
     const admin = createAdminClient();
     const { data: profileData, error: profileError } = await admin
         .from("profiles")
-        .select("user_id, handle, display_name, time_zone")
-        .eq("user_id", userId)
+        .select("user_id:id, handle, display_name, time_zone")
+        .eq("id", userId)
         .maybeSingle();
     if (profileError) {
         throw new ApiError(500, ERROR_CODES.db_error, "Could not load profile");

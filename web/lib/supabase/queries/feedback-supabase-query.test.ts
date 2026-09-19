@@ -135,7 +135,7 @@ test("only the author or a trusted admin account can delete feedback", async (t)
                     fetch: async (input, init) => {
                         const url = new URL(new Request(input, init).url);
                         if (url.pathname === "/rest/v1/profiles") {
-                            assert.equal(url.searchParams.get("user_id"), `eq.${userId}`);
+                            assert.equal(url.searchParams.get("id"), `eq.${userId}`);
                             assert.equal(url.searchParams.get("deleted_at"), "is.null");
                             return Response.json(scenario.handle ? [{ handle: scenario.handle }] : []);
                         }
@@ -563,7 +563,7 @@ test("reporting a feedback post records the reason", async () => {
 
 test("blocking a feedback author hides them from the viewer", async () => {
     const { database, queries } = createDatabaseStub((sql) => {
-        if (sql.includes("select user_id from public.profiles")) {
+        if (sql.includes("select id as user_id from public.profiles")) {
             return [{ user_id: authorId }];
         }
         return [];

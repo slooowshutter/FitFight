@@ -196,7 +196,7 @@ export async function listFeedbackPosts(
             post.archive_reason
         from public.feedback_posts as post
         join public.profiles as profile
-            on profile.user_id = post.author_id
+            on profile.id = post.author_id
           and profile.deleted_at is null
         where (${kind}::text is null or post.kind::text = ${kind})
             and post.archived = ${archived}
@@ -258,7 +258,7 @@ export async function getFeedbackPost(
             post.archive_reason
         from public.feedback_posts as post
         join public.profiles as profile
-            on profile.user_id = post.author_id
+            on profile.id = post.author_id
           and profile.deleted_at is null
         where post.id = ${postId}
             and not exists (
@@ -280,7 +280,7 @@ export async function getFeedbackPost(
             coalesce(comment.metadata, '{}'::jsonb) as metadata
         from public.feedback_comments as comment
         join public.profiles as profile
-            on profile.user_id = comment.author_id
+            on profile.id = comment.author_id
           and profile.deleted_at is null
         where comment.post_id = ${postId}
             and not exists (
@@ -428,7 +428,7 @@ async function insertFeedbackPost(
             (
                 select handle
                 from public.profiles
-                where user_id = ${userId}
+                where id = ${userId}
                     and deleted_at is null
             ) as author_handle,
             true as mine,
@@ -521,7 +521,7 @@ export async function createFeedbackComment(
                 (
                     select handle
                     from public.profiles
-                    where user_id = ${userId}
+                    where id = ${userId}
                         and deleted_at is null
                 ) as author_handle,
                 created_at,
@@ -551,7 +551,7 @@ export async function reportFeedbackPost(
         select post.id, post.author_id
         from public.feedback_posts as post
         join public.profiles as profile
-            on profile.user_id = post.author_id
+            on profile.id = post.author_id
           and profile.deleted_at is null
         where post.id = ${postId}
             and not exists (
@@ -591,8 +591,8 @@ export async function blockFeedbackAuthor(
         );
     }
     const [profile] = await database<{ user_id: string }[]>`
-        select user_id from public.profiles
-        where user_id = ${blockedId} and deleted_at is null
+        select id as user_id from public.profiles
+        where id = ${blockedId} and deleted_at is null
     `;
     if (!profile) {
         throw new ApiError(

@@ -60,6 +60,19 @@ enum ScreenshotExport {
             to: folder
         )
 
+        write(
+            sheet(RequestsScreenshot.board(), themeStore: light, model: model),
+            name: "light-feedback",
+            height: canvas.height,
+            to: folder
+        )
+        write(
+            sheet(RequestsScreenshot.filters(), themeStore: light, model: model),
+            name: "light-feedback-filters",
+            height: canvas.height,
+            to: folder
+        )
+
         // The design system page is one long scroll. ImageRenderer returns nil well
         // before the texture limit, so it is exported as a run of slices instead of
         // one tall canvas.
@@ -220,6 +233,9 @@ enum ScreenshotExport {
             },
             Shot(name: "05-feed") { store, model in
                 frame(FeedView(), tab: .feed, themeStore: store, model: model)
+            },
+            Shot(name: "06-feedback-filters") { store, model in
+                sheet(RequestsScreenshot.filters(), themeStore: store, model: model)
             },
             Shot(name: "06-requests") { store, model in
                 sheet(RequestsScreenshot.board(), themeStore: store, model: model)

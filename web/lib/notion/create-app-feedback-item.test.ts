@@ -25,6 +25,8 @@ const post: FeedbackPostSummary = {
     created_at: "2026-09-04T12:00:00Z",
     metadata: {},
     media: [],
+    archived: false,
+    archive_reason: null,
 };
 
 function restoreEnv(name: string, previous: string | undefined) {

@@ -29,7 +29,10 @@ legacy fight without a code, creator, or stored time zone. Source localization,
 native API-boundary, and whitespace checks also passed. No native build ran on
 the workstation. The temporary feature-branch CI triggers were then removed.
 The follow-up Details section heading uses the existing localized section-header
-component; its refreshed cloud screenshots are pending.
+component. Its [cloud simulator build and refreshed English/French captures](https://github.com/slooowshutter/FitFight/actions/runs/35447146255)
+passed at `249a240`; the matching headings and spacing were visually checked in
+Night and Day. The temporary screenshot trigger was removed after this run,
+with no subsequent app-source changes.
 
 **Contract and deployment:** native presentation only. API requests/responses,
 native API models, database schema, and supported-client contracts are unchanged.

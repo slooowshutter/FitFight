@@ -28,6 +28,41 @@ enum Changelog {
             version: "1.1.2",
             year: 2026,
             month: 9,
+            day: 19,
+            notes: "The comment Send button turns green as soon as you type. Empty or spaces-only comments keep it gray and disabled."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 18,
+            notes: "Fight status labels follow your language immediately, even when a refresh fails. Fight names and user-written stakes stay exactly as entered."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 18,
+            notes: "Language changes keep your iPhone’s regional formats and preserve unfinished fights and posts."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Choose your language and appearance in You → Preferences. Your choices are saved to your account. Find notification settings, beta access, and your installed app details in the same place."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Companion descriptions stay saved when you change animals. Browse habitats and reuse your saved descriptions from Yours."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
             day: 17,
             notes: "Type @ to tag someone in a post or comment. They get a FitFight notification with your name."
         ),
@@ -133,6 +168,34 @@ enum Changelog {
             version: "1.1.1",
             year: 2026,
             month: 9,
+            day: 18,
+            notes: "Joining a suggested Fight now syncs your steps. Profile history opens the selected round, and Feedback comment counts open the discussion."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 18,
+            notes: "Profiles now show the Fights you both still belong to. Leaving a Fight removes it from Fights together."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Suggested Fight invitations stay joinable, and rematches keep their original number of days across clock changes. Private Fight history protects participant identities."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Profiles now include Friends, private sharing controls, Fight records and head-to-head rivalries. Tap a person to open their profile or challenge them. Suggested public Fights are optional at the end of onboarding."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
             day: 16,
             notes: "Feed comments can be sorted by most comments or most recent. Most comments is the default."
         ),
@@ -156,6 +219,34 @@ enum Changelog {
             month: 9,
             day: 16,
             notes: "Bars, line, histogram, and pace now use the same confirmed Fight scores as the oval. A teammate without daily history is a gap, not a blank graph."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Your time zone stays fixed when you travel and can be changed in Edit profile. Custom Fights let you choose their time zone. Profile statistics refresh after Health sync, and Feedback comment counts open the discussion."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Profiles now show your best recorded step day, weekly averages, activity-level distribution and streaks. Shared statistics respect your chosen audience and history period."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Profile history keeps private Fight participants hidden and opens the selected round. Scheduled Fight records and rematch durations are now preserved."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Profiles now include Friends, private sharing controls, Fight records and head-to-head rivalries. Tap a person to open their profile or challenge them. Suggested public Fights are optional at the end of onboarding."
         ),
         ReleaseNote(
             version: "1.1.1",

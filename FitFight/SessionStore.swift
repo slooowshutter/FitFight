@@ -25,6 +25,7 @@ final class SessionStore: ObservableObject {
     private static let needsHealthKey = "ff.onboarding.needsHealth"
     private static let needsNotificationKey = "ff.onboarding.needsNotifications"
     private static let needsRequestsKey = "ff.onboarding.needsRequests"
+    private static let needsSuggestedPrefix = "ff.onboarding.needsSuggested."
     private static let profileCachePrefix = "fitfight.profile."
     private static let adminHandle = "marc"
 
@@ -51,10 +52,22 @@ final class SessionStore: ObservableObject {
             && UserDefaults.standard.bool(forKey: Self.needsRequestsKey)
     }
 
+    var needsSuggestedOnboarding: Bool {
+        guard !screenshotSignedIn, let userID = authSession?.user.id else { return false }
+        return !needsOnboarding && !needsHealthOnboarding && !needsNotificationOnboarding && !needsRequestsOnboarding
+            && UserDefaults.standard.bool(forKey: Self.needsSuggestedPrefix + userID.uuidString)
+    }
+
+    func finishSuggestedOnboarding() {
+        guard let userID = authSession?.user.id else { return }
+        UserDefaults.standard.removeObject(forKey: Self.needsSuggestedPrefix + userID.uuidString)
+        objectWillChange.send()
+    }
+
     var needsCompanionSelection: Bool {
         guard isSignedIn, profile != nil else { return false }
         if screenshotSignedIn || CompanionPreview.isEnabled || ScreenshotExport.isEnabled { return false }
-        guard !needsOnboarding, !needsHealthOnboarding, !needsNotificationOnboarding, !needsRequestsOnboarding else {
+        guard !needsOnboarding, !needsHealthOnboarding, !needsNotificationOnboarding, !needsRequestsOnboarding, !needsSuggestedOnboarding else {
             return false
         }
         return profile?.companionId == nil && !CompanionStore.hasPendingChoice(for: profile?.userId)
@@ -188,7 +201,7 @@ final class SessionStore: ObservableObject {
             await loadProfile()
         } catch {
             authError = String(
-                localized: "session.dev-rejected",
+                appLocalized: "session.dev-rejected",
                 defaultValue: "Dev session rejected: \(error.localizedDescription)"
             )
         }
@@ -215,21 +228,21 @@ final class SessionStore: ObservableObject {
     static func signInFailureMessage(_ error: Error) -> String {
         let text = error.localizedDescription.lowercased()
         if text.contains("invalid api key") || text.contains("another supabase project") {
-            return String(localized: "This build’s key doesn’t match the staging database.")
+            return String(appLocalized: "This build’s key doesn’t match the staging database.")
         }
         if text.contains("provider is not enabled")
             || text.contains("unsupported provider")
             || text.contains("provider not enabled") {
-            return String(localized: "Apple Sign In is off on this database.")
+            return String(appLocalized: "Apple Sign In is off on this database.")
         }
         if text.contains("nscurlerror")
             || text.contains("nsurlerrordomain")
             || text.contains("could not connect")
             || text.contains("hostname could not be found")
             || text.contains("not known") {
-            return String(localized: "Can’t reach the staging database.")
+            return String(appLocalized: "Can’t reach the staging database.")
         }
-        return String(localized: "Couldn’t sign in. Try again.")
+        return String(appLocalized: "Couldn’t sign in. Try again.")
     }
 
     static func isValidHandle(_ raw: String) -> Bool {
@@ -264,6 +277,7 @@ final class SessionStore: ObservableObject {
             let updated = try await api.updateProfile(
                 handle: handle,
                 avatarMediaId: avatarMediaId,
+                timeZone: TimeZone.current.identifier,
                 accessToken: token
             )
             UserDefaults.standard.set(true, forKey: Self.handleChosenKey)
@@ -274,6 +288,7 @@ final class SessionStore: ObservableObject {
             guard authSession?.user.id == userId, client.auth.currentUser?.id == userId else {
                 throw CancellationError()
             }
+            UserDefaults.standard.set(true, forKey: Self.needsSuggestedPrefix + userId.uuidString)
             profile = updated
             if let data = try? JSONEncoder().encode(updated) {
                 UserDefaults.standard.set(data, forKey: Self.profileCachePrefix + userId.uuidString)
@@ -293,6 +308,18 @@ final class SessionStore: ObservableObject {
         }
     }
 
+    func updateIdentity(displayName: String, handle: String, timeZone: TimeZone) async throws {
+        guard let userId = authSession?.user.id else { throw HandleError.notSignedIn }
+        let token = try await freshAccessToken()
+        let updated = try await api.updateProfile(handle: handle, displayName: displayName, timeZone: timeZone.identifier, accessToken: token)
+        try Task.checkCancellation()
+        guard authSession?.user.id == userId else { throw CancellationError() }
+        profile = updated
+        if let data = try? JSONEncoder().encode(updated) {
+            UserDefaults.standard.set(data, forKey: Self.profileCachePrefix + userId.uuidString)
+        }
+    }
+
     func setAvatar(_ media: FitFightMedia) async throws {
         guard !screenshotSignedIn else { throw CompanionPreview.WriteUnavailable() }
         guard let userId = authSession?.user.id ?? client.auth.currentUser?.id else {
@@ -306,6 +333,11 @@ final class SessionStore: ObservableObject {
         if let data = try? JSONEncoder().encode(updated) {
             UserDefaults.standard.set(data, forKey: Self.profileCachePrefix + userId.uuidString)
         }
+    }
+
+    func companionPrompts() async throws -> [String] {
+        let token = try await freshAccessToken()
+        return try await api.companionPrompts(accessToken: token)
     }
 
     func setCompanion(id: String, prompt: String?) async throws {
@@ -354,13 +386,14 @@ final class SessionStore: ObservableObject {
             UserDefaults.standard.removeObject(forKey: Self.needsRequestsKey)
             if let userID {
                 UserDefaults.standard.removeObject(forKey: Self.profileCachePrefix + userID.uuidString)
+                CompanionStore.deleteLocalLibrary(for: userID)
             }
             if !deletion.appleAuthorizationRevoked {
-                authError = String(localized: "Account deleted. To disconnect Apple too, open iPhone Settings, tap your name, then Sign in with Apple → FitFight → Stop Using Apple ID.")
+                authError = String(appLocalized: "Account deleted. To disconnect Apple too, open iPhone Settings, tap your name, then Sign in with Apple → FitFight → Stop Using Apple ID.")
             }
             return true
         } catch {
-            authError = String(localized: "Couldn’t delete account. Try again.")
+            authError = String(appLocalized: "Couldn’t delete account. Try again.")
             return false
         }
     }
@@ -456,10 +489,10 @@ enum HandleError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .notSignedIn: return String(localized: "Sign in first.")
-        case .invalid: return String(localized: "Use 2–30 letters, numbers, or underscore.")
-        case .taken: return String(localized: "That username is taken.")
-        case .failed: return String(localized: "Couldn’t save that username.")
+        case .notSignedIn: return String(appLocalized: "Sign in first.")
+        case .invalid: return String(appLocalized: "Use 2–30 letters, numbers, or underscore.")
+        case .taken: return String(appLocalized: "That username is taken.")
+        case .failed: return String(appLocalized: "Couldn’t save that username.")
         }
     }
 }

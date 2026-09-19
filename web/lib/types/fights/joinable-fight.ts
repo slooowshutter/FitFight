@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { fightVisibilityValues } from "./fight-visibility";
 import { fightJoinStartSchema } from "./join-start";
+import { fightStateValues, fightMemberStateValues } from "./membership-decision";
 
 export const fightVisibilitySchema = z.enum(fightVisibilityValues);
 
@@ -16,6 +17,7 @@ export const joinableFightSummarySchema = z.object({
     memberCount: z.number().int().nonnegative(),
     recurring: z.boolean(),
     alreadyMember: z.boolean(),
+    membershipState: z.enum(fightMemberStateValues).nullable().optional(),
     canJoinNext: z.boolean(),
 });
 
@@ -49,3 +51,13 @@ export type JoinableFightListResponse = z.infer<
 >;
 export type JoinFightRequest = z.infer<typeof joinFightRequestSchema>;
 export type LeaveFightRequest = z.infer<typeof leaveFightRequestSchema>;
+
+export const joiningFightRowSchema = z.object({
+    id: z.string().uuid(), state: z.enum(fightStateValues), starts_at: z.coerce.date(), ends_at: z.coerce.date(),
+    time_zone: z.string(), series_id: z.string().uuid(),
+});
+export const joiningSeriesRowSchema = z.object({
+    id: z.string().uuid(), visibility: fightVisibilitySchema, recurring: z.boolean(),
+    paused_at: z.coerce.date().nullable(), current_fight_id: z.string().uuid().nullable(), join_code: z.string().nullable(),
+});
+export const joiningMemberRowSchema = z.object({ state: z.enum(fightMemberStateValues) });

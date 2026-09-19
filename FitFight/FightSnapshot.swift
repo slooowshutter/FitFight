@@ -71,6 +71,7 @@ struct FightRow: Decodable {
     let graceEndsAt: String?
     let actionText: String?
     let seriesId: UUID?
+    let timeZone: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -82,6 +83,7 @@ struct FightRow: Decodable {
         case graceEndsAt = "grace_ends_at"
         case actionText = "action_text"
         case seriesId = "series_id"
+        case timeZone = "time_zone"
     }
 
     init(from decoder: Decoder) throws {
@@ -95,6 +97,7 @@ struct FightRow: Decodable {
         graceEndsAt = try container.decodeIfPresent(String.self, forKey: .graceEndsAt)
         actionText = try container.decodeIfPresent(String.self, forKey: .actionText)
         seriesId = try container.decodeIfPresent(UUID.self, forKey: .seriesId)
+        timeZone = try container.decodeIfPresent(String.self, forKey: .timeZone)
     }
 
     var startsAtDate: Date { Self.parse(startsAt) ?? Date() }

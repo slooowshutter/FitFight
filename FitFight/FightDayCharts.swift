@@ -11,11 +11,11 @@ enum FightDayChartKind: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .oval: return String(localized: "Oval")
-        case .bars: return String(localized: "Bars")
-        case .line: return String(localized: "Line")
-        case .histogram: return String(localized: "Histogram")
-        case .pace: return String(localized: "Pace")
+        case .oval: return String(appLocalized: "Oval")
+        case .bars: return String(appLocalized: "Bars")
+        case .line: return String(appLocalized: "Line")
+        case .histogram: return String(appLocalized: "Histogram")
+        case .pace: return String(appLocalized: "Pace")
         }
     }
 }
@@ -64,7 +64,7 @@ struct FightDayChartsView: View {
                                 .ffType(.label)
                                 .foregroundStyle(theme.text)
                             Spacer()
-                            Text(kind == .pace ? String(localized: "Cumulative steps") : String(localized: "Daily steps"))
+                            Text(kind == .pace ? String(appLocalized: "Cumulative steps") : String(appLocalized: "Daily steps"))
                                 .ffType(.micro)
                                 .foregroundStyle(theme.textSecondary)
                         }
@@ -72,7 +72,7 @@ struct FightDayChartsView: View {
                             ForEach(model.series) { series in
                                 HStack(spacing: 6) {
                                     Circle().fill(series.color).frame(width: 7, height: 7)
-                                    Text(series.person.isYou ? String(localized: "You") : series.person.name)
+                                    Text(series.person.isYou ? String(appLocalized: "You") : series.person.name)
                                     Text((kind == .pace ? series.cumulative[day] : series.daily[day])?
                                         .formatted(.number.precision(.fractionLength(0))) ?? "-")
                                         .fontWeight(.heavy)
@@ -92,8 +92,8 @@ struct FightDayChartsView: View {
                         }
                     }
                     Text(kind == .line || kind == .pace
-                         ? String(localized: "Touch or slide to inspect a day.")
-                         : String(localized: "Tap a day to see its steps."))
+                         ? String(appLocalized: "Touch or slide to inspect a day.")
+                         : String(appLocalized: "Tap a day to see its steps."))
                         .ffType(.micro)
                         .foregroundStyle(theme.textFaint)
                     Text("Only synced steps are shown. Missing daily data is marked with a dash.")
@@ -163,7 +163,7 @@ struct FightDayChartsView: View {
                     Circle()
                         .fill(series.color)
                         .frame(width: 8, height: 8)
-                    Text(series.person.isYou ? String(localized: "You") : series.person.name)
+                    Text(series.person.isYou ? String(appLocalized: "You") : series.person.name)
                         .ffType(.micro)
                         .foregroundStyle(theme.textSecondary)
                         .lineLimit(1)
@@ -242,7 +242,7 @@ private struct FightDayChartModel {
         // Oval already plots these totals. Bars, line, histogram, and pace use the same scores
         // when no matching daily history is attached yet.
         if labels.isEmpty, !series.isEmpty {
-            labels = [String(localized: "So far")]
+            labels = [String(appLocalized: "So far")]
             for index in series.indices {
                 series[index].daily = [series[index].total]
                 series[index].cumulative = [series[index].total]
@@ -383,7 +383,7 @@ private struct FightDayLineChart: View {
                             selectedDay = Int((fraction * CGFloat(model.dayCount - 1)).rounded())
                         }
                     )
-                    .accessibilityLabel(String(localized: "Steps chart"))
+                    .accessibilityLabel(String(appLocalized: "Steps chart"))
                 }
                 .frame(height: 156)
             }
@@ -400,7 +400,7 @@ private struct FightDayHistogramChart: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(String(localized: "chart.scale", defaultValue: "0–\(model.peakDaily.formatted(.number.notation(.compactName).precision(.fractionLength(0...1)))) steps"))
+            Text(String(appLocalized: "chart.scale", defaultValue: "0–\(model.peakDaily.formatted(.number.notation(.compactName).precision(.fractionLength(0...1)))) steps"))
                 .ffType(.micro)
                 .foregroundStyle(theme.textSecondary)
             GeometryReader { geo in
@@ -463,7 +463,7 @@ private struct FightDayBarsChart: View {
                         let value = series.daily[day]
                         HStack(spacing: 8) {
                             CompanionAvatar(series.person, size: 16)
-                            Text(series.person.isYou ? String(localized: "You") : series.person.name)
+                            Text(series.person.isYou ? String(appLocalized: "You") : series.person.name)
                                 .ffType(.micro)
                                 .foregroundStyle(theme.textSecondary)
                                 .lineLimit(1)
@@ -508,7 +508,7 @@ private struct FightDayOvalChart: View {
                 .stroke(theme.gold, style: StrokeStyle(lineWidth: 2, lineCap: .round))
                 VStack(spacing: 4) {
                     if let leader = model.series.first {
-                        Text(leader.person.isYou ? String(localized: "You") : leader.person.name)
+                        Text(leader.person.isYou ? String(appLocalized: "You") : leader.person.name)
                             .ffType(.label)
                             .foregroundStyle(theme.text)
                             .lineLimit(1)

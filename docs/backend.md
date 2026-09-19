@@ -65,6 +65,18 @@ safe backend migration, not automatically an iOS release. Removing information o
 behavior an admitted app still requires waits for that app to be retired. Destructive
 SQL and hosted deployment still follow Marc's authorization rules.
 
+## Saved companion descriptions (prepared 17 Sep 2026)
+
+`GET /api/v1/me/companions` returns the authenticated user's saved descriptions as
+a JSON string array, most recently used first. Apply
+`20260917010915_saved_companion_prompts.sql` before deploying this endpoint.
+The private library is backfilled from existing custom prompts. An internal capture
+trigger keeps it current even when an older backend writes the profile. It is not
+an app-facing RPC. The existing `GET/PATCH /api/v1/me` contract remains unchanged,
+including a null active prompt for stock animals. Reusing a description still uses
+the existing custom-companion PATCH. Libraries are isolated by user and cascade
+away when the account is deleted. This stores descriptions, not generated artwork.
+
 ## Fight chart consistency (prepared 15 Sep 2026)
 
 Apply `20260915200338_fight_step_checkpoints.sql` before deploying this backend.
@@ -89,6 +101,32 @@ are retained for installed builds. An older backend without context `time_zone`
 receives the original upload fields from the new app. Distribute the new native
 build after the migration and compatible backend deployment. See
 [status](status.md#fight-charts-and-standings-prepared-15-sep-2026) for verification.
+
+## Account preferences (prepared 17 Sep 2026)
+
+`GET/PATCH /api/v1/me/preferences` reads and saves the signed-in account's
+`language` (`system`, `en`, `fr`) and `appearance` (`system`, `light`, `dark`).
+Missing rows follow the iPhone for both settings. PATCH accepts either setting
+independently; concurrent changes to different fields are preserved. The
+authenticated caller owns the row. Unknown fields and client-supplied account
+IDs are rejected.
+
+Apply `20260917024606_account_preferences.sql`, then deploy the backend, then
+distribute the native app. Storage is in `private.account_preferences`, with
+RLS enabled, no direct client grants, and account-deletion cascading. Existing
+profile and notification preference contracts, public tables, and legacy
+permissions remain unchanged. No backfill or client permission cutoff is needed.
+
+The app caches confirmed values per account and environment for offline launch,
+refreshes on foreground and when opening Preferences, and reports failed saves
+without applying them. Language selection uses an explicit localization bundle
+for Foundation strings and the SwiftUI locale. Apple documents that the
+[Foundation locale parameter](https://developer.apple.com/documentation/swift/string/init(localized:table:bundle:locale:comment:))
+formats interpolated values without selecting the translation bundle.
+Installation source is read from
+StoreKit separately from the configured account environment; it is device
+information, not an account preference. Beta and App Store databases do not sync
+preferences automatically.
 
 ## Friend referrals (pending deployment)
 

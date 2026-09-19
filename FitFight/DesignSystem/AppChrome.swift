@@ -32,7 +32,7 @@ struct FFLoadingBlock: View {
             .tint(theme.gold)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 28)
-            .accessibilityLabel(String(localized: "Loading"))
+            .accessibilityLabel(String(appLocalized: "Loading"))
     }
 }
 
@@ -263,11 +263,11 @@ struct FFTabBar: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            item(.fights, "trophy", String(localized: "Fights"))
-            item(.newFight, "plus.circle", String(localized: "New"))
-            item(.feed, "text.below.photo", String(localized: "Feed"))
-            item(.feedback, "bubble.left.and.bubble.right", String(localized: "Feedback"))
-            item(.you, "person", String(localized: "You"))
+            item(.fights, "trophy", String(appLocalized: "Fights"))
+            item(.newFight, "plus.circle", String(appLocalized: "New"))
+            item(.feed, "text.below.photo", String(appLocalized: "Feed"))
+            item(.feedback, "bubble.left.and.bubble.right", String(appLocalized: "Feedback"))
+            item(.you, "person", String(appLocalized: "You"))
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 10)

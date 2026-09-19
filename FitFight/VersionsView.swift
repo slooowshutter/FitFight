@@ -21,7 +21,7 @@ struct VersionsView: View {
 
             Text(
                 String(
-                    localized: "version.current",
+                    appLocalized: "version.current",
                     defaultValue: "You're on \(AppVersion.label)"
                 )
             )
@@ -53,6 +53,12 @@ private struct ReleaseNoteRow: View {
         release.id == Changelog.current?.id
     }
 
+    private var localizedNotes: LocalizedStringResource {
+        var notes = release.notes
+        notes.locale = AppLocalization.locale
+        return notes
+    }
+
     var body: some View {
         FFCard(padding: 16, stroke: isCurrent ? theme.mossEdge : nil) {
             VStack(alignment: .leading, spacing: 8) {
@@ -61,14 +67,14 @@ private struct ReleaseNoteRow: View {
                         .ffType(.heading)
                         .foregroundStyle(isCurrent ? theme.mossText : theme.text)
                     if isCurrent {
-                        FFPill(String(localized: "this build"))
+                        FFPill(String(appLocalized: "this build"))
                     }
                     Spacer()
                     Text(release.date, format: .dateTime.month(.abbreviated).day().year())
                         .ffType(.caption)
                         .foregroundStyle(theme.textFaint)
                 }
-                Text(release.notes)
+                Text(localizedNotes)
                     .ffType(.body)
                     .foregroundStyle(theme.textSecondary)
                     .lineSpacing(3)

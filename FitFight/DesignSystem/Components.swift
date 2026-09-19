@@ -877,7 +877,7 @@ struct FFListRow: View {
                     .tracking(18 * -0.02)
                     .foregroundStyle(metricIsGap ? (ahead ? theme.mossText : theme.emberText) : theme.text)
                 if metricIsGap {
-                    Text(ahead ? String(localized: "steps ahead") : String(localized: "steps behind"))
+                    Text(ahead ? String(appLocalized: "steps ahead") : String(appLocalized: "steps behind"))
                         .ffType(.micro)
                         .foregroundStyle(ahead ? theme.mossText : theme.emberText)
                 }

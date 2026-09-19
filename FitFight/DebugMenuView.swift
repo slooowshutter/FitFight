@@ -12,16 +12,16 @@ struct DebugMenuView: View {
         VStack(spacing: 0) {
             VersionBanner()
             HStack {
-                Text(showDesign ? String(localized: "Design system") : String(localized: "Debug"))
+                Text(showDesign ? String(appLocalized: "Design system") : String(appLocalized: "Debug"))
                     .ffType(.title)
                     .foregroundStyle(theme.text)
                 Spacer()
                 if showDesign {
-                    Button(String(localized: "Back")) { showDesign = false }
+                    Button(String(appLocalized: "Back")) { showDesign = false }
                         .ffType(.label)
                         .foregroundStyle(theme.mossText)
                 }
-                Button(String(localized: "Close")) { dismiss() }
+                Button(String(appLocalized: "Close")) { dismiss() }
                     .ffType(.label)
                     .foregroundStyle(theme.mossText)
             }
@@ -43,14 +43,14 @@ struct DebugMenuView: View {
                 Text(AppVersion.label)
                     .ffType(.caption)
                     .foregroundStyle(theme.textSecondary)
-                FFSection(title: String(localized: "Apple Health")) {
+                FFSection(title: String(appLocalized: "Apple Health")) {
                     diagnostics
                 }
-                FFSection(title: String(localized: "Look")) {
+                FFSection(title: String(appLocalized: "Look")) {
                     FFGroupedRows {
                         FFGroupedRow(
-                            title: String(localized: "Design system"),
-                            subtitle: String(localized: "Internal kit. Not shown to other people."),
+                            title: String(appLocalized: "Design system"),
+                            subtitle: String(appLocalized: "Internal kit. Not shown to other people."),
                             systemImage: "paintpalette",
                             trailing: AnyView(
                                 Image(systemName: "chevron.right")
@@ -70,39 +70,39 @@ struct DebugMenuView: View {
     private var diagnostics: some View {
         FFGroupedRows {
             FFGroupedRow(
-                title: String(localized: "Background App Refresh"),
+                title: String(appLocalized: "Background App Refresh"),
                 subtitle: steps.backgroundRefreshText,
                 systemImage: "arrow.clockwise",
                 subtitleTone: steps.diagnostics.backgroundRefreshStatus == .available ? .moss : .neutral,
                 trailing: steps.diagnostics.backgroundRefreshStatus == .denied
-                    ? AnyView(FFPill(String(localized: "Open Settings"), style: .softMoss)) : nil,
+                    ? AnyView(FFPill(String(appLocalized: "Open Settings"), style: .softMoss)) : nil,
                 action: steps.diagnostics.backgroundRefreshStatus == .denied
                     ? { UIApplication.shared.open(URL(string: UIApplication.openSettingsURLString)!) }
                     : nil
             )
             FFDivider()
             FFGroupedRow(
-                title: String(localized: "HealthKit background delivery"),
+                title: String(appLocalized: "HealthKit background delivery"),
                 subtitle: steps.backgroundDeliveryText,
                 systemImage: "heart.text.square",
                 subtitleTone: steps.diagnostics.deliveryRegistrationStatus == .enabled ? .moss : .neutral
             )
             FFDivider()
             FFGroupedRow(
-                title: String(localized: "Last automatic sync"),
+                title: String(appLocalized: "Last automatic sync"),
                 subtitle: diagnosticDate(steps.diagnostics.lastAutomaticSync),
                 systemImage: "bolt"
             )
             FFDivider()
             FFGroupedRow(
-                title: String(localized: "Last manual or foreground sync"),
+                title: String(appLocalized: "Last manual or foreground sync"),
                 subtitle: diagnosticDate(steps.diagnostics.lastManualSync),
                 systemImage: "hand.tap"
             )
             if let failure = steps.currentFailureText {
                 FFDivider()
                 FFGroupedRow(
-                    title: String(localized: "Current sync issue"),
+                    title: String(appLocalized: "Current sync issue"),
                     subtitle: failure,
                     systemImage: "exclamationmark.triangle",
                     subtitleTone: .ember
@@ -111,7 +111,7 @@ struct DebugMenuView: View {
             if let reference = steps.diagnostics.failureReference {
                 FFDivider()
                 FFGroupedRow(
-                    title: String(localized: "Sync error reference"),
+                    title: String(appLocalized: "Sync error reference"),
                     subtitle: reference,
                     systemImage: "number",
                     subtitleTone: .neutral
@@ -121,7 +121,7 @@ struct DebugMenuView: View {
     }
 
     private func diagnosticDate(_ date: Date?) -> String {
-        guard let date else { return String(localized: "Not yet") }
-        return date.formatted(.relative(presentation: .named))
+        guard let date else { return String(appLocalized: "Not yet") }
+        return date.formatted(.relative(presentation: .named).locale(AppLocalization.locale))
     }
 }

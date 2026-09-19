@@ -60,6 +60,7 @@ struct FitFightApp: App {
     @StateObject private var themeStore: ThemeStore
     @StateObject private var model: AppModel
     @StateObject private var companions = CompanionStore()
+    @StateObject private var preferences = AccountPreferencesStore()
     @StateObject private var appUpdate = AppUpdateChecker.shared
     @StateObject private var session: SessionStore
     @StateObject private var steps: HealthKitStepsStore
@@ -112,12 +113,33 @@ struct FitFightApp: App {
                 .environmentObject(themeStore)
                 .environmentObject(model)
                 .environmentObject(companions)
+                .environmentObject(preferences)
+                .environment(\.locale, AppLocalization.locale)
                 .environmentObject(session)
                 .environmentObject(steps)
                 .environmentObject(feed)
                 .environmentObject(appUpdate)
                 .environmentObject(push)
                 .fitFightTheme(themeStore.theme)
+                .onChange(of: session.authSession?.user.id, initial: true) { _, userID in
+                    guard !CompanionPreview.isEnabled, !ScreenshotExport.isEnabled else { return }
+                    preferences.activate(userID: userID)
+                }
+                .onChange(of: preferences.value.appearance, initial: true) { _, appearance in
+                    guard !CompanionPreview.isEnabled, !ScreenshotExport.isEnabled else { return }
+                    themeStore.apply(appearance)
+                }
+                .onChange(of: preferences.value.language) { _, _ in
+                    guard !CompanionPreview.isEnabled, !ScreenshotExport.isEnabled else { return }
+                    model.relocalizeFights()
+                    Task {
+                        await push.registerIfAuthorized()
+                    }
+                }
+                .task(id: scenePhase == .active ? session.authSession?.user.id : nil) {
+                    guard scenePhase == .active, !CompanionPreview.isEnabled, !ScreenshotExport.isEnabled else { return }
+                    await preferences.refresh(session: session)
+                }
                 .task {
                     guard !CompanionPreview.isEnabled else {
                         #if DEBUG && targetEnvironment(simulator)
@@ -161,6 +183,7 @@ struct FitFightApp: App {
                     guard let userId = session.authSession?.user.id else {
                         model.openPost = nil
                         model.showingActivity = false
+                        model.showingPreferences = false
                         return
                     }
                     CrashReporting.identify(userId: userId)

@@ -1,0 +1,29 @@
+name: Bugbot routing tests
+
+on:
+    pull_request:
+        paths:
+            - ".github/scripts/bugbot-review*.cjs"
+            - ".github/workflows/bugbot-review*.yml"
+            - ".github/bugbot-release-ruleset.json"
+    push:
+        paths:
+            - ".github/scripts/bugbot-review*.cjs"
+            - ".github/workflows/bugbot-review*.yml"
+            - ".github/bugbot-release-ruleset.json"
+
+permissions:
+    contents: read
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  persist-credentials: false
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+            - run: node --test .github/scripts/bugbot-review.test.cjs

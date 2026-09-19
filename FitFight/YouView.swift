@@ -1,4 +1,3 @@
-import PhotosUI
 import SwiftUI
 import UIKit
 
@@ -8,20 +7,25 @@ struct YouView: View {
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var steps: HealthKitStepsStore
     @EnvironmentObject private var companions: CompanionStore
+    @EnvironmentObject private var preferences: AccountPreferencesStore
     @EnvironmentObject private var feed: FeedStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
+    @Environment(\.scenePhase) private var scenePhase
+    @StateObject private var profileStore = ProfileScreenStore()
+    @State private var showingEditProfile = false
+    @State private var showingFriends = false
+    @State private var showingProfileHistory = false
+    @State private var incomingFriends = 0
+    @State private var rivals: [ProfileRivalrySummary] = []
+    @State private var profileLoadGeneration = 0
+    @State private var socialError: String?
     @State private var confirmDelete = false
     @State private var copied = false
-    @State private var pickerItem: PhotosPickerItem?
-    @State private var isUploadingPhoto = false
-    @State private var photoError = ""
     @State private var showingOnboardingPreview = false
     @State private var showingSlideHapticsLab = false
     @State private var showingBroadcastCompose = false
     @State private var showingHealthDetails = false
-    @State private var showingNotificationSettings = false
-    @State private var showingBetaInfo = false
     @State private var showingCompanionPreviewControls = false
 
     var body: some View {
@@ -38,35 +42,61 @@ struct YouView: View {
             if session.isSignedIn, let authError = session.authError {
                 FFNotice(text: authError, tone: .ember, systemImage: "exclamationmark.triangle")
             }
-            if !photoError.isEmpty {
-                FFNotice(text: photoError, tone: .ember, systemImage: "exclamationmark.triangle")
+            if let record = profileStore.profile?.record {
+                ProfileRecordCard(record: record)
+                FFButton(title: String(appLocalized: "Fight history"), kind: .ghost) { showingProfileHistory = true }
             }
-
-            FFSection(title: String(localized: "Apple Health")) {
-                health
+            if let statistics = profileStore.profile?.stepStatistics {
+                ProfileStepStatisticsView(statistics: statistics)
             }
-
-            FFSection(title: String(localized: "Activity")) {
+            ForEach(rivals) { rival in
+                ProfileIdentityLink(userID: rival.id, source: "friends", onClosed: { Task { await loadOwnProfile() } }) {
+                    FFCard {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(verbatim: "@\(rival.identity.handle)").ffType(.label)
+                            Text(String(format: String(appLocalized: "profile.rivalry-score"), rival.rivalry.wins, rival.rivalry.losses, rival.rivalry.draws))
+                                .ffType(.heading)
+                            Text(String(appLocalized: "Your rivalry")).ffType(.caption).foregroundStyle(theme.textSecondary)
+                        }.frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+            }
+            if let error = profileStore.error ?? socialError {
+                FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
+                FFButton(title: String(appLocalized: "Retry"), kind: .secondary) { Task { await loadOwnProfile() } }
+            }
+            if session.isSignedIn {
                 FFGroupedRows {
-                    navRow(String(localized: "Notifications & activity")) { model.showingActivity = true }
+                    FFGroupedRow(
+                        title: String(appLocalized: "Friends"),
+                        subtitle: incomingFriends > 0 ? String(format: String(appLocalized: "profile.requests-count"), incomingFriends) : nil,
+                        systemImage: "person.2",
+                        action: { showingFriends = true }
+                    )
                 }
             }
 
-            FFSection(title: String(localized: "Bugs & requests")) {
+            FFSection(title: String(appLocalized: "Apple Health")) {
+                health
+            }
+
+            FFSection(title: String(appLocalized: "Activity")) {
+                FFGroupedRows {
+                    navRow(String(appLocalized: "Notifications & activity")) { model.showingActivity = true }
+                }
+            }
+
+            FFSection(title: String(appLocalized: "Bugs & requests")) {
                 requests
             }
 
-            FFSection(title: String(localized: "Settings")) {
+            FFSection(title: String(appLocalized: "Settings")) {
                 settings
-            }
-
-            FFSection(title: String(localized: "Look")) {
-                appearance
             }
 
             #if DEBUG && targetEnvironment(simulator)
             if CompanionPreview.isEnabled && !ScreenshotExport.isEnabled {
-                FFButton(title: String(localized: "Companion preview"), kind: .ghost, fullWidth: true) {
+                FFButton(title: String(appLocalized: "Companion preview"), kind: .ghost, fullWidth: true) {
                     showingCompanionPreviewControls = true
                 }
                 .sheet(isPresented: $showingCompanionPreviewControls) {
@@ -78,14 +108,29 @@ struct YouView: View {
             #endif
 
             if session.isFitFightAdmin {
-                FFSection(title: String(localized: "Developer")) {
+                FFSection(title: String(appLocalized: "Developer")) {
                     developer
                 }
             }
         }
-        .task {
-            guard !staticRender else { return }
-            await model.refreshFights(session: session, steps: steps)
+        .task(id: session.authSession?.user.id) { await refreshOwnProfile() }
+        .onChange(of: scenePhase) { _, phase in
+            profileLoadGeneration += 1
+            profileStore.clear()
+            rivals = []
+            incomingFriends = 0
+            if phase == .active { Task { await refreshOwnProfile() } }
+        }
+        .sheet(isPresented: $showingEditProfile, onDismiss: { Task { await loadOwnProfile() } }) {
+            EditProfileView().fitFightTheme(theme).presentationBackground(theme.bg)
+        }
+        .sheet(isPresented: $showingFriends, onDismiss: { Task { await loadOwnProfile() } }) {
+            FriendsView().fitFightTheme(theme).presentationBackground(theme.bg)
+        }
+        .sheet(isPresented: $showingProfileHistory) {
+            if let userID = session.authSession?.user.id {
+                ProfileSheet(userID: userID, source: "friends").fitFightTheme(theme).presentationBackground(theme.bg)
+            }
         }
         .sheet(isPresented: $showingOnboardingPreview) {
             OnboardingPreviewView()
@@ -110,17 +155,6 @@ struct YouView: View {
             .fitFightTheme(themeStore.theme)
             .presentationBackground(themeStore.theme.bg)
         }
-        .sheet(isPresented: $showingNotificationSettings) {
-            NotificationSettingsView()
-                .environmentObject(session)
-                .fitFightTheme(themeStore.theme)
-                .presentationBackground(themeStore.theme.bg)
-        }
-        .sheet(isPresented: $showingBetaInfo) {
-            betaInfo
-                .fitFightTheme(themeStore.theme)
-                .presentationBackground(themeStore.theme.bg)
-        }
         .confirmationDialog(
             "Delete account?",
             isPresented: $confirmDelete,
@@ -130,9 +164,10 @@ struct YouView: View {
                 Task {
                     let userId = session.authSession?.user.id
                     if await session.deleteAccount(), let userId {
+                        preferences.removeCache(for: userId)
                         model.removeCachedFights(for: userId)
                         if !(await steps.deleteLocalData(userId: userId)) {
-                            let cleanupMessage = String(localized: "Your account was deleted. FitFight will retry removing its local Health cache when you reopen the app.")
+                            let cleanupMessage = String(appLocalized: "Your account was deleted. FitFight will retry removing its local Health cache when you reopen the app.")
                             if let authError = session.authError {
                                 session.authError = "\(authError) \(cleanupMessage)"
                             } else {
@@ -159,7 +194,7 @@ struct YouView: View {
             isRefreshing: model.isRefreshingFights,
             message: model.refreshStatusText,
             action: {
-                await model.refreshFights(session: session, steps: steps, trigger: .manual)
+                await refreshOwnProfile(trigger: .manual)
             }
         )
     }
@@ -167,74 +202,69 @@ struct YouView: View {
     @ViewBuilder
     private var profile: some View {
         if session.isSignedIn {
-            HStack(spacing: 14) {
-                if companions.hasChosen {
-                    Button {
-                        companions.pickerStartsWithCustom = false
-                        companions.showingPicker = true
-                    } label: {
-                        CompanionAvatar(
-                            personID: session.profile?.userId.uuidString,
-                            companionID: session.profile?.companionId,
-                            isYou: true,
-                            monogram: session.profile?.initials ?? "FF",
-                            size: 68
-                        )
-                            .overlay { Circle().strokeBorder(theme.mossEdge, lineWidth: 3) }
-                            .contentShape(Circle())
-                    }
-                    .buttonStyle(FFHapticPlainStyle())
-                    .accessibilityLabel(String(localized: "Choose your companion"))
-                } else {
-                    PhotosPicker(selection: $pickerItem, matching: .images) {
-                        FFAvatar(
-                            monogram: session.profile?.initials ?? "FF",
-                            size: 68,
-                            selected: true,
-                            photoURL: session.profile?.avatar?.url
-                        )
-                        .contentShape(Circle())
-                        .overlay {
-                            if isUploadingPhoto {
-                                ZStack {
-                                    Circle().fill(theme.bg.opacity(0.45))
-                                    ProgressView().tint(theme.text)
-                                }
-                            }
-                        }
-                    }
-                    .buttonStyle(FFHapticPlainStyle())
-                    .disabled(isUploadingPhoto)
-                    .onChange(of: pickerItem) { _, item in
-                        Task { await uploadPhoto(item) }
-                    }
+            HStack(alignment: .top, spacing: 14) {
+                Button { showingProfileHistory = true } label: {
+                    CompanionAvatar(
+                        personID: session.profile?.userId.uuidString,
+                        companionID: session.profile?.companionId, isYou: true,
+                        monogram: session.profile?.initials ?? "FF", photoURL: session.profile?.avatar?.url, size: 68
+                    )
                 }
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(verbatim: session.profile?.displayName ?? String(localized: "Signed in"))
-                        .ffType(.heading)
-                        .foregroundStyle(theme.text)
-                    Text(verbatim: session.profile?.atHandle ?? String(localized: "Profile isn’t ready yet"))
-                        .ffType(.caption)
-                        .foregroundStyle(theme.textSecondary)
-                        .lineLimit(1)
+                .buttonStyle(FFHapticPlainStyle())
+                .accessibilityLabel(String(appLocalized: "Open profile"))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(verbatim: session.profile?.displayName ?? String(appLocalized: "Signed in"))
+                        .ffType(.heading).foregroundStyle(theme.text)
+                    Text(verbatim: session.profile?.atHandle ?? String(appLocalized: "Profile isn’t ready yet"))
+                        .ffType(.caption).foregroundStyle(theme.textSecondary)
                     if session.profile != nil {
                         Button {
                             UIPasteboard.general.string = session.profile?.atHandle ?? ""
                             copied = true
                         } label: {
-                            Text(copied ? String(localized: "Copied") : String(localized: "Copy username"))
-                                .ffType(.micro)
-                                .fontWeight(.heavy)
-                                .foregroundStyle(theme.mossText)
-                        }
-                        .buttonStyle(FFHapticPlainStyle())
+                            Text(copied ? String(appLocalized: "Copied") : String(appLocalized: "Copy username"))
+                                .ffType(.micro).foregroundStyle(theme.mossText)
+                        }.buttonStyle(FFHapticPlainStyle()).frame(minHeight: 44)
                     }
                 }
-                .layoutPriority(1)
                 Spacer(minLength: 4)
+                Button(String(appLocalized: "Edit profile")) { showingEditProfile = true }
+                    .ffType(.label).foregroundStyle(theme.mossText).frame(minHeight: 44)
             }
         } else {
             AppleSignInControl()
+        }
+    }
+
+    private func refreshOwnProfile(trigger: HealthKitStepsStore.SyncTrigger = .foreground, requestAccess: Bool = false) async {
+        guard !staticRender else { return }
+        await model.refreshFights(session: session, steps: steps, trigger: trigger, requestAccess: requestAccess)
+        guard !Task.isCancelled else { return }
+        await loadOwnProfile()
+    }
+
+    private func loadOwnProfile() async {
+        profileLoadGeneration += 1
+        let requestGeneration = profileLoadGeneration
+        rivals = []
+        socialError = nil
+        profileStore.clear()
+        incomingFriends = 0
+        guard !staticRender, let userID = session.authSession?.user.id else { return }
+        await profileStore.load(userID: userID, session: session)
+        do {
+            let token = try await session.freshAccessToken()
+            async let friendsRequest = FitFightAPI().profileFriends(kind: "incoming", accessToken: token)
+            async let rivalsRequest = FitFightAPI().ownRivalries(accessToken: token)
+            let (friends, loadedRivals) = try await (friendsRequest, rivalsRequest)
+            try Task.checkCancellation()
+            guard requestGeneration == profileLoadGeneration, session.authSession?.user.id == userID else { return }
+            incomingFriends = friends.incomingCount
+            rivals = loadedRivals
+        } catch is CancellationError {
+        } catch {
+            guard requestGeneration == profileLoadGeneration, session.authSession?.user.id == userID else { return }
+            socialError = error.localizedDescription
         }
     }
 
@@ -242,12 +272,12 @@ struct YouView: View {
         FFGroupedRows {
             Button {
                 Task {
-                    await model.refreshFights(session: session, steps: steps, trigger: .manual, requestAccess: !steps.hasAsked)
+                    await refreshOwnProfile(trigger: .manual, requestAccess: !steps.hasAsked)
                 }
             } label: {
                 FFGroupedRow(
-                    title: String(localized: "Apple Health Steps"),
-                    subtitle: steps.connection == .upToDate ? String(localized: "Up to date") : steps.detailText,
+                    title: String(appLocalized: "Apple Health Steps"),
+                    subtitle: steps.connection == .upToDate ? String(appLocalized: "Up to date") : steps.detailText,
                     systemImage: "heart",
                     enabled: steps.status != .reading && !model.isRefreshingFights,
                     subtitleTone: healthSubtitleTone,
@@ -258,7 +288,7 @@ struct YouView: View {
             .disabled(steps.status == .reading || model.isRefreshingFights)
             FFDivider()
             FFGroupedRow(
-                title: showingHealthDetails ? String(localized: "Fewer settings") : String(localized: "More settings"),
+                title: showingHealthDetails ? String(appLocalized: "Fewer settings") : String(appLocalized: "More settings"),
                 systemImage: "slider.horizontal.3",
                 trailing: AnyView(
                     Image(systemName: showingHealthDetails ? "chevron.up" : "chevron.down")
@@ -270,68 +300,63 @@ struct YouView: View {
             if showingHealthDetails {
                 FFDivider()
                 FFGroupedRow(
-                    title: String(localized: "Request Health access"),
-                    subtitle: String(localized: "Ask for access to Health types you haven’t reviewed yet. Fights use Steps only."),
+                    title: String(appLocalized: "Request Health access"),
+                    subtitle: String(appLocalized: "Ask for access to Health types you haven’t reviewed yet. Fights use Steps only."),
                     systemImage: "heart.circle",
                     enabled: steps.status != .reading && !model.isRefreshingFights,
                     subtitleTone: .neutral,
                     trailing: AnyView(
-                        FFPill(String(localized: "Review"), style: .softMoss)
+                        FFPill(String(appLocalized: "Review"), style: .softMoss)
                     ),
                     action: {
                         Task {
-                            await model.refreshFights(
-                                session: session,
-                                steps: steps,
-                                trigger: .manual,
-                                requestAccess: true
-                            )
+                            await refreshOwnProfile(trigger: .manual, requestAccess: true)
                         }
                     }
                 )
                 .disabled(steps.status == .reading || model.isRefreshingFights)
                 FFDivider()
                 FFGroupedRow(
-                    title: String(localized: "Change Health permissions"),
-                    subtitle: String(localized: "In Health, tap your profile → Apps → FitFight to turn each type of access on or off."),
+                    title: String(appLocalized: "Change Health permissions"),
+                    subtitle: String(appLocalized: "In Health, tap your profile → Apps → FitFight to turn each type of access on or off."),
                     systemImage: "hand.raised",
                     subtitleTone: .neutral
                 )
                 FFDivider()
                 FFGroupedRow(
-                    title: String(localized: "Background App Refresh"),
+                    title: String(appLocalized: "Background App Refresh"),
                     subtitle: steps.backgroundRefreshText,
                     systemImage: "arrow.clockwise",
                     subtitleTone: steps.diagnostics.backgroundRefreshStatus == .available ? .moss : .neutral,
                     trailing: steps.diagnostics.backgroundRefreshStatus == .denied
-                        ? AnyView(FFPill(String(localized: "Open Settings"), style: .softMoss)) : nil,
+                        ? AnyView(FFPill(String(appLocalized: "Open Settings"), style: .softMoss)) : nil,
                     action: steps.diagnostics.backgroundRefreshStatus == .denied
                         ? { UIApplication.shared.open(URL(string: UIApplication.openSettingsURLString)!) }
                         : nil
                 )
                 FFDivider()
                 FFGroupedRow(
-                    title: String(localized: "HealthKit background delivery"),
+                    title: String(appLocalized: "HealthKit background delivery"),
                     subtitle: steps.backgroundDeliveryText,
                     systemImage: "heart.text.square",
                     subtitleTone: steps.diagnostics.deliveryRegistrationStatus == .enabled ? .moss : .neutral
                 )
                 FFDivider()
                 FFGroupedRow(
-                    title: String(localized: "Last automatic sync"),
+                    title: String(appLocalized: "Last automatic sync"),
                     subtitle: diagnosticDate(steps.diagnostics.lastAutomaticSync),
                     systemImage: "bolt"
                 )
                 FFDivider()
                 FFGroupedRow(
-                    title: String(localized: "Last manual or foreground sync"),
+                    title: String(appLocalized: "Last manual or foreground sync"),
                     subtitle: diagnosticDate(steps.diagnostics.lastManualSync),
                     systemImage: "hand.tap"
                 )
                 if let failure = steps.currentFailureText {
                     FFDivider()
                     FFGroupedRow(
-                        title: String(localized: "Current sync issue"),
+                        title: String(appLocalized: "Current sync issue"),
                         subtitle: failure,
                         systemImage: "exclamationmark.triangle",
                         subtitleTone: .ember
@@ -340,7 +365,7 @@ struct YouView: View {
                 if let reference = steps.diagnostics.failureReference {
                     FFDivider()
                     FFGroupedRow(
-                        title: String(localized: "Sync error reference"),
+                        title: String(appLocalized: "Sync error reference"),
                         subtitle: reference,
                         systemImage: "number",
                         subtitleTone: .neutral
@@ -361,46 +386,26 @@ struct YouView: View {
     private var healthPill: FFPill {
         switch steps.connection {
         case .syncFailed:
-            return FFPill(String(localized: "Retry"), style: .softEmber)
+            return FFPill(String(appLocalized: "Retry"), style: .softEmber)
         case .syncing:
-            return FFPill(String(localized: "Syncing"), style: .neutral)
+            return FFPill(String(appLocalized: "Syncing"), style: .neutral)
         case .upToDate, .noAccessibleSteps:
-            return FFPill(String(localized: "Connected"), style: .softMoss)
+            return FFPill(String(appLocalized: "Connected"), style: .softMoss)
         case .notConnected:
-            return FFPill(String(localized: "Connect"), style: .solidMoss)
-        }
-    }
-
-    private func uploadPhoto(_ item: PhotosPickerItem?) async {
-        defer { pickerItem = nil }
-        guard let item else { return }
-        guard !CompanionPreview.isEnabled else { photoError = CompanionPreview.writeUnavailable; return }
-        guard let data = try? await item.loadTransferable(type: Data.self),
-              let image = UIImage(data: data) else {
-            photoError = String(localized: "That photo could not be read.")
-            return
-        }
-        isUploadingPhoto = true
-        defer { isUploadingPhoto = false }
-        do {
-            let media = try await MediaUploader.upload(image, purpose: "profile", session: session)
-            try await session.setAvatar(media)
-            photoError = ""
-        } catch {
-            photoError = error.localizedDescription
+            return FFPill(String(appLocalized: "Connect"), style: .solidMoss)
         }
     }
 
     private func diagnosticDate(_ date: Date?) -> String {
-        guard let date else { return String(localized: "Not yet") }
-        return date.formatted(.relative(presentation: .named))
+        guard let date else { return String(appLocalized: "Not yet") }
+        return date.formatted(.relative(presentation: .named).locale(AppLocalization.locale))
     }
 
     private var requests: some View {
         FFGroupedRows {
             FFGroupedRow(
-                title: String(localized: "Bugs & requests"),
-                subtitle: String(localized: "Post a bug or a feature request. Other people can upvote and comment with their username."),
+                title: String(appLocalized: "Bugs & requests"),
+                subtitle: String(appLocalized: "Post a bug or a feature request. Other people can upvote and comment with their username."),
                 systemImage: "bubble.left.and.bubble.right",
                 trailing: AnyView(
                     Image(systemName: "chevron.right")
@@ -420,87 +425,36 @@ struct YouView: View {
         FFGroupedRows {
             if let code = session.profile?.referralCode {
                 ShareLink(item: APIConfig.publicOrigin.appending(path: "r/\(code.uuidString.lowercased())")) {
-                    rowLabel(title: String(localized: "Refer a friend"), destructive: false)
+                    rowLabel(title: String(appLocalized: "Refer a friend"), destructive: false)
                 }
                 .buttonStyle(FFHapticPlainStyle())
                 FFDivider()
             }
-            linkRow(String(localized: "Privacy"), destination: sitePage("privacy"))
+            navRow(String(appLocalized: "Preferences")) { model.showingPreferences = true }
             FFDivider()
-            linkRow(String(localized: "Support"), destination: sitePage("support"))
+            linkRow(String(appLocalized: "Privacy"), destination: sitePage("privacy"))
             FFDivider()
-            navRow(String(localized: "Notifications")) { showingNotificationSettings = true }
+            linkRow(String(appLocalized: "Support"), destination: sitePage("support"))
             FFDivider()
-            navRow(String(localized: "Versions")) { model.showingVersions = true }
-            FFDivider()
-            navRow(String(localized: "Try the beta")) { showingBetaInfo = true }
+            navRow(String(appLocalized: "Versions")) { model.showingVersions = true }
             if session.isSignedIn {
                 FFDivider()
-                navRow(String(localized: "Sign out")) {
+                navRow(String(appLocalized: "Sign out")) {
                     Task { await session.signOut() }
                 }
                 FFDivider()
-                navRow(String(localized: "Delete account"), destructive: true) {
+                navRow(String(appLocalized: "Delete account"), destructive: true) {
                     confirmDelete = true
                 }
             }
         }
     }
 
-    private var betaInfo: some View {
-        VStack(spacing: 0) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(String(localized: "Try the beta"))
-                    .ffType(.title)
-                    .foregroundStyle(theme.text)
-                    .accessibilityAddTraits(.isHeader)
-                Spacer()
-                Button(String(localized: "Close")) { showingBetaInfo = false }
-                    .ffType(.label)
-                    .foregroundStyle(theme.mossText)
-                    .frame(minWidth: 44, minHeight: 44)
-                    .buttonStyle(FFHapticPlainStyle())
-            }
-            .padding(.horizontal, theme.space.screenPadding)
-            .padding(.vertical, 12)
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: theme.space.cardGap) {
-                    Text(String(localized: "Try upcoming features in TestFlight. Beta builds may have bugs."))
-                        .ffType(.body)
-                        .foregroundStyle(theme.textSecondary)
-                    FFNotice(
-                        text: String(localized: "The beta uses a separate database. Accounts, fights, and progress do not sync automatically with the App Store version, even when you use the same Apple ID."),
-                        tone: .ember,
-                        systemImage: "exclamationmark.triangle"
-                    )
-                    Text(String(localized: "Installing the beta replaces the App Store app on this device. To switch back, reinstall FitFight from the App Store."))
-                        .ffType(.body)
-                        .foregroundStyle(theme.textSecondary)
-                    FFGroupedRows {
-                        linkRow(
-                            String(localized: "Open TestFlight"),
-                            destination: URL(string: "https://testflight.apple.com/join/wcZKdwVZ")!
-                        )
-                        FFDivider()
-                        linkRow(
-                            String(localized: "Return to the App Store"),
-                            destination: URL(string: "https://apps.apple.com/app/id6804230516")!
-                        )
-                    }
-                }
-                .padding(.horizontal, theme.space.screenPadding)
-                .padding(.bottom, 24)
-            }
-        }
-        .background(theme.bg.ignoresSafeArea())
-    }
-
     private var developer: some View {
         FFGroupedRows {
             FFGroupedRow(
-                title: String(localized: "Replay onboarding"),
-                subtitle: String(localized: "Health, challenge reminders, and Bugs & requests. Your account and fights stay."),
+                title: String(appLocalized: "Replay onboarding"),
+                subtitle: String(appLocalized: "Health, challenge reminders, and Bugs & requests. Your account and fights stay."),
                 systemImage: "arrow.counterclockwise",
                 subtitleTone: .neutral,
                 trailing: AnyView(
@@ -525,8 +479,8 @@ struct YouView: View {
             )
             FFDivider()
             FFGroupedRow(
-                title: String(localized: "Broadcast"),
-                subtitle: String(localized: "Write one post. Everyone signed in sees it on Feed."),
+                title: String(appLocalized: "Broadcast"),
+                subtitle: String(appLocalized: "Write one post. Everyone signed in sees it on Feed."),
                 systemImage: "megaphone",
                 subtitleTone: .neutral,
                 trailing: AnyView(
@@ -539,35 +493,12 @@ struct YouView: View {
         }
     }
 
-    private var appearance: some View {
-        HStack(spacing: 10) {
-            ForEach(Mode.allCases) { mode in
-                let on = themeStore.mode == mode
-                Button {
-                    themeStore.mode = mode
-                } label: {
-                    Text(mode.label)
-                        .ffType(.label)
-                        .foregroundStyle(on ? theme.mossOn : theme.text)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 44)
-                        .background(
-                            on ? theme.mossFill : theme.card,
-                            in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous)
-                        )
-                        .ffBorder(on ? theme.mossEdge : theme.hairline, radius: theme.radius.field)
-                }
-                .buttonStyle(FFPressStyle(scale: 0.97))
-            }
-        }
-    }
-
     private var siteURL: URL {
         URL(string: AppVersion.backend == "prod" ? "https://fitfight.app" : "https://staging.fitfight.app")!
     }
 
     private func sitePage(_ path: String) -> URL {
-        let root = Bundle.main.preferredLocalizations.first?.hasPrefix("fr") == true
+        let root = AppLocalization.languageCode == "fr"
             ? siteURL.appending(path: "fr")
             : siteURL
         return root.appending(path: path)

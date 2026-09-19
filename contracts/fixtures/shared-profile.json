@@ -1,0 +1,47 @@
+{
+    "identity": {
+        "user_id": "11111111-1111-4111-8111-111111111111",
+        "handle": "maya",
+        "display_name": "Maya",
+        "companion_id": "fox",
+        "avatar_url": null
+    },
+    "access": "shared",
+    "competitive": true,
+    "friendship": "friends",
+    "record": {
+        "played": 10,
+        "wins": 3,
+        "win_rate": 0.3,
+        "categories": {
+            "public": {
+                "played": 0,
+                "wins": 0,
+                "win_rate": null
+            },
+            "private": {
+                "played": 10,
+                "wins": 3,
+                "win_rate": 0.3
+            },
+            "unknown": {
+                "played": 0,
+                "wins": 0,
+                "win_rate": null
+            }
+        },
+        "excluded": 2
+    },
+    "rivalry": {
+        "wins": 1,
+        "losses": 1,
+        "draws": 0,
+        "rematch": {
+            "duration_seconds": 604800,
+            "action_text": null
+        }
+    },
+    "activity": null,
+    "artwork": null,
+    "view_measurement_enabled": false
+}

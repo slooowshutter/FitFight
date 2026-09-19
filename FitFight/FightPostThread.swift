@@ -33,7 +33,7 @@ struct FightPostEngagement: View {
         VStack(alignment: .leading, spacing: 10) {
             if !post.reactions.isEmpty {
                 reactionChips
-                Button(String(localized: "View reactions")) { showingReactions = true }
+                Button(String(appLocalized: "View reactions")) { showingReactions = true }
                     .ffType(.caption)
                     .foregroundStyle(theme.mossText)
                     .buttonStyle(FFHapticPlainStyle())
@@ -44,7 +44,7 @@ struct FightPostEngagement: View {
                     items: FightPostCommentSort.allCases,
                     selection: $commentSort
                 ) { $0.title }
-                .accessibilityLabel(String(localized: "Comment order"))
+                .accessibilityLabel(String(appLocalized: "Comment order"))
                 if loadingComments {
                     ProgressView()
                         .tint(theme.mossText)
@@ -55,7 +55,7 @@ struct FightPostEngagement: View {
                         .id(row.id)
                 }
                 if nextCursor != nil {
-                    Button(String(localized: "More comments")) {
+                    Button(String(appLocalized: "More comments")) {
                         Task { await loadComments(more: true) }
                     }
                     .ffType(.caption)
@@ -65,11 +65,11 @@ struct FightPostEngagement: View {
                 }
                 if let replyTo {
                     HStack {
-                        Text(String(localized: "Replying to @\(replyTo.author.handle)"))
+                        Text(String(appLocalized: "Replying to @\(replyTo.author.handle)"))
                             .ffType(.micro)
                             .foregroundStyle(theme.textSecondary)
                         Spacer()
-                        Button(String(localized: "Cancel")) { self.replyTo = nil }
+                        Button(String(appLocalized: "Cancel")) { self.replyTo = nil }
                             .ffType(.micro)
                             .foregroundStyle(theme.mossText)
                             .buttonStyle(FFHapticPlainStyle())
@@ -88,18 +88,18 @@ struct FightPostEngagement: View {
                     }()
                 ) {
                     HStack {
-                        TextField(String(localized: "Write a comment…"), text: $draft, axis: .vertical)
+                        TextField(String(appLocalized: "Write a comment…"), text: $draft, axis: .vertical)
                             .ffType(.body)
                             .foregroundStyle(theme.text)
                             .lineLimit(1...4)
                         FFButton(
-                            title: loading ? String(localized: "Posting…") : String(localized: "Send"),
-                            kind: .ghost,
+                            title: loading ? String(appLocalized: "Posting…") : String(appLocalized: "Send"),
+                            kind: .primary,
+                            enabled: !loading && !loadingComments && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                             fullWidth: false
                         ) {
                             Task { await sendComment() }
                         }
-                        .disabled(loading || loadingComments || draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
                 }
             }
@@ -137,10 +137,10 @@ struct FightPostEngagement: View {
                 .fitFightTheme(theme)
                 .presentationBackground(theme.bg)
         }
-        .alert(String(localized: "React"), isPresented: $showingCustomEmoji) {
-            TextField(String(localized: "Emoji"), text: $customEmoji)
-            Button(String(localized: "Cancel"), role: .cancel) { customEmoji = "" }
-            Button(String(localized: "React")) {
+        .alert(String(appLocalized: "React"), isPresented: $showingCustomEmoji) {
+            TextField(String(appLocalized: "Emoji"), text: $customEmoji)
+            Button(String(appLocalized: "Cancel"), role: .cancel) { customEmoji = "" }
+            Button(String(appLocalized: "React")) {
                 if let emoji = firstEmoji(in: customEmoji) {
                     Task { await feed.react(session: session, post: post, emoji: emoji) }
                 }
@@ -170,7 +170,7 @@ struct FightPostEngagement: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(FFHapticPlainStyle())
-                .accessibilityLabel(mine == nil ? String(localized: "Cheer this post") : String(localized: "Remove reaction"))
+                .accessibilityLabel(mine == nil ? String(appLocalized: "Cheer this post") : String(appLocalized: "Remove reaction"))
                 .accessibilityValue(count > 0 ? String(count) : "")
 
                 Button {
@@ -181,10 +181,10 @@ struct FightPostEngagement: View {
                 } label: {
                     Text(
                         post.commentCount == 0
-                            ? String(localized: "Comment")
+                            ? String(appLocalized: "Comment")
                             : post.commentCount == 1
-                                ? String(localized: "1 comment")
-                                : String(localized: "\(post.commentCount) comments")
+                                ? String(appLocalized: "1 comment")
+                                : String(appLocalized: "\(post.commentCount) comments")
                     )
                     .ffType(.caption)
                     .foregroundStyle(theme.mossText)
@@ -199,7 +199,7 @@ struct FightPostEngagement: View {
                             Task { await feed.react(session: session, post: post, emoji: emoji) }
                         }
                     }
-                    Button(String(localized: "Other emoji…")) {
+                    Button(String(appLocalized: "Other emoji…")) {
                         showingCustomEmoji = true
                     }
                 } label: {
@@ -211,12 +211,12 @@ struct FightPostEngagement: View {
                 }
                 .buttonStyle(FFHapticPlainStyle())
                 .menuOrder(.fixed)
-                .accessibilityLabel(String(localized: "React"))
+                .accessibilityLabel(String(appLocalized: "React"))
                 Spacer(minLength: 0)
             }
         }
         .disabled(feed.reactingPostIDs.contains(post.id))
-        .accessibilityValue(feed.reactingPostIDs.contains(post.id) ? String(localized: "Saving…") : "")
+        .accessibilityValue(feed.reactingPostIDs.contains(post.id) ? String(appLocalized: "Saving…") : "")
     }
 
     private var reactionChips: some View {
@@ -240,7 +240,7 @@ struct FightPostEngagement: View {
             }
         }
         .disabled(feed.reactingPostIDs.contains(post.id))
-        .accessibilityValue(feed.reactingPostIDs.contains(post.id) ? String(localized: "Saving…") : "")
+        .accessibilityValue(feed.reactingPostIDs.contains(post.id) ? String(appLocalized: "Saving…") : "")
     }
 
     private var displayedComments: [DisplayedFightComment] {
@@ -288,19 +288,23 @@ struct FightPostEngagement: View {
     private func commentRow(_ comment: FitFightFightPostComment) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .top, spacing: 8) {
-                CompanionAvatar(
-                    personID: comment.author.userId.uuidString,
-                    companionID: comment.author.companionId,
-                    isYou: comment.mine,
-                    monogram: comment.author.initials,
-                    photoURL: comment.author.avatar?.url,
-                    size: 26
-                )
+                ProfileIdentityLink(userID: comment.author.userId, source: "comments") {
+                    CompanionAvatar(
+                        personID: comment.author.userId.uuidString,
+                        companionID: comment.author.companionId,
+                        isYou: comment.mine,
+                        monogram: comment.author.initials,
+                        photoURL: comment.author.avatar?.url,
+                        size: 26
+                    )
+                }
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(comment.author.atHandle)
-                        .ffType(.caption)
-                        .foregroundStyle(theme.text)
-                        .lineLimit(1)
+                    ProfileIdentityLink(userID: comment.author.userId, source: "comments") {
+                        Text(comment.author.atHandle)
+                            .ffType(.caption)
+                            .foregroundStyle(theme.text)
+                            .lineLimit(1)
+                    }
                     Text(comment.body)
                         .ffType(.body)
                         .foregroundStyle(theme.text)
@@ -309,7 +313,7 @@ struct FightPostEngagement: View {
                         Text(comment.createdDate, style: .relative)
                             .ffType(.micro)
                             .foregroundStyle(theme.textFaint)
-                        Button(String(localized: "Reply")) {
+                        Button(String(appLocalized: "Reply")) {
                             replyTo = comment
                         }
                         .ffType(.micro)
@@ -322,11 +326,11 @@ struct FightPostEngagement: View {
                     TextTranslationButton(text: comment.body)
                     Menu {
                         if comment.mine {
-                            Button(String(localized: "Delete"), role: .destructive) {
+                            Button(String(appLocalized: "Delete"), role: .destructive) {
                                 Task { await deleteComment(comment) }
                             }
                         } else {
-                            Button(String(localized: "Report")) {
+                            Button(String(appLocalized: "Report")) {
                                 Task { await reportComment(comment) }
                             }
                         }
@@ -505,11 +509,11 @@ private struct FightPostReactionsSheet: View {
     var body: some View {
         FFScreen(clearance: false) {
             HStack {
-                Text(String(localized: "Reactions"))
+                Text(String(appLocalized: "Reactions"))
                     .ffType(.title)
                     .foregroundStyle(theme.text)
                 Spacer()
-                Button(String(localized: "Close")) { dismiss() }
+                Button(String(appLocalized: "Close")) { dismiss() }
                     .ffType(.label)
                     .foregroundStyle(theme.mossText)
                     .buttonStyle(FFHapticPlainStyle())
@@ -517,7 +521,8 @@ private struct FightPostReactionsSheet: View {
             if !people.isEmpty {
                 FFCard {
                     ForEach(people) { person in
-                        HStack(spacing: 12) {
+                        ProfileIdentityLink(userID: person.userId, source: "reactions") {
+                            HStack(spacing: 12) {
                             Text(person.emoji)
                                 .ffType(.title)
                             VStack(alignment: .leading, spacing: 2) {
@@ -530,11 +535,12 @@ private struct FightPostReactionsSheet: View {
                             }
                             Spacer(minLength: 0)
                         }
-                        .padding(.vertical, 4)
+                            .padding(.vertical, 4)
+                        }
                     }
                 }
             } else if !loading && error == nil {
-                Text(String(localized: "No reactions yet"))
+                Text(String(appLocalized: "No reactions yet"))
                     .ffType(.body)
                     .foregroundStyle(theme.textSecondary)
             }
@@ -544,12 +550,12 @@ private struct FightPostReactionsSheet: View {
             }
             if let error {
                 FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
-                FFButton(title: String(localized: "Retry"), kind: .ghost) {
+                FFButton(title: String(appLocalized: "Retry"), kind: .ghost) {
                     Task { await loadPeople(more: !people.isEmpty) }
                 }
                 .disabled(loading)
             } else if nextCursor != nil {
-                FFButton(title: String(localized: "More reactions"), kind: .ghost) {
+                FFButton(title: String(appLocalized: "More reactions"), kind: .ghost) {
                     Task { await loadPeople(more: true) }
                 }
                 .disabled(loading)

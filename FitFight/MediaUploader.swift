@@ -64,12 +64,12 @@ enum MediaUploader {
 
         var errorDescription: String? {
             switch self {
-            case .invalidImage: return String(localized: "That photo could not be read.")
-            case .invalidVideo: return String(localized: "That video could not be read.")
-            case .invalidFile: return String(localized: "That file could not be read.")
-            case .tooLarge: return String(localized: "Choose a smaller photo or video.")
-            case .tooLong: return String(localized: "Choose a video under 3 minutes.")
-            case .fileTooLarge: return String(localized: "Choose a smaller file.")
+            case .invalidImage: return String(appLocalized: "That photo could not be read.")
+            case .invalidVideo: return String(appLocalized: "That video could not be read.")
+            case .invalidFile: return String(appLocalized: "That file could not be read.")
+            case .tooLarge: return String(appLocalized: "Choose a smaller photo or video.")
+            case .tooLong: return String(appLocalized: "Choose a video under 3 minutes.")
+            case .fileTooLarge: return String(appLocalized: "Choose a smaller file.")
             }
         }
     }

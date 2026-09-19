@@ -24,6 +24,14 @@ struct APIContractTests {
         precondition(profile.referralCode?.uuidString.lowercased() == "22222222-2222-4222-8222-222222222222")
         precondition(profile.companionId == nil)
         precondition(profile.companionPrompt == nil)
+        precondition(profile.timeZone == nil, "Older profiles remain decodable")
+        var zonedProfileJSON = try JSONSerialization.jsonObject(with: profileData) as! [String: Any]
+        zonedProfileJSON["time_zone"] = "Pacific/Kiritimati"
+        let zonedProfile = try decoder.decode(FitFightProfile.self,
+            from: JSONSerialization.data(withJSONObject: zonedProfileJSON))
+        precondition(zonedProfile.calendarTimeZone.identifier == "Pacific/Kiritimati")
+        let cachedZonedProfile = try decoder.decode(FitFightProfile.self, from: JSONEncoder().encode(zonedProfile))
+        precondition(cachedZonedProfile == zonedProfile)
 
         var withCompanionJSON = try JSONSerialization.jsonObject(with: profileData) as! [String: Any]
         withCompanionJSON["companion_id"] = "fox"
@@ -64,6 +72,13 @@ struct APIContractTests {
         let snapshot = try decoder.decode(FitFightSnapshot.self,
             from: JSONSerialization.data(withJSONObject: extendedSnapshot))
         precondition(snapshot.fights.count == 1 && snapshot.members.count == 2)
+        precondition(snapshot.fights[0].timeZone == nil, "Older Fight snapshots remain decodable")
+        var zonedFights = extendedSnapshot["fights"] as! [[String: Any]]
+        zonedFights[0]["time_zone"] = "Europe/Paris"
+        extendedSnapshot["fights"] = zonedFights
+        let zonedSnapshot = try decoder.decode(FitFightSnapshot.self,
+            from: JSONSerialization.data(withJSONObject: extendedSnapshot))
+        precondition(zonedSnapshot.fights[0].timeZone == "Europe/Paris")
         precondition(snapshot.fights[0].name == "September Steps" && snapshot.fights[0].actionText == nil)
         precondition(snapshot.members[0].currentValue == 8500 && snapshot.members[0].rank == 1)
         precondition(snapshot.members[0].lastSyncedAt != nil && snapshot.members[0].finalValue == nil)

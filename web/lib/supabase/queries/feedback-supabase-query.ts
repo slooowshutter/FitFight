@@ -16,8 +16,9 @@ import type {
     CreateFeedbackCommentRequest,
     CreateFeedbackPostRequest,
     FeedbackComment,
+    FeedbackCommentRow,
     FeedbackCommentResponse,
-    FeedbackKind,
+    FeedbackPostRow,
     FeedbackListResponse,
     FeedbackMetadata,
     FeedbackPostDetail,
@@ -28,34 +29,11 @@ import type {
     ReportFeedbackPostRequest,
     ReportFeedbackPostResponse,
 } from "@/lib/types/feedback/feedback";
-import { feedbackMetadataSchema } from "@/lib/types/feedback/feedback";
+import { feedbackCommentRowSchema, feedbackMetadataSchema, feedbackPostRowSchema } from "@/lib/types/feedback/feedback";
 import type { MediaObject } from "@/lib/types/media/media";
 
 const POST_LIMIT_PER_DAY = 8;
 const COMMENT_LIMIT_PER_DAY = 30;
-
-type FeedbackPostRow = {
-    id: string;
-    kind: FeedbackKind;
-    title: string;
-    body: string;
-    vote_count: number;
-    comment_count: number;
-    voted: boolean;
-    author_id: string;
-    author_handle: string;
-    mine: boolean;
-    created_at: Date | string;
-    metadata: unknown;
-};
-
-type FeedbackCommentRow = {
-    id: string;
-    body: string;
-    author_handle: string;
-    created_at: Date | string;
-    metadata: unknown;
-};
 
 function isoUtc(value: Date | string): string {
     return new Date(value).toISOString().replace(/\.\d{3}Z$/, "Z");
@@ -67,9 +45,10 @@ function mapMetadata(value: unknown): FeedbackMetadata {
 }
 
 function mapPost(
-    row: FeedbackPostRow,
+    value: FeedbackPostRow,
     media: MediaObject[] = [],
 ): FeedbackPostSummary {
+    const row = feedbackPostRowSchema.parse(value);
     return {
         id: row.id,
         kind: row.kind,
@@ -157,8 +136,10 @@ async function prepareFeedbackMedia(
     return uniqueMediaIds;
 }
 
-function mapComment(row: FeedbackCommentRow): FeedbackComment {
+function mapComment(value: FeedbackCommentRow): FeedbackComment {
+    const row = feedbackCommentRowSchema.parse(value);
     return {
+        ...(row.author_id ? { author_id: row.author_id } : {}),
         id: row.id,
         body: row.body,
         author_handle: row.author_handle,
@@ -276,6 +257,7 @@ export async function getFeedbackPost(
         select
             comment.id,
             comment.body,
+            comment.author_id,
             profile.handle as author_handle,
             comment.created_at,
             coalesce(comment.metadata, '{}'::jsonb) as metadata
@@ -481,6 +463,7 @@ export async function createFeedbackComment(
         returning
             id,
             body,
+            author_id,
             (
                 select handle
                 from public.profiles

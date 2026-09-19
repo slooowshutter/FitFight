@@ -125,12 +125,23 @@ export const feedbackPostSummarySchema = z
 export const feedbackCommentSchema = z
     .object({
         id: z.string().uuid(),
+        author_id: z.string().uuid().optional(),
         body: z.string(),
         author_handle: z.string(),
         created_at: z.string().datetime(),
         metadata: feedbackMetadataSchema,
     })
     .strict();
+
+export const feedbackPostRowSchema = feedbackPostSummarySchema.omit({ media: true }).extend({
+    created_at: z.union([z.date(), z.string().datetime()]),
+    metadata: z.unknown(),
+});
+
+export const feedbackCommentRowSchema = feedbackCommentSchema.extend({
+    created_at: z.union([z.date(), z.string().datetime()]),
+    metadata: z.unknown(),
+});
 
 export const feedbackListResponseSchema = z
     .object({
@@ -185,6 +196,8 @@ export const feedbackCommentResponseSchema = z
     .strict();
 
 export type FeedbackKind = z.infer<typeof feedbackKindSchema>;
+export type FeedbackPostRow = z.infer<typeof feedbackPostRowSchema>;
+export type FeedbackCommentRow = z.infer<typeof feedbackCommentRowSchema>;
 export type FeedbackMetadata = z.infer<typeof feedbackMetadataSchema>;
 export type ReportFeedbackPostRequest = z.infer<
     typeof reportFeedbackPostRequestSchema

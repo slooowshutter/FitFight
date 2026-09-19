@@ -21,6 +21,7 @@ struct NewFightView: View {
     @State private var usernameError: String?
     @State private var durationDays = 7
     @State private var customSchedule = false
+    @State private var selectedTimeZone: TimeZone?
     @State private var customStart = Date(timeIntervalSince1970: ceil(Date().timeIntervalSince1970 / 60) * 60 + 3_600)
     @State private var customEnd = Date(timeIntervalSince1970: ceil(Date().timeIntervalSince1970 / 60) * 60 + 7 * 86_400 + 3_600)
     @State private var fightTitle = ""
@@ -41,14 +42,44 @@ struct NewFightView: View {
         _step = State(initialValue: initialStep)
     }
 
+    private var fightTimeZone: TimeZone { selectedTimeZone ?? session.profile?.calendarTimeZone ?? .current }
+
+    private func applyProfileChallenge(now: Date = Date()) {
+        guard let draft = model.profileChallenge else { return }
+        opening = .create
+        step = 0
+        durationDays = 7
+        selectedTimeZone = nil
+        customSchedule = false
+        recurring = true
+        fightTitle = ""
+        visibilityJoinable = false
+        inviteHandles = [draft.handle]
+        actionText = draft.actionText ?? ""
+        if let days = draft.durationDays, [3, 7, 14, 30].contains(days) {
+            durationDays = days
+        } else if let seconds = draft.durationSeconds {
+            if let days = [3, 7, 14, 30].first(where: {
+                FightComposer.endDate(from: now, days: $0, timeZone: fightTimeZone).timeIntervalSince(now) == TimeInterval(seconds)
+            }) {
+                durationDays = days
+            } else {
+                customSchedule = true
+                customStart = Date(timeIntervalSince1970: ceil(now.timeIntervalSince1970 / 60) * 60 + 3_600)
+                customEnd = customStart.addingTimeInterval(TimeInterval(seconds))
+            }
+        }
+        model.profileChallenge = nil
+    }
+
     private var duration: String {
         FightComposer.durationLabel(days: durationDays, customSchedule: customSchedule)
     }
 
     private var scheduleError: String? {
         guard customSchedule else { return nil }
-        if customStart <= Date() { return String(localized: "Choose a start time in the future.") }
-        if customEnd <= customStart { return String(localized: "The end must be after the start.") }
+        if customStart <= Date() { return String(appLocalized: "Choose a start time in the future.") }
+        if customEnd <= customStart { return String(appLocalized: "The end must be after the start.") }
         return nil
     }
 
@@ -78,6 +109,8 @@ struct NewFightView: View {
                 )
             }
         }
+        .onAppear { applyProfileChallenge() }
+        .onChange(of: model.profileChallenge) { _, _ in applyProfileChallenge() }
         .task(id: opening) {
             guard opening != .create, !staticRender else { return }
             await model.loadFightDiscovery(session: session)
@@ -116,7 +149,7 @@ struct NewFightView: View {
             EmptyView()
         } else if effectiveOpening == .join {
             FFButton(
-                title: lookingUp ? String(localized: "Looking up…") : String(localized: "Open fight"),
+                title: lookingUp ? String(appLocalized: "Looking up…") : String(appLocalized: "Open fight"),
                 size: .large,
                 enabled: joinCode.count == 4,
                 busy: lookingUp,
@@ -130,8 +163,8 @@ struct NewFightView: View {
         } else if step == 4 {
             FFSlideToConfirm(
                 title: model.isCreatingFight
-                    ? String(localized: "Starting…")
-                    : customSchedule ? String(localized: "Slide to schedule") : String(localized: "Slide to start"),
+                    ? String(appLocalized: "Starting…")
+                    : customSchedule ? String(appLocalized: "Slide to schedule") : String(appLocalized: "Slide to start"),
                 enabled: canStart,
                 busy: model.isCreatingFight
             ) {
@@ -157,7 +190,7 @@ struct NewFightView: View {
                 FFNotice(text: scheduleError, tone: .ember, systemImage: "calendar")
             }
         } else {
-            FFButton(title: String(localized: "Next"), size: .large, enabled: step != 1 || scheduleError == nil, fullWidth: true) {
+            FFButton(title: String(appLocalized: "Next"), size: .large, enabled: step != 1 || scheduleError == nil, fullWidth: true) {
                 step += 1
             }
         }
@@ -188,7 +221,7 @@ struct NewFightView: View {
                 if opening == .create {
                     Text(
                         String(
-                            localized: "fight.step-progress",
+                            appLocalized: "fight.step-progress",
                             defaultValue: "Step \(step + 1) of 5"
                         )
                     )
@@ -210,7 +243,7 @@ struct NewFightView: View {
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(
                     String(
-                        localized: "fight.step-progress",
+                        appLocalized: "fight.step-progress",
                         defaultValue: "Step \(step + 1) of 5"
                     )
                 )
@@ -257,24 +290,24 @@ struct NewFightView: View {
 
             FFGroupedRows {
                 FFGroupedRow(
-                    title: String(localized: "Create"),
-                    subtitle: String(localized: "Start a new fight"),
+                    title: String(appLocalized: "Create"),
+                    subtitle: String(appLocalized: "Start a new fight"),
                     systemImage: "plus",
                     subtitleTone: .neutral,
                     action: { opening = .create }
                 )
                 FFDivider()
                 FFGroupedRow(
-                    title: String(localized: "Join"),
-                    subtitle: String(localized: "Code, invite link, or a public fight"),
+                    title: String(appLocalized: "Join"),
+                    subtitle: String(appLocalized: "Code, invite link, or a public fight"),
                     systemImage: "person.badge.plus",
                     subtitleTone: .neutral,
                     action: { opening = .join }
                 )
                 FFDivider()
                 FFGroupedRow(
-                    title: String(localized: "Post"),
-                    subtitle: String(localized: "Share a note, photo, or video on the Feed"),
+                    title: String(appLocalized: "Post"),
+                    subtitle: String(appLocalized: "Share a note, photo, or video on the Feed"),
                     systemImage: "square.and.pencil",
                     subtitleTone: .neutral,
                     action: { composing = true }
@@ -288,39 +321,19 @@ struct NewFightView: View {
     private var suggestedSection: some View {
         let rows = staticRender ? Array(Self.screenshotJoinable.prefix(2)) : model.suggestedFights
         return VStack(alignment: .leading, spacing: 12) {
-            FFSectionHeader(title: String(localized: "Suggested"))
+            FFSectionHeader(title: String(appLocalized: "Suggested"))
             if let error = model.discoveryError {
                 FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
             }
             if model.isLoadingDiscovery && rows.isEmpty && !staticRender {
                 FFLoadingBlock()
             } else if rows.isEmpty && model.discoveryError == nil {
-                Text(String(localized: "No suggested fights right now."))
+                Text(String(appLocalized: "No suggested fights right now."))
                     .ffType(.body)
                     .foregroundStyle(theme.textSecondary)
             } else if !rows.isEmpty {
-                FFGroupedRows {
-                    ForEach(Array(rows.enumerated()), id: \.element.id) { index, item in
-                        if index > 0 { FFDivider() }
-                        FFGroupedRow(
-                            title: Fight.displayTitle(name: item.name, actionText: item.actionText),
-                            subtitle: item.recurring
-                                ? String(
-                                    localized: "fight.joinable-row-repeats",
-                                    defaultValue: "@\(item.ownerHandle) · \(item.memberCount) in · repeats"
-                                )
-                                : String(
-                                    localized: "fight.joinable-row",
-                                    defaultValue: "@\(item.ownerHandle) · \(item.memberCount) in"
-                                ),
-                            systemImage: "figure.walk",
-                            subtitleTone: .neutral,
-                            trailing: AnyView(Text(item.joinCode).ffType(.caption).foregroundStyle(theme.textSecondary)),
-                            action: {
-                                Task { await model.openJoinable(item, session: session) }
-                            }
-                        )
-                    }
+                ForEach(rows) { item in
+                    SuggestedFightOffer(fight: item) { Task { await model.openJoinable(item, session: session) } }
                 }
             }
         }
@@ -370,7 +383,7 @@ struct NewFightView: View {
                 .ffBorder(theme.line, radius: theme.radius.field)
             }
 
-            FFSectionHeader(title: String(localized: "Live public fights"))
+            FFSectionHeader(title: String(appLocalized: "Live public fights"))
             let rows = staticRender ? Self.screenshotJoinable : model.joinableFights
             if let error = model.discoveryError {
                 FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
@@ -389,11 +402,11 @@ struct NewFightView: View {
                             title: Fight.displayTitle(name: item.name, actionText: item.actionText),
                             subtitle: item.recurring
                                 ? String(
-                                    localized: "fight.joinable-row-repeats",
+                                    appLocalized: "fight.joinable-row-repeats",
                                     defaultValue: "@\(item.ownerHandle) · \(item.memberCount) in · repeats"
                                 )
                                 : String(
-                                    localized: "fight.joinable-row",
+                                    appLocalized: "fight.joinable-row",
                                     defaultValue: "@\(item.ownerHandle) · \(item.memberCount) in"
                                 ),
                             systemImage: "figure.walk",
@@ -421,6 +434,7 @@ struct NewFightView: View {
                 customStart: $customStart,
                 customEnd: $customEnd,
                 recurring: $recurring,
+                timeZone: Binding(get: { fightTimeZone }, set: { selectedTimeZone = $0 }),
                 canEditStart: true,
                 startsImmediately: true,
                 constrainEnd: false,
@@ -454,6 +468,7 @@ struct NewFightView: View {
                 customEnd: customEnd,
                 durationStart: Date(),
                 durationDays: durationDays,
+                timeZone: fightTimeZone,
                 visibilityJoinable: visibilityJoinable,
                 opponentHandles: inviteHandles,
                 recurring: recurring,
@@ -514,16 +529,16 @@ struct NewFightView: View {
         usernameError = nil
 
         guard SessionStore.isValidHandle(handle) else {
-            usernameError = String(localized: "Use 2–30 letters, numbers, or underscores.")
+            usernameError = String(appLocalized: "Use 2–30 letters, numbers, or underscores.")
             return
         }
         if handle == session.profile?.handle {
-            usernameError = String(localized: "Add someone else’s username.")
+            usernameError = String(appLocalized: "Add someone else’s username.")
             return
         }
         guard !inviteHandles.contains(handle) else {
             usernameError = String(
-                localized: "fight.handle-already-added",
+                appLocalized: "fight.handle-already-added",
                 defaultValue: "@\(handle) is already in this fight."
             )
             return
@@ -534,7 +549,7 @@ struct NewFightView: View {
     }
 
     private func endDate(from startsAt: Date) -> Date {
-        FightComposer.endDate(from: startsAt, days: durationDays)
+        FightComposer.endDate(from: startsAt, days: durationDays, timeZone: fightTimeZone)
     }
 
     private func startFight() -> Bool {
@@ -551,6 +566,7 @@ struct NewFightView: View {
                 name: title,
                 startsAt: startsAt,
                 endsAt: endsAt,
+                timeZone: fightTimeZone,
                 actionText: action,
                 inviteHandles: inviteHandles,
                 visibility: visibilityJoinable ? "joinable" : "invite_only",

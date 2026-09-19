@@ -81,15 +81,15 @@ final class HealthKitStepsStore: ObservableObject {
 
     var detailText: String {
         switch connection {
-        case .notConnected: return String(localized: "Not connected")
-        case .syncing: return String(localized: "Syncing Steps…")
+        case .notConnected: return String(appLocalized: "Not connected")
+        case .syncing: return String(appLocalized: "Syncing Steps…")
         case .upToDate:
             return diagnostics.deliveryRegistrationStatus == .unavailable
-                ? String(localized: "Up to date · Background sync unavailable")
-                : String(localized: "Up to date")
-        case .noAccessibleSteps: return String(localized: "No accessible Steps")
+                ? String(appLocalized: "Up to date · Background sync unavailable")
+                : String(appLocalized: "Up to date")
+        case .noAccessibleSteps: return String(appLocalized: "No accessible Steps")
         case .syncFailed:
-            return diagnostics.failureDetail ?? String(localized: "Sync failed. Tap to retry.")
+            return diagnostics.failureDetail ?? String(appLocalized: "Sync failed. Tap to retry.")
         }
     }
 
@@ -99,7 +99,7 @@ final class HealthKitStepsStore: ObservableObject {
             // NOTE: The catalog string uses %lld and pluralizes on the integer.
             // `format: .number` passes a FormatStyle value, so %lld printed garbage.
             return String(
-                localized: "health.steps-today",
+                appLocalized: "health.steps-today",
                 defaultValue: "\(count) steps today"
             )
         default:
@@ -111,16 +111,16 @@ final class HealthKitStepsStore: ObservableObject {
 
     var backgroundRefreshText: String {
         switch diagnostics.backgroundRefreshStatus {
-        case .available: return String(localized: "Available")
-        case .denied: return String(localized: "Denied")
-        case .restricted: return String(localized: "Restricted by this device")
+        case .available: return String(appLocalized: "Available")
+        case .denied: return String(appLocalized: "Denied")
+        case .restricted: return String(appLocalized: "Restricted by this device")
         }
     }
 
     var backgroundDeliveryText: String {
         diagnostics.deliveryRegistrationStatus == .enabled
-            ? String(localized: "Enabled")
-            : String(localized: "Unavailable")
+            ? String(appLocalized: "Enabled")
+            : String(appLocalized: "Unavailable")
     }
 
     var currentFailureText: String? {
@@ -293,7 +293,7 @@ final class HealthKitStepsStore: ObservableObject {
         do {
             try Task.checkCancellation()
             let count = try await trace.measure(.todayTotal) {
-                try await Self.todayTotal(store: store, type: stepsType)
+                try await Self.todayTotal(store: store, type: stepsType, timeZone: session?.profile?.calendarTimeZone ?? .current)
             }
             try Task.checkCancellation()
             guard activeUserId == userID else { trace.fail(.attemptExpired); return }
@@ -364,14 +364,16 @@ final class HealthKitStepsStore: ObservableObject {
             let contextToken = try await trace.measure(.session) { try await session.freshAccessToken() }
             guard activeUserId == userId, session.authSession?.user.id == userId else { throw CancellationError() }
             let context = try await api.healthKitUploadContext(accessToken: contextToken, trace: trace)
+            let timeZone = session.profile?.calendarTimeZone ?? .current
             var sync = try await HealthKitStepAggregates.read(
                 store: store,
                 type: stepsType,
                 context: context,
-                trace: trace
+                trace: trace,
+                timeZone: timeZone
             )
             let activity = await trace.measure(.healthKitActivity) {
-                await HealthKitActivityAggregates.read(store: store, context: context)
+                await HealthKitActivityAggregates.read(store: store, context: context, timeZone: timeZone)
             }
             sync.activityDays = activity.days
             sync.workouts = activity.workouts
@@ -490,13 +492,13 @@ final class HealthKitStepsStore: ObservableObject {
 
     static func fallbackMessage(for code: SyncErrorCode) -> String {
         switch code {
-        case .authenticationUnavailable: return String(localized: "Sign in, then open FitFight to sync.")
-        case .networkUnavailable: return String(localized: "Connect to the internet, then open FitFight.")
-        case .protectedDataUnavailable: return String(localized: "Unlock your iPhone, then open FitFight.")
-        case .attemptExpired: return String(localized: "Open FitFight to finish syncing.")
-        case .healthKitUnavailable: return String(localized: "Apple Health isn’t available on this device.")
-        case .backgroundDeliveryUnavailable: return String(localized: "Open FitFight to sync your Steps.")
-        case .syncFailed: return String(localized: "Sync failed. Tap to retry.")
+        case .authenticationUnavailable: return String(appLocalized: "Sign in, then open FitFight to sync.")
+        case .networkUnavailable: return String(appLocalized: "Connect to the internet, then open FitFight.")
+        case .protectedDataUnavailable: return String(appLocalized: "Unlock your iPhone, then open FitFight.")
+        case .attemptExpired: return String(appLocalized: "Open FitFight to finish syncing.")
+        case .healthKitUnavailable: return String(appLocalized: "Apple Health isn’t available on this device.")
+        case .backgroundDeliveryUnavailable: return String(appLocalized: "Open FitFight to sync your Steps.")
+        case .syncFailed: return String(appLocalized: "Sync failed. Tap to retry.")
         }
     }
 
@@ -513,12 +515,12 @@ final class HealthKitStepsStore: ObservableObject {
 
     private static func failureDetail(for error: Error) -> String {
         if case HealthKitStepAggregates.ReadError.noAccessibleSteps = error {
-            return String(localized: "No accessible Steps")
+            return String(appLocalized: "No accessible Steps")
         }
-        let retry = String(localized: "Tap to retry")
+        let retry = String(appLocalized: "Tap to retry")
         if case FitFightAPIError.http(let status, _, _) = error, status >= 500 {
             let saved = String(
-                localized: "health.sync-server-failed",
+                appLocalized: "health.sync-server-failed",
                 defaultValue: "FitFight's server could not save your Steps (error \(status))."
             )
             return "\(saved) \(retry)"
@@ -533,20 +535,22 @@ final class HealthKitStepsStore: ObservableObject {
         if let urlError = error as? URLError {
             switch urlError.code {
             case .notConnectedToInternet, .networkConnectionLost:
-                return String(localized: "No internet connection. Tap to retry.")
+                return String(appLocalized: "No internet connection. Tap to retry.")
             case .timedOut:
-                return String(localized: "The server took too long. Tap to retry.")
+                return String(appLocalized: "The server took too long. Tap to retry.")
             default:
                 break
             }
         }
-        return String(localized: "Sync failed. Tap to retry.")
+        return String(appLocalized: "Sync failed. Tap to retry.")
     }
 
-    private static func todayTotal(store: HKHealthStore, type: HKQuantityType) async throws -> Int? {
+    private static func todayTotal(store: HKHealthStore, type: HKQuantityType, timeZone: TimeZone) async throws -> Int? {
         let now = Date()
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
         let predicate = HKQuery.predicateForSamples(
-            withStart: Calendar.current.startOfDay(for: now), end: now, options: .strictStartDate
+            withStart: calendar.startOfDay(for: now), end: now, options: .strictStartDate
         )
         let descriptor = HKStatisticsQueryDescriptor(
             predicate: .quantitySample(type: type, predicate: predicate), options: [.cumulativeSum]

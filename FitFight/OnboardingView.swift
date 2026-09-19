@@ -54,7 +54,7 @@ struct OnboardingView: View {
             }
             .buttonStyle(FFHapticPlainStyle())
             FFField(
-                label: String(localized: "Username"),
+                label: String(appLocalized: "Username"),
                 state: fieldState,
                 help: error.isEmpty ? nil : error
             ) {
@@ -66,7 +66,7 @@ struct OnboardingView: View {
             }
             .padding(.top, 28)
             FFScreenCTA(
-                title: isSaving ? String(localized: "Saving…") : String(localized: "Continue"),
+                title: isSaving ? String(appLocalized: "Saving…") : String(appLocalized: "Continue"),
                 enabled: canSave
             ) {
                 Task { await save() }
@@ -101,7 +101,7 @@ struct OnboardingView: View {
         guard let item else { return }
         guard let data = try? await item.loadTransferable(type: Data.self),
               let image = UIImage(data: data) else {
-            error = String(localized: "That photo could not be read.")
+            error = String(appLocalized: "That photo could not be read.")
             return
         }
         error = ""

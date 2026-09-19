@@ -20,7 +20,7 @@ info_plist = read_catalog("FitFight/InfoPlist.xcstrings")
 localized_references = set()
 for source in Path("FitFight").rglob("*.swift"):
     localized_references.update(
-        re.findall(r'String\(\s*localized:\s*"((?:[^"\\]|\\.)*)"', source.read_text())
+        re.findall(r'String\(\s*(?:appLocalized|localized):\s*"((?:[^"\\]|\\.)*)"', source.read_text())
     )
 missing_references = sorted(localized_references - localizable["strings"].keys())
 if missing_references:

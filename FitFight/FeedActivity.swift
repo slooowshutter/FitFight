@@ -39,30 +39,30 @@ struct FeedActivityItem: Decodable, Identifiable {
     var summary: String {
         switch kind {
         case "feed_post":
-            return String(localized: "activity.post", defaultValue: "@\(actor.handle) posted")
+            return String(appLocalized: "activity.post", defaultValue: "@\(actor.handle) posted")
         case "post_comment":
-            return String(localized: "activity.comment", defaultValue: "@\(actor.handle) commented")
+            return String(appLocalized: "activity.comment", defaultValue: "@\(actor.handle) commented")
         case "comment_reply":
-            return String(localized: "activity.reply", defaultValue: "@\(actor.handle) replied")
+            return String(appLocalized: "activity.reply", defaultValue: "@\(actor.handle) replied")
         case "post_reaction":
-            return String(localized: "activity.reaction", defaultValue: "@\(actor.handle) reacted")
+            return String(appLocalized: "activity.reaction", defaultValue: "@\(actor.handle) reacted")
         case "invited":
             if let subject {
-                return String(localized: "activity.invitation", defaultValue: "@\(actor.handle) invited @\(subject.handle)")
+                return String(appLocalized: "activity.invitation", defaultValue: "@\(actor.handle) invited @\(subject.handle)")
             }
-            return String(localized: "Invitation")
+            return String(appLocalized: "Invitation")
         case "accepted":
-            return String(localized: "activity.joined", defaultValue: "@\(actor.handle) joined")
+            return String(appLocalized: "activity.joined", defaultValue: "@\(actor.handle) joined")
         case "deferred":
-            return String(localized: "activity.next-round", defaultValue: "@\(actor.handle) joined the next round")
+            return String(appLocalized: "activity.next-round", defaultValue: "@\(actor.handle) joined the next round")
         case "declined":
-            return String(localized: "activity.declined", defaultValue: "@\(actor.handle) declined")
+            return String(appLocalized: "activity.declined", defaultValue: "@\(actor.handle) declined")
         case "withdrawn":
-            return String(localized: "activity.left", defaultValue: "@\(actor.handle) left")
+            return String(appLocalized: "activity.left", defaultValue: "@\(actor.handle) left")
         case "disqualified":
-            return String(localized: "activity.disqualified", defaultValue: "@\(actor.handle) was disqualified")
+            return String(appLocalized: "activity.disqualified", defaultValue: "@\(actor.handle) was disqualified")
         default:
-            return String(localized: "Fight activity")
+            return String(appLocalized: "Fight activity")
         }
     }
 }
@@ -115,22 +115,22 @@ struct FeedActivityView: View {
     var body: some View {
         FFScreen(refresh: FFRefreshConfig(
             isRefreshing: activity.isLoading,
-            message: String(localized: "Loading"),
+            message: String(appLocalized: "Loading"),
             action: { await activity.load(session: session) }
         )) {
-            Text(String(localized: "Posts, comments, reactions and membership history from your fights."))
+            Text(String(appLocalized: "Posts, comments, reactions and membership history from your fights."))
                 .ffType(.body)
                 .foregroundStyle(theme.textSecondary)
             if let error = activity.error {
                 FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
-                FFButton(title: String(localized: "Try again"), kind: .ghost, fullWidth: true) {
+                FFButton(title: String(appLocalized: "Try again"), kind: .ghost, fullWidth: true) {
                     Task { await activity.load(session: session) }
                 }
             }
             if activity.events.isEmpty && activity.isLoading {
                 FFLoadingBlock()
             } else if activity.events.isEmpty && activity.error == nil {
-                Text(String(localized: "No activity yet."))
+                Text(String(appLocalized: "No activity yet."))
                     .ffType(.body)
                     .foregroundStyle(theme.textSecondary)
             }
@@ -140,7 +140,7 @@ struct FeedActivityView: View {
                         model.tab = .feed
                         model.openPost = FeedPostLink(id: postID, commentID: event.commentId)
                     } else {
-                        model.openFightFromFeed(id: event.fightId.uuidString)
+                        model.openFight(id: event.fightId.uuidString)
                     }
                 } label: {
                     FFCard(padding: 16) {
@@ -157,7 +157,7 @@ struct FeedActivityView: View {
                                     .foregroundStyle(theme.textSecondary)
                                     .lineLimit(3)
                             }
-                            Text(event.occurredAt?.formatted(date: .abbreviated, time: .shortened) ?? String(localized: "Time not recorded"))
+                            Text(event.occurredAt?.formatted(Date.FormatStyle(date: .abbreviated, time: .shortened).locale(AppLocalization.locale)) ?? String(appLocalized: "Time not recorded"))
                                 .ffType(.micro)
                                 .foregroundStyle(theme.textSecondary)
                         }
@@ -167,13 +167,13 @@ struct FeedActivityView: View {
                 .buttonStyle(FFHapticPlainStyle())
             }
             if activity.nextCursor != nil {
-                FFButton(title: String(localized: "More"), kind: .ghost, fullWidth: true) {
+                FFButton(title: String(appLocalized: "More"), kind: .ghost, fullWidth: true) {
                     Task { await activity.load(session: session, more: true) }
                 }
                 .disabled(activity.isLoading)
             }
         }
-        .navigationTitle(String(localized: "Activity"))
+        .navigationTitle(String(appLocalized: "Activity"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.visible, for: .navigationBar)
         .toolbarBackground(theme.bg, for: .navigationBar)
@@ -195,12 +195,12 @@ struct FightPostDetailView: View {
         ScrollViewReader { reader in
             FFScreen(refresh: FFRefreshConfig(
                 isRefreshing: postFeed.isLoading,
-                message: String(localized: "Loading"),
+                message: String(appLocalized: "Loading"),
                 action: { await postFeed.load(session: session, postID: target.id) }
             )) {
                 if let error = postFeed.error {
                     FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
-                    FFButton(title: String(localized: "Try again"), kind: .ghost, fullWidth: true) {
+                    FFButton(title: String(appLocalized: "Try again"), kind: .ghost, fullWidth: true) {
                         Task { await postFeed.load(session: session, postID: target.id) }
                     }
                 }
@@ -216,20 +216,20 @@ struct FightPostDetailView: View {
                                 }
                             }
                         },
-                        onOpen: post.fightId.map { id in { model.openFightFromFeed(id: id.uuidString) } },
+                        onOpen: post.fightId.map { id in { model.openFight(id: id.uuidString) } },
                         onOpenPhoto: { openedPhoto = FeedOpenedPhoto(url: $0) }
                     )
                 } else if postFeed.isLoading {
                     FFLoadingBlock()
                 } else if postFeed.error == nil {
-                    Text(String(localized: "This post is no longer available."))
+                    Text(String(appLocalized: "This post is no longer available."))
                         .ffType(.body)
                         .foregroundStyle(theme.textSecondary)
                 }
             }
         }
         .environmentObject(postFeed)
-        .navigationTitle(String(localized: "Post"))
+        .navigationTitle(String(appLocalized: "Post"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.visible, for: .navigationBar)
         .toolbarBackground(theme.bg, for: .navigationBar)

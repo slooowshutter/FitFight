@@ -38,6 +38,9 @@ struct FightPostEngagement: View {
         if CompanionPreview.isEnabled {
             _comments = State(initialValue: post.commentCount == 0 ? [] : CompanionPreview.comments(postID: post.id))
             _open = State(initialValue: post.commentCount > 0)
+            if ProcessInfo.processInfo.environment["FF_COMMENT_REPLY_PREVIEW"] == "1" {
+                _replyTo = State(initialValue: CompanionPreview.comments(postID: post.id).first)
+            }
         }
         #endif
     }
@@ -181,43 +184,45 @@ struct FightPostEngagement: View {
     private var actions: some View {
         VStack(alignment: .leading, spacing: 0) {
             FFDivider(inset: 0)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 4) {
-                    ForEach(quickEmoji + post.reactions.map(\.emoji).filter { !quickEmoji.contains($0) }, id: \.self) { emoji in
-                        let reaction = post.reactions.first { $0.emoji == emoji }
-                        Button {
-                            Task { await feed.react(session: session, post: post, emoji: emoji) }
-                        } label: {
-                            HStack(spacing: 4) {
-                                Text(emoji)
-                                if let reaction { Text(verbatim: "\(reaction.count)") }
+            HStack(spacing: 4) {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 4) {
+                        ForEach(quickEmoji + post.reactions.map(\.emoji).filter { !quickEmoji.contains($0) }, id: \.self) { emoji in
+                            let reaction = post.reactions.first { $0.emoji == emoji }
+                            Button {
+                                Task { await feed.react(session: session, post: post, emoji: emoji) }
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Text(emoji)
+                                    if let reaction { Text(verbatim: "\(reaction.count)") }
+                                }
+                                .ffType(.caption)
+                                .foregroundStyle(reaction?.mine == true ? theme.mossText : theme.textSecondary)
+                                .padding(.horizontal, 8)
+                                .frame(minWidth: 44, minHeight: 44)
+                                .background(reaction?.mine == true ? theme.mossWash : theme.card, in: Capsule())
+                                .contentShape(Rectangle())
                             }
-                            .ffType(.caption)
-                            .foregroundStyle(reaction?.mine == true ? theme.mossText : theme.textSecondary)
-                            .padding(.horizontal, 8)
-                            .frame(minWidth: 44, minHeight: 44)
-                            .background(reaction?.mine == true ? theme.mossWash : theme.card, in: Capsule())
-                            .contentShape(Rectangle())
+                            .buttonStyle(FFHapticPlainStyle())
+                            .disabled(feed.reactingPostIDs.contains(post.id))
+                            .accessibilityLabel(emoji)
+                            .accessibilityValue(reaction.map { String($0.count) } ?? "0")
+                            .accessibilityAddTraits(reaction?.mine == true ? .isSelected : [])
                         }
-                        .buttonStyle(FFHapticPlainStyle())
-                        .disabled(feed.reactingPostIDs.contains(post.id))
-                        .accessibilityLabel(emoji)
-                        .accessibilityValue(reaction.map { String($0.count) } ?? "0")
-                        .accessibilityAddTraits(reaction?.mine == true ? .isSelected : [])
                     }
-                    Button {
-                        showingCustomEmoji = true
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(theme.textSecondary)
-                            .frame(width: 44, height: 44)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(FFHapticPlainStyle())
-                    .disabled(feed.reactingPostIDs.contains(post.id))
-                    .accessibilityLabel(String(appLocalized: "Other emoji…"))
                 }
+                Button {
+                    showingCustomEmoji = true
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(theme.textSecondary)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(FFHapticPlainStyle())
+                .disabled(feed.reactingPostIDs.contains(post.id))
+                .accessibilityLabel(String(appLocalized: "Other emoji…"))
             }
             HStack {
                 Button {

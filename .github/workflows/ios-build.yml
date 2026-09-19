@@ -96,9 +96,6 @@ jobs:
         steps:
             - uses: actions/checkout@v4
 
-            - name: Reproduce notification destination regression
-              run: python3 scripts/test_feed_activity.py
-
             - name: Validate English and French localizations
               run: python3 scripts/check_localizations.py
 

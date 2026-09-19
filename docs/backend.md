@@ -94,7 +94,8 @@ Ordinary updates and upserts retain `created_at` unless an existing writer
 explicitly changes it, as report refreshes already do.
 
 For historical rows, the migration uses recorded signup, connection, receipt,
-join, send, and capture timestamps where available. Otherwise it initializes
+join, send, and capture timestamps where available. Sync rows use their last
+recorded successful sync for both new timestamps. Otherwise it initializes
 `created_at` from the old `updated_at`, or migration time when neither exists.
 Those values are estimates or initialization times, not recovered creation
 history. Missing `updated_at` uses a recorded last receipt/sync when available,

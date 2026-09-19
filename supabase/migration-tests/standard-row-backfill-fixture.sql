@@ -10,6 +10,8 @@ insert into public.step_days (user_id, day, steps, updated_at)
 values ('92000000-0000-4000-8000-920000000001', '2026-09-01', 4321, '2026-09-02');
 insert into private.account_preferences (user_id, language, appearance, updated_at)
 values ('92000000-0000-4000-8000-920000000001', 'fr', 'dark', '2026-09-03');
+insert into private.healthkit_step_syncs (user_id, time_zone, complete_through, last_success_at)
+values ('92000000-0000-4000-8000-920000000001', 'UTC', '2026-09-02', '2026-09-03');
 insert into public.fights (id, owner_id, name, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy)
 values ('94000000-0000-4000-8000-000000000001', '92000000-0000-4000-8000-920000000001',
     'Metadata backfill', 'live', now() - interval '1 day', now() + interval '1 day', 'UTC', 'highest_total', 'shared');
@@ -29,7 +31,7 @@ begin
     foreach table_name in array array[
         'public.profiles', 'public.fights', 'public.fight_members', 'public.data_sources', 'public.step_days',
         'private.account_preferences', 'private.companion_libraries', 'private.fight_membership_events',
-        'private.fight_record_contexts', 'private.fight_participation_records'
+        'private.fight_record_contexts', 'private.fight_participation_records', 'private.healthkit_step_syncs'
     ] loop
         execute format('insert into row_columns_test.before_rows select %L, coalesce(jsonb_agg(to_jsonb(row)), ''[]''::jsonb) from %s row', table_name, table_name);
     end loop;

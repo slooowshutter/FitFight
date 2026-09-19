@@ -11,6 +11,9 @@ select is((select created_at from public.step_days where user_id = '92000000-000
     '2026-09-02'::timestamptz, 'daily creation backfill uses the last retained timestamp');
 select is((select created_at from private.account_preferences where user_id = '92000000-0000-4000-8000-920000000001'),
     '2026-09-03'::timestamptz, 'preference backfill keeps its retained timestamp');
+select ok((select created_at = last_success_at and updated_at = last_success_at
+    from private.healthkit_step_syncs where user_id = '92000000-0000-4000-8000-920000000001'),
+    'sync backfill uses the last recorded sync for both timestamps');
 select ok((select created_at is not null and updated_at is not null
     from public.fight_members where fight_id = '94000000-0000-4000-8000-000000000001'),
     'rows without historical times receive initialization timestamps');

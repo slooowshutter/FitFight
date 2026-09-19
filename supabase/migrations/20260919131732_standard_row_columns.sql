@@ -48,7 +48,7 @@ begin
         ('private.healthkit_step_sample_deletions', 'gen_random_uuid()', 'first_received_at', 'last_received_at'),
         ('private.healthkit_step_samples', 'gen_random_uuid()', 'first_received_at', 'last_received_at'),
         ('private.healthkit_step_source_days', 'gen_random_uuid()', 'updated_at', null),
-        ('private.healthkit_step_syncs', 'user_id', 'now()', 'last_success_at'),
+        ('private.healthkit_step_syncs', 'user_id', 'last_success_at', 'last_success_at'),
         ('private.healthkit_sync_attempts', 'gen_random_uuid()', 'received_at', 'now()'),
         ('private.healthkit_sync_diagnostics', 'gen_random_uuid()', 'updated_at', null),
         ('private.healthkit_workouts', 'gen_random_uuid()', 'updated_at', null),

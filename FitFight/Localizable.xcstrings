@@ -13285,6 +13285,17 @@
                 }
             }
         },
+        "Suggested fights use compact invitation cards. Tap a card to see the details before joining.": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les Fights suggérés utilisent des cartes d’invitation compactes. Touchez une carte pour voir les détails avant de rejoindre le Fight."
+                    }
+                }
+            }
+        },
         "Find feedback with one filter button. See features and bugs together, sort by votes or date, and browse archived posts. Delete your own feedback; admins can archive, reopen, or delete any post.": {
             "extractionState": "manual",
             "localizations": {

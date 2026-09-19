@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 19,
+            notes: "Suggested fights use compact invitation cards. Tap a card to see the details before joining."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 19,
             notes: "Comments are easier to scan with bold names, lighter text, and tighter spacing. Reactions start on the left, ranked by votes, and the reply bar stays aligned."
         ),
         ReleaseNote(

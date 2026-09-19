@@ -12,10 +12,11 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Code:** Feed and Fight-thread comments use one newest-first conversation with
 replies nested beneath their parent. The Most comments / Most recent control is
-removed. Names and comment text share a compact line, each comment has a heart on
-the right, and the composer uses an inline send arrow and reply placeholder with
-a dismiss button. Preset emoji reactions are visible in a horizontal strip with
-an Other emoji option. Profile links, translation, reporting, deletion, mention
+removed. Bold names and muted times sit above lighter comment text, with compact
+Reply controls below and a heart on the right. The composer centers its text,
+inline send arrow, and reply dismiss button. Emoji reactions start on the left,
+ranked by count, followed by unused presets and an Other emoji option in the
+horizontal strip. Profile links, translation, reporting, deletion, mention
 suggestions, reaction identities, and comment pagination remain available.
 English and French copy and a 1.1.2 release note are included.
 
@@ -49,8 +50,10 @@ workstation. [Live iPhone simulator captures](https://github.com/slooowshutter/F
 were visually checked in English/French and both themes, including the inline reply
 state and a larger text setting. Names and comment text, heart states/counts, preset
 emoji, the fixed custom-emoji button, and composer controls remain visible without
-overlap. Temporary CI triggers and capture steps were then removed. App, backend,
+overlap. Temporary CI triggers and capture steps were then removed. Backend,
 migration, and test sources are unchanged from their successful cloud runs.
+The subsequent native spacing, typography, and reaction-order revision awaits
+its own hosted build and live simulator checks.
 
 **Rollout:** apply the additive migration first, deploy the compatible backend,
 then distribute the new native build. No PR, merge, staging/production deployment,

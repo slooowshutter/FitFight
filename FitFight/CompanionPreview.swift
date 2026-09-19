@@ -187,7 +187,9 @@ extension CompanionPreview {
                 fightName: fightName,
                 body: bodies[index], createdAt: Date().addingTimeInterval(-Double(index + 1) * 1_200).ISO8601Format(),
                 author: .init(userId: UUID(uuidString: person.id)!, handle: String(person.handle.dropFirst()), displayName: person.name, avatar: nil),
-                media: [], tags: [], reactions: [.init(emoji: "👏", count: 3 - index, mine: false)],
+                media: [], tags: [], reactions: index == 0
+                    ? [.init(emoji: "🔥", count: 1, mine: true), .init(emoji: "👏", count: 3, mine: false)]
+                    : [.init(emoji: "👏", count: 3 - index, mine: false)],
                 commentCount: index == 0 ? 2 : 0, mine: person.isYou,
                 broadcast: false, channels: [.init(fightId: postFightID, name: fightName)]
             )
@@ -200,7 +202,7 @@ extension CompanionPreview {
             FitFightFightPostComment(
                 id: index == 0 ? firstID : UUID(uuidString: "E0000000-0000-4000-8000-000000000002")!,
                 postId: postID, parentId: index == 0 ? nil : firstID,
-                body: index == 0 ? String(appLocalized: "See you on Sunday!") : String(appLocalized: "Count me in!"),
+                body: index == 0 ? String(appLocalized: "See you on Sunday! Let's take the longer route by the river.") : String(appLocalized: "Count me in!"),
                 createdAt: Date().addingTimeInterval(-600).ISO8601Format(),
                 author: .init(userId: UUID(uuidString: person.id)!, handle: String(person.handle.dropFirst()), displayName: person.name, avatar: nil),
                 mine: person.isYou, likeCount: index == 0 ? 2 : 1, likedByMe: index == 1

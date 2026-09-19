@@ -46,7 +46,7 @@ struct FightPostEngagement: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             actions
             if open {
                 if loadingComments {
@@ -79,7 +79,7 @@ struct FightPostEngagement: View {
                         return ids
                     }()
                 ) {
-                    HStack(alignment: .bottom, spacing: 0) {
+                    HStack(alignment: .center, spacing: 0) {
                         TextField(
                             replyTo.map { String(appLocalized: "Reply to @\($0.author.handle)…") }
                                 ?? String(appLocalized: "Write a comment…"),
@@ -91,7 +91,8 @@ struct FightPostEngagement: View {
                         .lineLimit(1...4)
                         .focused($composerFocused)
                         .padding(.leading, 14)
-                        .padding(.vertical, 11)
+                        .padding(.vertical, 10)
+                        .frame(minHeight: 44, alignment: .center)
                         if replyTo != nil {
                             Button {
                                 replyTo = nil
@@ -134,6 +135,13 @@ struct FightPostEngagement: View {
                 open = true
                 await loadComments()
             }
+            #if DEBUG && targetEnvironment(simulator)
+            if CompanionPreview.isEnabled,
+               ProcessInfo.processInfo.environment["FF_COMMENT_FOCUS_PREVIEW"] == "1",
+               post.id == CompanionPreview.posts().first?.id {
+                composerFocused = true
+            }
+            #endif
         }
         .onChange(of: post.commentCount) { previous, count in
             if previous == 0 && count > 0 {
@@ -182,48 +190,55 @@ struct FightPostEngagement: View {
     }
 
     private var actions: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        let rankedEmoji = post.reactions.sorted { lhs, rhs in
+            if lhs.count != rhs.count { return lhs.count > rhs.count }
+            return lhs.emoji < rhs.emoji
+        }.map(\.emoji)
+        let emojiOptions = rankedEmoji + quickEmoji.filter { !rankedEmoji.contains($0) }
+
+        return VStack(alignment: .leading, spacing: 0) {
             FFDivider(inset: 0)
-            HStack(spacing: 4) {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 4) {
-                        ForEach(quickEmoji + post.reactions.map(\.emoji).filter { !quickEmoji.contains($0) }, id: \.self) { emoji in
-                            let reaction = post.reactions.first { $0.emoji == emoji }
-                            Button {
-                                Task { await feed.react(session: session, post: post, emoji: emoji) }
-                            } label: {
-                                HStack(spacing: 4) {
-                                    Text(emoji)
-                                    if let reaction { Text(verbatim: "\(reaction.count)") }
-                                }
-                                .ffType(.caption)
-                                .foregroundStyle(reaction?.mine == true ? theme.mossText : theme.textSecondary)
-                                .padding(.horizontal, 8)
-                                .frame(minWidth: 44, minHeight: 44)
-                                .background(reaction?.mine == true ? theme.mossWash : theme.card, in: Capsule())
-                                .contentShape(Rectangle())
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 4) {
+                    ForEach(emojiOptions, id: \.self) { emoji in
+                        let reaction = post.reactions.first { $0.emoji == emoji }
+                        Button {
+                            Task { await feed.react(session: session, post: post, emoji: emoji) }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Text(emoji)
+                                if let reaction { Text(verbatim: "\(reaction.count)") }
                             }
-                            .buttonStyle(FFHapticPlainStyle())
-                            .disabled(feed.reactingPostIDs.contains(post.id))
-                            .accessibilityLabel(emoji)
-                            .accessibilityValue(reaction.map { String($0.count) } ?? "0")
-                            .accessibilityAddTraits(reaction?.mine == true ? .isSelected : [])
+                            .ffType(.caption)
+                            .foregroundStyle(reaction?.mine == true ? theme.mossText : theme.textSecondary)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(reaction?.mine == true ? theme.mossWash : reaction == nil ? theme.card : theme.control, in: Capsule())
+                            .frame(minWidth: 44, minHeight: 44, alignment: .leading)
+                            .contentShape(Rectangle())
                         }
+                        .buttonStyle(FFHapticPlainStyle())
+                        .disabled(feed.reactingPostIDs.contains(post.id))
+                        .accessibilityLabel(emoji)
+                        .accessibilityValue(reaction.map { String($0.count) } ?? "0")
+                        .accessibilityAddTraits(reaction?.mine == true ? .isSelected : [])
                     }
+                    Button {
+                        showingCustomEmoji = true
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(theme.textSecondary)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(FFHapticPlainStyle())
+                    .disabled(feed.reactingPostIDs.contains(post.id))
+                    .accessibilityLabel(String(appLocalized: "Other emoji…"))
                 }
-                Button {
-                    showingCustomEmoji = true
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(theme.textSecondary)
-                        .frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(FFHapticPlainStyle())
-                .disabled(feed.reactingPostIDs.contains(post.id))
-                .accessibilityLabel(String(appLocalized: "Other emoji…"))
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .frame(height: 44)
             HStack {
                 Button {
                     open.toggle()
@@ -254,6 +269,8 @@ struct FightPostEngagement: View {
                         .buttonStyle(FFHapticPlainStyle())
                 }
             }
+            .frame(height: 24)
+            .padding(.top, 10)
         }
     }
 
@@ -286,10 +303,8 @@ struct FightPostEngagement: View {
         author.font = theme.font(.label)
         author.foregroundColor = theme.text
         author.link = URL(string: "fitfight-profile://author")
-        var message = author + AttributedString(" " + comment.body)
-        message.foregroundColor = theme.text
 
-        return HStack(alignment: .top, spacing: 8) {
+        return HStack(alignment: .top, spacing: 0) {
             ProfileIdentityLink(userID: comment.author.userId, source: "comments") {
                 CompanionAvatar(
                     personID: comment.author.userId.uuidString,
@@ -297,32 +312,37 @@ struct FightPostEngagement: View {
                     isYou: comment.mine,
                     monogram: comment.author.initials,
                     photoURL: comment.author.avatar?.url,
-                    size: 26
+                    size: 28
                 )
-                .frame(width: 44)
+                .frame(width: 44, height: 44, alignment: .topLeading)
             }
-            VStack(alignment: .leading, spacing: 0) {
-                Text(message)
-                    .ffType(.body)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .tint(theme.text)
-                    .environment(\.openURL, OpenURLAction { _ in
-                        profileComment = comment
-                        return .handled
-                    })
-                HStack(spacing: 8) {
-                    Text(comment.createdDate, style: .relative)
-                        .ffType(.micro)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(author)
+                        .tint(theme.text)
+                        .lineLimit(1)
+                        .environment(\.openURL, OpenURLAction { _ in
+                            profileComment = comment
+                            return .handled
+                        })
+                    Text(comment.createdDate, format: .relative(presentation: .numeric, unitsStyle: .narrow))
+                        .font(.ff(theme.type.spec(.micro).size, 500))
                         .foregroundStyle(theme.textFaint)
+                        .lineLimit(1)
+                }
+                Text(comment.body)
+                    .font(.ff(theme.type.spec(.body).size, 500))
+                    .foregroundStyle(theme.text)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 4) {
                     Button(String(appLocalized: "Reply")) {
                         replyTo = comment
                         composerFocused = true
                     }
                     .ffType(.micro)
                     .foregroundStyle(theme.textSecondary)
-                    .frame(minWidth: 44, minHeight: 44)
+                    .frame(minWidth: 44, minHeight: 44, alignment: .leading)
                     .buttonStyle(FFHapticPlainStyle())
-                    Spacer(minLength: 0)
                     TextTranslationButton(text: comment.body, alignment: .center)
                     Menu {
                         if comment.mine {
@@ -343,10 +363,12 @@ struct FightPostEngagement: View {
                     }
                     .buttonStyle(FFHapticPlainStyle())
                     .accessibilityLabel(String(appLocalized: "Comment actions"))
+                    Spacer(minLength: 0)
                 }
+                .frame(height: 24)
             }
-            .padding(.top, 10)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.trailing, 8)
             Button {
                 Task { await likeComment(comment) }
             } label: {
@@ -364,6 +386,7 @@ struct FightPostEngagement: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(FFHapticPlainStyle())
+            .padding(.top, 12)
             .disabled(likingCommentIDs.contains(comment.id))
             .accessibilityLabel(comment.likedByMe == true ? String(appLocalized: "Unlike comment") : String(appLocalized: "Like comment"))
             .accessibilityValue(String(comment.likeCount ?? 0))

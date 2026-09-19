@@ -13,7 +13,9 @@ struct GoogleUser {
 }
 struct GoogleResult { let user: GoogleUser }
 let kGIDSignInErrorDomain = "com.google.GIDSignIn"
-enum GIDSignInErrorCode: Int { case canceled = -5 }
+struct GIDSignInError {
+    enum Code: Int { case canceled = -5 }
+}
 
 @MainActor
 final class GIDSignIn {

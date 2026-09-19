@@ -42,7 +42,8 @@ export default function PrivacyPage() {
                             <strong>Account data:</strong> your Apple or Google
                             account identifier, email address (which may be an
                             Apple private relay address), name and profile image
-                            when your sign-in provider supplies them, your FitFight username, chosen
+                            when your sign-in provider supplies them, your
+                            FitFight username, chosen
                             companion and optional custom description, and an
                             encrypted server-only Apple credential used to
                             disconnect Sign in with Apple when you delete your

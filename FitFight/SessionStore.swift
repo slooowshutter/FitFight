@@ -234,7 +234,7 @@ final class SessionStore: ObservableObject {
             GIDSignIn.sharedInstance.signOut()
             let googleError = error as NSError
             if googleError.domain == kGIDSignInErrorDomain,
-               googleError.code == GIDSignInErrorCode.canceled.rawValue {
+               googleError.code == GIDSignInError.Code.canceled.rawValue {
                 return
             }
             authError = Self.signInFailureMessage(error)

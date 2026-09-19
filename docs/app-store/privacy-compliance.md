@@ -2,6 +2,15 @@
 
 Technical record updated 16 Sep 2026. Marc authorized the production rollout and App Store submission. The 12 App Privacy categories below are published in App Store Connect, with App Functionality, linked to the user, and no tracking. Steps is the only scoring metric, but the current app also collects private activity/workout summaries, posts, media, and notification data. This record describes technical behavior and submitted answers; it does not establish legal compliance.
 
+## Google sign-in, prepared 19 Sep 2026
+
+The native Google integration adds Google account identifiers, email, name, and
+provider profile-image metadata to the existing account data. These fit the
+already-declared User ID, Email Address, Name, and Photos or Videos categories,
+with App Functionality, linked to the user, and no tracking. The updated privacy
+page is prepared in this branch and must deploy before the app is distributed.
+This is a code disclosure update, not a new App Store Connect submission.
+
 ## App Privacy
 
 Select **No** for tracking. No data type is used for third-party advertising, developer advertising, data brokerage, or tracking across other companies' apps or websites.

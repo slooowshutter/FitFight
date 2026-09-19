@@ -128,7 +128,6 @@ struct FightPostEngagement: View {
                     .background(theme.control, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                     .ffBorder(theme.hairline, radius: 22)
                 }
-                .preference(key: FFFocusedFieldKey.self, value: composerFocused ? post.id : nil)
             }
         }
         .task {

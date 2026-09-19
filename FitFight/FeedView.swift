@@ -1064,7 +1064,6 @@ struct FightPostCard: View {
                 FightPostEngagement(post: post, targetCommentID: targetCommentID, onTargetCommentLoaded: onTargetCommentLoaded)
             }
         }
-        .id(post.id)
         .confirmationDialog(String(appLocalized: "Post"), isPresented: $showActions, titleVisibility: .hidden) {
             if post.mine {
                 Button(String(appLocalized: "Edit")) {

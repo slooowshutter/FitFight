@@ -15,8 +15,8 @@ replies nested beneath their parent. The Most comments / Most recent control is
 removed. Bold names and muted times sit above lighter comment text, with compact
 Reply controls below and a heart on the right. The composer centers its text,
 inline send arrow, and reply dismiss button. Emoji reactions start on the left,
-ranked by count, followed by unused presets and an Other emoji option in the
-horizontal strip. Profile links, translation, reporting, deletion, mention
+ranked by count, followed by unused presets in a horizontal strip. The Other
+emoji button stays visible beside the strip. Profile links, translation, reporting, deletion, mention
 suggestions, reaction identities, and comment pagination remain available.
 English and French copy and a 1.1.2 release note are included.
 
@@ -52,8 +52,28 @@ state and a larger text setting. Names and comment text, heart states/counts, pr
 emoji, the fixed custom-emoji button, and composer controls remain visible without
 overlap. Temporary CI triggers and capture steps were then removed. Backend,
 migration, and test sources are unchanged from their successful cloud runs.
-The subsequent native spacing, typography, and reaction-order revision awaits
-its own hosted build and live simulator checks.
+
+**Native layout refinement:** the spacing, typography, centered composer, and
+reaction-order revision passed all native regressions and simulator compilation
+at `f755da43` in [hosted verification](https://github.com/slooowshutter/FitFight/actions/runs/35450260915).
+Live English/French captures in Night/Day confirm wrapped comment text, name/time
+hierarchy, ranked reactions, visible custom emoji, and heart states/counts. The
+French reply state was also checked at the larger simulator text setting. The
+focused cloud captures exposed a separate keyboard visibility issue: the keyboard
+tutorial covered one capture and the other did not scroll the input into view.
+The cloud-built app was installed in the existing iPhone 17 simulator without a
+local build. Direct interaction checks confirmed centered single-line and
+multiline reply controls, enabled Send with text, disabled Send after clearing,
+draft retention on Cancel reply, and opening/cancelling the custom emoji picker.
+
+**Still open:** showing the software keyboard can cover the inline composer.
+The screenshot check in `.context/check_comment_keyboard.py` reproduced this on
+the cloud captures and the local simulator. Two scroll-target adjustments also
+failed that check and were removed. Native sources are restored byte-for-byte to
+the verified `f755da43` layout revision. Keyboard auto-scroll and physical signed-in
+two-device checks remain outstanding; this sample preview does not save reactions
+or comments. Temporary cloud capture steps and branch triggers are restored to
+their normal configuration.
 
 **Rollout:** apply the additive migration first, deploy the compatible backend,
 then distribute the new native build. No PR, merge, staging/production deployment,

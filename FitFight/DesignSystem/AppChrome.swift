@@ -9,9 +9,9 @@ private struct FFStaticRenderKey: EnvironmentKey {
 }
 
 struct FFFocusedFieldKey: PreferenceKey {
-    static let defaultValue: String? = nil
+    static let defaultValue: UUID? = nil
 
-    static func reduce(value: inout String?, nextValue: () -> String?) {
+    static func reduce(value: inout UUID?, nextValue: () -> UUID?) {
         if let next = nextValue() { value = next }
     }
 }
@@ -87,7 +87,7 @@ struct FFScreen<Content: View>: View {
     @Environment(\.ffTheme) private var theme
     @State private var holdOpen = false
     @State private var displayedMessage = ""
-    @State private var focusedFieldID: String?
+    @State private var focusedFieldID: UUID?
 
     private let restingHeight: CGFloat = 88
 

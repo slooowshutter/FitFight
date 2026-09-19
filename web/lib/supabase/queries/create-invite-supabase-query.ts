@@ -19,7 +19,7 @@ export async function lookupProfileByHandle(
     }
     const { data: profileData, error: profileError } = await admin
         .from("profiles")
-        .select("user_id, handle, display_name, time_zone")
+        .select("user_id:id, handle, display_name, time_zone")
         .eq("handle", handle)
         .is("deleted_at", null)
         .maybeSingle();
@@ -186,7 +186,7 @@ export async function createInvite(
         const { data: owner } = await admin
             .from("profiles")
             .select("handle, display_name")
-            .eq("user_id", ownerId)
+            .eq("id", ownerId)
             .maybeSingle();
         const display = owner?.display_name?.replace(/\s+/g, " ").trim();
         await enqueueFightInviteNotifications(sql, {

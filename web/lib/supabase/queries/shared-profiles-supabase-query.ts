@@ -17,20 +17,20 @@ import { signMediaUrl } from "./media-supabase-query";
 /** Profile locks serialize new sharing reads with settings, friendships, blocks, and deletion. */
 export async function loadProfileAccess(sql: TransactionSql, viewerId: string, targetId: string, write = false) {
     const users = await sql`
-        select user_id from public.profiles
-        where user_id in (${viewerId}, ${targetId}) and deleted_at is null
+        select id as user_id from public.profiles
+        where id in (${viewerId}, ${targetId}) and deleted_at is null
         order by user_id ${write ? sql`for update` : sql`for share`}
     `;
     if (users.length !== (viewerId === targetId ? 1 : 2)) {
         throw new ApiError(404, "not_found", "Profile unavailable");
     }
     const [row] = await sql`
-        select jsonb_build_object('user_id', profile.user_id, 'handle', profile.handle,
+        select jsonb_build_object('user_id', profile.id, 'handle', profile.handle,
             'display_name', profile.display_name, 'companion_id', profile.companion_id) identity,
             media.object_path avatar_path, coalesce(profile.time_zone, 'UTC') time_zone,
             coalesce(to_jsonb(settings), ${sql.json(defaultProfileSettings)}::jsonb) settings,
             jsonb_build_object(
-                'owner', profile.user_id = ${viewerId},
+                'owner', profile.id = ${viewerId},
                 'friend', coalesce(friendship.state = 'accepted', false),
                 'current_opponent', exists (
                     select 1 from public.fight_members mine
@@ -51,17 +51,17 @@ export async function loadProfileAccess(sql: TransactionSql, viewerId: string, t
                         or (blocker_id = ${targetId} and blocked_id = ${viewerId})
                 )
             ) relationship,
-            case when profile.user_id = ${viewerId} then 'self'
+            case when profile.id = ${viewerId} then 'self'
                 when friendship.state = 'accepted' then 'friends'
                 when friendship.requester_id = ${viewerId} then 'outgoing'
                 when friendship.requester_id is not null then 'incoming' else 'none' end friendship
         from public.profiles profile
-        left join private.profile_settings settings on settings.user_id = profile.user_id
+        left join private.profile_settings settings on settings.user_id = profile.id
         left join public.media_objects media on media.id = profile.avatar_media_id and media.status = 'ready'
         left join private.profile_friendships friendship
             on friendship.user_low = least(${viewerId}::uuid, ${targetId}::uuid)
             and friendship.user_high = greatest(${viewerId}::uuid, ${targetId}::uuid)
-        where profile.user_id = ${targetId}
+        where profile.id = ${targetId}
     `;
     const result = profileAccessRowSchema.parse(row);
     if (result.relationship.blocked) throw new ApiError(404, "not_found", "Profile unavailable");
@@ -231,12 +231,12 @@ export async function updateProfileSettings(userId: string, input: UpdateProfile
 
 export async function lookupSharedProfile(userId: string, handle: string, database: Sql = createDatabaseClient()): Promise<SharedIdentity> {
     const targetId = await database.begin(async (sql) => {
-        await sql`select user_id from public.profiles where user_id = ${userId} for update`;
+        await sql`select id as user_id from public.profiles where id = ${userId} for update`;
         const [count] = await sql`select count(*)::int n from private.profile_lookup_attempts
             where actor_id = ${userId} and created_at > now() - interval '1 hour'`;
         if (profileCountRowSchema.parse(count).n >= 30) throw new ApiError(429, "rate_limited", "Too many username searches");
         await sql`insert into private.profile_lookup_attempts(actor_id) values (${userId})`;
-        const [profile] = await sql`select user_id from public.profiles where lower(handle) = ${handle} and deleted_at is null`;
+        const [profile] = await sql`select id as user_id from public.profiles where lower(handle) = ${handle} and deleted_at is null`;
         return profile ? profileUserIDSchema.parse(profile.user_id) : null;
     });
     if (!targetId) throw new ApiError(404, "not_found", "Profile unavailable");

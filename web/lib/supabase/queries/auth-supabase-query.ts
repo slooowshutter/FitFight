@@ -47,8 +47,8 @@ async function requireActiveProfile(
 ): Promise<void> {
     const { data, error } = await admin
         .from("profiles")
-        .select("user_id")
-        .eq("user_id", userId)
+        .select("id")
+        .eq("id", userId)
         .is("deleted_at", null)
         .maybeSingle();
     if (error) {
@@ -100,7 +100,7 @@ export async function readAdminViewer(
     const { data, error } = await admin
         .from("profiles")
         .select("handle")
-        .eq("user_id", userId)
+        .eq("id", userId)
         .is("deleted_at", null)
         .maybeSingle();
     if (error) {

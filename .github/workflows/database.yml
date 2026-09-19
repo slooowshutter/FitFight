@@ -4,7 +4,7 @@ name: Database
 on:
     pull_request:
     push:
-        branches: [main, develop, preview, profiles-friends-and-stats]
+        branches: [main, develop, preview, profiles-friends-and-stats, rename-profile-id-api-v2]
 
 concurrency:
     group: database-${{ github.ref }}
@@ -90,8 +90,10 @@ jobs:
                     supabase/migrations/20260901103642_legacy_deleted_accounts_fixture.sql
                   cp supabase/migration-tests/profile-record-backfill-fixture.sql \
                     supabase/migrations/20260916215823_profile_record_backfill_fixture.sql
+                  cp supabase/migration-tests/standard-row-backfill-fixture.sql \
+                    supabase/migrations/20260919131731_standard_row_backfill_fixture.sql
                   supabase migration up --local --yes
-                  supabase test db --local supabase/migration-tests/legacy-deleted-accounts.sql supabase/migration-tests/profile-record-backfill.sql
+                  supabase test db --local supabase/migration-tests/legacy-deleted-accounts.sql supabase/migration-tests/profile-record-backfill.sql supabase/migration-tests/standard-row-backfill.sql
                   export DATABASE_URL="$(jq -er .DB_URL "$RUNNER_TEMP/supabase-test.json")"
                   export SUPABASE_TEST_URL="$(jq -er .API_URL "$RUNNER_TEMP/supabase-test.json")"
                   export SUPABASE_TEST_ANON_KEY="$(jq -er .ANON_KEY "$RUNNER_TEMP/supabase-test.json")"

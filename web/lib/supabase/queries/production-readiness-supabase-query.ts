@@ -8,6 +8,7 @@ export async function verifyBackendReadiness(
 ): Promise<void> {
     await database`
         select 1 / migration.applied::integer as migration_ready,
+            profile.id, profile.created_at, profile.updated_at,
             profile.deleted_at, profile.handle_set_at, profile.referral_code,
             fight.action_text, member.current_value,
             source.complete_through, day.calculation_version, snapshot.cutoff_at,
@@ -15,7 +16,7 @@ export async function verifyBackendReadiness(
         from (
             select count(*) as applied
             from supabase_migrations.schema_migrations
-            where version = '20260909132922'
+            where version = '20260919131732'
         ) as migration
         left join public.profiles as profile on false
         left join public.fights as fight on false
@@ -28,7 +29,7 @@ export async function verifyBackendReadiness(
 
     await database.begin("read only", async (sql) => {
         await sql`set local role fitfight_backend_reader`;
-        await sql`select user_id from public.profiles limit 0`;
+        await sql`select id from public.profiles limit 0`;
     });
 
     const { error } = await createAdminClient().auth.admin.listUsers({

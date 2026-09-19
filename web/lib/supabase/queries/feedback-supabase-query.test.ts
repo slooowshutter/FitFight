@@ -549,7 +549,7 @@ test("reporting a feedback post records the reason", async () => {
 
 test("blocking a feedback author hides them from the viewer", async () => {
     const { database, queries } = createDatabaseStub((sql) => {
-        if (sql.includes("select user_id from public.profiles")) {
+        if (sql.includes("select id as user_id from public.profiles")) {
             return [{ user_id: authorId }];
         }
         return [];

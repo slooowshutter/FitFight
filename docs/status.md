@@ -753,11 +753,19 @@ provider-contract and interruption tests. The database library scenario asserts 
 provider URLs, no image downloads or Storage calls, automatic complete saving,
 owned companion selection, old profile command behavior, pruning and deletion.
 
-**Current checks:** TypeScript and all 380 backend tests passed locally. Localization,
-native API boundary, migration guard, project syntax and whitespace checks passed.
-Cloud database and native results for this revision are pending. Earlier cloud
-checks passed on `70915e5` (backend/database) and `f5a24cb` (native); those do not
-verify this storage simplification. No local iOS or database runtime was used.
+**Cloud checks passed:**
+
+- [Web API](https://github.com/slooowshutter/FitFight/actions/runs/35445062344): TypeScript, all 380 backend tests and contract parsing on `e98ab95`; backend code is unchanged in the final implementation.
+- [Database](https://github.com/slooowshutter/FitFight/actions/runs/35445411309): migrations, schema lint, pgTAP, real transaction tests before and after the permission cutoff, legacy build 113 compatibility and deletion/backfill checks on `e414239`.
+- [iOS simulator](https://github.com/slooowshutter/FitFight/actions/runs/35445411296): full app compilation, native recovery/account isolation, pre-change profile decoding and existing native regressions on `e414239`.
+
+Localization, native API boundary, remote image loading, migration guard, project
+syntax and whitespace checks also passed. Cloud compilation caught a thumbnail
+still using the removed media field; the view was corrected to read the Blend URL.
+The existing standings test stayed unchanged when an unnecessary prefetch edit was
+reverted. Only documentation changed after these runs. No local iOS or database
+runtime was used. A full Next.js production build was not rerun; the earlier build
+required a database credential for homepage prerendering.
 
 **Live:** Read-only checks at **13:02 UTC on 19 Sep** found staging latest
 **1.1.1 (201)** and review/internal **1.1.2 (203)**, enforcement off. Production

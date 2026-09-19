@@ -11,6 +11,7 @@ import {
     listFightPostCommentsQuerySchema,
     listFightPostReactionPeopleQuerySchema,
     setFightPostReactionRequestSchema,
+    setFightPostCommentLikeRequestSchema,
 } from "@/lib/types/feed/fight-post";
 import {
     createFightPostComment,
@@ -18,6 +19,7 @@ import {
     listFightPostComments,
     listFightPostReactionPeople,
     setFightPostReaction,
+    setFightPostCommentLike,
 } from "./fight-post-engagement-supabase-query";
 
 const userId = "11111111-1111-4111-8111-111111111111";
@@ -187,6 +189,8 @@ test("a created comment returns the authoritative visible count after insertion 
                 },
             ]);
         }
+        if (sql.includes("from private.fight_post_comment_likes as likes"))
+            return Promise.resolve([]);
         if (sql.startsWith("select count(*)::int as n"))
             return Promise.resolve([{ n: 0 }]);
         if (sql.startsWith("insert into public.fight_post_comments")) {
@@ -237,7 +241,10 @@ test("a created comment returns the authoritative visible count after insertion 
         { body: fixture.comment.body },
         database,
     );
-    assert.deepEqual(result, fixture);
+    const { like_count, liked_by_me, ...legacyComment } = result.comment;
+    assert.equal(like_count, 0);
+    assert.equal(liked_by_me, false);
+    assert.deepEqual({ ...result, comment: legacyComment }, fixture);
 });
 
 test("deleting a parent returns the remaining visible count after cascading replies", async () => {
@@ -498,6 +505,8 @@ test("most comments sort returns the busiest visible thread first", async () => 
                 },
             ]);
         }
+        if (sql.includes("from private.fight_post_comment_likes as likes"))
+            return Promise.resolve([]);
         return Promise.resolve([
             {
                 id: busyId,
@@ -562,4 +571,52 @@ test("most comments sort returns the busiest visible thread first", async () => 
         [quietId],
     );
     assert.equal(second.next_cursor, null);
+});
+
+test("comment likes validate explicit state and remain idempotent", async () => {
+    for (const input of [{}, { liked: "true" }, { liked: 1 }, { liked: true, emoji: "❤️" }]) {
+        assert.equal(setFightPostCommentLikeRequestSchema.safeParse(input).success, false);
+    }
+    const commentId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+    let liked = false;
+    let visible = true;
+    const query = (strings: TemplateStringsArray, ...values: unknown[]) => {
+        const sql = strings.join("?").replace(/\s+/g, " ").trim();
+        if (sql.includes("from public.fight_posts")) {
+            return Promise.resolve([{ id: postId, audience: "main", fight_id: null, author_id: userId }]);
+        }
+        if (sql.includes("from public.fight_post_comments as comment")) {
+            assert.match(sql, /profile.deleted_at is null/);
+            assert.match(sql, /blocked.blocked_id in \(comment.author_id, \?::uuid\)/);
+            assert.match(sql, /for update of comment/);
+            assert.deepEqual(values, [commentId, postId, userId, userId, userId, userId]);
+            return Promise.resolve(visible ? [{ id: commentId }] : []);
+        }
+        if (sql.startsWith("insert into private.fight_post_comment_likes")) {
+            assert.match(sql, /on conflict \(comment_id, user_id\) do nothing/);
+            liked = true;
+            return Promise.resolve([]);
+        }
+        if (sql.startsWith("delete from private.fight_post_comment_likes")) {
+            assert.deepEqual(values, [commentId, userId]);
+            liked = false;
+            return Promise.resolve([]);
+        }
+        assert.match(sql, /from private.fight_post_comment_likes as likes/);
+        assert.match(sql, /profile.deleted_at is null/);
+        assert.match(sql, /blocked.blocked_id = likes.user_id/);
+        return Promise.resolve(liked ? [{ comment_id: commentId, like_count: 1, liked_by_me: true }] : []);
+    };
+    const database = Object.assign(query, {
+        begin: (_options: string, run: (sql: unknown) => unknown) => run(query),
+    }) as unknown as Sql;
+    for (const desired of [true, true, false, false]) {
+        assert.deepEqual(await setFightPostCommentLike(userId, postId, commentId, desired, database), {
+            like_count: desired ? 1 : 0,
+            liked_by_me: desired,
+        });
+    }
+    visible = false;
+    await assert.rejects(setFightPostCommentLike(userId, postId, commentId, true, database), { status: 404 });
+    assert.equal(liked, false);
 });

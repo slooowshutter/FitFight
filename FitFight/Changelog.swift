@@ -36,6 +36,20 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 19,
+            notes: "Comments are easier to scan with bold names, lighter text, and tighter spacing. Reactions start on the left, ranked by votes, and the reply bar stays aligned."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 19,
+            notes: "Feed comments are more compact, with hearts to like replies, a simpler composer, and quick emoji reactions without sorting tabs."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 19,
             notes: "Find feedback with one filter button. See features and bugs together, sort by votes or date, and browse archived posts. Delete your own feedback; admins can archive, reopen, or delete any post."
         ),
         ReleaseNote(

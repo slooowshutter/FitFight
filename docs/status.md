@@ -27,6 +27,102 @@ removed after verification; native sources are unchanged from the checked commit
 API contracts and the database are unchanged; no backend rollout is needed. No
 PR, deployment, release-branch merge, or TestFlight upload was performed.
 
+## Feed comments and hearts: prepared 19 Sep 2026
+
+**Code:** Feed and Fight-thread comments use one newest-first conversation with
+replies nested beneath their parent. The Most comments / Most recent control is
+removed. Bold names and muted times sit above lighter comment text, with compact
+Reply controls below and a heart on the right. The composer centers its text,
+inline send arrow, and reply dismiss button. Emoji reactions start on the left,
+ranked by count, followed by unused presets in a horizontal strip. The Other
+emoji button stays visible beside the strip. Profile links, translation, reporting, deletion, mention
+suggestions, reaction identities, and comment pagination remain available.
+English and French copy and a 1.1.2 release note are included.
+
+**Contract:** additive optional `like_count` and `liked_by_me` comment fields and
+idempotent `PUT /api/v1/posts/{postID}/comments/{commentID}/like` with `{ liked }`.
+`/api/v1`, existing comment creation/deletion, omitted sort, both explicit sort
+values, and cursors stay supported. Migration
+`20260919160000_feed_comment_likes.sql` adds private comment likes with forced RLS,
+server-only grants, deletion cascades, and the existing live Feed invalidation.
+The backend checks post access, comment ownership by that post, deleted authors,
+and bilateral author blocks before saving a heart.
+
+**Supported clients:** read-only `/api/app-release` checks on 19 Sep returned
+staging latest **1.1.1 (201)**, review/internal **1.1.2 (204)**, enforcement off;
+production latest **1.1.1 (202)**, null review/internal candidates, enforcement on.
+The released comment decoders in sources `d97145a` (201), `e2783be` (202), and
+`origin/fitfight-1.1.2-preview` (204) are identical. Preserved legacy fixtures and a
+frozen released decoder cover old responses and the additive fields. Staging's
+legacy request behavior remains supported while enforcement is off.
+
+**Cloud checks:** backend typecheck and all 319 unit tests passed in
+[Web API](https://github.com/slooowshutter/FitFight/actions/runs/35446705100).
+[All native regressions and the iOS simulator build](https://github.com/slooowshutter/FitFight/actions/runs/35447298734)
+passed at `3a4f811`. Coverage includes optimistic like/unlike, duplicate taps,
+rollback, pending refreshes, account changes, request encoding, and released-client
+decoding. [Database verification](https://github.com/slooowshutter/FitFight/actions/runs/35446705120)
+passed migrations, SQL lint, pgTAP, legacy build 113, and all 42 transaction tests
+both before and after the existing client-permission cutoff. Comment checks cover
+persistence, access, cascade deletion and legacy reads. No native build ran on the
+workstation. [Live iPhone simulator captures](https://github.com/slooowshutter/FitFight/actions/runs/35447298734)
+were visually checked in English/French and both themes, including the inline reply
+state and a larger text setting. Names and comment text, heart states/counts, preset
+emoji, the fixed custom-emoji button, and composer controls remain visible without
+overlap. Temporary CI triggers and capture steps were then removed. Backend,
+migration, and test sources are unchanged from their successful cloud runs.
+
+**Native layout refinement:** the spacing, typography, centered composer, and
+reaction-order revision passed all native regressions and simulator compilation
+at `f755da43` in [hosted verification](https://github.com/slooowshutter/FitFight/actions/runs/35450260915).
+Live English/French captures in Night/Day confirm wrapped comment text, name/time
+hierarchy, ranked reactions, visible custom emoji, and heart states/counts. The
+French reply state was also checked at the larger simulator text setting. The
+focused cloud captures exposed a separate keyboard visibility issue: the keyboard
+tutorial covered one capture and the other did not scroll the input into view.
+The cloud-built app was installed in the existing iPhone 17 simulator without a
+local build. Direct interaction checks confirmed centered single-line and
+multiline reply controls, enabled Send with text, disabled Send after clearing,
+draft retention on Cancel reply, and opening/cancelling the custom emoji picker.
+
+**Still open:** showing the software keyboard can cover the inline composer.
+The screenshot check in `.context/check_comment_keyboard.py` reproduced this on
+the cloud captures and the local simulator. Two scroll-target adjustments also
+failed that check and were removed. Native sources are restored byte-for-byte to
+the verified `f755da43` layout revision. Keyboard auto-scroll and physical signed-in
+two-device checks remain outstanding; this sample preview does not save reactions
+or comments. Temporary cloud capture steps and branch triggers are restored to
+their normal configuration.
+
+**Rollout:** apply the additive migration first, deploy the compatible backend,
+then distribute the new native build. PR review into `develop` was requested;
+no release-branch merge, staging/production deployment, or TestFlight upload was performed.
+Physical signed-in two-device heart/reply verification remains outstanding.
+
+**Develop integration, 19 Sep:** merged `c78f02de` into this feature branch,
+preserving both sets of release notes, translations, and status entries. Comment
+likes now follow the incoming standard-row convention: a UUID primary key,
+default creation/update timestamps, the shared update trigger, and a unique
+comment/user pair that preserves idempotent writes. The two new profile joins use
+the canonical `profiles.id`; the API contract and legacy foreign key stay unchanged.
+Read-only release rechecks still admit staging 201/204 and production 202 as above.
+Localization, native API boundary, migration safety, and whitespace checks passed;
+post-merge backend, disposable database, and native checks will run on the PR push.
+
+## Manual notification endpoint: prepared 19 Sep 2026
+
+`POST /api/admin/notifications` accepts `{ "username": "@marc", "message": "Bonjour !" }`
+with `Authorization: Bearer <cron secret>`. It reuses `CRON_SECRET`, or
+`FITFIGHT_CRON_SECRET` when the primary variable is unset, and the existing profile
+lookup, active-device lookup, and APNs sender. It sends once to the newest active
+device and returns Apple's acceptance, HTTP status, request ID, and reason.
+Manual sends are not recorded in the database; each POST is a new send.
+No admin page, migration, mobile API change, or iOS update is included.
+After merging `develop` at `05e2ffb9`, cloud TypeScript and all 321 backend tests
+passed. Handler checks also passed authentication, validation, missing
+configuration/device/profile, and Apple acceptance/rejection with mocked external
+boundaries. Endpoint not deployed; verification sent no real notifications.
+
 ## Feedback filtering and management: prepared 19 Sep 2026
 
 **Code:** the existing Feedback cards and screen styling remain. The filter tabs

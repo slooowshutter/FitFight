@@ -8,6 +8,14 @@ private struct FFStaticRenderKey: EnvironmentKey {
     static let defaultValue = false
 }
 
+struct FFFocusedFieldKey: PreferenceKey {
+    static let defaultValue: String? = nil
+
+    static func reduce(value: inout String?, nextValue: () -> String?) {
+        if let next = nextValue() { value = next }
+    }
+}
+
 extension EnvironmentValues {
     /// True while ScreenshotExport renders screens off-screen, where scroll views stay blank.
     var ffStaticRender: Bool {
@@ -79,6 +87,7 @@ struct FFScreen<Content: View>: View {
     @Environment(\.ffTheme) private var theme
     @State private var holdOpen = false
     @State private var displayedMessage = ""
+    @State private var focusedFieldID: String?
 
     private let restingHeight: CGFloat = 88
 
@@ -102,7 +111,17 @@ struct FFScreen<Content: View>: View {
                         }
                     }
             } else {
-                liveScroll
+                ScrollViewReader { reader in
+                    liveScroll
+                        .onPreferenceChange(FFFocusedFieldKey.self) { fieldID in
+                            focusedFieldID = fieldID
+                            if let fieldID { reader.scrollTo(fieldID, anchor: .bottom) }
+                        }
+                        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in
+                            // The viewport has finished shrinking, so the composer clears the keyboard and tab bar.
+                            if let focusedFieldID { reader.scrollTo(focusedFieldID, anchor: .bottom) }
+                        }
+                }
             }
         }
         .background(theme.bg)

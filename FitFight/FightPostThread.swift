@@ -128,6 +128,8 @@ struct FightPostEngagement: View {
                     .background(theme.control, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                     .ffBorder(theme.hairline, radius: 22)
                 }
+                .id("comment-composer-\(post.id)")
+                .preference(key: FFFocusedFieldKey.self, value: composerFocused ? "comment-composer-\(post.id)" : nil)
             }
         }
         .task {

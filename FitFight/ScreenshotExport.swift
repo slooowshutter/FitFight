@@ -42,6 +42,12 @@ enum ScreenshotExport {
         let light = ThemeStore(transient: .day)
 
         write(
+            sheet(WelcomeView(), themeStore: light, model: model),
+            name: "light-welcome",
+            height: canvas.height,
+            to: folder
+        )
+        write(
             frame(FightsListView(), tab: .fights, themeStore: light, model: model),
             name: "light-fights",
             height: canvas.height,

@@ -60,6 +60,32 @@ and Apple private-relay identities. No PR, release-branch merge, production
 deployment, or TestFlight upload is included. Promote the privacy copy before
 distributing the new app.
 
+## Google button and simulator login follow-up: 19 Sep 2026
+
+The Google control now uses a flat white surface, a centered current Google logo
+and Google Sans Medium label, and the same 44pt height and 6pt corners as Apple.
+Provider colors live in the design tokens. The unused GoogleSignInSwift UI product
+is removed; the GoogleSignIn authentication SDK and token flow are unchanged.
+English/French release copy and Day/Night screenshot coverage are included.
+Asset and font provenance is recorded in `docs/design/source/google-sign-in.md`.
+
+The first simulator ZIP was a compile artifact with linker ad-hoc signing and no
+app entitlements. Marc's existing simulator security logs reported `-34018`:
+"Client has neither application-identifier nor keychain-access-groups entitlements".
+HealthKit also reported its missing entitlement. Recent Supabase logs contained
+refreshes but no failed Google token exchange. The exported bundle itself had no
+entitlements and its signing identifier was `FitFight`, not `com.fitfight.mvp`.
+This makes the original artifact unsuitable for testing secure sign-in storage.
+
+The simulator exporter now ad-hoc signs the bundle with the app's capabilities,
+application identifier, and keychain group before archiving. It rejects device
+archives. A disposable hosted-simulator regression first tests an unsigned probe,
+then runs the real packager and verifies generic-password add/read/delete. This
+uses no real account or external auth request. Compilation, storage validation,
+new screen captures, and a replacement staging ZIP are in progress. A complete
+Google consent/login still requires verification after installing the replacement.
+No hosted auth configuration, API, or database contract was changed for this fix.
+
 ## Account preferences: prepared 17 Sep 2026
 
 **Code:** You → Settings → Preferences appears immediately below Refer a friend.

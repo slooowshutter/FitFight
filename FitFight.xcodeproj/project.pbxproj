@@ -96,7 +96,8 @@
         B71900000000000000000100 /* GoogleSignInConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = B71900000000000000000000 /* GoogleSignInConfig.swift */; };
         B71900000000000000000101 /* SignInControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = B71900000000000000000001 /* SignInControls.swift */; };
         B71900000000000000000E01 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = B71900000000000000000F01 /* GoogleSignIn */; };
-        B71900000000000000000E02 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = B71900000000000000000F02 /* GoogleSignInSwift */; };
+        B71900000000000000000300 /* GoogleSans.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B71900000000000000000200 /* GoogleSans.ttf */; };
+        B71900000000000000000301 /* GoogleSans-OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = B71900000000000000000201 /* GoogleSans-OFL.txt */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -192,6 +193,8 @@
         B71900000000000000000000 /* GoogleSignInConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleSignInConfig.swift; sourceTree = "<group>"; };
         B71900000000000000000001 /* SignInControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInControls.swift; sourceTree = "<group>"; };
         B71900000000000000000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+        B71900000000000000000200 /* GoogleSans.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "GoogleSans.ttf"; sourceTree = "<group>"; };
+        B71900000000000000000201 /* GoogleSans-OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = file; path = "GoogleSans-OFL.txt"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -200,7 +203,6 @@
             buildActionMask = 2147483647;
             files = (
                 A1000000000000000000F002 /* Supabase in Frameworks */,
-                B71900000000000000000E02 /* GoogleSignInSwift in Frameworks */,
                 B71900000000000000000E01 /* GoogleSignIn in Frameworks */,
                 A1000000000000000000F012 /* PostHog in Frameworks */,
             );
@@ -313,6 +315,8 @@
             isa = PBXGroup;
             children = (
                 A100000000000000000000A2 /* Nunito-Medium.ttf */,
+                B71900000000000000000201 /* GoogleSans-OFL.txt */,
+                B71900000000000000000200 /* GoogleSans.ttf */,
                 A100000000000000000000A3 /* Nunito-SemiBold.ttf */,
                 A100000000000000000000A4 /* Nunito-Bold.ttf */,
                 A100000000000000000000A5 /* Nunito-ExtraBold.ttf */,
@@ -353,7 +357,6 @@
             );
             name = FitFight;
             packageProductDependencies = (
-                B71900000000000000000F02 /* GoogleSignInSwift */,
                 B71900000000000000000F01 /* GoogleSignIn */,
                 A1000000000000000000F001 /* Supabase */,
                 A1000000000000000000F011 /* PostHog */,
@@ -409,6 +412,8 @@
                 A10000000000000000000004 /* Assets.xcassets in Resources */,
                 A1000000000000000000000A /* tokens.json in Resources */,
                 A100000000000000000000B2 /* Nunito-Medium.ttf in Resources */,
+                B71900000000000000000301 /* GoogleSans-OFL.txt in Resources */,
+                B71900000000000000000300 /* GoogleSans.ttf in Resources */,
                 A100000000000000000000B3 /* Nunito-SemiBold.ttf in Resources */,
                 A100000000000000000000B4 /* Nunito-Bold.ttf in Resources */,
                 A100000000000000000000B5 /* Nunito-ExtraBold.ttf in Resources */,
@@ -774,11 +779,6 @@
             isa = XCSwiftPackageProductDependency;
             package = B71900000000000000000F00 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
             productName = GoogleSignIn;
-        };
-        B71900000000000000000F02 /* GoogleSignInSwift */ = {
-            isa = XCSwiftPackageProductDependency;
-            package = B71900000000000000000F00 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
-            productName = GoogleSignInSwift;
         };
 /* End XCSwiftPackageProductDependency section */
     };

@@ -1,6 +1,16 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Google sign-in has a cleaner button with centered text and sizing that matches Sign in with Apple.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Le bouton de connexion Google est plus épuré, avec un texte centré et les mêmes dimensions que celui d’Apple."
+                    }
+                }
+            }
+        },
         "Sign in with Apple or Google. First time here, that creates your account.": {
             "localizations": {
                 "fr": {

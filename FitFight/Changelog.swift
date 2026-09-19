@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 19,
+            notes: "Google sign-in has a cleaner button with centered text and sizing that matches Sign in with Apple."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 19,
             notes: "Sign in or create your FitFight account with Google. Sign in with Apple is still available."
         ),
         ReleaseNote(

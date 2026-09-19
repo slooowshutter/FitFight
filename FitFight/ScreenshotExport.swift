@@ -60,6 +60,34 @@ enum ScreenshotExport {
             to: folder
         )
 
+        if var fight = model.fights.first(where: { $0.id == "sweat" }) {
+            fight.id = "details-preview"
+            fight.windowStart = Date(timeIntervalSince1970: 1_789_776_000)
+            fight.windowEnd = fight.windowStart.addingTimeInterval(7 * 86_400)
+            fight.timeZone = "Europe/Paris"
+            fight.joinCode = "WALK742"
+            for store in [themeStore, light] {
+                for size in [DynamicTypeSize.large, .accessibility3] {
+                    write(
+                        frame(
+                            FightDetailView(fight: fight, pane: .details).environment(\.dynamicTypeSize, size),
+                            tab: .fights, themeStore: store, model: model
+                        ),
+                        name: "\(store.mode.rawValue)-details\(size == .large ? "" : "-large-text")",
+                        height: size == .large ? canvas.height : tallHeight,
+                        to: folder
+                    )
+                }
+            }
+            fight.joinCode = nil
+            fight.inviter = nil
+            fight.timeZone = nil
+            write(
+                frame(FightDetailView(fight: fight, pane: .details), tab: .fights, themeStore: themeStore, model: model),
+                name: "night-details-legacy", height: canvas.height, to: folder
+            )
+        }
+
         // The design system page is one long scroll. ImageRenderer returns nil well
         // before the texture limit, so it is exported as a run of slices instead of
         // one tall canvas.
@@ -132,7 +160,7 @@ enum ScreenshotExport {
                 ("edit", AnyView(EditFightView(fight: group)), .fights),
                 ("invitation", AnyView(FightDetailView(fight: invite)), .fights),
                 ("history", AnyView(FightDetailView(fight: group, pane: .history)), .fights),
-                ("share", AnyView(FightDetailView(fight: group, pane: .share)), .fights),
+                ("details", AnyView(FightDetailView(fight: group, pane: .details)), .fights),
                 ("fight-feed", AnyView(FightDetailView(fight: group, pane: .feed)), .fights),
                 ("new", AnyView(NewFightView()), .newFight),
                 ("review", AnyView(NewFightView(opening: .create, initialStep: 4)), .newFight),

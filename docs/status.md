@@ -59,6 +59,80 @@ binary. Production migration/backend changes on `main` must serve the installed
 App Store build while Apple reviews the next one. This code requires no new app
 build. Removing legacy identifiers and direct access remains a separate rollout.
 
+## Fight Details tab: prepared 19 Sep 2026
+
+**Code:** the [Details backlog item](https://app.notion.com/p/3e08907c7ecf8156a21ed76c23276427)
+replaces the Fight's Share tab with Details. It shows the current round's start
+and end dates/times in the Fight time zone, creator when available, and current
+participant count. Invited and next-round members are excluded from that count.
+The information card has a Details heading and separator, matching Share above
+the existing share sheet, invite link, and copy-code controls grouped below.
+Details remains available without a join code; legacy fights without a stored
+time zone use the phone's zone, matching the existing editor. Stats, Feed,
+recurring History, and the pre-join preview keep their existing behavior.
+A 1.1.2 release note includes English and French copy.
+
+**Cloud checks:** [simulator compilation and all native regression checks](https://github.com/slooowshutter/FitFight/actions/runs/35445969544)
+passed at `4dfcdb4` on GitHub-hosted `macos-26`, including preserved API decoding,
+language switching, standings, and navigation. [English/French screen captures](https://github.com/slooowshutter/FitFight/actions/runs/35445969554)
+passed and were visually checked in Night/Day, with accessibility text, and for a
+legacy fight without a code, creator, or stored time zone. Source localization,
+native API-boundary, and whitespace checks also passed. No native build ran on
+the workstation. The temporary feature-branch CI triggers were then removed.
+The follow-up Details section heading uses the existing localized section-header
+component. Its [cloud simulator build and refreshed English/French captures](https://github.com/slooowshutter/FitFight/actions/runs/35447146255)
+passed at `249a240`; the matching headings and spacing were visually checked in
+Night and Day. The temporary screenshot trigger was removed after this run,
+with no subsequent app-source changes.
+
+**Contract and deployment:** native presentation only. API requests/responses,
+native API models, database schema, and supported-client contracts are unchanged.
+No backend rollout is required. No PR, release-branch merge, or TestFlight upload
+was made. Physical-device share-sheet and clipboard checks remain outstanding.
+
+## Notification destinations: prepared 19 Sep 2026
+
+**Code:** Fight notification links now preserve the exact round in their URL.
+The six-hour final-sync reminder already carried the correct Fight ID, but native
+navigation replaced a pending or completed round with the current live round of
+the same recurring series. The destination stays on the notified round after a
+snapshot refresh or a cold start that loads the Fight later. Ordinary Fight-list
+and Feed channel navigation retain their current-round behavior. A 1.1.2 release
+note includes English and French copy.
+
+**Sender audit:** all ten existing notification kinds retain their targets through
+the outbox and APNs payload. No file-target notification kind exists in FitFight.
+
+| Notification kinds | Existing target |
+| --- | --- |
+| `fight_ended`, `grace_reminder` (12h, 6h, 1h), `fight_finalized`, `fight_invite` | Exact Fight ID in `/fights/{id}` |
+| `daily_status` | Exact Fight ID plus `daily_status=1` |
+| `feed_post`, `post_reaction`, post `mention` | Exact `post` ID |
+| `post_comment`, `comment_reply`, comment `mention` | Exact `post` and `comment` IDs |
+
+**Regression evidence:** `python3 scripts/test_feed_activity.py`
+[reproduced the wrong round on hosted macOS](https://github.com/slooowshutter/FitFight/actions/runs/35444007879)
+before the fix: "A reminder must open its exact Fight round even after the next
+round starts". The runner now exercises the production tab state, Fight selection,
+and navigation methods instead of stubbing `openFight`. Coverage includes every
+tab, pending/completed/invited/live rounds, delayed snapshots, subsequent refreshes,
+post/comment replacement, unavailable targets, daily recaps, and the unchanged
+build 201/202 route parsers. Push delegate checks also cover both current nested
+and legacy flat payloads before startup configures navigation.
+
+**Cloud checks:** [the iOS simulator build and all native regressions](https://github.com/slooowshutter/FitFight/actions/runs/35444061127)
+passed at `2d40a1d` on GitHub-hosted `macos-26`. This includes the corrected
+notification tests, session/push checks, normal Profile/Feed navigation, preserved
+API decoding, and localization checks. No native build ran on the workstation.
+The temporary feature-branch CI trigger was then removed; app and test sources
+are unchanged from that successful run.
+
+**Contract and deployment:** native navigation only. API, APNs payload, database
+schema, and backend behavior are unchanged. No server rollout is required for
+this fix. No PR, release-branch merge, deployment, or TestFlight upload was made.
+The fix needs a new app build through the usual authorized release process.
+Physical-device APNs tap verification remains outstanding.
+
 ## Account preferences: prepared 17 Sep 2026
 
 **Code:** You → Settings → Preferences appears immediately below Refer a friend.
@@ -1784,7 +1858,7 @@ The native Fight path uses the API to create and join; Apple Health synchronizat
 | Versions                | Works under You → Settings (the public changelog). The version label is only on You. Do not put it on Fights, New, Feed, or Feedback. Tapping it opens the admin/debug menu only for signed-in username `marc`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | Bugs & requests         | Works on the Feedback tab (Bugs, Top, and Report), with a shortcut still on You above Settings. Signed-in people can post a bug or a feature request, attach a photo, a video, or any file, browse the board, upvote, and comment with their username. Device/debug metadata is stored when someone posts or comments, omitted from the board API, and attached again when Marc taps Send to Cursor (original snapshot plus the phone that sent it, plus attachment links). After `NOTION_TOKEN` is on Vercel, each new post also lands as a P0 Inbox row in the Product Backlog. After `CURSOR_API_KEY` is on Vercel, Marc sees **Send to Cursor** on a post and can start a cloud agent with the post, comments, those device snapshots, and attachment URLs. A successful send moves the matching Notion Product Backlog row to Building; when that agent finishes and opens a PR, FitFight marks the same row Done.                                                                                                                                                                                                                                                                                                                                                                           |
 | Privacy / Support       | Pages are implemented and linked under You → Settings. Staging uses `staging.fitfight.app`; production uses `fitfight.app`. Each route must be deployed before that build is tested or submitted.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| Fight posts / Feed      | Marc (username `marc`, You → Developer) can post one Broadcast that every signed-in user sees on the Feed tab; it is a normal post, not copied into each Fight, and it does not send a new lock-screen alert. Accepted and waiting-next-round members can post a short note, up to four photos, or one short video. Root Feedback → Feed is the same fight posts list as before (not a Recent/Top ranking of loaded posts). Root + chooses a new post or a new request. Media can take a photo with the camera or pick photos and video from the library. Posting to several fights keeps one post and shows those fight names; All fights shows Public. A fight’s Feed tab starts on that fight and can add other channels. There is no Main destination or tag-people picker. Each card puts its plain channel label, then the relative time, beneath the author, with actions at the top right. Posts support emoji reactions, nested comments, editing/deleting your own post, reporting another post and hiding its author. Other members of that fight can get a push when you post in that fight’s Feed; the post author can get comments and reactions; a reply notifies the parent commenter, not sibling commenters. You → Settings → Notifications turns each of those on or off, plus challenge reminders and daily status. Fight detail opens on Stats, with Feed, Share and recurring History alongside it. Recurring fights retain earlier posts; invited-only people gain access after joining. |
+| Fight posts / Feed      | Marc (username `marc`, You → Developer) can post one Broadcast that every signed-in user sees on the Feed tab; it is a normal post, not copied into each Fight, and it does not send a new lock-screen alert. Accepted and waiting-next-round members can post a short note, up to four photos, or one short video. Root Feedback → Feed is the same fight posts list as before (not a Recent/Top ranking of loaded posts). Root + chooses a new post or a new request. Media can take a photo with the camera or pick photos and video from the library. Posting to several fights keeps one post and shows those fight names; All fights shows Public. A fight’s Feed tab starts on that fight and can add other channels. There is no Main destination or tag-people picker. Each card puts its plain channel label, then the relative time, beneath the author, with actions at the top right. Posts support emoji reactions, nested comments, editing/deleting your own post, reporting another post and hiding its author. Other members of that fight can get a push when you post in that fight’s Feed; the post author can get comments and reactions; a reply notifies the parent commenter, not sibling commenters. You → Settings → Notifications turns each of those on or off, plus challenge reminders and daily status. Fight detail opens on Stats, with Feed, Details and recurring History alongside it. Details shows the round schedule, time zone, creator, current participant count, and sharing controls. Recurring fights retain earlier posts; invited-only people gain access after joining. |
 | Companion               | Saved on the account. Change animal opens the animal grid. Make it yours opens a description to edit and save (species, breed or race, accessories, colors, and other details). You can change animals anytime. That text is stored for later image generation; generation is not built. Other people see the stock animal, or initials until a custom image exists. People who have not chosen an animal are asked the next time they open a build that includes this. Pose and generation controls are not shown.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | Account deletion        | Permanently deletes the profile, photos, username, authentication, Health/Steps data, relationships, invitations, memberships, scores, owned Fights, fight posts, and bugs/requests the User posted; removes participation from other Fights; clears local Health sync state; and revokes a stored Apple credential when available.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | WHOOP / Strava          | Not built                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |

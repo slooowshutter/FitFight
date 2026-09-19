@@ -28,6 +28,27 @@ enum Changelog {
             version: "1.1.2",
             year: 2026,
             month: 9,
+            day: 19,
+            notes: "The new Details tab shows each fight's schedule, time zone, creator, and participant count. Sharing, invite links, and fight codes are all there too."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 19,
+            notes: "Fight notifications open the exact round they refer to, even when the next round has already started."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 19,
+            notes: "The comment Send button turns green as soon as you type. Empty or spaces-only comments keep it gray and disabled."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
             day: 18,
             notes: "Fight status labels follow your language immediately, even when a refresh fails. Fight names and user-written stakes stay exactly as entered."
         ),

@@ -12873,12 +12873,83 @@
                 }
             }
         },
+        "The comment Send button turns green as soon as you type. Empty or spaces-only comments keep it gray and disabled.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Le bouton Envoyer des commentaires devient vert dès que tu écris. Si le commentaire est vide ou ne contient que des espaces, il reste gris et désactivé."
+                    }
+                }
+            }
+        },
         "Account environment": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
                         "value": "Environnement du compte"
+                    }
+                }
+            }
+        },
+        "Fight notifications open the exact round they refer to, even when the next round has already started.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les notifications de combat ouvrent la manche concernée, même si la suivante a déjà commencé."
+                    }
+                }
+            }
+        },
+        "Created by": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Created by"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Créé par"
+                    }
+                }
+            }
+        },
+        "Participants": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Participants"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Participants"
+                    }
+                }
+            }
+        },
+        "The new Details tab shows each fight's schedule, time zone, creator, and participant count. Sharing, invite links, and fight codes are all there too.": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "The new Details tab shows each fight's schedule, time zone, creator, and participant count. Sharing, invite links, and fight codes are all there too."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Le nouvel onglet Détails affiche les dates et heures, le fuseau horaire, le créateur et le nombre de participants de chaque fight. Retrouvez-y aussi le partage, les liens d’invitation et les codes des fights."
                     }
                 }
             }

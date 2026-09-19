@@ -333,7 +333,7 @@ struct NewFightView: View {
                     .foregroundStyle(theme.textSecondary)
             } else if !rows.isEmpty {
                 ForEach(rows) { item in
-                    SuggestedFightOffer(fight: item) { Task { await model.openJoinable(item, session: session) } }
+                    SuggestedFightRow(fight: item) { Task { await model.openJoinable(item, session: session) } }
                 }
             }
         }

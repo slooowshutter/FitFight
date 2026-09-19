@@ -54,6 +54,12 @@ enum ScreenshotExport {
             to: folder
         )
         write(
+            frame(NewFightView(opening: .choose), tab: .newFight, themeStore: light, model: model),
+            name: "light-new",
+            height: canvas.height,
+            to: folder
+        )
+        write(
             sheet(PreferencesView(), themeStore: light, model: model),
             name: "light-preferences",
             height: tallHeight,

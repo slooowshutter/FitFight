@@ -31,7 +31,7 @@ struct APIContractTests {
             from: Data(contentsOf: fixtures.appendingPathComponent("ai-library.json")))
         precondition(aiLibrary.map(\.workflow) == [.avatar, .fitness, .groupPhoto])
         precondition(aiLibrary[1].images.map(\.stage) == ["resting", "soft", "average", "fit", "strong"])
-        precondition(aiLibrary[0].images[0].media.contentType == "image/png")
+        precondition(aiLibrary[0].images[0].url.absoluteString == "https://supabase.tryblend.ai/avatar-image_url.png")
         let unconfirmedAI = try decoder.decode(FitFightAIRequest.self,
             from: Data(contentsOf: fixtures.appendingPathComponent("ai-run-unconfirmed.json")))
         precondition(unconfirmedAI.failure?.code == "ai_start_unconfirmed")
@@ -62,6 +62,20 @@ struct APIContractTests {
         precondition(profile.companionId == nil)
         precondition(profile.companionPrompt == nil)
         precondition(profile.timeZone == nil, "Older profiles remain decodable")
+        var generatedProfile = profile
+        generatedProfile.companionId = "custom"
+        generatedProfile.companionImageURL = aiLibrary[0].images[0].url
+        precondition(generatedProfile.photoURL == aiLibrary[0].images[0].url)
+        let restoredGeneratedProfile = try decoder.decode(FitFightProfile.self, from: JSONEncoder().encode(generatedProfile))
+        precondition(restoredGeneratedProfile == generatedProfile)
+        let oldProfile = try decoder.decode(PreBlendProfile.self, from: profileData)
+        let oldReaderWithGeneratedImage = try decoder.decode(PreBlendProfile.self, from: JSONEncoder().encode(generatedProfile))
+        precondition(oldReaderWithGeneratedImage.userId == oldProfile.userId)
+        precondition(oldReaderWithGeneratedImage.handle == oldProfile.handle)
+        precondition(oldReaderWithGeneratedImage.avatar == oldProfile.avatar)
+        precondition(oldReaderWithGeneratedImage.companionId == "custom")
+
+
         var zonedProfileJSON = try JSONSerialization.jsonObject(with: profileData) as! [String: Any]
         zonedProfileJSON["time_zone"] = "Pacific/Kiritimati"
         let zonedProfile = try decoder.decode(FitFightProfile.self,
@@ -132,5 +146,49 @@ struct APIContractTests {
         precondition(checkpoints.members[0].stepCheckpoints?.last?.steps == 8500)
         precondition(checkpoints.members[1].stepCheckpoints == nil)
         print("API contracts: profile, onboarding, cached profiles, extra fields, Fight snapshot passed")
+    }
+}
+
+
+private struct PreBlendProfile: Codable, Equatable {
+    let userId: UUID
+    let handle: String
+    let displayName: String
+    let handleSetAt: String?
+    var referralCode: UUID?
+    var avatar: FitFightMedia?
+    var companionId: String? = nil
+    var companionPrompt: String? = nil
+    var timeZone: String? = nil
+
+    var calendarTimeZone: TimeZone { timeZone.flatMap(TimeZone.init(identifier:)) ?? .current }
+
+    var atHandle: String { "@\(handle)" }
+
+    var looksGenerated: Bool {
+        handle.hasPrefix("user_") && handle.count == 17
+    }
+
+    var initials: String {
+        let parts = displayName.split(separator: " ").filter { !$0.isEmpty }
+        if parts.count >= 2 {
+            return String(parts[0].prefix(1) + parts[1].prefix(1)).uppercased()
+        }
+        if let first = parts.first, !first.isEmpty {
+            return String(first.prefix(2)).uppercased()
+        }
+        return String(handle.prefix(2)).uppercased()
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case handle
+        case displayName = "display_name"
+        case handleSetAt = "handle_set_at"
+        case referralCode = "referral_code"
+        case avatar
+        case companionId = "companion_id"
+        case companionPrompt = "companion_prompt"
+        case timeZone = "time_zone"
     }
 }

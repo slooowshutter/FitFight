@@ -29,6 +29,7 @@ function pendingRequest(id = requestId) {
         id,
         user_id: userId,
         workflow: "avatar",
+        description: "Fox",
         resource_id: null,
         idempotency_key: id,
         request_hash: "a".repeat(64),
@@ -134,6 +135,7 @@ test("reconciliation observes abandoned results with the server caller path and 
             return {
                 request_id: id,
                 workflow: "avatar",
+        description: "Fox",
                 status: "completed",
                 data: { image_url: "https://cdn.tryblend.ai/avatar.png" },
             };
@@ -155,6 +157,7 @@ test("transient status failure is not settlement and does not block the next kno
             return {
                 request_id: id,
                 workflow: "avatar",
+        description: "Fox",
                 status: "failed",
                 code: "ai_invalid_result",
                 error: "Invalid output",

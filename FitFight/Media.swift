@@ -114,6 +114,8 @@ struct FitFightFightPost: Codable, Equatable, Hashable, Identifiable {
         let displayName: String
         let avatar: FitFightMedia?
         var companionId: String? = nil
+        var companionImageURL: URL? = nil
+        var photoURL: URL? { companionId == "custom" ? companionImageURL ?? avatar?.url : avatar?.url }
 
         var atHandle: String { "@\(handle)" }
         var initials: String {
@@ -133,6 +135,7 @@ struct FitFightFightPost: Codable, Equatable, Hashable, Identifiable {
             case displayName = "display_name"
             case avatar
             case companionId = "companion_id"
+            case companionImageURL = "companion_image_url"
         }
     }
 

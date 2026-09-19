@@ -45,6 +45,7 @@ type CommentRow = {
     author_handle: string;
     author_display_name: string;
     author_companion_id: string | null;
+    author_companion_image_url: string | null;
     avatar_id: string | null;
     avatar_kind: MediaRow["kind"] | null;
     avatar_purpose: MediaRow["purpose"] | null;
@@ -134,6 +135,7 @@ function authorFromRow(row: CommentRow, url: string | null): FightPostAuthor {
             companion_id: companionIdSchema
                 .nullable()
                 .parse(row.author_companion_id),
+            ...(row.author_companion_id === "custom" && row.author_companion_image_url ? { companion_image_url: row.author_companion_image_url } : {}),
         };
     }
     return {
@@ -162,6 +164,7 @@ function authorFromRow(row: CommentRow, url: string | null): FightPostAuthor {
         companion_id: companionIdSchema
             .nullable()
             .parse(row.author_companion_id),
+            ...(row.author_companion_id === "custom" && row.author_companion_image_url ? { companion_image_url: row.author_companion_image_url } : {}),
     };
 }
 
@@ -246,6 +249,7 @@ export async function listFightPostComments(
                     to_char(comment.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as created_at,
                     comment.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
                     profile.companion_id as author_companion_id,
+                    profile.companion_image_url as author_companion_image_url,
                     avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
                     avatar.status::text as avatar_status, avatar.object_path as avatar_object_path,
                     avatar.original_filename as avatar_original_filename, avatar.content_type as avatar_content_type,
@@ -275,6 +279,7 @@ export async function listFightPostComments(
                     to_char(comment.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as created_at,
                     comment.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
                     profile.companion_id as author_companion_id,
+                    profile.companion_image_url as author_companion_image_url,
                     avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
                     avatar.status::text as avatar_status, avatar.object_path as avatar_object_path,
                     avatar.original_filename as avatar_original_filename, avatar.content_type as avatar_content_type,
@@ -319,6 +324,7 @@ async function listRecentFightPostComments(
                     to_char(comment.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as created_at,
                     comment.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
                     profile.companion_id as author_companion_id,
+                    profile.companion_image_url as author_companion_image_url,
                     avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
                     avatar.status::text as avatar_status, avatar.object_path as avatar_object_path,
                     avatar.original_filename as avatar_original_filename, avatar.content_type as avatar_content_type,
@@ -348,6 +354,7 @@ async function listRecentFightPostComments(
                     to_char(comment.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as created_at,
                     comment.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
                     profile.companion_id as author_companion_id,
+                    profile.companion_image_url as author_companion_image_url,
                     avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
                     avatar.status::text as avatar_status, avatar.object_path as avatar_object_path,
                     avatar.original_filename as avatar_original_filename, avatar.content_type as avatar_content_type,
@@ -390,6 +397,7 @@ async function listDiscussedFightPostComments(
             comment.id, comment.post_id, comment.parent_id, comment.body, comment.created_at,
             comment.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
             profile.companion_id as author_companion_id,
+                    profile.companion_image_url as author_companion_image_url,
             avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
             avatar.status::text as avatar_status, avatar.object_path as avatar_object_path,
             avatar.original_filename as avatar_original_filename, avatar.content_type as avatar_content_type,
@@ -547,6 +555,7 @@ export async function createFightPostComment(
             comment.id, comment.post_id, comment.parent_id, comment.body, comment.created_at,
             comment.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
             profile.companion_id as author_companion_id,
+                    profile.companion_image_url as author_companion_image_url,
             avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
             avatar.status::text as avatar_status, avatar.object_path as avatar_object_path,
             avatar.original_filename as avatar_original_filename, avatar.content_type as avatar_content_type,

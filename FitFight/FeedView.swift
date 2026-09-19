@@ -104,7 +104,7 @@ final class FeedStore: ObservableObject {
                 error = nil
             }
             RemoteImageLoader.shared.prefetch(
-                refreshed.compactMap { $0.author.avatar?.url },
+                refreshed.compactMap { $0.author.photoURL },
                 kind: .avatar
             )
             RemoteImageLoader.shared.prefetch(
@@ -996,7 +996,7 @@ struct FightPostCard: View {
                             companionID: post.author.companionId,
                             isYou: post.mine,
                             monogram: post.author.initials,
-                            photoURL: post.author.avatar?.url,
+                            photoURL: post.author.photoURL,
                             size: 38
                         )
                     }

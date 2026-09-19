@@ -57,6 +57,7 @@ function reservation(): AiRequestReservation {
         version,
         creditPrice: 1,
         sourceRequestIds: [],
+        description: "Fox",
     };
 }
 
@@ -1186,6 +1187,9 @@ test("durable Blend admission and poll leases", async (t) => {
                 values (${id}, ${index === 2 ? other : owner}, 'avatar', ${randomUUID()}, ${"a".repeat(64)}, ${database.json(version)},
                 'completed', ${database.json({ ...version, runId: id })}, ${database.json({ image_url: `https://cdn.tryblend.ai/source-${index}.png` })},
                 clock_timestamp() - interval '2 minutes')`;
+                await database`insert into private.ai_library_images (request_id, user_id, workflow, description, stage, image_url)
+                    values (${id}, ${index === 2 ? other : owner}, 'avatar', 'Fox', 'image_url', ${`https://cdn.tryblend.ai/source-${index}.png`})`;
+
             }
             for (const ids of [[sources[2]], [randomUUID()]]) {
                 await assert.rejects(

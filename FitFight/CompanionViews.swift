@@ -633,7 +633,7 @@ struct CompanionIntroduction: View {
     @ViewBuilder
     private var youCharacter: some View {
         if companions.isCustom {
-            RemotePhoto(url: session.profile?.avatar?.url, contentMode: .fit) { Color.clear }
+            RemotePhoto(url: session.profile?.photoURL, contentMode: .fit) { Color.clear }
         } else {
             CompanionCharacter(animal: companions.selection, sport: companions.sport, effort: youEffort)
         }

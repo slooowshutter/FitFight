@@ -2,10 +2,8 @@ import { randomUUID } from "node:crypto";
 import type { Sql, TransactionSql } from "postgres";
 import type { ZodType } from "zod";
 import { ApiError } from "@/lib/http";
-import { aiAvatarResultSchema } from "@/lib/types/ai/workflow";
 import { appendAiBalanceEvent } from "@/lib/supabase/queries/ai-credits-supabase-query";
-import { signMediaUrl } from "@/lib/supabase/queries/media-supabase-query";
-import { aiSourcePortraitSchema } from "@/lib/types/ai/library";
+import { aiLibraryRowSchema } from "@/lib/types/ai/library";
 import { aiCreditBalanceSchema, type AiRecovery } from "@/lib/types/ai/credits";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import {
@@ -267,17 +265,12 @@ export async function reserveAiRequest(
             }
             const portraits: string[] = [];
             if (input.sourceRequestIds.length > 0) {
-                const sources = aiSourcePortraitSchema.array().parse(
-                    await sql`select wanted.id, request.result, media.object_path
-                from unnest(${sql.array(input.sourceRequestIds)}::uuid[]) with ordinality as wanted(id, position)
-                left join private.ai_requests as request on request.id = wanted.id
-                    and request.user_id = ${userId} and request.workflow = 'avatar' and request.status = 'completed'
-                left join private.ai_library_images as library on library.request_id = wanted.id
-                    and library.user_id = ${userId} and library.workflow = 'avatar' and library.stage = 'image_url'
-                left join public.media_objects as media on media.id = library.media_id
-                    and media.owner_id = ${userId} and media.status = 'ready' and media.purpose = 'profile'
-                where request.id is not null or media.id is not null
-                order by wanted.position`,
+                const sources = aiLibraryRowSchema.array().parse(
+                    await sql`select library.request_id, library.workflow, library.description, library.stage, library.image_url
+                    from unnest(${sql.array(input.sourceRequestIds)}::uuid[]) with ordinality as wanted(id, position)
+                    join private.ai_library_images library on library.request_id = wanted.id
+                        and library.user_id = ${userId} and library.workflow = 'avatar' and library.stage = 'image_url'
+                    order by wanted.position`,
                 );
                 if (sources.length !== input.sourceRequestIds.length) {
                     return new ApiError(
@@ -286,23 +279,7 @@ export async function reserveAiRequest(
                         "A source avatar is not available.",
                     );
                 }
-                for (const source of sources) {
-                    if (source.object_path !== null) {
-                        const url = await signMediaUrl(source.object_path);
-                        if (!url)
-                            return new ApiError(
-                                503,
-                                "storage_error",
-                                "Could not read a saved avatar.",
-                            );
-                        portraits.push(url);
-                    } else {
-                        portraits.push(
-                            databaseRow(aiAvatarResultSchema, source.result)
-                                .image_url,
-                        );
-                    }
-                }
+                portraits.push(...sources.map((source) => source.image_url));
             }
             await sql`insert into private.ai_credit_balances (user_id) values (${userId}) on conflict do nothing`;
             const [rawBalance] =
@@ -325,11 +302,11 @@ export async function reserveAiRequest(
             const [row] = await sql`
             insert into private.ai_requests (
                 user_id, workflow, resource_id, idempotency_key, request_hash, workflow_version,
-                lease_token, lease_expires_at, credit_price, credit_state, admitted_at, source_request_ids
+                lease_token, lease_expires_at, credit_price, credit_state, admitted_at, source_request_ids, description
             ) values (
                 ${userId}, ${input.workflow}, ${input.resourceId}, ${input.idempotencyKey},
                 ${input.requestHash}, ${sql.json(input.version)}, ${randomUUID()}, clock_timestamp() + interval '30 seconds',
-                ${price}, 'reserved', clock_timestamp(), ${sql.array(input.sourceRequestIds)}::uuid[]
+                ${price}, 'reserved', clock_timestamp(), ${sql.array(input.sourceRequestIds)}::uuid[], ${input.description}
             ) returning *
         `;
             const request = databaseRow(aiRequestRecordSchema, row);
@@ -473,6 +450,13 @@ export async function finishAiRequestAttempt(
                 available_change: consumed ? 0 : request.credit_price,
                 reserved_change: -request.credit_price,
             });
+        }
+        if (update.status === "completed" && update.result !== null) {
+            for (const [stage, url] of Object.entries(update.result)) {
+                await sql`insert into private.ai_library_images
+                    (request_id, user_id, workflow, description, stage, image_url)
+                    values (${requestId}, ${userId}, ${request.workflow}, ${request.description}, ${stage}, ${url})`;
+            }
         }
         const [row] = await sql`
             update private.ai_requests set

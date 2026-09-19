@@ -18,6 +18,7 @@ const snapshotRowSchema = fightSnapshotSchema.extend({
             display_name: z.string(),
             avatar_media_id: z.string().uuid().nullable().optional(),
             companion_id: companionIdSchema.nullable().default(null),
+            companion_image_url: z.string().url().nullish(),
         }),
     ),
 });
@@ -58,7 +59,7 @@ export async function readFightSnapshot(
                 ) as history on member.state = 'accepted'
                 where member.fight_id in (select id from visible_fights)
             ), visible_profiles as (
-                select user_id, handle, display_name, avatar_media_id, companion_id
+                select user_id, handle, display_name, avatar_media_id, companion_id, companion_image_url
                 from public.profiles
                 where user_id in (
                     select user_id from visible_members union select owner_id from visible_fights
@@ -144,5 +145,6 @@ async function attachProfileAvatars(
             ? (avatars.get(profile.avatar_media_id) ?? null)
             : null,
         companion_id: profile.companion_id,
+        ...(profile.companion_id === "custom" && profile.companion_image_url ? { companion_image_url: profile.companion_image_url } : {}),
     }));
 }

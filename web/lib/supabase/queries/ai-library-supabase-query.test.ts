@@ -2,57 +2,37 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { readFileSync } from "node:fs";
 import { GET } from "@/app/api/v1/ai/library/route";
-import { POST } from "@/app/api/v1/ai/runs/[requestID]/images/route";
-import {
-    aiLibraryEntrySchema,
-    saveAiImagesSchema,
-} from "@/lib/types/ai/library";
+import { aiLibraryEntrySchema } from "@/lib/types/ai/library";
+import { updateProfileRequestSchema } from "@/lib/types/profiles/profile";
 
-const requestId = "11111111-1111-4111-8111-111111111111";
-const mediaId = "22222222-2222-4222-8222-222222222222";
-
-test("library and save routes reject unauthenticated callers before database access", async () => {
-    const read = await GET(
+test("library access requires authentication and companion selection accepts only a saved result reference", async () => {
+    const response = await GET(
         new Request("https://example.com/api/v1/ai/library"),
         { params: Promise.resolve({}) },
     );
-    assert.equal(read.status, 401);
-    const write = await POST(
-        new Request(`https://example.com/api/v1/ai/runs/${requestId}/images`, {
-            method: "POST",
-            body: JSON.stringify({
-                description: "Fox",
-                images: [{ stage: "image_url", media_id: mediaId }],
-            }),
-        }),
-        { params: Promise.resolve({ requestID: requestId }) },
-    );
-    assert.equal(write.status, 401);
-});
-
-test("library save accepts owned-media references, never URLs or duplicate stages", () => {
-    const valid = {
-        description: "Fox",
-        images: [{ stage: "image_url", media_id: mediaId }],
+    assert.equal(response.status, 401);
+    const companion_image = {
+        request_id: "11111111-1111-4111-8111-111111111111",
+        stage: "image_url",
     };
-    assert.equal(saveAiImagesSchema.parse(valid).images.length, 1);
+    assert.deepEqual(updateProfileRequestSchema.parse({ companion_image }), {
+        companion_image,
+    });
     for (const input of [
-        { ...valid, images: [...valid.images, ...valid.images] },
         {
-            ...valid,
-            images: [
-                { stage: "image_url", url: "https://example.com/image.png" },
-            ],
+            companion_image: {
+                ...companion_image,
+                url: "https://example.com/foreign.png",
+            },
         },
-        { ...valid, images: [{ stage: "unknown", media_id: mediaId }] },
-        { ...valid, user_id: requestId },
-        { ...valid, description: " " },
+        { companion_image: { ...companion_image, stage: "unknown" } },
+        { companion_image, companion_id: "fox" },
     ])
-        assert.equal(saveAiImagesSchema.safeParse(input).success, false);
-});
-
-test("the shared library fixture carries durable media and all five named fitness images", () => {
-    const library = aiLibraryEntrySchema
+        assert.equal(
+            updateProfileRequestSchema.safeParse(input).success,
+            false,
+        );
+    const entries = aiLibraryEntrySchema
         .array()
         .parse(
             JSON.parse(
@@ -60,15 +40,7 @@ test("the shared library fixture carries durable media and all five named fitnes
             ),
         );
     assert.deepEqual(
-        library.map((entry) => entry.workflow),
-        ["avatar", "fitness", "group_photo"],
-    );
-    assert.equal(library[1].images.length, 5);
-    assert.ok(
-        library.every((entry) =>
-            entry.images.every(
-                (image) => image.media.content_type === "image/png",
-            ),
-        ),
+        entries.map((entry) => entry.images.length),
+        [1, 5, 1],
     );
 });

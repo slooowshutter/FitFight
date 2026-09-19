@@ -133,7 +133,7 @@ struct AICompanionView: View {
                             Text(entry.description).ffType(.body).foregroundStyle(theme.text)
                             ForEach(entry.images) { image in
                                 VStack(spacing: 8) {
-                                    RemotePhoto(url: image.media.url, contentMode: .fit) { theme.control }
+                                    RemotePhoto(url: image.url, contentMode: .fit) { theme.control }
                                         .frame(height: 220).accessibilityLabel(entry.description)
                                     if entry.workflow == .fitness {
                                         Text(stageLabel(image.stage)).ffType(.caption).foregroundStyle(theme.textSecondary)
@@ -144,7 +144,7 @@ struct AICompanionView: View {
                                                 assigning = true
                                                 defer { assigning = false }
                                                 do {
-                                                    try await session.setAvatar(image.media, companionPrompt: entry.description)
+                                                    try await session.setCompanion(image: .init(requestID: entry.requestID, stage: image.stage))
                                                     companions.apply(session.profile)
                                                     dismiss()
                                                 } catch {

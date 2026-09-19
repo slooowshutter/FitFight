@@ -27,6 +27,7 @@ export async function loadProfileAccess(sql: TransactionSql, viewerId: string, t
     const [row] = await sql`
         select jsonb_build_object('user_id', profile.user_id, 'handle', profile.handle,
             'display_name', profile.display_name, 'companion_id', profile.companion_id) identity,
+            case when profile.companion_id = 'custom' then profile.companion_image_url end companion_image_url,
             media.object_path avatar_path, coalesce(profile.time_zone, 'UTC') time_zone,
             coalesce(to_jsonb(settings), ${sql.json(defaultProfileSettings)}::jsonb) settings,
             jsonb_build_object(
@@ -150,7 +151,7 @@ export async function readSharedProfile(
             statistics = profileStepStatistics(history, context, relationship.owner ? null : row.settings.activity_days);
         }
         return sharedProfileSchema.parse({
-            identity: { ...row.identity, avatar_url: row.avatar_path ? await signMediaUrl(row.avatar_path) : null },
+            identity: { ...row.identity, avatar_url: row.companion_image_url ?? (row.avatar_path ? await signMediaUrl(row.avatar_path) : null) },
             access: relationship.owner ? "owner" : access.shared ? "shared" : "private",
             competitive: row.settings.competitive,
             friendship: preview ? "none" : row.friendship,
@@ -242,7 +243,7 @@ export async function lookupSharedProfile(userId: string, handle: string, databa
     if (!targetId) throw new ApiError(404, "not_found", "Profile unavailable");
     return database.begin(async (sql) => {
         const row = await loadProfileAccess(sql, userId, targetId);
-        return { ...row.identity, avatar_url: row.avatar_path ? await signMediaUrl(row.avatar_path) : null };
+        return { ...row.identity, avatar_url: row.companion_image_url ?? (row.avatar_path ? await signMediaUrl(row.avatar_path) : null) };
     });
 }
 

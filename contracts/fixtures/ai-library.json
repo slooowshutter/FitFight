@@ -6,21 +6,7 @@
         "images": [
             {
                 "stage": "image_url",
-                "media": {
-                    "id": "22222222-2222-4222-8222-000000000001",
-                    "kind": "photo",
-                    "purpose": "profile",
-                    "status": "ready",
-                    "original_filename": "companion.png",
-                    "content_type": "image/png",
-                    "byte_size": 120000,
-                    "width": 1024,
-                    "height": 1024,
-                    "duration_ms": null,
-                    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-                    "url": "https://example.supabase.co/storage/v1/object/sign/user-media/22222222-2222-4222-8222-000000000001.png?token=fixture",
-                    "created_at": "2026-09-18T12:00:00Z"
-                }
+                "url": "https://supabase.tryblend.ai/avatar-image_url.png"
             }
         ]
     },
@@ -31,93 +17,23 @@
         "images": [
             {
                 "stage": "resting",
-                "media": {
-                    "id": "22222222-2222-4222-8222-000000000002",
-                    "kind": "photo",
-                    "purpose": "profile",
-                    "status": "ready",
-                    "original_filename": "companion.png",
-                    "content_type": "image/png",
-                    "byte_size": 120000,
-                    "width": 1024,
-                    "height": 1024,
-                    "duration_ms": null,
-                    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-                    "url": "https://example.supabase.co/storage/v1/object/sign/user-media/22222222-2222-4222-8222-000000000002.png?token=fixture",
-                    "created_at": "2026-09-18T12:00:00Z"
-                }
+                "url": "https://supabase.tryblend.ai/fitness-resting.png"
             },
             {
                 "stage": "soft",
-                "media": {
-                    "id": "22222222-2222-4222-8222-000000000003",
-                    "kind": "photo",
-                    "purpose": "profile",
-                    "status": "ready",
-                    "original_filename": "companion.png",
-                    "content_type": "image/png",
-                    "byte_size": 120000,
-                    "width": 1024,
-                    "height": 1024,
-                    "duration_ms": null,
-                    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-                    "url": "https://example.supabase.co/storage/v1/object/sign/user-media/22222222-2222-4222-8222-000000000003.png?token=fixture",
-                    "created_at": "2026-09-18T12:00:00Z"
-                }
+                "url": "https://supabase.tryblend.ai/fitness-soft.png"
             },
             {
                 "stage": "average",
-                "media": {
-                    "id": "22222222-2222-4222-8222-000000000004",
-                    "kind": "photo",
-                    "purpose": "profile",
-                    "status": "ready",
-                    "original_filename": "companion.png",
-                    "content_type": "image/png",
-                    "byte_size": 120000,
-                    "width": 1024,
-                    "height": 1024,
-                    "duration_ms": null,
-                    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-                    "url": "https://example.supabase.co/storage/v1/object/sign/user-media/22222222-2222-4222-8222-000000000004.png?token=fixture",
-                    "created_at": "2026-09-18T12:00:00Z"
-                }
+                "url": "https://supabase.tryblend.ai/fitness-average.png"
             },
             {
                 "stage": "fit",
-                "media": {
-                    "id": "22222222-2222-4222-8222-000000000005",
-                    "kind": "photo",
-                    "purpose": "profile",
-                    "status": "ready",
-                    "original_filename": "companion.png",
-                    "content_type": "image/png",
-                    "byte_size": 120000,
-                    "width": 1024,
-                    "height": 1024,
-                    "duration_ms": null,
-                    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-                    "url": "https://example.supabase.co/storage/v1/object/sign/user-media/22222222-2222-4222-8222-000000000005.png?token=fixture",
-                    "created_at": "2026-09-18T12:00:00Z"
-                }
+                "url": "https://supabase.tryblend.ai/fitness-fit.png"
             },
             {
                 "stage": "strong",
-                "media": {
-                    "id": "22222222-2222-4222-8222-000000000006",
-                    "kind": "photo",
-                    "purpose": "profile",
-                    "status": "ready",
-                    "original_filename": "companion.png",
-                    "content_type": "image/png",
-                    "byte_size": 120000,
-                    "width": 1024,
-                    "height": 1024,
-                    "duration_ms": null,
-                    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-                    "url": "https://example.supabase.co/storage/v1/object/sign/user-media/22222222-2222-4222-8222-000000000006.png?token=fixture",
-                    "created_at": "2026-09-18T12:00:00Z"
-                }
+                "url": "https://supabase.tryblend.ai/fitness-strong.png"
             }
         ]
     },
@@ -128,21 +44,7 @@
         "images": [
             {
                 "stage": "image_url",
-                "media": {
-                    "id": "22222222-2222-4222-8222-000000000007",
-                    "kind": "photo",
-                    "purpose": "profile",
-                    "status": "ready",
-                    "original_filename": "companion.png",
-                    "content_type": "image/png",
-                    "byte_size": 120000,
-                    "width": 1024,
-                    "height": 1024,
-                    "duration_ms": null,
-                    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-                    "url": "https://example.supabase.co/storage/v1/object/sign/user-media/22222222-2222-4222-8222-000000000007.png?token=fixture",
-                    "created_at": "2026-09-18T12:00:00Z"
-                }
+                "url": "https://supabase.tryblend.ai/group_photo-image_url.png"
             }
         ]
     }

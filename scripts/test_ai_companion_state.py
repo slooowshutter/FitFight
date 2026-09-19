@@ -12,7 +12,7 @@ if os.environ.get("CI") != "true":
 
 root = Path(__file__).resolve().parents[1]
 store = (root / "FitFight/AICompanionStore.swift").read_text()
-store = store.replace("import SwiftUI", "import Foundation").replace("import UIKit\n", "")
+store = store.replace("import SwiftUI", "import Foundation")
 store = store.replace(": ObservableObject", "").replace("@Published ", "")
 source = store + "\n" + (root / "tests/AICompanionStateTests.swift").read_text()
 

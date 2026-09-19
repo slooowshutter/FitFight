@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 @MainActor
 final class AICompanionStore: ObservableObject {
@@ -91,7 +90,11 @@ final class AICompanionStore: ObservableObject {
                 case .avatar:
                     result = try await api.startAvatarGeneration(description: pending.description, idempotencyKey: pending.key, accessToken: token)
                 case .fitness:
-                    guard let character = pending.characters.first else { throw MediaUploader.UploadError.invalidImage }
+                    guard let character = pending.characters.first else {
+                        recoveryBlocked = true
+                        error = String(localized: "Couldn't restore your generation. Contact support before starting another.")
+                        return
+                    }
                     result = try await api.startFitnessGeneration(avatarRequestID: character.avatarRequestID, identityDetails: character.identityDetails, idempotencyKey: pending.key, accessToken: token)
                 case .groupPhoto:
                     result = try await api.startGroupPhotoGeneration(characters: pending.characters, scene: pending.description, idempotencyKey: pending.key, accessToken: token)
@@ -109,41 +112,6 @@ final class AICompanionStore: ObservableObject {
             }
             try Task.checkCancellation()
             guard session.profile?.userId == userID, ownerID == userID else { return }
-            progress = String(localized: "Saving images to your account…")
-            let outputs: [(String, URL)]
-            if let images = result.fitnessImages {
-                outputs = [("resting", images.resting), ("soft", images.soft), ("average", images.average), ("fit", images.fit), ("strong", images.strong)]
-            } else if let url = result.imageURL {
-                outputs = [("image_url", url)]
-            } else {
-                throw MediaUploader.UploadError.invalidImage
-            }
-            for (stage, url) in outputs where pending.uploaded[stage] == nil {
-                guard session.profile?.userId == userID, ownerID == userID else { return }
-                // Provider URLs come from the authenticated API, never from editable text.
-                var request = URLRequest(url: url)
-                request.timeoutInterval = 60
-                let (data, response) = try await URLSession.shared.data(for: request)
-                guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode),
-                      data.count <= 8_388_608, let image = UIImage(data: data) else {
-                    throw MediaUploader.UploadError.invalidImage
-                }
-                try Task.checkCancellation()
-                guard session.profile?.userId == userID, ownerID == userID else { return }
-                let media = try await MediaUploader.upload(image, purpose: "profile", preserveTransparency: true, session: session)
-                try Task.checkCancellation()
-                guard session.profile?.userId == userID, ownerID == userID else { return }
-                pending.uploaded[stage] = media
-                UserDefaults.standard.set(try JSONEncoder().encode(pending), forKey: Self.pendingPrefix + userID.uuidString)
-                action = pending
-            }
-            let input = FitFightAISaveImages(
-                description: pending.description,
-                images: outputs.compactMap { stage, _ in
-                    pending.uploaded[stage].map { .init(stage: stage, mediaID: $0.id) }
-                }
-            )
-            try await api.saveAIImages(requestID: result.requestID, input: input, accessToken: try await session.freshAccessToken())
             UserDefaults.standard.removeObject(forKey: Self.pendingPrefix + userID.uuidString)
             guard session.profile?.userId == userID, ownerID == userID else { return }
             action = nil

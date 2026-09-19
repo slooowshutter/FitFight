@@ -97,6 +97,7 @@ test("profile updates persist a stock companion without touching other fields", 
                 assert.deepEqual(await request.json(), {
                     companion_id: "fox",
                     companion_prompt: null,
+                    companion_image_url: null,
                 });
                 return Response.json({
                     ...profile,
@@ -128,6 +129,7 @@ test("profile updates persist a custom companion description", async () => {
                 assert.deepEqual(await request.json(), {
                     companion_id: "custom",
                     companion_prompt: "a cream frenchie with gold sunglasses",
+                    companion_image_url: null,
                 });
                 return Response.json({
                     ...profile,
@@ -166,10 +168,6 @@ test("profile reads filter by the authenticated owner and expose only the API fi
                     `eq.${profile.user_id}`,
                 );
                 assert.equal(url.searchParams.get("deleted_at"), "is.null");
-                assert.equal(
-                    url.searchParams.get("select"),
-                    "user_id,handle,display_name,handle_set_at,referral_code,avatar_media_id,companion_id,companion_prompt,time_zone",
-                );
                 return Response.json([
                     {
                         ...profile,

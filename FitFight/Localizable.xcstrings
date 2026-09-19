@@ -12789,17 +12789,6 @@
                 }
             }
         },
-        "Saving images to your account…": {
-            "extractionState": "manual",
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Enregistrement des images sur votre compte…"
-                    }
-                }
-            }
-        },
         "Saved to your library.": {
             "extractionState": "manual",
             "localizations": {
@@ -13172,6 +13161,17 @@
                                 }
                             }
                         }
+                    }
+                }
+            }
+        },
+        "Generated images stay available in your account, even when you close the app before generation finishes.": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les images générées restent disponibles sur votre compte, même si vous fermez l’app avant la fin de la génération."
                     }
                 }
             }

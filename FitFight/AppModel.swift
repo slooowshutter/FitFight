@@ -673,7 +673,7 @@ final class AppModel: ObservableObject {
                 UserDefaults.standard.set(data, forKey: Self.fightsCachePrefix + userId.uuidString)
             }
             RemoteImageLoader.shared.prefetch(
-                (loaded.flatMap { $0.standings.map(\.person.photoURL) } + [session.profile?.avatar?.url])
+                (loaded.flatMap { $0.standings.map(\.person.photoURL) } + [session.profile?.photoURL])
                     .compactMap { $0 },
                 kind: .avatar
             )
@@ -1428,7 +1428,7 @@ final class AppModel: ObservableObject {
             handle: profile.atHandle,
             initials: profile.initials,
             isYou: isYou,
-            photoURL: profile.avatar?.url,
+            photoURL: profile.photoURL,
             companionId: profile.companionId
         )
     }

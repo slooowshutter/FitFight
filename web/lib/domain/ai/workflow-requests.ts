@@ -92,6 +92,12 @@ export async function startAiRun(
         userId,
         {
             workflow: input.workflow,
+            description:
+                input.workflow === "avatar"
+                    ? input.parameters.description
+                    : input.workflow === "fitness"
+                      ? input.parameters.identity_details
+                      : input.parameters.scene,
             resourceId: null,
             idempotencyKey,
             requestHash: createHash("sha256")

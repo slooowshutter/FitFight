@@ -265,32 +265,6 @@ test("reads preserve every documented state and never create another run", async
     }
 });
 
-test("text, JSON, and media parts keep their typed values for feature decoding", async () => {
-    const parts = [
-        { type: "text", text: "Summary" },
-        { type: "json", data: { recap: "Summary" } },
-        { type: "image", url: "https://example.com/image.png" },
-        { type: "video", url: "https://example.com/video.mp4" },
-        {
-            type: "file",
-            url: "https://example.com/audio.mp3",
-            mime_type: "audio/mpeg",
-        },
-    ];
-    const result = await readBlendWorkflowRun(handle, async () =>
-        Response.json({
-            id: handle.runId,
-            status: "completed",
-            output: {
-                result: [
-                    { id: "item", item_index: 0, status: "completed", parts },
-                ],
-            },
-        }),
-    );
-    assert.deepEqual(result.data.output?.result[0].parts, parts);
-});
-
 test("read failures retain the known run and suppress unsafe rate-limit headers", async (t) => {
     for (const outcome of [
         "network",

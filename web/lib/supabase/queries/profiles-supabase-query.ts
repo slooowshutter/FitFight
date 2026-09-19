@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ApiError } from "@/lib/http";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { readAiCompanionImage } from "./ai-library-supabase-query";
 import {
     profileDatabaseRowSchema,
     type Profile,
@@ -15,7 +16,7 @@ import {
 } from "./media-supabase-query";
 
 const PROFILE_COLUMNS =
-    "user_id, handle, display_name, handle_set_at, referral_code, avatar_media_id, companion_id, companion_prompt, time_zone";
+    "user_id, handle, display_name, handle_set_at, referral_code, avatar_media_id, companion_id, companion_prompt, companion_image_url, time_zone";
 
 async function asProfile(
     row: ProfileDatabaseRow,
@@ -47,6 +48,9 @@ async function asProfile(
         avatar,
         companion_id: row.companion_id,
         companion_prompt: row.companion_prompt,
+        ...(row.companion_id === "custom" && row.companion_image_url
+            ? { companion_image_url: row.companion_image_url }
+            : {}),
         time_zone: row.time_zone ?? "UTC",
     };
 }
@@ -76,6 +80,9 @@ export async function updateProfile(
     input: UpdateProfileRequest,
     admin: SupabaseClient = createAdminClient(),
 ): Promise<Profile> {
+    const image = input.companion_image
+        ? await readAiCompanionImage(userId, input.companion_image)
+        : null;
     if (input.avatar_media_id) {
         const media = await loadReadyMedia(
             userId,
@@ -118,6 +125,17 @@ export async function updateProfile(
                   }
                 : input.companion_prompt !== undefined
                   ? { companion_prompt: input.companion_prompt }
+                  : {}),
+            ...(image
+                ? {
+                      companion_id: "custom",
+                      companion_prompt: image.description,
+                      companion_image_url: image.image_url,
+                  }
+                : input.avatar_media_id !== undefined ||
+                    input.companion_id !== undefined ||
+                    input.companion_prompt !== undefined
+                  ? { companion_image_url: null }
                   : {}),
         })
         .eq("user_id", userId)

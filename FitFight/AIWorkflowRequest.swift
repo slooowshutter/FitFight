@@ -180,8 +180,8 @@ struct FitFightAILibraryEntry: Decodable, Identifiable {
 
     struct Image: Decodable, Identifiable {
         let stage: String
-        let media: FitFightMedia
-        var id: UUID { media.id }
+        let url: URL
+        var id: String { stage }
     }
 
     enum CodingKeys: String, CodingKey {
@@ -190,18 +190,13 @@ struct FitFightAILibraryEntry: Decodable, Identifiable {
     }
 }
 
-struct FitFightAISaveImages: Encodable {
-    let description: String
-    let images: [Image]
+struct FitFightAICompanionSelection: Encodable {
+    let requestID: UUID
+    let stage: String
 
-    struct Image: Encodable {
-        let stage: String
-        let mediaID: UUID
-
-        enum CodingKeys: String, CodingKey {
-            case stage
-            case mediaID = "media_id"
-        }
+    enum CodingKeys: String, CodingKey {
+        case requestID = "request_id"
+        case stage
     }
 }
 
@@ -212,5 +207,4 @@ struct AICompanionAction: Codable {
     let description: String
     let characters: [FitFightAICharacter]
     var requestID: UUID?
-    var uploaded: [String: FitFightMedia] = [:]
 }

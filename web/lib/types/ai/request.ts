@@ -31,12 +31,14 @@ export const aiRequestReservationSchema = z.object({
     version: blendWorkflowVersionSchema.nullable(),
     creditPrice: z.number().int().positive().nullable(),
     sourceRequestIds: z.array(z.string().uuid()).max(5),
+    description: z.string().min(1).max(1000),
 });
 
 export const aiRequestRecordSchema = z.object({
     id: z.string().uuid(),
     user_id: z.string().uuid(),
     workflow: aiWorkflowSchema,
+    description: z.string(),
     resource_id: z.string().uuid().nullable(),
     idempotency_key: z.string().uuid(),
     request_hash: z.string(),

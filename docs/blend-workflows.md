@@ -1,9 +1,8 @@
 # Blend workflow requests
 
-Backend and native generation prepared 18 Sep 2026. Disabled by default, not
+Backend and native generation updated 19 Sep 2026. Disabled by default, not
 deployed. Marc's follow-up also authorizes the generation screen, phone recovery,
-image saving and companion assignment. Cloud database and native checks have passed; the exact run links are in
-status.md. Deployment, configuration and a real staging generation are still
+image saving and companion assignment. Marc confirmed that Blend owns permanent image storage. Cloud results for each implementation are recorded in status.md. Deployment, configuration and a real staging generation are still
 required before this is described as usable on staging.
 Existing OpenRouter recap behavior is unchanged.
 
@@ -20,8 +19,8 @@ never a FitFight deployment setting. Styles and reference images stay inside Ble
 | `POST /api/v1/ai/runs` | Start or recover an owned Avatar, Fitness or Group Photo action using a UUID `Idempotency-Key` |
 | `GET /api/v1/ai/runs/{request_id}` | Read an owned action; shared leases coalesce status checks |
 | `GET /api/v1/ai/allowance` | Read `available`, `reserved`, `avatar_price`, and nullable `fitness_price`/`group_photo_price` |
-| `GET /api/v1/ai/library` | Read complete saved image sets owned by the account, with refreshed signed media URLs |
-| `POST /api/v1/ai/runs/{request_id}/images` | Atomically attach committed owned profile media to a completed generation; no generation or credit charge |
+| `GET /api/v1/ai/library` | Read complete saved image sets owned by the account, using original Blend URLs |
+| `PATCH /api/v1/me` with `companion_image` | Select an owned Avatar or Fitness result by `request_id` and `stage` |
 
 All require the normal Bearer token and app headers. Unknown and other users'
 request IDs return the same 404. New routes preserve `/api/v1`; existing endpoints,
@@ -46,17 +45,14 @@ legacy fixtures and shared error fields keep their contracts.
 For `workflow: "fitness"`, parameters are `avatar_request_id` and `identity_details`.
 For `workflow: "group_photo"`, parameters are `scene` and an ordered `characters`
 array of `{ avatar_request_id, identity_details }` objects. The array requires two
-to five distinct characters. The backend resolves completed Avatar requests or
-saved Avatar library entries owned by the caller, and builds the numbered `cast_roster` in the same order as their
+to five distinct characters. The backend resolves saved Avatar library entries owned by the caller, and builds the numbered `cast_roster` in the same order as their
 images. Raw URLs, Blend file IDs and other users' generations are not accepted.
 Source authorization happens before credit reservation and provider submission.
 An already-admitted action remains recoverable after source request cleanup.
 
 This source policy excludes arbitrary profile media IDs and cross-user group
 assembly. Group sizes above five and the 20-30-character grid remain outside the
-verified scope. Unsaved requests retain their seven-day window. Saved library
-entries and private media survive request pruning until account deletion; source
-resolution signs their owned media again before submitting a derivative workflow.
+verified scope. Unsaved requests retain their seven-day window. Saved library entries retain their original Blend URLs and survive request pruning until account deletion. Derivative workflows use those same URLs.
 
 `pending` and `running` include the minimum polling delay. `completed` carries
 `data.image_url` for Avatar and Group Photo, or five named URLs in `data.resting`,
@@ -66,10 +62,10 @@ an allowed HTTPS Blend host for each expected output. Fitness requires all five
 images to validate before consuming its stored price; an incomplete bundle releases
 the entire hold. Group Photo accepts one image from `output.group_photo`. Validation
 proves the provider envelope and allowed URL, not visual quality or PNG transparency.
-A returned URL is not a saved FitFight companion.
+Validated completed outputs are saved automatically with credit settlement. Selecting one as a companion is a separate profile update.
 
 The Swift bridge supports `startAvatarGeneration`, `startFitnessGeneration`,
-`startGroupPhotoGeneration`, `aiRequest`, `aiAllowance`, `aiLibrary` and `saveAIImages`.
+`startGroupPhotoGeneration`, `aiRequest`, `aiAllowance` and `aiLibrary`.
 AI calls send an individual trace ID. `FitFightAIError` preserves the request ID and
 retry delay and supplies English/French descriptions. App receipt/display telemetry
 is outside this scope.
@@ -82,22 +78,28 @@ Fitness selects one saved avatar. Group Photo selects two to five in explicit ca
 order and takes a scene description. These controls do not use HealthKit data.
 
 The native app persists the exact action inputs and UUID key before submission,
-then persists the request ID and each committed image upload under the account's
-local key. Closing the screen stops local polling; reopening resumes the same
+then persists the request ID under the account's local key. Closing the screen stops local polling; reopening resumes the same
 action. Unknown/network outcomes retain the action. Definite pre-admission
 rejections or terminal results let the user start a new deliberate action. A
 corrupt local action disables starts instead of risking another paid request.
 Account checks prevent delayed responses from updating a different signed-in user.
 
-Completed images pass through the existing signed upload and checksum commit flow,
-preserving PNG transparency. The new library attachment requires a completed owned
-request, distinct owned ready photo media, and exactly the workflow's expected
-stages. The app supplies the downloaded result images; the attachment API validates
-ownership and completeness, not visual provenance. It never fetches arbitrary
-client URLs or starts Blend. The first save must occur within request retention;
-repeated saves of the same IDs remain idempotent after pruning. An interrupted
-upload may leave an unassigned media object, handled by the existing account media
-lifecycle; it cannot trigger a second generation charge.
+Blend owns the image files and their durable URLs. FitFight never downloads and
+re-uploads them. The backend records each validated URL, owner, request, workflow,
+description and stage in `private.ai_library_images`, in the same transaction as
+successful credit settlement. This also runs during background reconciliation, so
+closing the app does not prevent saving. The request description is private stored
+product data; it is not written to HTTP logs. The app only reads the library and
+displays the original images through its normal image loader.
+
+`PATCH /api/v1/me` accepts `companion_image: { request_id, stage }`. The backend
+looks up an owned Avatar or Fitness result and records its URL and description on
+the profile. It rejects arbitrary URLs, someone else's result and Group Photo
+selection. A new optional `companion_image_url` response field supports current
+native profile, Fight and Feed displays; existing uploaded `avatar` fields retain
+their shape and content. Shared identities retain their existing `avatar_url` shape.
+Older profile edits preserve the selection when omitted. Choosing a stock/text
+companion or uploading another profile photo clears the generated selection.
 
 Avatar and individual Fitness images can be chosen as the custom companion with
 one existing profile update. The chosen image appears on You and existing avatar
@@ -273,7 +275,7 @@ support conversations. Do not put tokens in shell history or documentation.
 
 ## Configuration and rollout
 
-Apply the three private migrations through the authorized pipeline:
+Apply the three migrations through the authorized pipeline:
 
 1. `20260917003356_blend_workflow_requests.sql`
 2. `20260918142724_blend_credit_history.sql`
@@ -354,7 +356,14 @@ The cloud database suite covers concurrent last-credit requests, duplicate grant
 reservations and settlements, compensation, rollback integrity, every event chain
 and stored balance, zero allowance, ownership, disabled recovery, unknown holds,
 abandoned-run completion, cleanup and deletion. pgTAP checks private privileges and
-RLS. Shared unchanged AI fixtures plus the new allowance fixture feed backend and
+RLS. The removed upload/attachment tests have been replaced by a database scenario
+that asserts exact Blend URLs, no image download or Storage call, complete automatic
+saving, ownership, profile selection and survival after pruning. Five overlapping
+mock tests were removed where the real database or HTTP transport already checks
+the same rule. Core accounting, duplicate-start, recovery and old-client assertions
+remain. Expectations should change only when the intended behavior changes; explain
+that change in the diff. Refactoring alone is not a reason to change them.
+Shared unchanged AI fixtures plus the new allowance fixture feed backend and
 hosted Swift contract tests. Additional Fitness and Group Photo fixtures cover the
 new results without replacing the old Avatar fixtures.
 

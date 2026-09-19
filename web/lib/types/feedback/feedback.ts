@@ -4,6 +4,23 @@ import { mediaObjectSchema } from "@/lib/types/media/media";
 export const feedbackKindValues = ["bug", "feature"] as const;
 export const feedbackKindSchema = z.enum(feedbackKindValues);
 
+export const feedbackStatusValues = ["open", "archived"] as const;
+export const feedbackStatusSchema = z.enum(feedbackStatusValues);
+export const feedbackSortValues = ["votes", "newest", "oldest"] as const;
+export const feedbackSortSchema = z.enum(feedbackSortValues);
+
+export const feedbackArchiveRequestSchema = z.object({
+    archived: z.boolean(),
+    reason: z.string().trim().max(280).optional(),
+}).strict();
+
+export const feedbackArchiveResponseSchema = z.object({
+    archived: z.boolean(),
+    archive_reason: z.string().nullable(),
+}).strict();
+
+export const feedbackOwnerRowSchema = z.object({ author_id: z.string().uuid() });
+
 const feedbackMetadataTextSchema = z.string().trim().min(1).max(120);
 
 export const feedbackMetadataSchema = z
@@ -68,6 +85,8 @@ export const createFeedbackCommentRequestSchema = z
 export const listFeedbackQuerySchema = z
     .object({
         kind: feedbackKindSchema.optional(),
+        status: feedbackStatusSchema.optional(),
+        sort: feedbackSortSchema.optional(),
     })
     .strict();
 
@@ -119,6 +138,8 @@ export const feedbackPostSummarySchema = z
         created_at: z.string().datetime(),
         metadata: feedbackMetadataSchema,
         media: z.array(mediaObjectSchema).default([]),
+        archived: z.boolean().default(false),
+        archive_reason: z.string().nullable().default(null),
     })
     .strict();
 
@@ -146,6 +167,7 @@ export const feedbackCommentRowSchema = feedbackCommentSchema.extend({
 export const feedbackListResponseSchema = z
     .object({
         posts: z.array(feedbackPostSummarySchema),
+        can_archive: z.boolean().optional(),
     })
     .strict();
 
@@ -166,6 +188,7 @@ export const feedbackDetailResponseSchema = feedbackPostDetailSchema
     .extend({
         can_launch_fix: z.boolean(),
         can_delete: z.boolean().default(false),
+        can_archive: z.boolean().default(false),
     })
     .strict();
 
@@ -196,6 +219,11 @@ export const feedbackCommentResponseSchema = z
     .strict();
 
 export type FeedbackKind = z.infer<typeof feedbackKindSchema>;
+export type FeedbackStatus = z.infer<typeof feedbackStatusSchema>;
+export type FeedbackSort = z.infer<typeof feedbackSortSchema>;
+export type FeedbackArchiveRequest = z.infer<typeof feedbackArchiveRequestSchema>;
+export type FeedbackArchiveResponse = z.infer<typeof feedbackArchiveResponseSchema>;
+export type FeedbackOwnerRow = z.infer<typeof feedbackOwnerRowSchema>;
 export type FeedbackPostRow = z.infer<typeof feedbackPostRowSchema>;
 export type FeedbackCommentRow = z.infer<typeof feedbackCommentRowSchema>;
 export type FeedbackMetadata = z.infer<typeof feedbackMetadataSchema>;

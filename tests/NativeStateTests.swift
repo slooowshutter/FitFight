@@ -91,13 +91,17 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
     static var commentPages: [String: FitFightFightPostCommentList]?
     static var feedbackLists: [CheckedContinuation<FitFightFeedbackList, Error>] = []
     static var feedbackDetails: [CheckedContinuation<FitFightFeedbackDetail, Error>] = []
+    static var feedbackArchives: [CheckedContinuation<FitFightFeedbackArchive, Error>] = []
     static var feedbackDeletions: [CheckedContinuation<Void, Error>] = []
 
-    func listFeedback(kind: String?, accessToken: String) async throws -> FitFightFeedbackList {
+    func listFeedback(kind: String?, status: String = "open", sort: String = "votes", accessToken: String) async throws -> FitFightFeedbackList {
         try await withCheckedThrowingContinuation { Self.feedbackLists.append($0) }
     }
     func feedbackDetail(postID: UUID, accessToken: String) async throws -> FitFightFeedbackDetail {
         try await withCheckedThrowingContinuation { Self.feedbackDetails.append($0) }
+    }
+    func archiveFeedbackPost(postID: UUID, archived: Bool, reason: String?, accessToken: String) async throws -> FitFightFeedbackArchive {
+        try await withCheckedThrowingContinuation { Self.feedbackArchives.append($0) }
     }
     func deleteFeedbackPost(postID: UUID, accessToken: String) async throws {
         try await withCheckedThrowingContinuation { Self.feedbackDeletions.append($0) }
@@ -830,6 +834,7 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
         var requestB = requestA
         requestB.id = UUID()
         requestB.kind = "bug"
+        requestB.createdAt = requestA.createdAt.addingTimeInterval(-1)
         let requestComment = FitFightFeedbackComment(id: UUID(), body: "Keep this comment", authorHandle: "test", createdAt: Date())
         for detailFinishesFirst in [false, true] {
             let feedback = FeedbackStore()
@@ -891,6 +896,49 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
             check(feedback.posts == (deletionFails ? [requestA, requestB] : [requestB]), "list reload excludes a deleted request but still accepts other rows")
             check(feedback.detail == (deletionFails ? requestA : nil), "stale detail cannot restore a successfully deleted request")
             check(!feedback.isLoading && !feedback.isDeleting, "feedback loading and deletion flags settle after pending requests finish")
+        }
+
+        for archiveFails in [false, true] {
+            let feedback = FeedbackStore()
+            feedback.posts = [requestA]
+            let initialDetail = Task { await feedback.loadDetail(session: session, postID: requestA.id) }
+            while FitFightAPI.feedbackDetails.isEmpty { await Task.yield() }
+            FitFightAPI.feedbackDetails.removeFirst().resume(returning: .init(post: requestA, comments: [requestComment]))
+            await initialDetail.value
+            let staleList = Task { await feedback.load(session: session, kind: nil) }
+            let staleDetail = Task { await feedback.loadDetail(session: session, postID: requestA.id) }
+            let archive = Task { await feedback.archive(session: session, postID: requestA.id, archived: true, reason: "Resolved") }
+            while FitFightAPI.feedbackArchives.isEmpty || FitFightAPI.feedbackLists.isEmpty || FitFightAPI.feedbackDetails.isEmpty { await Task.yield() }
+            if archiveFails {
+                FitFightAPI.feedbackArchives.removeFirst().resume(throwing: TestFailure.offline)
+            } else {
+                FitFightAPI.feedbackArchives.removeFirst().resume(returning: .init(archived: true, archiveReason: "Resolved"))
+            }
+            check(await archive.value == !archiveFails, "archive reports the server result")
+            if archiveFails { check(feedback.error != nil, "failed archive explains the failure") }
+            FitFightAPI.feedbackLists.removeFirst().resume(returning: .init(posts: [requestA, requestB]))
+            FitFightAPI.feedbackDetails.removeFirst().resume(returning: .init(post: requestA, comments: [requestComment]))
+            await staleList.value
+            await staleDetail.value
+            check(feedback.posts.contains(where: { $0.id == requestA.id }) == archiveFails, "stale list cannot restore an archived post to Open")
+            check(feedback.detail?.archived == !archiveFails, "stale detail cannot undo a successful archive")
+            check(feedback.comments == [requestComment] && feedback.detail?.voteCount == requestA.voteCount, "archive preserves votes and discussion")
+            check(!feedback.isArchiving && !feedback.isLoading, "archive and refresh flags settle")
+            if !archiveFails {
+                let archivedLoad = Task { await feedback.load(session: session, kind: nil, status: "archived") }
+                while FitFightAPI.feedbackLists.isEmpty { await Task.yield() }
+                var archivedPost = requestA
+                archivedPost.archived = true
+                archivedPost.archiveReason = "Resolved"
+                FitFightAPI.feedbackLists.removeFirst().resume(returning: .init(posts: [archivedPost]))
+                await archivedLoad.value
+                let reopen = Task { await feedback.archive(session: session, postID: requestA.id, archived: false, reason: nil) }
+                while FitFightAPI.feedbackArchives.isEmpty { await Task.yield() }
+                FitFightAPI.feedbackArchives.removeFirst().resume(returning: .init(archived: false, archiveReason: nil))
+                check(await reopen.value, "archived feedback can reopen")
+                check(feedback.posts.isEmpty && feedback.detail?.archived == false, "reopen removes the archived row and restores the detail state")
+                check(feedback.detail?.archiveReason == nil && feedback.comments == [requestComment], "reopening clears the reason and keeps discussion")
+            }
         }
 
         if failures != 0 { exit(1) }

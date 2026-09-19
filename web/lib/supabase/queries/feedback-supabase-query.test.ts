@@ -59,7 +59,7 @@ test("feedback deletion authenticates before accessing the database", async () =
     assert.equal(response.status, 401);
 });
 
-test("only a trusted admin account can delete feedback", async (t) => {
+test("only the author or a trusted admin account can delete feedback", async (t) => {
     for (const scenario of [
         {
             name: "Marc's handle with an Apple relay email",
@@ -80,6 +80,14 @@ test("only a trusted admin account can delete feedback", async (t) => {
             handle: "owner",
             email: "marc@marclamy.com",
             confirmed: true,
+            status: 200,
+        },
+        {
+            name: "post author",
+            handle: "maya_moves",
+            email: "maya@example.com",
+            confirmed: true,
+            owns: true,
             status: 200,
         },
         {
@@ -145,7 +153,7 @@ test("only a trusted admin account can delete feedback", async (t) => {
                     },
                 },
             });
-            const { database, queries, bound } = createDatabaseStub(() => scenario.missing ? [] : [{ id: postId }]);
+            const { database, queries, bound } = createDatabaseStub(() => scenario.missing ? [] : [{ author_id: scenario.owns ? userId : authorId }]);
             if (scenario.status === 200) {
                 await deleteFeedbackPost(userId, postId, admin, database);
             } else {
@@ -155,10 +163,14 @@ test("only a trusted admin account can delete feedback", async (t) => {
                 );
             }
             if (scenario.status === 200 || scenario.status === 404) {
-                assert.deepEqual(queries, ["delete from public.feedback_posts where id = ? returning id"]);
-                assert.deepEqual(bound, [[postId]]);
-            } else {
+                assert.match(queries[0], /select author_id .* for update/);
+                if (scenario.status === 200) assert.match(queries[1], /delete from public.feedback_posts/);
+                assert.deepEqual(bound, scenario.status === 200 ? [[postId], [postId]] : [[postId]]);
+            } else if (scenario.status === 401) {
                 assert.deepEqual(queries, []);
+            } else {
+                assert.equal(queries.length, 1);
+                assert.match(queries[0], /select author_id/);
             }
         });
     }
@@ -403,6 +415,8 @@ test("listing feedback posts maps vote counts and the viewer vote", async () => 
                 created_at: "2026-09-04T12:00:00Z",
                 metadata: postRow.metadata,
                 media: [],
+                archived: false,
+                archive_reason: null,
             },
         ],
     });
@@ -496,8 +510,8 @@ test("creating a feedback post inserts the trimmed write-up", async () => {
 
 test("toggling a vote inserts when the viewer has not voted", async () => {
     const { database, queries } = createDatabaseStub((sql) => {
-        if (sql.includes("select id from public.feedback_posts")) {
-            return [{ id: postId }];
+        if (sql.includes("select archived, archive_reason from public.feedback_posts")) {
+            return [{ archived: false, archive_reason: null }];
         }
         if (sql.includes("delete from public.feedback_votes")) {
             return [];
@@ -588,6 +602,7 @@ test("commenting on a missing post returns not found", async () => {
 
 test("creating a feedback comment stores client metadata", async () => {
     const { database, queries, bound } = createDatabaseStub((sql) => {
+        if (sql.includes("select archived, archive_reason")) return [{ archived: false, archive_reason: null }];
         if (sql.includes("interval '24 hours'")) {
             return [{ n: 0 }];
         }
@@ -641,4 +656,29 @@ test("creating a feedback comment stores client metadata", async () => {
         app_version: "1.0.0",
         os: "iOS",
     });
+});
+
+
+test("archived feedback rejects votes and comments without changing either", async () => {
+    const { database, queries } = createDatabaseStub((sql) => {
+        if (sql.includes("interval '24 hours'")) return [{ n: 0 }];
+        return [{ archived: true, archive_reason: "Resolved" }];
+    });
+    for (const action of [
+        () => toggleFeedbackVote(userId, postId, database),
+        () => createFeedbackComment(userId, postId, { body: "Me too" }, database),
+    ]) {
+        await assert.rejects(action, (error: unknown) => error instanceof ApiError && error.status === 409);
+    }
+    assert.equal(queries.some((query) => /insert into|delete from/.test(query)), false);
+});
+
+test("feedback filters validate type, status, and sort independently", () => {
+    assert.deepEqual(listFeedbackQuerySchema.parse({}), {});
+    assert.deepEqual(listFeedbackQuerySchema.parse({ status: "archived", kind: "bug", sort: "oldest" }), {
+        status: "archived", kind: "bug", sort: "oldest",
+    });
+    for (const input of [{ status: "hidden" }, { sort: "random" }, { kind: "all" }]) {
+        assert.equal(listFeedbackQuerySchema.safeParse(input).success, false);
+    }
 });

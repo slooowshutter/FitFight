@@ -366,6 +366,8 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
     var createdAt: Date
     var metadata: FitFightFeedbackMetadata
     var media: [FitFightMedia]
+    var archived: Bool
+    var archiveReason: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -381,6 +383,8 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
         case createdAt = "created_at"
         case metadata
         case media
+        case archived
+        case archiveReason = "archive_reason"
     }
 
     init(
@@ -396,7 +400,9 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
         mine: Bool,
         createdAt: Date,
         metadata: FitFightFeedbackMetadata = FitFightFeedbackMetadata(),
-        media: [FitFightMedia] = []
+        media: [FitFightMedia] = [],
+        archived: Bool = false,
+        archiveReason: String? = nil
     ) {
         self.id = id
         self.kind = kind
@@ -411,6 +417,8 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
         self.createdAt = createdAt
         self.metadata = metadata
         self.media = media
+        self.archived = archived
+        self.archiveReason = archiveReason
     }
 
     init(from decoder: Decoder) throws {
@@ -429,6 +437,8 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
         metadata = try container.decodeIfPresent(FitFightFeedbackMetadata.self, forKey: .metadata)
             ?? FitFightFeedbackMetadata()
         media = try container.decodeIfPresent([FitFightMedia].self, forKey: .media) ?? []
+        archived = try container.decodeIfPresent(Bool.self, forKey: .archived) ?? false
+        archiveReason = try container.decodeIfPresent(String.self, forKey: .archiveReason)
     }
 }
 
@@ -479,6 +489,23 @@ struct FitFightFeedbackComment: Codable, Identifiable, Equatable, Hashable {
 
 struct FitFightFeedbackList: Decodable, Equatable {
     var posts: [FitFightFeedbackPost]
+    var canArchive: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case posts
+        case canArchive = "can_archive"
+    }
+
+    init(posts: [FitFightFeedbackPost], canArchive: Bool = false) {
+        self.posts = posts
+        self.canArchive = canArchive
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        posts = try container.decode([FitFightFeedbackPost].self, forKey: .posts)
+        canArchive = try container.decodeIfPresent(Bool.self, forKey: .canArchive) ?? false
+    }
 }
 
 struct FitFightFeedbackDetail: Decodable, Equatable {
@@ -486,12 +513,14 @@ struct FitFightFeedbackDetail: Decodable, Equatable {
     var comments: [FitFightFeedbackComment]
     var canLaunchFix: Bool
     var canDelete: Bool
+    var canArchive = false
 
     enum CodingKeys: String, CodingKey {
         case post
         case comments
         case canLaunchFix = "can_launch_fix"
         case canDelete = "can_delete"
+        case canArchive = "can_archive"
     }
 
     init(from decoder: Decoder) throws {
@@ -500,6 +529,17 @@ struct FitFightFeedbackDetail: Decodable, Equatable {
         comments = try container.decode([FitFightFeedbackComment].self, forKey: .comments)
         canLaunchFix = try container.decodeIfPresent(Bool.self, forKey: .canLaunchFix) ?? false
         canDelete = try container.decodeIfPresent(Bool.self, forKey: .canDelete) ?? false
+        canArchive = try container.decodeIfPresent(Bool.self, forKey: .canArchive) ?? false
+    }
+}
+
+struct FitFightFeedbackArchive: Decodable, Equatable {
+    var archived: Bool
+    var archiveReason: String?
+
+    enum CodingKeys: String, CodingKey {
+        case archived
+        case archiveReason = "archive_reason"
     }
 }
 
@@ -1272,12 +1312,26 @@ struct FitFightAPI {
         )
     }
 
-    func listFeedback(kind: String?, accessToken: String) async throws -> FitFightFeedbackList {
-        var path = "feedback"
-        if let kind {
-            path += "?kind=\(kind)"
+    func listFeedback(kind: String?, status: String = "open", sort: String = "votes", accessToken: String) async throws -> FitFightFeedbackList {
+        var query = URLComponents()
+        query.queryItems = [URLQueryItem(name: "status", value: status), URLQueryItem(name: "sort", value: sort)]
+        if let kind { query.queryItems?.append(URLQueryItem(name: "kind", value: kind)) }
+        return try await get(path: "feedback?\(query.percentEncodedQuery ?? "")", accessToken: accessToken, expected: [200])
+    }
+
+    func archiveFeedbackPost(postID: UUID, archived: Bool, reason: String?, accessToken: String) async throws -> FitFightFeedbackArchive {
+        struct ArchiveBody: Encodable {
+            let archived: Bool
+            let reason: String?
         }
-        return try await get(path: path, accessToken: accessToken, expected: [200])
+        return try await request(
+            path: "feedback/\(postID.uuidString.lowercased())",
+            method: "PATCH",
+            accessToken: accessToken,
+            body: Self.encoder.encode(ArchiveBody(archived: archived, reason: reason)),
+            idempotencyKey: nil,
+            expected: [200]
+        )
     }
 
     func feedbackDetail(postID: UUID, accessToken: String) async throws -> FitFightFeedbackDetail {

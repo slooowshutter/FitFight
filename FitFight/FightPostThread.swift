@@ -94,12 +94,12 @@ struct FightPostEngagement: View {
                             .lineLimit(1...4)
                         FFButton(
                             title: loading ? String(appLocalized: "Posting…") : String(appLocalized: "Send"),
-                            kind: .ghost,
+                            kind: .primary,
+                            enabled: !loading && !loadingComments && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                             fullWidth: false
                         ) {
                             Task { await sendComment() }
                         }
-                        .disabled(loading || loadingComments || draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
                 }
             }

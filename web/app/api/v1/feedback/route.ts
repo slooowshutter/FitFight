@@ -1,7 +1,6 @@
 import { apiRoute, corsPreflight, json, readJson } from "@/lib/http";
 import { createAppFeedbackBacklogItem } from "@/lib/notion/create-app-feedback-item";
-import { verifyUser } from "@/lib/supabase/queries/auth-supabase-query";
-import { readAdminViewer } from "@/lib/supabase/queries/auth-supabase-query";
+import { readAdminViewer, verifyUser } from "@/lib/supabase/queries/auth-supabase-query";
 import { isFitFightAdmin } from "@/lib/admin/is-fitfight-admin";
 import {
     createFeedbackPost,

@@ -834,6 +834,7 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
         var requestB = requestA
         requestB.id = UUID()
         requestB.kind = "bug"
+        requestB.createdAt = requestA.createdAt.addingTimeInterval(-1)
         let requestComment = FitFightFeedbackComment(id: UUID(), body: "Keep this comment", authorHandle: "test", createdAt: Date())
         for detailFinishesFirst in [false, true] {
             let feedback = FeedbackStore()

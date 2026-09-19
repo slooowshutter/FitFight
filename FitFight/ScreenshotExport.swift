@@ -221,6 +221,9 @@ enum ScreenshotExport {
             Shot(name: "05-feed") { store, model in
                 frame(FeedView(), tab: .feed, themeStore: store, model: model)
             },
+            Shot(name: "06-feedback-filters") { store, model in
+                sheet(RequestsScreenshot.filters(), themeStore: store, model: model)
+            },
             Shot(name: "06-requests") { store, model in
                 sheet(RequestsScreenshot.board(), themeStore: store, model: model)
             },

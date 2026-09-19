@@ -39,6 +39,7 @@ final class FeedbackStore: ObservableObject {
         #if DEBUG && targetEnvironment(simulator)
         if CompanionPreview.isEnabled {
             posts = Self.previewPosts.filter { (kind == nil || $0.kind == kind) && $0.archived == (status == "archived") }
+            sortPosts()
             return
         }
         #endif
@@ -64,6 +65,7 @@ final class FeedbackStore: ObservableObject {
                 }
                 return post
             }.filter { $0.archived == (status == "archived") }
+            sortPosts()
             RemoteImageLoader.shared.prefetch(
                 self.posts.flatMap(\.media).compactMap { media in
                     RequestAttachment.showsPhoto(media) ? media.url : nil
@@ -147,9 +149,7 @@ final class FeedbackStore: ObservableObject {
             if let index = posts.firstIndex(where: { $0.id == postID }) {
                 posts[index].voted = result.voted
                 posts[index].voteCount = result.voteCount
-                if listSort == "votes" {
-                    posts.sort { $0.voteCount == $1.voteCount ? $0.createdAt > $1.createdAt : $0.voteCount > $1.voteCount }
-                }
+                sortPosts()
             }
             if detail?.id == postID {
                 detail?.voted = result.voted
@@ -225,6 +225,7 @@ final class FeedbackStore: ObservableObject {
     func delete(session: SessionStore, postID: UUID) async -> Bool {
         guard !isDeleting && !isArchiving else { return false }
         isDeleting = true
+        let detailStartedAt = detailLoad
         defer { isDeleting = false }
         do {
             let token = try await session.freshAccessToken()
@@ -247,7 +248,7 @@ final class FeedbackStore: ObservableObject {
             postedComments.removeValue(forKey: postID)
             return true
         } catch {
-            if commentsFor == nil || commentsFor == postID {
+            if detailLoad == detailStartedAt || commentsFor == postID {
                 self.error = error.localizedDescription
             }
             return false
@@ -257,6 +258,7 @@ final class FeedbackStore: ObservableObject {
     func archive(session: SessionStore, postID: UUID, archived: Bool, reason: String?) async -> Bool {
         guard !isArchiving && !isDeleting else { return false }
         isArchiving = true
+        let detailStartedAt = detailLoad
         defer { isArchiving = false }
         do {
             let token = try await session.freshAccessToken()
@@ -272,10 +274,10 @@ final class FeedbackStore: ObservableObject {
                 detail?.archived = state.archived
                 detail?.archiveReason = state.archiveReason
             }
-            error = nil
+            if detailLoad == detailStartedAt || commentsFor == postID { error = nil }
             return true
         } catch {
-            self.error = error.localizedDescription
+            if detailLoad == detailStartedAt || commentsFor == postID { self.error = error.localizedDescription }
             return false
         }
     }
@@ -348,6 +350,16 @@ final class FeedbackStore: ObservableObject {
         post.archived = archive.state.archived
         post.archiveReason = archive.state.archiveReason
         return post
+    }
+
+    private func sortPosts() {
+        posts.sort { left, right in
+            if listSort == "votes", left.voteCount != right.voteCount { return left.voteCount > right.voteCount }
+            if left.createdAt != right.createdAt {
+                return listSort == "oldest" ? left.createdAt < right.createdAt : left.createdAt > right.createdAt
+            }
+            return left.id.uuidString < right.id.uuidString
+        }
     }
 
     private func postedAfter(postID: UUID, startedAt: Int) -> [FitFightFeedbackComment] {
@@ -449,6 +461,11 @@ enum RequestsScreenshot {
     static func compose() -> some View {
         ComposeRequestView(store: FeedbackStore())
     }
+
+    static func filters() -> some View {
+        RequestFiltersSheet(draft: RequestFilter(), onApply: { _ in })
+            .frame(height: 520)
+    }
 }
 
 struct RequestFilter: Hashable {
@@ -469,7 +486,7 @@ struct RequestFilter: Hashable {
 
         var title: String {
             switch self {
-            case .open: return String(appLocalized: "Open")
+            case .open: return String(appLocalized: "feedback.open", defaultValue: "Open")
             case .archived: return String(appLocalized: "Archived")
             }
         }

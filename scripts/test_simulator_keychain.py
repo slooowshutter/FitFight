@@ -49,7 +49,15 @@ with tempfile.TemporaryDirectory(prefix="fitfight-keychain-probe-") as directory
         ], text=True).strip())
         output = container / "Documents/keychain-probe.json"
         output.unlink(missing_ok=True)
-        subprocess.run(["xcrun", "simctl", "launch", device, bundle_id], check=True)
+        try:
+            subprocess.run(["xcrun", "simctl", "launch", device, bundle_id], check=True)
+        except subprocess.CalledProcessError:
+            subprocess.run([
+                "xcrun", "simctl", "spawn", device, "log", "show", "--last", "3m",
+                "--style", "compact", "--predicate",
+                f'eventMessage CONTAINS "{bundle_id}" OR process == "amfid"',
+            ], check=False)
+            raise
         for _ in range(150):
             if output.exists():
                 break
@@ -59,6 +67,6 @@ with tempfile.TemporaryDirectory(prefix="fitfight-keychain-probe-") as directory
         expected = 0 if signed else -34018
         assert result == {"add": expected, "read": expected, "delete": expected}, result
         subprocess.run(["xcrun", "simctl", "terminate", device, bundle_id], check=True)
-        subprocess.run(["xcrun", "simctl", "uninstall", device, bundle_id], check=True)
+    subprocess.run(["xcrun", "simctl", "uninstall", device, bundle_id], check=True)
 
 print("Simulator packaging regression passed: unsigned fails, signed add/read/delete succeed.")

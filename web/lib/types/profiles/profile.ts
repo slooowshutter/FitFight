@@ -18,7 +18,8 @@ export const profileSchema = z.object({
     time_zone: timeZoneSchema.optional(),
 });
 
-export const profileDatabaseRowSchema = profileSchema.omit({ avatar: true }).extend({
+export const profileDatabaseRowSchema = profileSchema.omit({ avatar: true, user_id: true }).extend({
+    id: z.string().uuid(),
     avatar_media_id: z.string().uuid().nullable(),
     time_zone: timeZoneSchema.nullable(),
 });

@@ -295,7 +295,7 @@ async function mapPosts(
         select tag.post_id, tag.user_id, profile.handle, profile.display_name
         from public.fight_post_tags as tag
         join public.profiles as profile
-            on profile.user_id = tag.user_id and profile.deleted_at is null
+            on profile.id = tag.user_id and profile.deleted_at is null
         where tag.post_id in ${database(postIds)}
         order by profile.handle
     `;
@@ -459,7 +459,7 @@ export async function listFightPosts(
                 from public.fight_posts as post
                 left join public.fights as fight on fight.id = post.fight_id
                 join public.profiles as profile
-                    on profile.user_id = post.author_id and profile.deleted_at is null
+                    on profile.id = post.author_id and profile.deleted_at is null
                 left join public.media_objects as avatar
                     on avatar.id = profile.avatar_media_id and avatar.status = 'ready'
                 where not exists (
@@ -590,7 +590,7 @@ export async function listFightPosts(
                 from public.fight_posts as post
                 left join public.fights as fight on fight.id = post.fight_id
                 join public.profiles as profile
-                    on profile.user_id = post.author_id and profile.deleted_at is null
+                    on profile.id = post.author_id and profile.deleted_at is null
                 left join public.media_objects as avatar
                     on avatar.id = profile.avatar_media_id and avatar.status = 'ready'
                 where not exists (
@@ -780,7 +780,7 @@ async function loadPostRows(ids: string[], database: Sql): Promise<PostRow[]> {
         from public.fight_posts as post
         left join public.fights as fight on fight.id = post.fight_id
         join public.profiles as profile
-            on profile.user_id = post.author_id and profile.deleted_at is null
+            on profile.id = post.author_id and profile.deleted_at is null
         left join public.media_objects as avatar
             on avatar.id = profile.avatar_media_id and avatar.status = 'ready'
         where post.id in ${database(ids)}
@@ -981,7 +981,7 @@ export async function createFeedPosts(
         const [profile] = await database<{ handle: string }[]>`
             select handle
             from public.profiles
-            where user_id = ${userId}
+            where id = ${userId}
                 and deleted_at is null
         `;
         if (
@@ -1156,7 +1156,7 @@ export async function listFeedPeople(
         })[]
     >`
         select distinct
-            profile.user_id, profile.handle, profile.display_name, profile.companion_id,
+            profile.id as user_id, profile.handle, profile.display_name, profile.companion_id,
             avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
             avatar.status::text as avatar_status, avatar.object_path as avatar_object_path,
             avatar.original_filename as avatar_original_filename, avatar.content_type as avatar_content_type,
@@ -1167,11 +1167,11 @@ export async function listFeedPeople(
         left join public.media_objects as avatar
             on avatar.id = profile.avatar_media_id and avatar.status = 'ready'
         where profile.deleted_at is null
-            and profile.user_id <> ${userId}
+            and profile.id <> ${userId}
             and not exists (
                 select 1 from private.feed_blocks as blocked
-                where (blocked.blocker_id = ${userId} and blocked.blocked_id = profile.user_id)
-                      or (blocked.blocker_id = profile.user_id and blocked.blocked_id = ${userId})
+                where (blocked.blocker_id = ${userId} and blocked.blocked_id = profile.id)
+                      or (blocked.blocker_id = profile.id and blocked.blocked_id = ${userId})
             )
             and exists (
                 select 1
@@ -1181,7 +1181,7 @@ export async function listFeedPeople(
                 join public.fights as done_fight
                     on done_fight.id = done_me.fight_id
                 where done_me.user_id = ${userId}
-                    and done_them.user_id = profile.user_id
+                    and done_them.user_id = profile.id
                     and done_me.state = 'accepted'
                     and done_them.state = 'accepted'
                     and done_fight.state = 'final'
@@ -1195,7 +1195,7 @@ export async function listFeedPeople(
                         join public.fight_members as them
                             on them.fight_id = me.fight_id
                         where me.user_id = ${userId}
-                            and them.user_id = profile.user_id
+                            and them.user_id = profile.id
                             and me.state in ('accepted', 'deferred')
                             and them.state in ('accepted', 'deferred')
                     )
@@ -1205,7 +1205,7 @@ export async function listFeedPeople(
                     and exists (
                         select 1
                         from public.fight_members as membership
-                        where membership.user_id = profile.user_id
+                        where membership.user_id = profile.id
                             and membership.state in ('accepted', 'deferred')
                             and membership.fight_id in ${database(fightIds.length > 0 ? fightIds : [userId])}
                     )
@@ -1382,8 +1382,8 @@ export async function blockFeedAuthor(
         );
     }
     const [profile] = await database<{ user_id: string }[]>`
-        select user_id from public.profiles
-        where user_id = ${blockedId} and deleted_at is null
+        select id as user_id from public.profiles
+        where id = ${blockedId} and deleted_at is null
     `;
     if (!profile) {
         throw new ApiError(

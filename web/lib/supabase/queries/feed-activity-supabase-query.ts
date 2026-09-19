@@ -22,7 +22,7 @@ export async function listFeedActivity(
             select p.id, p.author_id, p.body, p.created_at, channel.id as fight_id,
                 channel.name as fight_name
             from public.fight_posts p
-            join public.profiles author on author.user_id = p.author_id and author.deleted_at is null
+            join public.profiles author on author.id = p.author_id and author.deleted_at is null
             join lateral (
                 select f.id,
                     coalesce(nullif(nullif(f.name, 'Steps Fight'), ''), nullif(f.action_text, ''), 'Steps Fight') as name
@@ -73,7 +73,7 @@ export async function listFeedActivity(
                 null::uuid, null::uuid, ''
             from private.fight_membership_events e
             join my_fights f on f.id = e.fight_id
-            join public.profiles member on member.user_id = e.user_id and member.deleted_at is null
+            join public.profiles member on member.id = e.user_id and member.deleted_at is null
             where (f.state in ('accepted', 'deferred') or e.user_id = ${userId})
                 and not exists (
                     select 1 from private.feed_blocks b
@@ -83,14 +83,14 @@ export async function listFeedActivity(
         )
         select e.id, e.kind,
             to_char(e.occurred_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as occurred_at,
-            jsonb_build_object('user_id', actor.user_id, 'handle', actor.handle) as actor,
-            case when subject.user_id is not null then
-                jsonb_build_object('user_id', subject.user_id, 'handle', subject.handle)
+            jsonb_build_object('user_id', actor.id, 'handle', actor.handle) as actor,
+            case when subject.id is not null then
+                jsonb_build_object('user_id', subject.id, 'handle', subject.handle)
             else null end as subject,
             e.fight_id, e.fight_name, e.post_id, e.comment_id, e.body
         from events e
-        join public.profiles actor on actor.user_id = e.actor_id and actor.deleted_at is null
-        left join public.profiles subject on subject.user_id = e.subject_id and subject.deleted_at is null
+        join public.profiles actor on actor.id = e.actor_id and actor.deleted_at is null
+        left join public.profiles subject on subject.id = e.subject_id and subject.deleted_at is null
         where not exists (
                 select 1 from private.feed_blocks b
                 where (b.blocker_id = ${userId} and b.blocked_id = e.actor_id)

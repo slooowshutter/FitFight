@@ -25,6 +25,7 @@ with tempfile.TemporaryDirectory(prefix="fitfight-feedback-tests-") as directory
         str(root / "FitFight/AppLocalization.swift"),
         str(root / "FitFight/Media.swift"),
         str(root / "tests/fixtures/FeedbackBuild201Models.swift"),
+        str(root / "tests/fixtures/FeedbackBuild204Models.swift"),
         str(generated), "-o", str(executable),
     ], check=True)
     subprocess.run([str(executable), str(root / "contracts/fixtures")], check=True, timeout=15)

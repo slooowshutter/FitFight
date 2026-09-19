@@ -542,9 +542,9 @@ test("continuing on an older TestFlight build still requires authentication and 
                       );
             }
             assert.equal(url.pathname, "/rest/v1/profiles");
-            assert.equal(url.searchParams.get("user_id"), `eq.${userId}`);
+            assert.equal(url.searchParams.get("id"), `eq.${userId}`);
             assert.equal(url.searchParams.get("deleted_at"), "is.null");
-            return Response.json(deleted ? [] : [{ user_id: userId }]);
+            return Response.json(deleted ? [] : [{ id: userId }]);
         },
     );
     const token =

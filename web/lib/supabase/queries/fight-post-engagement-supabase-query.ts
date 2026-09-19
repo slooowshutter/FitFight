@@ -254,7 +254,7 @@ export async function listFightPostComments(
                     avatar.sha256 as avatar_sha256, avatar.created_at as avatar_created_at
                 from public.fight_post_comments as comment
                 join public.profiles as profile
-                    on profile.user_id = comment.author_id and profile.deleted_at is null
+                    on profile.id = comment.author_id and profile.deleted_at is null
                 left join public.media_objects as avatar
                     on avatar.id = profile.avatar_media_id and avatar.status = 'ready'
                 where comment.post_id = ${postId}
@@ -283,7 +283,7 @@ export async function listFightPostComments(
                     avatar.sha256 as avatar_sha256, avatar.created_at as avatar_created_at
                 from public.fight_post_comments as comment
                 join public.profiles as profile
-                    on profile.user_id = comment.author_id and profile.deleted_at is null
+                    on profile.id = comment.author_id and profile.deleted_at is null
                 left join public.media_objects as avatar
                     on avatar.id = profile.avatar_media_id and avatar.status = 'ready'
                 where comment.post_id = ${postId}
@@ -327,7 +327,7 @@ async function listRecentFightPostComments(
                     avatar.sha256 as avatar_sha256, avatar.created_at as avatar_created_at
                 from public.fight_post_comments as comment
                 join public.profiles as profile
-                    on profile.user_id = comment.author_id and profile.deleted_at is null
+                    on profile.id = comment.author_id and profile.deleted_at is null
                 left join public.media_objects as avatar
                     on avatar.id = profile.avatar_media_id and avatar.status = 'ready'
                 where comment.post_id = ${postId}
@@ -356,7 +356,7 @@ async function listRecentFightPostComments(
                     avatar.sha256 as avatar_sha256, avatar.created_at as avatar_created_at
                 from public.fight_post_comments as comment
                 join public.profiles as profile
-                    on profile.user_id = comment.author_id and profile.deleted_at is null
+                    on profile.id = comment.author_id and profile.deleted_at is null
                 left join public.media_objects as avatar
                     on avatar.id = profile.avatar_media_id and avatar.status = 'ready'
                 where comment.post_id = ${postId}
@@ -398,7 +398,7 @@ async function listDiscussedFightPostComments(
             avatar.sha256 as avatar_sha256, avatar.created_at as avatar_created_at
         from public.fight_post_comments as comment
         join public.profiles as profile
-            on profile.user_id = comment.author_id and profile.deleted_at is null
+            on profile.id = comment.author_id and profile.deleted_at is null
         left join public.media_objects as avatar
             on avatar.id = profile.avatar_media_id and avatar.status = 'ready'
         where comment.post_id = ${postId}
@@ -555,7 +555,7 @@ export async function createFightPostComment(
             avatar.sha256 as avatar_sha256, avatar.created_at as avatar_created_at
         from public.fight_post_comments as comment
         join public.profiles as profile
-            on profile.user_id = comment.author_id and profile.deleted_at is null
+            on profile.id = comment.author_id and profile.deleted_at is null
         left join public.media_objects as avatar
             on avatar.id = profile.avatar_media_id and avatar.status = 'ready'
         where comment.id = ${created.id}
@@ -647,7 +647,7 @@ export async function listFightPostReactionPeople(
         select reaction.user_id, reaction.emoji, profile.handle, profile.display_name
         from public.fight_post_reactions as reaction
         join public.profiles as profile
-            on profile.user_id = reaction.user_id and profile.deleted_at is null
+            on profile.id = reaction.user_id and profile.deleted_at is null
         where reaction.post_id = ${postId}
             and (${query.cursor ?? null}::uuid is null or reaction.user_id > ${query.cursor ?? null}::uuid)
             and not exists (

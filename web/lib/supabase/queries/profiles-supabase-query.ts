@@ -15,7 +15,7 @@ import {
 } from "./media-supabase-query";
 
 const PROFILE_COLUMNS =
-    "user_id, handle, display_name, handle_set_at, referral_code, avatar_media_id, companion_id, companion_prompt, time_zone";
+    "id, handle, display_name, handle_set_at, referral_code, avatar_media_id, companion_id, companion_prompt, time_zone";
 
 async function asProfile(
     row: ProfileDatabaseRow,
@@ -39,7 +39,7 @@ async function asProfile(
         }
     }
     return {
-        user_id: row.user_id,
+        user_id: row.id,
         handle: row.handle,
         display_name: row.display_name,
         handle_set_at: row.handle_set_at,
@@ -58,7 +58,7 @@ export async function readProfile(
     const { data, error } = await admin
         .from("profiles")
         .select(PROFILE_COLUMNS)
-        .eq("user_id", userId)
+        .eq("id", userId)
         .is("deleted_at", null)
         .maybeSingle();
     if (error) throw new ApiError(500, "db_error", "Could not load profile");
@@ -120,7 +120,7 @@ export async function updateProfile(
                   ? { companion_prompt: input.companion_prompt }
                   : {}),
         })
-        .eq("user_id", userId)
+        .eq("id", userId)
         .is("deleted_at", null)
         .select(PROFILE_COLUMNS)
         .maybeSingle();

@@ -28,8 +28,8 @@ export async function deleteAccount(
         await removeProviderInboxObjects(userId, database);
         await database.begin("read write", async (sql) => {
             const [profile] = await sql<{ user_id: string }[]>`
-                select user_id from public.profiles
-                where user_id = ${userId} and deleted_at is null
+                select id as user_id from public.profiles
+                where id = ${userId} and deleted_at is null
                 for update
             `;
             if (!profile) {

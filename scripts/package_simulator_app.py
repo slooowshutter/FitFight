@@ -1,35 +1,24 @@
 #!/usr/bin/env python3
-"""Ad-hoc sign the simulator app with its capabilities before exporting it."""
+"""Export an Xcode-signed simulator app without losing its embedded capabilities."""
 
 from pathlib import Path
 import plistlib
 import subprocess
 import sys
-import tempfile
 
-root = Path(__file__).resolve().parents[1]
 app = Path(sys.argv[1]).resolve()
 archive = Path(sys.argv[2]).resolve()
 info = plistlib.loads((app / "Info.plist").read_bytes())
 if "iPhoneSimulator" not in info["CFBundleSupportedPlatforms"]:
     raise SystemExit("This packager accepts simulator apps only, never device archives.")
 
-bundle_id = info["CFBundleIdentifier"]
-application_id = "C92DPD8ME2." + bundle_id
-entitlements = plistlib.loads((root / "FitFight/FitFight.entitlements").read_bytes())
-# CODE_SIGNING_ALLOWED=NO drops these; Google and Supabase cannot use Keychain without them.
-entitlements["application-identifier"] = application_id
-entitlements["com.apple.developer.team-identifier"] = "C92DPD8ME2"
-entitlements["keychain-access-groups"] = [application_id]
-
-with tempfile.TemporaryDirectory(prefix="fitfight-simulator-signing-") as directory:
-    signing = Path(directory) / "entitlements.plist"
-    signing.write_bytes(plistlib.dumps(entitlements))
-    subprocess.run([
-        "codesign", "--force", "--sign", "-", "--identifier", bundle_id,
-        "--entitlements", str(signing), "--timestamp=none", str(app),
-    ], check=True)
+# Simulator reads iOS capabilities from Mach-O sections, not the host's code signature.
+sections = subprocess.check_output([
+    "xcrun", "otool", "-l", str(app / info["CFBundleExecutable"]),
+], text=True)
+if "sectname __entitlements" not in sections or "sectname __ents_der" not in sections:
+    raise SystemExit("Missing simulator entitlements. Build with Xcode ad-hoc signing enabled.")
 
 subprocess.run(["codesign", "--verify", "--deep", "--strict", str(app)], check=True)
 subprocess.run(["ditto", "-c", "-k", "--keepParent", str(app), str(archive)], check=True)
-print(f"Packaged {bundle_id} with simulator Keychain and app capabilities: {archive}")
+print(f"Packaged {info['CFBundleIdentifier']} with embedded simulator capabilities: {archive}")

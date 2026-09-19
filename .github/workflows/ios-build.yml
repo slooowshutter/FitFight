@@ -32,7 +32,7 @@ on:
             - "fastlane/**"
             - ".github/workflows/ios-build.yml"
     push:
-        branches: [main, develop, preview, profiles-friends-and-stats]
+        branches: [main, develop, preview, profiles-friends-and-stats, google-sign-in-setup]
         paths:
             - "FitFight/**"
             - "FitFight.xcodeproj/**"
@@ -189,7 +189,10 @@ jobs:
                     -configuration Debug \
                     -destination 'generic/platform=iOS Simulator' \
                     -derivedDataPath build \
-                    CODE_SIGNING_ALLOWED=NO \
+                    CODE_SIGNING_ALLOWED=YES \
+                    CODE_SIGNING_REQUIRED=YES \
+                    CODE_SIGN_STYLE=Manual \
+                    CODE_SIGN_IDENTITY=- \
                     build
 
             - name: Package simulator app with Keychain capabilities

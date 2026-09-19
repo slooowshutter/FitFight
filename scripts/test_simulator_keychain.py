@@ -22,23 +22,40 @@ if os.environ.get("GITHUB_ACTIONS") != "true":
 root = Path(__file__).resolve().parents[1]
 source_app = Path(sys.argv[1]).resolve()
 device = sys.argv[2]
+entitlements = Path(sys.argv[3]).resolve()
+der_entitlements = entitlements.with_suffix(".xcent.der")
 info = plistlib.loads((source_app / "Info.plist").read_bytes())
 bundle_id = info["CFBundleIdentifier"]
 sdk = subprocess.check_output(["xcrun", "--sdk", "iphonesimulator", "--show-sdk-path"], text=True).strip()
+assert plistlib.loads(entitlements.read_bytes())["application-identifier"].endswith("." + bundle_id)
+assert der_entitlements.is_file()
 
 with tempfile.TemporaryDirectory(prefix="fitfight-keychain-probe-") as directory:
     app = Path(directory) / "FitFight.app"
     shutil.copytree(source_app, app)
-    subprocess.run([
+    shutil.rmtree(app / "_CodeSignature")
+    compile_arguments = [
         "xcrun", "--sdk", "iphonesimulator", "swiftc", "-swift-version", "5",
         "-parse-as-library", "-sdk", sdk,
         "-target", f"{platform.machine()}-apple-ios17.0-simulator",
         str(root / "tests/SimulatorKeychainProbe.swift"),
         "-o", str(app / info["CFBundleExecutable"]),
-    ], check=True)
+    ]
 
     for signed in (False, True):
+        arguments = list(compile_arguments)
         if signed:
+            for section, path in (("__entitlements", entitlements), ("__ents_der", der_entitlements)):
+                arguments.extend([
+                    "-Xlinker", "-sectcreate", "-Xlinker", "__TEXT",
+                    "-Xlinker", section, "-Xlinker", str(path),
+                ])
+        subprocess.run(arguments, check=True)
+        if signed:
+            subprocess.run([
+                "codesign", "--force", "--sign", "-", "--identifier", bundle_id,
+                "--timestamp=none", str(app),
+            ], check=True)
             subprocess.run([
                 sys.executable, str(root / "scripts/package_simulator_app.py"),
                 str(app), str(Path(directory) / "probe.zip"),

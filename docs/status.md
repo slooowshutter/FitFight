@@ -76,9 +76,9 @@ or comments. Temporary cloud capture steps and branch triggers are restored to
 their normal configuration.
 
 **Rollout:** apply the additive migration first, deploy the compatible backend,
-then distribute the new native build. No PR, merge, staging/production deployment,
-or TestFlight upload was requested or performed. Physical signed-in two-device
-heart/reply verification remains outstanding.
+then distribute the new native build. PR review into `develop` was requested;
+no merge, staging/production deployment, or TestFlight upload was performed.
+Physical signed-in two-device heart/reply verification remains outstanding.
 
 ## Notification destinations: prepared 19 Sep 2026
 

@@ -1,12 +1,55 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **18 Sep 2026**. Production candidate: **1.1.1 (202)**.
+Read this before building. Last updated **19 Sep 2026**. Production candidate: **1.1.1 (202)**.
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
 ---
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
+
+## Notification destinations: prepared 19 Sep 2026
+
+**Code:** Fight notification links now preserve the exact round in their URL.
+The six-hour final-sync reminder already carried the correct Fight ID, but native
+navigation replaced a pending or completed round with the current live round of
+the same recurring series. The destination stays on the notified round after a
+snapshot refresh or a cold start that loads the Fight later. Ordinary Fight-list
+and Feed channel navigation retain their current-round behavior. A 1.1.2 release
+note includes English and French copy.
+
+**Sender audit:** all ten existing notification kinds retain their targets through
+the outbox and APNs payload. No file-target notification kind exists in FitFight.
+
+| Notification kinds | Existing target |
+| --- | --- |
+| `fight_ended`, `grace_reminder` (12h, 6h, 1h), `fight_finalized`, `fight_invite` | Exact Fight ID in `/fights/{id}` |
+| `daily_status` | Exact Fight ID plus `daily_status=1` |
+| `feed_post`, `post_reaction`, post `mention` | Exact `post` ID |
+| `post_comment`, `comment_reply`, comment `mention` | Exact `post` and `comment` IDs |
+
+**Regression evidence:** `python3 scripts/test_feed_activity.py`
+[reproduced the wrong round on hosted macOS](https://github.com/slooowshutter/FitFight/actions/runs/35444007879)
+before the fix: "A reminder must open its exact Fight round even after the next
+round starts". The runner now exercises the production tab state, Fight selection,
+and navigation methods instead of stubbing `openFight`. Coverage includes every
+tab, pending/completed/invited/live rounds, delayed snapshots, subsequent refreshes,
+post/comment replacement, unavailable targets, daily recaps, and the unchanged
+build 201/202 route parsers. Push delegate checks also cover both current nested
+and legacy flat payloads before startup configures navigation.
+
+**Cloud checks:** [the iOS simulator build and all native regressions](https://github.com/slooowshutter/FitFight/actions/runs/35444061127)
+passed at `2d40a1d` on GitHub-hosted `macos-26`. This includes the corrected
+notification tests, session/push checks, normal Profile/Feed navigation, preserved
+API decoding, and localization checks. No native build ran on the workstation.
+The temporary feature-branch CI trigger was then removed; app and test sources
+are unchanged from that successful run.
+
+**Contract and deployment:** native navigation only. API, APNs payload, database
+schema, and backend behavior are unchanged. No server rollout is required for
+this fix. No PR, release-branch merge, deployment, or TestFlight upload was made.
+The fix needs a new app build through the usual authorized release process.
+Physical-device APNs tap verification remains outstanding.
 
 ## Account preferences: prepared 17 Sep 2026
 

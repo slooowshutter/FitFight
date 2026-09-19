@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 19,
+            notes: "Fight notifications open the exact round they refer to, even when the next round has already started."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 19,
             notes: "The comment Send button turns green as soon as you type. Empty or spaces-only comments keep it gray and disabled."
         ),
         ReleaseNote(

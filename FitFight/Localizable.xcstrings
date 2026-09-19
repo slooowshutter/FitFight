@@ -12892,6 +12892,16 @@
                     }
                 }
             }
+        },
+        "Fight notifications open the exact round they refer to, even when the next round has already started.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les notifications de combat ouvrent la manche concernée, même si la suivante a déjà commencé."
+                    }
+                }
+            }
         }
     },
     "version": "1.0"

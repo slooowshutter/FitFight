@@ -771,10 +771,16 @@ struct JoinFightPreview: View {
                     )
                     .ffType(.label)
                     .foregroundStyle(theme.text)
-                    Text(fight.deadlineLabel)
-                        .ffType(.caption)
-                        .foregroundStyle(theme.textSecondary)
-                    if fight.recurring {
+                    Group {
+                        if fight.pendingJoin || fight.suggested {
+                            Text(verbatim: "\(Fight.deadlineStamp(fight.windowStart)) → \(Fight.deadlineStamp(fight.windowEnd))")
+                        } else {
+                            Text(fight.deadlineLabel)
+                        }
+                    }
+                    .ffType(.caption)
+                    .foregroundStyle(theme.textSecondary)
+                    if fight.recurring && (fight.pendingJoin || fight.suggested) {
                         Text(String(appLocalized: "Repeats until you leave. Each round has its own result."))
                             .ffType(.caption)
                             .foregroundStyle(theme.textSecondary)
@@ -788,9 +794,11 @@ struct JoinFightPreview: View {
                 }
                 Rectangle().fill(theme.line).frame(height: 1)
 
-                Text(String(appLocalized: "Participants see your identity, Fight Steps, standings, and posts you share in this Fight. Joining does not enable profile or daily-history sharing."))
-                    .ffType(.caption)
-                    .foregroundStyle(theme.textSecondary)
+                if fight.pendingJoin || fight.suggested {
+                    Text(String(appLocalized: "Participants see your identity, Fight Steps, standings, and posts you share in this Fight. Joining does not enable profile or daily-history sharing."))
+                        .ffType(.caption)
+                        .foregroundStyle(theme.textSecondary)
+                }
 
                 VStack(alignment: .leading, spacing: 16) {
                     if fight.offersJoinNext {

@@ -774,6 +774,11 @@ struct JoinFightPreview: View {
                     Text(fight.deadlineLabel)
                         .ffType(.caption)
                         .foregroundStyle(theme.textSecondary)
+                    if fight.recurring {
+                        Text(String(appLocalized: "Repeats until you leave. Each round has its own result."))
+                            .ffType(.caption)
+                            .foregroundStyle(theme.textSecondary)
+                    }
                     if fight.hasAction, fight.actionText != fight.listTitle {
                         Text(fight.actionText)
                             .ffType(.body)
@@ -782,6 +787,10 @@ struct JoinFightPreview: View {
                     }
                 }
                 Rectangle().fill(theme.line).frame(height: 1)
+
+                Text(String(appLocalized: "Participants see your identity, Fight Steps, standings, and posts you share in this Fight. Joining does not enable profile or daily-history sharing."))
+                    .ffType(.caption)
+                    .foregroundStyle(theme.textSecondary)
 
                 VStack(alignment: .leading, spacing: 16) {
                     if fight.offersJoinNext {

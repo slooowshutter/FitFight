@@ -8,6 +8,39 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
 
+## Google sign-in: prepared 19 Sep 2026
+
+**Code:** Apple and Google sign-in are available on the welcome and signed-out
+You screens. GoogleSignIn 9.2.0 uses the iOS client and Web server client for the
+actual Supabase project, including Release builds pointed at staging. Both
+callback schemes are registered. A fresh nonce is hashed for Google and sent raw
+with the ID/access tokens to Supabase. Supabase continues to own session restore,
+profile loading, and onboarding. Cancellation is silent; failed exchanges clear
+Google state. Sign-out clears both sessions. Account deletion attempts Google
+revocation and shows Apple disconnect instructions only for Apple identities.
+English/French copy, the 1.1.2 release note, and privacy disclosures are updated.
+
+**Live configuration:** Google is enabled in staging `zstzbfocunthczzubggz` and
+production `pvqntpteehdvhqyctwum`. Each has its matching Web and iOS client IDs;
+nonce checks remain enabled and email is required. The native ID-token flow does
+not use a Supabase browser OAuth callback or JavaScript origin. Both Google
+projects remain External / Testing. Public publishing and any required Google
+branding verification are still outstanding. Credentials were exported outside
+the repository to Marc's Documents/FitFight-Google-Auth folder. The app contains
+only public client IDs, never the Web client secret.
+
+**Compatibility:** no API request/response, database schema, RLS policy, or
+existing Apple login contract changes. This adds a Supabase Auth provider using
+the existing profile and onboarding paths. Google and Apple accounts with
+different emails, including Apple private relay, may remain separate accounts.
+
+**Verification:** localization, native API-boundary, plist/project parsing, and
+whitespace checks passed. Cloud native regressions, simulator compilation, and
+English/French welcome-screen rendering are in progress. End-to-end Google
+consent and Supabase session creation still require an interactive account login.
+No PR, release-branch merge, website deployment, or TestFlight upload is included.
+Promote the privacy copy before distributing the new app.
+
 ## Account preferences: prepared 17 Sep 2026
 
 **Code:** You → Settings → Preferences appears immediately below Refer a friend.

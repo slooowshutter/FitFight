@@ -93,6 +93,10 @@
         99AAAB8BD6F184E568149D1D /* EditProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41EE371C708EECCC762EB820 /* EditProfileView.swift */; };
         61856F7155495A28A4B93A60 /* FriendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C2AC1044B8F11786123D48E /* FriendsView.swift */; };
         A0573E386FD2FA2A4A357CC4 /* SuggestedFightsOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AD1CDE4182F6C6E52321063 /* SuggestedFightsOnboardingView.swift */; };
+        B71900000000000000000100 /* GoogleSignInConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = B71900000000000000000000 /* GoogleSignInConfig.swift */; };
+        B71900000000000000000101 /* SignInControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = B71900000000000000000001 /* SignInControls.swift */; };
+        B71900000000000000000E01 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = B71900000000000000000F01 /* GoogleSignIn */; };
+        B71900000000000000000E02 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = B71900000000000000000F02 /* GoogleSignInSwift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -185,6 +189,9 @@
         41EE371C708EECCC762EB820 /* EditProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditProfileView.swift; sourceTree = "<group>"; };
         2C2AC1044B8F11786123D48E /* FriendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendsView.swift; sourceTree = "<group>"; };
         7AD1CDE4182F6C6E52321063 /* SuggestedFightsOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestedFightsOnboardingView.swift; sourceTree = "<group>"; };
+        B71900000000000000000000 /* GoogleSignInConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleSignInConfig.swift; sourceTree = "<group>"; };
+        B71900000000000000000001 /* SignInControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInControls.swift; sourceTree = "<group>"; };
+        B71900000000000000000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -193,6 +200,8 @@
             buildActionMask = 2147483647;
             files = (
                 A1000000000000000000F002 /* Supabase in Frameworks */,
+                B71900000000000000000E02 /* GoogleSignInSwift in Frameworks */,
+                B71900000000000000000E01 /* GoogleSignIn in Frameworks */,
                 A1000000000000000000F012 /* PostHog in Frameworks */,
             );
             runOnlyForDeploymentPostprocessing = 0;
@@ -255,6 +264,9 @@
                 A10000000000000000000416 /* SlideHapticsLabView.swift */,
                 A10000000000000000000302 /* SessionStore.swift */,
                 A10000000000000000000303 /* AppleSignInControl.swift */,
+                B71900000000000000000002 /* Info.plist */,
+                B71900000000000000000001 /* SignInControls.swift */,
+                B71900000000000000000000 /* GoogleSignInConfig.swift */,
                 A10000000000000000000309 /* WelcomeView.swift */,
                 A1000000000000000000030B /* OnboardingView.swift */,
                 A10000000000000000000304 /* HealthKitStepsStore.swift */,
@@ -341,6 +353,8 @@
             );
             name = FitFight;
             packageProductDependencies = (
+                B71900000000000000000F02 /* GoogleSignInSwift */,
+                B71900000000000000000F01 /* GoogleSignIn */,
                 A1000000000000000000F001 /* Supabase */,
                 A1000000000000000000F011 /* PostHog */,
             );
@@ -374,6 +388,7 @@
             );
             mainGroup = A10000000000000000000032;
             packageReferences = (
+                B71900000000000000000F00 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
                 A1000000000000000000F000 /* XCRemoteSwiftPackageReference "supabase-swift" */,
                 A1000000000000000000F010 /* XCRemoteSwiftPackageReference "posthog-ios" */,
             );
@@ -476,6 +491,8 @@
                 A10000000000000000000367 /* HealthOnboardingView.swift in Sources */,
                 A10000000000000000000312 /* SessionStore.swift in Sources */,
                 A10000000000000000000313 /* AppleSignInControl.swift in Sources */,
+                B71900000000000000000101 /* SignInControls.swift in Sources */,
+                B71900000000000000000100 /* GoogleSignInConfig.swift in Sources */,
                 A10000000000000000000319 /* WelcomeView.swift in Sources */,
                 A1000000000000000000031B /* OnboardingView.swift in Sources */,
                 A10000000000000000000314 /* HealthKitStepsStore.swift in Sources */,
@@ -625,6 +642,7 @@
                 DEVELOPMENT_TEAM = C92DPD8ME2;
                 ENABLE_PREVIEWS = YES;
                 GENERATE_INFOPLIST_FILE = YES;
+                INFOPLIST_FILE = FitFight/Info.plist;
                 INFOPLIST_KEY_CFBundleDisplayName = FitFight;
                 INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
                 INFOPLIST_KEY_LSApplicationCategoryType = public.app-category.sports;
@@ -663,6 +681,7 @@
                 DEVELOPMENT_TEAM = C92DPD8ME2;
                 ENABLE_PREVIEWS = YES;
                 GENERATE_INFOPLIST_FILE = YES;
+                INFOPLIST_FILE = FitFight/Info.plist;
                 INFOPLIST_KEY_CFBundleDisplayName = FitFight;
                 INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
                 INFOPLIST_KEY_LSApplicationCategoryType = public.app-category.sports;
@@ -730,6 +749,14 @@
                 minimumVersion = 3.59.3;
             };
         };
+        B71900000000000000000F00 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+            isa = XCRemoteSwiftPackageReference;
+            repositoryURL = "https://github.com/google/GoogleSignIn-iOS.git";
+            requirement = {
+                kind = exactVersion;
+                version = 9.2.0;
+            };
+        };
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -742,6 +769,16 @@
             isa = XCSwiftPackageProductDependency;
             package = A1000000000000000000F010 /* XCRemoteSwiftPackageReference "posthog-ios" */;
             productName = PostHog;
+        };
+        B71900000000000000000F01 /* GoogleSignIn */ = {
+            isa = XCSwiftPackageProductDependency;
+            package = B71900000000000000000F00 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+            productName = GoogleSignIn;
+        };
+        B71900000000000000000F02 /* GoogleSignInSwift */ = {
+            isa = XCSwiftPackageProductDependency;
+            package = B71900000000000000000F00 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+            productName = GoogleSignInSwift;
         };
 /* End XCSwiftPackageProductDependency section */
     };

@@ -232,7 +232,7 @@ struct YouView: View {
                     .ffType(.label).foregroundStyle(theme.mossText).frame(minHeight: 44)
             }
         } else {
-            AppleSignInControl()
+            SignInControls()
         }
     }
 

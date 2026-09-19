@@ -1,6 +1,56 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Sign in with Apple or Google. First time here, that creates your account.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Connecte-toi avec Apple ou Google. Si c’est ta première visite, ton compte sera créé."
+                    }
+                }
+            }
+        },
+        "Sign in with Google": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Se connecter avec Google"
+                    }
+                }
+            }
+        },
+        "Google sign-in is not configured for this build.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "La connexion Google n’est pas configurée pour cette version."
+                    }
+                }
+            }
+        },
+        "This sign-in provider is off on this database.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ce fournisseur de connexion est désactivé sur cette base de données."
+                    }
+                }
+            }
+        },
+        "Sign in or create your FitFight account with Google. Sign in with Apple is still available.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Connecte-toi ou crée ton compte FitFight avec Google. La connexion avec Apple reste disponible."
+                    }
+                }
+            }
+        },
         "All": {
             "localizations": {
                 "fr": {

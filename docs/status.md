@@ -44,8 +44,8 @@ passed migrations/lint, 233 pgTAP checks, preserved build 113 fixtures, and all 
 transaction tests both before and after the deferred client-permission cutoff.
 Historical migration replay and deletion checks also passed. New checks cover
 owner/admin permissions, archive/reopen, cascade deletion, ordering, and concurrent
-votes/comments waiting for an archive commit before rejecting the write. Backend
-and migration sources are unchanged since those runs.
+votes/comments waiting for an archive commit before rejecting the write. These
+runs predate integration with the latest standard-row changes from `develop`.
 
 The [native regressions and full simulator build](https://github.com/slooowshutter/FitFight/actions/runs/35449011830)
 passed at `37f364b` on GitHub-hosted macOS, including frozen decoders for builds
@@ -67,6 +67,14 @@ button while the label retains a 44-point tap target. The
 passed at `33164d3`; the final icon was visually checked in Night and Day captures.
 Localization and
 whitespace checks passed. This refinement changes no API, schema, or business logic.
+
+**PR preparation, 19 Sep:** merged `develop` at `8f1e58ed` into the feature branch,
+preserving both sets of release notes, translations, and screenshots. Feedback
+queries retain the new `profiles.id` lookups alongside archive write locks.
+[PR #290](https://github.com/slooowshutter/FitFight/pull/290) targets `develop`;
+its checks revalidate the combined native, backend, and migrated database sources.
+Those checks were running when the PR opened; earlier runs above are separate
+evidence, not a result for the integrated branch.
 
 **Rollout:** apply the additive migration, deploy the compatible backend and drain
 older instances, then distribute the native controls. No hosted database change,

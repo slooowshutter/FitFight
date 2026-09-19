@@ -1,6 +1,6 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **18 Sep 2026**. Production candidate: **1.1.1 (202)**.
+Read this before building. Last updated **19 Sep 2026**. Production candidate: **1.1.1 (202)**.
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
@@ -77,14 +77,33 @@ refreshes but no failed Google token exchange. The exported bundle itself had no
 entitlements and its signing identifier was `FitFight`, not `com.fitfight.mvp`.
 This makes the original artifact unsuitable for testing secure sign-in storage.
 
-The simulator exporter now ad-hoc signs the bundle with the app's capabilities,
-application identifier, and keychain group before archiving. It rejects device
-archives. A disposable hosted-simulator regression first tests an unsigned probe,
-then runs the real packager and verifies generic-password add/read/delete. This
-uses no real account or external auth request. Compilation, storage validation,
-new screen captures, and a replacement staging ZIP are in progress. A complete
-Google consent/login still requires verification after installing the replacement.
-No hosted auth configuration, API, or database contract was changed for this fix.
+The workflows now use Xcode's ad-hoc signing path, which embeds simulator entitlements
+at link time. Applying iOS entitlements afterward to the host code signature was
+rejected at launch in the first validation runs. The exporter checks the embedded
+XML/DER entitlement sections and signature, and rejects device archives. A disposable
+hosted-simulator regression compares a probe without capabilities against the same
+probe linked with Xcode's generated simulator entitlements, then verifies
+generic-password add/read/delete. It uses no real account or external auth request.
+
+**Verified at `a98a4b8`:** [all native regressions, the simulator build, and artifact
+export](https://github.com/slooowshutter/FitFight/actions/runs/35454559457) passed.
+The [hosted storage regression and screen rendering](https://github.com/slooowshutter/FitFight/actions/runs/35454559425)
+passed: without embedded entitlements, add/read/delete returned `-34018`; with
+Xcode's simulator entitlements, all three returned `0`. The complete app then
+launched and rendered in English and French. The Google button's logo, font,
+centering, and border were visually checked in both Day and Night for each language.
+Apple's system control still appears as the known ImageRenderer placeholder.
+The downloaded universal bundle's
+XML/DER sections, app identifier, HealthKit capability, Google callback schemes,
+SDK resources, font, staging endpoints, and signature were checked. The verified
+ZIP and extracted app replaced the old download in Marc's
+`Documents/FitFight-Google-Auth/simulator`; `build-verification.json` records the
+commit, checksum, and cloud evidence. Native compilation and execution stayed in
+GitHub-hosted CI. Normal workflow branch triggers are restored after verification.
+
+A complete Google consent/login still requires an interactive retry after installing
+the replacement. No hosted auth configuration, API, or database contract changed for
+this fix. No PR, merge, deployment, or TestFlight upload was made.
 
 ## Account preferences: prepared 17 Sep 2026
 

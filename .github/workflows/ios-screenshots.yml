@@ -13,7 +13,7 @@ on:
             - "tests/SimulatorKeychainProbe.swift"
             - ".github/workflows/ios-screenshots.yml"
     push:
-        branches: [main, develop, preview, google-sign-in-setup]
+        branches: [main, develop, preview]
         paths:
             - "FitFight/**"
             - "FitFight.xcodeproj/**"

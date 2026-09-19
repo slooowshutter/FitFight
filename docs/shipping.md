@@ -131,6 +131,19 @@ gh run download <run-id> -n screens -D /tmp/shots
 That is the fidelity loop: measure `docs/design/source/screenshots/app/*.png`, change the
 SwiftUI, push, download `screens`, compare the same numbers. Don't ask Marc to eyeball it.
 
+The simulator build also exports `FitFight-Simulator`. Xcode uses the ad-hoc identity
+(`CODE_SIGN_IDENTITY=-`) with signing enabled so it embeds iOS entitlements in the
+simulator executable. `scripts/package_simulator_app.py` verifies these Mach-O sections
+and the signature before archiving. Do not add iOS entitlements to the host Mac code
+signature afterward; that can prevent Simulator from launching the app.
+A raw `CODE_SIGNING_ALLOWED=NO` build lacks the embedded capabilities and can fail
+Google sign-in when the SDK saves credentials. The screenshot workflow checks this
+on a disposable hosted simulator: the probe without embedded capabilities must return
+`-34018`, and add/read/delete must succeed with Xcode's generated simulator entitlements.
+This checks secure storage; a real Google consent and Supabase session exchange still
+need interactive testing. The artifact installs only in Simulator, not on an iPhone
+or through TestFlight.
+
 ## GitHub secrets (already set)
 
 Names only. Never print values. Never ask Marc to paste the `.p8` into chat.

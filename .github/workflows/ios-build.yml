@@ -30,7 +30,7 @@ on:
             - "fastlane/**"
             - ".github/workflows/ios-build.yml"
     push:
-        branches: [main, develop, preview, profiles-friends-and-stats, simplify-comments-add-likes]
+        branches: [main, develop, preview, profiles-friends-and-stats]
         paths:
             - "FitFight/**"
             - "FitFight.xcodeproj/**"
@@ -181,44 +181,5 @@ jobs:
                     -scheme FitFight \
                     -configuration Debug \
                     -destination 'generic/platform=iOS Simulator' \
-                    -derivedDataPath build \
                     CODE_SIGNING_ALLOWED=NO \
                     build
-
-            - name: Capture live Feed comments
-              run: |
-                  python3 <<'PYTHON'
-                  import json, os, subprocess, time
-                  from pathlib import Path
-                  def sim(*args, **kwargs):
-                      return subprocess.check_output(["xcrun", "simctl", *args], text=True, **kwargs).strip()
-                  runtimes = json.loads(sim("list", "runtimes", "--json"))["runtimes"]
-                  runtime = sorted([r for r in runtimes if r["isAvailable"] and "iOS" in r["name"]], key=lambda r: r["version"])[-1]["identifier"]
-                  types = json.loads(sim("list", "devicetypes", "--json"))["devicetypes"]
-                  device_type = next(d["identifier"] for d in types if d["name"] == "iPhone 16")
-                  udid = sim("create", "feed-comments-check", device_type, runtime)
-                  sim("boot", udid)
-                  sim("bootstatus", udid, "-b")
-                  sim("install", udid, "build/Build/Products/Debug-iphonesimulator/FitFight.app")
-                  sim("status_bar", udid, "override", "--time", "9:41", "--batteryState", "charged", "--batteryLevel", "100")
-                  Path("comment-screens").mkdir()
-                  variants = [(language, mode, False, False) for language in ("en", "fr") for mode in ("night", "day")]
-                  variants += [("en", "night", True, False), ("fr", "day", True, True)]
-                  for language, mode, reply, large in variants:
-                      subprocess.run(["xcrun", "simctl", "terminate", udid, "com.fitfight.mvp"], check=False)
-                      sim("ui", udid, "appearance", "dark" if mode == "night" else "light")
-                      sim("ui", udid, "content_size", "accessibility-extra-extra-large" if large else "large")
-                      env = dict(os.environ, SIMCTL_CHILD_FF_COMPANION_PREVIEW="1", SIMCTL_CHILD_FF_SHOOT="1", SIMCTL_CHILD_FF_SHOT="feed", SIMCTL_CHILD_FF_COMPANION_THEME=mode, SIMCTL_CHILD_FF_COMMENT_REPLY_PREVIEW="1" if reply else "0")
-                      sim("launch", udid, "com.fitfight.mvp", "-AppleLanguages", f"({language})", "-AppleLocale", f"{language}_{'FR' if language == 'fr' else 'US'}", env=env)
-                      time.sleep(8)
-                      suffix = "-reply" if reply else ""
-                      suffix += "-large" if large else ""
-                      sim("io", udid, "screenshot", f"comment-screens/{language}-{mode}{suffix}.png")
-                  PYTHON
-
-            - uses: actions/upload-artifact@v4
-              if: always()
-              with:
-                  name: live-comment-screens
-                  path: comment-screens
-                  retention-days: 14

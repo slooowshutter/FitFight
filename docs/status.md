@@ -8,6 +8,55 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
 
+## Feed comments and hearts: prepared 19 Sep 2026
+
+**Code:** Feed and Fight-thread comments use one newest-first conversation with
+replies nested beneath their parent. The Most comments / Most recent control is
+removed. Names and comment text share a compact line, each comment has a heart on
+the right, and the composer uses an inline send arrow and reply placeholder with
+a dismiss button. Preset emoji reactions are visible in a horizontal strip with
+an Other emoji option. Profile links, translation, reporting, deletion, mention
+suggestions, reaction identities, and comment pagination remain available.
+English and French copy and a 1.1.2 release note are included.
+
+**Contract:** additive optional `like_count` and `liked_by_me` comment fields and
+idempotent `PUT /api/v1/posts/{postID}/comments/{commentID}/like` with `{ liked }`.
+`/api/v1`, existing comment creation/deletion, omitted sort, both explicit sort
+values, and cursors stay supported. Migration
+`20260919160000_feed_comment_likes.sql` adds private comment likes with forced RLS,
+server-only grants, deletion cascades, and the existing live Feed invalidation.
+The backend checks post access, comment ownership by that post, deleted authors,
+and bilateral author blocks before saving a heart.
+
+**Supported clients:** read-only `/api/app-release` checks on 19 Sep returned
+staging latest **1.1.1 (201)**, review/internal **1.1.2 (204)**, enforcement off;
+production latest **1.1.1 (202)**, null review/internal candidates, enforcement on.
+The released comment decoders in sources `d97145a` (201), `e2783be` (202), and
+`origin/fitfight-1.1.2-preview` (204) are identical. Preserved legacy fixtures and a
+frozen released decoder cover old responses and the additive fields. Staging's
+legacy request behavior remains supported while enforcement is off.
+
+**Cloud checks:** backend typecheck and all 319 unit tests passed in
+[Web API](https://github.com/slooowshutter/FitFight/actions/runs/35446705100).
+[All native regressions and the iOS simulator build](https://github.com/slooowshutter/FitFight/actions/runs/35447298734)
+passed at `3a4f811`. Coverage includes optimistic like/unlike, duplicate taps,
+rollback, pending refreshes, account changes, request encoding, and released-client
+decoding. [Database verification](https://github.com/slooowshutter/FitFight/actions/runs/35446705120)
+passed migrations, SQL lint, pgTAP, legacy build 113, and all 42 transaction tests
+both before and after the existing client-permission cutoff. Comment checks cover
+persistence, access, cascade deletion and legacy reads. No native build ran on the
+workstation. [Live iPhone simulator captures](https://github.com/slooowshutter/FitFight/actions/runs/35447298734)
+were visually checked in English/French and both themes, including the inline reply
+state and a larger text setting. Names and comment text, heart states/counts, preset
+emoji, the fixed custom-emoji button, and composer controls remain visible without
+overlap. Temporary CI triggers and capture steps were then removed. App, backend,
+migration, and test sources are unchanged from their successful cloud runs.
+
+**Rollout:** apply the additive migration first, deploy the compatible backend,
+then distribute the new native build. No PR, merge, staging/production deployment,
+or TestFlight upload was requested or performed. Physical signed-in two-device
+heart/reply verification remains outstanding.
+
 ## Notification destinations: prepared 19 Sep 2026
 
 **Code:** Fight notification links now preserve the exact round in their URL.

@@ -12902,6 +12902,118 @@
                     }
                 }
             }
+        },
+        "Cancel reply": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cancel reply"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Annuler la réponse"
+                    }
+                }
+            }
+        },
+        "Comment actions": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Comment actions"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Actions du commentaire"
+                    }
+                }
+            }
+        },
+        "Like comment": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Like comment"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Aimer le commentaire"
+                    }
+                }
+            }
+        },
+        "Unlike comment": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Unlike comment"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ne plus aimer le commentaire"
+                    }
+                }
+            }
+        },
+        "Reply to @\\($0.author.handle)…": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Reply to @%1$@…"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Répondre à @%1$@…"
+                    }
+                }
+            }
+        },
+        "Reply to @%@…": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Reply to @%1$@…"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Répondre à @%1$@…"
+                    }
+                }
+            }
+        },
+        "Feed comments are more compact, with hearts to like replies, a simpler composer, and quick emoji reactions without sorting tabs.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Feed comments are more compact, with hearts to like replies, a simpler composer, and quick emoji reactions without sorting tabs."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les commentaires du fil sont plus compacts, avec un cœur pour aimer les réponses, une saisie simplifiée et des réactions emoji rapides, sans onglets de tri."
+                    }
+                }
+            }
         }
     },
     "version": "1.0"

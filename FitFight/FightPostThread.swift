@@ -11,8 +11,6 @@ struct FightPostEngagement: View {
 
     @State private var comments: [FitFightFightPostComment] = []
     @State private var nextCursor: String?
-    @State private var commentSort = FightPostCommentSort.comments
-    @State private var loadedCommentSort = FightPostCommentSort.comments
     @State private var loadedCommentPages = 0
     @State private var open = false
     @State private var showingReactions = false
@@ -26,25 +24,28 @@ struct FightPostEngagement: View {
     @State private var reloadComments = false
     @State private var commentsVersion = 0
     @State private var didRevealTarget = false
+    @State private var likingCommentIDs: Set<UUID> = []
+    @State private var profileComment: FitFightFightPostComment?
+    @FocusState private var composerFocused: Bool
 
     private let quickEmoji = ["🔥", "💪", "😂", "❤️", "👏", "😮"]
 
+    init(post: FitFightFightPost, targetCommentID: UUID? = nil, onTargetCommentLoaded: (() -> Void)? = nil) {
+        self.post = post
+        self.targetCommentID = targetCommentID
+        self.onTargetCommentLoaded = onTargetCommentLoaded
+        #if DEBUG && targetEnvironment(simulator)
+        if CompanionPreview.isEnabled {
+            _comments = State(initialValue: post.commentCount == 0 ? [] : CompanionPreview.comments(postID: post.id))
+            _open = State(initialValue: post.commentCount > 0)
+        }
+        #endif
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            if !post.reactions.isEmpty {
-                reactionChips
-                Button(String(appLocalized: "View reactions")) { showingReactions = true }
-                    .ffType(.caption)
-                    .foregroundStyle(theme.mossText)
-                    .buttonStyle(FFHapticPlainStyle())
-            }
             actions
             if open {
-                FFSegmented(
-                    items: FightPostCommentSort.allCases,
-                    selection: $commentSort
-                ) { $0.title }
-                .accessibilityLabel(String(appLocalized: "Comment order"))
                 if loadingComments {
                     ProgressView()
                         .tint(theme.mossText)
@@ -63,18 +64,6 @@ struct FightPostEngagement: View {
                     .buttonStyle(FFHapticPlainStyle())
                     .disabled(loadingComments || loading)
                 }
-                if let replyTo {
-                    HStack {
-                        Text(String(appLocalized: "Replying to @\(replyTo.author.handle)"))
-                            .ffType(.micro)
-                            .foregroundStyle(theme.textSecondary)
-                        Spacer()
-                        Button(String(appLocalized: "Cancel")) { self.replyTo = nil }
-                            .ffType(.micro)
-                            .foregroundStyle(theme.mossText)
-                            .buttonStyle(FFHapticPlainStyle())
-                    }
-                }
                 FeedMentionField(
                     text: $draft,
                     people: $mentionPeople,
@@ -87,20 +76,53 @@ struct FightPostEngagement: View {
                         return ids
                     }()
                 ) {
-                    HStack {
-                        TextField(String(appLocalized: "Write a comment…"), text: $draft, axis: .vertical)
-                            .ffType(.body)
-                            .foregroundStyle(theme.text)
-                            .lineLimit(1...4)
-                        FFButton(
-                            title: loading ? String(appLocalized: "Posting…") : String(appLocalized: "Send"),
-                            kind: .primary,
-                            enabled: !loading && !loadingComments && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                            fullWidth: false
-                        ) {
-                            Task { await sendComment() }
+                    HStack(alignment: .bottom, spacing: 0) {
+                        TextField(
+                            replyTo.map { String(appLocalized: "Reply to @\($0.author.handle)…") }
+                                ?? String(appLocalized: "Write a comment…"),
+                            text: $draft,
+                            axis: .vertical
+                        )
+                        .ffType(.body)
+                        .foregroundStyle(theme.text)
+                        .lineLimit(1...4)
+                        .focused($composerFocused)
+                        .padding(.leading, 14)
+                        .padding(.vertical, 11)
+                        if replyTo != nil {
+                            Button {
+                                replyTo = nil
+                            } label: {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(theme.textSecondary)
+                                    .frame(width: 44, height: 44)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(FFHapticPlainStyle())
+                            .accessibilityLabel(String(appLocalized: "Cancel reply"))
                         }
+                        Button {
+                            Task { await sendComment() }
+                        } label: {
+                            Group {
+                                if loading {
+                                    ProgressView().tint(theme.mossText)
+                                } else {
+                                    Image(systemName: "arrow.up.circle.fill")
+                                        .font(.system(size: 28, weight: .semibold))
+                                        .foregroundStyle(canSendComment ? theme.mossText : theme.textFaint)
+                                }
+                            }
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(FFHapticPlainStyle())
+                        .disabled(!canSendComment)
+                        .accessibilityLabel(loading ? String(appLocalized: "Posting…") : String(appLocalized: "Send"))
                     }
+                    .background(theme.control, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                    .ffBorder(theme.hairline, radius: 22)
                 }
             }
         }
@@ -127,9 +149,11 @@ struct FightPostEngagement: View {
                 onTargetCommentLoaded?()
             }
         }
-        .onChange(of: commentSort) { _, _ in
-            nextCursor = nil
-            Task { await loadComments() }
+        .sheet(item: $profileComment) { comment in
+            ProfileSheet(userID: comment.author.userId, source: "comments")
+                .fitFightTheme(theme)
+                .presentationBackground(theme.bg)
+                .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showingReactions) {
             FightPostReactionsSheet(post: post)
@@ -150,34 +174,58 @@ struct FightPostEngagement: View {
         }
     }
 
-    private var actions: some View {
-        let mine = post.reactions.first(where: \.mine)
-        let count = post.reactions.reduce(0) { $0 + $1.count }
-        return VStack(alignment: .leading, spacing: 0) {
-            FFDivider(inset: 0)
-            HStack(spacing: 16) {
-                Button {
-                    let emoji = mine?.emoji ?? "👏"
-                    Task { await feed.react(session: session, post: post, emoji: emoji) }
-                } label: {
-                    HStack(spacing: 6) {
-                        Text(mine?.emoji ?? "👏")
-                        if count > 0 { Text(verbatim: "\(count)") }
-                    }
-                    .ffType(.caption)
-                    .foregroundStyle(mine == nil ? theme.textSecondary : theme.mossText)
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(FFHapticPlainStyle())
-                .accessibilityLabel(mine == nil ? String(appLocalized: "Cheer this post") : String(appLocalized: "Remove reaction"))
-                .accessibilityValue(count > 0 ? String(count) : "")
+    private var canSendComment: Bool {
+        !loading && !loadingComments && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
 
+    private var actions: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            FFDivider(inset: 0)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 4) {
+                    ForEach(quickEmoji + post.reactions.map(\.emoji).filter { !quickEmoji.contains($0) }, id: \.self) { emoji in
+                        let reaction = post.reactions.first { $0.emoji == emoji }
+                        Button {
+                            Task { await feed.react(session: session, post: post, emoji: emoji) }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Text(emoji)
+                                if let reaction { Text(verbatim: "\(reaction.count)") }
+                            }
+                            .ffType(.caption)
+                            .foregroundStyle(reaction?.mine == true ? theme.mossText : theme.textSecondary)
+                            .padding(.horizontal, 8)
+                            .frame(minWidth: 44, minHeight: 44)
+                            .background(reaction?.mine == true ? theme.mossWash : theme.card, in: Capsule())
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(FFHapticPlainStyle())
+                        .disabled(feed.reactingPostIDs.contains(post.id))
+                        .accessibilityLabel(emoji)
+                        .accessibilityValue(reaction.map { String($0.count) } ?? "0")
+                        .accessibilityAddTraits(reaction?.mine == true ? .isSelected : [])
+                    }
+                    Button {
+                        showingCustomEmoji = true
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(theme.textSecondary)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(FFHapticPlainStyle())
+                    .disabled(feed.reactingPostIDs.contains(post.id))
+                    .accessibilityLabel(String(appLocalized: "Other emoji…"))
+                }
+            }
+            HStack {
                 Button {
                     open.toggle()
                     if open && comments.isEmpty {
                         Task { await loadComments() }
                     }
+                    if open && post.commentCount == 0 { composerFocused = true }
                 } label: {
                     Text(
                         post.commentCount == 0
@@ -192,82 +240,25 @@ struct FightPostEngagement: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(FFHapticPlainStyle())
-
-                Menu {
-                    ForEach(quickEmoji, id: \.self) { emoji in
-                        Button(emoji) {
-                            Task { await feed.react(session: session, post: post, emoji: emoji) }
-                        }
-                    }
-                    Button(String(appLocalized: "Other emoji…")) {
-                        showingCustomEmoji = true
-                    }
-                } label: {
-                    Image(systemName: "face.smiling")
-                        .font(.system(size: 16, weight: .bold))
+                Spacer(minLength: 8)
+                if !post.reactions.isEmpty {
+                    Button(String(appLocalized: "View reactions")) { showingReactions = true }
+                        .ffType(.micro)
                         .foregroundStyle(theme.textSecondary)
-                        .frame(minWidth: 44, minHeight: 44)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(FFHapticPlainStyle())
-                .menuOrder(.fixed)
-                .accessibilityLabel(String(appLocalized: "React"))
-                Spacer(minLength: 0)
-            }
-        }
-        .disabled(feed.reactingPostIDs.contains(post.id))
-        .accessibilityValue(feed.reactingPostIDs.contains(post.id) ? String(appLocalized: "Saving…") : "")
-    }
-
-    private var reactionChips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(post.reactions, id: \.emoji) { reaction in
-                    Button {
-                        Task { await feed.react(session: session, post: post, emoji: reaction.emoji) }
-                    } label: {
-                        Text("\(reaction.emoji) \(reaction.count)")
-                            .ffType(.caption)
-                            .foregroundStyle(reaction.mine ? theme.mossOn : theme.text)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(reaction.mine ? theme.mossFill : theme.control, in: Capsule())
-                            .frame(minHeight: 44)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(FFHapticPlainStyle())
+                        .frame(minHeight: 44)
+                        .buttonStyle(FFHapticPlainStyle())
                 }
             }
         }
-        .disabled(feed.reactingPostIDs.contains(post.id))
-        .accessibilityValue(feed.reactingPostIDs.contains(post.id) ? String(appLocalized: "Saving…") : "")
     }
 
     private var displayedComments: [DisplayedFightComment] {
         let commentIDs = Set(comments.map(\.id))
         let children = Dictionary(grouping: comments, by: \.parentId)
-        func replyCount(_ comment: FitFightFightPostComment) -> Int {
-            var count = 0
-            var pending = children[comment.id] ?? []
-            while let next = pending.popLast() {
-                count += 1
-                pending.append(contentsOf: children[next.id] ?? [])
-            }
-            return count
-        }
         func ordered(_ items: [FitFightFightPostComment]) -> [FitFightFightPostComment] {
             items.sorted { lhs, rhs in
-                switch commentSort {
-                case .comments:
-                    let left = replyCount(lhs)
-                    let right = replyCount(rhs)
-                    if left != right { return left > right }
-                    if lhs.createdDate != rhs.createdDate { return lhs.createdDate > rhs.createdDate }
-                    return lhs.id.uuidString > rhs.id.uuidString
-                case .recent:
-                    if lhs.createdDate != rhs.createdDate { return lhs.createdDate > rhs.createdDate }
-                    return lhs.id.uuidString > rhs.id.uuidString
-                }
+                if lhs.createdDate != rhs.createdDate { return lhs.createdDate > rhs.createdDate }
+                return lhs.id.uuidString > rhs.id.uuidString
             }
         }
         var rows: [DisplayedFightComment] = []
@@ -286,44 +277,48 @@ struct FightPostEngagement: View {
     }
 
     private func commentRow(_ comment: FitFightFightPostComment) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .top, spacing: 8) {
-                ProfileIdentityLink(userID: comment.author.userId, source: "comments") {
-                    CompanionAvatar(
-                        personID: comment.author.userId.uuidString,
-                        companionID: comment.author.companionId,
-                        isYou: comment.mine,
-                        monogram: comment.author.initials,
-                        photoURL: comment.author.avatar?.url,
-                        size: 26
-                    )
-                }
-                VStack(alignment: .leading, spacing: 3) {
-                    ProfileIdentityLink(userID: comment.author.userId, source: "comments") {
-                        Text(comment.author.atHandle)
-                            .ffType(.caption)
-                            .foregroundStyle(theme.text)
-                            .lineLimit(1)
-                    }
-                    Text(comment.body)
-                        .ffType(.body)
-                        .foregroundStyle(theme.text)
-                        .fixedSize(horizontal: false, vertical: true)
-                    HStack(spacing: 12) {
-                        Text(comment.createdDate, style: .relative)
-                            .ffType(.micro)
-                            .foregroundStyle(theme.textFaint)
-                        Button(String(appLocalized: "Reply")) {
-                            replyTo = comment
-                        }
+        var author = AttributedString(comment.author.atHandle)
+        author.font = theme.font(.label)
+        author.foregroundColor = theme.text
+        author.link = URL(string: "fitfight-profile://author")
+        var message = author + AttributedString(" " + comment.body)
+        message.foregroundColor = theme.text
+
+        return HStack(alignment: .top, spacing: 8) {
+            ProfileIdentityLink(userID: comment.author.userId, source: "comments") {
+                CompanionAvatar(
+                    personID: comment.author.userId.uuidString,
+                    companionID: comment.author.companionId,
+                    isYou: comment.mine,
+                    monogram: comment.author.initials,
+                    photoURL: comment.author.avatar?.url,
+                    size: 26
+                )
+                .frame(width: 44)
+            }
+            VStack(alignment: .leading, spacing: 0) {
+                Text(message)
+                    .ffType(.body)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .tint(theme.text)
+                    .environment(\.openURL, OpenURLAction { _ in
+                        profileComment = comment
+                        return .handled
+                    })
+                HStack(spacing: 8) {
+                    Text(comment.createdDate, style: .relative)
                         .ffType(.micro)
-                        .foregroundStyle(theme.mossText)
-                        .buttonStyle(FFHapticPlainStyle())
+                        .foregroundStyle(theme.textFaint)
+                    Button(String(appLocalized: "Reply")) {
+                        replyTo = comment
+                        composerFocused = true
                     }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                HStack(alignment: .top, spacing: 0) {
-                    TextTranslationButton(text: comment.body)
+                    .ffType(.micro)
+                    .foregroundStyle(theme.textSecondary)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .buttonStyle(FFHapticPlainStyle())
+                    Spacer(minLength: 0)
+                    TextTranslationButton(text: comment.body, alignment: .center)
                     Menu {
                         if comment.mine {
                             Button(String(appLocalized: "Delete"), role: .destructive) {
@@ -338,13 +333,35 @@ struct FightPostEngagement: View {
                         Image(systemName: "ellipsis")
                             .font(.system(size: 12, weight: .bold))
                             .foregroundStyle(theme.textFaint)
-                            .frame(height: 20)
-                            .frame(width: 44, height: 44, alignment: .top)
+                            .frame(width: 44, height: 44)
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(FFHapticPlainStyle())
+                    .accessibilityLabel(String(appLocalized: "Comment actions"))
                 }
             }
+            .padding(.top, 10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Button {
+                Task { await likeComment(comment) }
+            } label: {
+                VStack(spacing: 2) {
+                    Image(systemName: comment.likedByMe == true ? "heart.fill" : "heart")
+                        .font(.system(size: 16, weight: .semibold))
+                    if let count = comment.likeCount, count > 0 {
+                        Text(verbatim: "\(count)")
+                            .ffType(.micro)
+                            .monospacedDigit()
+                    }
+                }
+                .foregroundStyle(comment.likedByMe == true ? theme.mossText : theme.textSecondary)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(FFHapticPlainStyle())
+            .disabled(likingCommentIDs.contains(comment.id))
+            .accessibilityLabel(comment.likedByMe == true ? String(appLocalized: "Unlike comment") : String(appLocalized: "Like comment"))
+            .accessibilityValue(String(comment.likeCount ?? 0))
         }
     }
 
@@ -363,16 +380,14 @@ struct FightPostEngagement: View {
         loadingComments = true
         defer { if session.authSession?.user.id == userID { loadingComments = false } }
         var append = more
-        let requestedSort = commentSort
-        let requestedPages = loadedCommentSort == requestedSort ? max(1, loadedCommentPages + (more ? 1 : 0)) : 1
+        let requestedPages = max(1, loadedCommentPages + (more ? 1 : 0))
         repeat {
             reloadComments = false
             let version = commentsVersion
-            let sort = commentSort
-            let retainedIDs = loadedCommentSort == sort ? Set(comments.map(\.id)) : []
-            var refreshed = append && loadedCommentSort == sort ? comments : []
-            var cursor = append && loadedCommentSort == sort ? nextCursor : nil
-            var pages = append && loadedCommentSort == sort ? loadedCommentPages : 0
+            let retainedIDs = Set(comments.map(\.id))
+            var refreshed = append ? comments : []
+            var cursor = append ? nextCursor : nil
+            var pages = append ? loadedCommentPages : 0
             do {
                 let token = try await session.freshAccessToken()
                 guard !Task.isCancelled, session.authSession?.user.id == userID else { return }
@@ -381,11 +396,11 @@ struct FightPostEngagement: View {
                         postID: post.id,
                         cursor: cursor,
                         accessToken: token,
-                        sort: sort
+                        sort: .recent
                     )
                     guard !Task.isCancelled, session.authSession?.user.id == userID else { return }
-                    if commentsVersion != version || commentSort != sort || reloadComments {
-                        // A response started before a write, sort change, or invalidation must not undo it.
+                    if commentsVersion != version || reloadComments {
+                        // A response started before a write or invalidation must not undo it.
                         reloadComments = true
                         break
                     }
@@ -393,7 +408,7 @@ struct FightPostEngagement: View {
                     cursor = result.nextCursor
                     pages += 1
                     if cursor == nil { break }
-                    if pages >= (sort == requestedSort ? requestedPages : 1),
+                    if pages >= requestedPages,
                        retainedIDs.isSubset(of: Set(refreshed.map(\.id))) {
                         if let targetCommentID, !refreshed.contains(where: { $0.id == targetCommentID }) { continue }
                         break
@@ -401,9 +416,15 @@ struct FightPostEngagement: View {
                 } while true
                 if !reloadComments {
                     // Publish all retained pages together so a failed later page cannot collapse the thread.
-                    comments = refreshed
+                    let pendingLikes = Dictionary(uniqueKeysWithValues: comments.filter { likingCommentIDs.contains($0.id) }.map { ($0.id, $0) })
+                    comments = refreshed.map { comment in
+                        guard let pending = pendingLikes[comment.id] else { return comment }
+                        var updated = comment
+                        updated.likeCount = pending.likeCount
+                        updated.likedByMe = pending.likedByMe
+                        return updated
+                    }
                     nextCursor = cursor
-                    loadedCommentSort = sort
                     loadedCommentPages = pages
                 }
             } catch {
@@ -413,6 +434,44 @@ struct FightPostEngagement: View {
             }
             append = false
         } while reloadComments
+    }
+
+    private func likeComment(_ comment: FitFightFightPostComment) async {
+        guard let userID = session.authSession?.user.id,
+              !likingCommentIDs.contains(comment.id),
+              let index = comments.firstIndex(where: { $0.id == comment.id }) else { return }
+        let previous = comments[index]
+        let liked = previous.likedByMe != true
+        likingCommentIDs.insert(comment.id)
+        commentsVersion += 1
+        comments[index].likedByMe = liked
+        comments[index].likeCount = max(0, (previous.likeCount ?? 0) + (liked ? 1 : -1))
+        defer {
+            if session.authSession?.user.id == userID {
+                likingCommentIDs.remove(comment.id)
+            }
+        }
+        do {
+            let token = try await session.freshAccessToken()
+            guard session.authSession?.user.id == userID else { return }
+            let result = try await FitFightAPI().setFightPostCommentLike(
+                postID: post.id, commentID: comment.id, liked: liked, accessToken: token
+            )
+            guard session.authSession?.user.id == userID else { return }
+            commentsVersion += 1
+            if let index = comments.firstIndex(where: { $0.id == comment.id }) {
+                comments[index].likeCount = result.likeCount
+                comments[index].likedByMe = result.likedByMe
+            }
+        } catch {
+            guard session.authSession?.user.id == userID else { return }
+            commentsVersion += 1
+            if let index = comments.firstIndex(where: { $0.id == comment.id }) {
+                comments[index].likeCount = previous.likeCount
+                comments[index].likedByMe = previous.likedByMe
+            }
+            if !(error is CancellationError) { feed.error = error.localizedDescription }
+        }
     }
 
     private func sendComment() async {

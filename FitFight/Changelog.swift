@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 19,
+            notes: "Feed comments are more compact, with hearts to like replies, a simpler composer, and quick emoji reactions without sorting tabs."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 19,
             notes: "Fight notifications open the exact round they refer to, even when the next round has already started."
         ),
         ReleaseNote(

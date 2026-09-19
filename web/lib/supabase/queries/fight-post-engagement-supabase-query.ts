@@ -4,6 +4,9 @@ import { createDatabaseClient } from "@/lib/supabase/postgres";
 import { companionIdSchema } from "@/lib/types/companions/companion";
 import {
     fightPostCommentResponseSchema,
+    fightPostCommentLikeRowSchema,
+    type FightPostCommentLikeResponse,
+    type FightPostCommentLikeRow,
     fightPostReactionPersonSchema,
     type DeleteFightPostCommentResponse,
 } from "@/lib/types/feed/fight-post";
@@ -168,7 +171,9 @@ function authorFromRow(row: CommentRow, url: string | null): FightPostAuthor {
 async function mapComments(
     userId: string,
     rows: CommentRow[],
+    database: Sql,
 ): Promise<FightPostComment[]> {
+    const likes = await readCommentLikes(userId, rows.map((row) => row.id), database);
     const urls = await signMediaUrls(
         rows.flatMap((row) =>
             row.avatar_object_path ? [row.avatar_object_path] : [],
@@ -181,6 +186,8 @@ async function mapComments(
         body: row.body,
         created_at: isoUtc(row.created_at),
         mine: row.author_id === userId,
+        like_count: likes.get(row.id)?.like_count ?? 0,
+        liked_by_me: likes.get(row.id)?.liked_by_me ?? false,
         author: authorFromRow(
             row,
             row.avatar_object_path
@@ -297,7 +304,7 @@ export async function listFightPostComments(
     const page = rows.slice(0, query.limit);
     const last = page.at(-1);
     return {
-        comments: await mapComments(userId, page),
+        comments: await mapComments(userId, page, database),
         next_cursor:
             rows.length > query.limit && last
                 ? `${cursorStamp(last.created_at)}|${last.id}`
@@ -370,7 +377,7 @@ async function listRecentFightPostComments(
     const page = rows.slice(0, query.limit);
     const last = page.at(-1);
     return {
-        comments: await mapComments(userId, page),
+        comments: await mapComments(userId, page, database),
         next_cursor:
             rows.length > query.limit && last
                 ? `${cursorStamp(last.created_at)}|${last.id}`
@@ -467,7 +474,7 @@ async function listDiscussedFightPostComments(
     }
     const last = pageRoots.at(-1);
     return {
-        comments: await mapComments(userId, page),
+        comments: await mapComments(userId, page, database),
         next_cursor:
             offset + query.limit < roots.length && last
                 ? `${replyCount(last)}|${new Date(last.created_at).toISOString()}|${last.id}`
@@ -567,7 +574,7 @@ export async function createFightPostComment(
             "Could not load that comment",
         );
     }
-    const [comment] = await mapComments(userId, [row]);
+    const [comment] = await mapComments(userId, [row], database);
     if (!comment) {
         throw new ApiError(
             500,
@@ -698,4 +705,76 @@ export async function setFightPostReaction(
         });
     }
     return { reactions: await listPostReactions(userId, postId, database) };
+}
+
+async function readCommentLikes(
+    userId: string,
+    commentIds: string[],
+    database: Sql,
+): Promise<Map<string, FightPostCommentLikeRow>> {
+    if (commentIds.length === 0) return new Map();
+    const rows = await database`
+        select likes.comment_id, count(*)::int as like_count,
+            bool_or(likes.user_id = ${userId}) as liked_by_me
+        from private.fight_post_comment_likes as likes
+        join public.profiles as profile
+            on profile.user_id = likes.user_id and profile.deleted_at is null
+        where likes.comment_id = any(${commentIds}::uuid[])
+            and not exists (
+                select 1 from private.feed_blocks as blocked
+                where blocked.blocker_id = ${userId} and blocked.blocked_id = likes.user_id
+            )
+        group by likes.comment_id
+    `;
+    return new Map(rows.map((row) => {
+        const likes = fightPostCommentLikeRowSchema.parse(row);
+        return [likes.comment_id, likes];
+    }));
+}
+
+export async function setFightPostCommentLike(
+    userId: string,
+    postId: string,
+    commentId: string,
+    liked: boolean,
+    database: Sql = createDatabaseClient(),
+): Promise<FightPostCommentLikeResponse> {
+    return database.begin("read write", async (sql) => {
+        const post = await loadVisiblePost(userId, postId, sql);
+        const [comment] = await sql`
+            select comment.id
+            from public.fight_post_comments as comment
+            join public.profiles as profile
+                on profile.user_id = comment.author_id and profile.deleted_at is null
+            where comment.id = ${commentId} and comment.post_id = ${postId}
+                and not exists (
+                    select 1 from private.feed_blocks as blocked
+                    where (blocked.blocker_id = ${userId}
+                        and blocked.blocked_id in (comment.author_id, ${post.author_id}::uuid))
+                        or (blocked.blocked_id = ${userId}
+                            and blocked.blocker_id in (comment.author_id, ${post.author_id}::uuid))
+                )
+            for update of comment
+        `;
+        if (!comment) {
+            throw new ApiError(404, ERROR_CODES.not_found, "Comment not found");
+        }
+        if (liked) {
+            await sql`
+                insert into private.fight_post_comment_likes (comment_id, post_id, user_id)
+                values (${commentId}, ${postId}, ${userId})
+                on conflict (comment_id, user_id) do nothing
+            `;
+        } else {
+            await sql`
+                delete from private.fight_post_comment_likes
+                where comment_id = ${commentId} and user_id = ${userId}
+            `;
+        }
+        const likes = (await readCommentLikes(userId, [commentId], sql)).get(commentId);
+        return {
+            like_count: likes?.like_count ?? 0,
+            liked_by_me: likes?.liked_by_me ?? false,
+        };
+    });
 }

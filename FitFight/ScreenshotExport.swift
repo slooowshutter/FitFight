@@ -156,7 +156,7 @@ enum ScreenshotExport {
                 })
                 write(wrap(view, .fights), name: "\(mode.rawValue)-chart-\(kind.rawValue)", height: canvas.height, to: folder, scale: 1)
             }
-            for (name, view, tab) in shots where ["fights", "group", "new", "you", "picker"].contains(name) {
+            for (name, view, tab) in shots where ["fights", "group", "new", "you", "picker", "feed"].contains(name) {
                 write(
                     AnyView(wrap(view, tab).environment(\.dynamicTypeSize, .accessibility3)),
                     name: "\(mode.rawValue)-\(name)-large-text", height: canvas.height, to: folder, scale: 1

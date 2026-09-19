@@ -259,6 +259,8 @@ struct FitFightFightPostComment: Codable, Equatable, Hashable, Identifiable {
     let createdAt: String
     let author: FitFightFightPost.Author
     let mine: Bool
+    var likeCount: Int? = nil
+    var likedByMe: Bool? = nil
 
     var createdDate: Date {
         let iso = ISO8601DateFormatter()
@@ -273,6 +275,18 @@ struct FitFightFightPostComment: Codable, Equatable, Hashable, Identifiable {
         case postId = "post_id"
         case parentId = "parent_id"
         case createdAt = "created_at"
+        case likeCount = "like_count"
+        case likedByMe = "liked_by_me"
+    }
+}
+
+struct FitFightFightPostCommentLike: Decodable {
+    let likeCount: Int
+    let likedByMe: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case likeCount = "like_count"
+        case likedByMe = "liked_by_me"
     }
 }
 

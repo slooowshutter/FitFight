@@ -928,6 +928,17 @@ struct FitFightAPI {
         )
     }
 
+    func setFightPostCommentLike(postID: UUID, commentID: UUID, liked: Bool, accessToken: String) async throws -> FitFightFightPostCommentLike {
+        try await request(
+            path: "posts/\(postID.uuidString.lowercased())/comments/\(commentID.uuidString.lowercased())/like",
+            method: "PUT",
+            accessToken: accessToken,
+            body: Self.encoder.encode(FightPostCommentLikeBody(liked: liked)),
+            idempotencyKey: nil,
+            expected: [200]
+        )
+    }
+
     func reportFightPostComment(postID: UUID, commentID: UUID, accessToken: String) async throws {
         let _: DiscardBody = try await post(
             path: "posts/\(postID.uuidString.lowercased())/comments/\(commentID.uuidString.lowercased())/report",
@@ -1662,6 +1673,10 @@ private struct FeedPostsBody: Encodable {
         case destinations
         case taggedUserIds = "tagged_user_ids"
     }
+}
+
+private struct FightPostCommentLikeBody: Encodable {
+    let liked: Bool
 }
 
 private struct FightPostCommentBody: Encodable {

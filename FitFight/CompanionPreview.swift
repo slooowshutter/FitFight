@@ -203,7 +203,7 @@ extension CompanionPreview {
                 body: index == 0 ? String(appLocalized: "See you on Sunday!") : String(appLocalized: "Count me in!"),
                 createdAt: Date().addingTimeInterval(-600).ISO8601Format(),
                 author: .init(userId: UUID(uuidString: person.id)!, handle: String(person.handle.dropFirst()), displayName: person.name, avatar: nil),
-                mine: person.isYou
+                mine: person.isYou, likeCount: index == 0 ? 2 : 1, likedByMe: index == 1
             )
         }
     }

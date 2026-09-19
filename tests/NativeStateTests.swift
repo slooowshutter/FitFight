@@ -87,6 +87,8 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
     static var commentLists: [CheckedContinuation<FitFightFightPostCommentList, Error>] = []
     static var commentCreations: [CheckedContinuation<FitFightFightPostCommentResponse, Error>] = []
     static var commentDeletions: [CheckedContinuation<FitFightFightPostCommentDeletion, Error>] = []
+    static var commentLikes: [CheckedContinuation<FitFightFightPostCommentLike, Error>] = []
+    static var commentLikeRequests: [(postID: UUID, commentID: UUID, liked: Bool)] = []
     static var commentReports: [CheckedContinuation<Void, Error>] = []
     static var commentPages: [String: FitFightFightPostCommentList]?
     static var feedbackLists: [CheckedContinuation<FitFightFeedbackList, Error>] = []
@@ -121,6 +123,10 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
     }
     func deleteFightPostComment(postID: UUID, commentID: UUID, accessToken: String) async throws -> FitFightFightPostCommentDeletion {
         try await withCheckedThrowingContinuation { Self.commentDeletions.append($0) }
+    }
+    func setFightPostCommentLike(postID: UUID, commentID: UUID, liked: Bool, accessToken: String) async throws -> FitFightFightPostCommentLike {
+        Self.commentLikeRequests.append((postID, commentID, liked))
+        return try await withCheckedThrowingContinuation { Self.commentLikes.append($0) }
     }
     func reportFightPostComment(postID: UUID, commentID: UUID, accessToken: String) async throws {
         try await withCheckedThrowingContinuation { Self.commentReports.append($0) }
@@ -190,6 +196,29 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
     }
 }
 
+@MainActor final class CommentLikeRequestPaths {
+    static let encoder = JSONEncoder()
+    var path: String?
+    var method: String?
+    var body: Data?
+    var expected: Set<Int> = []
+
+    func request<Response: Decodable>(
+        path: String,
+        method: String,
+        accessToken: String,
+        body: Data?,
+        idempotencyKey: String?,
+        expected: Set<Int>
+    ) async throws -> Response {
+        self.path = path
+        self.method = method
+        self.body = body
+        self.expected = expected
+        return try JSONDecoder().decode(Response.self, from: Data("{\"like_count\":4,\"liked_by_me\":true}".utf8))
+    }
+}
+
 @MainActor final class FeedRefreshHarness {
     let model = AppModel()
     let session = SessionStore()
@@ -226,11 +255,10 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
     var replyTo: FitFightFightPostComment?
     var draft = ""
     var nextCursor: String?
-    var commentSort = FightPostCommentSort.comments
-    var loadedCommentSort = FightPostCommentSort.comments
     var loadedCommentPages = 0
     var loading = false
     var loadingComments = false
+    var likingCommentIDs: Set<UUID> = []
     var open = false
     var reloadComments = false
     var commentsVersion = 0
@@ -321,6 +349,19 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
               "initial and paginated feeds request exactly ten posts through the existing API")
         check(URLComponents(string: paths.paths[1])?.queryItems?.first(where: { $0.name == "cursor" })?.value == "2026-09-16T12:00:00.123456Z|cursor-id",
               "ten-post pagination preserves the server cursor exactly")
+
+        let commentLikePaths = CommentLikeRequestPaths()
+        let likePostID = UUID()
+        let likeCommentID = UUID()
+        let persistedLike = try? await commentLikePaths.setFightPostCommentLike(
+            postID: likePostID, commentID: likeCommentID, liked: true, accessToken: "token"
+        )
+        let encodedLike = commentLikePaths.body.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Bool] }
+        check(commentLikePaths.path == "posts/\(likePostID.uuidString.lowercased())/comments/\(likeCommentID.uuidString.lowercased())/like"
+                && commentLikePaths.method == "PUT" && commentLikePaths.expected == [200] && encodedLike == ["liked": true],
+              "comment likes persist through the versioned PUT endpoint with the requested state")
+        check(persistedLike?.likeCount == 4 && persistedLike?.likedByMe == true,
+              "the native API decodes the authoritative persisted comment like")
 
         let firstRevision = pagedFeed.revision
         pagedFeed.error = "Earlier refresh failed"
@@ -573,11 +614,72 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
             id: UUID(), postId: post.id, parentId: busy.id, body: "Reply",
             createdAt: "2026-09-16T11:30:00Z", author: sortAuthor, mine: false
         )
-        let sortThread = FightPostThreadState(post: post)
-        sortThread.comments = [quiet, busy, reply]
-        check(sortThread.rowsForTest().map(\.0) == [busy.id, reply.id, quiet.id], "most comments shows the busiest thread first")
-        sortThread.commentSort = .recent
-        check(sortThread.rowsForTest().map(\.0) == [quiet.id, busy.id, reply.id], "most recent shows the newest root first")
+        let chronologicalThread = FightPostThreadState(post: post)
+        chronologicalThread.comments = [busy, quiet, reply]
+        check(chronologicalThread.rowsForTest().map(\.0) == [quiet.id, busy.id, reply.id],
+              "comments show the newest root first and keep its replies underneath")
+
+        let likeThread = FightPostThreadState(post: post)
+        let unliked = FitFightFightPostComment(
+            id: UUID(), postId: post.id, parentId: nil, body: "Like this",
+            createdAt: post.createdAt, author: post.author, mine: false,
+            likeCount: 2, likedByMe: false
+        )
+        likeThread.comments = [unliked]
+        let likeRequestsBefore = FitFightAPI.commentLikeRequests.count
+        let savingLike = Task { await likeThread.likeForTest(unliked) }
+        while FitFightAPI.commentLikes.isEmpty { await Task.yield() }
+        check(likeThread.comments[0].likeCount == 3 && likeThread.comments[0].likedByMe == true
+                && likeThread.likingCommentIDs == [unliked.id],
+              "liking a comment updates the heart and count while the request is pending")
+        await likeThread.likeForTest(unliked)
+        check(FitFightAPI.commentLikeRequests.count == likeRequestsBefore + 1
+                && FitFightAPI.commentLikeRequests.last?.postID == post.id
+                && FitFightAPI.commentLikeRequests.last?.commentID == unliked.id
+                && FitFightAPI.commentLikeRequests.last?.liked == true,
+              "a pending comment like blocks duplicate persistence requests")
+        FitFightAPI.commentLikes.removeFirst().resume(returning: .init(likeCount: 4, likedByMe: true))
+        await savingLike.value
+        check(likeThread.comments[0].likeCount == 4 && likeThread.comments[0].likedByMe == true
+                && likeThread.likingCommentIDs.isEmpty,
+              "a successful comment like publishes the authoritative server result")
+        let removingLike = Task { await likeThread.likeForTest(unliked) }
+        while FitFightAPI.commentLikes.isEmpty { await Task.yield() }
+        check(likeThread.comments[0].likeCount == 3 && likeThread.comments[0].likedByMe == false
+                && FitFightAPI.commentLikeRequests.last?.liked == false,
+              "tapping a liked comment optimistically removes exactly one like")
+        FitFightAPI.commentLikes.removeFirst().resume(returning: .init(likeCount: 3, likedByMe: false))
+        await removingLike.value
+
+        let failedLikeThread = FightPostThreadState(post: post)
+        let legacyComment = FitFightFightPostComment(
+            id: UUID(), postId: post.id, parentId: nil, body: "From an older response",
+            createdAt: post.createdAt, author: post.author, mine: false
+        )
+        failedLikeThread.comments = [legacyComment]
+        let failedLike = Task { await failedLikeThread.likeForTest(legacyComment) }
+        while FitFightAPI.commentLikes.isEmpty { await Task.yield() }
+        check(failedLikeThread.comments[0].likeCount == 1 && failedLikeThread.comments[0].likedByMe == true,
+              "a legacy comment without like fields still supports an optimistic first like")
+        FitFightAPI.commentLikes.removeFirst().resume(throwing: TestFailure.offline)
+        await failedLike.value
+        check(failedLikeThread.comments[0].likeCount == nil && failedLikeThread.comments[0].likedByMe == nil
+                && failedLikeThread.likingCommentIDs.isEmpty && failedLikeThread.feed.error != nil,
+              "a failed first like restores the exact legacy state and reports the failure")
+
+        let refreshingLikeThread = FightPostThreadState(post: post)
+        refreshingLikeThread.comments = [unliked]
+        let pendingLike = Task { await refreshingLikeThread.likeForTest(unliked) }
+        while FitFightAPI.commentLikes.isEmpty { await Task.yield() }
+        let refreshDuringLike = Task { await refreshingLikeThread.loadForTest() }
+        while FitFightAPI.commentLists.isEmpty { await Task.yield() }
+        FitFightAPI.commentLists.removeFirst().resume(returning: .init(comments: [unliked], nextCursor: nil))
+        await refreshDuringLike.value
+        check(FitFightAPI.commentRequests.last?.sort == .recent
+                && refreshingLikeThread.comments[0].likeCount == 3 && refreshingLikeThread.comments[0].likedByMe == true,
+              "a comment refresh cannot erase an optimistic like while its request is pending")
+        FitFightAPI.commentLikes.removeFirst().resume(returning: .init(likeCount: 3, likedByMe: true))
+        await pendingLike.value
 
         let thread = FightPostThreadState(post: post)
         let orphan = FitFightFightPostComment(
@@ -634,20 +736,6 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
             FitFightAPI.commentPages = nil
         }
 
-        let changingSort = Task { await refreshedThread.loadForTest() }
-        while FitFightAPI.commentLists.isEmpty { await Task.yield() }
-        refreshedThread.commentSort = .recent
-        refreshedThread.sortChangedForTest()
-        while !refreshedThread.reloadComments { await Task.yield() }
-        FitFightAPI.commentLists.removeFirst().resume(returning: .init(comments: [orphan], nextCursor: "old-sort"))
-        while FitFightAPI.commentLists.isEmpty { await Task.yield() }
-        check(FitFightAPI.commentRequests.last?.sort == .recent && FitFightAPI.commentRequests.last?.cursor == nil,
-              "a sort change restarts the first page instead of reusing the previous order's cursor")
-        check(refreshedThread.comments.contains(grandchild), "an older sort response cannot replace the displayed comments")
-        FitFightAPI.commentLists.removeFirst().resume(returning: .init(comments: [grandchild, child, orphan], nextCursor: nil))
-        await changingSort.value
-        check(refreshedThread.comments.first?.id == grandchild.id, "the queued refresh uses the current comment order")
-
         let pagedThread = FightPostThreadState(post: post.updating(commentCount: 3))
         pagedThread.targetCommentID = grandchild.id
         let targeted = Task { await pagedThread.loadForTest() }
@@ -664,7 +752,7 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
                 createdAt: post.createdAt, author: post.author, mine: false
             )
         }
-        for (changeSort, failedRead) in [(false, false), (false, true), (true, false)] {
+        for failedRead in [false, true] {
             let interruptedPage = FightPostThreadState(post: post.updating(commentCount: 45))
             let pages: [String: FitFightFightPostCommentList] = [
                 "": .init(comments: Array(commentHistory.prefix(40)), nextCursor: "older-comments"),
@@ -676,13 +764,7 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
             let moreComments = Task { await interruptedPage.loadForTest(more: true) }
             while FitFightAPI.commentLists.isEmpty { await Task.yield() }
             check(FitFightAPI.commentRequests.last?.cursor == "older-comments", "More comments requests the next page")
-            if changeSort {
-                interruptedPage.commentSort = .recent
-                interruptedPage.sortChangedForTest()
-                while !interruptedPage.reloadComments { await Task.yield() }
-            } else {
-                await interruptedPage.loadForTest()
-            }
+            await interruptedPage.loadForTest()
             FitFightAPI.commentPages = pages
             if failedRead {
                 FitFightAPI.commentLists.removeFirst().resume(throwing: TestFailure.offline)
@@ -690,15 +772,14 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
                 FitFightAPI.commentLists.removeFirst().resume(returning: .init(comments: Array(commentHistory.suffix(5)), nextCursor: nil))
             }
             await moreComments.value
-            check(interruptedPage.comments == (changeSort ? Array(commentHistory.prefix(40)) : commentHistory),
-                  changeSort ? "changing sort during pagination starts at the new first page" : "a live update during More comments preserves the requested next page")
-            check(interruptedPage.nextCursor == (changeSort ? "older-comments" : nil) && !interruptedPage.loadingComments,
+            check(interruptedPage.comments == commentHistory,
+                  "a live update during More comments preserves the requested next page")
+            check(interruptedPage.nextCursor == nil && !interruptedPage.loadingComments,
                   "interrupted comment pagination settles at the cursor for the displayed pages")
             FitFightAPI.commentPages = nil
         }
 
         let retainedThread = FightPostThreadState(post: post.updating(commentCount: 45))
-        retainedThread.commentSort = .recent
         FitFightAPI.commentPages = [
             "": .init(comments: Array(commentHistory.prefix(40)), nextCursor: "older-comments"),
             "older-comments": .init(comments: Array(commentHistory.suffix(5)), nextCursor: nil),
@@ -767,12 +848,16 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
             let load = Task { await stale.loadForTest() }
             let send = Task { await stale.sendForTest() }
             let remove = Task { await stale.deleteForTest(orphan) }
+            let like = Task { await stale.likeForTest(child) }
             let report = Task { await stale.reportForTest(child) }
-            while FitFightAPI.commentLists.isEmpty || FitFightAPI.commentCreations.isEmpty || FitFightAPI.commentDeletions.isEmpty || FitFightAPI.commentReports.isEmpty {
+            while FitFightAPI.commentLists.isEmpty || FitFightAPI.commentCreations.isEmpty || FitFightAPI.commentDeletions.isEmpty
+                    || FitFightAPI.commentLikes.isEmpty || FitFightAPI.commentReports.isEmpty {
                 await Task.yield()
             }
             stale.session.authSession = TestSession(user: TestUser(id: UUID()))
             stale.feed.activate(userID: stale.session.authSession?.user.id)
+            stale.comments = [orphan, child]
+            stale.likingCommentIDs = [grandchild.id]
             stale.feed.posts = [post.updating(commentCount: 8)]
             stale.feed.error = "New account error"
             stale.draft = "New draft"
@@ -782,19 +867,23 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
                 FitFightAPI.commentLists.removeFirst().resume(throwing: TestFailure.offline)
                 FitFightAPI.commentCreations.removeFirst().resume(throwing: TestFailure.offline)
                 FitFightAPI.commentDeletions.removeFirst().resume(throwing: TestFailure.offline)
+                FitFightAPI.commentLikes.removeFirst().resume(throwing: TestFailure.offline)
                 FitFightAPI.commentReports.removeFirst().resume(throwing: TestFailure.offline)
             } else {
                 FitFightAPI.commentLists.removeFirst().resume(returning: .init(comments: [grandchild], nextCursor: "Old cursor"))
                 FitFightAPI.commentCreations.removeFirst().resume(returning: .init(comment: grandchild, commentCount: 3))
                 FitFightAPI.commentDeletions.removeFirst().resume(returning: .init(deleted: true, commentCount: 0))
+                FitFightAPI.commentLikes.removeFirst().resume(returning: .init(likeCount: 9, likedByMe: true))
                 FitFightAPI.commentReports.removeFirst().resume()
             }
             await load.value
             await send.value
             await remove.value
+            await like.value
             await report.value
             check(stale.comments == [orphan, child] && stale.nextCursor == "New cursor", "old-account comment \(fails ? "failures" : "responses") preserve the new thread")
             check(stale.draft == "New draft" && stale.replyTo == child && stale.loading, "old-account comment completions preserve the new account's draft, reply, and loading state")
+            check(stale.likingCommentIDs == [grandchild.id], "old-account like completions preserve the new account's pending likes")
             check(stale.feed.posts[0].commentCount == 8 && stale.feed.error == "New account error", "old-account comment \(fails ? "failures" : "responses") cannot overwrite shared feed state")
         }
 
@@ -804,21 +893,25 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
         let tokenLoad = Task { await tokenSwitch.loadForTest() }
         let tokenSend = Task { await tokenSwitch.sendForTest() }
         let tokenDelete = Task { await tokenSwitch.deleteForTest(child) }
+        tokenSwitch.comments = [child]
+        let tokenLike = Task { await tokenSwitch.likeForTest(child) }
         let tokenReport = Task { await tokenSwitch.reportForTest(child) }
-        while tokenSwitch.session.tokenRequests.count < 4 { await Task.yield() }
+        while tokenSwitch.session.tokenRequests.count < 5 { await Task.yield() }
         tokenSwitch.session.authSession = nil
         for continuation in tokenSwitch.session.tokenRequests { continuation.resume(returning: "old-token") }
         tokenSwitch.session.tokenRequests = []
         try? await Task.sleep(for: .milliseconds(20))
         let sentAfterSignOut = !FitFightAPI.commentLists.isEmpty || !FitFightAPI.commentCreations.isEmpty
-            || !FitFightAPI.commentDeletions.isEmpty || !FitFightAPI.commentReports.isEmpty
+            || !FitFightAPI.commentDeletions.isEmpty || !FitFightAPI.commentLikes.isEmpty || !FitFightAPI.commentReports.isEmpty
         for continuation in FitFightAPI.commentLists { continuation.resume(throwing: TestFailure.offline) }
         for continuation in FitFightAPI.commentCreations { continuation.resume(throwing: TestFailure.offline) }
         for continuation in FitFightAPI.commentDeletions { continuation.resume(throwing: TestFailure.offline) }
+        for continuation in FitFightAPI.commentLikes { continuation.resume(throwing: TestFailure.offline) }
         for continuation in FitFightAPI.commentReports { continuation.resume(throwing: TestFailure.offline) }
         await tokenLoad.value
         await tokenSend.value
         await tokenDelete.value
+        await tokenLike.value
         await tokenReport.value
         check(!sentAfterSignOut, "comment operations stop after sign-out during token refresh")
 

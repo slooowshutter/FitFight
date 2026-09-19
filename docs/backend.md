@@ -65,6 +65,56 @@ safe backend migration, not automatically an iOS release. Removing information o
 behavior an admitted app still requires waits for that app to be retired. Destructive
 SQL and hosted deployment still follow Marc's authorization rules.
 
+## Standard row columns
+
+The prepared `20260919131732_standard_row_columns.sql` migration adds missing
+`id`, `created_at`, and `updated_at` columns to all 60 FitFight-owned tables in
+`public` and `private`. Auth, Storage, Realtime, and extension-owned tables are
+outside this convention. New tables must follow it; the schema test checks it.
+
+`profiles.id` is an indexed, stored generated copy of the unique `user_id`.
+Profile queries read/filter/join on `id`; v1 still serializes
+`user_id`, including identities embedded in Fight, Feed, and shared-profile
+responses. Native models, request paths, and response fixtures do not change.
+Legacy signup, old backend instances, RLS, foreign keys, and direct Supabase
+clients continue using `user_id`. Its removal is deferred to a separate rollout.
+The other existing single-row UUID identities also receive generated aliases;
+tables with compound identities receive a generated UUID default. Existing
+primary, foreign, and uniqueness constraints remain unchanged, including the
+keys used by `ON CONFLICT`. Generated aliases use non-unique lookup indexes:
+their source keys already guarantee uniqueness, and redundant unique indexes
+can break concurrent legacy `ON CONFLICT` writes. No new API version or native
+release is required.
+
+New timestamps default to `now()`. Existing timestamps keep their semantics.
+The update trigger fills `updated_at` when a writer leaves it unchanged and
+preserves explicitly changed timestamps from existing writers. It does not
+replace domain dates such as `occurred_at`, `received_at`, or `finalized_at`.
+Ordinary updates and upserts retain `created_at` unless an existing writer
+explicitly changes it, as report refreshes already do.
+
+For historical rows, the migration uses recorded signup, connection, receipt,
+join, send, and capture timestamps where available. Otherwise it initializes
+`created_at` from the old `updated_at`, or migration time when neither exists.
+Those values are estimates or initialization times, not recovered creation
+history. Missing `updated_at` uses a recorded last receipt/sync when available,
+otherwise migration time. Each new timestamp column documents its expression.
+Existing timestamp values are never overwritten by the backfill.
+
+The migration suppresses user-trigger side effects only within its own
+transaction, preventing metadata backfills from creating activity, recapturing
+companions, or sending Realtime invalidations. Constraints, grants, and RLS stay
+in place. A five-second lock timeout aborts the transaction if it cannot acquire
+the required table locks. The backfill and new indexes still require a deployment
+window appropriate to the environment's row counts.
+
+Apply this additive migration before deploying the changed backend. The new
+backend readiness check requires its migration record and profile columns.
+Keep the old backend usable during the migration and rollback window. Validate
+staging separately from production; the normal authorized branch promotions
+still apply. Do not include removal of legacy identifiers or direct-client
+permissions in this migration batch.
+
 ## Saved companion descriptions (prepared 17 Sep 2026)
 
 `GET /api/v1/me/companions` returns the authenticated user's saved descriptions as

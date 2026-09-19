@@ -22,7 +22,15 @@ select is_empty($$
                 and i.indisunique and i.indisvalid and i.indnkeyatts = 1
                 and i.indkey[0] = a.attnum and i.indpred is null
         )
-$$, 'each row ID is independently unique while existing compound keys remain');
+        and not exists (
+            select 1 from pg_attrdef generated
+            join pg_attribute source on source.attrelid = c.oid and source.attnotnull
+                and pg_get_expr(generated.adbin, generated.adrelid) = quote_ident(source.attname)
+            join pg_index i on i.indrelid = c.oid and i.indkey[0] = source.attnum
+            where generated.adrelid = c.oid and generated.adnum = a.attnum and a.attgenerated = 's'
+                and i.indisunique and i.indisvalid and i.indnkeyatts = 1 and i.indpred is null
+        )
+$$, 'each row ID is unique directly or through its generated source key');
 
 select is_empty($$
     select table_schema, table_name, column_name
@@ -88,6 +96,16 @@ select ok(not has_column_privilege('authenticated', 'public.profiles', 'created_
     'legacy profile writers gain no timestamp-write permission');
 select ok(not has_table_privilege('authenticated', 'private.account_preferences', 'SELECT'),
     'standard columns do not expose private rows');
+
+insert into public.fights (id, owner_id, name, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy)
+values ('95000000-0000-4000-8000-000000000001', '91000000-0000-4000-8000-000000000001',
+    'Timestamp-only update', 'live', now(), now() + interval '1 day', 'UTC', 'highest_total', 'shared');
+insert into public.fight_members (fight_id, user_id, state)
+values ('95000000-0000-4000-8000-000000000001', '91000000-0000-4000-8000-000000000001', 'accepted');
+create temporary table original_messages as select count(*) total from realtime.messages;
+update public.fight_members set state = state where fight_id = '95000000-0000-4000-8000-000000000001';
+select is((select count(*) from realtime.messages), (select total from original_messages),
+    'timestamp-only membership updates do not emit Fight or Feed invalidations');
 
 select * from finish();
 rollback;

@@ -94,7 +94,10 @@ begin
         if target.id_source = 'gen_random_uuid()' then
             execute format('alter table %s add column id uuid not null default gen_random_uuid() unique', target.table_name);
         elsif target.id_source is not null then
-            execute format('alter table %s add column id uuid generated always as (%I) stored not null unique', target.table_name, target.id_source);
+            -- The source key already enforces uniqueness. A second unique index can
+            -- defeat legacy ON CONFLICT targets during concurrent inserts.
+            execute format('alter table %s add column id uuid generated always as (%I) stored not null', target.table_name, target.id_source);
+            execute format('create index on %s (id)', target.table_name);
             execute format('comment on column %s.id is %L', target.table_name,
                 'Stable row identity. Generated from ' || target.id_source || ' while existing writers and keys remain supported.');
         end if;

@@ -52,7 +52,12 @@ test("authenticated legacy /me and new mutual-profile contracts coexist before a
             headers: { ...headers, "X-FitFight-Version": version, "X-FitFight-Build": build },
         }), { params: Promise.resolve({}) });
         assert.equal(response.status, 200);
-        const profile = profileSchema.parse(await response.json());
+        const payload = await response.json();
+        assert.deepEqual(Object.keys(payload).sort(), [
+            "user_id", "handle", "display_name", "handle_set_at", "referral_code", "avatar",
+            "companion_id", "companion_prompt", "time_zone",
+        ].sort(), "Storage IDs and row timestamps must not leak into the v1 profile contract");
+        const profile = profileSchema.parse(payload);
         assert.equal(profile.user_id, viewer.userId);
         assert.ok(profile.referral_code);
         assert.equal(profile.time_zone, "Pacific/Kiritimati");

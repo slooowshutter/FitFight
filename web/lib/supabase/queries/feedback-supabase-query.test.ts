@@ -127,7 +127,7 @@ test("only a trusted admin account can delete feedback", async (t) => {
                     fetch: async (input, init) => {
                         const url = new URL(new Request(input, init).url);
                         if (url.pathname === "/rest/v1/profiles") {
-                            assert.equal(url.searchParams.get("user_id"), `eq.${userId}`);
+                            assert.equal(url.searchParams.get("id"), `eq.${userId}`);
                             assert.equal(url.searchParams.get("deleted_at"), "is.null");
                             return Response.json(scenario.handle ? [{ handle: scenario.handle }] : []);
                         }

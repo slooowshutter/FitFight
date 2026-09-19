@@ -14,7 +14,8 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 replaces the Fight's Share tab with Details. It shows the current round's start
 and end dates/times in the Fight time zone, creator when available, and current
 participant count. Invited and next-round members are excluded from that count.
-The existing share sheet, invite link, and copy-code controls are grouped below.
+The information card has a Details heading and separator, matching Share above
+the existing share sheet, invite link, and copy-code controls grouped below.
 Details remains available without a join code; legacy fights without a stored
 time zone use the phone's zone, matching the existing editor. Stats, Feed,
 recurring History, and the pre-join preview keep their existing behavior.
@@ -26,8 +27,9 @@ language switching, standings, and navigation. [English/French screen captures](
 passed and were visually checked in Night/Day, with accessibility text, and for a
 legacy fight without a code, creator, or stored time zone. Source localization,
 native API-boundary, and whitespace checks also passed. No native build ran on
-the workstation. The temporary feature-branch CI triggers were then removed;
-app sources are unchanged from the successful runs.
+the workstation. The temporary feature-branch CI triggers were then removed.
+The follow-up Details section heading uses the existing localized section-header
+component; its refreshed cloud screenshots are pending.
 
 **Contract and deployment:** native presentation only. API requests/responses,
 native API models, database schema, and supported-client contracts are unchanged.

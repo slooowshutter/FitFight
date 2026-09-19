@@ -508,6 +508,7 @@ struct FightDetailView: View {
         let participantCount = fight.standings.filter { !$0.invited && !$0.deferred }.count
 
         return VStack(alignment: .leading, spacing: theme.space.cardGap) {
+            FFSectionHeader(title: String(appLocalized: "Details"))
             FFGroupedRows {
                 FFGroupedRow(
                     title: String(appLocalized: "Start"),

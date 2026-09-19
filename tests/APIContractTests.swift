@@ -7,6 +7,23 @@ struct APIContractTests {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
 
+        let legacyCommentData = try Data(contentsOf: fixtures.appendingPathComponent("post-comment-list-legacy-response.json"))
+        let currentCommentData = try Data(contentsOf: fixtures.appendingPathComponent("post-comment-list-like-response.json"))
+        let legacyComments = try decoder.decode(FitFightFightPostCommentList.self, from: legacyCommentData)
+        let currentComments = try decoder.decode(FitFightFightPostCommentList.self, from: currentCommentData)
+        precondition(legacyComments.comments[0].likeCount == nil && legacyComments.comments[0].likedByMe == nil,
+                     "Responses for installed clients remain decodable without comment like fields")
+        precondition(currentComments.comments[0].likeCount == 2 && currentComments.comments[0].likedByMe == true)
+        let encodedComment = try JSONSerialization.jsonObject(with: JSONEncoder().encode(currentComments.comments[0])) as! [String: Any]
+        precondition(encodedComment["like_count"] as? Int == 2 && encodedComment["liked_by_me"] as? Bool == true,
+                     "Cached comment like fields retain their API snake-case keys")
+        let releasedComments = try decoder.decode(Build201FightPostCommentList.self, from: currentCommentData)
+        precondition(releasedComments.comments[0].body == "See you on the walk!",
+                     "The byte-identical build 201, 202, and 204 comment decoder ignores additive like fields")
+        let likeData = try Data(contentsOf: fixtures.appendingPathComponent("post-comment-like-response.json"))
+        let like = try decoder.decode(FitFightFightPostCommentLike.self, from: likeData)
+        precondition(like.likeCount == 3 && like.likedByMe)
+
         let reactionPeopleData = try Data(contentsOf: fixtures.appendingPathComponent("post-reaction-people-response.json"))
         let reactionPeople = try decoder.decode(FitFightFightPostReactionPeople.self, from: reactionPeopleData)
         precondition(reactionPeople.people.count == 2)
@@ -94,6 +111,33 @@ struct APIContractTests {
         let checkpoints = try decoder.decode(FitFightSnapshot.self, from: checkpointData)
         precondition(checkpoints.members[0].stepCheckpoints?.last?.steps == 8500)
         precondition(checkpoints.members[1].stepCheckpoints == nil)
-        print("API contracts: profile, onboarding, cached profiles, extra fields, Fight snapshot passed")
+        print("API contracts: comment likes, profile, onboarding, cached profiles, extra fields, Fight snapshot passed")
+    }
+}
+
+private struct Build201FightPostCommentList: Decodable {
+    let comments: [Build201FightPostComment]
+    let nextCursor: String?
+
+    enum CodingKeys: String, CodingKey {
+        case comments
+        case nextCursor = "next_cursor"
+    }
+}
+
+private struct Build201FightPostComment: Decodable {
+    let id: UUID
+    let postId: UUID
+    let parentId: UUID?
+    let body: String
+    let createdAt: String
+    let author: FitFightFightPost.Author
+    let mine: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case id, body, author, mine
+        case postId = "post_id"
+        case parentId = "parent_id"
+        case createdAt = "created_at"
     }
 }

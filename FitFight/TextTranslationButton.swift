@@ -4,6 +4,7 @@ import Translation
 
 struct TextTranslationButton: View {
     let text: String
+    var alignment: Alignment = .top
 
     @Environment(\.ffTheme) private var theme
     @State private var showingTranslation = false
@@ -17,7 +18,7 @@ struct TextTranslationButton: View {
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(theme.mossText)
                     .frame(height: 20)
-                    .frame(width: 44, height: 44, alignment: .top)
+                    .frame(width: 44, height: 44, alignment: alignment)
                     .contentShape(Rectangle())
             }
             .buttonStyle(FFHapticPlainStyle())

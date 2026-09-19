@@ -8,6 +8,19 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
 
+## Manual notification endpoint: prepared 19 Sep 2026
+
+`POST /api/admin/notifications` accepts `{ "username": "@marc", "message": "Bonjour !" }`
+with `Authorization: Bearer <cron secret>`. It reuses `CRON_SECRET`, or
+`FITFIGHT_CRON_SECRET` when the primary variable is unset, and the existing profile
+lookup, active-device lookup, and APNs sender. It sends once to the newest active
+device and returns Apple's acceptance, HTTP status, request ID, and reason.
+Manual sends are not recorded in the database; each POST is a new send.
+No admin page, migration, mobile API change, or iOS update is included.
+Cloud TypeScript and handler checks passed authentication, validation, missing
+configuration/device/profile, and Apple acceptance/rejection with mocked external
+boundaries. Endpoint not deployed; verification sent no real notifications.
+
 ## Notification destinations: prepared 19 Sep 2026
 
 **Code:** Fight notification links now preserve the exact round in their URL.

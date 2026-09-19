@@ -12902,6 +12902,57 @@
                     }
                 }
             }
+        },
+        "Created by": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Created by"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Créé par"
+                    }
+                }
+            }
+        },
+        "Participants": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Participants"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Participants"
+                    }
+                }
+            }
+        },
+        "The new Details tab shows each fight's schedule, time zone, creator, and participant count. Sharing, invite links, and fight codes are all there too.": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "The new Details tab shows each fight's schedule, time zone, creator, and participant count. Sharing, invite links, and fight codes are all there too."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Le nouvel onglet Détails affiche les dates et heures, le fuseau horaire, le créateur et le nombre de participants de chaque fight. Retrouvez-y aussi le partage, les liens d’invitation et les codes des fights."
+                    }
+                }
+            }
         }
     },
     "version": "1.0"

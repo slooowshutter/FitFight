@@ -6,7 +6,7 @@ enum FightDetailPane: Hashable {
     case stats
     case history
     case feed
-    case share
+    case details
 
     var title: String {
         switch self {
@@ -16,8 +16,8 @@ enum FightDetailPane: Hashable {
             return String(appLocalized: "History")
         case .feed:
             return String(appLocalized: "Feed")
-        case .share:
-            return String(appLocalized: "Share")
+        case .details:
+            return String(appLocalized: "Details")
         }
     }
 }
@@ -55,7 +55,7 @@ struct FightDetailView: View {
             items.append(.history)
         }
         items.append(.feed)
-        if fight.joinCode != nil { items.append(.share) }
+        items.append(.details)
         return items
     }
 
@@ -111,8 +111,8 @@ struct FightDetailView: View {
                     if let fightID = UUID(uuidString: fight.id) {
                         FightPostsSection(fightID: fightID, fightFeed: fightFeed)
                     }
-                case .share:
-                    shareCard
+                case .details:
+                    detailsPane
                 }
             }
         }
@@ -498,6 +498,62 @@ struct FightDetailView: View {
                 .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var detailsPane: some View {
+        let timeZone = fight.timeZone.flatMap(TimeZone.init(identifier:)) ?? .current
+        let dateFormat = Date.FormatStyle(date: .abbreviated, time: .shortened, timeZone: timeZone)
+            .locale(AppLocalization.locale)
+        let participantCount = fight.standings.filter { !$0.invited && !$0.deferred }.count
+
+        return VStack(alignment: .leading, spacing: theme.space.cardGap) {
+            FFGroupedRows {
+                FFGroupedRow(
+                    title: String(appLocalized: "Start"),
+                    subtitle: fight.windowStart.formatted(dateFormat),
+                    systemImage: "calendar",
+                    subtitleTone: .neutral
+                )
+                FFDivider()
+                FFGroupedRow(
+                    title: String(appLocalized: "End"),
+                    subtitle: fight.windowEnd.formatted(dateFormat),
+                    systemImage: "calendar.badge.checkmark",
+                    subtitleTone: .neutral
+                )
+                FFDivider()
+                FFGroupedRow(
+                    title: String(appLocalized: "Time zone"),
+                    subtitle: timeZone.identifier,
+                    systemImage: "globe",
+                    subtitleTone: .neutral
+                )
+                if let creator = fight.inviter {
+                    FFDivider()
+                    FFGroupedRow(
+                        title: String(appLocalized: "Created by"),
+                        subtitle: creator.isYou ? String(appLocalized: "You") : creator.name,
+                        systemImage: "person",
+                        subtitleTone: .neutral
+                    )
+                }
+                FFDivider()
+                FFGroupedRow(
+                    title: String(appLocalized: "Participants"),
+                    subtitle: String(
+                        appLocalized: "fight.participant-count",
+                        defaultValue: "\(participantCount) in this fight"
+                    ),
+                    systemImage: "person.2",
+                    subtitleTone: .neutral
+                )
+            }
+            if fight.joinCode != nil {
+                FFSection(title: String(appLocalized: "Share")) {
+                    shareCard
+                }
+            }
         }
     }
 

@@ -8,6 +8,25 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
 
+## Compact suggested fight cards: prepared 19 Sep 2026
+
+**Code:** Suggested fights on New and under Fights > Invited use compact rows
+with the invitation card's spacing, green surface, title, participant count, and
+small Join pill. Tapping the row opens the existing fight preview before joining.
+The full schedule, recurrence, stake, and sharing disclosure appear in that
+preview. Already joined fights open their existing detail screen. The onboarding
+offer keeps its full details because its button joins directly. A localized
+1.1.2 release note and a Day screenshot of New were added.
+
+**Verification:** localization, native API-boundary, and whitespace checks passed.
+The [hosted simulator build and English/French captures](https://github.com/slooowshutter/FitFight/actions/runs/35455820424)
+passed at `813e1bb`. The 72-point rows were visually checked in both Night and Day.
+These are static captures; signed-in device interaction was not tested. No local
+native compilation ran. The temporary feature-branch screenshot trigger was
+removed after verification; native sources are unchanged from the checked commit.
+API contracts and the database are unchanged; no backend rollout is needed. No
+PR, deployment, release-branch merge, or TestFlight upload was performed.
+
 ## Feedback filtering and management: prepared 19 Sep 2026
 
 **Code:** the existing Feedback cards and screen styling remain. The filter tabs

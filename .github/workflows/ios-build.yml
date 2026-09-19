@@ -30,7 +30,7 @@ on:
             - "fastlane/**"
             - ".github/workflows/ios-build.yml"
     push:
-        branches: [main, develop, preview, profiles-friends-and-stats]
+        branches: [main, develop, preview, profiles-friends-and-stats, fix-notification-deep-links]
         paths:
             - "FitFight/**"
             - "FitFight.xcodeproj/**"
@@ -95,6 +95,9 @@ jobs:
             contents: read
         steps:
             - uses: actions/checkout@v4
+
+            - name: Reproduce notification destination regression
+              run: python3 scripts/test_feed_activity.py
 
             - name: Validate English and French localizations
               run: python3 scripts/check_localizations.py

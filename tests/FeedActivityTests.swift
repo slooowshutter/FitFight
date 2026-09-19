@@ -18,15 +18,22 @@ enum Failure: Error { case offline }
     }
 }
 
+enum FFTab { case fights, newFight, feed, feedback, you }
+enum FightStatus { case live, pending, invited, finished }
+struct Fight {
+    let id: String
+    let seriesId: String?
+    let status: FightStatus
+    let windowStart: Date
+}
+
 @MainActor final class AppModel {
-    enum Tab { case fights, feed }
-    var tab = Tab.fights
-    var openPost: FeedPostLink?
-    var openFightID: String?
+    // MODEL_STATE
+    var fights: [Fight] = []
+    var pendingJoinable: Fight?
     var dailyRecapID: String?
     static let pendingFightRouteKey = "fitfight.tests.activity.route"
     static let pendingDailyStatusKey = "fitfight.tests.activity.daily"
-    func openFight(id: String) { openFightID = id; tab = .fights }
     func presentDailyStatusRecap(for id: String) async { dailyRecapID = id }
 }
 
@@ -51,6 +58,7 @@ enum Failure: Error { case offline }
         precondition(model.openPost == nil, "A notification must not reopen after it is consumed")
         AppModel.storePendingFightRoute("/fights/\(fight)")
         model.consumeForTest()
+        for _ in 0..<20 { await Task.yield() }
         precondition(model.tab == .fights && model.openFightID == fight.uuidString, "Older pushes retain Fight navigation")
         AppModel.storePendingFightRoute("/fights/\(fight)?daily_status=1")
         precondition(UserDefaults.standard.bool(forKey: AppModel.pendingDailyStatusKey))
@@ -61,6 +69,16 @@ enum Failure: Error { case offline }
         AppModel.storePendingFightRoute("/fights/not-a-uuid?post=\(post)")
         model.consumeForTest()
         precondition(model.openPost == nil && model.openFightID == nil)
+
+        let historical = Fight(id: fight.uuidString, seriesId: "series", status: .finished, windowStart: Date(timeIntervalSince1970: 1000))
+        let current = Fight(id: UUID().uuidString, seriesId: "series", status: .live, windowStart: Date(timeIntervalSince1970: 2000))
+        model.fights = [historical, current]
+        model.tab = .you
+        AppModel.storePendingFightRoute("/fights/\(fight)")
+        model.consumeForTest()
+        for _ in 0..<20 { await Task.yield() }
+        precondition(model.openFightID == historical.id && model.detailFight(for: historical.id)?.id == historical.id,
+                     "A reminder must open its exact Fight round even after the next round starts")
 
         let fixture = try Data(contentsOf: URL(fileURLWithPath: CommandLine.arguments[1]))
         let decoded = try FitFightAPI.decodeActivityForTest(fixture)

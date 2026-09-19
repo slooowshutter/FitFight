@@ -14,7 +14,12 @@ store_route = app[app.index("    static func storePendingFightRoute("):app.index
 consume_route = app[app.index("    private func consumePendingFightRoute("):app.index("    private static func mapFight(")]
 source += "\n" + models
 source += "\n" + (root / "tests/LegacyNotificationRoutes.swift").read_text()
-source += "\nextension AppModel {\n" + store_route + consume_route
+state = app[app.index("    @Published var tab:"):app.index("    @Published var dailyStatusRecap:")]
+selection = app[app.index("    func fight(id:"):app.index("    func seriesHistory(for fight:")]
+priority = app[app.index("    private static func fightStatusPriority("):app.index("    private static func ordinal(")]
+opening = app[app.index("    func openFight("):app.index("    func presentDailyStatusRecap(")]
+source = source.replace("// MODEL_STATE", state)
+source += "\nextension AppModel {\n" + selection + priority + opening + store_route + consume_route
 source += "    func consumeForTest(daily: Bool = false) { consumePendingFightRoute(showDailyStatusRecap: daily) }\n}\n"
 api = (root / "FitFight/FitFightAPI.swift").read_text()
 decoder = api[api.index("    private static let decoder:"):api.index("\n}\n\nprivate struct EmptyJSON:")]

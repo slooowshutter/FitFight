@@ -1,12 +1,63 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **18 Sep 2026**. Production candidate: **1.1.1 (202)**.
+Read this before building. Last updated **19 Sep 2026**. Production candidate: **1.1.1 (202)**.
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
 ---
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
+
+## Standard row columns with API v1: prepared 19 Sep 2026
+
+**Code:** the additive `20260919131732_standard_row_columns.sql` migration
+standardizes all 60 FitFight-owned `public` / `private` tables. It adds 36
+missing IDs, 30 creation timestamps, and 49 update timestamps. Existing keys,
+foreign keys, grants, RLS, and domain timestamps remain. Generated ID aliases
+reuse existing unique identifiers; compound-key tables receive UUID defaults
+without changing their conflict targets. A private trigger maintains update
+timestamps, including writes from older backends. Backfill provenance and the
+rollout order are documented in [backend](backend.md#standard-row-columns).
+
+**Contract:** backend profile queries read `id`, while `/api/v1` retains
+`user_id` in the existing profile and embedded-identity responses. No v2,
+native model, API fixture, marketing version, or client permission cutoff is
+included. `profiles.user_id` remains for legacy signup, direct clients, existing
+foreign keys, and running backends. Its generated `id` cannot drift. Aliases
+use non-unique lookup indexes because their existing source keys already
+ensure uniqueness; a cloud concurrency regression caught that redundant
+unique indexes could break legacy `ON CONFLICT` writes.
+
+**Supported clients:** read-only release checks on 19 Sep returned staging
+latest **1.1.1 (201)**, review/internal **1.1.2 (203)**, enforcement off;
+production latest **1.1.1 (202)**, no candidates, enforcement on. The preserved
+build 113 direct-Supabase fixture remains unchanged. HTTP compatibility checks
+cover builds 113, 190, 200, 201, 202, and 203, including the exact v1 profile
+field set. Optional staging updates still require legacy compatibility.
+
+**Cloud verification:** [strict TypeScript, all 318 backend tests, and API contract
+parsing](https://github.com/slooowshutter/FitFight/actions/runs/35445877648)
+passed at `97947dc`; backend and contract files remain unchanged since that run.
+The final [disposable database replay](https://github.com/slooowshutter/FitFight/actions/runs/35446703437)
+passed at `b2b8de6`: migrations, SQL lint, preserved build 113 requests, 249
+schema/RLS assertions, and all 41 integration tests both before and after the
+deferred client-permission cutoff. Populated historical replay passed 45
+assertions and the profile-record compatibility test. It verifies backfill
+timestamps, retained rows/values/keys, and no metadata-only Realtime events.
+Migration and test files remain unchanged since this run. The temporary
+feature-branch CI triggers were removed after verification. Native checks were
+not rerun because no native code or contract fixture changed.
+
+**Live rollout:** no staging or production deployment, hosted migration,
+release-branch merge, TestFlight upload, or PR was performed. Apply the additive
+migration, verify it, then deploy the compatible backend through the normal
+authorized staging and production promotions. The updated readiness check
+requires the migration record and profile columns. Verify live schema/row
+counts and signed-in behavior for each environment before its rollout. Staging
+database/backend changes reach testers on `develop`; `preview` cuts the TestFlight
+binary. Production migration/backend changes on `main` must serve the installed
+App Store build while Apple reviews the next one. This code requires no new app
+build. Removing legacy identifiers and direct access remains a separate rollout.
 
 ## Account preferences: prepared 17 Sep 2026
 

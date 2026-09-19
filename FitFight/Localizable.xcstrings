@@ -12873,6 +12873,16 @@
                 }
             }
         },
+        "The comment Send button turns green as soon as you type. Empty or spaces-only comments keep it gray and disabled.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Le bouton Envoyer des commentaires devient vert dès que tu écris. Si le commentaire est vide ou ne contient que des espaces, il reste gris et désactivé."
+                    }
+                }
+            }
+        },
         "Account environment": {
             "localizations": {
                 "fr": {

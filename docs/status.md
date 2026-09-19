@@ -6,7 +6,7 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ---
 
-**Last TestFlight:** 17 Sep 2026 at 02:50 UTC. **1.1.2 (203)** from [#277](https://github.com/slooowshutter/FitFight/pull/277). Apple processing is `VALID`; Internal Tester receives it. This upload did not submit or assign external groups. The live staging release policy checked on 19 Sep lists `latest` 1.1.1 (201), `review`/`internal` 1.1.2 (203), and enforcement off.
+**Last TestFlight:** 19 Sep 2026 at 13:14 UTC. **1.1.2 (204)** from preview merge `c80e642`, including develop `f206592`. [Upload and Apple processing succeeded](https://github.com/slooowshutter/FitFight/actions/runs/35444706489): `VALID`, unexpired, available to Internal Tester. This upload did not submit or assign external groups. The published release registry lists `latest` 1.1.1 (201) and `review`/`internal` 1.1.2 (204). At the 13:18 UTC recheck, staging's live release endpoint still returned candidate 203 with enforcement off; its metadata propagation does not block internal build 204. Production remains 1.1.1 (202).
 
 ## Preview promotion, 19 Sep 2026
 
@@ -32,8 +32,27 @@ regressions retain builds 113, 190, 200, 201, 202, and 203, including frozen nat
 feedback models and the separately deferred permission cutoff. Public staging
 build 201, internal build 203, and legacy clients remain admitted with enforcement
 off. No production promotion or external TestFlight distribution is authorized
-by this release. Preview cloud checks and Apple processing are pending; signed-in
-physical-device testing follows installation.
+by this release. Signed-in physical-device testing follows installation.
+
+**Preview verification:** the authorized merge is `c80e642`. Its app, backend,
+migrations, and preserved fixtures are byte-identical to develop `f206592`.
+[Web API](https://github.com/slooowshutter/FitFight/actions/runs/35444706464)
+passed strict typechecking, all 318 tests, and contract parsing.
+[Database](https://github.com/slooowshutter/FitFight/actions/runs/35444706482)
+passed 233 pgTAP checks, all 41 transaction tests before and after the deferred
+permission cutoff, legacy build 113 compatibility, and migration replay.
+[Native checks and full simulator compilation](https://github.com/slooowshutter/FitFight/actions/runs/35444706444)
+passed on GitHub-hosted `macos-26`. Release checks passed 18 tests and 69 assertions,
+including no external submission or notification. Vercel deployment succeeded.
+The [TestFlight job](https://github.com/slooowshutter/FitFight/actions/runs/35444706489)
+passed distribution checks, live staging-backend readiness, archive, upload, and
+Apple processing. It uploaded **1.1.2 (204)** at 13:12 UTC; Apple marked it `VALID`
+and unexpired at 13:14 UTC, and confirmed internal group `Tester` receives it.
+Friends Beta was left untouched. The release registry contains build 204.
+Staging health remains ready; its release endpoint was still propagating the new
+candidate at the final check above. The separate English/French screenshot export
+was still running when this evidence was recorded. Main and its production
+release policy remain unchanged; physical-device verification is Marc's next step.
 
 ## Account preferences: prepared 17 Sep 2026
 

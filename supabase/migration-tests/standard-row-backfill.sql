@@ -1,15 +1,15 @@
 begin;
 select no_plan();
 
-select is((select id from public.profiles where user_id = '92000000-0000-4000-8000-000000000001'),
-    '92000000-0000-4000-8000-000000000001'::uuid, 'existing profiles retain their Auth identity');
-select is((select created_at from public.profiles where id = '92000000-0000-4000-8000-000000000001'),
+select is((select id from public.profiles where user_id = '92000000-0000-4000-8000-920000000001'),
+    '92000000-0000-4000-8000-920000000001'::uuid, 'existing profiles retain their Auth identity');
+select is((select created_at from public.profiles where id = '92000000-0000-4000-8000-920000000001'),
     '2026-08-25'::timestamptz, 'profile backfill uses recorded signup time');
 select is((select created_at from public.data_sources where id = '93000000-0000-4000-8000-000000000001'),
     '2026-08-26'::timestamptz, 'source backfill uses the recorded connection time');
-select is((select created_at from public.step_days where user_id = '92000000-0000-4000-8000-000000000001'),
+select is((select created_at from public.step_days where user_id = '92000000-0000-4000-8000-920000000001'),
     '2026-09-02'::timestamptz, 'daily creation backfill uses the last retained timestamp');
-select is((select created_at from private.account_preferences where user_id = '92000000-0000-4000-8000-000000000001'),
+select is((select created_at from private.account_preferences where user_id = '92000000-0000-4000-8000-920000000001'),
     '2026-09-03'::timestamptz, 'preference backfill keeps its retained timestamp');
 select ok((select created_at is not null and updated_at is not null
     from public.fight_members where fight_id = '94000000-0000-4000-8000-000000000001'),

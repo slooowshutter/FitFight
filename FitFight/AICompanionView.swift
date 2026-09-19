@@ -75,7 +75,7 @@ struct AICompanionView: View {
                             else if selected.count < 5 { selected.append(entry.id) }
                         } label: {
                             HStack(spacing: 12) {
-                                RemotePhoto(url: entry.images.first?.media.url, contentMode: .fit) { theme.control }
+                                RemotePhoto(url: entry.images.first?.url, contentMode: .fit) { theme.control }
                                     .frame(width: 64, height: 64)
                                 Text(entry.description).ffType(.body).lineLimit(3).frame(maxWidth: .infinity, alignment: .leading)
                                 if let index = selected.firstIndex(of: entry.id) {

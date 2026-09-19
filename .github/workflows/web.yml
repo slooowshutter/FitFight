@@ -7,7 +7,7 @@ on:
             - "contracts/**"
             - ".github/workflows/web.yml"
     push:
-        branches: [main, develop, preview, profiles-friends-and-stats, google-sign-in-setup]
+        branches: [main, develop, preview, profiles-friends-and-stats]
         paths:
             - "web/**"
             - "contracts/**"

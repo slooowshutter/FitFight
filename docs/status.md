@@ -34,12 +34,31 @@ existing Apple login contract changes. This adds a Supabase Auth provider using
 the existing profile and onboarding paths. Google and Apple accounts with
 different emails, including Apple private relay, may remain separate accounts.
 
-**Verification:** localization, native API-boundary, plist/project parsing, and
-whitespace checks passed. Cloud native regressions, simulator compilation, and
-English/French welcome-screen rendering are in progress. End-to-end Google
-consent and Supabase session creation still require an interactive account login.
-No PR, release-branch merge, website deployment, or TestFlight upload is included.
-Promote the privacy copy before distributing the new app.
+**Cloud checks:** at `0ac4011`, [Google auth regressions, all existing native checks,
+and the complete simulator build](https://github.com/slooowshutter/FitFight/actions/runs/35450678742)
+passed. Google tests cover environment/client selection, registered callbacks,
+fresh nonce hashing and exchange, cancellation, missing tokens, rejected exchanges,
+duplicate taps, and the update gate. [TypeScript and all 318 backend tests](https://github.com/slooowshutter/FitFight/actions/runs/35450678738)
+passed. [English/French screen rendering](https://github.com/slooowshutter/FitFight/actions/runs/35450678723)
+passed; the Google button and welcome copy were visually checked in both languages.
+The Apple system control appears as an ImageRenderer placeholder in these captures,
+so its device appearance remains unverified. Localization, native API-boundary,
+plist/project parsing, and whitespace checks passed. The downloaded simulator bundle preserves the existing camera and
+Health permissions, both Google callback schemes, and Google SDK resources.
+The staging simulator ZIP is saved in Marc's Documents/FitFight-Google-Auth/simulator.
+All native compilation and simulator execution ran on GitHub-hosted macOS.
+Normal CI branch triggers are restored after verification; the Google regression
+stays in the regular native checks.
+
+**Live and release:** read-only checks on 19 Sep returned HTTP 200 with Google,
+Apple, and email enabled in both Supabase projects. Staging release policy lists
+latest 1.1.1 (201), review/internal 1.1.2 (204), enforcement off. Production lists
+latest 1.1.1 (202), enforcement on. These contracts and database grants are unchanged.
+End-to-end Google consent and Supabase session creation still require an interactive
+account login; device testing must include returning users, sign-out, deletion,
+and Apple private-relay identities. No PR, release-branch merge, production
+deployment, or TestFlight upload is included. Promote the privacy copy before
+distributing the new app.
 
 ## Account preferences: prepared 17 Sep 2026
 

@@ -198,47 +198,49 @@ struct FightPostEngagement: View {
 
         return VStack(alignment: .leading, spacing: 0) {
             FFDivider(inset: 0)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 4) {
-                    ForEach(emojiOptions, id: \.self) { emoji in
-                        let reaction = post.reactions.first { $0.emoji == emoji }
-                        Button {
-                            Task { await feed.react(session: session, post: post, emoji: emoji) }
-                        } label: {
-                            HStack(spacing: 4) {
-                                Text(emoji)
-                                if let reaction { Text(verbatim: "\(reaction.count)") }
+            HStack(spacing: 4) {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 4) {
+                        ForEach(emojiOptions, id: \.self) { emoji in
+                            let reaction = post.reactions.first { $0.emoji == emoji }
+                            Button {
+                                Task { await feed.react(session: session, post: post, emoji: emoji) }
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Text(emoji)
+                                    if let reaction { Text(verbatim: "\(reaction.count)") }
+                                }
+                                .ffType(.caption)
+                                .foregroundStyle(reaction?.mine == true ? theme.mossText : theme.textSecondary)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(reaction?.mine == true ? theme.mossWash : reaction == nil ? theme.card : theme.control, in: Capsule())
+                                .frame(minWidth: 44, minHeight: 44, alignment: .leading)
+                                .contentShape(Rectangle())
                             }
-                            .ffType(.caption)
-                            .foregroundStyle(reaction?.mine == true ? theme.mossText : theme.textSecondary)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(reaction?.mine == true ? theme.mossWash : reaction == nil ? theme.card : theme.control, in: Capsule())
-                            .frame(minWidth: 44, minHeight: 44, alignment: .leading)
-                            .contentShape(Rectangle())
+                            .buttonStyle(FFHapticPlainStyle())
+                            .disabled(feed.reactingPostIDs.contains(post.id))
+                            .accessibilityLabel(emoji)
+                            .accessibilityValue(reaction.map { String($0.count) } ?? "0")
+                            .accessibilityAddTraits(reaction?.mine == true ? .isSelected : [])
                         }
-                        .buttonStyle(FFHapticPlainStyle())
-                        .disabled(feed.reactingPostIDs.contains(post.id))
-                        .accessibilityLabel(emoji)
-                        .accessibilityValue(reaction.map { String($0.count) } ?? "0")
-                        .accessibilityAddTraits(reaction?.mine == true ? .isSelected : [])
                     }
-                    Button {
-                        showingCustomEmoji = true
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(theme.textSecondary)
-                            .frame(width: 44, height: 44)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(FFHapticPlainStyle())
-                    .disabled(feed.reactingPostIDs.contains(post.id))
-                    .accessibilityLabel(String(appLocalized: "Other emoji…"))
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(height: 44)
+                Button {
+                    showingCustomEmoji = true
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(theme.textSecondary)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(FFHapticPlainStyle())
+                .disabled(feed.reactingPostIDs.contains(post.id))
+                .accessibilityLabel(String(appLocalized: "Other emoji…"))
             }
-            .frame(height: 44)
             HStack {
                 Button {
                     open.toggle()

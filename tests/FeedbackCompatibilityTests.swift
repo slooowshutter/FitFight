@@ -22,6 +22,14 @@ struct FeedbackCompatibilityTests {
         precondition(oldReader.post == profileReader.post)
         precondition(oldReader.comments == profileReader.comments)
         precondition(oldReader.canLaunchFix == profileReader.canLaunchFix)
+        precondition(!current.post.archived && current.post.archiveReason == nil && !current.canArchive)
+        let archivedData = try Data(contentsOf: fixtures.appendingPathComponent("feedback-detail-archived.json"))
+        let archived = try decoder.decode(FitFightFeedbackDetail.self, from: archivedData)
+        precondition(archived.post.archived && archived.post.archiveReason == "Resolved")
+        precondition(archived.canArchive && archived.canDelete)
+        let archivedOldReader = try decoder.decode(LegacyFeedbackDetail.self, from: archivedData)
+        precondition(archivedOldReader.post == profileReader.post)
+        precondition(archivedOldReader.comments == profileReader.comments)
         print("Feedback: frozen build 201/202 and current decoding with optional Profile author IDs")
     }
 }

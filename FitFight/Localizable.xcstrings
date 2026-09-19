@@ -12902,6 +12902,245 @@
                     }
                 }
             }
+        },
+        "Archived": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Archivés"
+                    }
+                }
+            }
+        },
+        "Most upvoted": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les plus votés"
+                    }
+                }
+            }
+        },
+        "Newest first": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les plus récents"
+                    }
+                }
+            }
+        },
+        "Oldest first": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les plus anciens"
+                    }
+                }
+            }
+        },
+        "Sort & filter": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Trier et filtrer"
+                    }
+                }
+            }
+        },
+        "Status": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Statut"
+                    }
+                }
+            }
+        },
+        "Type": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Type"
+                    }
+                }
+            }
+        },
+        "Sort by": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Trier par"
+                    }
+                }
+            }
+        },
+        "Show feedback": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Afficher les retours"
+                    }
+                }
+            }
+        },
+        "Reset to defaults": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Réinitialiser les filtres"
+                    }
+                }
+            }
+        },
+        "Filter feedback": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Filtrer les retours"
+                    }
+                }
+            }
+        },
+        "Archive feedback": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Archiver le retour"
+                    }
+                }
+            }
+        },
+        "Reopen feedback": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Rouvrir le retour"
+                    }
+                }
+            }
+        },
+        "Public reason (optional)": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Motif public (facultatif)"
+                    }
+                }
+            }
+        },
+        "Reopen this feedback with its existing votes and discussion. People can vote and comment again.": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Rouvrez ce retour en conservant ses votes et sa discussion. Les votes et commentaires seront à nouveau possibles."
+                    }
+                }
+            }
+        },
+        "Keep this feedback, its votes, and its discussion in Archived. New votes and comments will close. You can reopen it later.": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Conservez ce retour, ses votes et sa discussion dans les archives. Les nouveaux votes et commentaires seront fermés. Vous pourrez le rouvrir plus tard."
+                    }
+                }
+            }
+        },
+        "This feedback is archived. Votes and comments are closed.": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ce retour est archivé. Les votes et commentaires sont fermés."
+                    }
+                }
+            }
+        },
+        "Find feedback with one filter button. See features and bugs together, sort by votes or date, and browse archived posts. Delete your own feedback; admins can archive, reopen, or delete any post.": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Retrouvez les retours grâce à un seul bouton de filtre. Affichez ensemble les fonctionnalités et les bugs, triez par votes ou par date et consultez les archives. Supprimez vos propres retours ; les administrateurs peuvent archiver, rouvrir ou supprimer toute publication."
+                    }
+                }
+            }
+        },
+        "feedback.post-count": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld post"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld posts"
+                                }
+                            }
+                        }
+                    }
+                },
+                "fr": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld publication"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld publications"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "version": "1.0"

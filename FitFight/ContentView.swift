@@ -283,7 +283,7 @@ struct ContentView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             FFTabBar(tab: $model.tab, onReselect: {
                 if model.tab == .feedback {
-                    model.feedbackRequestFilter = .top
+                    model.feedbackRequestFilter = RequestFilter()
                 }
                 model.openFightID = nil
             })

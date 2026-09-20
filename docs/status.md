@@ -1,6 +1,6 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **19 Sep 2026**. Production candidate: **1.1.1 (202)**.
+Read this before building. Last updated **20 Sep 2026**. Production candidate: **1.1.1 (202)**.
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
@@ -8,6 +8,106 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
 
+## Google sign-in: prepared 19 Sep 2026
+
+**Code:** Apple and Google sign-in are available on the welcome and signed-out
+You screens. GoogleSignIn 9.2.0 uses the iOS client and Web server client for the
+actual Supabase project, including Release builds pointed at staging. Both
+callback schemes are registered. A fresh nonce is hashed for Google and sent raw
+with the ID/access tokens to Supabase. Supabase continues to own session restore,
+profile loading, and onboarding. Cancellation is silent; failed exchanges clear
+Google state. Sign-out clears both sessions. Account deletion attempts Google
+revocation and shows Apple disconnect instructions only for Apple identities.
+English/French copy, the 1.1.2 release note, and privacy disclosures are updated.
+
+**Live configuration:** Google is enabled in staging `zstzbfocunthczzubggz` and
+production `pvqntpteehdvhqyctwum`. Each has its matching Web and iOS client IDs;
+nonce checks remain enabled and email is required. The native ID-token flow does
+not use a Supabase browser OAuth callback or JavaScript origin. Both Google
+projects remain External / Testing. Public publishing and any required Google
+branding verification are still outstanding. Credentials were exported outside
+the repository to Marc's Documents/FitFight-Google-Auth folder. The app contains
+only public client IDs, never the Web client secret.
+
+**Compatibility:** additive `POST /api/v1/auth/google`. No database schema or
+RLS change. Existing Apple login still works. This adds a Supabase Auth
+provider using the existing profile and onboarding paths. Google and Apple
+accounts with different emails, including Apple private relay, stay separate.
+The same verified email attaches Google to the existing account before a
+second user is created. The first Apple sign-in now stores the email Apple
+sends, when it sends one.
+
+**Cloud checks:** at `0ac4011`, [Google auth regressions, all existing native checks,
+and the complete simulator build](https://github.com/slooowshutter/FitFight/actions/runs/35450678742)
+passed. Google tests cover environment/client selection, registered callbacks,
+fresh nonce hashing and exchange, cancellation, missing tokens, rejected exchanges,
+duplicate taps, and the update gate. [TypeScript and all 318 backend tests](https://github.com/slooowshutter/FitFight/actions/runs/35450678738)
+passed. [English/French screen rendering](https://github.com/slooowshutter/FitFight/actions/runs/35450678723)
+passed; the Google button and welcome copy were visually checked in both languages.
+The Apple system control appears as an ImageRenderer placeholder in these captures,
+so its device appearance remains unverified. Localization, native API-boundary,
+plist/project parsing, and whitespace checks passed. The downloaded simulator bundle preserves the existing camera and
+Health permissions, both Google callback schemes, and Google SDK resources.
+The staging simulator ZIP is saved in Marc's Documents/FitFight-Google-Auth/simulator.
+All native compilation and simulator execution ran on GitHub-hosted macOS.
+Normal CI branch triggers are restored after verification; the Google regression
+stays in the regular native checks.
+
+**Live and release:** read-only checks on 19 Sep returned HTTP 200 with Google,
+Apple, and email enabled in both Supabase projects. Staging release policy lists
+latest 1.1.1 (201), review/internal 1.1.2 (204), enforcement off. Production lists
+latest 1.1.1 (202), enforcement on. These contracts and database grants are unchanged.
+End-to-end Google consent and Supabase session creation still require an interactive
+account login; device testing must include returning users, sign-out, deletion,
+and Apple private-relay identities. Staging Google login on 20 Sep opened the
+existing Apple `marc` account after that inbox was stored on the user. Promote
+the privacy copy before distributing the new app. This branch does not upload
+TestFlight or change production.
+
+## Google button and simulator login follow-up: 19 Sep 2026
+
+The Google control now uses a flat white surface, a centered current Google logo
+and Google Sans Medium label, and the same 44pt height and 6pt corners as Apple.
+Provider colors live in the design tokens. The unused GoogleSignInSwift UI product
+is removed; the GoogleSignIn authentication SDK and token flow are unchanged.
+English/French release copy and Day/Night screenshot coverage are included.
+Asset and font provenance is recorded in `docs/design/source/google-sign-in.md`.
+
+The first simulator ZIP was a compile artifact with linker ad-hoc signing and no
+app entitlements. Marc's existing simulator security logs reported `-34018`:
+"Client has neither application-identifier nor keychain-access-groups entitlements".
+HealthKit also reported its missing entitlement. Recent Supabase logs contained
+refreshes but no failed Google token exchange. The exported bundle itself had no
+entitlements and its signing identifier was `FitFight`, not `com.fitfight.mvp`.
+This makes the original artifact unsuitable for testing secure sign-in storage.
+
+The workflows now use Xcode's ad-hoc signing path, which embeds simulator entitlements
+at link time. Applying iOS entitlements afterward to the host code signature was
+rejected at launch in the first validation runs. The exporter checks the embedded
+XML/DER entitlement sections and signature, and rejects device archives. A disposable
+hosted-simulator regression compares a probe without capabilities against the same
+probe linked with Xcode's generated simulator entitlements, then verifies
+generic-password add/read/delete. It uses no real account or external auth request.
+
+**Verified at `a98a4b8`:** [all native regressions, the simulator build, and artifact
+export](https://github.com/slooowshutter/FitFight/actions/runs/35454559457) passed.
+The [hosted storage regression and screen rendering](https://github.com/slooowshutter/FitFight/actions/runs/35454559425)
+passed: without embedded entitlements, add/read/delete returned `-34018`; with
+Xcode's simulator entitlements, all three returned `0`. The complete app then
+launched and rendered in English and French. The Google button's logo, font,
+centering, and border were visually checked in both Day and Night for each language.
+Apple's system control still appears as the known ImageRenderer placeholder.
+The downloaded universal bundle's
+XML/DER sections, app identifier, HealthKit capability, Google callback schemes,
+SDK resources, font, staging endpoints, and signature were checked. The verified
+ZIP and extracted app replaced the old download in Marc's
+`Documents/FitFight-Google-Auth/simulator`; `build-verification.json` records the
+commit, checksum, and cloud evidence. Native compilation and execution stayed in
+GitHub-hosted CI. Normal workflow branch triggers are restored after verification.
+
+A complete Google consent/login still requires an interactive retry after installing
+the replacement. No hosted auth configuration, API, or database contract changed for
+this fix. No PR, merge, deployment, or TestFlight upload was made.
 ## Compact suggested fight cards: prepared 19 Sep 2026
 
 **Code:** Suggested fights on New and under Fights > Invited use compact rows

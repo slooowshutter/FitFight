@@ -1,6 +1,76 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Signing in with Google opens the FitFight account that already uses that email, including Sign in with Apple.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "La connexion Google ouvre le compte FitFight qui utilise déjà cet e-mail, y compris avec Sign in with Apple."
+                    }
+                }
+            }
+        },
+        "Google sign-in has a cleaner button with centered text and sizing that matches Sign in with Apple.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Le bouton de connexion Google est plus épuré, avec un texte centré et les mêmes dimensions que celui d’Apple."
+                    }
+                }
+            }
+        },
+        "Sign in with Apple or Google. First time here, that creates your account.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Connecte-toi avec Apple ou Google. Si c’est ta première visite, ton compte sera créé."
+                    }
+                }
+            }
+        },
+        "Sign in with Google": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Se connecter avec Google"
+                    }
+                }
+            }
+        },
+        "Google sign-in is not configured for this build.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "La connexion Google n’est pas configurée pour cette version."
+                    }
+                }
+            }
+        },
+        "This sign-in provider is off on this database.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ce fournisseur de connexion est désactivé sur cette base de données."
+                    }
+                }
+            }
+        },
+        "Sign in or create your FitFight account with Google. Sign in with Apple is still available.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Connecte-toi ou crée ton compte FitFight avec Google. La connexion avec Apple reste disponible."
+                    }
+                }
+            }
+        },
         "All": {
             "localizations": {
                 "fr": {

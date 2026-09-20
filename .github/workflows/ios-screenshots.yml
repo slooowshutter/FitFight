@@ -8,6 +8,9 @@ on:
             - "FitFight/**"
             - "FitFight.xcodeproj/**"
             - "scripts/check_localizations.py"
+            - "scripts/package_simulator_app.py"
+            - "scripts/test_simulator_keychain.py"
+            - "tests/SimulatorKeychainProbe.swift"
             - ".github/workflows/ios-screenshots.yml"
     push:
         branches: [main, develop, preview]
@@ -15,6 +18,9 @@ on:
             - "FitFight/**"
             - "FitFight.xcodeproj/**"
             - "scripts/check_localizations.py"
+            - "scripts/package_simulator_app.py"
+            - "scripts/test_simulator_keychain.py"
+            - "tests/SimulatorKeychainProbe.swift"
             - ".github/workflows/ios-screenshots.yml"
     workflow_dispatch:
 
@@ -62,7 +68,10 @@ jobs:
                     -destination 'generic/platform=iOS Simulator' \
                     -derivedDataPath build \
                     CURRENT_PROJECT_VERSION=1 \
-                    CODE_SIGNING_ALLOWED=NO \
+                    CODE_SIGNING_ALLOWED=YES \
+                    CODE_SIGNING_REQUIRED=YES \
+                    CODE_SIGN_STYLE=Manual \
+                    CODE_SIGN_IDENTITY=- \
                     build
 
             - name: Render the app in English and French
@@ -74,6 +83,8 @@ jobs:
                   UDID=$(xcrun simctl create ff-shots "$DEVICE_TYPE" "$RUNTIME")
                   xcrun simctl boot "$UDID"
                   xcrun simctl bootstatus "$UDID" -b
+                  python3 scripts/test_simulator_keychain.py build/Build/Products/Debug-iphonesimulator/FitFight.app "$UDID" build/Build/Intermediates.noindex/FitFight.build/Debug-iphonesimulator/FitFight.build/FitFight.app-Simulated.xcent
+                  python3 scripts/package_simulator_app.py build/Build/Products/Debug-iphonesimulator/FitFight.app "$RUNNER_TEMP/FitFight-Screenshot.zip"
                   xcrun simctl install "$UDID" build/Build/Products/Debug-iphonesimulator/FitFight.app
                   CONTAINER=$(xcrun simctl get_app_container "$UDID" com.fitfight.mvp data)
 

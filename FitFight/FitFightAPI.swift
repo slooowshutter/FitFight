@@ -626,8 +626,12 @@ struct FitFightAPI {
         if let url = APIConfig.baseURL { return url }
         let raw = ProcessInfo.processInfo.environment["FFAPIBaseURL"]?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        guard !raw.isEmpty else { return nil }
-        return URL(string: raw)
+        if !raw.isEmpty { return URL(string: raw) }
+        #if DEBUG
+        return URL(string: "https://staging.fitfight.app")
+        #else
+        return nil
+        #endif
     }
 
     func claimReferral(code: UUID, accessToken: String) async throws -> FitFightReferralClaim {
@@ -711,6 +715,23 @@ struct FitFightAPI {
         try await get(
             path: "fights/\(fightID.uuidString.lowercased())/daily-status",
             accessToken: accessToken,
+            expected: [200]
+        )
+    }
+
+    func reconcileGoogleIdentity(
+        idToken: String,
+        accessToken: String,
+        nonce: String
+    ) async throws {
+        let _: DiscardBody = try await post(
+            path: "auth/google",
+            accessToken: "",
+            body: GoogleIdentityBody(
+                idToken: idToken,
+                accessToken: accessToken,
+                nonce: nonce
+            ),
             expected: [200]
         )
     }
@@ -1513,7 +1534,9 @@ struct FitFightAPI {
 
             var request = URLRequest(url: requestURL)
             request.httpMethod = method
-            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+            if !accessToken.isEmpty {
+                request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+            }
             request.setValue("application/json", forHTTPHeaderField: "Accept")
             request.setValue(AppVersion.marketing, forHTTPHeaderField: "X-FitFight-Version")
             request.setValue(AppVersion.build, forHTTPHeaderField: "X-FitFight-Build")
@@ -1792,6 +1815,18 @@ private struct AppleAuthorizationBody: Encodable {
 
     enum CodingKeys: String, CodingKey {
         case authorizationCode = "authorization_code"
+    }
+}
+
+private struct GoogleIdentityBody: Encodable {
+    var idToken: String
+    var accessToken: String
+    var nonce: String
+
+    enum CodingKeys: String, CodingKey {
+        case idToken = "id_token"
+        case accessToken = "access_token"
+        case nonce
     }
 }
 

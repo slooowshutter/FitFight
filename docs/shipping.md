@@ -141,8 +141,10 @@ Google sign-in when the SDK saves credentials. The screenshot workflow checks th
 on a disposable hosted simulator: the probe without embedded capabilities must return
 `-34018`, and add/read/delete must succeed with Xcode's generated simulator entitlements.
 This checks secure storage; a real Google consent and Supabase session exchange still
-need interactive testing. The artifact installs only in Simulator, not on an iPhone
-or through TestFlight.
+need interactive testing. Before that exchange, the app asks the staging or production
+API to attach Google to an existing account with the same verified email, including
+an Apple identity email. Hide My Email addresses do not match a Google inbox. The
+artifact installs only in Simulator, not on an iPhone or through TestFlight.
 
 ## GitHub secrets (already set)
 

@@ -48,7 +48,8 @@ struct AppleSignInControl: View {
                 idToken: idToken,
                 authorizationCode: authorizationCode,
                 nonce: nonce,
-                fullName: formattedName(credential.fullName)
+                fullName: formattedName(credential.fullName),
+                email: credential.email
             )
         }
     }

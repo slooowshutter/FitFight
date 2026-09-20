@@ -152,7 +152,8 @@ final class SessionStore: ObservableObject {
         idToken: String,
         authorizationCode: String,
         nonce: String,
-        fullName: String?
+        fullName: String?,
+        email: String? = nil
     ) async {
         guard !CompanionPreview.isEnabled else { authError = CompanionPreview.writeUnavailable; return }
         guard !isBusy else { return }
@@ -178,6 +179,9 @@ final class SessionStore: ObservableObject {
                     _ = try? await api.updateProfile(displayName: fullName, accessToken: signedIn.accessToken)
                 }
             }
+            if let email, !email.isEmpty, signedIn.user.email == nil {
+                try? await client.auth.update(user: UserAttributes(email: email))
+            }
             try? await api.storeAppleAuthorizationCode(
                 authorizationCode,
                 accessToken: signedIn.accessToken
@@ -185,6 +189,21 @@ final class SessionStore: ObservableObject {
             await loadProfile()
         } catch {
             authError = Self.signInFailureMessage(error)
+        }
+    }
+
+    func linkGoogleIdentity(idToken: String, accessToken: String, nonce: String) async throws {
+        guard api.isConfigured else { return }
+        do {
+            try await api.reconcileGoogleIdentity(
+                idToken: idToken,
+                accessToken: accessToken,
+                nonce: nonce
+            )
+        } catch FitFightAPIError.notConfigured {
+            return
+        } catch FitFightAPIError.http(let status, _, _) where status == 404 {
+            return
         }
     }
 
@@ -221,6 +240,11 @@ final class SessionStore: ObservableObject {
                 authError = String(appLocalized: "Couldn’t sign in. Try again.")
                 return
             }
+            try await linkGoogleIdentity(
+                idToken: idToken,
+                accessToken: result.user.accessToken.tokenString,
+                nonce: nonce
+            )
             _ = try await client.auth.signInWithIdToken(
                 credentials: .init(
                     provider: .google,

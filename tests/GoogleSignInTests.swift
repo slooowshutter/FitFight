@@ -94,7 +94,14 @@ final class SessionStore {
     var authError: String?
     var isBusy = false
     var profileLoads = 0
+    var googleLinks = 0
     func loadProfile() async { profileLoads += 1 }
+    func linkGoogleIdentity(idToken: String, accessToken: String, nonce: String) async throws {
+        googleLinks += 1
+        precondition(idToken == "google-id-token")
+        precondition(accessToken == "google-access-token")
+        precondition(nonce.count == 32)
+    }
     // GOOGLE_SIGN_IN_METHOD
 }
 
@@ -129,7 +136,7 @@ struct GoogleSignInTests {
         precondition(credentials.provider == .google)
         precondition(credentials.idToken == "google-id-token")
         precondition(credentials.accessToken == "google-access-token")
-        precondition(store.profileLoads == 1 && !store.isBusy && store.authError == nil)
+        precondition(store.profileLoads == 1 && store.googleLinks == 1 && !store.isBusy && store.authError == nil)
 
         let cancelled = Task { await store.signInWithGoogle(presenting: presenter) }
         while google.continuation == nil { await Task.yield() }

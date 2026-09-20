@@ -21,7 +21,7 @@ Declare these collected data types:
 | --------------------- | ------------------------------------------------------------------------------------------------------------------ | -----------------: | ----------------- |
 | Health                | Apple Health Steps totals, relevant daily chart totals, private activity totals and workout summaries              |                Yes | App Functionality |
 | Name                  | Name supplied by Sign in with Apple, when available                                                                |                Yes | App Functionality |
-| Email Address         | Apple email or private-relay email                                                                                 |                Yes | App Functionality |
+| Email Address         | Apple email, Apple private-relay email, or Google email                                                            |                Yes | App Functionality |
 | User ID               | Apple subject, Supabase account ID, FitFight username, referral relationships, and crash-report account identifier |                Yes | App Functionality |
 | Device ID             | Encrypted APNs device token and its fingerprint for notification delivery                                          |                Yes | App Functionality |
 | Photos or Videos      | Profile photo, Fight post photos/videos, and feedback attachments                                                  |                Yes | App Functionality |

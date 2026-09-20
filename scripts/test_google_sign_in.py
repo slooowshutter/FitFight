@@ -9,6 +9,7 @@ import tempfile
 root = Path(__file__).resolve().parents[1]
 session = (root / "FitFight/SessionStore.swift").read_text()
 config = (root / "FitFight/GoogleSignInConfig.swift").read_text().replace("import GoogleSignIn\n", "")
+clients = (root / "web/lib/google/google-clients.ts").read_text()
 method = session[session.index("    func signInWithGoogle("):session.index("    #if DEBUG\n")]
 errors = session[session.index("    static func signInFailureMessage("):session.index("    static func isValidHandle(")]
 harness = (root / "tests/GoogleSignInTests.swift").read_text()
@@ -21,6 +22,8 @@ for client in (
     "1060235196761-nuoouoc4envuhkpo4kpdfpdg8u20tlq4",
 ):
     assert "com.googleusercontent.apps." + client in schemes, "Missing Google callback scheme"
+    assert client in config
+    assert client in clients
 
 with tempfile.TemporaryDirectory(prefix="fitfight-google-tests-") as directory:
     source = Path(directory) / "GoogleSignInTests.swift"

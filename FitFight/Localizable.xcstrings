@@ -1,6 +1,16 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Signing in with Google opens the FitFight account that already uses that email, including Sign in with Apple.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "La connexion Google ouvre le compte FitFight qui utilise déjà cet e-mail, y compris avec Sign in with Apple."
+                    }
+                }
+            }
+        },
         "Google sign-in has a cleaner button with centered text and sizing that matches Sign in with Apple.": {
             "localizations": {
                 "fr": {

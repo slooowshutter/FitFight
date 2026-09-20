@@ -1,6 +1,6 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **19 Sep 2026**. Production candidate: **1.1.1 (202)**.
+Read this before building. Last updated **20 Sep 2026**. Production candidate: **1.1.1 (202)**.
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
@@ -29,10 +29,13 @@ branding verification are still outstanding. Credentials were exported outside
 the repository to Marc's Documents/FitFight-Google-Auth folder. The app contains
 only public client IDs, never the Web client secret.
 
-**Compatibility:** no API request/response, database schema, RLS policy, or
-existing Apple login contract changes. This adds a Supabase Auth provider using
-the existing profile and onboarding paths. Google and Apple accounts with
-different emails, including Apple private relay, may remain separate accounts.
+**Compatibility:** additive `POST /api/v1/auth/google`. No database schema or
+RLS change. Existing Apple login still works. This adds a Supabase Auth
+provider using the existing profile and onboarding paths. Google and Apple
+accounts with different emails, including Apple private relay, stay separate.
+The same verified email attaches Google to the existing account before a
+second user is created. The first Apple sign-in now stores the email Apple
+sends, when it sends one.
 
 **Cloud checks:** at `0ac4011`, [Google auth regressions, all existing native checks,
 and the complete simulator build](https://github.com/slooowshutter/FitFight/actions/runs/35450678742)
@@ -56,9 +59,10 @@ latest 1.1.1 (201), review/internal 1.1.2 (204), enforcement off. Production lis
 latest 1.1.1 (202), enforcement on. These contracts and database grants are unchanged.
 End-to-end Google consent and Supabase session creation still require an interactive
 account login; device testing must include returning users, sign-out, deletion,
-and Apple private-relay identities. No PR, release-branch merge, production
-deployment, or TestFlight upload is included. Promote the privacy copy before
-distributing the new app.
+and Apple private-relay identities. Staging Google login on 20 Sep opened the
+existing Apple `marc` account after that inbox was stored on the user. Promote
+the privacy copy before distributing the new app. This branch does not upload
+TestFlight or change production.
 
 ## Google button and simulator login follow-up: 19 Sep 2026
 

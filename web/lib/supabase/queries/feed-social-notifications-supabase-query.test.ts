@@ -93,7 +93,7 @@ function createSql(options: {
             return Promise.resolve(options.parent ? [options.parent] : []);
         }
         if (sql.includes("from public.profiles as profile")) {
-            return Promise.resolve(options.recipients ?? []);
+            return Promise.resolve((options.recipients ?? []).map((row) => ({ enabled: null, mention: null, ...row })));
         }
         if (sql.includes("from public.profiles")) {
             return Promise.resolve(options.actor ? [options.actor] : []);

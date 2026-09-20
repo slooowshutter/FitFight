@@ -1,3 +1,4 @@
+import { notificationRecipientRowSchema, type NotificationRecipientRow } from "@/lib/types/notifications/notification-delivery";
 import type { Sql } from "postgres";
 import {
     mentionNotificationAlert,
@@ -24,22 +25,12 @@ type Recipient = {
     copyKey?: NotificationCopyKey;
 };
 
-type RecipientRow = {
-    user_id: string;
-    locale: string | null;
-    enabled: boolean | null;
-    mention: boolean | null;
-    feed_post: boolean | null;
-    post_comment: boolean | null;
-    comment_reply: boolean | null;
-    post_reaction: boolean | null;
-};
 
 function localeFor(value: string | null): NotificationLocale {
     return value === "fr" ? "fr" : "en";
 }
 
-function preferenceOn(kind: SocialKind, row: RecipientRow): boolean {
+function preferenceOn(kind: SocialKind, row: NotificationRecipientRow): boolean {
     if (row.enabled === false) return false;
     switch (kind) {
         case "feed_post":
@@ -74,9 +65,9 @@ async function recipientRows(
     sql: Sql,
     actorId: string,
     userIds: string[],
-): Promise<RecipientRow[]> {
+): Promise<NotificationRecipientRow[]> {
     if (userIds.length === 0) return [];
-    return sql<RecipientRow[]>`
+    const rows = await sql`
         select distinct on (profile.id)
             profile.id as user_id,
             installation.locale,
@@ -102,6 +93,7 @@ async function recipientRows(
             )
         order by profile.id, installation.last_registered_at desc nulls last
     `;
+    return notificationRecipientRowSchema.array().parse(rows);
 }
 
 async function accessibleFightByUser(

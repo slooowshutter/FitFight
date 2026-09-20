@@ -3,6 +3,7 @@ import { pendingNotificationIntentSchema } from "./notification-intent";
 import { notificationPreferencesSchema } from "./notification-preferences";
 
 export const notificationDeliveryRowSchema = pendingNotificationIntentSchema.extend({
+    expires_at: z.coerce.date(),
     alert_body: z.string().nullable(),
     fight_state: z.string().nullable(),
     fight_name: z.string(),
@@ -32,6 +33,17 @@ export const notificationContentSchema = z.object({
     threadId: z.string(),
     imageUrl: z.string().url().nullable(),
 });
+export const notificationRecipientRowSchema = z.object({
+    user_id: z.string().uuid(),
+    locale: z.string().nullable(),
+    enabled: z.boolean().nullable(),
+    mention: z.boolean().nullable(),
+    feed_post: z.boolean().nullable(),
+    post_comment: z.boolean().nullable(),
+    comment_reply: z.boolean().nullable(),
+    post_reaction: z.boolean().nullable(),
+});
+export type NotificationRecipientRow = z.infer<typeof notificationRecipientRowSchema>;
 export type NotificationDeliveryRow = z.infer<typeof notificationDeliveryRowSchema>;
 export type NotificationPostContext = z.infer<typeof notificationPostContextSchema>;
 export type NotificationContent = z.infer<typeof notificationContentSchema>;

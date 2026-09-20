@@ -25,7 +25,7 @@ export async function readNotificationContent(
                     coalesce(e.post_id, substring(e.route from '[?&]post=([a-f0-9-]+)')::uuid) as target_post,
                     coalesce(e.comment_id, substring(e.route from '[?&]comment=([a-f0-9-]+)')::uuid) as target_comment
                 from private.notification_intents e
-                where e.id = ${row.id} or e.digest_id = ${row.id}
+                where (e.id = ${row.id} and e.kind <> 'social_digest') or e.digest_id = ${row.id}
             )
             select e.kind, p.id as post_id, c.id as comment_id, e.fight_id,
                 actor.handle as actor_handle, coalesce(c.body, p.body) as body,
@@ -103,6 +103,10 @@ export async function readNotificationContent(
                 : `${newPosts} new post${newPosts > 1 ? "s" : ""} in your fights.`);
             title = onePost ? first.fight_name : (fr ? "Ton résumé du soir" : "Your evening summary");
             body = parts.join(" ");
+            if (onePost && newPosts === 1 && actors.length === 0) {
+                title = fr ? `@${first.actor_handle} a publié` : `@${first.actor_handle} posted`;
+                body = first.fight_name;
+            }
             if (onePost && first.post_body.trim()) body += ` « ${first.post_body.replace(/\s+/g, " ").trim().slice(0, 100)} »`;
         } else {
             const who = `@${first.actor_handle}`;

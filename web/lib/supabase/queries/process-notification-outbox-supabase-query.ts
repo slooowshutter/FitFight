@@ -113,10 +113,10 @@ export async function processNotificationOutbox(
             where intent.id = picked.id
                 and intent.status = 'pending'
             returning intent.id, intent.user_id, intent.fight_id, intent.kind, intent.slot,
-                intent.route, intent.copy_key, intent.alert_body
+                intent.route, intent.copy_key, intent.alert_body, intent.expires_at
         )
         select claimed.id, claimed.user_id, claimed.fight_id, claimed.kind, claimed.slot,
-            claimed.route, claimed.copy_key, claimed.alert_body, fight.state::text as fight_state,
+            claimed.route, claimed.copy_key, claimed.alert_body, claimed.expires_at, fight.state::text as fight_state,
             member.final_steps_complete, member.state::text as member_state,
             coalesce(fight.name, '') as fight_name, owner.handle as owner_handle,
             fight.ends_at, fight.ends_at + fight.final_sync_grace_seconds * interval '1 second' as sync_deadline,
@@ -228,7 +228,7 @@ export async function processNotificationOutbox(
                 route: content.route,
                 threadId: content.threadId,
                 collapseId: intent.id,
-                expiresAt: Math.floor(now.getTime() / 1000) + 3600,
+                expiresAt: Math.floor(Math.min(row.expires_at.getTime(), now.getTime() + 3_600_000) / 1000),
                 imageUrl: content.imageUrl ?? undefined,
             });
 

@@ -1,4 +1,5 @@
 import UIKit
+import ImageIO
 import UserNotifications
 
 final class NotificationService: UNNotificationServiceExtension, URLSessionTaskDelegate {
@@ -39,9 +40,15 @@ final class NotificationService: UNNotificationServiceExtension, URLSessionTaskD
                   let finalURL = response.url, Self.isAllowedImageURL(finalURL),
                   let size = try? location.resourceValues(forKeys: [.fileSizeKey]).fileSize,
                   size <= 8_388_608,
-                  let data = try? Data(contentsOf: location),
-                  let image = UIImage(data: data),
-                  let jpeg = image.jpegData(compressionQuality: 0.8) else { return }
+                  let source = CGImageSourceCreateWithURL(location as CFURL, nil) else { return }
+            // Downsample before decoding camera photos into the extension's small memory budget.
+            let options = [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceThumbnailMaxPixelSize: 512,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+            ] as CFDictionary
+            guard let thumbnail = CGImageSourceCreateThumbnailAtIndex(source, 0, options),
+                  let jpeg = UIImage(cgImage: thumbnail).jpegData(compressionQuality: 0.8) else { return }
             let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
             do {
                 try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

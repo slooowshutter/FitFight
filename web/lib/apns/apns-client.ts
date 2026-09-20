@@ -2,27 +2,7 @@ import { connect, type ClientHttp2Session } from "node:http2";
 import { readApnsEnvironment } from "./apns-config";
 import { getApnsProviderToken } from "./apns-jwt";
 
-export type ApnsSendInput = {
-    deviceToken: string;
-    environment: "sandbox" | "production";
-    topic: string;
-    title: string;
-    body: string;
-    route: string;
-    threadId?: string;
-    collapseId?: string;
-    expiresAt?: number;
-    imageUrl?: string;
-};
-
-export type ApnsSendResult = {
-    httpStatus: number;
-    reason: string | null;
-    apnsId: string | null;
-    unregistered: boolean;
-    retryLater: boolean;
-    invalidProviderToken: boolean;
-};
+import type { ApnsSendInput, ApnsSendResult } from "@/lib/types/notifications/apns";
 
 function apnsHost(environment: "sandbox" | "production"): string {
     return environment === "production"

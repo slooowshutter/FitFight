@@ -6,6 +6,7 @@ struct NotificationSettingsView: View {
     @ObservedObject private var push = PushNotificationService.shared
     @Environment(\.ffTheme) private var theme
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.ffStaticRender) private var staticRender
 
     @State private var prefs = FitFightNotificationPreferences()
     @State private var hydrated = false
@@ -138,11 +139,12 @@ struct NotificationSettingsView: View {
                 }
                 .padding(.horizontal, theme.space.screenPadding)
                 .padding(.bottom, 24)
-                .disabled(!hydrated || saving)
+                .disabled((!hydrated && !staticRender) || saving)
             }
         }
         .background(theme.bg.ignoresSafeArea())
         .task {
+            guard !staticRender else { return }
             await push.refreshAuthorizationStatus()
             await load()
         }

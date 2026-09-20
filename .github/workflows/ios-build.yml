@@ -5,6 +5,7 @@ on:
     pull_request:
         paths:
             - "FitFight/**"
+            - "FitFightNotificationService/**"
             - "FitFight.xcodeproj/**"
             - "tests/**"
             - "contracts/fixtures/**"
@@ -22,6 +23,7 @@ on:
             - "scripts/test_fight_live_updates.py"
             - "scripts/test_fight_chart_scores.py"
             - "scripts/test_push_state.py"
+            - "scripts/test_notification_preferences.py"
             - "scripts/test_feedback_compatibility.py"
             - "scripts/test_slide_haptics.py"
             - "scripts/test_feed_activity.py"
@@ -30,9 +32,10 @@ on:
             - "fastlane/**"
             - ".github/workflows/ios-build.yml"
     push:
-        branches: [main, develop, preview, profiles-friends-and-stats]
+        branches: [main, develop, preview, profiles-friends-and-stats, ig-style-notifications]
         paths:
             - "FitFight/**"
+            - "FitFightNotificationService/**"
             - "FitFight.xcodeproj/**"
             - "tests/**"
             - "contracts/fixtures/**"
@@ -50,6 +53,7 @@ on:
             - "scripts/test_fight_live_updates.py"
             - "scripts/test_fight_chart_scores.py"
             - "scripts/test_push_state.py"
+            - "scripts/test_notification_preferences.py"
             - "scripts/test_feedback_compatibility.py"
             - "scripts/test_slide_haptics.py"
             - "scripts/test_feed_activity.py"
@@ -141,6 +145,9 @@ jobs:
 
             - name: Verify push signout and session restoration
               run: python3 scripts/test_push_state.py
+
+            - name: Verify notification preferences and released clients
+              run: python3 scripts/test_notification_preferences.py
 
             - name: Verify notification targets and activity loading
               run: python3 scripts/test_feed_activity.py

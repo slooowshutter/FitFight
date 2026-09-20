@@ -13386,6 +13386,206 @@
                     }
                 }
             }
+        },
+        "Turn off every push while keeping your choices below.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Désactive toutes les notifications sans modifier tes choix ci-dessous."
+                    }
+                }
+            }
+        },
+        "Evening summaries arrive around 8 pm in your saved time zone, only when there is new activity. Posts remain in Feed when notifications are off.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les résumés arrivent vers 20 h dans ton fuseau horaire enregistré, uniquement s’il y a du nouveau. Les publications restent dans le fil même si les notifications sont désactivées."
+                    }
+                }
+            }
+        },
+        "Fight invitations": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Invitations aux défis"
+                    }
+                }
+            }
+        },
+        "When someone invites you to a fight.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Quand quelqu’un t’invite à un défi."
+                    }
+                }
+            }
+        },
+        "24-hour ending reminder": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Rappel 24 heures avant la fin"
+                    }
+                }
+            }
+        },
+        "Once, one day before a fight ends.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Une seule fois, un jour avant la fin du défi."
+                    }
+                }
+            }
+        },
+        "One-week ending reminder": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Rappel une semaine avant la fin"
+                    }
+                }
+            }
+        },
+        "One week before the end of one-month fights only.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Une semaine avant la fin, uniquement pour les défis d’un mois."
+                    }
+                }
+            }
+        },
+        "Fight ended": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Défi terminé"
+                    }
+                }
+            }
+        },
+        "When the fight closes, before results are confirmed.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "À la fin du défi, avant la confirmation des résultats."
+                    }
+                }
+            }
+        },
+        "Final sync needed": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Dernière synchronisation nécessaire"
+                    }
+                }
+            }
+        },
+        "Once after the end, only if your final steps are missing.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Une fois après la fin, uniquement s’il manque tes derniers pas."
+                    }
+                }
+            }
+        },
+        "Final results": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Résultats définitifs"
+                    }
+                }
+            }
+        },
+        "When the final standings are confirmed.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Quand le classement final est confirmé."
+                    }
+                }
+            }
+        },
+        "A daily update on each live fight.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Un point quotidien sur chaque défi en cours."
+                    }
+                }
+            }
+        },
+        "New posts are included in one evening summary.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les nouvelles publications sont regroupées dans un résumé le soir."
+                    }
+                }
+            }
+        },
+        "Reactions are combined into one evening summary.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les réactions sont regroupées dans un résumé le soir."
+                    }
+                }
+            }
+        },
+        "Mentions": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Mentions"
+                    }
+                }
+            }
+        },
+        "When someone mentions your username in a post or comment.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Quand quelqu’un mentionne ton nom d’utilisateur dans une publication ou un commentaire."
+                    }
+                }
+            }
+        },
+        "Choose every notification separately or pause them all. Reactions and optional feed updates arrive in one evening summary. Fight reminders are clearer, use usernames, and can show post photos.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Choisis chaque notification ou suspends-les toutes. Les réactions et les nouvelles publications en option arrivent dans un résumé le soir. Les rappels des défis sont plus clairs, utilisent les noms d’utilisateur et peuvent afficher les photos des publications."
+                    }
+                }
+            }
         }
     },
     "version": "1.0"

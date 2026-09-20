@@ -27,6 +27,8 @@ type Recipient = {
 type RecipientRow = {
     user_id: string;
     locale: string | null;
+    enabled: boolean | null;
+    mention: boolean | null;
     feed_post: boolean | null;
     post_comment: boolean | null;
     comment_reply: boolean | null;
@@ -38,9 +40,10 @@ function localeFor(value: string | null): NotificationLocale {
 }
 
 function preferenceOn(kind: SocialKind, row: RecipientRow): boolean {
+    if (row.enabled === false) return false;
     switch (kind) {
         case "feed_post":
-            return row.feed_post !== false;
+            return row.feed_post === true;
         case "post_comment":
             return row.post_comment !== false;
         case "comment_reply":
@@ -48,7 +51,7 @@ function preferenceOn(kind: SocialKind, row: RecipientRow): boolean {
         case "post_reaction":
             return row.post_reaction !== false;
         case "mention":
-            return true;
+            return row.mention !== false;
         default: {
             const _exhaustive: never = kind;
             return _exhaustive;
@@ -57,15 +60,14 @@ function preferenceOn(kind: SocialKind, row: RecipientRow): boolean {
 }
 
 async function actorName(sql: Sql, actorId: string): Promise<string> {
-    const [profile] = await sql<{ handle: string; display_name: string }[]>`
-        select handle, display_name
+    const [profile] = await sql<{ handle: string }[]>`
+        select handle
         from public.profiles
         where id = ${actorId}
             and deleted_at is null
     `;
     if (!profile) return "";
-    const display = profile.display_name.replace(/\s+/g, " ").trim();
-    return display.length > 0 ? display : profile.handle;
+    return profile.handle;
 }
 
 async function recipientRows(
@@ -78,6 +80,8 @@ async function recipientRows(
         select distinct on (profile.id)
             profile.id as user_id,
             installation.locale,
+            prefs.enabled,
+            prefs.mention,
             prefs.feed_post,
             prefs.post_comment,
             prefs.comment_reply,
@@ -186,6 +190,9 @@ async function insertSocialIntents(
             {
                 idempotency_key: `${recipient.userId}:${recipient.kind}:${recipient.eventId}`,
                 user_id: recipient.userId,
+                actor_id: actorId,
+                post_id: postId,
+                comment_id: commentId ?? null,
                 fight_id: recipient.fightId,
                 kind: recipient.kind,
                 slot: "event",
@@ -205,10 +212,13 @@ async function insertSocialIntents(
     await sql`
         insert into private.notification_intents (
             idempotency_key, user_id, fight_id, kind, slot,
-            not_before, expires_at, route, copy_key, alert_body
+            not_before, expires_at, route, copy_key, alert_body, actor_id, post_id, comment_id, digest_on
         )
         select row.idempotency_key, row.user_id, row.fight_id, row.kind, row.slot,
-            row.not_before::timestamptz, row.expires_at::timestamptz, row.route, row.copy_key, row.alert_body
+            case when row.kind in ('feed_post', 'post_reaction') then evening.at else row.not_before::timestamptz end,
+            case when row.kind in ('feed_post', 'post_reaction') then evening.at + interval '4 hours' else row.expires_at::timestamptz end,
+            row.route, row.copy_key, row.alert_body, row.actor_id, row.post_id, row.comment_id,
+            case when row.kind in ('feed_post', 'post_reaction') then evening.day end
         from jsonb_to_recordset(${sql.json(rows)}::jsonb) as row (
             idempotency_key text,
             user_id uuid,
@@ -219,8 +229,22 @@ async function insertSocialIntents(
             expires_at text,
             route text,
             copy_key text,
-            alert_body text
+            alert_body text,
+            actor_id uuid,
+            post_id uuid,
+            comment_id uuid
         )
+        join public.profiles profile on profile.id = row.user_id
+        cross join lateral (
+            select (row.not_before::timestamptz at time zone coalesce(profile.time_zone, 'UTC')) as local_now
+        ) local_clock
+        cross join lateral (
+            select (local_now::date + case when local_now::time >= time '20:00' then 1 else 0 end) as day
+        ) target
+        cross join lateral (
+            select target.day,
+                (target.day + time '20:00') at time zone coalesce(profile.time_zone, 'UTC') as at
+        ) evening
         on conflict (idempotency_key) do nothing
     `;
 }

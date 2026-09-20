@@ -14,6 +14,7 @@ import {
     mintNextRecurringFight,
 } from "./mint-recurring-fight-supabase-query";
 import { processNotificationOutbox } from "./process-notification-outbox-supabase-query";
+import { enqueueScheduledNotifications } from "./scheduled-notifications-supabase-query";
 import { recalculateFight } from "./recalculate-fight-supabase-query";
 
 const DUE_STATES = ["live", "scheduled", "awaiting_final_sync"] as const;
@@ -78,6 +79,7 @@ export async function closeDueFights(
         database,
     );
     await mintDueRecurringFights(admin, now);
+    await enqueueScheduledNotifications(database, now);
     const notifications = await processNotificationOutbox(now, database);
     return {
         checked: rows.length,
@@ -127,6 +129,7 @@ export async function closeDueFightsForUser(
     for (const previousFightId of recurring.slice(0, BATCH)) {
         await mintNextRecurringFight(previousFightId, now, database);
     }
+    await enqueueScheduledNotifications(database, now);
     const notifications = await processNotificationOutbox(now, database);
     return {
         checked: candidates.length,

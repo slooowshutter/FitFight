@@ -184,11 +184,10 @@ async function inviteUserToOpenFight(
             );
         }
         const profile = owner as ProfileRow | null;
-        const display = profile?.display_name.replace(/\s+/g, " ").trim() ?? "";
         await enqueueFightInviteNotifications(sql, {
             fightId: fight.id,
             fightName: series.name,
-            actorName: display.length > 0 ? display : (profile?.handle ?? "user"),
+            actorName: profile?.handle ?? "",
             userIds: [userId],
             now,
         });

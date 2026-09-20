@@ -1479,6 +1479,11 @@ final class AppModel: ObservableObject {
         guard let components = URLComponents(string: route) else { return }
         let parts = components.path.split(separator: "/").map(String.init)
         guard parts.count == 2, parts[0] == "fights", UUID(uuidString: parts[1]) != nil else { return }
+        if components.queryItems?.contains(where: { $0.name == "activity" && $0.value == "1" }) == true {
+            tab = .you
+            showingActivity = true
+            return
+        }
         if let postID = components.queryItems?.first(where: { $0.name == "post" })?.value.flatMap(UUID.init(uuidString:)) {
             let commentID = components.queryItems?.first(where: { $0.name == "comment" })?.value.flatMap(UUID.init(uuidString:))
             tab = .feed

@@ -9,6 +9,10 @@ export type ApnsSendInput = {
     title: string;
     body: string;
     route: string;
+    threadId?: string;
+    collapseId?: string;
+    expiresAt?: number;
+    imageUrl?: string;
 };
 
 export type ApnsSendResult = {
@@ -36,8 +40,10 @@ function sendOnSession(
             aps: {
                 alert: { title: input.title, body: input.body },
                 sound: "default",
+                ...(input.threadId ? { "thread-id": input.threadId } : {}),
+                ...(input.imageUrl ? { "mutable-content": 1 } : {}),
             },
-            fitfight: { route: input.route },
+            fitfight: { route: input.route, image_url: input.imageUrl },
         });
         const request = session.request({
             ":method": "POST",
@@ -46,6 +52,8 @@ function sendOnSession(
             "apns-topic": input.topic,
             "apns-push-type": "alert",
             "apns-priority": "10",
+            ...(input.collapseId ? { "apns-collapse-id": input.collapseId } : {}),
+            ...(input.expiresAt !== undefined ? { "apns-expiration": String(input.expiresAt) } : {}),
         });
         let responseStatus = 0;
         let reason: string | null = null;

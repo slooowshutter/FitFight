@@ -45,48 +45,96 @@ struct NotificationSettingsView: View {
                             UIApplication.shared.open(URL(string: UIApplication.openSettingsURLString)!)
                         }
                     }
+                    FFGroupedRows {
+                        toggleRow(
+                            title: String(appLocalized: "Allow notifications"),
+                            subtitle: String(appLocalized: "Turn off every push while keeping your choices below."),
+                            isOn: setting(\.enabled)
+                        )
+                    }
+                    Text(String(appLocalized: "Evening summaries arrive around 8 pm in your saved time zone, only when there is new activity. Posts remain in Feed when notifications are off."))
+                        .ffType(.caption)
+                        .foregroundStyle(theme.textSecondary)
+                    FFSection(title: String(appLocalized: "Fights")) {
+                        FFGroupedRows {
+                            toggleRow(
+                                title: String(appLocalized: "Fight invitations"),
+                                subtitle: String(appLocalized: "When someone invites you to a fight."),
+                                isOn: setting(\.fightInvite)
+                            )
+                            FFDivider()
+                            toggleRow(
+                                title: String(appLocalized: "24-hour ending reminder"),
+                                subtitle: String(appLocalized: "Once, one day before a fight ends."),
+                                isOn: setting(\.ending24h)
+                            )
+                            FFDivider()
+                            toggleRow(
+                                title: String(appLocalized: "One-week ending reminder"),
+                                subtitle: String(appLocalized: "One week before the end of one-month fights only."),
+                                isOn: setting(\.endingWeek)
+                            )
+                            FFDivider()
+                            toggleRow(
+                                title: String(appLocalized: "Fight ended"),
+                                subtitle: String(appLocalized: "When the fight closes, before results are confirmed."),
+                                isOn: setting(\.fightEnded)
+                            )
+                            FFDivider()
+                            toggleRow(
+                                title: String(appLocalized: "Final sync needed"),
+                                subtitle: String(appLocalized: "Once after the end, only if your final steps are missing."),
+                                isOn: setting(\.finalSync)
+                            )
+                            FFDivider()
+                            toggleRow(
+                                title: String(appLocalized: "Final results"),
+                                subtitle: String(appLocalized: "When the final standings are confirmed."),
+                                isOn: setting(\.fightFinalized)
+                            )
+                            FFDivider()
+                            toggleRow(
+                                title: String(appLocalized: "Daily status"),
+                                subtitle: String(appLocalized: "A daily update on each live fight."),
+                                isOn: setting(\.dailyStatus)
+                            )
+                        }
+                    }
+                    .disabled(!prefs.enabled)
                     FFSection(title: String(appLocalized: "Feed")) {
                         FFGroupedRows {
                             toggleRow(
                                 title: String(appLocalized: "Fight posts"),
-                                subtitle: String(appLocalized: "When someone posts in a fight you’re in."),
-                                isOn: $prefs.feedPost
+                                subtitle: String(appLocalized: "New posts are included in one evening summary."),
+                                isOn: setting(\.feedPost)
                             )
                             FFDivider()
                             toggleRow(
                                 title: String(appLocalized: "Comments on your posts"),
                                 subtitle: String(appLocalized: "When someone comments on a post you wrote."),
-                                isOn: $prefs.postComment
+                                isOn: setting(\.postComment)
                             )
                             FFDivider()
                             toggleRow(
                                 title: String(appLocalized: "Replies to your comments"),
                                 subtitle: String(appLocalized: "When someone replies to a comment you left."),
-                                isOn: $prefs.commentReply
+                                isOn: setting(\.commentReply)
                             )
                             FFDivider()
                             toggleRow(
                                 title: String(appLocalized: "Reactions on your posts"),
-                                subtitle: String(appLocalized: "When someone reacts to a post you wrote."),
-                                isOn: $prefs.postReaction
-                            )
-                        }
-                    }
-                    FFSection(title: String(appLocalized: "Fights")) {
-                        FFGroupedRows {
-                            toggleRow(
-                                title: String(appLocalized: "Challenge reminders"),
-                                subtitle: String(appLocalized: "When a fight ends, when to sync, and when the result is in."),
-                                isOn: $prefs.challengeReminder
+                                subtitle: String(appLocalized: "Reactions are combined into one evening summary."),
+                                isOn: setting(\.postReaction)
                             )
                             FFDivider()
                             toggleRow(
-                                title: String(appLocalized: "Daily status"),
-                                subtitle: String(appLocalized: "A daily update on a live fight."),
-                                isOn: $prefs.dailyStatus
+                                title: String(appLocalized: "Mentions"),
+                                subtitle: String(appLocalized: "When someone mentions your username in a post or comment."),
+                                isOn: setting(\.mention)
                             )
                         }
                     }
+                    .disabled(!prefs.enabled)
                 }
                 .padding(.horizontal, theme.space.screenPadding)
                 .padding(.bottom, 24)
@@ -98,10 +146,20 @@ struct NotificationSettingsView: View {
             await push.refreshAuthorizationStatus()
             await load()
         }
-        .onChange(of: prefs) { old, new in
-            guard hydrated, !saving, old != new else { return }
-            Task { await save(from: old, to: new) }
-        }
+    }
+
+    private func setting(_ keyPath: WritableKeyPath<FitFightNotificationPreferences, Bool>) -> Binding<Bool> {
+        Binding(
+            get: { prefs[keyPath: keyPath] },
+            set: { value in
+                guard hydrated, !saving else { return }
+                let old = prefs
+                prefs[keyPath: keyPath] = value
+                let new = prefs
+                saving = true
+                Task { await save(from: old, to: new) }
+            }
+        )
     }
 
     private func toggleRow(title: String, subtitle: String, isOn: Binding<Bool>) -> some View {
@@ -128,22 +186,35 @@ struct NotificationSettingsView: View {
     }
 
     private func save(from old: FitFightNotificationPreferences, to new: FitFightNotificationPreferences) async {
-        guard let token = try? await session.freshAccessToken() else { return }
-        saving = true
         defer { saving = false }
+        guard let token = try? await session.freshAccessToken() else {
+            prefs = old
+            error = String(appLocalized: "Sign in to change notification settings.")
+            return
+        }
         do {
             prefs = try await FitFightAPI().updateNotificationPreferences(
                 FitFightNotificationPreferencesUpdate(
+                    enabled: new.enabled == old.enabled ? nil : new.enabled,
+                    fightInvite: new.fightInvite == old.fightInvite ? nil : new.fightInvite,
+                    ending24h: new.ending24h == old.ending24h ? nil : new.ending24h,
+                    endingWeek: new.endingWeek == old.endingWeek ? nil : new.endingWeek,
+                    fightEnded: new.fightEnded == old.fightEnded ? nil : new.fightEnded,
+                    finalSync: new.finalSync == old.finalSync ? nil : new.finalSync,
+                    fightFinalized: new.fightFinalized == old.fightFinalized ? nil : new.fightFinalized,
+                    mention: new.mention == old.mention ? nil : new.mention,
                     feedPost: new.feedPost == old.feedPost ? nil : new.feedPost,
                     postComment: new.postComment == old.postComment ? nil : new.postComment,
                     commentReply: new.commentReply == old.commentReply ? nil : new.commentReply,
                     postReaction: new.postReaction == old.postReaction ? nil : new.postReaction,
-                    challengeReminder: new.challengeReminder == old.challengeReminder ? nil : new.challengeReminder,
                     dailyStatus: new.dailyStatus == old.dailyStatus ? nil : new.dailyStatus
                 ),
                 accessToken: token
             )
             error = ""
+            if !old.enabled && new.enabled && push.permissionStatus == .notDetermined {
+                await push.requestSystemPermission()
+            }
         } catch {
             prefs = old
             self.error = error.localizedDescription

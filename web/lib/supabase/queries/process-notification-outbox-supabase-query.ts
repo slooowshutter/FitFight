@@ -1,11 +1,10 @@
 import type { Sql } from "postgres";
 import { sendApnsAlert } from "@/lib/apns/apns-client";
 import { isApnsConfigured, readApnsEnvironment } from "@/lib/apns/apns-config";
-import { resolveNotificationAlert } from "@/lib/notifications/resolve-notification-alert";
-import {
-    pendingNotificationIntentSchema,
-    type PendingNotificationIntent,
-} from "@/lib/types/notifications/notification-intent";
+import { notificationDeliveryRowSchema } from "@/lib/types/notifications/notification-delivery";
+import type { NotificationKind } from "@/lib/types/notifications/notification-intent";
+import { defaultNotificationPreferences, type NotificationPreferences } from "@/lib/types/notifications/notification-preferences";
+import { readNotificationContent } from "./notification-content-supabase-query";
 import {
     decryptInstallationToken,
     readActiveDeviceInstallations,
@@ -23,51 +22,17 @@ export type ProcessNotificationOutboxResult = {
     pending: number;
 };
 
-type IntentRow = {
-    id: string;
-    user_id: string;
-    fight_id: string;
-    kind: string;
-    slot: string;
-    route: string;
-    copy_key: string;
-    alert_body: string | null;
-    fight_state: string | null;
-    final_steps_complete: boolean | null;
-    feed_post: boolean | null;
-    post_comment: boolean | null;
-    comment_reply: boolean | null;
-    post_reaction: boolean | null;
-    challenge_reminder: boolean | null;
-    daily_status: boolean | null;
-};
-
-function isMuted(
-    kind: PendingNotificationIntent["kind"],
-    row: IntentRow,
-): boolean {
+function isMuted(kind: NotificationKind, prefs: NotificationPreferences): boolean {
+    if (!prefs.enabled) return true;
     switch (kind) {
-        case "feed_post":
-            return row.feed_post === false;
-        case "post_comment":
-            return row.post_comment === false;
-        case "comment_reply":
-            return row.comment_reply === false;
-        case "post_reaction":
-            return row.post_reaction === false;
-        case "fight_ended":
         case "grace_reminder":
-        case "fight_finalized":
-            return row.challenge_reminder === false;
-        case "daily_status":
-            return row.daily_status === false;
-        case "fight_invite":
-        case "mention":
-            return false;
-        default: {
-            const _exhaustive: never = kind;
-            return _exhaustive;
-        }
+        case "feed_post":
+        case "post_reaction":
+            return true;
+        case "social_digest":
+            return !prefs.feed_post && !prefs.post_reaction;
+        default:
+            return !prefs[kind];
     }
 }
 
@@ -125,11 +90,12 @@ export async function processNotificationOutbox(
             and expires_at <= ${nowIso}::timestamptz
     `;
 
-    const rows = await database<IntentRow[]>`
+    const rows = notificationDeliveryRowSchema.array().parse(await database`
         with picked as (
             select intent.id
             from private.notification_intents as intent
             where intent.status = 'pending'
+                and intent.kind not in ('feed_post', 'post_reaction')
                 and intent.not_before <= ${nowIso}::timestamptz
                 and intent.expires_at > ${nowIso}::timestamptz
                 and (
@@ -151,18 +117,21 @@ export async function processNotificationOutbox(
         )
         select claimed.id, claimed.user_id, claimed.fight_id, claimed.kind, claimed.slot,
             claimed.route, claimed.copy_key, claimed.alert_body, fight.state::text as fight_state,
-            member.final_steps_complete,
-            prefs.feed_post, prefs.post_comment, prefs.comment_reply, prefs.post_reaction,
-            prefs.challenge_reminder, prefs.daily_status
+            member.final_steps_complete, member.state::text as member_state,
+            coalesce(fight.name, '') as fight_name, owner.handle as owner_handle,
+            fight.ends_at, fight.ends_at + fight.final_sync_grace_seconds * interval '1 second' as sync_deadline,
+            coalesce(profile.time_zone, 'UTC') as time_zone,
+            to_jsonb(prefs) as preferences
         from claimed
         left join public.fights as fight on fight.id = claimed.fight_id
         left join public.fight_members as member
             on member.fight_id = claimed.fight_id
             and member.user_id = claimed.user_id
-            and member.state = 'accepted'
+        join public.profiles profile on profile.id = claimed.user_id and profile.deleted_at is null
+        left join public.profiles owner on owner.id = fight.owner_id and owner.deleted_at is null
         left join private.notification_preferences as prefs
             on prefs.user_id = claimed.user_id
-    `;
+    `);
 
     result.checked = rows.length;
     if (rows.length === 0) {
@@ -173,31 +142,24 @@ export async function processNotificationOutbox(
     const apnsEnvironment = readApnsEnvironment();
 
     for (const row of rows) {
-        const intent = pendingNotificationIntentSchema.parse({
-            id: row.id,
-            user_id: row.user_id,
-            fight_id: row.fight_id,
-            kind: row.kind,
-            slot: row.slot,
-            route: row.route,
-            copy_key: row.copy_key,
-        });
+        const intent = row;
+        const prefs = { ...defaultNotificationPreferences, ...row.preferences };
 
-        if (row.fight_state === "cancelled" || row.fight_state === null) {
+        if (intent.kind !== "social_digest" && (row.fight_state === "cancelled" || row.fight_state === null)) {
             await markIntent(database, intent.id, "skipped", "fight_cancelled");
             result.skipped += 1;
             continue;
         }
 
-        if (isMuted(intent.kind, row)) {
+        if (isMuted(intent.kind, prefs)) {
             await markIntent(database, intent.id, "skipped", "muted");
             result.skipped += 1;
             continue;
         }
 
         if (
-            intent.kind === "grace_reminder" &&
-            row.final_steps_complete === true
+            intent.kind === "final_sync" &&
+            (row.final_steps_complete === true || row.fight_state !== "awaiting_final_sync")
         ) {
             await markIntent(
                 database,
@@ -205,6 +167,15 @@ export async function processNotificationOutbox(
                 "skipped",
                 "already_complete",
             );
+            result.skipped += 1;
+            continue;
+        }
+
+        const social = ["social_digest", "post_comment", "comment_reply", "mention"].includes(intent.kind);
+        if ((!social && (intent.kind === "fight_invite" ? row.member_state !== "invited" : row.member_state !== "accepted"))
+            || ((intent.kind === "ending_24h" || intent.kind === "ending_week") && row.fight_state !== "live")
+            || (intent.kind === "fight_ended" && !row.final_steps_complete && prefs.final_sync)) {
+            await markIntent(database, intent.id, "skipped", "superseded");
             result.skipped += 1;
             continue;
         }
@@ -224,12 +195,12 @@ export async function processNotificationOutbox(
             continue;
         }
 
-        const alert = resolveNotificationAlert({
-            kind: intent.kind,
-            copyKey: intent.copy_key,
-            alertBody: row.alert_body,
-            locale: installations[0]?.locale,
-        });
+        const content = await readNotificationContent(row, installations[0].locale === "fr" ? "fr" : "en", database);
+        if (!content) {
+            await markIntent(database, intent.id, "skipped", "superseded");
+            result.skipped += 1;
+            continue;
+        }
         let delivered = false;
         let retryLater = false;
         let invalidProviderToken = false;
@@ -252,9 +223,13 @@ export async function processNotificationOutbox(
                 deviceToken,
                 environment: installation.apns_environment,
                 topic: apnsEnvironment.topic,
-                title: alert.title,
-                body: alert.body,
-                route: intent.route,
+                title: content.title,
+                body: content.body,
+                route: content.route,
+                threadId: content.threadId,
+                collapseId: intent.id,
+                expiresAt: Math.floor(now.getTime() / 1000) + 3600,
+                imageUrl: content.imageUrl ?? undefined,
             });
 
             await recordDelivery(

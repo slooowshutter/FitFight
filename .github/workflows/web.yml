@@ -7,7 +7,7 @@ on:
             - "contracts/**"
             - ".github/workflows/web.yml"
     push:
-        branches: [main, develop, preview, profiles-friends-and-stats, ig-style-notifications]
+        branches: [main, develop, preview, profiles-friends-and-stats]
         paths:
             - "web/**"
             - "contracts/**"

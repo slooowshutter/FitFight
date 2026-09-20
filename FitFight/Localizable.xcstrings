@@ -13586,6 +13586,16 @@
                     }
                 }
             }
+        },
+        "Disabled": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Désactivé"
+                    }
+                }
+            }
         }
     },
     "version": "1.0"

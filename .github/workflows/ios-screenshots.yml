@@ -6,6 +6,7 @@ on:
     pull_request:
         paths:
             - "FitFight/**"
+            - "FitFightNotificationService/**"
             - "FitFight.xcodeproj/**"
             - "scripts/check_localizations.py"
             - ".github/workflows/ios-screenshots.yml"
@@ -13,6 +14,7 @@ on:
         branches: [main, develop, preview, ig-style-notifications]
         paths:
             - "FitFight/**"
+            - "FitFightNotificationService/**"
             - "FitFight.xcodeproj/**"
             - "scripts/check_localizations.py"
             - ".github/workflows/ios-screenshots.yml"

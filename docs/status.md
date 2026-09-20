@@ -1,12 +1,65 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **19 Sep 2026**. Production candidate: **1.1.1 (202)**.
+Read this before building. Last updated **20 Sep 2026**. Production candidate: **1.1.1 (202)**.
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
 ---
 
 **Last TestFlight:** 15 Sep 2026 at 22:16 UTC. **1.1.1 (201)** from [#243](https://github.com/slooowshutter/FitFight/pull/243). Apple processing is `VALID`. Internal Tester receives it; Friends Beta is assigned the same IPA and waits for Apple beta review (`WAITING_FOR_BETA_REVIEW`). The published release manifest lists `latest` 190, `review` 200, and `internal` 201.
+
+## Quieter notifications and complete controls: prepared 20 Sep 2026
+
+**Code:** You > Settings > Preferences > Notifications has a master switch and
+every automatic category. Invitations, the 24-hour ending reminder, one conditional
+post-end final-sync request, final results, comments, replies, reactions, and
+mentions default on. Fight ended, daily status, feed posts, and the one-week
+reminder default off. The week reminder only applies to 30-calendar-day fights.
+Reactions and opted-in posts combine into one summary around 20:00 in the account's
+saved time zone. Existing saved choices remain. Repeated grace countdowns are
+removed. Delivery uses @usernames, Fight/deadline context, and post/comment excerpts.
+A notification service extension can attach a single post's photo. English/French
+copy and a 1.1.2 release note are included. See [the complete behavior](notifications.md).
+
+**Contract:** `GET/PATCH /api/v1/notifications/preferences` keeps all six released
+fields and partial updates, with eight additive switches. The legacy
+`challenge_reminder` field continues to control its ended/sync/result group;
+individual writes maintain the aggregate. Migration
+`20260920172636_notification_controls_and_digests.sql` retains old outbox kinds,
+slots, and grants while adding preferences and summary metadata. Feed visibility
+is unaffected by notification preferences. Old builds open the first related
+Fight from a multi-post digest; the new app opens Notifications & activity.
+
+**Supported clients:** read-only release checks on 20 Sep returned staging latest
+**1.1.1 (201)**, review **1.1.2 (204)**, internal **1.1.2 (205)**, enforcement off;
+production latest **1.1.1 (202)**, no review/internal candidates, enforcement on.
+The six-field preference models from sources `d97145a` (201), `e2783be` (202),
+`c80e642a` (204), and `bd7283d1` (205) are identical. Frozen decoder/encoder fixtures
+retain that contract, including old responses and partial legacy patches.
+
+**Cloud backend checks:** at `32d341c2`, [Web API typecheck and all 320 tests](https://github.com/slooowshutter/FitFight/actions/runs/35527589992)
+passed. [Disposable database verification](https://github.com/slooowshutter/FitFight/actions/runs/35527589944)
+passed migrations/lint, 255 pgTAP checks, build 113 compatibility, and all 46
+transaction tests before and after the deferred client-permission cutoff.
+Historical migration replay also passed. Notification coverage includes concurrent
+partial writes and digest workers, defaults and opt-outs, local evening timing and
+DST, distinct actor/post counts, exact destinations, blocks, removed reactions,
+deleted posts, mention fallback, and a single conditional final-sync request.
+
+**Native verification:** [all native regressions and the simulator build](https://github.com/slooowshutter/FitFight/actions/runs/35527590007)
+passed at `32d341c2`, including frozen preference decoders, partial patches,
+defaults, and the photo URL allowlist. Notification screen captures are being
+checked. Localization, native API-boundary, migration-safety, and whitespace
+checks passed. No native compilation ran on the workstation.
+
+**Rollout:** apply the additive migration, deploy the compatible backend, let old
+backend instances drain, then distribute the app. Verify the existing hosted
+15-minute closer job in each environment; its live activation has not been
+confirmed, and daily Vercel jobs cannot provide evening delivery. Signed archive
+provisioning for `com.fitfight.mvp.notifications` and physical-device APNs/photo
+delivery remain release checks. No PR, deployment, release-branch merge, live
+notification send, or TestFlight upload was performed. The feature branch disables
+automatic Vercel deployment while these changes are prepared.
 
 ## Compact suggested fight cards: prepared 19 Sep 2026
 

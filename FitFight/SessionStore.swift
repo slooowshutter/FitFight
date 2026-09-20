@@ -1,6 +1,9 @@
 import Combine
+import CryptoKit
 import Foundation
+import GoogleSignIn
 import Supabase
+import UIKit
 
 @MainActor
 final class SessionStore: ObservableObject {
@@ -149,13 +152,15 @@ final class SessionStore: ObservableObject {
         idToken: String,
         authorizationCode: String,
         nonce: String,
-        fullName: String?
+        fullName: String?,
+        email: String? = nil
     ) async {
         guard !CompanionPreview.isEnabled else { authError = CompanionPreview.writeUnavailable; return }
+        guard !isBusy else { return }
         authError = nil
-        guard await AppUpdateChecker.shared.permitsRequests() else { return }
         isBusy = true
         defer { isBusy = false }
+        guard await AppUpdateChecker.shared.permitsRequests() else { return }
         do {
             let signedIn = try await client.auth.signInWithIdToken(
                 credentials: .init(
@@ -174,12 +179,88 @@ final class SessionStore: ObservableObject {
                     _ = try? await api.updateProfile(displayName: fullName, accessToken: signedIn.accessToken)
                 }
             }
+            if let email, !email.isEmpty, signedIn.user.email == nil {
+                try? await client.auth.update(user: UserAttributes(email: email))
+            }
             try? await api.storeAppleAuthorizationCode(
                 authorizationCode,
                 accessToken: signedIn.accessToken
             )
             await loadProfile()
         } catch {
+            authError = Self.signInFailureMessage(error)
+        }
+    }
+
+    func linkGoogleIdentity(idToken: String, accessToken: String, nonce: String) async throws {
+        guard api.isConfigured else { return }
+        do {
+            try await api.reconcileGoogleIdentity(
+                idToken: idToken,
+                accessToken: accessToken,
+                nonce: nonce
+            )
+        } catch FitFightAPIError.notConfigured {
+            return
+        } catch FitFightAPIError.http(let status, _, _) where status == 404 {
+            return
+        }
+    }
+
+    func signInWithGoogle(presenting viewController: UIViewController) async {
+        guard !CompanionPreview.isEnabled else { authError = CompanionPreview.writeUnavailable; return }
+        guard !isBusy else { return }
+        authError = nil
+        isBusy = true
+        defer { isBusy = false }
+        guard await AppUpdateChecker.shared.permitsRequests() else { return }
+        guard let configuration = GoogleSignInConfig.configuration(for: SupabaseConfig.projectURL) else {
+            authError = String(appLocalized: "Google sign-in is not configured for this build.")
+            return
+        }
+
+        let characters = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-._")
+        var generator = SystemRandomNumberGenerator()
+        let nonce = String((0..<32).map { _ in
+            characters[Int.random(in: characters.indices, using: &generator)]
+        })
+        // Supabase checks the raw nonce against the SHA-256 nonce in Google's ID token.
+        let hashedNonce = SHA256.hash(data: Data(nonce.utf8))
+            .map { String(format: "%02x", $0) }.joined()
+        GIDSignIn.sharedInstance.configuration = configuration
+        do {
+            let result = try await GIDSignIn.sharedInstance.signIn(
+                withPresenting: viewController,
+                hint: nil,
+                additionalScopes: nil,
+                nonce: hashedNonce
+            )
+            guard let idToken = result.user.idToken?.tokenString, !idToken.isEmpty else {
+                GIDSignIn.sharedInstance.signOut()
+                authError = String(appLocalized: "Couldn’t sign in. Try again.")
+                return
+            }
+            try await linkGoogleIdentity(
+                idToken: idToken,
+                accessToken: result.user.accessToken.tokenString,
+                nonce: nonce
+            )
+            _ = try await client.auth.signInWithIdToken(
+                credentials: .init(
+                    provider: .google,
+                    idToken: idToken,
+                    accessToken: result.user.accessToken.tokenString,
+                    nonce: nonce
+                )
+            )
+            await loadProfile()
+        } catch {
+            GIDSignIn.sharedInstance.signOut()
+            let googleError = error as NSError
+            if googleError.domain == kGIDSignInErrorDomain,
+               googleError.code == GIDSignInError.Code.canceled.rawValue {
+                return
+            }
             authError = Self.signInFailureMessage(error)
         }
     }
@@ -215,6 +296,7 @@ final class SessionStore: ObservableObject {
         authError = nil
         await PushNotificationService.shared.revokeLocalRegistration()
         try? await client.auth.signOut()
+        GIDSignIn.sharedInstance.signOut()
         authSession = nil
         profile = nil
         profileUnavailable = false
@@ -233,7 +315,7 @@ final class SessionStore: ObservableObject {
         if text.contains("provider is not enabled")
             || text.contains("unsupported provider")
             || text.contains("provider not enabled") {
-            return String(appLocalized: "Apple Sign In is off on this database.")
+            return String(appLocalized: "This sign-in provider is off on this database.")
         }
         if text.contains("nscurlerror")
             || text.contains("nsurlerrordomain")
@@ -375,6 +457,10 @@ final class SessionStore: ObservableObject {
             }
             authSession = renewedSession
             let deletion = try await api.deleteAccount(accessToken: renewedSession.accessToken)
+            if GIDSignIn.sharedInstance.currentUser != nil {
+                try? await GIDSignIn.sharedInstance.disconnect()
+                GIDSignIn.sharedInstance.signOut()
+            }
             try? await client.auth.signOut()
             authSession = nil
             profile = nil
@@ -388,7 +474,8 @@ final class SessionStore: ObservableObject {
                 UserDefaults.standard.removeObject(forKey: Self.profileCachePrefix + userID.uuidString)
                 CompanionStore.deleteLocalLibrary(for: userID)
             }
-            if !deletion.appleAuthorizationRevoked {
+            if !deletion.appleAuthorizationRevoked,
+               renewedSession.user.identities?.contains(where: { $0.provider == "apple" }) == true {
                 authError = String(appLocalized: "Account deleted. To disconnect Apple too, open iPhone Settings, tap your name, then Sign in with Apple → FitFight → Stop Using Apple ID.")
             }
             return true

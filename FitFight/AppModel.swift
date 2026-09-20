@@ -244,7 +244,7 @@ final class AppModel: ObservableObject {
     @Published var showingVersions = false
     @Published var showingPreferences = false
     @Published var showingDebugMenu = false
-    @Published var feedbackRequestFilter: RequestFilter = .top
+    @Published var feedbackRequestFilter = RequestFilter()
     @Published var companionPreviewNotice: String?
     @Published var joined: Set<String> = []
     @Published var createError: String?
@@ -1485,7 +1485,8 @@ final class AppModel: ObservableObject {
             openPost = FeedPostLink(id: postID, commentID: commentID)
             return
         }
-        openFight(id: parts[1])
+        // A final-sync reminder can refer to an earlier round while the next is live.
+        openFight(id: parts[1], preserveRound: true)
         if showDailyStatusRecap {
             Task { await presentDailyStatusRecap(for: parts[1]) }
         }

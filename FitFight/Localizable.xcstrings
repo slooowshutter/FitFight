@@ -1,6 +1,76 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Signing in with Google opens the FitFight account that already uses that email, including Sign in with Apple.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "La connexion Google ouvre le compte FitFight qui utilise déjà cet e-mail, y compris avec Sign in with Apple."
+                    }
+                }
+            }
+        },
+        "Google sign-in has a cleaner button with centered text and sizing that matches Sign in with Apple.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Le bouton de connexion Google est plus épuré, avec un texte centré et les mêmes dimensions que celui d’Apple."
+                    }
+                }
+            }
+        },
+        "Sign in with Apple or Google. First time here, that creates your account.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Connecte-toi avec Apple ou Google. Si c’est ta première visite, ton compte sera créé."
+                    }
+                }
+            }
+        },
+        "Sign in with Google": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Se connecter avec Google"
+                    }
+                }
+            }
+        },
+        "Google sign-in is not configured for this build.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "La connexion Google n’est pas configurée pour cette version."
+                    }
+                }
+            }
+        },
+        "This sign-in provider is off on this database.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ce fournisseur de connexion est désactivé sur cette base de données."
+                    }
+                }
+            }
+        },
+        "Sign in or create your FitFight account with Google. Sign in with Apple is still available.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Connecte-toi ou crée ton compte FitFight avec Google. La connexion avec Apple reste disponible."
+                    }
+                }
+            }
+        },
         "All": {
             "localizations": {
                 "fr": {
@@ -12889,6 +12959,500 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Environnement du compte"
+                    }
+                }
+            }
+        },
+        "Fight notifications open the exact round they refer to, even when the next round has already started.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les notifications de combat ouvrent la manche concernée, même si la suivante a déjà commencé."
+                    }
+                }
+            }
+        },
+        "Cancel reply": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cancel reply"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Annuler la réponse"
+                    }
+                }
+            }
+        },
+        "Comment actions": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Comment actions"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Actions du commentaire"
+                    }
+                }
+            }
+        },
+        "Like comment": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Like comment"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Aimer le commentaire"
+                    }
+                }
+            }
+        },
+        "Unlike comment": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Unlike comment"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ne plus aimer le commentaire"
+                    }
+                }
+            }
+        },
+        "Reply to @\\($0.author.handle)…": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Reply to @%1$@…"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Répondre à @%1$@…"
+                    }
+                }
+            }
+        },
+        "Reply to @%@…": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Reply to @%1$@…"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Répondre à @%1$@…"
+                    }
+                }
+            }
+        },
+        "Feed comments are more compact, with hearts to like replies, a simpler composer, and quick emoji reactions without sorting tabs.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Feed comments are more compact, with hearts to like replies, a simpler composer, and quick emoji reactions without sorting tabs."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les commentaires du fil sont plus compacts, avec un cœur pour aimer les réponses, une saisie simplifiée et des réactions emoji rapides, sans onglets de tri."
+                    }
+                }
+            }
+        },
+        "Comments are easier to scan with bold names, lighter text, and tighter spacing. Reactions start on the left, ranked by votes, and the reply bar stays aligned.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Comments are easier to scan with bold names, lighter text, and tighter spacing. Reactions start on the left, ranked by votes, and the reply bar stays aligned."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les commentaires sont plus lisibles grâce aux noms en gras, au texte plus léger et aux espacements réduits. Les réactions commencent à gauche, classées par nombre de votes, et la barre de réponse reste alignée."
+                    }
+                }
+            }
+        },
+        "See you on Sunday! Let's take the longer route by the river.": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "See you on Sunday! Let's take the longer route by the river."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "À dimanche ! Prenons le chemin le plus long au bord de la rivière."
+                    }
+                }
+            }
+        },
+        "Created by": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Created by"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Créé par"
+                    }
+                }
+            }
+        },
+        "Participants": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Participants"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Participants"
+                    }
+                }
+            }
+        },
+        "The new Details tab shows each fight's schedule, time zone, creator, and participant count. Sharing, invite links, and fight codes are all there too.": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "The new Details tab shows each fight's schedule, time zone, creator, and participant count. Sharing, invite links, and fight codes are all there too."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Le nouvel onglet Détails affiche les dates et heures, le fuseau horaire, le créateur et le nombre de participants de chaque fight. Retrouvez-y aussi le partage, les liens d’invitation et les codes des fights."
+                    }
+                }
+            }
+        },
+        "Archived": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Archivés"
+                    }
+                }
+            }
+        },
+        "Most upvoted": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les plus votés"
+                    }
+                }
+            }
+        },
+        "Newest first": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les plus récents"
+                    }
+                }
+            }
+        },
+        "Oldest first": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les plus anciens"
+                    }
+                }
+            }
+        },
+        "Sort & filter": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Trier et filtrer"
+                    }
+                }
+            }
+        },
+        "Status": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Statut"
+                    }
+                }
+            }
+        },
+        "Type": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Type"
+                    }
+                }
+            }
+        },
+        "Sort by": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Trier par"
+                    }
+                }
+            }
+        },
+        "Show feedback": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Afficher les retours"
+                    }
+                }
+            }
+        },
+        "Reset to defaults": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Réinitialiser les filtres"
+                    }
+                }
+            }
+        },
+        "Filter feedback": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Filtrer les retours"
+                    }
+                }
+            }
+        },
+        "Archive feedback": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Archiver le retour"
+                    }
+                }
+            }
+        },
+        "Reopen feedback": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Rouvrir le retour"
+                    }
+                }
+            }
+        },
+        "Public reason (optional)": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Motif public (facultatif)"
+                    }
+                }
+            }
+        },
+        "Reopen this feedback with its existing votes and discussion. People can vote and comment again.": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Rouvrez ce retour en conservant ses votes et sa discussion. Les votes et commentaires seront à nouveau possibles."
+                    }
+                }
+            }
+        },
+        "Keep this feedback, its votes, and its discussion in Archived. New votes and comments will close. You can reopen it later.": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Conservez ce retour, ses votes et sa discussion dans les archives. Les nouveaux votes et commentaires seront fermés. Vous pourrez le rouvrir plus tard."
+                    }
+                }
+            }
+        },
+        "This feedback is archived. Votes and comments are closed.": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ce retour est archivé. Les votes et commentaires sont fermés."
+                    }
+                }
+            }
+        },
+        "Suggested fights use compact invitation cards. Tap a card to see the details before joining.": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les Fights suggérés utilisent des cartes d’invitation compactes. Touchez une carte pour voir les détails avant de rejoindre le Fight."
+                    }
+                }
+            }
+        },
+        "Find feedback with one filter button. See features and bugs together, sort by votes or date, and browse archived posts. Delete your own feedback; admins can archive, reopen, or delete any post.": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Retrouvez les retours grâce à un seul bouton de filtre. Affichez ensemble les fonctionnalités et les bugs, triez par votes ou par date et consultez les archives. Supprimez vos propres retours ; les administrateurs peuvent archiver, rouvrir ou supprimer toute publication."
+                    }
+                }
+            }
+        },
+        "feedback.post-count": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld post"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld posts"
+                                }
+                            }
+                        }
+                    }
+                },
+                "fr": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld publication"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld publications"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "feedback.open": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Open"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ouverts"
+                    }
+                }
+            }
+        },
+        "No matching feedback": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Aucun retour correspondant"
+                    }
+                }
+            }
+        },
+        "Try changing the filters to see other feedback.": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Modifiez les filtres pour afficher d’autres retours."
                     }
                 }
             }

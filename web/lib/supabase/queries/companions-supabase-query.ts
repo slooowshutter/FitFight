@@ -12,7 +12,7 @@ export async function readCompanionPrompts(
 ): Promise<SavedCompanionPrompts> {
     const rows = await database`
         select library.prompts from private.companion_libraries as library
-        join public.profiles as profile on profile.user_id = library.user_id
+        join public.profiles as profile on profile.id = library.user_id
         where library.user_id = ${userId} and profile.deleted_at is null
     `;
     return savedCompanionPromptsSchema.parse(rows.length ? rows[0].prompts : []);

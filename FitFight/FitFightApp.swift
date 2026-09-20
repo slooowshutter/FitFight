@@ -1,3 +1,4 @@
+import GoogleSignIn
 import SwiftUI
 import UIKit
 import UserNotifications
@@ -215,6 +216,7 @@ struct FitFightApp: App {
                 }
                 .onOpenURL { url in
                     guard !CompanionPreview.isEnabled else { return }
+                    if GIDSignIn.sharedInstance.handle(url) { return }
                     Task { await model.handleOpenURL(url, session: session) }
                 }
                 .onChange(of: session.needsOnboarding) { _, needsOnboarding in

@@ -29,6 +29,69 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 19,
+            notes: "Signing in with Google opens the FitFight account that already uses that email, including Sign in with Apple."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 19,
+            notes: "Google sign-in has a cleaner button with centered text and sizing that matches Sign in with Apple."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 19,
+            notes: "Sign in or create your FitFight account with Google. Sign in with Apple is still available."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 19,
+            notes: "Suggested fights use compact invitation cards. Tap a card to see the details before joining."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 19,
+            notes: "Comments are easier to scan with bold names, lighter text, and tighter spacing. Reactions start on the left, ranked by votes, and the reply bar stays aligned."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 19,
+            notes: "Feed comments are more compact, with hearts to like replies, a simpler composer, and quick emoji reactions without sorting tabs."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 19,
+            notes: "Find feedback with one filter button. See features and bugs together, sort by votes or date, and browse archived posts. Delete your own feedback; admins can archive, reopen, or delete any post."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 19,
+            notes: "The new Details tab shows each fight's schedule, time zone, creator, and participant count. Sharing, invite links, and fight codes are all there too."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 19,
+            notes: "Fight notifications open the exact round they refer to, even when the next round has already started."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 19,
             notes: "The comment Send button turns green as soon as you type. Empty or spaces-only comments keep it gray and disabled."
         ),
         ReleaseNote(

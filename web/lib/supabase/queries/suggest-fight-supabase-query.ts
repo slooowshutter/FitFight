@@ -37,7 +37,7 @@ export async function setFightSuggested(userId: string, fightId: string, suggest
                 sql,
             );
             if (invitedIds.length > 0) {
-                const [ownerRow] = await sql`select handle, display_name from public.profiles where user_id = ${series.owner_id}`;
+                const [ownerRow] = await sql`select handle, display_name from public.profiles where id = ${series.owner_id}`;
                 const owner = suggestedFightOwnerSchema.parse(ownerRow);
                 const displayName = owner.display_name.replace(/\s+/g, " ").trim();
                 await enqueueFightInviteNotifications(sql, {

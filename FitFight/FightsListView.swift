@@ -80,7 +80,7 @@ struct FightsListView: View {
                     InvitationRow(fight: fight)
                 }
                 ForEach(model.suggestedFights.filter { !$0.alreadyMember }) { fight in
-                    SuggestedFightOffer(fight: fight) { Task { await model.openJoinable(fight, session: session) } }
+                    SuggestedFightRow(fight: fight) { Task { await model.openJoinable(fight, session: session) } }
                 }
             }
 
@@ -196,6 +196,39 @@ struct InvitationRow: View {
         .ffBorder(theme.mossText.opacity(0.18), radius: theme.radius.card)
         .contentShape(Rectangle())
         .onTapGesture { model.openFightID = fight.id }
+    }
+}
+
+struct SuggestedFightRow: View {
+    let fight: FitFightJoinableFight
+    let onOpen: () -> Void
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        Button(action: onOpen) {
+            HStack(spacing: 13) {
+                FFAvatar(monogram: String(fight.ownerHandle.prefix(2)).uppercased())
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: Fight.displayTitle(name: fight.name, actionText: fight.actionText))
+                        .ffType(.heading)
+                        .foregroundStyle(theme.text)
+                        .lineLimit(1)
+                    Text(String(format: String(appLocalized: "suggested.participants"), fight.memberCount))
+                        .ffType(.caption)
+                        .foregroundStyle(theme.textSecondary)
+                }
+                Spacer(minLength: 8)
+                FFPill(fight.hasJoined ? String(appLocalized: "Open fight") : String(appLocalized: "Join"), style: .solidMoss)
+                    .fixedSize()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(theme.mossWash, in: RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
+            .ffBorder(theme.mossText.opacity(0.18), radius: theme.radius.card)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(FFPressStyle())
     }
 }
 

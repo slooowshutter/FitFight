@@ -366,6 +366,8 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
     var createdAt: Date
     var metadata: FitFightFeedbackMetadata
     var media: [FitFightMedia]
+    var archived: Bool
+    var archiveReason: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -381,6 +383,8 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
         case createdAt = "created_at"
         case metadata
         case media
+        case archived
+        case archiveReason = "archive_reason"
     }
 
     init(
@@ -396,7 +400,9 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
         mine: Bool,
         createdAt: Date,
         metadata: FitFightFeedbackMetadata = FitFightFeedbackMetadata(),
-        media: [FitFightMedia] = []
+        media: [FitFightMedia] = [],
+        archived: Bool = false,
+        archiveReason: String? = nil
     ) {
         self.id = id
         self.kind = kind
@@ -411,6 +417,8 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
         self.createdAt = createdAt
         self.metadata = metadata
         self.media = media
+        self.archived = archived
+        self.archiveReason = archiveReason
     }
 
     init(from decoder: Decoder) throws {
@@ -429,6 +437,8 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
         metadata = try container.decodeIfPresent(FitFightFeedbackMetadata.self, forKey: .metadata)
             ?? FitFightFeedbackMetadata()
         media = try container.decodeIfPresent([FitFightMedia].self, forKey: .media) ?? []
+        archived = try container.decodeIfPresent(Bool.self, forKey: .archived) ?? false
+        archiveReason = try container.decodeIfPresent(String.self, forKey: .archiveReason)
     }
 }
 
@@ -479,6 +489,23 @@ struct FitFightFeedbackComment: Codable, Identifiable, Equatable, Hashable {
 
 struct FitFightFeedbackList: Decodable, Equatable {
     var posts: [FitFightFeedbackPost]
+    var canArchive: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case posts
+        case canArchive = "can_archive"
+    }
+
+    init(posts: [FitFightFeedbackPost], canArchive: Bool = false) {
+        self.posts = posts
+        self.canArchive = canArchive
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        posts = try container.decode([FitFightFeedbackPost].self, forKey: .posts)
+        canArchive = try container.decodeIfPresent(Bool.self, forKey: .canArchive) ?? false
+    }
 }
 
 struct FitFightFeedbackDetail: Decodable, Equatable {
@@ -486,12 +513,14 @@ struct FitFightFeedbackDetail: Decodable, Equatable {
     var comments: [FitFightFeedbackComment]
     var canLaunchFix: Bool
     var canDelete: Bool
+    var canArchive = false
 
     enum CodingKeys: String, CodingKey {
         case post
         case comments
         case canLaunchFix = "can_launch_fix"
         case canDelete = "can_delete"
+        case canArchive = "can_archive"
     }
 
     init(from decoder: Decoder) throws {
@@ -500,6 +529,17 @@ struct FitFightFeedbackDetail: Decodable, Equatable {
         comments = try container.decode([FitFightFeedbackComment].self, forKey: .comments)
         canLaunchFix = try container.decodeIfPresent(Bool.self, forKey: .canLaunchFix) ?? false
         canDelete = try container.decodeIfPresent(Bool.self, forKey: .canDelete) ?? false
+        canArchive = try container.decodeIfPresent(Bool.self, forKey: .canArchive) ?? false
+    }
+}
+
+struct FitFightFeedbackArchive: Decodable, Equatable {
+    var archived: Bool
+    var archiveReason: String?
+
+    enum CodingKeys: String, CodingKey {
+        case archived
+        case archiveReason = "archive_reason"
     }
 }
 
@@ -586,8 +626,12 @@ struct FitFightAPI {
         if let url = APIConfig.baseURL { return url }
         let raw = ProcessInfo.processInfo.environment["FFAPIBaseURL"]?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        guard !raw.isEmpty else { return nil }
-        return URL(string: raw)
+        if !raw.isEmpty { return URL(string: raw) }
+        #if DEBUG
+        return URL(string: "https://staging.fitfight.app")
+        #else
+        return nil
+        #endif
     }
 
     func claimReferral(code: UUID, accessToken: String) async throws -> FitFightReferralClaim {
@@ -671,6 +715,23 @@ struct FitFightAPI {
         try await get(
             path: "fights/\(fightID.uuidString.lowercased())/daily-status",
             accessToken: accessToken,
+            expected: [200]
+        )
+    }
+
+    func reconcileGoogleIdentity(
+        idToken: String,
+        accessToken: String,
+        nonce: String
+    ) async throws {
+        let _: DiscardBody = try await post(
+            path: "auth/google",
+            accessToken: "",
+            body: GoogleIdentityBody(
+                idToken: idToken,
+                accessToken: accessToken,
+                nonce: nonce
+            ),
             expected: [200]
         )
     }
@@ -924,6 +985,17 @@ struct FitFightAPI {
         try await delete(
             path: "posts/\(postID.uuidString.lowercased())/comments/\(commentID.uuidString.lowercased())",
             accessToken: accessToken,
+            expected: [200]
+        )
+    }
+
+    func setFightPostCommentLike(postID: UUID, commentID: UUID, liked: Bool, accessToken: String) async throws -> FitFightFightPostCommentLike {
+        try await request(
+            path: "posts/\(postID.uuidString.lowercased())/comments/\(commentID.uuidString.lowercased())/like",
+            method: "PUT",
+            accessToken: accessToken,
+            body: Self.encoder.encode(FightPostCommentLikeBody(liked: liked)),
+            idempotencyKey: nil,
             expected: [200]
         )
     }
@@ -1272,12 +1344,26 @@ struct FitFightAPI {
         )
     }
 
-    func listFeedback(kind: String?, accessToken: String) async throws -> FitFightFeedbackList {
-        var path = "feedback"
-        if let kind {
-            path += "?kind=\(kind)"
+    func listFeedback(kind: String?, status: String = "open", sort: String = "votes", accessToken: String) async throws -> FitFightFeedbackList {
+        var query = URLComponents()
+        query.queryItems = [URLQueryItem(name: "status", value: status), URLQueryItem(name: "sort", value: sort)]
+        if let kind { query.queryItems?.append(URLQueryItem(name: "kind", value: kind)) }
+        return try await get(path: "feedback?\(query.percentEncodedQuery ?? "")", accessToken: accessToken, expected: [200])
+    }
+
+    func archiveFeedbackPost(postID: UUID, archived: Bool, reason: String?, accessToken: String) async throws -> FitFightFeedbackArchive {
+        struct ArchiveBody: Encodable {
+            let archived: Bool
+            let reason: String?
         }
-        return try await get(path: path, accessToken: accessToken, expected: [200])
+        return try await request(
+            path: "feedback/\(postID.uuidString.lowercased())",
+            method: "PATCH",
+            accessToken: accessToken,
+            body: Self.encoder.encode(ArchiveBody(archived: archived, reason: reason)),
+            idempotencyKey: nil,
+            expected: [200]
+        )
     }
 
     func feedbackDetail(postID: UUID, accessToken: String) async throws -> FitFightFeedbackDetail {
@@ -1448,7 +1534,9 @@ struct FitFightAPI {
 
             var request = URLRequest(url: requestURL)
             request.httpMethod = method
-            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+            if !accessToken.isEmpty {
+                request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+            }
             request.setValue("application/json", forHTTPHeaderField: "Accept")
             request.setValue(AppVersion.marketing, forHTTPHeaderField: "X-FitFight-Version")
             request.setValue(AppVersion.build, forHTTPHeaderField: "X-FitFight-Build")
@@ -1664,6 +1752,10 @@ private struct FeedPostsBody: Encodable {
     }
 }
 
+private struct FightPostCommentLikeBody: Encodable {
+    let liked: Bool
+}
+
 private struct FightPostCommentBody: Encodable {
     let body: String
     let parentId: UUID?
@@ -1723,6 +1815,18 @@ private struct AppleAuthorizationBody: Encodable {
 
     enum CodingKeys: String, CodingKey {
         case authorizationCode = "authorization_code"
+    }
+}
+
+private struct GoogleIdentityBody: Encodable {
+    var idToken: String
+    var accessToken: String
+    var nonce: String
+
+    enum CodingKeys: String, CodingKey {
+        case idToken = "id_token"
+        case accessToken = "access_token"
+        case nonce
     }
 }
 

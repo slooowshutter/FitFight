@@ -65,6 +65,57 @@ safe backend migration, not automatically an iOS release. Removing information o
 behavior an admitted app still requires waits for that app to be retired. Destructive
 SQL and hosted deployment still follow Marc's authorization rules.
 
+## Standard row columns
+
+The prepared `20260919131732_standard_row_columns.sql` migration adds missing
+`id`, `created_at`, and `updated_at` columns to all 60 FitFight-owned tables in
+`public` and `private`. Auth, Storage, Realtime, and extension-owned tables are
+outside this convention. New tables must follow it; the schema test checks it.
+
+`profiles.id` is an indexed, stored generated copy of the unique `user_id`.
+Profile queries read/filter/join on `id`; v1 still serializes
+`user_id`, including identities embedded in Fight, Feed, and shared-profile
+responses. Native models, request paths, and response fixtures do not change.
+Legacy signup, old backend instances, RLS, foreign keys, and direct Supabase
+clients continue using `user_id`. Its removal is deferred to a separate rollout.
+The other existing single-row UUID identities also receive generated aliases;
+tables with compound identities receive a generated UUID default. Existing
+primary, foreign, and uniqueness constraints remain unchanged, including the
+keys used by `ON CONFLICT`. Generated aliases use non-unique lookup indexes:
+their source keys already guarantee uniqueness, and redundant unique indexes
+can break concurrent legacy `ON CONFLICT` writes. No new API version or native
+release is required.
+
+New timestamps default to `now()`. Existing timestamps keep their semantics.
+The update trigger fills `updated_at` when a writer leaves it unchanged and
+preserves explicitly changed timestamps from existing writers. It does not
+replace domain dates such as `occurred_at`, `received_at`, or `finalized_at`.
+Ordinary updates and upserts retain `created_at` unless an existing writer
+explicitly changes it, as report refreshes already do.
+
+For historical rows, the migration uses recorded signup, connection, receipt,
+join, send, and capture timestamps where available. Sync rows use their last
+recorded successful sync for both new timestamps. Otherwise it initializes
+`created_at` from the old `updated_at`, or migration time when neither exists.
+Those values are estimates or initialization times, not recovered creation
+history. Missing `updated_at` uses a recorded last receipt/sync when available,
+otherwise migration time. Each new timestamp column documents its expression.
+Existing timestamp values are never overwritten by the backfill.
+
+The migration suppresses user-trigger side effects only within its own
+transaction, preventing metadata backfills from creating activity, recapturing
+companions, or sending Realtime invalidations. Constraints, grants, and RLS stay
+in place. A five-second lock timeout aborts the transaction if it cannot acquire
+the required table locks. The backfill and new indexes still require a deployment
+window appropriate to the environment's row counts.
+
+Apply this additive migration before deploying the changed backend. The new
+backend readiness check requires its migration record and profile columns.
+Keep the old backend usable during the migration and rollback window. Validate
+staging separately from production; the normal authorized branch promotions
+still apply. Do not include removal of legacy identifiers or direct-client
+permissions in this migration batch.
+
 ## Saved companion descriptions (prepared 17 Sep 2026)
 
 `GET /api/v1/me/companions` returns the authenticated user's saved descriptions as
@@ -207,17 +258,36 @@ creates a P0 Inbox row in the Blend HQ Product Backlog (Product FitFight, Source
 App feedback). Vercel holds `NOTION_TOKEN`. A missing token or a Notion failure
 does not fail the in-app post. The token never belongs in iOS, git, or chat.
 
-`GET /api/v1/feedback/{postID}` includes `can_launch_fix` and `can_delete` for the signed-in viewer.
-Those flags are true only for the FitFight admin: confirmed account email `marc@marclamy.com`, username
-`marc`, or extras in `FITFIGHT_ADMIN_EMAILS` / `FITFIGHT_ADMIN_HANDLES`. Apple Sign
-In may store no email, so the username match is required on staging. User-editable
-metadata and identity email copies never grant admin access.
-Admin-only `DELETE /api/v1/feedback/{postID}` returns `{ deleted: true }` and
-removes the request plus its comments, votes, reports, and attachment links through
-existing foreign keys. It returns 403 for a regular account and 404 if the request
-is missing. The app asks for confirmation in the request's menu, then returns to
-the board. Older backends omit `can_delete`, which the app treats as false.
-No schema migration is needed. Stored media bytes and external Notion copies are
+`GET /api/v1/feedback` accepts optional `kind=feature|bug`, `status=open|archived`,
+and `sort=votes|newest|oldest`. Defaults include both types, exclude archived posts,
+and sort by votes descending. Date sorting uses creation time. Filters and sorting
+apply before the existing 100-post limit. The response includes `can_archive`.
+Posts include additive `archived` and nullable `archive_reason` fields.
+
+`GET /api/v1/feedback/{postID}` includes `can_launch_fix`, `can_delete`, and
+`can_archive` for the signed-in viewer. Authors can delete their own posts.
+The launch and archive flags require the existing FitFight admin allowlist:
+confirmed account email `marc@marclamy.com`, username `marc`, or extras in
+`FITFIGHT_ADMIN_EMAILS` / `FITFIGHT_ADMIN_HANDLES`. User-editable metadata and
+identity email copies never grant admin access.
+
+Author-or-admin `DELETE /api/v1/feedback/{postID}` returns `{ deleted: true }`
+and removes the post, comments, votes, reports, and attachment links through
+existing foreign keys. An unrelated member receives 403; a missing post returns
+404. The app confirms deletion in the existing ellipsis menu on a card or detail.
+Older backends omit capabilities, which native decoders default to false.
+
+Admin-only `PATCH /api/v1/feedback/{postID}` accepts `{ archived: boolean,
+reason?: string }`, with a trimmed public reason up to 280 characters. It returns
+`{ archived, archive_reason }`. Archive retains content, media, votes, and discussion;
+reopen clears the reason and permits voting/comments again. Archived vote and comment
+commands return the existing `409 conflict` response. Both commands lock the post
+in their transaction so they cannot race an archive into accepting a late write.
+The migration adds two columns and an index; client grants and RLS remain unchanged.
+Apply the migration, deploy and drain the old backend, then distribute the native
+archive controls. Existing `/api/v1` paths and legacy response fields remain supported.
+
+Stored media bytes and external Notion copies are
 outside this deletion, matching existing post deletion behavior. List, detail,
 create, and comment responses keep a `metadata` object for older clients and always
 send `{}` so the board never shows device details. List, detail, and create include

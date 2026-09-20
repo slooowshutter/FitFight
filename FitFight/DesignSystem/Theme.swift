@@ -52,6 +52,9 @@ struct Palette {
     var disabledBg: Color { value(for: "disabledBg") }
     var disabledLine: Color { value(for: "disabledLine") }
     var disabledText: Color { value(for: "disabledText") }
+    var googleFill: Color { value(for: "googleFill") }
+    var googleInk: Color { value(for: "googleInk") }
+    var googleBorder: Color { value(for: "googleBorder") }
     var scrim: Color { value(for: "scrim") }
 
     var mossFill: Color { value(for: "mossFill") }

@@ -7,6 +7,7 @@ struct NotificationPreferencesTests {
         let current = try decoder.decode(FitFightNotificationPreferences.self, from: old)
         precondition(current.feedPost == legacy.feedPost && current.postComment == legacy.postComment)
         precondition(current.challengeReminder == legacy.challengeReminder && current.dailyStatus == legacy.dailyStatus)
+        precondition(!current.finalSync && !current.fightFinalized)
         var settings = FitFightNotificationPreferences()
         settings.enabled = false
         settings.mention = false

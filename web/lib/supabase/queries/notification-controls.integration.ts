@@ -121,7 +121,7 @@ test("notification controls preserve old clients and batch activity without losi
     await updateNotificationPreferences(owner, { post_comment: true }, database);
     const commentId = randomUUID();
     await database`insert into public.fight_post_comments (id, post_id, author_id, body) values (${commentId}, ${postId}, ${peer}, 'See you tomorrow')`;
-    await enqueueFightFeedCommentNotifications(database, { postId, commentId, parentId: null, actorId: peer });
+    await enqueueFightFeedCommentNotifications(database, { postId, commentId, parentId: null, actorId: peer, skipUserIds: [owner] });
     const [comment] = await database`select * from private.notification_intents where user_id = ${owner} and comment_id = ${commentId}`;
     const commentContent = await readNotificationContent({ ...delivery, ...comment, preferences: await readNotificationPreferences(owner, database) }, "en", database);
     assert.ok(commentContent?.title.startsWith("@notif_"));

@@ -1853,20 +1853,20 @@ struct FitFightNotificationPreferences: Codable, Equatable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        enabled = try container.decodeIfPresent(Bool.self, forKey: .enabled) ?? true
-        fightInvite = try container.decodeIfPresent(Bool.self, forKey: .fightInvite) ?? true
-        ending24h = try container.decodeIfPresent(Bool.self, forKey: .ending24h) ?? true
-        endingWeek = try container.decodeIfPresent(Bool.self, forKey: .endingWeek) ?? false
-        fightEnded = try container.decodeIfPresent(Bool.self, forKey: .fightEnded) ?? false
-        finalSync = try container.decodeIfPresent(Bool.self, forKey: .finalSync) ?? true
-        fightFinalized = try container.decodeIfPresent(Bool.self, forKey: .fightFinalized) ?? true
-        mention = try container.decodeIfPresent(Bool.self, forKey: .mention) ?? true
         feedPost = try container.decode(Bool.self, forKey: .feedPost)
         postComment = try container.decode(Bool.self, forKey: .postComment)
         commentReply = try container.decode(Bool.self, forKey: .commentReply)
         postReaction = try container.decode(Bool.self, forKey: .postReaction)
         challengeReminder = try container.decode(Bool.self, forKey: .challengeReminder)
         dailyStatus = try container.decode(Bool.self, forKey: .dailyStatus)
+        enabled = try container.decodeIfPresent(Bool.self, forKey: .enabled) ?? true
+        fightInvite = try container.decodeIfPresent(Bool.self, forKey: .fightInvite) ?? true
+        ending24h = try container.decodeIfPresent(Bool.self, forKey: .ending24h) ?? challengeReminder
+        endingWeek = try container.decodeIfPresent(Bool.self, forKey: .endingWeek) ?? false
+        fightEnded = try container.decodeIfPresent(Bool.self, forKey: .fightEnded) ?? false
+        finalSync = try container.decodeIfPresent(Bool.self, forKey: .finalSync) ?? challengeReminder
+        fightFinalized = try container.decodeIfPresent(Bool.self, forKey: .fightFinalized) ?? challengeReminder
+        mention = try container.decodeIfPresent(Bool.self, forKey: .mention) ?? true
     }
 }
 

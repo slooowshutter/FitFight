@@ -156,6 +156,7 @@ async function insertSocialIntents(
     recipients: Recipient[],
     postId: string,
     commentId?: string,
+    skipMentionedUserIds: string[] = [],
 ): Promise<void> {
     const unique = new Map<string, Recipient>();
     for (const recipient of recipients) {
@@ -177,6 +178,7 @@ async function insertSocialIntents(
     const rows = wanted.flatMap((recipient) => {
         const row = rowsByUser.get(recipient.userId);
         if (!row || !preferenceOn(recipient.kind, row)) return [];
+        if (skipMentionedUserIds.includes(recipient.userId) && preferenceOn("mention", row)) return [];
         const locale = localeFor(row.locale);
         const alert =
             recipient.kind === "mention"
@@ -283,17 +285,15 @@ export async function enqueueFightFeedPostNotifications(
         sql,
         input.actorId,
         await actorName(sql, input.actorId),
-        members
-            .filter(
-                (member) => !(input.skipUserIds ?? []).includes(member.user_id),
-            )
-            .map((member) => ({
+        members.map((member) => ({
                 userId: member.user_id,
                 kind: "feed_post" as const,
                 eventId: input.postId,
                 fightId: member.fight_id,
             })),
         input.postId,
+        undefined,
+        input.skipUserIds,
     );
 }
 
@@ -339,10 +339,7 @@ export async function enqueueFightFeedCommentNotifications(
             eventId: input.commentId,
         });
     }
-    const skipped = new Set(input.skipUserIds ?? []);
-    const remaining = wanted.filter(
-        (recipient) => !skipped.has(recipient.userId),
-    );
+    const remaining = wanted;
     const fights = await accessibleFightByUser(
         sql,
         remaining.map((recipient) => recipient.userId),
@@ -359,6 +356,7 @@ export async function enqueueFightFeedCommentNotifications(
         }),
         input.postId,
         input.commentId,
+        input.skipUserIds,
     );
 }
 

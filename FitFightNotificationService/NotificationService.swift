@@ -1,7 +1,7 @@
 import UIKit
 import UserNotifications
 
-final class NotificationService: UNNotificationServiceExtension {
+final class NotificationService: UNNotificationServiceExtension, URLSessionTaskDelegate {
     private let lock = NSLock()
     private var handler: ((UNNotificationContent) -> Void)?
     private var content: UNMutableNotificationContent?
@@ -29,7 +29,7 @@ final class NotificationService: UNNotificationServiceExtension {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.timeoutIntervalForRequest = 10
         configuration.timeoutIntervalForResource = 15
-        let session = URLSession(configuration: configuration)
+        let session = URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
         self.session = session
         session.downloadTask(with: url) { [weak self] location, response, _ in
             guard let self else { return }
@@ -55,6 +55,16 @@ final class NotificationService: UNNotificationServiceExtension {
                 // The text remains useful when a signed photo expires or cannot be attached.
             }
         }.resume()
+    }
+
+    func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        willPerformHTTPRedirection response: HTTPURLResponse,
+        newRequest request: URLRequest,
+        completionHandler: @escaping (URLRequest?) -> Void
+    ) {
+        completionHandler(request.url.map(Self.isAllowedImageURL) == true ? request : nil)
     }
 
     override func serviceExtensionTimeWillExpire() {

@@ -35,7 +35,7 @@ export async function updateNotificationPreferences(
     }
     const [row] = await database`
         insert into private.notification_preferences ${database({ user_id: userId, ...changes })}
-        on conflict (user_id) do update set ${database(changes, ...Object.keys(changes))}
+        on conflict (user_id) do update set ${database(changes)}
         returning enabled, fight_invite, ending_24h, ending_week, fight_ended,
             final_sync, fight_finalized, mention, feed_post, post_comment,
             comment_reply, post_reaction, challenge_reminder, daily_status

@@ -107,7 +107,8 @@ test("Google tokens attach to an existing Apple account with the same verified e
         select provider, user_id from auth.identities
         where provider_id = ${subject} and provider = 'google'
     `;
-    assert.deepEqual(identities, [{ provider: "google", user_id: appleId }]);
+    assert.equal(identities.length, 1);
+    assert.deepEqual(identities[0], { provider: "google", user_id: appleId });
     const leftover = await database<{ count: number }[]>`
         select count(*)::integer as count from auth.users where id = ${createdGoogleId}
     `;

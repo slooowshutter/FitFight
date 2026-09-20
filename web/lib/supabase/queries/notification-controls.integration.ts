@@ -127,4 +127,16 @@ test("notification controls preserve old clients and batch activity without losi
     assert.ok(commentContent?.title.startsWith("@notif_"));
     assert.ok(commentContent?.body.includes("See you tomorrow"));
     assert.ok(commentContent?.route.endsWith(`comment=${commentId}`));
+    await database`delete from public.fight_posts where id = ${newPostId}`;
+    assert.equal(await readNotificationContent(delivery, "en", database), null, "Deleted posts and removed reactions must disappear from a delayed summary");
+
+    at.setTime(Date.parse("2026-10-24T18:01:00Z"));
+    const dstPost = randomUUID();
+    await database`insert into public.fight_posts (id, fight_id, audience, author_id, body)
+        values (${dstPost}, ${fightId}, 'fight', ${peer}, 'After the evening cutoff')`;
+    await enqueueFightFeedPostNotifications(database, { fightId, postId: dstPost, actorId: peer });
+    const [dst] = await database`select not_before, digest_on::text from private.notification_intents where user_id = ${owner} and post_id = ${dstPost}`;
+    assert.equal(dst.digest_on, "2026-10-25");
+    assert.equal(dst.not_before.toISOString(), "2026-10-25T19:00:00.000Z", "The evening cutoff must follow the saved zone across daylight-saving changes");
+
 });

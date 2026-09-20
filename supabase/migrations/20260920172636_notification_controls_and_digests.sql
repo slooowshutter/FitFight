@@ -48,7 +48,7 @@ for each row execute function private.maintain_legacy_notification_preferences()
 revoke all on function private.maintain_legacy_notification_preferences() from public, anon, authenticated;
 
 alter table private.notification_intents
-    add column actor_id uuid references public.profiles (id) on delete set null,
+    add column actor_id uuid references public.profiles (user_id) on delete set null,
     add column post_id uuid references public.fight_posts (id) on delete set null,
     add column comment_id uuid references public.fight_post_comments (id) on delete set null,
     add column digest_on date,

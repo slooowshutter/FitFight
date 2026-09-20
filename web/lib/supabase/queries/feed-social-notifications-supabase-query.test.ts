@@ -379,7 +379,7 @@ test("a reaction notifies the post author once", async () => {
     assert.equal(inserted.length, 1);
     const row = inserted[0] as { kind: string; alert_body: string };
     assert.equal(row.kind, "post_reaction");
-    assert.equal(row.alert_body, "Alex a réagi à ta publication.");
+    assert.equal(row.alert_body, "@alex a réagi à ta publication.");
 });
 
 test("reacting to your own post does not enqueue", async () => {
@@ -459,7 +459,7 @@ test("a mention names the person and skips the author", async () => {
     assert.equal(row.user_id, otherId);
     assert.equal(row.kind, "mention");
     assert.equal(row.copy_key, "mention_post");
-    assert.equal(row.alert_body, "Alex tagged you in a post.");
+    assert.equal(row.alert_body, "@alex tagged you in a post.");
     assert.doesNotMatch(row.alert_body, /score/i);
     assert.doesNotMatch(row.alert_body, /step/i);
     assert.equal(row.route, `/fights/${fightId}?post=${postId}`);
@@ -504,7 +504,7 @@ test("a comment mention names the person and skips a matching post-comment alert
     };
     assert.equal(row.kind, "mention");
     assert.equal(row.copy_key, "mention_comment");
-    assert.equal(row.alert_body, "Alex t’a mentionné dans un commentaire.");
+    assert.equal(row.alert_body, "@alex t’a mentionné dans un commentaire.");
     assert.equal(
         row.route,
         `/fights/${fightId}?post=${postId}&comment=${commentId}`,

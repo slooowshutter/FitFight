@@ -11,7 +11,7 @@ on:
             - "scripts/check_localizations.py"
             - ".github/workflows/ios-screenshots.yml"
     push:
-        branches: [main, develop, preview, ig-style-notifications]
+        branches: [main, develop, preview]
         paths:
             - "FitFight/**"
             - "FitFightNotificationService/**"

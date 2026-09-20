@@ -46,11 +46,18 @@ partial writes and digest workers, defaults and opt-outs, local evening timing a
 DST, distinct actor/post counts, exact destinations, blocks, removed reactions,
 deleted posts, mention fallback, and a single conditional final-sync request.
 
-**Native verification:** [all native regressions and the simulator build](https://github.com/slooowshutter/FitFight/actions/runs/35527590007)
-passed at `32d341c2`, including frozen preference decoders, partial patches,
-defaults, and the photo URL allowlist. Notification screen captures are being
-checked. Localization, native API-boundary, migration-safety, and whitespace
-checks passed. No native compilation ran on the workstation.
+**Native verification:** [all native regressions and the simulator build](https://github.com/slooowshutter/FitFight/actions/runs/35528448727)
+passed at `ce74cc6e`, including frozen preference decoders, partial patches,
+defaults, and the photo URL allowlist. [English/French cloud captures](https://github.com/slooowshutter/FitFight/actions/runs/35528448726)
+passed and were visually checked in Night and Day: all switches, default states,
+and wrapped explanations remain visible. Capture mode shares the screen content
+with a static viewport, following Preferences; the app retains its ScrollView.
+Rows expose localized VoiceOver labels, state, and action. Static captures do not
+verify touch interaction, VoiceOver operation, or system text scaling.
+Localization, native API-boundary, migration-safety, and whitespace checks passed.
+Temporary feature-branch CI triggers were removed after verification; native
+sources remain identical to `ce74cc6e`, and backend/migration sources remain
+identical to `32d341c2`. No native compilation ran on the workstation.
 
 **Rollout:** apply the additive migration, deploy the compatible backend, let old
 backend instances drain, then distribute the app. Verify the existing hosted

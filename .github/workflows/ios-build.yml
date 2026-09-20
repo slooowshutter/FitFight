@@ -32,7 +32,7 @@ on:
             - "fastlane/**"
             - ".github/workflows/ios-build.yml"
     push:
-        branches: [main, develop, preview, profiles-friends-and-stats, ig-style-notifications]
+        branches: [main, develop, preview, profiles-friends-and-stats]
         paths:
             - "FitFight/**"
             - "FitFightNotificationService/**"

@@ -413,7 +413,7 @@ struct YouView: View {
                         .foregroundStyle(theme.textFaint)
                 ),
                 action: {
-                    model.feedbackRequestFilter = .top
+                    model.feedbackRequestFilter = RequestFilter()
                     model.tab = .feedback
                 }
             )

@@ -14,7 +14,7 @@ function createDatabaseStub(options: {
     const query = ((first: TemplateStringsArray, ..._values: unknown[]) => {
         const sql = first.join("?").replace(/\s+/g, " ").trim();
         queries.push(sql);
-        if (sql.includes("select user_id from public.profiles")) {
+        if (sql.includes("select id as user_id from public.profiles")) {
             return Promise.resolve(
                 options.profileExists ? [{ user_id: "user-id" }] : [],
             );

@@ -125,8 +125,8 @@ async function ownerHandle(
 ): Promise<string> {
     const { data, error } = await admin
         .from("profiles")
-        .select("user_id, handle, display_name, time_zone")
-        .eq("user_id", ownerId)
+        .select("user_id:id, handle, display_name, time_zone")
+        .eq("id", ownerId)
         .maybeSingle();
     if (error) {
         throw new ApiError(500, ERROR_CODES.db_error, "Could not load owner");

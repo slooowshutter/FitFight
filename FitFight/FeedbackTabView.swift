@@ -19,10 +19,10 @@ struct FeedbackTabView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(theme.bg)
         .sheet(isPresented: $composingRequest, onDismiss: {
-            Task { await requests.load(session: session, kind: model.feedbackRequestFilter.kind) }
+            Task { await requests.load(session: session, kind: model.feedbackRequestFilter.kind, status: model.feedbackRequestFilter.status.rawValue, sort: model.feedbackRequestFilter.sort.rawValue) }
         }) {
-            ComposeRequestView(store: requests, onPosted: { filter in
-                model.feedbackRequestFilter = filter
+            ComposeRequestView(store: requests, onPosted: {
+                model.feedbackRequestFilter.status = .open
                 composingRequest = false
             })
             .environmentObject(session)

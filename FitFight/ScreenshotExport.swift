@@ -60,11 +60,58 @@ enum ScreenshotExport {
             to: folder
         )
         write(
+            frame(NewFightView(opening: .choose), tab: .newFight, themeStore: light, model: model),
+            name: "light-new",
+            height: canvas.height,
+            to: folder
+        )
+        write(
             sheet(PreferencesView(), themeStore: light, model: model),
             name: "light-preferences",
             height: tallHeight,
             to: folder
         )
+
+        write(
+            sheet(RequestsScreenshot.board(), themeStore: light, model: model),
+            name: "light-feedback",
+            height: canvas.height,
+            to: folder
+        )
+        write(
+            sheet(RequestsScreenshot.filters(), themeStore: light, model: model),
+            name: "light-feedback-filters",
+            height: canvas.height,
+            to: folder
+        )
+
+        if var fight = model.fights.first(where: { $0.id == "sweat" }) {
+            fight.id = "details-preview"
+            fight.windowStart = Date(timeIntervalSince1970: 1_789_776_000)
+            fight.windowEnd = fight.windowStart.addingTimeInterval(7 * 86_400)
+            fight.timeZone = "Europe/Paris"
+            fight.joinCode = "WALK742"
+            for store in [themeStore, light] {
+                for size in [DynamicTypeSize.large, .accessibility3] {
+                    write(
+                        frame(
+                            FightDetailView(fight: fight, pane: .details).environment(\.dynamicTypeSize, size),
+                            tab: .fights, themeStore: store, model: model
+                        ),
+                        name: "\(store.mode.rawValue)-details\(size == .large ? "" : "-large-text")",
+                        height: size == .large ? canvas.height : tallHeight,
+                        to: folder
+                    )
+                }
+            }
+            fight.joinCode = nil
+            fight.inviter = nil
+            fight.timeZone = nil
+            write(
+                frame(FightDetailView(fight: fight, pane: .details), tab: .fights, themeStore: themeStore, model: model),
+                name: "night-details-legacy", height: canvas.height, to: folder
+            )
+        }
 
         // The design system page is one long scroll. ImageRenderer returns nil well
         // before the texture limit, so it is exported as a run of slices instead of
@@ -138,7 +185,7 @@ enum ScreenshotExport {
                 ("edit", AnyView(EditFightView(fight: group)), .fights),
                 ("invitation", AnyView(FightDetailView(fight: invite)), .fights),
                 ("history", AnyView(FightDetailView(fight: group, pane: .history)), .fights),
-                ("share", AnyView(FightDetailView(fight: group, pane: .share)), .fights),
+                ("details", AnyView(FightDetailView(fight: group, pane: .details)), .fights),
                 ("fight-feed", AnyView(FightDetailView(fight: group, pane: .feed)), .fights),
                 ("new", AnyView(NewFightView()), .newFight),
                 ("review", AnyView(NewFightView(opening: .create, initialStep: 4)), .newFight),
@@ -226,6 +273,9 @@ enum ScreenshotExport {
             },
             Shot(name: "05-feed") { store, model in
                 frame(FeedView(), tab: .feed, themeStore: store, model: model)
+            },
+            Shot(name: "06-feedback-filters") { store, model in
+                sheet(RequestsScreenshot.filters(), themeStore: store, model: model)
             },
             Shot(name: "06-requests") { store, model in
                 sheet(RequestsScreenshot.board(), themeStore: store, model: model)

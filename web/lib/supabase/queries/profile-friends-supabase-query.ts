@@ -53,12 +53,12 @@ export async function changeFriendship(viewerId: string, targetId: string, actio
 
 export async function listProfileFriends(userId: string, query: FriendsQuery, database: Sql = createDatabaseClient()): Promise<FriendsPage> {
     return database.begin(async (sql) => {
-        await sql`select user_id from public.profiles where user_id = ${userId} and deleted_at is null for share`;
+        await sql`select id as user_id from public.profiles where id = ${userId} and deleted_at is null for share`;
         const rows = profileFriendListRowSchema.array().parse(await sql`
-            select profile.user_id, profile.handle, profile.display_name, profile.companion_id, null avatar_url,
+            select profile.id as user_id, profile.handle, profile.display_name, profile.companion_id, null avatar_url,
                 friendship.state, friendship.requester_id, media.object_path avatar_path
             from private.profile_friendships friendship
-            join public.profiles profile on profile.user_id = case when friendship.user_low = ${userId}
+            join public.profiles profile on profile.id = case when friendship.user_low = ${userId}
                 then friendship.user_high else friendship.user_low end
             left join public.media_objects media on media.id = profile.avatar_media_id and media.status = 'ready'
             where (friendship.user_low = ${userId} or friendship.user_high = ${userId})
@@ -68,10 +68,10 @@ export async function listProfileFriends(userId: string, query: FriendsQuery, da
                         select blocker_id, blocked_id from private.profile_blocks
                         union all select blocker_id, blocked_id from private.feed_blocks
                         union all select blocker_id, blocked_id from private.feedback_blocks
-                    ) blocks where (blocker_id = ${userId} and blocked_id = profile.user_id)
-                        or (blocker_id = profile.user_id and blocked_id = ${userId})
+                    ) blocks where (blocker_id = ${userId} and blocked_id = profile.id)
+                        or (blocker_id = profile.id and blocked_id = ${userId})
                 )
-            order by profile.user_id
+            order by profile.id
         `);
         const filtered = rows.filter((row) => query.kind === "accepted" ? row.state === "accepted"
             : row.state === "pending" && (query.kind === "outgoing" ? row.requester_id === userId : row.requester_id !== userId));
@@ -92,7 +92,7 @@ export async function listProfileFriends(userId: string, query: FriendsQuery, da
 export async function blockProfile(userId: string, targetId: string, database: Sql = createDatabaseClient()): Promise<{ blocked: boolean }> {
     if (userId === targetId) throw new ApiError(400, "validation", "You cannot block yourself");
     return database.begin(async (sql) => {
-        const profiles = await sql`select user_id from public.profiles where user_id in (${userId}, ${targetId}) and deleted_at is null order by user_id for update`;
+        const profiles = await sql`select id as user_id from public.profiles where id in (${userId}, ${targetId}) and deleted_at is null order by user_id for update`;
         if (profiles.length !== 2) throw new ApiError(404, "not_found", "Profile unavailable");
         await sql`insert into private.profile_blocks(blocker_id, blocked_id) values (${userId}, ${targetId}) on conflict do nothing`;
         await sql`insert into private.feed_blocks(blocker_id, blocked_id) values (${userId}, ${targetId}) on conflict do nothing`;

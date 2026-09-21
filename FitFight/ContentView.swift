@@ -178,13 +178,17 @@ struct ContentView: View {
 
     private var updateCard: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(appUpdate.isTestFlight
+            Text(appUpdate.offersAppStore
+                 ? String(appLocalized: "Move to FitFight on the App Store")
+                 : appUpdate.isTestFlight
                  ? String(appLocalized: "A FitFight update is available")
                  : String(appLocalized: "Update FitFight to continue"))
                 .font(.ff(18, 800))
                 .tracking(18 * -0.015)
                 .foregroundStyle(theme.text)
-            Text(appUpdate.isTestFlight
+            Text(appUpdate.offersAppStore
+                 ? String(appLocalized: "FitFight is available on the App Store. Install it and sign in with the same account. Beta fights and progress do not sync automatically.")
+                 : appUpdate.isTestFlight
                  ? String(appLocalized: "Open TestFlight to check for the update. If it isn’t available yet, cancel and keep using FitFight.")
                  : String(appLocalized: "You can’t use FitFight until you install the latest version."))
                 .ffType(.body)
@@ -194,7 +198,7 @@ struct ContentView: View {
                 .padding(.top, 7)
             HStack(spacing: 9) {
                 if appUpdate.isTestFlight {
-                    FFButton(title: String(appLocalized: "Cancel"), kind: .secondary, fullWidth: true) {
+                    FFButton(title: appUpdate.offersAppStore ? String(appLocalized: "Not now") : String(appLocalized: "Cancel"), kind: .secondary, fullWidth: true) {
                         appUpdate.dismissUpdate()
                     }
                     .accessibilityIdentifier("cancel-update-button")
@@ -209,7 +213,7 @@ struct ContentView: View {
                     .disabled(appUpdate.isChecking)
                 }
                 if let release = appUpdate.offeredRelease {
-                    FFButton(title: String(appLocalized: "Update FitFight"), kind: .primary, fullWidth: true) {
+                    FFButton(title: appUpdate.offersAppStore ? String(appLocalized: "Open App Store") : String(appLocalized: "Update FitFight"), kind: .primary, fullWidth: true) {
                         openURL(release.updateURL)
                     }
                     .accessibilityIdentifier("required-update-button")

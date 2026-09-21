@@ -298,6 +298,40 @@ actual affected contract; follow [AGENTS.md](../AGENTS.md#mobile-api-and-databas
 
 ## Mandatory updates and database rollout
 
+### TestFlight App Store prompt
+
+`FITFIGHT_TESTFLIGHT_APP_STORE_PROMPT=true` on the staging backend offers the
+registry's public production `latest` through the existing `/api/app-release`
+contract. It defaults to off. Only an installable public App Store release can
+be offered; a review candidate cannot replace it. The registry and its publisher
+are unchanged. Staging keeps `enforced: false` and retains its `review`/`internal`
+build exceptions. Set the flag to `false` or remove it to return to TestFlight
+offers. Production ignores this setting.
+
+Public TestFlight 1.1.1 (201) already understands App Store URLs, so a backend
+deployment and activation can redirect its existing update button to App Store
+1.1.1 (202) without another install. Its existing wording still mentions
+TestFlight, Cancel still works, and a previously dismissed higher beta offer
+may suppress the prompt. Older clients that compare versions do not offer an
+older App Store version to a newer installed beta. This is not a universal
+forced-update mechanism or evidence that someone changed installations.
+
+The new native copy explicitly offers the App Store, explains the separate beta
+data, and uses **Open App Store** / **Not now**. It can offer an older production
+version to an unadmitted newer beta and treats beta and App Store dismissals
+separately. Admitted review/internal builds remain usable without a prompt.
+Not now stays dismissed for the same App Store release. The new wording needs
+a native release; backend activation alone cannot rewrite installed UI.
+
+Deploy the compatible staging backend before activating the flag, after checking
+the current public App Store availability and deciding how to handle later beta
+fights and progress. Native distribution is a separate authorized preview
+promotion. No data is copied or synchronized by this prompt. Ending beta access,
+expiring builds, and changing compatibility cutoffs are separate work requiring
+their own rollout; do not revoke sessions to simulate an App Store migration.
+
+### Version updates
+
 **TestFlight updates are optional; production retains mandatory updates.** This policy is prepared in the workspace on 15 Sep 2026 at Marc's request. The staging backend always serves `enforced: false` and does not return `426` for version/build mismatches, even if the publisher still records enforcement in its raw manifest. Authentication and account checks still apply. The next prepared TestFlight marketing version is `1.1.1`; build numbers distinguish follow-up releases. Production has no independently adjustable minimum.
 
 `fastlane refresh_app_releases` reads Apple availability. A staging build must be valid, unexpired, in `IN_BETA_TESTING`, and assigned to every external group to become `latest` (Friends Beta / public join). The newest registered VALID staging build that is newer than that public latest is `internal` and is also copied into `review` so existing binaries stop prompting Internal testers who already installed it. Production uses only `READY_FOR_DISTRIBUTION` App Store versions and their exact build; `PROCESSING_FOR_DISTRIBUTION` is not installable yet. A registered staging build waiting for or in beta review is separately admitted. For production, the registered build selected in App Store Connect is admitted for review; uploading or submitting it never replaces the public release. The public registry contains only channel/version/build numbers, no Apple credentials.

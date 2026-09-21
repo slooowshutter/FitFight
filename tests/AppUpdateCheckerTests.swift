@@ -37,6 +37,7 @@ private struct AppUpdateCheckerTests {
         precondition(ProcessInfo.processInfo.environment["GITHUB_ACTIONS"] == "true",
                      "Native checks run on GitHub-hosted macOS only")
         try await testTestFlightUpdates()
+        try await testAppStorePrompt()
         // Preserve the mandatory production policy separately from optional TestFlight updates.
         let suite = "fitfight-release-tests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
@@ -200,7 +201,72 @@ private struct AppUpdateCheckerTests {
         await justInstalled.check()
         precondition(justInstalled.status == .updateRequired,
                      "A readable policy that does not admit the build still requires an update")
-        print("App update checks passed: TestFlight cancellation, public availability, stale metadata, API access, and production gate")
+        print("App update checks passed: TestFlight cancellation, App Store prompts, public availability, stale metadata, API access, and production gate")
+    }
+
+    static func testAppStorePrompt() async throws {
+        let suite = "fitfight-app-store-prompt.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [ReleaseProtocol.self]
+        let session = URLSession(configuration: configuration)
+        defer { session.invalidateAndCancel() }
+        let url = URL(string: "https://staging.fitfight.app/api/app-release")!
+        let store = AppRelease(version: "1.1.1", build: 202,
+                               updateURL: URL(string: "https://apps.apple.com/app/id6804230516")!)
+        let internalBeta = AppRelease(version: "1.1.2", build: 205, updateURL: URL(string: "itms-beta://")!)
+        let policy = AppReleasePolicy(latest: store, review: internalBeta, enforced: false,
+                                      internalLatest: internalBeta)
+        ReleaseProtocol.responseStatus = 200
+        ReleaseProtocol.responseData = try JSONEncoder().encode(policy)
+
+        for (version, build) in [("1.1.1", "201"), ("1.1.2", "204")] {
+            let installed = AppUpdateChecker(version: version, build: build, releaseURL: url,
+                                              isTestFlight: true, defaults: defaults, session: session)
+            await installed.check()
+            precondition(installed.status == .updateAvailable && installed.offersAppStore,
+                         "App Store migration can offer an older marketing version than the installed beta")
+            precondition(installed.offeredRelease == store && installed.allowsUse,
+                         "The prompt must open the App Store and leave beta access available")
+        }
+        let internalTester = AppUpdateChecker(version: "1.1.2", build: "205", releaseURL: url,
+                                               isTestFlight: true, defaults: defaults, session: session)
+        await internalTester.check()
+        precondition(!internalTester.showsUpdate && internalTester.allowsUse,
+                     "Admitted internal testers keep their beta")
+
+        let betaOffer = AppReleasePolicy(latest: internalBeta, review: nil, enforced: false)
+        ReleaseProtocol.responseData = try JSONEncoder().encode(betaOffer)
+        let installed = AppUpdateChecker(version: "1.1.1", build: "201", releaseURL: url,
+                                          isTestFlight: true, defaults: defaults, session: session)
+        await installed.check()
+        installed.dismissUpdate()
+        ReleaseProtocol.responseData = try JSONEncoder().encode(policy)
+        await installed.check()
+        precondition(installed.showsUpdate && installed.offersAppStore,
+                     "Dismissing a newer beta must not suppress the App Store invitation")
+        installed.dismissUpdate()
+        await installed.check()
+        precondition(!installed.showsUpdate, "Not now must survive the minute refresh")
+        let relaunched = AppUpdateChecker(version: "1.1.1", build: "201", releaseURL: url,
+                                           isTestFlight: true, defaults: defaults, session: session)
+        await relaunched.check()
+        precondition(!relaunched.showsUpdate && relaunched.allowsUse,
+                     "Not now must survive relaunch for the same App Store offer")
+
+        let nextStore = AppRelease(version: "1.1.2", build: 206, updateURL: store.updateURL)
+        ReleaseProtocol.responseData = try JSONEncoder().encode(
+            AppReleasePolicy(latest: nextStore, review: internalBeta, enforced: false, internalLatest: internalBeta)
+        )
+        await relaunched.check()
+        precondition(relaunched.showsUpdate && relaunched.offeredRelease == nextStore,
+                     "A later installable App Store release can offer a new invitation")
+        ReleaseProtocol.responseStatus = 503
+        await relaunched.check()
+        precondition(!relaunched.showsUpdate && relaunched.allowsUse,
+                     "An unavailable policy must not trap a beta user")
+        ReleaseProtocol.responseStatus = 200
     }
 
     static func testTestFlightUpdates() async throws {

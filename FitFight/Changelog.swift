@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.1.2",
             year: 2026,
             month: 9,
+            day: 21,
+            notes: "When the public beta moves to the App Store, a notice opens the App Store directly and explains that beta fights and progress do not sync automatically."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
             day: 19,
             notes: "Signing in with Google opens the FitFight account that already uses that email, including Sign in with Apple."
         ),

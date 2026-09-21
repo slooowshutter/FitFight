@@ -1,6 +1,46 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Move to FitFight on the App Store": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Passe à FitFight sur l’App Store"
+                    }
+                }
+            }
+        },
+        "FitFight is available on the App Store. Install it and sign in with the same account. Beta fights and progress do not sync automatically.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "FitFight est disponible sur l’App Store. Installe-le et connecte-toi avec le même compte. Les défis et la progression de la bêta ne se synchronisent pas automatiquement."
+                    }
+                }
+            }
+        },
+        "Open App Store": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ouvrir l’App Store"
+                    }
+                }
+            }
+        },
+        "When the public beta moves to the App Store, a notice opens the App Store directly and explains that beta fights and progress do not sync automatically.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Lorsque la bêta publique passe à l’App Store, un message permet d’ouvrir directement l’App Store et rappelle que les défis et la progression de la bêta ne se synchronisent pas automatiquement."
+                    }
+                }
+            }
+        },
         "Signing in with Google opens the FitFight account that already uses that email, including Sign in with Apple.": {
             "localizations": {
                 "fr": {

@@ -1275,7 +1275,7 @@ paths:
         servers: [{ url: /api }]
         get:
             operationId: getAppReleasePolicy
-            summary: Read the latest installable release and the Apple review candidate for this channel.
+            summary: Read the installable release offer and admitted review candidates for this backend.
             security: []
             responses:
                 "200":
@@ -2638,6 +2638,7 @@ components:
             required: [latest, review, enforced]
             properties:
                 latest:
+                    description: Public installable release. Staging may offer the App Store release when its App Store prompt is enabled; this does not require an update or change API access.
                     anyOf:
                         - { $ref: "#/components/schemas/AppRelease" }
                         - { type: "null" }

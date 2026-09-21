@@ -32,7 +32,7 @@ on:
             - "fastlane/**"
             - ".github/workflows/ios-build.yml"
     push:
-        branches: [main, develop, preview, profiles-friends-and-stats]
+        branches: [main, develop, preview, profiles-friends-and-stats, switch-testflight-to-app-store]
         paths:
             - "FitFight/**"
             - "FitFight.xcodeproj/**"
@@ -108,6 +108,17 @@ jobs:
               run: |
                   swiftc -swift-version 5 -target "$(uname -m)-apple-macosx13.0" FitFight/AppUpdateChecker.swift tests/AppUpdateCheckerTests.swift -o /tmp/fitfight-update-tests
                   /tmp/fitfight-update-tests
+
+            - name: Verify released TestFlight App Store redirect
+              timeout-minutes: 2
+              run: |
+                  curl --fail --silent --show-error \
+                    https://raw.githubusercontent.com/marclelamy/FitFight/d97145ac77ac90298adda8f8dffc2f92a9329202/FitFight/AppUpdateChecker.swift \
+                    -o "$RUNNER_TEMP/AppUpdateChecker-201.swift"
+                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx13.0" \
+                    "$RUNNER_TEMP/AppUpdateChecker-201.swift" tests/AppStorePromptLegacyTests.swift \
+                    -o "$RUNNER_TEMP/fitfight-legacy-app-store-tests"
+                  "$RUNNER_TEMP/fitfight-legacy-app-store-tests"
 
             - name: Verify Google sign-in and environment selection
               run: python3 scripts/test_google_sign_in.py

@@ -4,6 +4,7 @@ import {
     appReleaseProjectSchema,
     prodAppReleasePolicySchema,
     stagingAppReleasePolicySchema,
+    testFlightAppStorePromptSchema,
     type AppReleasePolicy,
 } from "@/lib/types/releases/app-release";
 
@@ -43,10 +44,28 @@ export async function appReleasePolicy(): Promise<AppReleasePolicy> {
             : "prod";
     const parsed = appReleaseManifestSchema.safeParse(payload);
     if (parsed.success) {
-        // TestFlight availability can differ per tester, so its updates are advisory.
-        return channel === "staging"
-            ? { ...parsed.data.staging, enforced: false }
-            : parsed.data.prod;
+        if (channel === "staging") {
+            const prompt = testFlightAppStorePromptSchema.safeParse(
+                process.env.FITFIGHT_TESTFLIGHT_APP_STORE_PROMPT,
+            );
+            if (!prompt.success) {
+                throw new ApiError(
+                    503,
+                    "config",
+                    "App Store prompt setting is invalid",
+                );
+            }
+            // Existing TestFlight binaries already accept an App Store URL in this contract.
+            return {
+                ...parsed.data.staging,
+                latest:
+                    prompt.data === "true" && parsed.data.prod.latest
+                        ? parsed.data.prod.latest
+                        : parsed.data.staging.latest,
+                enforced: false,
+            };
+        }
+        return parsed.data.prod;
     }
     const selected =
         payload &&

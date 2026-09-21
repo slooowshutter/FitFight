@@ -94,6 +94,7 @@ final class AppUpdateChecker: ObservableObject {
     var allowsUse: Bool { status != .updateRequired }
     var showsUpdate: Bool { status == .updateAvailable || status == .updateRequired }
     var offeredRelease: AppRelease? { isTestFlight ? policy?.latest : policy?.offeredRelease }
+    var offersAppStore: Bool { isTestFlight && offeredRelease?.updateURL.host == "apps.apple.com" }
     let isTestFlight: Bool
 
     private let version: String
@@ -163,9 +164,12 @@ final class AppUpdateChecker: ObservableObject {
                         self.status = .current
                     } else if let latest = policy.latest {
                         // Internal/review membership does not prove what this tester can install.
-                        let isNewer = latest.isNewer(thanVersion: self.version, build: self.build)
+                        let isAppStore = latest.updateURL.host == "apps.apple.com"
+                        let isNewer = isAppStore || latest.isNewer(thanVersion: self.version, build: self.build)
                         let isDismissed = self.dismissedRelease.map {
-                            !latest.isNewer(thanVersion: $0.version, build: String($0.build))
+                            isAppStore ? $0 == latest
+                                : $0.updateURL == latest.updateURL
+                                    && !latest.isNewer(thanVersion: $0.version, build: String($0.build))
                         } ?? false
                         self.status = isNewer && !isDismissed ? .updateAvailable : .current
                     } else {

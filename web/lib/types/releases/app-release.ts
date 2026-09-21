@@ -54,10 +54,14 @@ export const appReleaseProjectValues = [
 ] as const;
 export const appReleaseProjectSchema = z.enum(appReleaseProjectValues);
 
-export const testFlightAppStorePromptSchema = z.enum(["true", "false"]).optional();
+export const testFlightAppStorePromptSchema = z
+    .enum(["true", "false"])
+    .optional();
 
 export type AppRelease = z.infer<typeof appReleaseSchema>;
 export type AppReleasePolicy = z.infer<typeof appReleasePolicySchema>;
 export type AppReleaseManifest = z.infer<typeof appReleaseManifestSchema>;
 export type AppReleaseProject = z.infer<typeof appReleaseProjectSchema>;
-export type TestFlightAppStorePrompt = z.infer<typeof testFlightAppStorePromptSchema>;
+export type TestFlightAppStorePrompt = z.infer<
+    typeof testFlightAppStorePromptSchema
+>;

@@ -30,7 +30,8 @@ const manifest = {
 test("the App Store prompt keeps the release contract and admits internal beta builds", async (t) => {
     const saved = {
         NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-        FITFIGHT_TESTFLIGHT_APP_STORE_PROMPT: process.env.FITFIGHT_TESTFLIGHT_APP_STORE_PROMPT,
+        FITFIGHT_TESTFLIGHT_APP_STORE_PROMPT:
+            process.env.FITFIGHT_TESTFLIGHT_APP_STORE_PROMPT,
     };
     t.after(() => {
         for (const [key, value] of Object.entries(saved)) {
@@ -38,42 +39,91 @@ test("the App Store prompt keeps the release contract and admits internal beta b
             else process.env[key] = value;
         }
     });
-    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://zstzbfocunthczzubggz.supabase.co";
+    process.env.NEXT_PUBLIC_SUPABASE_URL =
+        "https://zstzbfocunthczzubggz.supabase.co";
     process.env.FITFIGHT_TESTFLIGHT_APP_STORE_PROMPT = "true";
     const beta = { version: "1.1.2", build: 205, update_url: "itms-beta://" };
-    const store = { version: "1.1.1", build: 202, update_url: "https://apps.apple.com/app/id6804230516" };
-    t.mock.method(globalThis, "fetch", async () => Response.json({
-        staging: {
-            latest: { version: "1.1.1", build: 201, update_url: "itms-beta://" },
-            review: beta,
-            internal: beta,
-            enforced: true,
-        },
-        prod: { latest: store, review: { ...store, version: "1.1.2", build: 206 }, enforced: true },
-    }));
-    const response = await GET(new Request("https://staging.fitfight.app/api/app-release"), { params: Promise.resolve({}) });
+    const store = {
+        version: "1.1.1",
+        build: 202,
+        update_url: "https://apps.apple.com/app/id6804230516",
+    };
+    t.mock.method(globalThis, "fetch", async () =>
+        Response.json({
+            staging: {
+                latest: {
+                    version: "1.1.1",
+                    build: 201,
+                    update_url: "itms-beta://",
+                },
+                review: beta,
+                internal: beta,
+                enforced: true,
+            },
+            prod: {
+                latest: store,
+                review: { ...store, version: "1.1.2", build: 206 },
+                enforced: true,
+            },
+        }),
+    );
+    const response = await GET(
+        new Request("https://staging.fitfight.app/api/app-release"),
+        { params: Promise.resolve({}) },
+    );
     assert.equal(response.status, 200);
     assert.equal(response.headers.get("cache-control"), "no-store");
     const policy = appReleasePolicySchema.parse(await response.json());
-    assert.deepEqual(policy, { latest: store, review: beta, internal: beta, enforced: false });
-    for (const [version, build] of [["1.0.0", "113"], ["1.0.0", "190"], ["1.1.0", "200"], ["1.1.1", "201"], ["1.1.1", "202"], ["1.1.2", "203"], ["1.1.2", "204"], ["1.1.2", "205"]]) {
-        await assert.doesNotReject(requireLatestAppRelease(new Request("https://staging.fitfight.app/api/v1/me", {
-            headers: { "X-FitFight-Version": version, "X-FitFight-Build": build },
-        })));
+    assert.deepEqual(policy, {
+        latest: store,
+        review: beta,
+        internal: beta,
+        enforced: false,
+    });
+    for (const [version, build] of [
+        ["1.0.0", "113"],
+        ["1.0.0", "190"],
+        ["1.1.0", "200"],
+        ["1.1.1", "201"],
+        ["1.1.1", "202"],
+        ["1.1.2", "203"],
+        ["1.1.2", "204"],
+        ["1.1.2", "205"],
+    ]) {
+        await assert.doesNotReject(
+            requireLatestAppRelease(
+                new Request("https://staging.fitfight.app/api/v1/me", {
+                    headers: {
+                        "X-FitFight-Version": version,
+                        "X-FitFight-Build": build,
+                    },
+                }),
+            ),
+        );
     }
-    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://pvqntpteehdvhqyctwum.supabase.co";
+    process.env.NEXT_PUBLIC_SUPABASE_URL =
+        "https://pvqntpteehdvhqyctwum.supabase.co";
     const production = await appReleasePolicy();
     assert.equal(production.enforced, true);
     assert.deepEqual(production.latest, store);
-    await assert.rejects(requireLatestAppRelease(new Request("https://fitfight.app/api/v1/me", {
-        headers: { "X-FitFight-Version": "1.1.1", "X-FitFight-Build": "201" },
-    })), (error: unknown) => error instanceof ApiError && error.status === 426);
+    await assert.rejects(
+        requireLatestAppRelease(
+            new Request("https://fitfight.app/api/v1/me", {
+                headers: {
+                    "X-FitFight-Version": "1.1.1",
+                    "X-FitFight-Build": "201",
+                },
+            }),
+        ),
+        (error: unknown) => error instanceof ApiError && error.status === 426,
+    );
 });
 
 test("App Store prompting is opt-in and never offers an unavailable or untrusted production release", async (t) => {
     const saved = {
         NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-        FITFIGHT_TESTFLIGHT_APP_STORE_PROMPT: process.env.FITFIGHT_TESTFLIGHT_APP_STORE_PROMPT,
+        FITFIGHT_TESTFLIGHT_APP_STORE_PROMPT:
+            process.env.FITFIGHT_TESTFLIGHT_APP_STORE_PROMPT,
     };
     t.after(() => {
         for (const [key, value] of Object.entries(saved)) {
@@ -81,26 +131,44 @@ test("App Store prompting is opt-in and never offers an unavailable or untrusted
             else process.env[key] = value;
         }
     });
-    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://zstzbfocunthczzubggz.supabase.co";
+    process.env.NEXT_PUBLIC_SUPABASE_URL =
+        "https://zstzbfocunthczzubggz.supabase.co";
     let payload: unknown = manifest;
     t.mock.method(globalThis, "fetch", async () => Response.json(payload));
     for (const setting of [undefined, "false"]) {
-        if (setting === undefined) delete process.env.FITFIGHT_TESTFLIGHT_APP_STORE_PROMPT;
+        if (setting === undefined)
+            delete process.env.FITFIGHT_TESTFLIGHT_APP_STORE_PROMPT;
         else process.env.FITFIGHT_TESTFLIGHT_APP_STORE_PROMPT = setting;
-        assert.deepEqual(await appReleasePolicy(), { ...manifest.staging, enforced: false });
+        assert.deepEqual(await appReleasePolicy(), {
+            ...manifest.staging,
+            enforced: false,
+        });
     }
     process.env.FITFIGHT_TESTFLIGHT_APP_STORE_PROMPT = "true";
     for (const prod of [
         { ...manifest.prod, latest: null },
-        { ...manifest.prod, latest: { ...manifest.prod.latest, update_url: "https://example.com/install" } },
+        {
+            ...manifest.prod,
+            latest: {
+                ...manifest.prod.latest,
+                update_url: "https://example.com/install",
+            },
+        },
         null,
     ]) {
         payload = { ...manifest, prod };
-        assert.deepEqual(await appReleasePolicy(), { ...manifest.staging, enforced: false });
+        assert.deepEqual(await appReleasePolicy(), {
+            ...manifest.staging,
+            enforced: false,
+        });
     }
     payload = manifest;
     process.env.FITFIGHT_TESTFLIGHT_APP_STORE_PROMPT = "yes";
-    await assert.rejects(appReleasePolicy(), (error: unknown) => error instanceof ApiError && error.code === "config");
+    await assert.rejects(
+        appReleasePolicy(),
+        (error: unknown) =>
+            error instanceof ApiError && error.code === "config",
+    );
 });
 
 test("TestFlight users can continue when Apple has no update for their installed build", async (t) => {

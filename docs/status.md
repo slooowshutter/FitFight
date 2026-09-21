@@ -1,12 +1,51 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **20 Sep 2026**. Production release: **1.1.1 (202)**.
+Read this before building. Last updated **21 Sep 2026**. Production release: **1.1.1 (202)**.
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
 ---
 
 **Last TestFlight:** 19 Sep 2026 at 13:14 UTC. **1.1.2 (204)** from preview merge `c80e642`, including develop `f206592`. [Upload and Apple processing succeeded](https://github.com/slooowshutter/FitFight/actions/runs/35444706489): `VALID`, unexpired, available to Internal Tester. This upload did not submit or assign external groups. The published release registry lists `latest` 1.1.1 (201) and `review`/`internal` 1.1.2 (204). At the 13:18 UTC recheck, staging's live release endpoint still returned candidate 203 with enforcement off; its metadata propagation does not block internal build 204. Production remains 1.1.1 (202).
+
+## TestFlight App Store prompt: prepared 21 Sep 2026
+
+**Code:** the staging-only `FITFIGHT_TESTFLIGHT_APP_STORE_PROMPT` switch defaults
+to off. When enabled, `/api/app-release` offers the registry's installable public
+App Store release in `latest`, retains the beta `review`/`internal` exceptions,
+and keeps enforcement off. Production release policy and `/api/v1` access are
+unchanged. The new native dialog has English/French App Store wording, an
+**Open App Store** button, and **Not now**. It explains that beta fights and
+progress do not sync automatically. The existing 1.1.2 release train is retained.
+
+**Compatibility:** the JSON shape is unchanged. Public TestFlight 1.1.1 (201)
+already decodes the App Store target and can redirect its existing button without
+another install. Its old wording, Cancel behavior, and version/dismissal comparisons
+remain. The new native code offers the App Store even when its version is older
+than an unadmitted beta and separates App Store offers from dismissed beta offers.
+Admitted internal/review builds remain on the beta. This is a prompt, not a beta
+cutoff, installation detector, session revocation, or data-transfer operation.
+
+**Verification:** [native regressions and the full iOS simulator build at `7c8382a6`](https://github.com/slooowshutter/FitFight/actions/runs/35603243121)
+passed on GitHub-hosted `macos-26`, including the new prompt cases and the released
+build 201 source from `d97145ac77ac90298adda8f8dffc2f92a9329202`.
+[Backend checks at `54f87f77`](https://github.com/slooowshutter/FitFight/actions/runs/35603471740)
+passed typechecking, all 327 tests, and API contract parsing. The first full run
+caught an existing live-fight test whose fixed end date had passed; its existing
+clock parameter is now explicit, without changing app behavior or assertions.
+Localization, native API-boundary, contract/workflow parsing, and whitespace
+checks passed. Normal CI branch triggers are restored; the frozen build 201
+regression remains in the native workflow. Final application code differs from
+the checked revisions only in explanatory comments. No native build ran locally.
+
+**Live and rollout:** read-only release checks on 21 Sep found staging latest
+1.1.1 (201), review/internal 1.1.2 (205), enforcement off; production latest
+1.1.1 (202), enforcement on. No staging/production promotion or prompt activation
+was performed. Deploy the compatible backend before activating the flag, after
+checking App Store availability and handling any later beta data. The new wording
+requires a separately authorized native release. Signed-in device verification
+of both the existing and new dialogs remains outstanding. See the
+[rollout and limitations](shipping.md#testflight-app-store-prompt).
 
 ## Preview promotion, 19 Sep 2026
 

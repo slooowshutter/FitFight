@@ -7,7 +7,7 @@ on:
             - "contracts/**"
             - ".github/workflows/web.yml"
     push:
-        branches: [main, develop, preview, profiles-friends-and-stats, switch-testflight-to-app-store]
+        branches: [main, develop, preview, profiles-friends-and-stats]
         paths:
             - "web/**"
             - "contracts/**"

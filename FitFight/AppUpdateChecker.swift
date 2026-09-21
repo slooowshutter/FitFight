@@ -163,7 +163,7 @@ final class AppUpdateChecker: ObservableObject {
                     if policy.allows(version: self.version, build: self.build) {
                         self.status = .current
                     } else if let latest = policy.latest {
-                        // Internal/review membership does not prove what this tester can install.
+                        // Moving to the App Store can mean installing a lower version than the beta.
                         let isAppStore = latest.updateURL.host == "apps.apple.com"
                         let isNewer = isAppStore || latest.isNewer(thanVersion: self.version, build: self.build)
                         let isDismissed = self.dismissedRelease.map {

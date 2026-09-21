@@ -55,7 +55,7 @@ export async function appReleasePolicy(): Promise<AppReleasePolicy> {
                     "App Store prompt setting is invalid",
                 );
             }
-            // Existing TestFlight binaries already accept an App Store URL in this contract.
+            // Public TestFlight build 201 already accepts an App Store URL in this contract.
             return {
                 ...parsed.data.staging,
                 latest:

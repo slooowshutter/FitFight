@@ -68,8 +68,9 @@ struct SuggestedFightsOnboardingView: View {
         } actions: {
             if joinedFightID != nil {
                 FFScreenCTA(title: String(appLocalized: "Continue"), enabled: !busy) { finish() }
-            } else if !loading, invitation != nil || offer != nil {
-                FFScreenCTA(title: String(appLocalized: "Join this Fight"), enabled: !busy, busy: busy) {
+            } else if invitation != nil || offer != nil || busy {
+                // Keep the action mounted while an accepted membership refreshes the offers.
+                FFScreenCTA(title: String(appLocalized: "Join this Fight"), enabled: !busy && !loading, busy: busy) {
                     Task {
                         if let invitation { await accept(invitation) }
                         else if let offer { await join(offer) }

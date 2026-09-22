@@ -1,6 +1,6 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **20 Sep 2026**. Production release: **1.1.1 (202)**.
+Read this before building. Last updated **23 Sep 2026**. Production release: **1.1.1 (202)**.
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
@@ -22,14 +22,15 @@ only the hero artwork; controls stay mounted. System Reduce Motion suppresses
 motion and counting. Health reads, sign-in and Fight membership use existing
 services and `/api/v1` contracts. No API model, backend or database schema changed.
 
-Code is prepared on `build-onboarding`. Localization, project-file parsing and
-native API-boundary checks passed. The first [hosted native checks and simulator
-build](https://github.com/slooowshutter/FitFight/actions/runs/35791489498) passed at
-`d7cb1327`, including onboarding progress, account isolation, membership ordering
-and supported API decoding. Final Back, skipped-Health and app-handoff refinements
-are awaiting the next GitHub-hosted `macos-26` check. A branch push runs these
-checks; it does not upload TestFlight. No PR, merge or release has been
-requested. Physical-device permission and animation verification remain pending.
+Code is prepared on `build-onboarding`. The final [GitHub-hosted native checks,
+full simulator build and signed simulator package](https://github.com/slooowshutter/FitFight/actions/runs/35792404282)
+passed at `7a62986b`. Checks include onboarding progress and account isolation,
+confirmed membership ordering, Google sign-in, Health/Feed refresh state, supported
+API decoding, English/French localization, token parity and project compilation.
+Back returns to the Health reveal, skipped Health stays on step four, and joining
+keeps the primary action mounted during refresh. A branch push runs these hosted
+checks; it does not upload TestFlight. No PR, merge or release was requested.
+Physical-device permission and animation verification remain pending.
 
 The [private reference](https://fitfight-onboarding.marc719509.chatgpt.site) now
 contains only Full of life. Other treatments and the picker are removed. Twelve

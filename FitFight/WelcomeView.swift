@@ -23,7 +23,7 @@ struct WelcomeView: View {
                             .padding(.horizontal, 14).padding(.vertical, 10)
                             .background(theme.card, in: Capsule())
                             .overlay { Capsule().strokeBorder(theme.line, lineWidth: 1) }
-                            .frame(maxHeight: .infinity, alignment: .topTrailing)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                     }
                 }
                 .frame(height: 257)

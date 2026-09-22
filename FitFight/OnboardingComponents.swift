@@ -167,7 +167,7 @@ struct OnboardingAnimal: View {
         Image(animal.image)
             .resizable()
             .scaledToFit()
-            .keyframeAnimator(initialValue: Pose(), trigger: greeted) { image, pose in
+            .keyframeAnimator(initialValue: Pose(scale: selectionReaction ? 0.98 : 1), trigger: greeted) { image, pose in
                 image.offset(y: reduceMotion || staticRender ? 0 : pose.height)
                     .scaleEffect(reduceMotion || staticRender ? 1 : pose.scale)
             } keyframes: { _ in
@@ -178,7 +178,6 @@ struct OnboardingAnimal: View {
                     CubicKeyframe(0, duration: duration * 0.22)
                 }
                 KeyframeTrack(\.scale) {
-                    LinearKeyframe(selectionReaction ? 0.98 : 1, duration: 0)
                     CubicKeyframe(selectionReaction ? 1.025 : 1, duration: duration * 0.55)
                     CubicKeyframe(1, duration: duration * 0.45)
                 }

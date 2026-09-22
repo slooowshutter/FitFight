@@ -86,7 +86,7 @@ struct HealthOnboardingView: View {
                         onResult()
                     }
                 }
-                OnboardingSkip(title: String(appLocalized: "I'll do this later"), action: onFinished)
+                OnboardingSkip(title: String(appLocalized: "I'll do this later"), action: onResult)
                     .disabled(busy)
             }
         }

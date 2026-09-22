@@ -22,7 +22,7 @@ struct FirstFightOnboarding: Codable, Equatable {
             case .companion: .username
             case .health: .companion
             case .healthResult: .health
-            case .firstFight: .health
+            case .firstFight: .healthResult
             case .reminders: .firstFight
             }
         }

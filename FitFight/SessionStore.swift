@@ -119,21 +119,6 @@ final class SessionStore: ObservableObject {
         return handle.caseInsensitiveCompare(Self.adminHandle) == .orderedSame
     }
 
-    func finishHealthOnboarding() {
-        UserDefaults.standard.set(false, forKey: Self.needsHealthKey)
-        objectWillChange.send()
-    }
-
-    func finishNotificationOnboarding() {
-        UserDefaults.standard.set(false, forKey: Self.needsNotificationKey)
-        objectWillChange.send()
-    }
-
-    func finishRequestsOnboarding() {
-        UserDefaults.standard.set(false, forKey: Self.needsRequestsKey)
-        objectWillChange.send()
-    }
-
     func freshAccessToken() async throws -> String {
         guard !screenshotSignedIn else { throw CompanionPreview.WriteUnavailable() }
         let userID = authSession?.user.id ?? client.auth.currentUser?.id

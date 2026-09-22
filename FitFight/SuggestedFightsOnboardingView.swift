@@ -4,6 +4,7 @@ struct SuggestedFightsOnboardingView: View {
     var onFinished: (() -> Void)? = nil
     var onJoined: ((UUID, String) -> Void)? = nil
     var joinedFightID: UUID? = nil
+    var joinedFightName: String? = nil
     @Binding var busy: Bool
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var model: AppModel
@@ -26,7 +27,15 @@ struct SuggestedFightsOnboardingView: View {
                 Text(verbatim: "@" + (session.profile?.handle ?? ""))
                     .font(.ff(14, 800)).foregroundStyle(theme.textSecondary)
             }
-            if loading {
+            if joinedFightID != nil {
+                FFCard {
+                    VStack(alignment: .leading, spacing: 12) {
+                        if let joinedFightName { Text(verbatim: joinedFightName).ffType(.heading) }
+                        Label(String(appLocalized: "Joined"), systemImage: "checkmark.circle")
+                            .ffType(.body).foregroundStyle(theme.mossText)
+                    }
+                }
+            } else if loading {
                 ProgressView().frame(maxWidth: .infinity, minHeight: 100)
             } else if let invitation {
                 FFCard {

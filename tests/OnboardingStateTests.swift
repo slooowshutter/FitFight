@@ -48,6 +48,7 @@ struct TestPublisher { func send() {} }
         restored.profile = session.profile
         precondition(restored.firstFightOnboarding == progress)
         precondition(progress.page.step == 4 && FirstFightOnboarding.Page.health.step == 4)
+        precondition(FirstFightOnboarding.Page.firstFight.previous == .healthResult)
         print("PASS: relaunch restores the same Health step for the same account")
 
         session.authSession = TestSession(user: TestUser(id: second))

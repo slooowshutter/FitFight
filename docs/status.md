@@ -23,10 +23,20 @@ motion and counting. Health reads, sign-in and Fight membership use existing
 services and `/api/v1` contracts. No API model, backend or database schema changed.
 
 Code is prepared on `build-onboarding`. Localization, project-file parsing and
-native API-boundary checks passed. The new onboarding-state regression and full
-simulator build are pending GitHub-hosted `macos-26` verification. A branch push
-runs those checks; it does not upload TestFlight. No PR, merge or release has been
+native API-boundary checks passed. The first [hosted native checks and simulator
+build](https://github.com/slooowshutter/FitFight/actions/runs/35791489498) passed at
+`d7cb1327`, including onboarding progress, account isolation, membership ordering
+and supported API decoding. Final Back, skipped-Health and app-handoff refinements
+are awaiting the next GitHub-hosted `macos-26` check. A branch push runs these
+checks; it does not upload TestFlight. No PR, merge or release has been
 requested. Physical-device permission and animation verification remain pending.
+
+The [private reference](https://fitfight-onboarding.marc719509.chatgpt.site) now
+contains only Full of life. Other treatments and the picker are removed. Twelve
+complete prototype journeys and 36 companion-selection checks passed; source and
+DOM checks confirm the original timing, stable Health heading and reduced-motion
+controls. Native membership remains joined when navigating back; no UI action
+pretends that a confirmed server membership was undone.
 
 ## Preview promotion, 19 Sep 2026
 

@@ -6,6 +6,7 @@ struct OnboardingView: View {
     var onFinished: (() -> Void)? = nil
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var companions: CompanionStore
+    @EnvironmentObject private var model: AppModel
     @Environment(\.ffTheme) private var theme
     @State private var progress = FirstFightOnboarding()
     @State private var ownerID: UUID?
@@ -47,6 +48,7 @@ struct OnboardingView: View {
                             go(.reminders)
                         },
                         joinedFightID: progress.joinedFightID,
+                        joinedFightName: progress.joinedFightName,
                         busy: $busy
                     )
                 case .reminders:
@@ -185,7 +187,10 @@ struct OnboardingView: View {
     }
 
     private func finish() {
-        if !isReplay, let ownerID { session.finishFirstFightOnboarding(userID: ownerID) }
+        if !isReplay, let ownerID, session.profile?.userId == ownerID {
+            model.tab = .fights
+            session.finishFirstFightOnboarding(userID: ownerID)
+        }
         onFinished?()
     }
 }

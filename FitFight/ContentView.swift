@@ -146,6 +146,7 @@ struct ContentView: View {
             isPresented: Binding(
                 get: {
                     push.showPrePrompt
+                        && session.firstFightOnboarding == nil
                         && !session.needsOnboarding
                         && !session.needsHealthOnboarding
                         && !session.needsNotificationOnboarding
@@ -259,16 +260,9 @@ struct ContentView: View {
             }
             .padding(.horizontal, theme.space.screenPadding)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        } else if session.needsOnboarding {
+        } else if session.firstFightOnboarding != nil {
             OnboardingView()
-        } else if session.needsHealthOnboarding {
-            HealthOnboardingView()
-        } else if session.needsNotificationOnboarding {
-            NotificationOnboardingView()
-        } else if session.needsRequestsOnboarding {
-            RequestsOnboardingView()
-        } else if session.needsSuggestedOnboarding {
-            SuggestedFightsOnboardingView()
+                .id(session.profile?.userId)
         } else {
             signedInApp
                 .id(session.authSession?.user.id)

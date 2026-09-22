@@ -198,7 +198,8 @@ struct FitFightApp: App {
                     guard appUpdate.allowsUse else { return }
                     model.restoreCachedFights(session: session)
                     await model.refreshFights(session: session, steps: steps)
-                    if !session.needsOnboarding,
+                    if session.firstFightOnboarding == nil,
+                       !session.needsOnboarding,
                        !session.needsHealthOnboarding,
                        !session.needsNotificationOnboarding,
                        !session.needsRequestsOnboarding {

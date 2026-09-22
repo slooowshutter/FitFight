@@ -1,44 +1,45 @@
 import SwiftUI
 
-/// Shown instead of the tabs until the User signs in.
+/// Account creation precedes companion choice; returning accounts go straight to their existing destination.
 struct WelcomeView: View {
     @Environment(\.ffTheme) private var theme
     @EnvironmentObject private var session: SessionStore
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Spacer(minLength: 24)
-            Image(systemName: "trophy.fill")
-                .font(.system(size: 26, weight: .medium))
-                .foregroundStyle(theme.mossText)
-                .frame(width: 64, height: 64)
-                .background(theme.mossFill.opacity(0.20), in: Circle())
-                .padding(.bottom, 24)
-            Text("FitFight")
-                .ffType(.title)
-                .foregroundStyle(theme.text)
-            Text("Challenge your friends. Winner takes the glory.")
-                .font(.ff(17, 700))
-                .foregroundStyle(theme.textSecondary)
-                .padding(.top, 10)
-            Text("Sign in with Apple or Google. First time here, that creates your account.")
-                .ffType(.body)
-                .foregroundStyle(theme.textFaint)
-                .lineSpacing(3)
-                .padding(.top, 16)
-            SignInControls()
-                .padding(.top, 28)
-            if session.isBusy {
-                Text("Signing in…")
-                    .ffType(.micro)
-                    .foregroundStyle(theme.textFaint)
-                    .padding(.top, 10)
+        VStack(spacing: 0) {
+            OnboardingHeader(step: 1)
+            OnboardingPage {
+                GeometryReader { geometry in
+                    ZStack(alignment: .bottom) {
+                        OnboardingAnimal(animal: .goat)
+                            .frame(width: geometry.size.width * 0.59, height: 236)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        OnboardingAnimal(animal: .fox, delay: 0.12)
+                            .frame(width: geometry.size.width * 0.59, height: 236)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                        Text(String(appLocalized: "Taking the long way?"))
+                            .font(.ff(14, 800))
+                            .foregroundStyle(theme.emberText)
+                            .padding(.horizontal, 14).padding(.vertical, 10)
+                            .background(theme.card, in: Capsule())
+                            .overlay { Capsule().strokeBorder(theme.line, lineWidth: 1) }
+                            .frame(maxHeight: .infinity, alignment: .topTrailing)
+                    }
+                }
+                .frame(height: 257)
+                OnboardingHeading(
+                    title: String(appLocalized: "onboarding.welcome.title", defaultValue: "A little rivalry.\nA few more steps."),
+                    subtitle: String(appLocalized: "Friendly competition for your everyday walks.")
+                )
+            } actions: {
+                SignInControls()
+                if session.isBusy {
+                    Text(String(appLocalized: "Signing in…"))
+                        .ffType(.caption).foregroundStyle(theme.textSecondary)
+                }
             }
-            Spacer(minLength: 24)
         }
-        .padding(.horizontal, theme.space.screenPadding)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .background(theme.bg)
+        .background(theme.bg.ignoresSafeArea())
     }
 }
 

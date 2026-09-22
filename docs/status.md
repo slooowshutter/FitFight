@@ -8,6 +8,26 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last TestFlight:** 19 Sep 2026 at 13:14 UTC. **1.1.2 (204)** from preview merge `c80e642`, including develop `f206592`. [Upload and Apple processing succeeded](https://github.com/slooowshutter/FitFight/actions/runs/35444706489): `VALID`, unexpired, available to Internal Tester. This upload did not submit or assign external groups. The published release registry lists `latest` 1.1.1 (201) and `review`/`internal` 1.1.2 (204). At the 13:18 UTC recheck, staging's live release endpoint still returned candidate 203 with enforcement off; its metadata propagation does not block internal build 204. Production remains 1.1.1 (202).
 
+## Full of life onboarding, prepared 23 Sep 2026
+
+Marc selected onboarding option 10 for native implementation. The first-run flow
+is account, username, companion, Apple Health with a same-step count reveal, a real
+Fight offer, and reminders. Confirmed joins celebrate after reminders. Explore
+still visits reminders. The old Feedback introduction is removed. Existing
+accounts bypass completed setup; interrupted setup is stored per account.
+
+Native screens use the existing Night/Day tokens, Nunito, stock companion art,
+320 ms page/element entrances and 65 ms staggering. Companion selection animates
+only the hero artwork; controls stay mounted. System Reduce Motion suppresses
+motion and counting. Health reads, sign-in and Fight membership use existing
+services and `/api/v1` contracts. No API model, backend or database schema changed.
+
+Code is prepared on `build-onboarding`. Localization, project-file parsing and
+native API-boundary checks passed. The new onboarding-state regression and full
+simulator build are pending GitHub-hosted `macos-26` verification. A branch push
+runs those checks; it does not upload TestFlight. No PR, merge or release has been
+requested. Physical-device permission and animation verification remain pending.
+
 ## Preview promotion, 19 Sep 2026
 
 Marc authorized merging all current develop work into preview for internal

@@ -13456,6 +13456,508 @@
                     }
                 }
             }
+        },
+        "2 to 30 characters. Letters, numbers and underscores.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "De 2 à 30 caractères. Lettres, chiffres et tirets bas."
+                    }
+                }
+            }
+        },
+        "A name for the leaderboard.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Un nom pour le classement."
+                    }
+                }
+            }
+        },
+        "Meet all 12 companions": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Découvrir les 12 compagnons"
+                    }
+                }
+            }
+        },
+        "Show fewer companions": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Voir moins de compagnons"
+                    }
+                }
+            }
+        },
+        "That's me": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "C’est moi"
+                    }
+                }
+            }
+        },
+        "Your username": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ton pseudo"
+                    }
+                }
+            }
+        },
+        "Friendly competition for your everyday walks.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Un peu de compétition amicale pour tes balades quotidiennes."
+                    }
+                }
+            }
+        },
+        "Taking the long way?": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tu prends le chemin le plus long ?"
+                    }
+                }
+            }
+        },
+        "Reminders": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Rappels"
+                    }
+                }
+            }
+        },
+        "Your account": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ton compte"
+                    }
+                }
+            }
+        },
+        "Your companion": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ton compagnon"
+                    }
+                }
+            }
+        },
+        "Your first Fight": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ton premier Fight"
+                    }
+                }
+            }
+        },
+        "Connect Apple Health to count your steps in Fights.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Connecte Apple Santé pour compter tes pas dans les Fights."
+                    }
+                }
+            }
+        },
+        "Connect later from You → Apple Health.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Connecte-toi plus tard dans Toi → Apple Santé."
+                    }
+                }
+            }
+        },
+        "Fight participants see your steps and standings.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les participants du Fight voient tes pas et ton classement."
+                    }
+                }
+            }
+        },
+        "Find your first Fight": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Trouver ton premier Fight"
+                    }
+                }
+            }
+        },
+        "I'll do this later": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Je le ferai plus tard"
+                    }
+                }
+            }
+        },
+        "No accessible step data": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Aucune donnée de pas accessible"
+                    }
+                }
+            }
+        },
+        "Only steps taken during the Fight count.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Seuls les pas effectués pendant le Fight comptent."
+                    }
+                }
+            }
+        },
+        "Reads steps and movement data.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Lit tes pas et tes données d’activité."
+                    }
+                }
+            }
+        },
+        "You control access in Apple Health.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tu contrôles les accès dans Apple Santé."
+                    }
+                }
+            }
+        },
+        "Make that last walk count.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Fais compter ta dernière balade."
+                    }
+                }
+            }
+        },
+        "Open FitFight to sync your latest steps.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ouvre FitFight pour synchroniser tes derniers pas."
+                    }
+                }
+            }
+        },
+        "Turn on reminders": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Activer les rappels"
+                    }
+                }
+            }
+        },
+        "Your Fight is finishing soon": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ton Fight se termine bientôt"
+                    }
+                }
+            }
+        },
+        "now": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "maintenant"
+                    }
+                }
+            }
+        },
+        "Explore first": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Explorer d’abord"
+                    }
+                }
+            }
+        },
+        "Join this Fight": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Rejoindre ce Fight"
+                    }
+                }
+            }
+        },
+        "No Fights to join right now. Find one later in Fights.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Aucun Fight à rejoindre pour le moment. Tu en trouveras plus tard dans Fights."
+                    }
+                }
+            }
+        },
+        "your_name": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "ton_pseudo"
+                    }
+                }
+            }
+        },
+        "A livelier first Fight: choose your companion, reveal your steps, find a Fight, and set reminders in six simple steps.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Un premier Fight plus vivant : choisis ton compagnon, découvre tes pas, trouve un Fight et configure tes rappels en six étapes simples."
+                    }
+                }
+            }
+        },
+        "onboarding.username.title": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "What should your\nopponents call you?"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Comment tes adversaires\ndoivent-ils t’appeler ?"
+                    }
+                }
+            }
+        },
+        "onboarding.companion.title": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Find your kind\nof competitive."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Trouve ton âme\nde compétiteur."
+                    }
+                }
+            }
+        },
+        "onboarding.welcome.title": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "A little rivalry.\nA few more steps."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Un peu de rivalité.\nQuelques pas de plus."
+                    }
+                }
+            }
+        },
+        "onboarding.health.title": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Let your steps\ndo the talking."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Laisse tes pas\nparler pour toi."
+                    }
+                }
+            }
+        },
+        "onboarding.steps.title": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Look at you,\nalready moving."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tu vois,\ntu bouges déjà."
+                    }
+                }
+            }
+        },
+        "onboarding.no-steps.title": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Your starting line\nis still here."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ta ligne de départ\nt’attend toujours."
+                    }
+                }
+            }
+        },
+        "onboarding.reminders.title": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "A nudge when\nit matters."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Un rappel\nau bon moment."
+                    }
+                }
+            }
+        },
+        "onboarding.fight.title": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Everything is better\nwith a little rivalry."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tout est mieux\navec un peu de rivalité."
+                    }
+                }
+            }
+        },
+        "onboarding.invitation.title": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Your people.\nYour first rivalry."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tes proches.\nTon premier défi."
+                    }
+                }
+            }
+        },
+        "onboarding.go-with": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Go with %@"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Continuer avec %@"
+                    }
+                }
+            }
+        },
+        "onboarding.youre-in": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "You're in,\n%@."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tu en es,\n%@."
+                    }
+                }
+            }
+        },
+        "onboarding.progress": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld of 6"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld sur 6"
+                    }
+                }
+            }
         }
     },
     "version": "1.0"

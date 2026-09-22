@@ -12,6 +12,7 @@ struct Fight {
     var status: FightStatus
     let windowStart: Date
     var score: Int
+    static func displayTitle(name: String, actionText: String?) -> String { name }
 }
 
 @MainActor final class SessionStore {
@@ -65,6 +66,8 @@ struct Fight {
     let session: SessionStore
     let model: AppModel
     var onFinished: (() -> Void)?
+    var onJoined: ((UUID, String) -> Void)?
+    var busy = false
     var fights: [FitFightJoinableFight] = []
     var loading = false
     var joining: UUID?
@@ -74,6 +77,7 @@ struct Fight {
         self.model = model
     }
     func joinForTest(_ fight: FitFightJoinableFight) async { await join(fight) }
+    func loadForTest() async { await load() }
     // ONBOARDING_METHODS
 }
 
@@ -121,9 +125,12 @@ struct Fight {
         )
         FitFightAPI.offers = [offer]
         let steps = HealthKitStepsStore.shared
+        var joinedID: UUID?
+        view.onJoined = { id, _ in joinedID = id }
         var completed = false
         let join = Task { await view.joinForTest(offer); completed = true }
         await until { FitFightAPI.joins.count == 1 }
+        check(joinedID == nil && view.busy, "Reminders wait for confirmed membership and navigation stays busy")
         check(steps.pending.isEmpty, "Steps are not synced before membership is accepted")
         await view.joinForTest(offer)
         check(FitFightAPI.joins.count == 1, "Repeated Join taps do not submit another membership")
@@ -136,6 +143,8 @@ struct Fight {
         check(model.snapshotLoads == 1 && model.discoveryInvalidations == 1 && FitFightAPI.offerLoads == 1,
               "A successful onboarding join syncs, refreshes standings, and reloads offers")
         check(view.joining == nil && view.error == nil, "Join settles after the refresh")
+        check(joinedID == offer.fightId && !view.busy, "Only a confirmed and synced join advances to reminders")
+        joinedID = nil
 
         let snapshotsBeforeFailure = model.snapshotLoads
         let failed = Task { await view.joinForTest(offer) }
@@ -143,6 +152,7 @@ struct Fight {
         FitFightAPI.joins.removeFirst().resume(throwing: TestFailure.offline)
         await failed.value
         check(steps.pending.isEmpty && model.snapshotLoads == snapshotsBeforeFailure && view.error != nil, "A rejected join reports the error without syncing")
+        check(joinedID == nil, "A rejected join cannot trigger a celebration")
 
         let previousAccount = Task { await view.joinForTest(offer) }
         await until { FitFightAPI.joins.count == 1 }
@@ -160,6 +170,12 @@ struct Fight {
         steps.pending.removeFirst().resume()
         await switchingDuringSync.value
         check(FitFightAPI.offerLoads == loads, "An account change during Steps sync cannot reload the previous onboarding screen")
+        check(joinedID == nil, "A previous account cannot advance the new account's onboarding")
+        var skipped = false
+        view.onFinished = { skipped = true }
+        FitFightAPI.offers = []
+        await view.loadForTest()
+        check(!skipped && view.fights.isEmpty, "An empty offer list stays on the choice screen and never bypasses reminders")
 
         let series = UUID().uuidString
         let pastID = UUID()

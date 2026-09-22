@@ -1,127 +1,191 @@
-import PhotosUI
 import SwiftUI
 
-/// First-run handle after Apple sign-in. People challenge you with this name.
+/// The signed-in part of the selected Full of life flow. Only page changes replace the screen.
 struct OnboardingView: View {
+    var isReplay = false
+    var onFinished: (() -> Void)? = nil
     @EnvironmentObject private var session: SessionStore
+    @EnvironmentObject private var companions: CompanionStore
     @Environment(\.ffTheme) private var theme
-
+    @State private var progress = FirstFightOnboarding()
+    @State private var ownerID: UUID?
     @State private var handle = ""
-    @State private var error = ""
-    @State private var isSaving = false
-    @State private var pickerItem: PhotosPickerItem?
-    @State private var photo: UIImage?
-    @FocusState private var focused: Bool
+    @State private var selected: StockCompanion = .goat
+    @State private var showAll = false
+    @State private var busy = false
+    @State private var error: String?
+    @State private var backwards = false
+    @FocusState private var usernameFocused: Bool
+    private let animals: [StockCompanion] = [.goat, .fox, .otter, .bear, .rabbit, .sloth, .badger, .raccoon, .redPanda, .boar, .dog, .turtle]
+
+    private var previous: FirstFightOnboarding.Page? {
+        isReplay && progress.page == .health ? nil : progress.page.previous
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Spacer(minLength: 24)
-            Text("Pick a username")
-                .ffType(.title)
-                .foregroundStyle(theme.text)
-            Text("People challenge you with this. Letters, numbers, underscore. 2–30 characters.")
-                .ffType(.body)
-                .foregroundStyle(theme.textSecondary)
-                .lineSpacing(3)
-                .padding(.top, 10)
-            PhotosPicker(selection: $pickerItem, matching: .images) {
-                HStack(spacing: 14) {
-                    Group {
-                        if let photo {
-                            Image(uiImage: photo)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 68, height: 68)
-                                .clipShape(Circle())
-                                .overlay {
-                                    Circle().strokeBorder(theme.mossEdge, lineWidth: 3)
-                                }
-                        } else {
-                            FFAvatar(monogram: previewInitials, size: 68, selected: true)
-                        }
+        VStack(spacing: 0) {
+            OnboardingHeader(step: progress.page.step, onBack: previous.map { page in
+                { go(page, backwards: true) }
+            }, busy: busy)
+            Group {
+                switch progress.page {
+                case .username: username
+                case .companion: companion
+                case .health, .healthResult:
+                    HealthOnboardingView(
+                        showingResult: progress.page == .healthResult,
+                        animal: selected, busy: $busy,
+                        onResult: { go(.healthResult) },
+                        onFinished: { go(.firstFight) }
+                    )
+                case .firstFight:
+                    SuggestedFightsOnboardingView(
+                        onFinished: { go(.reminders) },
+                        onJoined: { id, name in
+                            progress.joinedFightID = id
+                            progress.joinedFightName = name
+                            go(.reminders)
+                        },
+                        joinedFightID: progress.joinedFightID,
+                        busy: $busy
+                    )
+                case .reminders:
+                    NotificationOnboardingView(animal: selected, busy: $busy) {
+                        if let page = progress.pageAfterReminders { go(page) } else { finish() }
                     }
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Add a photo")
-                            .ffType(.rowTitle)
-                            .foregroundStyle(theme.text)
-                        Text("Optional. You can change it later on You.")
-                            .ffType(.caption)
-                            .foregroundStyle(theme.textSecondary)
-                    }
-                    Spacer(minLength: 0)
+                case .celebration: celebration
                 }
-                .padding(.top, 24)
             }
-            .buttonStyle(FFHapticPlainStyle())
-            FFField(
-                label: String(appLocalized: "Username"),
-                state: fieldState,
-                help: error.isEmpty ? nil : error
-            ) {
-                TextField("username", text: $handle)
+            .id(progress.page)
+            .environment(\.onboardingDirection, backwards ? -1 : 1)
+        }
+        .background(theme.bg.ignoresSafeArea())
+        .onAppear {
+            ownerID = session.profile?.userId
+            progress = isReplay ? FirstFightOnboarding(page: .health) : session.firstFightOnboarding ?? FirstFightOnboarding()
+            handle = session.needsOnboarding ? "" : session.profile?.handle ?? ""
+            selected = companions.hasChosen ? companions.selection : .goat
+        }
+    }
+
+    private var username: some View {
+        OnboardingPage {
+            OnboardingHeading(title: String(appLocalized: "onboarding.username.title", defaultValue: "What should your\nopponents call you?"))
+            OnboardingSpeech(animal: selected, text: String(appLocalized: "A name for the leaderboard."))
+            FFField(label: String(appLocalized: "Your username"), state: error == nil ? .normal : .error, help: error) {
+                TextField("your_name", text: $handle)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .textContentType(.username)
-                    .focused($focused)
+                    .submitLabel(.continue)
+                    .focused($usernameFocused)
+                    .onSubmit { if SessionStore.isValidHandle(handle) && !busy { Task { await saveUsername() } } }
             }
-            .padding(.top, 28)
-            FFScreenCTA(
-                title: isSaving ? String(appLocalized: "Saving…") : String(appLocalized: "Continue"),
-                enabled: canSave
-            ) {
-                Task { await save() }
+            .modifier(OnboardingEntrance(order: 2))
+            Text(String(appLocalized: "2 to 30 characters. Letters, numbers and underscores."))
+                .ffType(.caption).foregroundStyle(theme.textSecondary)
+        } actions: {
+            FFScreenCTA(title: String(appLocalized: "That's me"), enabled: SessionStore.isValidHandle(handle) && !busy, busy: busy) {
+                Task { await saveUsername() }
             }
-            .padding(.top, 20)
-            Spacer(minLength: 24)
-        }
-        .padding(.horizontal, theme.space.screenPadding)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .background(theme.bg)
-        .onChange(of: pickerItem) { _, item in
-            Task { await loadPhoto(item) }
         }
     }
 
-    private var previewInitials: String {
-        let trimmed = handle.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? "FF" : String(trimmed.prefix(2)).uppercased()
-    }
-
-    private var fieldState: FFFieldState {
-        if !error.isEmpty { return .error }
-        return focused ? .focused : .normal
-    }
-
-    private var canSave: Bool {
-        !isSaving && SessionStore.isValidHandle(handle)
-    }
-
-    private func loadPhoto(_ item: PhotosPickerItem?) async {
-        defer { pickerItem = nil }
-        guard let item else { return }
-        guard let data = try? await item.loadTransferable(type: Data.self),
-              let image = UIImage(data: data) else {
-            error = String(appLocalized: "That photo could not be read.")
-            return
+    private var companion: some View {
+        OnboardingPage {
+            OnboardingHeading(title: String(appLocalized: "onboarding.companion.title", defaultValue: "Find your kind\nof competitive."))
+            OnboardingAnimal(animal: selected, duration: 0.65, selectionReaction: true)
+                .id(selected)
+                .frame(height: 165)
+                .frame(maxWidth: .infinity)
+            VStack(spacing: 3) {
+                Text(selected.name).font(.ff(18, 800)).foregroundStyle(theme.text)
+                Text(selected.caption).font(.ff(14, 700)).foregroundStyle(theme.textSecondary)
+            }
+            .frame(maxWidth: .infinity, minHeight: 52)
+            .accessibilityElement(children: .combine)
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+                ForEach(Array(animals.prefix(showAll ? 12 : 6))) { animal in
+                    Button {
+                        guard selected != animal else { return }
+                        selected = animal
+                    } label: {
+                        VStack(spacing: 3) {
+                            Image(animal.image).resizable().scaledToFit().frame(height: 52)
+                                .accessibilityHidden(true)
+                            Text(animal.name).font(.ff(14, 800))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .foregroundStyle(selected == animal ? theme.mossText : theme.text)
+                        .frame(maxWidth: .infinity, minHeight: 89)
+                        .background(selected == animal ? theme.control : theme.card, in: RoundedRectangle(cornerRadius: 22))
+                        .overlay { RoundedRectangle(cornerRadius: 22).strokeBorder(selected == animal ? theme.mossEdge : theme.line, lineWidth: 1) }
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(busy)
+                    .accessibilityAddTraits(selected == animal ? .isSelected : [])
+                    .modifier(OnboardingEntrance(order: 5))
+                }
+            }
+            OnboardingSkip(title: showAll ? String(appLocalized: "Show fewer companions") : String(appLocalized: "Meet all 12 companions")) { showAll.toggle() }
+                .disabled(busy)
+            if let error { FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle") }
+        } actions: {
+            FFScreenCTA(title: String(appLocalized: "onboarding.go-with", defaultValue: "Go with \(selected.name)"), enabled: !busy, busy: busy) {
+                Task {
+                    guard !busy, let ownerID else { return }
+                    busy = true
+                    error = nil
+                    defer { busy = false }
+                    do {
+                        try await session.setCompanion(id: selected.id, prompt: nil)
+                        try Task.checkCancellation()
+                        guard session.profile?.userId == ownerID else { return }
+                        companions.apply(session.profile)
+                        go(.health)
+                    } catch is CancellationError {
+                    } catch { self.error = error.localizedDescription }
+                }
+            }
         }
-        error = ""
-        photo = image
     }
 
-    private func save() async {
-        error = ""
-        isSaving = true
-        defer { isSaving = false }
+    private var celebration: some View {
+        OnboardingPage {
+            OnboardingCelebration(animal: selected)
+            OnboardingHeading(
+                title: String(appLocalized: "onboarding.youre-in", defaultValue: "You're in,\n\(session.profile?.handle ?? handle)."),
+                subtitle: progress.joinedFightName
+            )
+        } actions: {
+            FFScreenCTA(title: String(appLocalized: "Continue")) { finish() }
+        }
+    }
+
+    private func go(_ page: FirstFightOnboarding.Page, backwards: Bool = false) {
+        usernameFocused = false
+        error = nil
+        self.backwards = backwards
+        progress.page = page
+        if !isReplay, let ownerID { session.saveFirstFightOnboarding(progress, userID: ownerID) }
+    }
+
+    private func saveUsername() async {
+        guard !busy, let ownerID else { return }
+        busy = true
+        error = nil
+        defer { busy = false }
         do {
-            var avatarMediaId: UUID?
-            if let photo {
-                avatarMediaId = try await MediaUploader.upload(photo, purpose: "profile", session: session).id
-            }
-            try await session.setHandle(handle, avatarMediaId: avatarMediaId)
+            try await session.setHandle(handle)
+            try Task.checkCancellation()
+            guard session.profile?.userId == ownerID else { return }
+            go(.companion)
         } catch is CancellationError {
-            return
-        } catch {
-            self.error = error.localizedDescription
-        }
+        } catch { self.error = error.localizedDescription }
+    }
+
+    private func finish() {
+        if !isReplay, let ownerID { session.finishFirstFightOnboarding(userID: ownerID) }
+        onFinished?()
     }
 }

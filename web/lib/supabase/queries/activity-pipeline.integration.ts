@@ -173,6 +173,17 @@ test("two devices, deletions, stale replays and corrections converge on one effe
     assert.equal(resolved.find((row) => row.metric === "workout_count")?.value, 1);
     assert.equal(resolved.find((row) => row.metric === "walk_run_workout_distance")?.value, 3_000);
 
+    await receiveHealthKitActivity(f.owner, healthKitActivityBatchSchema.parse({
+        collected_at: new Date(Date.now() + 1_000).toISOString(),
+        time_zone: zone,
+        workouts: [{ ...walk, distance_m: null }],
+    }), database);
+    resolved = await metrics(f.owner);
+    assert.ok(!resolved.some((row) => row.scope === "workout" && row.metric === "distance"),
+        "A corrected workout removes an absent measurement");
+    assert.ok(!resolved.some((row) => row.metric === "walk_run_workout_distance"),
+        "Derived distance disappears when its only input is removed");
+
     for (const [value, at] of [[9_500, later], [9_000, new Date().toISOString()]] as const) {
         await receiveHealthKitActivity(f.owner, healthKitActivityBatchSchema.parse({
             collected_at: at, time_zone: zone, totals: [dayTotal("steps", yesterday, value, at)],

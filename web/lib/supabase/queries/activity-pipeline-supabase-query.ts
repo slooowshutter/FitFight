@@ -315,12 +315,12 @@ async function resolveActivity(
                 and current.scope_key = any(${sql.array(workoutKeys)}::text[])
                 and not exists (
                     select 1
-                    from jsonb_to_recordset(${sql.json(measurements)}::jsonb) as next (
+                    from jsonb_to_recordset(${sql.json(measurements)}::jsonb) as incoming (
                         scope text, scope_key text, metric text
                     )
-                    where next.scope = 'workout'
-                        and next.scope_key = current.scope_key
-                        and next.metric = current.metric
+                    where incoming.scope = 'workout'
+                        and incoming.scope_key = current.scope_key
+                        and incoming.metric = current.metric
                 )
         `;
     }

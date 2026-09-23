@@ -246,6 +246,7 @@ test("two devices, deletions, stale replays and corrections converge on one effe
         9_000,
         "A correction that returns to an earlier total selects it again",
     );
+    await database`update public.profiles set time_zone = ${zone} where user_id = ${f.owner}`;
     const shared = await readSharedProfile(f.owner, f.owner, undefined, database);
     assert.equal(shared.step_statistics?.best_day?.steps, 9_000, "Profiles read the corrected measurement");
 });

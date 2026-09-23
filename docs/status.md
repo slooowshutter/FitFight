@@ -22,9 +22,9 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 The native app now shows an optional update as a toast when a newer public
 TestFlight build is available. It offers Update and Close, disappears after 10
-seconds unless VoiceOver is running, and can appear again after three days for
-the same release, even across app launches. A newer public release can appear
-immediately. Marc selected the top card. Its reusable toast has an optional action
+seconds unless VoiceOver is running, and can appear again after three days if
+the app is still behind, even across app launches or newer public releases.
+Marc selected the top card. Its reusable toast has an optional action
 button height, set to 48pt for the update action. You -> Developer keeps one
 preview, which stays open until closed. The existing
 `./scripts/run-companion-preview.sh` launches this preview in a

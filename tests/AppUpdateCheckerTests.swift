@@ -280,8 +280,16 @@ private struct AppUpdateCheckerTests {
             AppReleasePolicy(latest: next, review: nil, enforced: false)
         )
         await relaunched.check()
+        precondition(relaunched.pendingToastRelease == nil,
+                     "A newer public release must not interrupt the three-day reminder interval")
+        testNow.addTimeInterval(3 * 24 * 60 * 60 - 1)
+        await relaunched.check()
+        precondition(relaunched.pendingToastRelease == nil,
+                     "A newer release stays quiet until three full days pass")
+        testNow.addTimeInterval(1)
+        await relaunched.check()
         precondition(relaunched.pendingToastRelease == next,
-                     "A newly available public release bypasses the three-day reminder interval")
+                     "The reminder offers the newest public release when the interval ends")
         relaunched.dismissToast()
         ReleaseProtocol.responseData = try JSONEncoder().encode(policy)
 
@@ -297,40 +305,49 @@ private struct AppUpdateCheckerTests {
         ReleaseProtocol.responseData = try JSONEncoder().encode(
             AppReleasePolicy(latest: next, review: nil, enforced: false)
         )
-        await outdated.check()
-        precondition(outdated.status == .updateAvailable && outdated.pendingToastRelease == next,
-                     "A different public release can offer another optional update")
-        outdated.dismissToast()
+        await relaunched.check()
+        precondition(relaunched.status == .updateAvailable && relaunched.pendingToastRelease == nil,
+                     "Minute checks must not repeat the newest release")
+        let updatedButBehind = AppUpdateChecker(version: "1.0.0", build: "191", releaseURL: url,
+                                                isTestFlight: true, defaults: defaults, session: session,
+                                                now: { testNow })
+        await updatedButBehind.check()
+        precondition(updatedButBehind.pendingToastRelease == next,
+                     "Installing a different build starts a fresh reminder interval")
         ReleaseProtocol.responseData = try JSONEncoder().encode(policy)
-        await outdated.check()
-        precondition(outdated.status == .updateAvailable && outdated.pendingToastRelease == nil,
-                     "A manifest rollback must not repeat an older update during this session")
+        await relaunched.check()
+        precondition(relaunched.status == .updateAvailable && relaunched.pendingToastRelease == nil,
+                     "A manifest rollback must not repeat an older update during the interval")
         let later = AppRelease(version: "1.1.1", build: 202, updateURL: latest.updateURL)
         ReleaseProtocol.responseData = try JSONEncoder().encode(
             AppReleasePolicy(latest: later, review: nil, enforced: false)
         )
-        await outdated.check()
-        precondition(outdated.status == .updateAvailable && outdated.pendingToastRelease == later,
-                     "A subsequent build of the same version can offer an optional update")
+        await relaunched.check()
+        precondition(relaunched.status == .updateAvailable && relaunched.pendingToastRelease == nil,
+                     "Another newer public build must respect the same interval")
+        testNow.addTimeInterval(3 * 24 * 60 * 60)
+        await relaunched.check()
+        precondition(relaunched.pendingToastRelease == later,
+                     "The reminder offers the latest build after another three days")
         ReleaseProtocol.responseStatus = 503
-        await outdated.check()
-        precondition(outdated.status == .unavailable && outdated.allowsUse
-                     && outdated.pendingToastRelease == nil,
+        await relaunched.check()
+        precondition(relaunched.status == .unavailable && relaunched.allowsUse
+                     && relaunched.pendingToastRelease == nil,
                      "An outage must clear a previously visible TestFlight toast")
         ReleaseProtocol.responseStatus = 200
-        await outdated.check()
+        await relaunched.check()
         ReleaseProtocol.responseData = Data("{broken".utf8)
-        await outdated.check()
-        precondition(outdated.status == .unavailable && outdated.allowsUse
-                     && outdated.pendingToastRelease == nil,
+        await relaunched.check()
+        precondition(relaunched.status == .unavailable && relaunched.allowsUse
+                     && relaunched.pendingToastRelease == nil,
                      "Malformed metadata must not preserve a TestFlight toast")
         ReleaseProtocol.responseData = try JSONEncoder().encode(
             AppReleasePolicy(latest: nil, review: next, enforced: true, internalLatest: next)
         )
-        await outdated.check()
-        precondition(outdated.status == .unavailable && outdated.allowsUse,
+        await relaunched.check()
+        precondition(relaunched.status == .unavailable && relaunched.allowsUse,
                      "Review and internal builds alone must never be advertised as installable")
-        precondition(outdated.offeredRelease == nil)
+        precondition(relaunched.offeredRelease == nil)
 
         let productionURL = URL(string: "https://fitfight.app/api/app-release")!
         let production = AppUpdateChecker(version: "1.0.0", build: "189", releaseURL: productionURL,

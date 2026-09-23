@@ -4194,12 +4194,12 @@
                 }
             }
         },
-        "A new TestFlight version appears in a toast, with reminders for that version three days apart.": {
+        "If you stay on an older TestFlight build, an update toast returns at most once every three days.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Une nouvelle version TestFlight apparaît dans un avis. Les rappels pour cette version sont espacés de trois jours."
+                        "value": "Si vous gardez une ancienne version TestFlight, un avis de mise à jour revient au maximum une fois tous les trois jours."
                     }
                 }
             }

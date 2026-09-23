@@ -29,7 +29,7 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 23,
-            notes: "A new TestFlight version appears in a toast, with reminders for that version three days apart."
+            notes: "If you stay on an older TestFlight build, an update toast returns at most once every three days."
         ),
         ReleaseNote(
             version: "1.1.2",

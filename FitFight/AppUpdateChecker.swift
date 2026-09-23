@@ -89,9 +89,7 @@ final class AppUpdateChecker: ObservableObject {
     private let now: () -> Date
     private let cacheKey: String
     private let requiredKey: String
-    private let reminderKey: String
     private let reminderDateKey: String
-    private var lastNotifiedRelease: AppRelease?
     private var lastNotifiedAt: Date?
     private var inFlight: Task<Bool, Never>?
 
@@ -108,18 +106,13 @@ final class AppUpdateChecker: ObservableObject {
         self.now = now
         cacheKey = "fitfight.release-policy.\(releaseURL.absoluteString)"
         requiredKey = "fitfight.release-required.\(releaseURL.absoluteString).\(version).\(build)"
-        let reminderKey = "fitfight.release-reminded.\(releaseURL.absoluteString).\(version).\(build)"
-        self.reminderKey = reminderKey
-        reminderDateKey = "\(reminderKey).date"
+        reminderDateKey = "fitfight.release-reminded.\(releaseURL.absoluteString).\(version).\(build).date"
         if let data = defaults.data(forKey: cacheKey),
            let cached = try? JSONDecoder().decode(AppReleasePolicy.self, from: data) {
             policy = cached
         }
         if isTestFlight {
             defaults.removeObject(forKey: requiredKey)
-            if let data = defaults.data(forKey: reminderKey) {
-                lastNotifiedRelease = try? JSONDecoder().decode(AppRelease.self, from: data)
-            }
             lastNotifiedAt = defaults.object(forKey: reminderDateKey) as? Date
         }
         if !isTestFlight && defaults.bool(forKey: requiredKey) {
@@ -160,16 +153,12 @@ final class AppUpdateChecker: ObservableObject {
                         let isNewer = latest.isNewer(thanVersion: self.version, build: self.build)
                         self.status = isNewer ? .updateAvailable : .current
                         if isNewer {
-                            let alreadyNotified = self.lastNotifiedRelease.map {
-                                !latest.isNewer(thanVersion: $0.version, build: String($0.build))
-                            } == true && self.lastNotifiedAt.map {
-                                self.now().timeIntervalSince($0) < 3 * 24 * 60 * 60
-                            } == true
-                            if !alreadyNotified {
-                                let notifiedAt = self.now()
-                                self.lastNotifiedRelease = latest
+                            let notifiedAt = self.now()
+                            let remindedRecently = self.lastNotifiedAt.map {
+                                notifiedAt.timeIntervalSince($0) < 3 * 24 * 60 * 60
+                            } ?? false
+                            if !remindedRecently {
                                 self.lastNotifiedAt = notifiedAt
-                                self.defaults.set(try? JSONEncoder().encode(latest), forKey: self.reminderKey)
                                 self.defaults.set(notifiedAt, forKey: self.reminderDateKey)
                                 self.pendingToastRelease = latest
                             }

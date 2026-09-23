@@ -238,7 +238,7 @@ After a feature PR merges, CI deletes that branch. `main`, `develop`, `preview`,
 
 A push to `preview` that touches the app or Fastlane starts TestFlight. Feature-branch and `develop` pushes do not. Tell Marc only after that upload: wait for the TestFlight notification, then **Update**. Tester gets it after processing. Friends wait for Apple beta review on a new marketing version. Check the workflow result before promising a build. Do not ask him to Run workflow.
 
-Both staging and production binaries check `/api/app-release` at launch, on foregrounding, and every minute while active. TestFlight only offers a newer public `latest`, never an internal/review-only update. The optional update appears as a toast at most once every three days for the same release, including after Close or the 10-second timeout. A newer public release can show immediately. Failed checks clear the toast, and saved locks from older binaries are ignored. Production keeps its mandatory update gate. The version line remains on You only.
+Both staging and production binaries check `/api/app-release` at launch, on foregrounding, and every minute while active. TestFlight only offers a newer public `latest`, never an internal/review-only update. While the installed build stays behind, the optional toast appears at most once every three days, including after Close or the 10-second timeout. A newer public release does not restart that interval. Installing another build starts a fresh interval for that installed build. Failed checks clear the toast, and saved locks from older binaries are ignored. Production keeps its mandatory update gate. The version line remains on You only.
 
 ## API compatibility for every change
 

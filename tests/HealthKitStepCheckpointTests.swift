@@ -19,13 +19,7 @@ enum HealthKitStepAggregates {
         store.reads.append((start, end))
         return store.samples.filter { $0.0 >= start && $0.0 < end }.reduce(0) { $0 + $1.1 }
     }
-    private static func dailyTotals(store: HKHealthStore, type: HKQuantityType, start: Date, end: Date, calendar: Calendar) async throws -> [String: Int] {
-        var values: [String: Int] = [:]
-        for (date, value) in store.samples where date >= start && date < end {
-            values[dayStamp(date, calendar: calendar), default: 0] += value
-        }
-        return values
-    }
+
 }
 
 @main struct HealthKitStepCheckpointTests {
@@ -60,11 +54,9 @@ enum HealthKitStepAggregates {
         NSTimeZone.default = TimeZone(identifier: "Asia/Tokyo")!
         let atHome = try await HealthKitStepAggregates.read(store: store, type: HKQuantityType(), context: context, trace: HealthKitSyncTrace(), timeZone: savedZone)
         precondition(atHome.timeZone == "America/New_York")
-        precondition(atHome.mergedDays.first?.startsAt == "2026-03-28T04:00:00.000Z", "Daily Steps start at midnight in the saved zone")
+        precondition(atHome.mergedDays.isEmpty, "Daily Steps use the separate activity batch")
         NSTimeZone.default = TimeZone(identifier: "Pacific/Kiritimati")!
         let traveling = try await HealthKitStepAggregates.read(store: store, type: HKQuantityType(), context: context, trace: HealthKitSyncTrace(), timeZone: savedZone)
-        precondition(traveling.mergedDays.map(\.startsAt) == atHome.mergedDays.map(\.startsAt))
-        precondition(traveling.mergedDays.map(\.steps) == atHome.mergedDays.map(\.steps), "Device travel cannot shift personal days")
         precondition(traveling.fightAggregates[0].steps == fight.steps)
         precondition(traveling.fightAggregates[0].stepCheckpoints == fight.stepCheckpoints, "Fight days keep their separate time zone")
 

@@ -19,7 +19,7 @@ checkpoint = snapshot[snapshot.index("struct FightStepCheckpoint:"):snapshot.ind
 models = charts[charts.index("private struct FightDayChartSeries:"):charts.index("private func fightDayTickIndices(")]
 day_cards = app[app.index("    private static func dayCards("):app.index("    private static func person(from profile:")]
 ordering = app[app.index("    private static func orderedStandings("):app.index("\n}\n\nprivate func localizedDuration(")]
-read = health[health.index("    static func read("):health.index("    private static func dailyTotals(")]
+read = health[health.index("    static func read("):health.index("    private static func total(")]
 date_helpers = health[health.index("    static func dayStamp("):health.rindex("\n}")]
 api_models = api[api.index("struct FitFightHealthKitContext:"):api.index("struct FitFightHealthKitStepSyncResult:")]
 

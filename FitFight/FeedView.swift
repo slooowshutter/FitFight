@@ -711,6 +711,7 @@ struct FightPostComposer: View {
     @State private var showLibrary = false
     @State private var showCamera = false
     @State private var pendingMedia: MediaSource?
+    @FocusState private var bodyFocused: Bool
 
     private enum MediaSource {
         case camera
@@ -733,6 +734,7 @@ struct FightPostComposer: View {
                         fightIDs: destinations.compactMap(\.fightId)
                     ) {
                         TextField(String(appLocalized: "Add a note or some proof…"), text: $bodyText, axis: .vertical)
+                            .focused($bodyFocused)
                             .ffType(.body)
                             .foregroundStyle(theme.text)
                             .lineLimit(3...6)
@@ -810,6 +812,7 @@ struct FightPostComposer: View {
                     .disabled(!canPost)
                 }
             }
+            .ffKeyboardDismissOnBackgroundTap()
         }
         .confirmationDialog(String(appLocalized: "Add media"), isPresented: $showMediaSource, titleVisibility: .visible) {
             Button(String(appLocalized: "Take Photo")) {
@@ -1079,6 +1082,7 @@ private struct FightPostEditSheet: View {
     @Environment(\.ffTheme) private var theme
     @Environment(\.dismiss) private var dismiss
     @State private var mentionPeople: [FitFightFightPost.Author] = []
+    @FocusState private var draftFocused: Bool
 
     var body: some View {
         FFScreen(clearance: false) {
@@ -1086,6 +1090,7 @@ private struct FightPostEditSheet: View {
             FFCard {
                 FeedMentionField(text: $draft, people: $mentionPeople, main: main, fightIDs: fightIDs) {
                     TextField(String(appLocalized: "Add a note or some proof…"), text: $draft, axis: .vertical)
+                        .focused($draftFocused)
                         .ffType(.body)
                         .foregroundStyle(theme.text)
                         .lineLimit(3...8)

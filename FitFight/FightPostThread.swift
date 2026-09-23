@@ -131,6 +131,7 @@ struct FightPostEngagement: View {
                 }
             }
         }
+        .ffKeyboardDismissOnBackgroundTap()
         .task {
             if post.commentCount > 0 || targetCommentID != nil {
                 open = true

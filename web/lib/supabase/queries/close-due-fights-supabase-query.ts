@@ -1,6 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Sql } from "postgres";
-import { ApiError, ERROR_CODES } from "@/lib/http";
 import { fightNeedsCloserTick } from "@/lib/scoring/fight-clock";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
@@ -17,7 +16,6 @@ import { processNotificationOutbox } from "./process-notification-outbox-supabas
 import { enqueueScheduledNotifications } from "./scheduled-notifications-supabase-query";
 import { recalculateFight } from "./recalculate-fight-supabase-query";
 
-const DUE_STATES = ["live", "scheduled", "awaiting_final_sync"] as const;
 const BATCH = 25;
 
 export type CloseDueResult = {
@@ -53,31 +51,31 @@ async function recalculateIds(
     return closed;
 }
 
-/** Server job: walk fights whose clock can move, using `now` so tests fake time. */
+/** Server job: process only due transitions, using `now` so tests can pin time. */
 export async function closeDueFights(
     admin: SupabaseClient = createAdminClient(),
     now: Date = new Date(),
     database: Sql = createDatabaseClient(),
 ): Promise<CloseDueResult> {
-    const { data, error } = await admin
-        .from("fights")
-        .select("id, state, starts_at, ends_at")
-        .in("state", [...DUE_STATES])
-        .order("ends_at", { ascending: true })
-        .limit(200);
-    if (error) {
-        throw new ApiError(
-            500,
-            ERROR_CODES.db_error,
-            "Could not load fights to close",
-        );
-    }
-    const rows = fightMaintenanceCandidateSchema.array().parse(data);
-    const fightIds = await recalculateIds(
-        dueIds(rows, now.getTime()),
-        now,
-        database,
-    );
+    const rows = fightMaintenanceCandidateSchema.pick({ id: true }).array().parse(await database`
+        with candidates as (
+            select id,
+                case state
+                    when 'scheduled' then starts_at
+                    when 'live' then ends_at
+                    when 'awaiting_final_sync' then ends_at
+                        + final_sync_grace_seconds * interval '1 second'
+                end as next_transition_at
+            from public.fights
+            where state in ('scheduled', 'live', 'awaiting_final_sync')
+        )
+        select id
+        from candidates
+        where next_transition_at <= ${now.toISOString()}::timestamptz
+        order by next_transition_at, id
+        limit ${BATCH}
+    `);
+    const fightIds = await recalculateIds(rows.map((row) => row.id), now, database);
     await mintDueRecurringFights(admin, now);
     await enqueueScheduledNotifications(database, now);
     const notifications = await processNotificationOutbox(now, database);

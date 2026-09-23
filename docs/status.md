@@ -71,14 +71,32 @@ passed. The AI native generation check requires GitHub-hosted macOS, and this
 combined revision still needs PR simulator and disposable database CI. No
 hosted migration or deployment occurred.
 
+**Closer merge, 23 Sep:** With develop `27f75330` included, local Web API
+typechecking and all 387 tests passed, plus localization, notification
+preferences, native state, native API boundary, and Fight localization checks.
+The incoming disposable database test now expects the single conditional
+final-sync request used by this branch. The combined revision still needs PR
+simulator and disposable database CI; no hosted job or deployment changed.
+
 **Rollout:** apply the additive migration, deploy the compatible backend, let old
-backend instances drain, then distribute the app. Verify the existing hosted
-15-minute closer job in each environment; its live activation has not been
-confirmed, and daily Vercel jobs cannot provide evening delivery. Signed archive
+backend instances drain, then distribute the app. The prepared production
+15-minute Vercel schedule activates only after an authorized `main` promotion;
+staging needs a separate hosted Supabase Cron job and matching Preview secret.
+Verify both schedules before rollout. Signed archive
 provisioning for `com.fitfight.mvp.notifications` and physical-device APNs/photo
 delivery remain release checks. No deployment, release-branch merge, live
 notification send, or TestFlight upload was performed. The feature branch disables
 automatic Vercel deployment while these changes are prepared.
+
+## Fight clock, keyboard, and Current Fights sort: prepared 23 Sep 2026
+
+**Code:** The protected closer selects at most 25 fights whose next state transition is due. It no longer spends its batch or 200-row read cap on fights waiting within the final Steps grace period. The exact `ends_at` and grace deadline now count as due. The production Vercel close-fights schedule is prepared for every 15 minutes; Preview still needs its separate hosted Supabase Cron job. Current Fights defaults to earliest end, offers latest end and recently started, and shows the countdown with the exact local deadline. Tapping noninteractive screen space dismisses the keyboard on entry forms; scrolling can also dismiss it. The app has an English/French `1.1.2` release note.
+
+**Compatibility:** No `/api/v1` request or response shape, database schema, direct-access grant, or marketing version changes. The worker route remains protected and still drains notification intents. Read-only `/api/app-release` checks on 23 Sep returned staging `latest` 1.1.1 (201), `review`/`internal` 1.1.2 (205), `enforced: false`; production returned `latest` 1.1.1 (202), no candidate, `enforced: true`. These clients keep their existing requests and decoders. Stage the compatible backend before distributing the native build; the new Production cron schedule takes effect only after an authorized `main` promotion.
+
+**Checks:** Web typechecking and all 389 unit tests passed after bringing in current develop. The fixed-clock test demonstrated the exact end and grace boundaries; the existing security integration suite covers early completion from exact final snapshots. New disposable database tests cover 25 waiting fights, more than 200 waiting fights, the grace deadline, and reminder idempotence. English/French localization, native API boundary, native state, and destructive-SQL checks passed. The database integration tests, GitHub-hosted iPhone simulator, native compilation, compact-phone and larger-text layout, Night/Day layout, and physical-device reminder still need cloud verification.
+
+**Hosted state:** A read-only Vercel check found the `fit-fight` project under the Enterprise `blendai` team, which supports the 15-minute cron interval. Production has a `CRON_SECRET` variable. Neither `CRON_SECRET` nor `FITFIGHT_CRON_SECRET` was listed for Preview. No staging Cron job, Vault value, route logs, or three-run history was verified. No hosted setting or deployment changed, and this work has not entered develop, preview, main, or TestFlight. The staging Preview secret and matching hosted Supabase Vault/job setup are required before scheduled staging verification.
 
 ## Fight creation transaction: reviewed 23 Sep 2026
 

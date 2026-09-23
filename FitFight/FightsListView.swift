@@ -124,7 +124,7 @@ struct FightsListView: View {
                         .accessibilityValue(currentSort.title)
                     }
                 }
-                ForEach(sortedCurrentFights, id: \.id) { fight in
+                ForEach(sortedCurrentFights) { fight in
                     let standing = difference(in: fight)
                     let opponent = opponent(in: fight)
                     FFListRow(

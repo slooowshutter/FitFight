@@ -11,6 +11,7 @@ import {
 } from "@/lib/http";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
+import { readNotificationPreferences } from "@/lib/supabase/queries/notification-preferences-supabase-query";
 import { lookupProfileByHandle } from "@/lib/supabase/queries/create-invite-supabase-query";
 import {
     decryptInstallationToken,
@@ -39,6 +40,8 @@ export const POST = apiRoute(async (request) => {
         createAdminClient(),
         input.username,
     );
+    const prefs = await readNotificationPreferences(profile.user_id);
+    if (!prefs.enabled) return json({ accepted: false, reason: "notifications_disabled" });
     const [installation] = await readActiveDeviceInstallations(
         profile.user_id,
         createDatabaseClient(),

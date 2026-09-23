@@ -130,6 +130,7 @@ export const profileAccessRowSchema = z.object({
     time_zone: z.string(),
     identity: sharedIdentitySchema.omit({ avatar_url: true }),
     avatar_path: z.string().nullable(),
+    companion_image_url: z.string().url().nullish(),
     settings: profileSettingsSchema,
     relationship: profileRelationshipSchema,
     friendship: z.enum(friendshipStateValues),

@@ -28,6 +28,7 @@ test("fight state follows its exact clock boundaries", () => {
     assert.equal(clock("scheduled", starts - 1), "scheduled");
     assert.equal(clock("scheduled", starts), "live");
     assert.equal(clock("live", ends - 1), "live");
+    assert.equal(clock("live", ends), "awaiting_final_sync");
     assert.equal(clock("live", ends + 1), "awaiting_final_sync");
     assert.equal(
         clock("awaiting_final_sync", ends + hour),
@@ -39,7 +40,8 @@ test("fight state follows its exact clock boundaries", () => {
         }),
         "final",
     );
-    assert.equal(clock("awaiting_final_sync", grace + 1), "final");
+    assert.equal(clock("awaiting_final_sync", grace - 1), "awaiting_final_sync");
+    assert.equal(clock("awaiting_final_sync", grace), "final");
     assert.equal(clock("final", grace + hour), "final");
 });
 
@@ -52,6 +54,15 @@ test("closer only ticks fights that can change", () => {
             endsAtMs: ends,
         }),
         false,
+    );
+    assert.equal(
+        fightNeedsCloserTick({
+            state: "live",
+            nowMs: ends,
+            startsAtMs: starts,
+            endsAtMs: ends,
+        }),
+        true,
     );
     assert.equal(
         fightNeedsCloserTick({

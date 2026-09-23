@@ -22,6 +22,19 @@ with App Functionality, linked to the user, and no tracking. The updated privacy
 page is prepared in this branch and must deploy before the app is distributed.
 This is a code disclosure update, not a new App Store Connect submission.
 
+## Paid Specials, prepared 21 Sep 2026
+
+The new purchase flow adds **Purchase History**, linked to the user for App
+Functionality, without tracking. It stores Apple transaction identifiers, a
+random purchase account token, the selected Special, purchase timestamps,
+price/currency when supplied, and ownership/refund state. Apple handles payment
+credentials; FitFight does not collect card or bank details. Purchase records
+remain after deletion with their profile link removed, for reconciliation,
+recovery and disputes. The English/French privacy pages and native privacy
+manifest include this behavior. Before production submission, add Purchase
+History to the published App Privacy answers and review purchase-record
+retention with the Account Holder. That App Store update is not yet submitted.
+
 ## App Privacy
 
 Select **No** for tracking. No data type is used for third-party advertising, developer advertising, data brokerage, or tracking across other companies' apps or websites.
@@ -43,7 +56,7 @@ Declare these collected data types:
 | Other Diagnostic Data | Limited server errors, Health sync timing/failure reports, app version and request sizes                           |                Yes | App Functionality |
 | Crash Data            | Stack traces and related crash diagnostics sent to PostHog                                                         |                Yes | App Functionality |
 
-The app does not read the address book, GPS routes, or heart rate, and has no purchases, advertising identifiers, or product-interaction capture in its crash integration. Review uploaded files/video audio, stored referral relationships, and diagnostic timing against Apple's exact categories rather than copying older “no photos/videos” answers.
+The app does not read the address book, GPS routes, or heart rate, and has no advertising identifiers or product-interaction capture in its crash integration. Review uploaded files/video audio, stored referral relationships, and diagnostic timing against Apple's exact categories rather than copying older “no photos/videos” answers.
 
 The app privacy manifest now includes Photos or Videos and Device ID alongside the existing categories, no tracking, and the `CA92.1` UserDefaults reason. Apple spells the photo/video value `NSPrivacyCollectedDataTypePhotosorVideos`. Verify the final archive report, SDK manifests, App Store answers, and both published privacy translations agree. Sources: [Apple privacy-manifest data types](https://developer.apple.com/documentation/bundleresources/app-privacy-configuration/nsprivacycollecteddatatypes/nsprivacycollecteddatatype) and [App Privacy details](https://developer.apple.com/app-store/app-privacy-details/).
 
@@ -82,7 +95,7 @@ The editable 1.1.1 questionnaire now declares Health or Wellness Topics, Messagi
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | Regulated medical device                                   | No: FitFight does not diagnose, prevent, monitor, or treat disease                                                                    |
 | HealthKit                                                  | Read-only supported movement history, including individual samples; no Health writes                                          |
-| In-app purchases                                           | None                                                                                                                                  |
+| In-app purchases                                           | Paid Specials use non-consumable StoreKit purchases; production sale is disabled.                                                                                                                                  |
 | Gambling, entry fees, money settlement, payouts, or prizes | None                                                                                                                                  |
 | Advertising / IDFA                                         | None; the app does not request tracking permission                                                                                    |
 | Non-exempt encryption                                      | No; `ITSAppUsesNonExemptEncryption` is `NO` and the app uses ordinary platform HTTPS/TLS. Recheck the final archive.                  |

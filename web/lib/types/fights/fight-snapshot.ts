@@ -65,6 +65,7 @@ export const fightSnapshotSchema = z.object({
             display_name: z.string(),
             avatar: mediaObjectSchema.nullable(),
             companion_id: companionIdSchema.nullable().default(null),
+            companion_image_url: z.string().url().optional(),
         }),
     ),
     series: z.array(

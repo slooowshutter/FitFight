@@ -7,6 +7,7 @@ on:
         branches: [main]
         paths:
             - "FitFight/**"
+            - "FitFightNotificationService/**"
             - "FitFight.xcodeproj/**"
             - "fastlane/**"
             - "scripts/publish-app-releases.sh"

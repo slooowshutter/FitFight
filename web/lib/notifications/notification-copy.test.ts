@@ -15,26 +15,26 @@ test("APNs is not configured without server secrets", () => {
 });
 
 test("mention alerts name the person and stay off scores", () => {
-    const alert = mentionNotificationAlert("post", "Marc", "en");
+    const alert = mentionNotificationAlert("post", "marc", "en");
     assert.equal(alert.title, "FitFight");
-    assert.equal(alert.body, "Marc tagged you in a post.");
+    assert.equal(alert.body, "@marc tagged you in a post.");
     assert.doesNotMatch(alert.body, /score/i);
     assert.doesNotMatch(alert.body, /step/i);
     assert.doesNotMatch(alert.body, /\d{3,}/);
     assert.equal(
-        mentionNotificationAlert("comment", "Marc", "fr").body,
-        "Marc t’a mentionné dans un commentaire.",
+        mentionNotificationAlert("comment", "marc", "fr").body,
+        "@marc t’a mentionné dans un commentaire.",
     );
 });
 
 test("invite alerts name the person and fight and stay off scores", () => {
-    const alert = inviteNotificationAlert("Marc", "EVERYBODY ON THE APP", "en");
+    const alert = inviteNotificationAlert("marc", "EVERYBODY ON THE APP", "en");
     assert.equal(alert.title, "FitFight");
-    assert.equal(alert.body, "Marc invited you to EVERYBODY ON THE APP.");
+    assert.equal(alert.body, "@marc invited you to EVERYBODY ON THE APP.");
     assert.doesNotMatch(alert.body, /score/i);
     assert.doesNotMatch(alert.body, /\d{3,}/);
     assert.equal(
-        inviteNotificationAlert("Marc", "EVERYBODY ON THE APP", "fr").body,
-        "Marc t'a invité à EVERYBODY ON THE APP.",
+        inviteNotificationAlert("marc", "EVERYBODY ON THE APP", "fr").body,
+        "@marc t'a invité à EVERYBODY ON THE APP.",
     );
 });

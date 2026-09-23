@@ -1,0 +1,802 @@
+[
+    {
+        "id": "limited-pangolin",
+        "swiftCase": "limitedPangolin",
+        "name": "Pangolin",
+        "frenchName": "Pangolin",
+        "caption": "Packed a snack. Called it endurance.",
+        "frenchCaption": "A pris un goûter. Appelle ça de l’endurance.",
+        "source": "Pangolin with glasses and satchel.jpg",
+        "avatarCrop": [
+            271,
+            53,
+            797,
+            579
+        ],
+        "sourcePixels": [
+            848,
+            1264
+        ],
+        "preparedSource": "originals/limited/limited-pangolin.jpg"
+    },
+    {
+        "id": "limited-platypus",
+        "swiftCase": "limitedPlatypus",
+        "name": "Platypus",
+        "frenchName": "Ornithorynque",
+        "caption": "Built like a committee. Walks like a legend.",
+        "frenchCaption": "Conçu en réunion. Marche comme une légende.",
+        "source": "Platypus in retro sportswear.jpg",
+        "avatarCrop": [
+            356,
+            132,
+            1408,
+            1183
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-platypus.jpg"
+    },
+    {
+        "id": "limited-spotted-quoll",
+        "swiftCase": "limitedSpottedQuoll",
+        "name": "Spotted Quoll",
+        "frenchName": "Chat marsupial tacheté",
+        "caption": "Spots the finish line. Ignores the warm-up.",
+        "frenchCaption": "Repère l’arrivée. Ignore l’échauffement.",
+        "source": "Spotted quoll with headphones.jpg",
+        "avatarCrop": [
+            178,
+            66,
+            704,
+            592
+        ],
+        "sourcePixels": [
+            848,
+            1264
+        ],
+        "preparedSource": "originals/limited/limited-spotted-quoll.jpg"
+    },
+    {
+        "id": "limited-fennec-fox",
+        "swiftCase": "limitedFennecFox",
+        "name": "Fennec Fox",
+        "frenchName": "Fennec",
+        "caption": "Heard you were skipping leg day.",
+        "frenchCaption": "A entendu que tu séchais les jambes.",
+        "source": "Fennec fox athlete with whistle.jpg",
+        "avatarCrop": [
+            356,
+            56,
+            1408,
+            1107
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-fennec-fox.jpg"
+    },
+    {
+        "id": "limited-musk-ox",
+        "swiftCase": "limitedMuskOx",
+        "name": "Musk Ox",
+        "frenchName": "Bœuf musqué",
+        "caption": "Built for winter. Dressed for PE.",
+        "frenchCaption": "Taillé pour l’hiver. Habillé pour le sport.",
+        "source": "Musk ox athlete with stopwatch.jpg",
+        "avatarCrop": [
+            356,
+            132,
+            1408,
+            1183
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-musk-ox.jpg"
+    },
+    {
+        "id": "limited-kookaburra",
+        "swiftCase": "limitedKookaburra",
+        "name": "Kookaburra",
+        "frenchName": "Kookaburra",
+        "caption": "Laughs at your excuses. Then takes a break.",
+        "frenchCaption": "Rit de tes excuses. Puis fait une pause.",
+        "source": "Kookaburra wearing spectacles and wristbands.jpg",
+        "avatarCrop": [
+            153,
+            132,
+            1204,
+            1183
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-kookaburra.jpg"
+    },
+    {
+        "id": "limited-porcupine",
+        "swiftCase": "limitedPorcupine",
+        "name": "Porcupine",
+        "frenchName": "Porc-épic",
+        "caption": "Personal space is part of the training plan.",
+        "frenchCaption": "La distance de sécurité fait partie du programme.",
+        "source": "Anthropomorphic porcupine athlete.jpg",
+        "avatarCrop": [
+            356,
+            132,
+            1408,
+            1183
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-porcupine.jpg"
+    },
+    {
+        "id": "limited-bharal",
+        "swiftCase": "limitedBharal",
+        "name": "Bharal",
+        "frenchName": "Bharal",
+        "caption": "Your hill is the warm-up.",
+        "frenchCaption": "Ta côte, c’est son échauffement.",
+        "source": "Bharal sheep athlete sunglasses.jpg",
+        "avatarCrop": [
+            356,
+            132,
+            1408,
+            1183
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-bharal.jpg"
+    },
+    {
+        "id": "limited-golden-snub-nosed-monkey",
+        "swiftCase": "limitedGoldenSnubNosedMonkey",
+        "name": "Golden Snub-Nosed Monkey",
+        "frenchName": "Rhinopithèque doré",
+        "caption": "Golden fur. Questionable pacing.",
+        "frenchCaption": "Pelage doré. Gestion de l’effort discutable.",
+        "source": "Golden snub-nosed monkey athlete.jpg",
+        "avatarCrop": [
+            356,
+            132,
+            1408,
+            1183
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-golden-snub-nosed-monkey.jpg"
+    },
+    {
+        "id": "limited-proboscis-monkey",
+        "swiftCase": "limitedProboscisMonkey",
+        "name": "Proboscis Monkey",
+        "frenchName": "Nasique",
+        "caption": "Wins every race by a nose.",
+        "frenchCaption": "Gagne chaque course d’un nez.",
+        "source": "Proboscis monkey athlete.jpg",
+        "avatarCrop": [
+            356,
+            132,
+            1408,
+            1183
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-proboscis-monkey.jpg"
+    },
+    {
+        "id": "limited-tree-kangaroo",
+        "swiftCase": "limitedTreeKangaroo",
+        "name": "Tree Kangaroo",
+        "frenchName": "Kangourou arboricole",
+        "caption": "Took the stairs. All the way up the tree.",
+        "frenchCaption": "A pris les escaliers. Jusqu’en haut de l’arbre.",
+        "source": "Tree kangaroo in retro sportswear.jpg",
+        "avatarCrop": [
+            85,
+            106,
+            1136,
+            1158
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-tree-kangaroo.jpg"
+    },
+    {
+        "id": "limited-gila-monster",
+        "swiftCase": "limitedGilaMonster",
+        "name": "Gila Monster",
+        "frenchName": "Monstre de Gila",
+        "caption": "A monster at taking it easy.",
+        "frenchCaption": "Un monstre de la récupération.",
+        "source": "Gila monster in retro sportswear.jpg",
+        "avatarCrop": [
+            356,
+            132,
+            1408,
+            1183
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-gila-monster.jpg"
+    },
+    {
+        "id": "limited-tarsier",
+        "swiftCase": "limitedTarsier",
+        "name": "Tarsier",
+        "frenchName": "Tarsier",
+        "caption": "Wide awake. Deeply suspicious of cardio.",
+        "frenchCaption": "Bien réveillé. Très méfiant envers le cardio.",
+        "source": "Skeptical tarsier in retro sportswear.jpg",
+        "avatarCrop": [
+            356,
+            132,
+            1408,
+            1183
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-tarsier.jpg"
+    },
+    {
+        "id": "limited-maned-wolf",
+        "swiftCase": "limitedManedWolf",
+        "name": "Maned Wolf",
+        "frenchName": "Loup à crinière",
+        "caption": "All legs. No shortcuts.",
+        "frenchCaption": "Tout en jambes. Aucun raccourci.",
+        "source": "Maned wolf fit stage four.jpg",
+        "avatarCrop": [
+            356,
+            132,
+            1408,
+            1183
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-maned-wolf.jpg"
+    },
+    {
+        "id": "limited-fire-salamander",
+        "swiftCase": "limitedFireSalamander",
+        "name": "Fire Salamander",
+        "frenchName": "Salamandre tachetée",
+        "caption": "Warming up is a personal brand.",
+        "frenchCaption": "L’échauffement, c’est sa marque de fabrique.",
+        "source": "Fire salamander in retro sportswear.jpg",
+        "avatarCrop": [
+            356,
+            258,
+            1408,
+            1309
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-fire-salamander.jpg"
+    },
+    {
+        "id": "limited-serval-stroll",
+        "swiftCase": "limitedServalStroll",
+        "name": "Serval, Easy Pace",
+        "frenchName": "Serval, tranquille",
+        "caption": "Long legs. Leisurely agenda.",
+        "frenchCaption": "Grandes jambes. Petit programme.",
+        "source": "Serval average fitness stage 3.jpg",
+        "avatarCrop": [
+            356,
+            56,
+            1408,
+            1107
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-serval-stroll.jpg"
+    },
+    {
+        "id": "limited-puffin",
+        "swiftCase": "limitedPuffin",
+        "name": "Puffin",
+        "frenchName": "Macareux",
+        "caption": "Flight mode off. Step count on.",
+        "frenchCaption": "Mode avion désactivé. Compteur de pas activé.",
+        "source": "Puffin wearing headphones and shorts.jpg",
+        "avatarCrop": [
+            356,
+            132,
+            1408,
+            1183
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-puffin.jpg"
+    },
+    {
+        "id": "limited-numbat-sprint",
+        "swiftCase": "limitedNumbatSprint",
+        "name": "Numbat, Sprint Mode",
+        "frenchName": "Numbat, mode sprint",
+        "caption": "Small stripes. Unreasonably big ambitions.",
+        "frenchCaption": "Petites rayures. Ambitions démesurées.",
+        "source": "Numbat fitness stage five.jpg",
+        "avatarCrop": [
+            356,
+            132,
+            1408,
+            1183
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-numbat-sprint.jpg"
+    },
+    {
+        "id": "limited-coati-snooze",
+        "swiftCase": "limitedCoatiSnooze",
+        "name": "Coati, Snooze Mode",
+        "frenchName": "Coati, mode sieste",
+        "caption": "Yawn first. Personal best later.",
+        "frenchCaption": "D’abord le bâillement. Le record attendra.",
+        "source": "Coati yawning in athletic wear.jpg",
+        "avatarCrop": [
+            356,
+            132,
+            1408,
+            1183
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-coati-snooze.jpg"
+    },
+    {
+        "id": "limited-galago",
+        "swiftCase": "limitedGalago",
+        "name": "Galago",
+        "frenchName": "Galago",
+        "caption": "Night owl energy. Morning walk regrets.",
+        "frenchCaption": "Énergie nocturne. Regrets à la marche du matin.",
+        "source": "Galago fit and toned.jpg",
+        "avatarCrop": [
+            356,
+            132,
+            1408,
+            1183
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-galago.jpg"
+    },
+    {
+        "id": "limited-frilled-lizard",
+        "swiftCase": "limitedFrilledLizard",
+        "name": "Frilled Lizard",
+        "frenchName": "Lézard à collerette",
+        "caption": "Dressed for drama. Stayed for the steps.",
+        "frenchCaption": "Venu pour le spectacle. Resté pour les pas.",
+        "source": "Frilled lizard athlete.jpg",
+        "avatarCrop": [
+            356,
+            132,
+            1408,
+            1183
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-frilled-lizard.jpg"
+    },
+    {
+        "id": "limited-okapi",
+        "swiftCase": "limitedOkapi",
+        "name": "Okapi",
+        "frenchName": "Okapi",
+        "caption": "Half stripes. Full commitment to a nap.",
+        "frenchCaption": "À moitié rayé. À fond pour la sieste.",
+        "source": "Okapi yawning in athletic wear.jpg",
+        "avatarCrop": [
+            356,
+            132,
+            1408,
+            1183
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-okapi.jpg"
+    },
+    {
+        "id": "limited-hoatzin",
+        "swiftCase": "limitedHoatzin",
+        "name": "Hoatzin",
+        "frenchName": "Hoazin",
+        "caption": "Pre-workout is coffee and a long sit.",
+        "frenchCaption": "Avant le sport : café et fauteuil.",
+        "source": "Hoatzin resting with coffee (1).jpg",
+        "avatarCrop": [
+            322,
+            233,
+            1374,
+            1284
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-hoatzin.jpg"
+    },
+    {
+        "id": "limited-quokka",
+        "swiftCase": "limitedQuokka",
+        "name": "Quokka",
+        "frenchName": "Quokka",
+        "caption": "Smiling through a very optional workout.",
+        "frenchCaption": "Sourit malgré une séance très facultative.",
+        "source": "Average fitness quokka illustration.jpg",
+        "avatarCrop": [
+            356,
+            132,
+            1408,
+            1183
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-quokka.jpg"
+    },
+    {
+        "id": "limited-numbat-stride",
+        "swiftCase": "limitedNumbatStride",
+        "name": "Numbat, Steady Stride",
+        "frenchName": "Numbat, bon rythme",
+        "caption": "Counts ants on rest days. Steps on the others.",
+        "frenchCaption": "Compte les fourmis au repos. Les pas le reste du temps.",
+        "source": "Numbat fitness stage four (1).jpg",
+        "avatarCrop": [
+            356,
+            132,
+            1408,
+            1183
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-numbat-stride.jpg"
+    },
+    {
+        "id": "limited-sifaka",
+        "swiftCase": "limitedSifaka",
+        "name": "Sifaka",
+        "frenchName": "Sifaka",
+        "caption": "Sideways is still a direction.",
+        "frenchCaption": "De côté, ça reste une direction.",
+        "source": "Sifaka fitness stage five.jpg",
+        "avatarCrop": [
+            356,
+            132,
+            1408,
+            1183
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-sifaka.jpg"
+    },
+    {
+        "id": "limited-secretary-bird-stride",
+        "swiftCase": "limitedSecretaryBirdStride",
+        "name": "Secretary Bird, On Duty",
+        "frenchName": "Messager sagittaire, en service",
+        "caption": "Booked your defeat between two meetings.",
+        "frenchCaption": "A calé ta défaite entre deux réunions.",
+        "source": "Secretary bird fit and toned.jpg",
+        "avatarCrop": [
+            356,
+            132,
+            1408,
+            1183
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-secretary-bird-stride.jpg"
+    },
+    {
+        "id": "limited-rock-hyrax",
+        "swiftCase": "limitedRockHyrax",
+        "name": "Rock Hyrax",
+        "frenchName": "Daman des rochers",
+        "caption": "Tiny legs. Elephant-sized confidence.",
+        "frenchCaption": "Petites pattes. Confiance d’éléphant.",
+        "source": "Rock hyrax in retro sportswear.jpg",
+        "avatarCrop": [
+            373,
+            106,
+            1425,
+            1158
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-rock-hyrax.jpg"
+    },
+    {
+        "id": "limited-serval-sprint",
+        "swiftCase": "limitedServalSprint",
+        "name": "Serval, Sprint Mode",
+        "frenchName": "Serval, mode sprint",
+        "caption": "Already at the finish. Pretending to stretch.",
+        "frenchCaption": "Déjà à l’arrivée. Fait semblant de s’étirer.",
+        "source": "Serval stage 5 fitness (1).jpg",
+        "avatarCrop": [
+            356,
+            56,
+            1408,
+            1107
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-serval-sprint.jpg"
+    },
+    {
+        "id": "limited-banded-mongoose",
+        "swiftCase": "limitedBandedMongoose",
+        "name": "Banded Mongoose",
+        "frenchName": "Mangouste rayée",
+        "caption": "Runs in a pack. Keeps a solo victory speech.",
+        "frenchCaption": "Court en bande. Prépare un discours en solo.",
+        "source": "Banded mongoose in athletic wear.jpg",
+        "avatarCrop": [
+            356,
+            132,
+            1408,
+            1183
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-banded-mongoose.jpg"
+    },
+    {
+        "id": "limited-axolotl",
+        "swiftCase": "limitedAxolotl",
+        "name": "Axolotl",
+        "frenchName": "Axolotl",
+        "caption": "Regrows limbs. Still skips leg day.",
+        "frenchCaption": "Ses pattes repoussent. Sèche quand même les jambes.",
+        "source": "Axolotl average fitness stage 3.jpg",
+        "avatarCrop": [
+            356,
+            132,
+            1408,
+            1183
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-axolotl.jpg"
+    },
+    {
+        "id": "limited-thorny-devil-stroll",
+        "swiftCase": "limitedThornyDevilStroll",
+        "name": "Thorny Devil, Easy Pace",
+        "frenchName": "Diable cornu, tranquille",
+        "caption": "Prickly about pace. Soft on rest days.",
+        "frenchCaption": "Pointilleux sur l’allure. Souple sur les jours de repos.",
+        "source": "Thorny devil out of shape.jpg",
+        "avatarCrop": [
+            356,
+            132,
+            1408,
+            1183
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-thorny-devil-stroll.jpg"
+    },
+    {
+        "id": "limited-coati-sprint",
+        "swiftCase": "limitedCoatiSprint",
+        "name": "Coati, Sprint Mode",
+        "frenchName": "Coati, mode sprint",
+        "caption": "Sniffed out a shortcut. Took the long way.",
+        "frenchCaption": "A flairé un raccourci. A pris le grand tour.",
+        "source": "Coati fitness stage 5.jpg",
+        "avatarCrop": [
+            356,
+            132,
+            1408,
+            1183
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-coati-sprint.jpg"
+    },
+    {
+        "id": "limited-tamandua",
+        "swiftCase": "limitedTamandua",
+        "name": "Tamandua",
+        "frenchName": "Tamandua",
+        "caption": "Long snout. Short list of excuses.",
+        "frenchCaption": "Long museau. Courte liste d’excuses.",
+        "source": "Tamandua average fitness stage 3.jpg",
+        "avatarCrop": [
+            356,
+            132,
+            1408,
+            1183
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-tamandua.jpg"
+    },
+    {
+        "id": "limited-paca",
+        "swiftCase": "limitedPaca",
+        "name": "Paca",
+        "frenchName": "Paca",
+        "caption": "Times every lap. Rounds down the snack breaks.",
+        "frenchCaption": "Chronomètre les tours. Arrondit les pauses goûter.",
+        "source": "Paca athlete with stopwatch.jpg",
+        "avatarCrop": [
+            356,
+            132,
+            1408,
+            1183
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-paca.jpg"
+    },
+    {
+        "id": "limited-jerboa",
+        "swiftCase": "limitedJerboa",
+        "name": "Jerboa",
+        "frenchName": "Gerboise",
+        "caption": "Tiny footprint. Dramatic entrance.",
+        "frenchCaption": "Petite empreinte. Entrée spectaculaire.",
+        "source": "Jerboa average fitness stage.jpg",
+        "avatarCrop": [
+            356,
+            56,
+            1408,
+            1107
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-jerboa.jpg"
+    },
+    {
+        "id": "limited-thorny-devil-coffee",
+        "swiftCase": "limitedThornyDevilCoffee",
+        "name": "Thorny Devil, Coffee Break",
+        "frenchName": "Diable cornu, pause café",
+        "caption": "Sharp outfit. Extremely soft schedule.",
+        "frenchCaption": "Tenue piquante. Planning très doux.",
+        "source": "Thorny devil resting with coffee.jpg",
+        "avatarCrop": [
+            356,
+            359,
+            1408,
+            1411
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-thorny-devil-coffee.jpg"
+    },
+    {
+        "id": "limited-kakapo",
+        "swiftCase": "limitedKakapo",
+        "name": "Kakapo",
+        "frenchName": "Kakapo",
+        "caption": "Flight cancelled. Walking reluctantly.",
+        "frenchCaption": "Vol annulé. Marche à contrecœur.",
+        "source": "Kakapo average fitness stage.jpg",
+        "avatarCrop": [
+            356,
+            258,
+            1408,
+            1309
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-kakapo.jpg"
+    },
+    {
+        "id": "limited-secretary-bird-snooze",
+        "swiftCase": "limitedSecretaryBirdSnooze",
+        "name": "Secretary Bird, Off Duty",
+        "frenchName": "Messager sagittaire, en pause",
+        "caption": "This meeting could have been a nap.",
+        "frenchCaption": "Cette réunion aurait pu être une sieste.",
+        "source": "Secretary bird yawning.jpg",
+        "avatarCrop": [
+            356,
+            132,
+            1408,
+            1183
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-secretary-bird-snooze.jpg"
+    },
+    {
+        "id": "limited-markhor",
+        "swiftCase": "limitedMarkhor",
+        "name": "Markhor",
+        "frenchName": "Markhor",
+        "caption": "Spiralling horns. Perfectly level coffee.",
+        "frenchCaption": "Cornes en spirale. Café parfaitement stable.",
+        "source": "Markhor resting with mug.jpg",
+        "avatarCrop": [
+            458,
+            207,
+            1509,
+            1259
+        ],
+        "sourcePixels": [
+            1696,
+            2528
+        ],
+        "preparedSource": "originals/limited/limited-markhor.jpg"
+    }
+]

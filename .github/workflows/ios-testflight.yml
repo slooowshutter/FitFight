@@ -12,9 +12,11 @@ on:
             - preview
         paths:
             - "FitFight/**"
+            - "FitFightNotificationService/**"
             - "FitFight.xcodeproj/**"
             - "fastlane/**"
             - "scripts/publish-app-releases.sh"
+            - "scripts/apple-specials-notifications.rb"
             - "Gemfile"
             - "Gemfile.lock"
             - ".github/workflows/ios-testflight.yml"
@@ -184,6 +186,13 @@ jobs:
                           and health.get("schema") == "ready" and health.get("profile_api") is True):
                       raise SystemExit("Deploy the profile API and backend-reader migration before distributing this native build")
                   PY
+
+            - name: Configure and verify Sandbox purchase notifications
+              env:
+                  APPLE_IAP_KEY_ID: ${{ secrets.APPLE_IAP_KEY_ID }}
+                  APPLE_IAP_ISSUER_ID: ${{ secrets.APPLE_IAP_ISSUER_ID }}
+                  APPLE_IAP_PRIVATE_KEY: ${{ secrets.APPLE_IAP_PRIVATE_KEY }}
+              run: bundle exec ruby scripts/apple-specials-notifications.rb
 
             - name: Upload to TestFlight
               env:

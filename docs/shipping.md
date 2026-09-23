@@ -25,6 +25,7 @@ The iOS workflows **must** stay GitHub-hosted. Never `self-hosted`. Apple requir
 
 On an app push to `preview`, TestFlight waits for Database, Web API, Simulator, and Screenshots runs for the same commit to succeed before the macOS upload job starts. Manual dispatch on `preview` retains its existing direct-upload behavior.
 The active `Protect develop` ruleset still requires a PR but has no required CI status. `Protect main` continues to require the Database `Migrations and RLS` check before production merges.
+Vercel auto-deploys only `develop` (staging), `preview`, and `main`; feature PR branches do not create Vercel deployments. GitGuardian and Supabase PR statuses are managed by their integrations.
 
 Fastlane: `fastlane/Fastfile` lane `beta` uploads staging TestFlight builds. Lane `app_store_candidate` is CI- and `main`-only, archives Release with production configuration, and uploads the binary to App Store Connect without selecting it or submitting it for review. Both use automatic signing + App Store Connect API key (`-allowProvisioningUpdates`) and share one non-cancelling concurrency group so signing and build-number allocation cannot race. The production lane does not revoke team certificates; it fails safely if automatic signing cannot create one. Do **not** also set `export_xcargs` to the same `-authenticationKeyPath` flags — gym passes `xcargs` into export and duplicates the flag.
 

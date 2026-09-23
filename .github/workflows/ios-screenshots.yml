@@ -5,15 +5,6 @@ name: Screenshots
 on:
     push:
         branches: [preview]
-        paths:
-            - "FitFight/**"
-            - "FitFightNotificationService/**"
-            - "FitFight.xcodeproj/**"
-            - "scripts/check_localizations.py"
-            - "scripts/package_simulator_app.py"
-            - "scripts/test_simulator_keychain.py"
-            - "tests/SimulatorKeychainProbe.swift"
-            - ".github/workflows/ios-screenshots.yml"
     workflow_dispatch:
 
 concurrency:

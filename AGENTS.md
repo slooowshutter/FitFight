@@ -43,7 +43,7 @@ Current map: [`docs/status.md`](docs/status.md). Sign-in, username, direct-usern
 - Native SwiftUI iOS app, scheme `FitFight`, bundle ID `com.fitfight.mvp`.
 - First TestFlight upload **succeeded** (build `0.1.0 (1)`). Next prepared release/TestFlight marketing version: **1.1.2**. See `docs/status.md` for uploaded builds and availability.
 - Staging TestFlight only on push/merge to `preview` (optional manual `workflow_dispatch` on that branch). No daily cron. Feature branches and `develop` do not upload. `main` never uploads to TestFlight.
-- Simulator compile on pushes to `preview` that change the native app or its tests.
+- Simulator, screenshots, database, and web validation run on pushes to `preview`. On app pushes, TestFlight waits for all four workflows to pass before uploading. Database and web checks also run on PRs into `main`.
 - Approved design source remains in `docs/design/source/`. The app uses Night/Day and one fixed semantic palette.
 - Four tabs: **Fights, New, You, Feedback**. Requests, persistent friends, money, unsupported Metrics, and dead settings are gone.
 - A Fight is always Steps × highest total. Add exact usernames, choose 3 days / 1 week / 2 weeks / 1 month, and optionally name the fight and type the action the loser will do.

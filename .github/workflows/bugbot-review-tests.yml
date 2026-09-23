@@ -2,11 +2,13 @@ name: Bugbot routing tests
 
 on:
     pull_request:
+        branches: [main]
         paths:
             - ".github/scripts/bugbot-review*.cjs"
             - ".github/workflows/bugbot-review*.yml"
             - ".github/bugbot-release-ruleset.json"
     push:
+        branches: [preview]
         paths:
             - ".github/scripts/bugbot-review*.cjs"
             - ".github/workflows/bugbot-review*.yml"

@@ -3,8 +3,9 @@ name: Database
 
 on:
     pull_request:
+        branches: [main]
     push:
-        branches: [main, develop, preview, profiles-friends-and-stats, exclusive-animal-avatars]
+        branches: [preview]
 
 concurrency:
     group: database-${{ github.ref }}

@@ -13,14 +13,18 @@ Not: agent on Marc’s laptop or home Mac → local Xcode.
 
 | Workflow             | File                                         | When                                                                                                                                             | Runner          |
 | -------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | --------------- |
-| Simulator            | `.github/workflows/ios-build.yml`            | matching native files on push to `preview`                                                                                                      | `macos-26`      |
-| Screenshots          | `.github/workflows/ios-screenshots.yml`      | matching native files on push to `preview`, or manual dispatch                                                                                  | `macos-26`      |
-| TestFlight           | `.github/workflows/ios-testflight.yml`       | push to `preview` (app/fastlane paths), plus optional `workflow_dispatch` on that branch. No cron. Feature branches and `develop` do not upload. | `macos-26`      |
+| Simulator            | `.github/workflows/ios-build.yml`            | every push to `preview`                                                                                                                         | `macos-26`      |
+| Screenshots          | `.github/workflows/ios-screenshots.yml`      | every push to `preview`, or manual dispatch                                                                                                     | `macos-26`      |
+| TestFlight           | `.github/workflows/ios-testflight.yml`       | app/fastlane push to `preview` after preview checks pass, or manual dispatch on that branch                                                     | `macos-26`      |
 | App Store candidate  | `.github/workflows/ios-app-store.yml`        | app push to `main`; uploads only and never submits for review                                                                                    | `macos-26`      |
-| Database             | `.github/workflows/database.yml`             | PR + push to `main`, `develop`, or `preview`                                                                                                     | `ubuntu-latest` |
+| Database             | `.github/workflows/database.yml`             | PR into `main`, or push to `preview`                                                                                                             | `ubuntu-latest` |
+| Web API              | `.github/workflows/web.yml`                  | PR into `main`, or push to `preview`                                                                                                             | `ubuntu-latest` |
 | Delete merged branch | `.github/workflows/delete-merged-branch.yml` | PR merged                                                                                                                                        | `ubuntu-latest` |
 
 The iOS workflows **must** stay GitHub-hosted. Never `self-hosted`. Apple requires **Xcode 26 / iOS 26 SDK** to upload (Xcode 16.4 / iOS 18.5 is rejected).
+
+On an app push to `preview`, TestFlight waits for Database, Web API, Simulator, and Screenshots runs for the same commit to succeed before the macOS upload job starts. Manual dispatch on `preview` retains its existing direct-upload behavior.
+The active `Protect develop` ruleset still requires a PR but has no required CI status. `Protect main` continues to require the Database `Migrations and RLS` check before production merges.
 
 Fastlane: `fastlane/Fastfile` lane `beta` uploads staging TestFlight builds. Lane `app_store_candidate` is CI- and `main`-only, archives Release with production configuration, and uploads the binary to App Store Connect without selecting it or submitting it for review. Both use automatic signing + App Store Connect API key (`-allowProvisioningUpdates`) and share one non-cancelling concurrency group so signing and build-number allocation cannot race. The production lane does not revoke team certificates; it fails safely if automatic signing cannot create one. Do **not** also set `export_xcargs` to the same `-authenticationKeyPath` flags — gym passes `xcargs` into export and duplicates the flag.
 

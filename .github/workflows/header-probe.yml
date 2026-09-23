@@ -1,0 +1,55 @@
+name: Header probe
+
+on:
+    push:
+        branches: [fix-top-bar-layout-bugs]
+
+jobs:
+    probe:
+        runs-on: macos-26
+        timeout-minutes: 25
+        permissions:
+            contents: read
+        steps:
+            - uses: actions/checkout@v4
+            - name: Build simulator app
+              run: |
+                  xcodebuild -project FitFight.xcodeproj -scheme FitFight -configuration Debug \
+                    -destination 'generic/platform=iOS Simulator' -derivedDataPath build \
+                    CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES CODE_SIGN_STYLE=Manual \
+                    CODE_SIGN_IDENTITY=- build > /tmp/header-build.log 2>&1 || \
+                    (tail -100 /tmp/header-build.log && exit 1)
+            - name: Capture scrolled header
+              run: |
+                  set -euo pipefail
+                  RUNTIME=$(xcrun simctl list runtimes --json | python3 -c "import json,sys;rs=[r for r in json.load(sys.stdin)['runtimes'] if r['isAvailable'] and 'iOS' in r['name']];print(sorted(rs,key=lambda r:r['version'])[-1]['identifier'])")
+                  DEVICE_TYPE=$(xcrun simctl list devicetypes --json | python3 -c "import json,sys;ds=[d for d in json.load(sys.stdin)['devicetypes'] if d['name'] == 'iPhone 17'];print(ds[0]['identifier'])")
+                  UDID=$(xcrun simctl create ff-header-probe "$DEVICE_TYPE" "$RUNTIME")
+                  xcrun simctl boot "$UDID"
+                  xcrun simctl bootstatus "$UDID" -b
+                  xcrun simctl install "$UDID" build/Build/Products/Debug-iphonesimulator/FitFight.app
+                  SIMCTL_CHILD_FF_COMPANION_PREVIEW=1 SIMCTL_CHILD_FF_HEADER_PROBE=1 \
+                    xcrun simctl launch "$UDID" com.fitfight.mvp
+                  sleep 5
+                  xcrun simctl io "$UDID" screenshot header-probe.png
+            - name: Assert status area is clear
+              run: |
+                  python3 -m pip install --quiet pillow
+                  python3 - <<'PY'
+                  from PIL import Image
+
+                  image = Image.open('header-probe.png').convert('RGB')
+                  width, height = image.size
+                  magenta = sum(
+                      1 for y in range(min(190, height)) for x in range(width)
+                      if (lambda r, g, b: r > 180 and b > 180 and g < 100)(*image.getpixel((x, y)))
+                  )
+                  print(f'screenshot={width}x{height}, magenta pixels in status area={magenta}')
+                  if magenta:
+                      raise SystemExit('Scrolled content overlaps the status area')
+                  PY
+            - uses: actions/upload-artifact@v4
+              if: always()
+              with:
+                  name: header-probe
+                  path: header-probe.png

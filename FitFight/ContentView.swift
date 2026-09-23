@@ -15,11 +15,19 @@ struct ContentView: View {
 
     var body: some View {
         Group {
-            if !appUpdate.showsUpdate || ScreenshotExport.isEnabled || CompanionPreview.isEnabled {
-                appContent
+            #if DEBUG && targetEnvironment(simulator)
+            if ProcessInfo.processInfo.environment["FF_HEADER_PROBE"] == "1" {
+                FFScreen(top: AnyView(VersionBanner())) {
+                    Color.clear.frame(height: 400)
+                    Color.magenta.frame(height: 120)
+                    Color.clear.frame(height: 540)
+                }
             } else {
-                updateScreen
+                launchContent
             }
+            #else
+            launchContent
+            #endif
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(theme.bg.ignoresSafeArea())
@@ -42,6 +50,15 @@ struct ContentView: View {
             } else if status == .current, session.isSignedIn, session.profile == nil {
                 Task { await session.loadProfile() }
             }
+        }
+    }
+
+    @ViewBuilder
+    private var launchContent: some View {
+        if !appUpdate.showsUpdate || ScreenshotExport.isEnabled || CompanionPreview.isEnabled {
+            appContent
+        } else {
+            updateScreen
         }
     }
 

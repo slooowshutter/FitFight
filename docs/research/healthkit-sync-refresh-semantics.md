@@ -97,7 +97,7 @@ the same resolver.
 
 | Data | Each foreground, manual, or background sync | Reason |
 | --- | --- | --- |
-| Merged totals: Fight Steps, chart checkpoints, daily totals | Statistics query from window start to the collection cutoff | A few values per window. Catches every change inside it, including source-priority changes that add or delete no record |
+| Merged totals: Fight Steps, chart checkpoints, daily totals | Statistics query from window start to the collection cutoff | A few values per window. Rechecks values even when source priority changes without a sample addition or deletion |
 | Workouts | Anchored additions and explicit deletion UUIDs since the saved checkpoint | Workout summaries are records with stable IDs |
 | Quantity and category samples | Local anchored change query within the fixed recent predicate; send refreshed merged day totals only | Individual samples and sample deletion IDs stay on the phone |
 | First sync, reinstall, new device, lost checkpoint | Full accessible merged daily history and workout summaries, paged; local sample anchors use the fixed recent predicate | Establishes the checkpoint |
@@ -111,14 +111,18 @@ the same resolver.
   seconds. Anchored results carry explicit deletions. A full reread would infer
   deletion from absence, and denied read access returns empty results without
   an error.
-- A new or deleted record dated outside the reread windows marks its day as
-  changed. The phone reruns that day's merged statistics, so personal history
-  outside Fights stays correct.
+- A reported new or deleted record dated outside the 40-day reread window
+  marks its day as changed. The phone reruns that day's merged statistics.
+  The current local anchor has a fixed start at bootstrap minus 40 days, so
+  it can miss later changes to older activity.
 - Advance a type's checkpoint only after the server acknowledges durable
   intake. A failed upload resends the same changes.
 - Known gap: HealthKit keeps deleted objects only temporarily, so a long absence
   can miss a deletion. An occasional coverage-aware reconciliation can close it
-  later. An empty read never deletes server records.
+  later. An empty read never deletes server records because revoked read access
+  can look identical to a day whose total fell to zero. A source-priority change
+  that removes the last counted sample without an explicit deletion can leave a
+  previously saved nonzero day until a separate reconciliation is available.
 - Preserve the existing finalized-Fight policy while allowing personal history
   and active Fight calculations to receive corrections.
 

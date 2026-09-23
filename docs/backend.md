@@ -21,9 +21,11 @@ summaries, and deletion events, then `private.activity_metrics` for current
 measurements with scope, value, unit, interval, source, input IDs, and resolver
 version. Neither table is exposed to mobile database clients. Exact retries reuse
 one raw row; new readings replace current metrics. A workout tombstone wins over
-a stale replay. Workout counts, duration, and walk/run workout distance are
-derived from effective workout records and never added to Apple-merged daily
-Steps, energy, or distance.
+a stale replay. Each workout has separate duration, active-minutes, distance,
+and active-energy measurements when those values exist. Effort remains in the
+received record and duration details until its HealthKit unit is identified.
+Workout counts, duration, and walk/run workout distance are derived from effective
+workout records and never added to Apple-merged daily Steps, energy, or distance.
 
 The existing Steps endpoint keeps its request and decoded response shape for
 installed clients. It now validates and stores Fight readings, merged days, and
@@ -44,6 +46,35 @@ selects the newest row from both stores during this overlap; a later activity
 measurement becomes authoritative without waiting for another user sync.
 Keep `/api/v1`, old tables, and client permissions through the supported-build
 overlap. This branch has no live deploy.
+
+After the migration is deployed, this read-only query follows the latest raw
+records for handle `marc` to their current measurements. Replace the handle to
+inspect another account. Raw rows without a linked measurement are still shown,
+including superseded readings and deletions.
+
+```sql
+select
+    raw.id as raw_id,
+    raw.record_kind,
+    raw.record_type,
+    raw.record_key,
+    raw.starts_at,
+    raw.ends_at,
+    raw.payload,
+    metric.scope,
+    metric.metric,
+    metric.value,
+    metric.unit,
+    metric.input_ids
+from private.activity_raw as raw
+left join private.activity_metrics as metric
+    on raw.id = any(metric.input_ids)
+where raw.user_id = (
+    select user_id from public.profiles where handle = 'marc'
+)
+order by raw.collected_at desc, raw.id, metric.metric
+limit 100;
+```
 
 ## Application database boundary
 

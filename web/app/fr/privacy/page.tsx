@@ -30,7 +30,7 @@ export default function PrivacyPage() {
             <article className="legal-content">
                 <p className="eyebrow">VOS DONNÉES, EN TOUTE CLARTÉ</p>
                 <h1>Politique de confidentialité</h1>
-                <p className="legal-updated">En vigueur le 21 septembre 2026</p>
+                <p className="legal-updated">En vigueur le 23 septembre 2026</p>
                 <p className="legal-intro">
                     FitFight permet à des participants identifiés de comparer le
                     nombre de pas enregistrés pendant un défi privé. Cette
@@ -68,13 +68,16 @@ export default function PrivacyPage() {
                         </li>
                         <li>
                             <strong>Santé d’Apple :</strong> avec votre
-                            autorisation, FitFight lit les pas, l’énergie active
-                            et au repos, les distances, l’exercice, les périodes
-                            debout, les étages montés et les entraînements. Les
-                            défis de pas envoient le total fusionné pour leur
-                            période exacte et les totaux quotidiens nécessaires
-                            aux graphiques. Les autres mesures restent privées
-                            sur votre compte.
+                            autorisation, FitFight lit les pas et d’autres
+                            activités (énergie, distances, exercice, périodes
+                            debout, étages montés et entraînements). L’app
+                            transmet les totaux quotidiens fusionnés de
+                            l’historique auquel vous lui donnez accès, les
+                            totaux de pas et points du graphique des défis,
+                            les résumés d’entraînement et les identifiants
+                            des entraînements supprimés. Seuls les pas
+                            comptent pour les défis actuels. Les autres
+                            activités restent privées sur votre compte.
                         </li>
                         <li>
                             <strong>Photos, vidéos et publications :</strong>{" "}
@@ -125,15 +128,17 @@ export default function PrivacyPage() {
                     <h2>Santé d’Apple</h2>
                     <p>
                         L’accès à Santé d’Apple est en lecture seule. FitFight
-                        n’écrit aucune donnée dans Santé d’Apple et n’envoie pas
-                        les échantillons bruts, itinéraires GPS, fréquences
-                        cardiaques ni métadonnées d’appareil ou de source. L’app
-                        peut envoyer des totaux d’activité quotidiens et des
-                        résumés d’entraînement : type, horaires, minutes actives
-                        lorsqu’elles sont disponibles, distance, énergie et
-                        effort. Ces mesures préparent de futurs types de défis,
-                        sans compter pour les défis de pas actuels ni être
-                        montrées aux autres participants.
+                        envoie les échantillons individuels autorisés avec leur
+                        identifiant Santé, leurs horaires, valeurs, unités, nom
+                        et identifiant de l’app source, version de la source,
+                        modèle d’appareil si disponible et certains identifiants
+                        de synchronisation. L’app conserve aussi les totaux
+                        quotidiens fusionnés, les résumés d’entraînement et les
+                        suppressions explicites. FitFight ne lit ni itinéraires
+                        GPS ni fréquences cardiaques. Les points de reprise
+                        restent sur votre téléphone. Les échantillons bruts
+                        restent privés et ne sont jamais ajoutés au score de
+                        pas fusionné par Apple ni montrés aux participants.
                     </p>
                     <p>
                         Les participants d’un même défi privé peuvent voir les
@@ -380,8 +385,9 @@ export default function PrivacyPage() {
                         sans contacter l’assistance. La suppression efface votre
                         profil et votre nom d’utilisateur, les photos, vidéos et
                         fichiers envoyés, les publications et commentaires, les
-                        totaux de pas et d’activité et les résumés
-                        d’entraînement, les relations d’amitié, les
+                        totaux de pas et d’activité, les échantillons
+                        individuels et les résumés d’entraînement, les
+                        relations d’amitié, les
                         invitations, participations et scores, les bugs et
                         demandes que vous avez publiés, ainsi que tous les défis
                         que vous avez créés. Elle vous retire également des

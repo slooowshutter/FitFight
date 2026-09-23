@@ -73,6 +73,8 @@ export async function deleteAccount(
             await sql`delete from public.fight_series where owner_id = ${userId}`;
             await sql`delete from public.fight_series_members where user_id = ${userId}`;
             await sql`delete from private.fight_score_snapshots where user_id = ${userId}`;
+            await sql`delete from private.activity_metrics where user_id = ${userId}`;
+            await sql`delete from private.activity_raw where user_id = ${userId}`;
             await sql`delete from private.metric_observations where user_id = ${userId}`;
             await sql`delete from private.provider_events where user_id = ${userId}`;
             await sql`delete from private.provider_uploads where user_id = ${userId}`;

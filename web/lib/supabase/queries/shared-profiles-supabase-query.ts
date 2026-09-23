@@ -128,25 +128,50 @@ export async function readSharedProfile(
         `;
         const context = profileStatisticsContextSchema.parse(contextRow);
         const values = access.activity ? activityDaySchema.array().parse(await sql`
+            with days as (
+                select metric.day, metric.value, metric.time_zone, metric.updated_at,
+                    metric.observed_through >= metric.ends_at as finalized, 1 as priority
+                from private.activity_metrics as metric
+                join public.data_sources as source on source.id = metric.source_id
+                where metric.user_id = ${targetId} and metric.scope = 'day' and metric.metric = 'steps'
+                    and source.provider = 'apple_health'
+                union all
+                select legacy.day, legacy.value, legacy.time_zone, legacy.updated_at,
+                    legacy.finalized_at is not null as finalized, 0 as priority
+                from public.metric_days as legacy
+                join public.data_sources as source on source.id = legacy.source_id
+                where legacy.user_id = ${targetId} and legacy.metric = 'steps'
+                    and source.provider = 'apple_health'
+            )
             select distinct on (days.day) days.day::text, days.value::float8 steps,
-                days.time_zone, days.updated_at::text, (days.finalized_at is not null) finalized
-            from public.metric_days days
-            join public.data_sources source on source.id = days.source_id
-            where days.user_id = ${targetId} and days.metric = 'steps'
-                and source.provider = 'apple_health'
-                and days.day >= ${context.today}::date - ${row.settings.activity_days - 1}::integer
+                days.time_zone, days.updated_at::text, days.finalized
+            from days
+            where days.day >= ${context.today}::date - ${row.settings.activity_days - 1}::integer
                 and days.day <= ${context.today}::date
-            order by days.day, days.updated_at desc
+            order by days.day, days.updated_at desc, days.priority desc
         `) : [];
         let statistics: SharedProfile["step_statistics"] = null;
         if (access.activity) {
             const history = relationship.owner ? activityDaySchema.array().parse(await sql`
+                with days as (
+                    select metric.day, metric.value, metric.time_zone, metric.updated_at,
+                        metric.observed_through >= metric.ends_at as finalized, 1 as priority
+                    from private.activity_metrics as metric
+                    join public.data_sources as source on source.id = metric.source_id
+                    where metric.user_id = ${targetId} and metric.scope = 'day' and metric.metric = 'steps'
+                        and source.provider = 'apple_health'
+                    union all
+                    select legacy.day, legacy.value, legacy.time_zone, legacy.updated_at,
+                        legacy.finalized_at is not null as finalized, 0 as priority
+                    from public.metric_days as legacy
+                    join public.data_sources as source on source.id = legacy.source_id
+                    where legacy.user_id = ${targetId} and legacy.metric = 'steps'
+                        and source.provider = 'apple_health'
+                )
                 select distinct on (days.day) days.day::text, days.value::float8 steps,
-                    days.time_zone, days.updated_at::text, (days.finalized_at is not null) finalized
-                from public.metric_days days
-                join public.data_sources source on source.id = days.source_id
-                where days.user_id = ${targetId} and days.metric = 'steps' and source.provider = 'apple_health'
-                order by days.day, days.updated_at desc
+                    days.time_zone, days.updated_at::text, days.finalized
+                from days
+                order by days.day, days.updated_at desc, days.priority desc
             `) : values;
             statistics = profileStepStatistics(history, context, relationship.owner ? null : row.settings.activity_days);
         }

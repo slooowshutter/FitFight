@@ -1,11 +1,83 @@
 # Backend
 
-Production Metric is **Steps**. Phone vs server status: [`status.md`](status.md). Fights, memberships, scores, and data sources are writable only by the backend. Native Accept and Decline use authenticated commands; database grants deny direct client mutations. For Apple Health, it asks HealthKit for Apple's merged cumulative total over each exact Fight window and sends those totals to one authenticated Next.js endpoint. It may also send Apple's merged daily buckets for the active Fight days needed by charts; those buckets never determine the Fight score. The same request may include private activity totals and workout summaries that are not used for scoring. The backend validates the User, Fight membership, server-issued windows and cutoffs, then stores the exact-window snapshots and updates standings in a TypeScript-owned Postgres transaction. There are no app-facing database RPCs.
+Production scoring Metric is **Steps**. The native app sends Apple's merged
+Fight-window totals and checkpoints through the existing `/api/v1/healthkit/steps`
+contract. The prepared activity pipeline also accepts merged daily totals,
+workout summaries, and explicit workout deletion IDs through
+`/api/v1/healthkit/activity`. Individual HealthKit samples enter the private raw store.
+The backend saves incoming records, resolves current measurements, and publishes
+Fight standings and compatible older-client mirrors. There are no app-facing
+Postgres RPCs.
 
 [`system-design.md`](system-design.md) is the golden guide. This folder is the first slice of it, not the whole thing. Do not add Active Minutes, Workout Count, WHOOP, Strava, payments, or a website until the backlog says so. Fight posts and photo uploads go through the API below.
 
 Hosted production (no secrets): https://pvqntpteehdvhqyctwum.supabase.co  
 Hosted staging / git `develop` (no secrets): https://zstzbfocunthczzubggz.supabase.co
+
+## Activity pipeline (prepared 23 Sep 2026)
+
+This branch adds `private.activity_raw` for durable received totals, individual
+quantity/category samples, workout summaries, and deletion events, then
+`private.activity_metrics` for current
+measurements with scope, value, unit, interval, source, input IDs, and resolver
+version. Neither table is exposed to mobile database clients. Exact retries reuse
+one raw row; new readings replace current metrics. A workout or sample tombstone wins over
+a stale replay. Each workout has separate duration, active-minutes, distance,
+and active-energy measurements when those values exist. Effort remains in the
+received record and duration details until its HealthKit unit is identified.
+Workout counts, duration, and walk/run workout distance are derived from effective
+workout records and never added to Apple-merged daily Steps, energy, or distance.
+
+The existing Steps endpoint keeps its request and decoded response shape for
+installed clients. It now validates and stores Fight readings, merged days, and
+any older-client activity extras as raw rows. The new activity endpoint accepts
+at most 1,000 daily totals, 200 workout summaries, 100 individual samples,
+and 500 deletion UUIDs of each kind per page. Its `received` count acknowledges
+durable intake; `processing` reports
+`processed` or `pending`. A deleted sample's previously stored interval is
+returned for merged-day refresh. Each request attempts bounded resolution. The
+close-fights worker resumes pending, failed, or expired-lease rows. Profile
+statistics read correctable `activity_metrics` day rows. Fight charts and
+standings use the published Fight revision; finalized outcomes remain frozen.
+`metric_days` and `step_days` remain as legacy mirrors. Account deletion removes
+both new stores.
+
+Rollout order after authorization: apply the additive migration and backfill,
+deploy the compatible backend, then distribute the native build. Old backend
+instances may keep writing legacy daily rows during rollout. The Profile reader
+selects the newest row from both stores during this overlap; a later activity
+measurement becomes authoritative without waiting for another user sync.
+Keep `/api/v1`, old tables, and client permissions through the supported-build
+overlap. This branch has no live deploy.
+
+After the migration is deployed, this read-only query follows recent raw
+records for handle `marc` to their current measurements. Replace the handle to
+inspect another account. Raw rows without a linked measurement are still shown,
+including superseded readings and deletions.
+
+```sql
+select
+    raw.id as raw_id,
+    raw.record_kind,
+    raw.record_type,
+    raw.record_key,
+    raw.starts_at,
+    raw.ends_at,
+    raw.payload,
+    metric.scope,
+    metric.metric,
+    metric.value,
+    metric.unit,
+    metric.input_ids
+from private.activity_raw as raw
+left join private.activity_metrics as metric
+    on raw.id = any(metric.input_ids)
+where raw.user_id = (
+    select user_id from public.profiles where handle = 'marc'
+)
+order by raw.collected_at desc, raw.id, metric.metric
+limit 100;
+```
 
 ## Application database boundary
 

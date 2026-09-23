@@ -1,6 +1,17 @@
 # App Store privacy and compliance answers
 
-Technical record updated 16 Sep 2026. Marc authorized the production rollout and App Store submission. The 12 App Privacy categories below are published in App Store Connect, with App Functionality, linked to the user, and no tracking. Steps is the only scoring metric, but the current app also collects private activity/workout summaries, posts, media, and notification data. This record describes technical behavior and submitted answers; it does not establish legal compliance.
+Technical record updated 23 Sep 2026. Marc authorized the production rollout and App Store submission. The 12 App Privacy categories below are published in App Store Connect, with App Functionality, linked to the user, and no tracking. Steps is the only scoring metric, but the current app also collects private activity/workout summaries, posts, media, and notification data. This record describes technical behavior and submitted answers; it does not establish legal compliance.
+
+## Activity pipeline, prepared 23 Sep 2026
+
+The branch imports accessible Apple-merged daily history, individual supported
+quantity/category samples, and workout summaries, including explicit deletion
+IDs. Limited source and device metadata accompanies samples. GPS routes and local
+anchors stay on the phone. Existing
+Health App Privacy answers already include Health linked to the user for App
+Functionality, but the revised collection scope and public English/French privacy
+policy must be reviewed against the final candidate before App Review submission.
+No submission or live policy deployment happened with this branch.
 
 ## Google sign-in, prepared 19 Sep 2026
 
@@ -32,7 +43,7 @@ Declare these collected data types:
 
 | App Privacy type      | What FitFight collects                                                                                             | Linked to the user | Purpose           |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------ | -----------------: | ----------------- |
-| Health                | Apple Health Steps totals, relevant daily chart totals, private activity totals and workout summaries              |                Yes | App Functionality |
+| Health                | Apple Health Fight Steps, merged daily activity, individual samples, workout summaries, and deletion IDs        |                Yes | App Functionality |
 | Name                  | Name supplied by Sign in with Apple, when available                                                                |                Yes | App Functionality |
 | Email Address         | Apple email, Apple private-relay email, or Google email                                                            |                Yes | App Functionality |
 | User ID               | Apple subject, Supabase account ID, FitFight username, referral relationships, and crash-report account identifier |                Yes | App Functionality |
@@ -83,7 +94,7 @@ The editable 1.1.1 questionnaire now declares Health or Wellness Topics, Messagi
 | Field                                                      | Answer                                                                                                                                |
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | Regulated medical device                                   | No: FitFight does not diagnose, prevent, monitor, or treat disease                                                                    |
-| HealthKit                                                  | Read-only Steps plus private movement totals/workout summaries; no Health writes                                                      |
+| HealthKit                                                  | Read-only supported movement history, including individual samples; no Health writes                                          |
 | In-app purchases                                           | Paid Specials use non-consumable StoreKit purchases; production sale is disabled.                                                                                                                                  |
 | Gambling, entry fees, money settlement, payouts, or prizes | None                                                                                                                                  |
 | Advertising / IDFA                                         | None; the app does not request tracking permission                                                                                    |

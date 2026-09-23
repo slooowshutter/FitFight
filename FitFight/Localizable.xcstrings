@@ -13879,16 +13879,6 @@
                 }
             }
         },
-        "Reads steps and movement data.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Lit tes pas et tes données d’activité."
-                    }
-                }
-            }
-        },
         "You control access in Apple Health.": {
             "localizations": {
                 "fr": {
@@ -14187,6 +14177,76 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "%lld sur 6"
+                    }
+                }
+            }
+        },
+        "FitFight uploads the Apple Health activity you allow, including individual records, daily totals, and workouts. Only Apple’s merged Steps score Fights. Your records are stored privately. We’ll ask for permission next.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "FitFight envoie les activités Santé d’Apple que vous autorisez, notamment les échantillons individuels, les totaux quotidiens et les entraînements. Seuls les pas fusionnés par Apple comptent pour les défis. Vos données restent privées. Nous allons demander votre autorisation."
+                    }
+                }
+            }
+        },
+        "Apple Health activity": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Activité Santé d’Apple"
+                    }
+                }
+            }
+        },
+        "This permanently deletes your profile, photos, uploaded Apple Health activity, referrals, invitations, fights you created, and bugs or requests you posted; removes you from other fights; and signs you out. This can’t be undone.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cela supprime définitivement votre profil, vos photos, vos activités Santé d’Apple envoyées, vos parrainages, invitations, défis créés, signalements et demandes ; vous retire des autres défis et vous déconnecte. Cette action est irréversible."
+                    }
+                }
+            }
+        },
+        "Steps up to date · Other activity didn't sync. Tap to retry.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les pas sont à jour · Les autres activités n’ont pas été synchronisées. Touchez pour réessayer."
+                    }
+                }
+            }
+        },
+        "Steps up to date · Other activity is processing.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les pas sont à jour · Les autres activités sont encore en cours de traitement."
+                    }
+                }
+            }
+        },
+        "Apple Health syncs detailed activity and workout history, including late changes and deletions. Fight Steps still use Apple’s merged total.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Santé d’Apple synchronise l’historique détaillé des activités et entraînements, y compris les changements tardifs et les suppressions. Les pas des défis utilisent toujours le total fusionné par Apple."
+                    }
+                }
+            }
+        },
+        "Uploads the Apple Health activity you allow, including individual records and workouts. Stored privately.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Envoie les activités Santé d’Apple que vous autorisez, y compris les échantillons individuels et les entraînements. Stockées en privé."
                     }
                 }
             }

@@ -171,7 +171,7 @@ struct YouView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This permanently deletes your profile, photos, uploaded Steps, referrals, invitations, fights you created, and bugs or requests you posted; removes you from other fights; and signs you out. This can’t be undone.")
+            Text("This permanently deletes your profile, photos, uploaded Apple Health activity, referrals, invitations, fights you created, and bugs or requests you posted; removes you from other fights; and signs you out. This can’t be undone.")
             Text("Deleting your account does not refund Apple purchases. Paid Specials are not resold. Contact support for purchase recovery.")
         }
     }
@@ -269,8 +269,8 @@ struct YouView: View {
                 }
             } label: {
                 FFGroupedRow(
-                    title: String(appLocalized: "Apple Health Steps"),
-                    subtitle: steps.connection == .upToDate ? String(appLocalized: "Up to date") : steps.detailText,
+                    title: String(appLocalized: "Apple Health activity"),
+                    subtitle: steps.detailText,
                     systemImage: "heart",
                     enabled: steps.status != .reading && !model.isRefreshingFights,
                     subtitleTone: healthSubtitleTone,
@@ -371,7 +371,7 @@ struct YouView: View {
     private var healthSubtitleTone: FFTone {
         switch steps.connection {
         case .syncFailed, .noAccessibleSteps: return .ember
-        case .upToDate: return .moss
+        case .upToDate: return steps.diagnostics.activitySyncFailed == true ? .ember : .moss
         case .syncing, .notConnected: return .neutral
         }
     }
@@ -382,7 +382,12 @@ struct YouView: View {
             return FFPill(String(appLocalized: "Retry"), style: .softEmber)
         case .syncing:
             return FFPill(String(appLocalized: "Syncing"), style: .neutral)
-        case .upToDate, .noAccessibleSteps:
+        case .upToDate:
+            if steps.diagnostics.activitySyncFailed == true {
+                return FFPill(String(appLocalized: "Retry"), style: .softEmber)
+            }
+            return FFPill(String(appLocalized: "Connected"), style: .softMoss)
+        case .noAccessibleSteps:
             return FFPill(String(appLocalized: "Connected"), style: .softMoss)
         case .notConnected:
             return FFPill(String(appLocalized: "Connect"), style: .solidMoss)

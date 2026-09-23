@@ -8,6 +8,53 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last documented TestFlight upload:** 19 Sep 2026 at 13:14 UTC. **1.1.2 (204)** from preview merge `c80e642`, including develop `f206592`. [Upload and Apple processing succeeded](https://github.com/slooowshutter/FitFight/actions/runs/35444706489): `VALID`, unexpired, available to Internal Tester. This upload did not submit or assign external groups. The published release registry then listed `latest` 1.1.1 (201) and `review`/`internal` 1.1.2 (204). At the 13:18 UTC recheck on 19 Sep, staging's live release endpoint still returned candidate 203 with enforcement off; its metadata propagation did not block internal build 204. Production remained 1.1.1 (202). See the 23 Sep live policy check below for current advertised builds.
 
+## Apple Health activity pipeline: prepared 23 Sep 2026
+
+**Code and affected contract:** The branch `explain-activity-sync-tables` adds
+`private.activity_raw` for received Apple-merged daily and exact Fight totals,
+individual supported quantity/category samples, workout summaries, and explicit
+sample/workout deletions. A bounded TypeScript resolver publishes
+`private.activity_metrics`, including sample measurements and separate workout duration,
+active-minutes, distance, and energy rows, plus Fight scores/charts and the legacy
+Steps mirror. Profile Steps reads the newest legacy or new row during rollout.
+Personal history can be corrected; finalized Fight results stay frozen. The phone
+keeps per-type anchors locally, registers all supported types for background
+observation, imports accessible sample and merged-total history in acknowledged
+pages, and distinguishes durable receipt awaiting processing from partial
+activity failure after a successful Steps upload. The new `POST /api/v1/healthkit/activity` is additive. Existing
+`POST /api/v1/healthkit/steps` requests and decoded response fields remain valid;
+its optional `processing` response field is ignored by older Swift decoders.
+
+**Supported builds checked:** Read-only `/api/app-release` checks on 23 Sep UTC
+returned staging `latest` **1.1.1 (201)**, `review`/`internal` **1.1.2 (205)**,
+`enforced: false`; production `latest` **1.1.1 (202)**, no review/internal build,
+`enforced: true`. Legacy builds also remain relevant on staging while enforcement
+is off. Disposable database regressions exercise old Steps uploads and direct
+Steps readers as well as new activity requests. This is source-level evidence,
+not a released-binary or signed-in device check for build 205.
+
+**Cloud checks:** [Web API](https://github.com/slooowshutter/FitFight/actions/runs/35888258868)
+passed strict typechecking, full tests, and contract checks at `6cad60f`.
+[Disposable Database](https://github.com/slooowshutter/FitFight/actions/runs/35888258957)
+passed migrations, legacy-client compatibility, pgTAP, and transaction tests,
+including sample UUID replay and deletion, at the same commit.
+[Hosted iOS](https://github.com/slooowshutter/FitFight/actions/runs/35888258895)
+passed native regressions, English/French localization, full simulator compilation,
+and app packaging. Background delivery, initial history duration, and corrections
+from a real HealthKit store remain device checks. No individual user data was used
+in CI.
+
+**Deployment order and live state:** Apply the additive migration and backfill,
+then deploy the compatible backend and English/French privacy pages before a new
+native build reaches staging TestFlight. Keep `/api/v1`, the old tables, and old
+client behavior during overlap. None of those steps has happened from this
+branch: no merge, hosted migration, backend/privacy deployment, TestFlight upload,
+production promotion, or PR. A later authorized rollout must check both
+staging and production separately. Sample anchors have no date predicate;
+temporary HealthKit deletion history and empty reads after permission revocation
+remain known limits. The daily worker resumes persisted rows
+until a more frequent hosted cron is activated.
+
 ## Top header overlap: prepared 23 Sep 2026
 
 **Code:** The shared `FFScreen` now keeps an eight-point pinned top inset and paints it through the iPhone safe area. Scrolling sections cannot show behind the status bar or the version line on You. The version label remains on You only. A 1.1.2 release note and English/French copy are included. No API, database, or release setting changed.

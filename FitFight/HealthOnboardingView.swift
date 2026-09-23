@@ -63,7 +63,7 @@ struct HealthOnboardingView: View {
                 .frame(maxWidth: .infinity)
                 .accessibilityHidden(true)
                 ForEach([
-                    ["figure.walk", String(appLocalized: "Reads steps and movement data.")],
+                    ["figure.walk", String(appLocalized: "Uploads the Apple Health activity you allow, including individual records and workouts. Stored privately.")],
                     ["person.2", String(appLocalized: "Fight participants see your steps and standings.")],
                     ["lock", String(appLocalized: "You control access in Apple Health.")]
                 ], id: \.first) { row in

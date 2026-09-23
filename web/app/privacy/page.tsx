@@ -27,7 +27,7 @@ export default function PrivacyPage() {
             <article className="legal-content">
                 <p className="eyebrow">YOUR DATA, IN PLAIN LANGUAGE</p>
                 <h1>Privacy Policy</h1>
-                <p className="legal-updated">Effective 21 September 2026</p>
+                <p className="legal-updated">Effective 23 September 2026</p>
                 <p className="legal-intro">
                     FitFight lets named participants compete on who records the
                     most Steps during a private Fight. This policy explains the
@@ -66,12 +66,14 @@ export default function PrivacyPage() {
                         <li>
                             <strong>Apple Health:</strong> with your permission,
                             FitFight reads Step Count and other movement types
-                            (active and resting energy, distance, exercise,
-                            stand, flights, and workouts). Steps fights still
-                            send the merged step total for each exact Fight
-                            window plus the relevant daily step totals used by
-                            Fight charts. Other activity totals stay on your
-                            account and are not shown to other participants.
+                            (energy, distance, exercise, stand, flights, and
+                            workouts). It uploads Apple-merged daily totals
+                            across the history you allow FitFight to read,
+                            exact Fight-window Steps totals and chart
+                            checkpoints, workout summaries, and explicit
+                            workout deletion IDs. Only Steps score current
+                            Fights. Other activity stays private to your
+                            account.
                         </li>
                         <li>
                             <strong>Photos, videos, and posts:</strong> your
@@ -117,15 +119,16 @@ export default function PrivacyPage() {
                 <section>
                     <h2>Apple Health</h2>
                     <p>
-                        Apple Health access is read-only. FitFight does not
-                        write to Apple Health. The current app does not send raw
-                        Health samples, GPS routes, heart rate, or device and
-                        source metadata. It may send merged daily activity
-                        totals and workout summaries (type, time, optional
-                        active minutes, distance, energy, and effort) so
-                        FitFight can prepare later challenge types. Those extra
-                        readings are not used to score today&apos;s Steps fights
-                        and are not shown to other people.
+                        Apple Health access is read-only. FitFight uploads the
+                        supported individual activity samples you allow, with
+                        their HealthKit IDs, times, values, units, source name,
+                        source app identifier, source version, device model when
+                        available, and selected sync identifiers. It also stores
+                        merged daily totals, workout summaries, and explicit
+                        record deletions. FitFight does not read GPS routes or
+                        heart rate. Sync checkpoints stay on your phone. Raw
+                        samples are private and never added to Apple&apos;s
+                        merged Steps score or shown to Fight participants.
                     </p>
                     <p>
                         Participants in the same private Fight can see each
@@ -349,12 +352,12 @@ export default function PrivacyPage() {
                         <strong>You → Settings → Delete account</strong>. You do
                         not need to contact support. Deletion removes your
                         profile, username, uploaded photos, videos, files, Fight
-                        posts and comments, uploaded Apple Health Fight, daily,
-                        and activity totals and workout summaries, friendships,
-                        invitations, Fight memberships, scores, bugs and feature
-                        requests you posted, and every Fight you created. It
-                        also removes your participation from Fights created by
-                        someone else.
+                        posts and comments, uploaded Apple Health Fight and
+                        daily totals, individual samples, workout summaries,
+                        friendships, invitations, Fight memberships, scores,
+                        bugs and feature requests you posted, and every Fight
+                        you created. It also removes your participation from
+                        Fights created by someone else.
                     </p>
                     <p>
                         In-app deletion does not automatically remove report

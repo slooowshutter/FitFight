@@ -9,6 +9,7 @@ export const requestTimingPhaseValues = [
 export const requestOperationValues = [
     "healthkit_context",
     "healthkit_upload",
+    "healthkit_activity",
     "fights_refresh",
     "fights_snapshot",
 ] as const;

@@ -15,9 +15,6 @@ struct PickedVideo: Transferable {
             let dest = FileManager.default.temporaryDirectory
                 .appendingPathComponent(UUID().uuidString, isDirectory: false)
                 .appendingPathExtension(ext)
-            if FileManager.default.fileExists(atPath: dest.path) {
-                try FileManager.default.removeItem(at: dest)
-            }
             try FileManager.default.copyItem(at: received.file, to: dest)
             return Self(url: dest)
         }
@@ -25,39 +22,9 @@ struct PickedVideo: Transferable {
 }
 
 enum MediaUploader {
-    struct PreparedPhoto {
-        let data: Data
-        let filename: String
-        let contentType: String
-        let byteSize: Int
-        let width: Int
-        let height: Int
-        let sha256: String
-    }
-
-    struct PreparedVideo {
-        let data: Data
-        let filename: String
-        let contentType: String
-        let byteSize: Int
-        let width: Int
-        let height: Int
-        let durationMs: Int
-        let sha256: String
-    }
-
-    struct PreparedFile {
-        let data: Data
-        let filename: String
-        let contentType: String
-        let byteSize: Int
-        let sha256: String
-    }
-
     enum UploadError: LocalizedError {
         case invalidImage
         case invalidVideo
-        case invalidFile
         case tooLarge
         case tooLong
         case fileTooLarge
@@ -66,7 +33,6 @@ enum MediaUploader {
             switch self {
             case .invalidImage: return String(appLocalized: "That photo could not be read.")
             case .invalidVideo: return String(appLocalized: "That video could not be read.")
-            case .invalidFile: return String(appLocalized: "That file could not be read.")
             case .tooLarge: return String(appLocalized: "Choose a smaller photo or video.")
             case .tooLong: return String(appLocalized: "Choose a video under 3 minutes.")
             case .fileTooLarge: return String(appLocalized: "Choose a smaller file.")
@@ -74,7 +40,12 @@ enum MediaUploader {
         }
     }
 
-    static func prepare(_ image: UIImage, filename: String = "photo.jpg") throws -> PreparedPhoto {
+    static func upload(
+        _ image: UIImage,
+        purpose: String,
+        session: SessionStore,
+        api: FitFightAPI = FitFightAPI()
+    ) async throws -> FitFightMedia {
         let maxDimension: CGFloat = 2048
         let longest = max(image.size.width, image.size.height)
         let scale = longest > 0 ? min(1, maxDimension / longest) : 1
@@ -93,83 +64,15 @@ enum MediaUploader {
         if data.count > 8_388_608 {
             throw UploadError.tooLarge
         }
-        let digest = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
-        return PreparedPhoto(
-            data: data,
-            filename: filename,
-            contentType: "image/jpeg",
-            byteSize: data.count,
-            width: Int(rendered.size.width * rendered.scale),
-            height: Int(rendered.size.height * rendered.scale),
-            sha256: digest
-        )
-    }
-
-    static func prepareVideo(url: URL) async throws -> PreparedVideo {
-        let values = try url.resourceValues(forKeys: [.fileSizeKey])
-        let fileSize = values.fileSize ?? 0
-        if fileSize < 1 || fileSize > 52_428_800 {
-            throw UploadError.tooLarge
-        }
-        let asset = AVURLAsset(url: url)
-        let duration = try await asset.load(.duration)
-        let seconds = CMTimeGetSeconds(duration)
-        guard seconds.isFinite, seconds > 0 else {
-            throw UploadError.invalidVideo
-        }
-        let durationMs = Int((seconds * 1000).rounded())
-        if durationMs > 180_000 {
-            throw UploadError.tooLong
-        }
-        let tracks = try await asset.loadTracks(withMediaType: .video)
-        guard let track = tracks.first else {
-            throw UploadError.invalidVideo
-        }
-        let natural = try await track.load(.naturalSize)
-        let transform = try await track.load(.preferredTransform)
-        let rendered = natural.applying(transform)
-        let width = max(1, Int(abs(rendered.width).rounded()))
-        let height = max(1, Int(abs(rendered.height).rounded()))
-        if width > 8192 || height > 8192 {
-            throw UploadError.tooLarge
-        }
-        let data = try Data(contentsOf: url, options: .mappedIfSafe)
-        if data.count > 52_428_800 {
-            throw UploadError.tooLarge
-        }
-        let ext = url.pathExtension.lowercased()
-        let isQuickTime = ext == "mov"
-        let digest = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
-        return PreparedVideo(
-            data: data,
-            filename: isQuickTime ? "video.mov" : "video.mp4",
-            contentType: isQuickTime ? "video/quicktime" : "video/mp4",
-            byteSize: data.count,
-            width: width,
-            height: height,
-            durationMs: durationMs,
-            sha256: digest
-        )
-    }
-
-    static func upload(
-        _ image: UIImage,
-        purpose: String,
-        session: SessionStore,
-        api: FitFightAPI = FitFightAPI()
-    ) async throws -> FitFightMedia {
-        let prepared = try prepare(image)
         return try await put(
-            data: prepared.data,
+            data: data,
             purpose: purpose,
             kind: "photo",
-            filename: prepared.filename,
-            contentType: prepared.contentType,
-            byteSize: prepared.byteSize,
-            width: prepared.width,
-            height: prepared.height,
+            filename: "photo.jpg",
+            contentType: "image/jpeg",
+            width: Int(rendered.size.width * rendered.scale),
+            height: Int(rendered.size.height * rendered.scale),
             durationMs: nil,
-            sha256: prepared.sha256,
             session: session,
             api: api
         )
@@ -181,18 +84,39 @@ enum MediaUploader {
         session: SessionStore,
         api: FitFightAPI = FitFightAPI()
     ) async throws -> FitFightMedia {
-        let prepared = try await prepareVideo(url: url)
+        let fileSize = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
+        if fileSize < 1 || fileSize > 52_428_800 {
+            throw UploadError.tooLarge
+        }
+        let asset = AVURLAsset(url: url)
+        let seconds = CMTimeGetSeconds(try await asset.load(.duration))
+        guard seconds.isFinite, seconds > 0 else {
+            throw UploadError.invalidVideo
+        }
+        let durationMs = Int((seconds * 1000).rounded())
+        if durationMs > 180_000 {
+            throw UploadError.tooLong
+        }
+        guard let track = try await asset.loadTracks(withMediaType: .video).first else {
+            throw UploadError.invalidVideo
+        }
+        let natural = try await track.load(.naturalSize)
+        let rendered = natural.applying(try await track.load(.preferredTransform))
+        let width = max(1, Int(abs(rendered.width).rounded()))
+        let height = max(1, Int(abs(rendered.height).rounded()))
+        if width > 8192 || height > 8192 {
+            throw UploadError.tooLarge
+        }
+        let isQuickTime = url.pathExtension.lowercased() == "mov"
         return try await put(
-            data: prepared.data,
+            data: try Data(contentsOf: url, options: .mappedIfSafe),
             purpose: purpose,
             kind: "video",
-            filename: prepared.filename,
-            contentType: prepared.contentType,
-            byteSize: prepared.byteSize,
-            width: prepared.width,
-            height: prepared.height,
-            durationMs: prepared.durationMs,
-            sha256: prepared.sha256,
+            filename: isQuickTime ? "video.mov" : "video.mp4",
+            contentType: isQuickTime ? "video/quicktime" : "video/mp4",
+            width: width,
+            height: height,
+            durationMs: durationMs,
             session: session,
             api: api
         )
@@ -204,24 +128,6 @@ enum MediaUploader {
         session: SessionStore,
         api: FitFightAPI = FitFightAPI()
     ) async throws -> FitFightMedia {
-        let prepared = try prepareFile(url: url)
-        return try await put(
-            data: prepared.data,
-            purpose: purpose,
-            kind: "file",
-            filename: prepared.filename,
-            contentType: prepared.contentType,
-            byteSize: prepared.byteSize,
-            width: 1,
-            height: 1,
-            durationMs: nil,
-            sha256: prepared.sha256,
-            session: session,
-            api: api
-        )
-    }
-
-    static func prepareFile(url: URL) throws -> PreparedFile {
         let accessing = url.startAccessingSecurityScopedResource()
         defer {
             if accessing { url.stopAccessingSecurityScopedResource() }
@@ -232,9 +138,6 @@ enum MediaUploader {
             throw UploadError.fileTooLarge
         }
         let data = try Data(contentsOf: url, options: .mappedIfSafe)
-        if data.count < 1 || data.count > 52_428_800 {
-            throw UploadError.fileTooLarge
-        }
         var name = (values.name ?? url.lastPathComponent)
             .replacingOccurrences(of: "/", with: "-")
             .replacingOccurrences(of: "\\", with: "-")
@@ -248,13 +151,17 @@ enum MediaUploader {
             .map(String.init)
             .flatMap { $0.contains("/") ? $0 : nil }
             ?? "application/octet-stream"
-        let digest = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
-        return PreparedFile(
+        return try await put(
             data: data,
+            purpose: purpose,
+            kind: "file",
             filename: name,
             contentType: mime,
-            byteSize: data.count,
-            sha256: digest
+            width: 1,
+            height: 1,
+            durationMs: nil,
+            session: session,
+            api: api
         )
     }
 
@@ -264,11 +171,9 @@ enum MediaUploader {
         kind: String,
         filename: String,
         contentType: String,
-        byteSize: Int,
         width: Int,
         height: Int,
         durationMs: Int?,
-        sha256: String,
         session: SessionStore,
         api: FitFightAPI
     ) async throws -> FitFightMedia {
@@ -278,11 +183,11 @@ enum MediaUploader {
             kind: kind,
             filename: filename,
             contentType: contentType,
-            byteSize: byteSize,
+            byteSize: data.count,
             width: width,
             height: height,
             durationMs: durationMs,
-            sha256: sha256,
+            sha256: SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined(),
             accessToken: token
         )
         var request = URLRequest(url: issued.upload.url)

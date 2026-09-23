@@ -6,15 +6,13 @@ import UIKit
 /// Only runs when the app is launched with FF_SHOOT=1.
 @MainActor
 enum ScreenshotExport {
-    static var isEnabled: Bool {
-        ProcessInfo.processInfo.environment["FF_SHOOT"] == "1"
-    }
+    static let isEnabled = ProcessInfo.processInfo.environment["FF_SHOOT"] == "1"
 
     static let canvas = CGSize(width: 393, height: 852)
     static let appStoreCanvas = CGSize(width: 440, height: 956)
     static let tallHeight: CGFloat = 1800
     static let designSystemSliceHeight: CGFloat = 2_600
-    static let designSystemSlices = 5
+    static let designSystemSlices = 4
 
     static func exportAll() {
         let themeStore = ThemeStore(transient: .night)
@@ -41,6 +39,12 @@ enum ScreenshotExport {
 
         let light = ThemeStore(transient: .day)
 
+        write(
+            sheet(WelcomeView(), themeStore: light, model: model),
+            name: "light-welcome",
+            height: canvas.height,
+            to: folder
+        )
         write(
             frame(FightsListView(), tab: .fights, themeStore: light, model: model),
             name: "light-fights",

@@ -1,6 +1,76 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Signing in with Google opens the FitFight account that already uses that email, including Sign in with Apple.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "La connexion Google ouvre le compte FitFight qui utilise déjà cet e-mail, y compris avec Sign in with Apple."
+                    }
+                }
+            }
+        },
+        "Google sign-in has a cleaner button with centered text and sizing that matches Sign in with Apple.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Le bouton de connexion Google est plus épuré, avec un texte centré et les mêmes dimensions que celui d’Apple."
+                    }
+                }
+            }
+        },
+        "Sign in with Apple or Google. First time here, that creates your account.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Connecte-toi avec Apple ou Google. Si c’est ta première visite, ton compte sera créé."
+                    }
+                }
+            }
+        },
+        "Sign in with Google": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Se connecter avec Google"
+                    }
+                }
+            }
+        },
+        "Google sign-in is not configured for this build.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "La connexion Google n’est pas configurée pour cette version."
+                    }
+                }
+            }
+        },
+        "This sign-in provider is off on this database.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ce fournisseur de connexion est désactivé sur cette base de données."
+                    }
+                }
+            }
+        },
+        "Sign in or create your FitFight account with Google. Sign in with Apple is still available.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Connecte-toi ou crée ton compte FitFight avec Google. La connexion avec Apple reste disponible."
+                    }
+                }
+            }
+        },
         "All": {
             "localizations": {
                 "fr": {
@@ -2388,12 +2458,12 @@
                 }
             }
         },
-        "Screen CTA — tap to continue": {
+        "Screen CTA: tap to continue": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Bouton principal — toucher pour continuer"
+                        "value": "Bouton principal : toucher pour continuer"
                     }
                 }
             }
@@ -2414,16 +2484,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Touche ou fais glisser pour explorer un jour."
-                    }
-                }
-            }
-        },
-        "Totals across the days shown": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Totaux des jours affichés"
                     }
                 }
             }
@@ -2648,16 +2708,6 @@
                 }
             }
         },
-        "That file could not be read.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Impossible de lire ce fichier."
-                    }
-                }
-            }
-        },
         "Choose a smaller file.": {
             "localizations": {
                 "fr": {
@@ -2764,30 +2814,13 @@
                 "en": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "0–%@ steps"
+                        "value": "0-%@ steps"
                     }
                 },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "0–%@ pas"
-                    }
-                }
-            }
-        },
-        "chart.group-scale": {
-            "extractionState": "manual",
-            "localizations": {
-                "en": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "0–%@ combined steps"
-                    }
-                },
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "0–%@ pas au total"
+                        "value": "0-%@ pas"
                     }
                 }
             }
@@ -3069,26 +3102,6 @@
                 }
             }
         },
-        "Demo artwork · original cast": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Illustration de démo · personnages d’origine"
-                    }
-                }
-            }
-        },
-        "Design preview. This choice lasts for this session and isn’t shared with other people.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Aperçu du design. Ce choix dure le temps de cette session et n’est pas partagé avec les autres."
-                    }
-                }
-            }
-        },
         "Display state": {
             "localizations": {
                 "fr": {
@@ -3235,16 +3248,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Aperçu uniquement. Aucun défi, publication, compte ou donnée de Santé n’est modifié."
-                    }
-                }
-            }
-        },
-        "Preview · sample data": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Aperçu · données de démo"
                     }
                 }
             }
@@ -3425,26 +3428,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Tortue"
-                    }
-                }
-            }
-        },
-        "Use this companion": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Choisir ce compagnon"
-                    }
-                }
-            }
-        },
-        "YOUR COMPANION": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "TON COMPAGNON"
                     }
                 }
             }
@@ -3741,22 +3724,12 @@
                 }
             }
         },
-        "Feed photos keep their original shape and fill the post width. A wide photo stays short, a tall one stays tall — nothing is cropped to a fixed frame.": {
+        "Feed photos keep their original shape and fill the post width. A wide photo stays short, a tall one stays tall. Nothing is cropped to a fixed frame.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Les photos du fil gardent leur forme d’origine et prennent toute la largeur du post. Une photo large reste basse, une photo haute reste haute — plus de recadrage dans un cadre fixe."
-                    }
-                }
-            }
-        },
-        "Feed photos keep their original shape and fill the post width. A wide photo stays short, a tall one stays tall, nothing is cropped to a fixed frame.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Les photos du fil gardent leur forme d’origine et prennent toute la largeur du post. Une photo large reste basse, une photo haute reste haute, plus de recadrage dans un cadre fixe."
+                        "value": "Les photos du fil gardent leur forme d’origine et prennent toute la largeur du post. Une photo large reste basse, une photo haute reste haute. Plus de recadrage dans un cadre fixe."
                     }
                 }
             }
@@ -3887,16 +3860,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Ton parrainage n’a pas encore été enregistré. Vérifie ta connexion et réessaie."
-                    }
-                }
-            }
-        },
-        "This permanently deletes your profile, uploaded Steps, referrals, invitations, fights you created, and bugs or requests you posted; removes you from other fights; and signs you out. This can’t be undone.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Cette action supprime définitivement ton profil, les pas envoyés, les parrainages, les invitations, les défis créés et les bugs ou demandes publiés ; elle te retire des autres défis et te déconnecte. Cette action est irréversible."
                     }
                 }
             }
@@ -4041,16 +4004,6 @@
                 }
             }
         },
-        "Checking for updates…": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Recherche de mises à jour…"
-                    }
-                }
-            }
-        },
         "The website now uses the centered FitFight logo with a transparent background in browser tabs.": {
             "localizations": {
                 "fr": {
@@ -4111,32 +4064,12 @@
                 }
             }
         },
-        "There’s a new update, please update": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Une nouvelle mise à jour est disponible, merci de mettre à jour"
-                    }
-                }
-            }
-        },
         "Opening FitFight shows your last Fights right away. Update checks run in the background; if a new build is ready you’ll get a small popup. Challenge reminders are asked once, not every launch. Offline still shows your last Fights.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
                         "value": "FitFight affiche tout de suite tes derniers défis. La recherche de mise à jour se fait en arrière-plan ; s’il y en a une, une petite fenêtre s’affiche. Les rappels de défis ne sont demandés qu’une fois. Hors ligne, tes derniers défis restent visibles."
-                    }
-                }
-            }
-        },
-        "Fights, the challenge page, and stats now show everyone’s photo when they have one — not just initials.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Les défis, la page du défi et les stats montrent maintenant la photo de chacun quand il en a une — plus seulement les initiales."
                     }
                 }
             }
@@ -4187,26 +4120,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Une bêta obsolète affiche seulement une boîte de dialogue de mise à jour. Vous ne pouvez pas utiliser FitFight tant que vous n’avez pas installé la dernière version."
-                    }
-                }
-            }
-        },
-        "Install the latest version to use FitFight. This screen stays until your app is up to date.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Installez la dernière version pour utiliser FitFight. Cet écran reste affiché tant que votre app n’est pas à jour."
-                    }
-                }
-            }
-        },
-        "Connect to the internet and try again to use FitFight.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Connectez-vous à Internet et réessayez pour utiliser FitFight."
                     }
                 }
             }
@@ -4541,42 +4454,12 @@
                 }
             }
         },
-        "Add at least one exact username and press Return. They must already have a FitFight account.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Ajoutez au moins un nom d’utilisateur exact et appuyez sur Retour. Cette personne doit déjà avoir un compte FitFight."
-                    }
-                }
-            }
-        },
-        "Add at least one other username.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Ajoutez au moins un autre nom d’utilisateur."
-                    }
-                }
-            }
-        },
         "Add someone else’s username.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
                         "value": "Ajoutez le nom d’utilisateur d’une autre personne."
-                    }
-                }
-            }
-        },
-        "Add the action the loser will do.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Ajoutez le gage que fera le perdant."
                     }
                 }
             }
@@ -4621,26 +4504,6 @@
                 }
             }
         },
-        "Ask iPhone for the extra Health types FitFight uses. Fights still use steps.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Demander à l’iPhone les types Santé supplémentaires que FitFight utilise. Les défis utilisent encore seulement les pas."
-                    }
-                }
-            }
-        },
-        "Update Apple Health access": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Mettre à jour l’accès à Santé"
-                    }
-                }
-            }
-        },
         "Joining or starting a fight now counts Apple Health Steps from the fight start, not from join time, and uploads them right away.": {
             "localizations": {
                 "fr": {
@@ -4677,16 +4540,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "L’écran de mise à jour obligatoire s’affiche maintenant correctement en Nuit et en Jour, sans bandes ni voile gris."
-                    }
-                }
-            }
-        },
-        "Apple Sign In is off on this database.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Connexion avec Apple est désactivée sur cette base de données."
                     }
                 }
             }
@@ -4747,16 +4600,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Modifier"
-                    }
-                }
-            }
-        },
-        "Check the agreement before you invite everyone.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Vérifiez l’accord avant d’inviter tout le monde."
                     }
                 }
             }
@@ -5101,16 +4944,6 @@
                 }
             }
         },
-        "Enter the action to continue—for example, cook dinner.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Saisissez le gage pour continuer, par exemple préparer le dîner."
-                    }
-                }
-            }
-        },
         "Every day so far": {
             "localizations": {
                 "fr": {
@@ -5201,32 +5034,12 @@
                 }
             }
         },
-        "Rings": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Anneaux"
-                    }
-                }
-            }
-        },
         "Stack": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
                         "value": "Pile"
-                    }
-                }
-            }
-        },
-        "Dots": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Points"
                     }
                 }
             }
@@ -5341,16 +5154,6 @@
                 }
             }
         },
-        "Posts, bugs, and reports.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Publications, bugs et signalements."
-                    }
-                }
-            }
-        },
         "Feedback is the last tab: Fights, New, You, Feedback. Feed is the same fight posts list, with the fight picker when you post.": {
             "localizations": {
                 "fr": {
@@ -5421,66 +5224,6 @@
                 }
             }
         },
-        "Photos and notes from the fights you’re in.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Photos et notes des défis auxquels tu participes."
-                    }
-                }
-            }
-        },
-        "Photos, videos, and notes from the fights you’re in.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Photos, vidéos et notes des défis auxquels tu participes."
-                    }
-                }
-            }
-        },
-        "Nothing here yet. Open a fight and post a photo or a short note.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Rien ici pour le moment. Ouvre un défi et publie une photo ou une courte note."
-                    }
-                }
-            }
-        },
-        "Nothing here yet. Tap + to post a photo, video, or note.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Rien ici pour le moment. Touche + pour publier une photo, une vidéo ou une note."
-                    }
-                }
-            }
-        },
-        "Be the first to post a photo or a note.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Sois le premier à publier une photo ou une note."
-                    }
-                }
-            }
-        },
-        "Be the first to post a photo, video, or note.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Sois le premier à publier une photo, une vidéo ou une note."
-                    }
-                }
-            }
-        },
         "Video": {
             "localizations": {
                 "fr": {
@@ -5507,16 +5250,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Nouvelle publication"
-                    }
-                }
-            }
-        },
-        "Post to": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Publier dans"
                     }
                 }
             }
@@ -5591,32 +5324,12 @@
                 }
             }
         },
-        "Share with everyone in your fights, or pick specific fights.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Partage avec tout le monde dans tes défis, ou choisis des défis précis."
-                    }
-                }
-            }
-        },
         "Nothing here yet. Tap + to post.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
                         "value": "Rien ici pour le moment. Touche + pour publier."
-                    }
-                }
-            }
-        },
-        "Public posts. Fight-only posts stay in that fight.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Publications publiques. Les publications d’un défi restent dans ce défi."
                     }
                 }
             }
@@ -5631,92 +5344,12 @@
                 }
             }
         },
-        "Public + all fights": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Public + tous les défis"
-                    }
-                }
-            }
-        },
         "All fights": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
                         "value": "Tous les défis"
-                    }
-                }
-            }
-        },
-        "Public + \\(destinations.count - 1) fights": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Public + \\(destinations.count - 1) défis"
-                    }
-                }
-            }
-        },
-        "Only people you’ve already finished a fight with. A tag never adds someone to a fight.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Seulement les personnes avec qui tu as déjà terminé un défi. Une identification n’ajoute personne à un défi."
-                    }
-                }
-            }
-        },
-        "Nobody you’ve finished a fight with can be tagged here yet.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Personne avec qui tu as déjà terminé un défi ne peut encore être identifié ici."
-                    }
-                }
-            }
-        },
-        "See more": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Voir plus"
-                    }
-                }
-            }
-        },
-        "See less": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Voir moins"
-                    }
-                }
-            }
-        },
-        "This fight · private": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Ce défi · privé"
-                    }
-                }
-            }
-        },
-        "In \\(post.fightName) · private": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Dans \\(post.fightName) · privé"
                     }
                 }
             }
@@ -5791,72 +5424,12 @@
                 }
             }
         },
-        "Plus starts with no destination — pick Public or a fight. Public posts and fight posts look different. You can edit or delete your own posts. Tags are people you’ve already finished a fight with.": {
+        "Plus starts with no destination: pick Public or a fight. Public posts and fight posts look different. You can edit or delete your own posts. Tags are people you’ve already finished a fight with.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Plus commence sans destination — choisis Public ou un défi. Les publications publiques et celles d’un défi se distinguent. Tu peux modifier ou supprimer tes publications. Les identifications sont les personnes avec qui tu as déjà terminé un défi."
-                    }
-                }
-            }
-        },
-        "Plus starts with no destination, pick Public or a fight. Public posts and fight posts look different. You can edit or delete your own posts. Tags are people you’ve already finished a fight with.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Plus commence sans destination, choisis Public ou un défi. Les publications publiques et celles d’un défi se distinguent. Tu peux modifier ou supprimer tes publications. Les identifications sont les personnes avec qui tu as déjà terminé un défi."
-                    }
-                }
-            }
-        },
-        "Pick one or more. Main is visible to people you already fight with.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Choisis-en un ou plusieurs. Principal est visible pour les personnes avec qui tu as déjà un défi."
-                    }
-                }
-            }
-        },
-        "Tag people": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Identifier des personnes"
-                    }
-                }
-            }
-        },
-        "A tag never adds someone to a fight. If they are not in a selected fight, they will not see that copy.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Une identification n’ajoute personne à un défi. S’ils ne sont pas dans un défi sélectionné, ils ne verront pas cette copie."
-                    }
-                }
-            }
-        },
-        "Nobody from these destinations can be tagged yet.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Personne de ces destinations ne peut encore être identifié."
-                    }
-                }
-            }
-        },
-        "Be the first to post.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Sois le premier à publier."
+                        "value": "Plus commence sans destination : choisis Public ou un défi. Les publications publiques et celles d’un défi se distinguent. Tu peux modifier ou supprimer tes publications. Les identifications sont les personnes avec qui tu as déjà terminé un défi."
                     }
                 }
             }
@@ -5897,16 +5470,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "\\(post.commentCount) commentaires"
-                    }
-                }
-            }
-        },
-        "Replying to @\\(replyTo.author.handle)": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Réponse à @\\(replyTo.author.handle)"
                     }
                 }
             }
@@ -5967,46 +5530,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Le fil a maintenant des onglets Principal et défi que tu peux glisser. Plus ouvre un seul composeur : ajoute une photo, une vidéo ou une note, identifie des personnes, et choisis plusieurs destinations. Les publications peuvent recevoir n’importe quel emoji et des commentaires imbriqués. Dans un défi, Stats et Fil sont des onglets."
-                    }
-                }
-            }
-        },
-        "Replying to @%@": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Réponse à @%@"
-                    }
-                }
-            }
-        },
-        "feed.replying-to %@": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Réponse à @%@"
-                    }
-                }
-            }
-        },
-        "feed.replying-to \\(replyTo.author.handle)": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Réponse à @\\(replyTo.author.handle)"
-                    }
-                }
-            }
-        },
-        "Choose a fight": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Choisir un défi"
                     }
                 }
             }
@@ -6117,26 +5640,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Cette photo n’a pas pu être lue."
-                    }
-                }
-            }
-        },
-        "Choose a smaller photo.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Choisis une photo plus petite."
-                    }
-                }
-            }
-        },
-        "A Feed tab collects photos and notes from every fight you’re in. Each fight also has its own posts, and you can add a profile photo when you pick a username. New accounts are asked to connect Apple Health during setup.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Un onglet Fil rassemble les photos et notes de tous tes défis. Chaque défi a aussi ses publications, et tu peux ajouter une photo de profil en choisissant ton nom. Les nouveaux comptes sont invités à connecter Santé d’Apple pendant l’installation."
                     }
                 }
             }
@@ -6411,16 +5914,6 @@
                 }
             }
         },
-        "No action was set for this older fight.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Aucun gage n’avait été défini pour cet ancien défi."
-                    }
-                }
-            }
-        },
         "No fights yet": {
             "localizations": {
                 "fr": {
@@ -6461,17 +5954,7 @@
                 }
             }
         },
-        "Opponents": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Adversaires"
-                    }
-                }
-            }
-        },
-        "People challenge you with this. Letters, numbers, underscore. 2–30 characters.": {
+        "People challenge you with this. Letters, numbers, underscore. 2-30 characters.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
@@ -6591,16 +6074,6 @@
                 }
             }
         },
-        "Sign in with Apple to get in. First time here, that creates your account.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Connectez-vous avec Apple. Lors de votre première visite, votre compte sera créé."
-                    }
-                }
-            }
-        },
         "Sign out": {
             "localizations": {
                 "fr": {
@@ -6667,16 +6140,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Lancer un défi"
-                    }
-                }
-            }
-        },
-        "Start one under New. Add people with their username — they must have signed in once.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Lancez-en un dans Nouveau. Ajoutez des personnes avec leur nom d’utilisateur : elles doivent s’être connectées au moins une fois."
                     }
                 }
             }
@@ -6751,32 +6214,12 @@
                 }
             }
         },
-        "Sync failed — tap to retry": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Échec de la synchronisation — touchez pour réessayer"
-                    }
-                }
-            }
-        },
         "Sync failed. Tap to retry.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
                         "value": "Synchronisation échouée. Touche pour réessayer."
-                    }
-                }
-            }
-        },
-        "\\(text) Tap to retry.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "\\(text) Touche pour réessayer."
                     }
                 }
             }
@@ -6951,16 +6394,6 @@
                 }
             }
         },
-        "This permanently deletes your profile, uploaded Steps, invitations, and fights you created; removes you from other fights; and signs you out. This can’t be undone.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Cette action supprime définitivement votre profil, les pas envoyés, les invitations et les défis que vous avez créés ; elle vous retire des autres défis et vous déconnecte. Cette action est irréversible."
-                    }
-                }
-            }
-        },
         "Tied": {
             "localizations": {
                 "fr": {
@@ -6991,7 +6424,7 @@
                 }
             }
         },
-        "Use 2–30 letters, numbers, or underscore.": {
+        "Use 2-30 letters, numbers, or underscore.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
@@ -7001,7 +6434,7 @@
                 }
             }
         },
-        "Use 2–30 letters, numbers, or underscores.": {
+        "Use 2-30 letters, numbers, or underscores.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
@@ -7041,36 +6474,6 @@
                 }
             }
         },
-        "What will the loser do?": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Que fera le perdant ?"
-                    }
-                }
-            }
-        },
-        "Who are you fighting?": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Qui défiez-vous ?"
-                    }
-                }
-            }
-        },
-        "Won by": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Gagné avec"
-                    }
-                }
-            }
-        },
         "You": {
             "localizations": {
                 "fr": {
@@ -7097,16 +6500,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Toute personne avec le code"
-                    }
-                }
-            }
-        },
-        "Anyone with the code can join. Usernames are optional.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Toute personne avec le code peut rejoindre. Les noms d’utilisateur sont facultatifs."
                     }
                 }
             }
@@ -7197,26 +6590,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Créer"
-                    }
-                }
-            }
-        },
-        "Create or join?": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Créer ou rejoindre ?"
-                    }
-                }
-            }
-        },
-        "Join one that's already going": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Rejoindre un défi déjà en cours"
                     }
                 }
             }
@@ -7331,72 +6704,12 @@
                 }
             }
         },
-        "Enter the 4-character code, or pick a live joinable fight. Scores stay inside the fight.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Saisissez le code de 4 caractères, ou choisissez un défi ouvert. Les scores restent dans le défi."
-                    }
-                }
-            }
-        },
-        "Enter the 4-character code, or pick a live public fight. Private fights stay off this list.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Saisissez le code de 4 caractères, ou choisissez un défi public. Les défis privés n’apparaissent pas dans cette liste."
-                    }
-                }
-            }
-        },
         "Listed on Join": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
                         "value": "Listé dans Rejoindre"
-                    }
-                }
-            }
-        },
-        "Listed on Join. Anyone with the code or link can join. Usernames are optional.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Listé dans Rejoindre. Toute personne avec le code ou le lien peut rejoindre. Les noms d’utilisateur sont facultatifs."
-                    }
-                }
-            }
-        },
-        "Not listed": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Non listé"
-                    }
-                }
-            }
-        },
-        "Not listed. Anyone with the code or link can join. Usernames are optional.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Non listé. Toute personne avec le code ou le lien peut rejoindre. Les noms d’utilisateur sont facultatifs."
-                    }
-                }
-            }
-        },
-        "Code or link only": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Code ou lien uniquement"
                     }
                 }
             }
@@ -7441,16 +6754,6 @@
                 }
             }
         },
-        "No live public fights right now. Ask for a code.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Aucun défi public pour le moment. Demandez un code."
-                    }
-                }
-            }
-        },
         "Fights are public or private. Anyone can join with the code or link. Only public fights show on Join.": {
             "localizations": {
                 "fr": {
@@ -7467,16 +6770,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Lancer un nouveau défi"
-                    }
-                }
-            }
-        },
-        "Invite-only": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Sur invitation"
                     }
                 }
             }
@@ -7551,16 +6844,6 @@
                 }
             }
         },
-        "Live joinable fights": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Défis ouverts en cours"
-                    }
-                }
-            }
-        },
         "Looking up…": {
             "localizations": {
                 "fr": {
@@ -7581,16 +6864,6 @@
                 }
             }
         },
-        "No live joinable fights right now. Ask for a code.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Aucun défi ouvert pour le moment. Demandez un code."
-                    }
-                }
-            }
-        },
         "Not now": {
             "localizations": {
                 "fr": {
@@ -7607,16 +6880,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Ouvrir le défi"
-                    }
-                }
-            }
-        },
-        "People you add by username": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Les personnes que vous ajoutez par nom d’utilisateur"
                     }
                 }
             }
@@ -7651,16 +6914,6 @@
                 }
             }
         },
-        "Short code plus the live join list": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Un code court plus la liste des défis ouverts"
-                    }
-                }
-            }
-        },
         "Sign in to join this fight.": {
             "localizations": {
                 "fr": {
@@ -7677,16 +6930,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Connectez-vous pour quitter ce défi."
-                    }
-                }
-            }
-        },
-        "Start a new fight, or join one that's already going.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Lancez un nouveau défi, ou rejoignez-en un déjà en cours."
                     }
                 }
             }
@@ -7737,16 +6980,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Ce défi est complet."
-                    }
-                }
-            }
-        },
-        "This fight is invite-only.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Ce défi est sur invitation."
                     }
                 }
             }
@@ -8131,17 +7364,7 @@
                 }
             }
         },
-        "New look, built from the approved design kit. One palette instead of ten accent colours — moss is you and winning, ember is losing and urgent, gold is progress. Nunito replaces Manrope. Every screen rebuilt: a moss hero card on Fights, a head-to-head block and leaderboard on a fight, new form controls on New fight. Look is now Night or Day. You → Settings → Design system shows every token and component in the app.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Nouvelle apparence issue du kit approuvé. Une seule palette : mousse pour vous et la victoire, braise pour la défaite et l’urgence, or pour la progression. Nunito remplace Manrope. Tous les écrans ont été reconstruits. L’apparence propose Nuit ou Jour et le système de design présente les composants de l’app."
-                    }
-                }
-            }
-        },
-        "New look, built from the approved design kit. One palette instead of ten accent colours, moss is you and winning, ember is losing and urgent, gold is progress. Nunito replaces Manrope. Every screen rebuilt: a moss hero card on Fights, a head-to-head block and leaderboard on a fight, new form controls on New fight. Look is now Night or Day. You → Settings → Design system shows every token and component in the app.": {
+        "New look, built from the approved design kit. One palette instead of ten accent colours: moss is you and winning, ember is losing and urgent, gold is progress. Nunito replaces Manrope. Every screen rebuilt: a moss hero card on Fights, a head-to-head block and leaderboard on a fight, new form controls on New fight. Look is now Night or Day. You → Settings → Design system shows every token and component in the app.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
@@ -8191,17 +7414,7 @@
                 }
             }
         },
-        "This TestFlight talks to develop. The version at the top includes staging and the date of the last ship. Still 0.9.0 — only the build number and the date change.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Ce TestFlight utilise develop. La version en haut inclut staging et la date du dernier envoi. La version reste 0.9.0 ; seuls le numéro de build et la date changent."
-                    }
-                }
-            }
-        },
-        "This TestFlight talks to develop. The version at the top includes staging and the date of the last ship. Still 0.9.0, only the build number and the date change.": {
+        "This TestFlight talks to develop. The version at the top includes staging and the date of the last ship. Still 0.9.0. Only the build number and the date change.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
@@ -8221,17 +7434,7 @@
                 }
             }
         },
-        "Sign in, add friends by handle, start a real Steps fight, Apple Health uploads to the server, standings come from the database. Fights are no longer the fixture people. When the days are up the fight closes on the server — you do not have to leave the app open. Design tab still previews the old mock. Requests is unchanged.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Connectez-vous, ajoutez des amis avec leur identifiant, lancez un vrai défi de pas et envoyez les données Santé d’Apple au serveur. Le classement vient de la base et le défi se termine côté serveur sans laisser l’app ouverte."
-                    }
-                }
-            }
-        },
-        "Sign in, add friends by handle, start a real Steps fight, Apple Health uploads to the server, standings come from the database. Fights are no longer the fixture people. When the days are up the fight closes on the server, you do not have to leave the app open. Design tab still previews the old mock. Requests is unchanged.": {
+        "Sign in, add friends by handle, start a real Steps fight, Apple Health uploads to the server, standings come from the database. Fights are no longer the fixture people. When the days are up the fight closes on the server. You do not have to leave the app open. Design tab still previews the old mock. Requests is unchanged.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
@@ -8251,16 +7454,6 @@
                 }
             }
         },
-        "Requests has a Talk to the boss button. It opens a private chat with Marc — not the public vote board. What you send is emailed to him; he writes back from his inbox until the app has a server.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Demandes propose un bouton Parler au responsable ouvrant une discussion privée avec Marc. Les messages lui sont envoyés par e-mail et il répond depuis sa boîte de réception."
-                    }
-                }
-            }
-        },
         "Requests has a Talk to the boss button. It opens a private chat with Marc, not the public vote board. What you send is emailed to him; he writes back from his inbox until the app has a server.": {
             "localizations": {
                 "fr": {
@@ -8271,17 +7464,7 @@
                 }
             }
         },
-        "Ten new looks for the app, plus a Design tab to flip between them. Each one is a real redesign of the fights screen with its own colours and its own idea of what matters: Ring closes an activity ring for every fight, Ledger reads like a betting statement, Arena puts you face to face with whoever is beating you, Soft says it in a sentence, Terminal prints it as monospace, Stack floats it on frosted glass, Podium builds a gold podium, Pulse turns the pot into one stacked bar, Bento lays it out as uneven tiles and Zine sets it like a printed page. Every design shows the same fights and the same money — only the look changes. The tab shows all eleven side by side, live, and one tap swaps the app over.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Dix nouvelles apparences et un onglet Design permettent de les comparer. Chaque proposition réinterprète réellement l’écran des défis avec ses couleurs et sa hiérarchie, tout en affichant les mêmes données. Les onze versions sont visibles côte à côte et un toucher change l’apparence de l’app."
-                    }
-                }
-            }
-        },
-        "Ten new looks for the app, plus a Design tab to flip between them. Each one is a real redesign of the fights screen with its own colours and its own idea of what matters: Ring closes an activity ring for every fight, Ledger reads like a betting statement, Arena puts you face to face with whoever is beating you, Soft says it in a sentence, Terminal prints it as monospace, Stack floats it on frosted glass, Podium builds a gold podium, Pulse turns the pot into one stacked bar, Bento lays it out as uneven tiles and Zine sets it like a printed page. Every design shows the same fights and the same money, only the look changes. The tab shows all eleven side by side, live, and one tap swaps the app over.": {
+        "Ten new looks for the app, plus a Design tab to flip between them. Each one is a real redesign of the fights screen with its own colours and its own idea of what matters: Ring closes an activity ring for every fight, Ledger reads like a betting statement, Arena puts you face to face with whoever is beating you, Soft says it in a sentence, Terminal prints it as monospace, Stack floats it on frosted glass, Podium builds a gold podium, Pulse turns the pot into one stacked bar, Bento lays it out as uneven tiles and Zine sets it like a printed page. Every design shows the same fights and the same money. Only the look changes. The tab shows all eleven side by side, live, and one tap swaps the app over.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
@@ -8301,17 +7484,7 @@
                 }
             }
         },
-        "The app was shouting. Measuring the brightness of every line against the mockups showed that most quiet text — the eyebrows over card titles, the line under each screen title, stat labels, handles, timestamps, +2 more — was rendering at 62% white where the design uses 40%. The bell, the Edit pill and the fight nav buttons also had a grey fill the design does not have, and the bell itself was three points too big. Buttons are the mockups' size now, and a part-filled progress bar is no longer two translucent whites stacked up.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "La hiérarchie visuelle était trop forte. La luminosité des textes secondaires, les icônes, boutons et barres de progression correspondent maintenant aux mesures et niveaux de contraste des maquettes."
-                    }
-                }
-            }
-        },
-        "The app was shouting. Measuring the brightness of every line against the mockups showed that most quiet text, the eyebrows over card titles, the line under each screen title, stat labels, handles, timestamps, +2 more, was rendering at 62% white where the design uses 40%. The bell, the Edit pill and the fight nav buttons also had a grey fill the design does not have, and the bell itself was three points too big. Buttons are the mockups' size now, and a part-filled progress bar is no longer two translucent whites stacked up.": {
+        "The app was shouting. Measuring the brightness of every line against the mockups showed that most quiet text (the eyebrows over card titles, the line under each screen title, stat labels, handles, timestamps, +2 more) was rendering at 62% white where the design uses 40%. The bell, the Edit pill and the fight nav buttons also had a grey fill the design does not have, and the bell itself was three points too big. Buttons are the mockups' size now, and a part-filled progress bar is no longer two translucent whites stacked up.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
@@ -8547,16 +7720,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Pas encore"
-                    }
-                }
-            }
-        },
-        "Open FitFight and try the Apple Health sync again.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Ouvrez FitFight et relancez la synchronisation Santé d’Apple."
                     }
                 }
             }
@@ -8863,23 +8026,6 @@
                 }
             }
         },
-        "fight.behind-person": {
-            "extractionState": "manual",
-            "localizations": {
-                "en": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "behind %@"
-                    }
-                },
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "derrière %@"
-                    }
-                }
-            }
-        },
         "fight.challenged-you": {
             "extractionState": "manual",
             "localizations": {
@@ -8893,47 +8039,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "%@ vous a défié"
-                    }
-                }
-            }
-        },
-        "fight.days-left": {
-            "extractionState": "manual",
-            "localizations": {
-                "en": {
-                    "variations": {
-                        "plural": {
-                            "one": {
-                                "stringUnit": {
-                                    "state": "translated",
-                                    "value": "%lld day left"
-                                }
-                            },
-                            "other": {
-                                "stringUnit": {
-                                    "state": "translated",
-                                    "value": "%lld days left"
-                                }
-                            }
-                        }
-                    }
-                },
-                "fr": {
-                    "variations": {
-                        "plural": {
-                            "one": {
-                                "stringUnit": {
-                                    "state": "translated",
-                                    "value": "%lld jour restant"
-                                }
-                            },
-                            "other": {
-                                "stringUnit": {
-                                    "state": "translated",
-                                    "value": "%lld jours restants"
-                                }
-                            }
-                        }
                     }
                 }
             }
@@ -9040,47 +8145,6 @@
                 }
             }
         },
-        "fight.ends-in-days": {
-            "extractionState": "manual",
-            "localizations": {
-                "en": {
-                    "variations": {
-                        "plural": {
-                            "one": {
-                                "stringUnit": {
-                                    "state": "translated",
-                                    "value": "Ends in %lld day"
-                                }
-                            },
-                            "other": {
-                                "stringUnit": {
-                                    "state": "translated",
-                                    "value": "Ends in %lld days"
-                                }
-                            }
-                        }
-                    }
-                },
-                "fr": {
-                    "variations": {
-                        "plural": {
-                            "one": {
-                                "stringUnit": {
-                                    "state": "translated",
-                                    "value": "Se termine dans %lld jour"
-                                }
-                            },
-                            "other": {
-                                "stringUnit": {
-                                    "state": "translated",
-                                    "value": "Se termine dans %lld jours"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "fight.finished-position": {
             "extractionState": "manual",
             "localizations": {
@@ -9128,47 +8192,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "@%@ participe déjà à ce défi."
-                    }
-                }
-            }
-        },
-        "fight.hours-left": {
-            "extractionState": "manual",
-            "localizations": {
-                "en": {
-                    "variations": {
-                        "plural": {
-                            "one": {
-                                "stringUnit": {
-                                    "state": "translated",
-                                    "value": "%lld hour left"
-                                }
-                            },
-                            "other": {
-                                "stringUnit": {
-                                    "state": "translated",
-                                    "value": "%lld hours left"
-                                }
-                            }
-                        }
-                    }
-                },
-                "fr": {
-                    "variations": {
-                        "plural": {
-                            "one": {
-                                "stringUnit": {
-                                    "state": "translated",
-                                    "value": "%lld heure restante"
-                                }
-                            },
-                            "other": {
-                                "stringUnit": {
-                                    "state": "translated",
-                                    "value": "%lld heures restantes"
-                                }
-                            }
-                        }
                     }
                 }
             }
@@ -9315,13 +8338,13 @@
                 "en": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "%1$@ – %2$@"
+                        "value": "%1$@ - %2$@"
                     }
                 },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "%1$@ – %2$@"
+                        "value": "%1$@ - %2$@"
                     }
                 }
             }
@@ -9403,23 +8426,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Le perdant devra : %@."
-                    }
-                }
-            }
-        },
-        "fight.metric-time-left": {
-            "extractionState": "manual",
-            "localizations": {
-                "en": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "%1$@ · %2$@"
-                    }
-                },
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "%1$@ · %2$@"
                     }
                 }
             }
@@ -9550,23 +8556,6 @@
                 }
             }
         },
-        "fight.synced-at": {
-            "extractionState": "manual",
-            "localizations": {
-                "en": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Synced %@"
-                    }
-                },
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Synchronisé %@"
-                    }
-                }
-            }
-        },
         "fight.tied-time-to-go": {
             "extractionState": "manual",
             "localizations": {
@@ -9601,40 +8590,6 @@
                 }
             }
         },
-        "fight.time-to-go": {
-            "extractionState": "manual",
-            "localizations": {
-                "en": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "with %@ to go"
-                    }
-                },
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "à %@ de la fin"
-                    }
-                }
-            }
-        },
-        "fight.unknown-handle": {
-            "extractionState": "manual",
-            "localizations": {
-                "en": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "No one with @%@. They need to open the app and pick a username first."
-                    }
-                },
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Personne n’utilise @%@. Cette personne doit d’abord ouvrir l’app et choisir un nom d’utilisateur."
-                    }
-                }
-            }
-        },
         "fight.winner-after-duration": {
             "extractionState": "manual",
             "localizations": {
@@ -9665,40 +8620,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Vous contre %@"
-                    }
-                }
-            }
-        },
-        "fights.live-count": {
-            "extractionState": "manual",
-            "localizations": {
-                "en": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "%lld live"
-                    }
-                },
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "%lld en cours"
-                    }
-                }
-            }
-        },
-        "fights.waiting-count": {
-            "extractionState": "manual",
-            "localizations": {
-                "en": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "%lld waiting"
-                    }
-                },
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "%lld en attente"
                     }
                 }
             }
@@ -9853,47 +8774,6 @@
                                 "stringUnit": {
                                     "state": "translated",
                                     "value": "Il y a %lld minutes"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "health.steps-today": {
-            "extractionState": "manual",
-            "localizations": {
-                "en": {
-                    "variations": {
-                        "plural": {
-                            "one": {
-                                "stringUnit": {
-                                    "state": "translated",
-                                    "value": "%lld step today"
-                                }
-                            },
-                            "other": {
-                                "stringUnit": {
-                                    "state": "translated",
-                                    "value": "%lld steps today"
-                                }
-                            }
-                        }
-                    }
-                },
-                "fr": {
-                    "variations": {
-                        "plural": {
-                            "one": {
-                                "stringUnit": {
-                                    "state": "translated",
-                                    "value": "%lld pas aujourd’hui"
-                                }
-                            },
-                            "other": {
-                                "stringUnit": {
-                                    "state": "translated",
-                                    "value": "%lld pas aujourd’hui"
                                 }
                             }
                         }
@@ -10276,16 +9156,6 @@
                 }
             }
         },
-        "This permanently deletes your profile, uploaded Steps, invitations, fights you created, and bugs or requests you posted; removes you from other fights; and signs you out. This can’t be undone.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Cette action supprime définitivement votre profil, les pas envoyés, les invitations, les défis que vous avez créés et les bugs ou demandes que vous avez publiés ; elle vous retire des autres défis et vous déconnecte. Cette action est irréversible."
-                    }
-                }
-            }
-        },
         "Title": {
             "localizations": {
                 "fr": {
@@ -10416,23 +9286,6 @@
                 }
             }
         },
-        "feedback.meta": {
-            "extractionState": "manual",
-            "localizations": {
-                "en": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "@%@ · %lld comments"
-                    }
-                },
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "@%@ · %lld commentaires"
-                    }
-                }
-            }
-        },
         "feedback.votes": {
             "extractionState": "manual",
             "localizations": {
@@ -10456,16 +9309,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "En attente"
-                    }
-                }
-            }
-        },
-        "Pending — open the app": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "À synchroniser — ouvrez l’app"
                     }
                 }
             }
@@ -10704,16 +9547,6 @@
                 }
             }
         },
-        "You can go to Settings to submit a feature you want or a bug you see. Those will be fixed rapidly.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Tu peux aller dans Réglages pour proposer une fonctionnalité que tu veux ou un bug que tu vois. On les corrige rapidement."
-                    }
-                }
-            }
-        },
         "Device": {
             "localizations": {
                 "fr": {
@@ -10904,16 +9737,6 @@
                 }
             }
         },
-        "Your companion is now your avatar for other people in fights and Feed. If you have not chosen one yet, FitFight will ask you to pick.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Ton compagnon est maintenant ton avatar pour les autres dans les défis et le Fil. Si tu n’en as pas encore choisi, FitFight te demandera d’en choisir un."
-                    }
-                }
-            }
-        },
         "Two-word companion names now capitalize both words, like Red Panda.": {
             "localizations": {
                 "fr": {
@@ -10970,16 +9793,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Ajouter"
-                    }
-                }
-            }
-        },
-        "Add a username or remove someone. Only you can kick people out.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Ajoute un nom d’utilisateur ou retire quelqu’un. Toi seul peux exclure des personnes."
                     }
                 }
             }
@@ -11171,112 +9984,12 @@
                 }
             }
         },
-        "Saved on this iPhone. Other people won’t see this until companions sync.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Enregistré sur cet iPhone. Les autres ne le verront pas tant que les compagnons ne sont pas synchronisés."
-                    }
-                }
-            }
-        },
-        "Companion · saved on this iPhone": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Compagnon · enregistré sur cet iPhone"
-                    }
-                }
-            }
-        },
-        "How effort changes this companion": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Comment l’effort change ce compagnon"
-                    }
-                }
-            }
-        },
-        "Depending on how much you move during the week, this character’s pose changes. Resting on a quiet week; furthest along when you’ve gone the hardest. The five scenes follow the sport.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Selon ton effort pendant la semaine, la pose de ce personnage change. Au repos une semaine calme ; le plus loin quand tu as le plus bougé. Les cinq scènes suivent le sport."
-                    }
-                }
-            }
-        },
-        "This is today’s effort.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "C’est l’effort d’aujourd’hui."
-                    }
-                }
-            }
-        },
-        "This companion stays in every pose until this sport has its own scenes.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Ce compagnon reste dans chaque pose tant que ce sport n’a pas ses propres scènes."
-                    }
-                }
-            }
-        },
-        "The five poses use this sport’s scenes — hiking, running, football, ski, or walking.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Les cinq poses utilisent les scènes de ce sport — randonnée, course, football, ski ou marche."
-                    }
-                }
-            }
-        },
         "Species": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
                         "value": "Espèce"
-                    }
-                }
-            }
-        },
-        "Breed": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Race"
-                    }
-                }
-            }
-        },
-        "Optional. Alpine, border collie…": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Facultatif. Alpine, border collie…"
-                    }
-                }
-            }
-        },
-        "Mood": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Humeur"
                     }
                 }
             }
@@ -11291,52 +10004,12 @@
                 }
             }
         },
-        "Accessories": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Accessoires"
-                    }
-                }
-            }
-        },
-        "Optional. Sunglasses, a hat, colours…": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Facultatif. Lunettes, un chapeau, des couleurs…"
-                    }
-                }
-            }
-        },
-        "Hiking": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Randonnée"
-                    }
-                }
-            }
-        },
         "Running": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
                         "value": "Course"
-                    }
-                }
-            }
-        },
-        "Football": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Football"
                     }
                 }
             }
@@ -11361,16 +10034,6 @@
                 }
             }
         },
-        "Calm": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Calme"
-                    }
-                }
-            }
-        },
         "Determined": {
             "localizations": {
                 "fr": {
@@ -11381,272 +10044,12 @@
                 }
             }
         },
-        "Smug": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Suffisant"
-                    }
-                }
-            }
-        },
-        "Playful": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Joueur"
-                    }
-                }
-            }
-        },
-        "Fierce": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Féroce"
-                    }
-                }
-            }
-        },
-        "Resting": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Au repos"
-                    }
-                }
-            }
-        },
-        "Heading out": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "En route"
-                    }
-                }
-            }
-        },
-        "On the trail": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Sur le sentier"
-                    }
-                }
-            }
-        },
         "Climbing": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
                         "value": "En montée"
-                    }
-                }
-            }
-        },
-        "At the peak": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Au sommet"
-                    }
-                }
-            }
-        },
-        "On the bench": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Sur le banc"
-                    }
-                }
-            }
-        },
-        "Warming up": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Échauffement"
-                    }
-                }
-            }
-        },
-        "Jogging": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Jogging"
-                    }
-                }
-            }
-        },
-        "Racing": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "En course"
-                    }
-                }
-            }
-        },
-        "Finish line": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Ligne d’arrivée"
-                    }
-                }
-            }
-        },
-        "On the sideline": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Sur la touche"
-                    }
-                }
-            }
-        },
-        "On the pitch": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Sur le terrain"
-                    }
-                }
-            }
-        },
-        "In the match": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Dans le match"
-                    }
-                }
-            }
-        },
-        "After the whistle": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Après le coup de sifflet"
-                    }
-                }
-            }
-        },
-        "In the lodge": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Au chalet"
-                    }
-                }
-            }
-        },
-        "At the lift": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Au télésiège"
-                    }
-                }
-            }
-        },
-        "On the slope": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Sur la piste"
-                    }
-                }
-            }
-        },
-        "Carving": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "En carving"
-                    }
-                }
-            }
-        },
-        "At the summit": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Au sommet"
-                    }
-                }
-            }
-        },
-        "At home": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "À la maison"
-                    }
-                }
-            }
-        },
-        "Stepping out": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "On sort"
-                    }
-                }
-            }
-        },
-        "On the path": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Sur le chemin"
-                    }
-                }
-            }
-        },
-        "A long loop": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Une grande boucle"
-                    }
-                }
-            }
-        },
-        "Back with a view": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Retour avec une vue"
                     }
                 }
             }
@@ -11811,32 +10214,12 @@
                 }
             }
         },
-        "Try the beta": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Essayer la bêta"
-                    }
-                }
-            }
-        },
         "Try upcoming features in TestFlight. Beta builds may have bugs.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
                         "value": "Essaie les prochaines fonctionnalités dans TestFlight. Les versions bêta peuvent contenir des bugs."
-                    }
-                }
-            }
-        },
-        "The beta uses a separate database. Accounts, fights, and progress do not sync automatically with the App Store version, even when you use the same Apple ID.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "La bêta utilise une base de données séparée. Les comptes, les fights et la progression ne se synchronisent pas automatiquement avec la version App Store, même avec le même identifiant Apple."
                     }
                 }
             }
@@ -12043,26 +10426,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Les réactions défilent horizontalement, avec un bouton J’aime visible et le choix de tout emoji. Les graphiques s’actualisent sans perdre ta sélection et signalent les données manquantes. Les commentaires se chargent correctement et les échecs de notification n’interrompent plus les fights enregistrés."
-                    }
-                }
-            }
-        },
-        "Cheer this post": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Encourager cette publication"
-                    }
-                }
-            }
-        },
-        "Remove reaction": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Retirer la réaction"
                     }
                 }
             }
@@ -12463,26 +10826,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Plus de commentaires"
-                    }
-                }
-            }
-        },
-        "Most recent": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Plus récents"
-                    }
-                }
-            }
-        },
-        "Comment order": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Ordre des commentaires"
                     }
                 }
             }

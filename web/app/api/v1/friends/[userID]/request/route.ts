@@ -11,6 +11,4 @@ export const POST = apiRoute<{ userID: string }>(async (request, { params }) => 
     return json(await changeFriendship(userId, profileUserIDSchema.parse(params.userID), "request"));
 });
 
-export function OPTIONS(request: Request) {
-    return corsPreflight(request);
-}
+export const OPTIONS = corsPreflight;

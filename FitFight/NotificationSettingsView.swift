@@ -15,17 +15,9 @@ struct NotificationSettingsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text(String(appLocalized: "Notifications"))
-                    .ffType(.title)
-                    .foregroundStyle(theme.text)
-                Spacer()
-                Button(String(appLocalized: "Close")) { dismiss() }
-                    .ffType(.label)
-                    .foregroundStyle(theme.mossText)
-            }
-            .padding(.horizontal, theme.space.screenPadding)
-            .padding(.vertical, 12)
+            FFSheetHeader(title: String(appLocalized: "Notifications")) { dismiss() }
+                .padding(.horizontal, theme.space.screenPadding)
+                .padding(.vertical, 12)
 
             if staticRender {
                 Color.clear

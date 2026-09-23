@@ -19,16 +19,7 @@ struct FitFightProfile: Codable, Equatable {
         handle.hasPrefix("user_") && handle.count == 17
     }
 
-    var initials: String {
-        let parts = displayName.split(separator: " ").filter { !$0.isEmpty }
-        if parts.count >= 2 {
-            return String(parts[0].prefix(1) + parts[1].prefix(1)).uppercased()
-        }
-        if let first = parts.first, !first.isEmpty {
-            return String(first.prefix(2)).uppercased()
-        }
-        return String(handle.prefix(2)).uppercased()
-    }
+    var initials: String { monogram(displayName: displayName, handle: handle) }
 
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"

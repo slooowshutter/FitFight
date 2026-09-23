@@ -77,7 +77,8 @@ struct FightPostEngagement: View {
                             ids.append(fightId)
                         }
                         return ids
-                    }()
+                    }(),
+                    loadsOnFirstMention: true
                 ) {
                     HStack(alignment: .center, spacing: 0) {
                         TextField(
@@ -168,7 +169,6 @@ struct FightPostEngagement: View {
         }
         .sheet(isPresented: $showingReactions) {
             FightPostReactionsSheet(post: post)
-                .environmentObject(session)
                 .fitFightTheme(theme)
                 .presentationBackground(theme.bg)
         }
@@ -597,16 +597,7 @@ private struct FightPostReactionsSheet: View {
 
     var body: some View {
         FFScreen(clearance: false) {
-            HStack {
-                Text(String(appLocalized: "Reactions"))
-                    .ffType(.title)
-                    .foregroundStyle(theme.text)
-                Spacer()
-                Button(String(appLocalized: "Close")) { dismiss() }
-                    .ffType(.label)
-                    .foregroundStyle(theme.mossText)
-                    .buttonStyle(FFHapticPlainStyle())
-            }
+            FFSheetHeader(title: String(appLocalized: "Reactions")) { dismiss() }
             if !people.isEmpty {
                 FFCard {
                     ForEach(people) { person in

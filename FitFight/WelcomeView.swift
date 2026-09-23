@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Shown instead of the tabs until the User signs in with Apple.
+/// Shown instead of the tabs until the User signs in.
 struct WelcomeView: View {
     @Environment(\.ffTheme) private var theme
     @EnvironmentObject private var session: SessionStore
@@ -21,12 +21,12 @@ struct WelcomeView: View {
                 .font(.ff(17, 700))
                 .foregroundStyle(theme.textSecondary)
                 .padding(.top, 10)
-            Text("Sign in with Apple to get in. First time here, that creates your account.")
+            Text("Sign in with Apple or Google. First time here, that creates your account.")
                 .ffType(.body)
                 .foregroundStyle(theme.textFaint)
                 .lineSpacing(3)
                 .padding(.top, 16)
-            AppleSignInControl()
+            SignInControls()
                 .padding(.top, 28)
             if session.isBusy {
                 Text("Signing in…")

@@ -105,7 +105,6 @@ struct APIContractTests {
         precondition(snapshot.profiles[0].companionId == "fox")
         precondition(snapshot.profiles[1].avatar == nil && snapshot.profiles[1].companionId == nil)
         precondition(snapshot.series[0].joinCode == "ABCD" && snapshot.series[0].recurring)
-        precondition(snapshot.stepDays[0].day == "2026-09-02" && snapshot.stepDays[0].steps == 8500)
         precondition(snapshot.members[0].stepCheckpoints == nil, "Older snapshot responses remain decodable")
         let checkpointData = try Data(contentsOf: fixtures.appendingPathComponent("fight-snapshot-checkpoints.json"))
         let checkpoints = try decoder.decode(FitFightSnapshot.self, from: checkpointData)

@@ -127,8 +127,8 @@ enum HealthKitActivityAggregates {
             var seconds: [String: Double] = [:]
             var walkRun: [String: Double] = [:]
             for workout in samples {
-                guard let started = parseISO8601(workout.startedAt) else { continue }
-                let day = dayStamp(started, calendar: calendar)
+                guard let started = parseServerDate(workout.startedAt) else { continue }
+                let day = HealthKitStepAggregates.dayStamp(started, calendar: calendar)
                 counts[day, default: 0] += 1
                 seconds[day, default: 0] += workout.durationSeconds
                 if workout.activityType == "walking" || workout.activityType == "running",
@@ -143,42 +143,21 @@ enum HealthKitActivityAggregates {
             syncedWorkouts = nil
         }
 
-        let units: [String: String] = [
-            "active_energy": "kcal",
-            "resting_energy": "kcal",
-            "walking_running_distance": "m",
-            "exercise_minutes": "min",
-            "stand_minutes": "min",
-            "stand_hours": "count",
-            "flights_climbed": "count",
-            "cycling_distance": "m",
-            "swimming_distance": "m",
-            "move_time_minutes": "min",
-            "wheelchair_distance": "m",
-            "wheelchair_pushes": "count",
-            "swimming_strokes": "count",
-            "rowing_distance": "m",
-            "paddle_distance": "m",
-            "skating_distance": "m",
-            "cross_country_ski_distance": "m",
-            "downhill_snow_distance": "m",
-            "workout_count": "count",
-            "workout_time": "s",
-            "walk_run_workout_distance": "m",
-        ]
+        let units = Dictionary(uniqueKeysWithValues: quantityKinds.map { ($0.metric, $0.unitName) })
+            .merging(["stand_hours": "count", "workout_count": "count", "workout_time": "s", "walk_run_workout_distance": "m"]) { kind, _ in kind }
 
         var days: [FitFightHealthKitStepSync.ActivityDay] = []
         var cursor = start
         while cursor < context.serverNow {
             guard let nextDay = calendar.date(byAdding: .day, value: 1, to: cursor) else { break }
-            let day = dayStamp(cursor, calendar: calendar)
+            let day = HealthKitStepAggregates.dayStamp(cursor, calendar: calendar)
             let endsAt = min(nextDay, context.serverNow)
             for (metric, byDay) in totals {
                 guard let value = byDay[day], let unit = units[metric] else { continue }
                 days.append(FitFightHealthKitStepSync.ActivityDay(
                     day: day,
-                    startsAt: iso8601(cursor),
-                    endsAt: iso8601(endsAt),
+                    startsAt: HealthKitStepAggregates.iso8601(cursor),
+                    endsAt: HealthKitStepAggregates.iso8601(endsAt),
                     metric: metric,
                     value: value,
                     unit: unit
@@ -222,7 +201,7 @@ enum HealthKitActivityAggregates {
                 var totals: [String: Double] = [:]
                 collection?.enumerateStatistics(from: start, to: end) { statistics, _ in
                     guard let value = quantityValue(statistics.sumQuantity(), unit: unit) else { return }
-                    totals[dayStamp(statistics.startDate, calendar: calendar)] = value
+                    totals[HealthKitStepAggregates.dayStamp(statistics.startDate, calendar: calendar)] = value
                 }
                 continuation.resume(returning: totals)
             }
@@ -261,7 +240,7 @@ enum HealthKitActivityAggregates {
         }
         var totals: [String: Double] = [:]
         for sample in samples where sample.value == HKCategoryValueAppleStandHour.stood.rawValue {
-            totals[dayStamp(sample.startDate, calendar: calendar), default: 0] += 1
+            totals[HealthKitStepAggregates.dayStamp(sample.startDate, calendar: calendar), default: 0] += 1
         }
         return totals
     }
@@ -299,8 +278,8 @@ enum HealthKitActivityAggregates {
             else { return nil }
             return FitFightHealthKitStepSync.Workout(
                 healthkitUuid: workout.uuid.uuidString.lowercased(),
-                startedAt: iso8601(workout.startDate),
-                endedAt: iso8601(workout.endDate),
+                startedAt: HealthKitStepAggregates.iso8601(workout.startDate),
+                endedAt: HealthKitStepAggregates.iso8601(workout.endDate),
                 activityType: activityTypeName(workout.workoutActivityType),
                 durationSeconds: max(0, workout.duration),
                 activeMinutes: quantityValue(
@@ -398,24 +377,4 @@ enum HealthKitActivityAggregates {
         return value
     }
 
-    private static func dayStamp(_ date: Date, calendar: Calendar) -> String {
-        let formatter = DateFormatter()
-        formatter.calendar = calendar
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = calendar.timeZone
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: date)
-    }
-
-    private static func iso8601(_ date: Date) -> String {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return formatter.string(from: date)
-    }
-
-    private static func parseISO8601(_ value: String) -> Date? {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return formatter.date(from: value)
-    }
 }

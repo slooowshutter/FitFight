@@ -46,4 +46,3 @@ struct LegacyNotificationPreferencesUpdate: Encodable {
         try container.encodeIfPresent(dailyStatus, forKey: .dailyStatus)
     }
 }
-

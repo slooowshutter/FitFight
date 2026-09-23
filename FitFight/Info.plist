@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>UIAppFonts</key>
+    <array>
+        <string>GoogleSans.ttf</string>
+        <string>Nunito-Medium.ttf</string>
+        <string>Nunito-SemiBold.ttf</string>
+        <string>Nunito-Bold.ttf</string>
+        <string>Nunito-ExtraBold.ttf</string>
+    </array>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>com.googleusercontent.apps.428975685987-6j9128tgf2k67pkf5tlsdbs58md0b38u</string>
+                <string>com.googleusercontent.apps.1060235196761-nuoouoc4envuhkpo4kpdfpdg8u20tlq4</string>
+            </array>
+        </dict>
+    </array>
+</dict>
+</plist>

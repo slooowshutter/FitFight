@@ -1,4 +1,3 @@
-import { after } from "next/server";
 import {
     apiRoute,
     corsPreflight,
@@ -6,8 +5,7 @@ import {
     readJson,
     requireUuid,
 } from "@/lib/http";
-import { createDatabaseClient } from "@/lib/supabase/postgres";
-import { processNotificationOutbox } from "@/lib/supabase/queries/process-notification-outbox-supabase-query";
+import { processNotificationOutboxAfterResponse } from "@/lib/notifications/process-notification-outbox-after-response";
 import { verifyUser } from "@/lib/supabase/queries/auth-supabase-query";
 import {
     createFightPostComment,
@@ -55,13 +53,9 @@ export const POST = apiRoute<{ postID: string }>(
             requireUuid(params.postID, "postID"),
             parsed.data,
         );
-        after(async () => {
-            await processNotificationOutbox(new Date(), createDatabaseClient());
-        });
+        processNotificationOutboxAfterResponse();
         return json(result, 201);
     },
 );
 
-export function OPTIONS(request: Request) {
-    return corsPreflight(request);
-}
+export const OPTIONS = corsPreflight;

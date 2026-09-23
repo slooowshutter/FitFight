@@ -27,7 +27,7 @@ export default function PrivacyPage() {
             <article className="legal-content">
                 <p className="eyebrow">YOUR DATA, IN PLAIN LANGUAGE</p>
                 <h1>Privacy Policy</h1>
-                <p className="legal-updated">Effective 17 September 2026</p>
+                <p className="legal-updated">Effective 19 September 2026</p>
                 <p className="legal-intro">
                     FitFight lets named participants compete on who records the
                     most Steps during a private Fight. This policy explains the
@@ -39,10 +39,11 @@ export default function PrivacyPage() {
                     <h2>Data we collect</h2>
                     <ul>
                         <li>
-                            <strong>Account data:</strong> your Sign in with
-                            Apple identifier, email address (which may be an
-                            Apple private relay address), name when Apple
-                            supplies it, your FitFight username, chosen
+                            <strong>Account data:</strong> your Apple or Google
+                            account identifier, email address (which may be an
+                            Apple private relay address), name and profile image
+                            when your sign-in provider supplies them, your
+                            FitFight username, chosen
                             companion and optional custom description, and an
                             encrypted server-only Apple credential used to
                             disconnect Sign in with Apple when you delete your
@@ -341,7 +342,11 @@ export default function PrivacyPage() {
                         If automatic revocation is unavailable, the app tells
                         you how to disconnect FitFight in Apple settings.
                         Deletion does not remove information stored in Apple
-                        Health or delete your Apple ID.
+                        Health or delete your Apple ID or Google account. For
+                        Google sign-in, the app also attempts to revoke its
+                        locally saved Google authorization. You can remove
+                        FitFight access in your Google Account&apos;s third-party
+                        connections settings.
                     </p>
                 </section>
 

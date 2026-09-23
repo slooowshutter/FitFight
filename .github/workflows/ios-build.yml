@@ -18,6 +18,8 @@ on:
             - "scripts/test_profile_refresh.py"
             - "scripts/test_native_state.py"
             - "scripts/test_account_preferences.py"
+            - "scripts/test_google_sign_in.py"
+            - "scripts/package_simulator_app.py"
             - "scripts/test_fight_localization.py"
             - "scripts/test_companion_state.py"
             - "scripts/test_fight_live_updates.py"
@@ -48,6 +50,8 @@ on:
             - "scripts/test_profile_refresh.py"
             - "scripts/test_native_state.py"
             - "scripts/test_account_preferences.py"
+            - "scripts/test_google_sign_in.py"
+            - "scripts/package_simulator_app.py"
             - "scripts/test_fight_localization.py"
             - "scripts/test_companion_state.py"
             - "scripts/test_fight_live_updates.py"
@@ -108,6 +112,9 @@ jobs:
               run: |
                   swiftc -swift-version 5 -target "$(uname -m)-apple-macosx13.0" FitFight/AppUpdateChecker.swift tests/AppUpdateCheckerTests.swift -o /tmp/fitfight-update-tests
                   /tmp/fitfight-update-tests
+
+            - name: Verify Google sign-in and environment selection
+              run: python3 scripts/test_google_sign_in.py
 
             - name: Verify account preferences and language switching
               run: python3 scripts/test_account_preferences.py
@@ -188,5 +195,18 @@ jobs:
                     -scheme FitFight \
                     -configuration Debug \
                     -destination 'generic/platform=iOS Simulator' \
-                    CODE_SIGNING_ALLOWED=NO \
+                    -derivedDataPath build \
+                    CODE_SIGNING_ALLOWED=YES \
+                    CODE_SIGNING_REQUIRED=YES \
+                    CODE_SIGN_STYLE=Manual \
+                    CODE_SIGN_IDENTITY=- \
                     build
+
+            - name: Package simulator app with Keychain capabilities
+              run: python3 scripts/package_simulator_app.py build/Build/Products/Debug-iphonesimulator/FitFight.app FitFight-Simulator.zip
+
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: FitFight-Simulator
+                  path: FitFight-Simulator.zip
+                  retention-days: 7

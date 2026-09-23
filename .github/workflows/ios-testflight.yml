@@ -3,7 +3,7 @@
 # Staging TestFlight only: push/merge to preview, or manual
 # workflow_dispatch on that branch. Feature-branch, develop, and cron
 # must not upload. main never uploads to TestFlight.
-# After upload, CI assigns Internal testers, every External group, and Friends Beta.
+# After processing, Internal testers receive the build. External groups stay unchanged.
 name: TestFlight
 
 on:

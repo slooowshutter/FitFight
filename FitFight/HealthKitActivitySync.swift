@@ -37,7 +37,7 @@ enum HealthKitActivitySync {
         context: FitFightHealthKitContext,
         timeZone: TimeZone,
         trace: HealthKitSyncTrace
-    ) async throws {
+    ) async throws -> Bool {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = timeZone
         let cutoff = context.serverNow
@@ -55,6 +55,7 @@ enum HealthKitActivitySync {
             progress.metrics[kind.metric] = MetricProgress(predicateStart: recentStart)
         }
         try save(progress, key: key)
+        var processingComplete = true
 
         // Current readings lead the upload, so an initial history import never delays live totals.
         var recent: [FitFightHealthKitStepSync.ActivityDay] = []
@@ -67,10 +68,11 @@ enum HealthKitActivitySync {
         }
         for offset in stride(from: 0, to: recent.count, by: 1_000) {
             let page = Array(recent[offset..<min(offset + 1_000, recent.count)])
-            try await upload(
+            let pageProcessed = try await upload(
                 totals: page, workouts: [], deletions: [], cutoff: cutoff,
                 timeZone: timeZone, api: api, session: session, trace: trace, userId: userId
             )
+            processingComplete = pageProcessed && processingComplete
             for row in page {
                 var metric = progress.metrics[row.metric]!
                 metric.knownDays.insert(row.day)
@@ -96,10 +98,11 @@ enum HealthKitActivitySync {
             let workouts = page.added.compactMap { $0 as? HKWorkout }
                 .filter { !deleted.contains($0.uuid.uuidString.lowercased()) }
                 .compactMap { HealthKitActivityAggregates.workoutRecord($0, end: cutoff) }
-            try await upload(
+            let pageProcessed = try await upload(
                 totals: [], workouts: workouts, deletions: deletions, cutoff: cutoff,
                 timeZone: timeZone, api: api, session: session, trace: trace, userId: userId
             )
+            processingComplete = pageProcessed && processingComplete
             workoutAnchor = page.anchor
             progress.workoutAnchorData = try archiveAnchor(workoutAnchor)
             try save(progress, key: key)
@@ -110,11 +113,12 @@ enum HealthKitActivitySync {
             store: store, start: recentStart, end: cutoff, limit: HKObjectQueryNoLimit
         )
         for offset in stride(from: 0, to: recentWorkouts.count, by: 200) {
-            try await upload(
+            let pageProcessed = try await upload(
                 totals: [], workouts: Array(recentWorkouts[offset..<min(offset + 200, recentWorkouts.count)]),
                 deletions: [], cutoff: cutoff, timeZone: timeZone,
                 api: api, session: session, trace: trace, userId: userId
             )
+            processingComplete = pageProcessed && processingComplete
         }
 
         for kind in HealthKitActivityAggregates.totalKinds {
@@ -136,10 +140,11 @@ enum HealthKitActivitySync {
                             store: store, kind: kind, start: cursor, end: next,
                             calendar: calendar, zeroDays: []
                         )
-                        try await upload(
+                        let pageProcessed = try await upload(
                             totals: rows, workouts: [], deletions: [], cutoff: cutoff,
                             timeZone: timeZone, api: api, session: session, trace: trace, userId: userId
                         )
+                        processingComplete = pageProcessed && processingComplete
                         metric.knownDays.formUnion(rows.map(\.day))
                         cursor = next
                         metric.historyCursor = cursor
@@ -182,10 +187,11 @@ enum HealthKitActivitySync {
                             store: store, kind: kind, start: cursor, end: next,
                             calendar: calendar, zeroDays: zeros
                         )
-                        try await upload(
+                        let pageProcessed = try await upload(
                             totals: rows, workouts: [], deletions: [], cutoff: cutoff,
                             timeZone: timeZone, api: api, session: session, trace: trace, userId: userId
                         )
+                        processingComplete = pageProcessed && processingComplete
                         metric.knownDays.formUnion(rows.map(\.day))
                         cursor = next
                     }
@@ -197,6 +203,7 @@ enum HealthKitActivitySync {
                 if page.added.count + page.deleted.count < anchorPageSize { break }
             }
         }
+        return processingComplete
     }
 
     private static func upload(
@@ -209,8 +216,8 @@ enum HealthKitActivitySync {
         session: SessionStore,
         trace: HealthKitSyncTrace,
         userId: UUID
-    ) async throws {
-        guard !totals.isEmpty || !workouts.isEmpty || !deletions.isEmpty else { return }
+    ) async throws -> Bool {
+        guard !totals.isEmpty || !workouts.isEmpty || !deletions.isEmpty else { return true }
         try Task.checkCancellation()
         guard session.authSession?.user.id == userId else { throw CancellationError() }
         let token = try await session.freshAccessToken()
@@ -222,7 +229,8 @@ enum HealthKitActivitySync {
             workouts: workouts,
             deletedWorkouts: deletions
         )
-        _ = try await api.syncHealthKitActivity(batch, accessToken: token, trace: trace)
+        let result = try await api.syncHealthKitActivity(batch, accessToken: token, trace: trace)
+        return result.processing == "processed"
     }
 
     private static func earliestSample(store: HKHealthStore, type: HKSampleType) async throws -> Date? {

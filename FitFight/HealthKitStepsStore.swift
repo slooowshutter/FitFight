@@ -32,6 +32,7 @@ final class HealthKitStepsStore: ObservableObject {
         var failureReference: String?
         var failureDetail: String?
         var activitySyncFailed: Bool?
+        var activityProcessingPending: Bool?
         var deliveryRegistrationFailures: [String]?
 
         @MainActor static var current: Diagnostics {
@@ -47,6 +48,7 @@ final class HealthKitStepsStore: ObservableObject {
                 failureReference: nil,
                 failureDetail: nil,
                 activitySyncFailed: false,
+                activityProcessingPending: false,
                 deliveryRegistrationFailures: nil
             )
         }
@@ -92,6 +94,9 @@ final class HealthKitStepsStore: ObservableObject {
         case .upToDate:
             if diagnostics.activitySyncFailed == true {
                 return String(appLocalized: "Steps up to date · Other activity didn't sync. Tap to retry.")
+            }
+            if diagnostics.activityProcessingPending == true {
+                return String(appLocalized: "Steps up to date · Other activity is processing.")
             }
             return diagnostics.deliveryRegistrationStatus == .unavailable
                 ? String(appLocalized: "Up to date · Background sync unavailable")
@@ -397,13 +402,15 @@ final class HealthKitStepsStore: ObservableObject {
             _ = try await api.syncHealthKitSteps(sync, accessToken: syncToken, trace: trace)
 
             var activityFailure: Error?
+            var activityProcessingPending = false
             do {
-                try await trace.measure(.healthKitActivity) {
+                let processed = try await trace.measure(.healthKitActivity) {
                     try await HealthKitActivitySync.synchronize(
                         store: store, api: api, session: session, userId: userId,
                         context: context, timeZone: timeZone, trace: trace
                     )
                 }
+                activityProcessingPending = !processed
             } catch {
                 activityFailure = error
                 trace.fail(Self.errorCode(for: error))
@@ -413,7 +420,7 @@ final class HealthKitStepsStore: ObservableObject {
             try Task.checkCancellation()
             guard activeUserId == userId else { throw CancellationError() }
             connection = .upToDate
-            if activityFailure == nil {
+            if activityFailure == nil && !activityProcessingPending {
                 UserDefaults.standard.removeObject(forKey: Self.pendingSyncKey)
             } else {
                 UserDefaults.standard.set(true, forKey: Self.pendingSyncKey)
@@ -422,6 +429,7 @@ final class HealthKitStepsStore: ObservableObject {
                 if trigger == .observer { $0.lastAutomaticSync = Date() }
                 else { $0.lastManualSync = Date() }
                 $0.activitySyncFailed = activityFailure != nil
+                $0.activityProcessingPending = activityProcessingPending
                 $0.errorCode = activityFailure.map { Self.errorCode(for: $0) }
                 $0.failureReference = activityFailure.map { HealthKitSyncTrace.Failure($0).reference }
                 $0.failureDetail = activityFailure == nil

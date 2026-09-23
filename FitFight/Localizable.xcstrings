@@ -41,6 +41,16 @@
                 }
             }
         },
+        "Steps up to date · Other activity is processing.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les pas sont à jour · Les autres activités sont encore en cours de traitement."
+                    }
+                }
+            }
+        },
         "Apple Health syncs all supported activity and workouts, including older history and later corrections.": {
             "localizations": {
                 "fr": {

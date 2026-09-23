@@ -21,6 +21,7 @@ on:
             - "scripts/package_simulator_app.py"
             - "scripts/test_fight_localization.py"
             - "scripts/test_companion_state.py"
+            - "scripts/test_ai_companion_state.py"
             - "scripts/test_fight_live_updates.py"
             - "scripts/test_fight_chart_scores.py"
             - "scripts/test_push_state.py"
@@ -51,6 +52,7 @@ on:
             - "scripts/package_simulator_app.py"
             - "scripts/test_fight_localization.py"
             - "scripts/test_companion_state.py"
+            - "scripts/test_ai_companion_state.py"
             - "scripts/test_fight_live_updates.py"
             - "scripts/test_fight_chart_scores.py"
             - "scripts/test_push_state.py"
@@ -163,8 +165,11 @@ jobs:
 
             - name: Verify native API contracts
               run: |
-                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx14.0" FitFight/AppLocalization.swift FitFight/Media.swift FitFight/Profile.swift FitFight/FightSnapshot.swift tests/APIContractTests.swift -o /tmp/fitfight-contract-tests
+                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx14.0" FitFight/AppLocalization.swift FitFight/AIWorkflowRequest.swift FitFight/Media.swift FitFight/Profile.swift FitFight/FightSnapshot.swift tests/APIContractTests.swift -o /tmp/fitfight-contract-tests
                   /tmp/fitfight-contract-tests contracts/fixtures
+
+            - name: Verify generation recovery and account isolation
+              run: python3 scripts/test_ai_companion_state.py
 
             - name: Verify feedback and released-client decoding
               run: python3 scripts/test_feedback_compatibility.py

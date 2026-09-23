@@ -11789,6 +11789,555 @@
                     }
                 }
             }
+        },
+        "You have made a few requests recently. Try again shortly.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Vous avez fait plusieurs demandes récemment. Réessayez dans un instant."
+                    }
+                }
+            }
+        },
+        "You have reached today's AI limit. It resets at midnight UTC.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Vous avez atteint la limite IA du jour. Elle est réinitialisée à minuit UTC."
+                    }
+                }
+            }
+        },
+        "Your previous request is still unresolved. Check its status.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Votre demande précédente est toujours en cours de vérification. Consultez son état."
+                    }
+                }
+            }
+        },
+        "This request was already used with different parameters.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cette demande a déjà été utilisée avec des paramètres différents."
+                    }
+                }
+            }
+        },
+        "AI is busy. Try again later.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "L’IA est occupée. Réessayez plus tard."
+                    }
+                }
+            }
+        },
+        "This feature is temporarily unavailable on our side.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cette fonctionnalité est temporairement indisponible de notre côté."
+                    }
+                }
+            }
+        },
+        "We couldn't complete this request.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nous n’avons pas pu terminer cette demande."
+                    }
+                }
+            }
+        },
+        "We couldn't read the generated result.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nous n’avons pas pu lire le résultat généré."
+                    }
+                }
+            }
+        },
+        "We couldn't check the result. Check again.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nous n’avons pas pu vérifier le résultat. Vérifiez à nouveau."
+                    }
+                }
+            }
+        },
+        "We couldn't confirm whether this request started. Check again later.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nous n’avons pas pu confirmer le démarrage de cette demande. Vérifiez à nouveau plus tard."
+                    }
+                }
+            }
+        },
+        "This request was cancelled.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cette demande a été annulée."
+                    }
+                }
+            }
+        },
+        "You do not have enough available credits.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Vous n’avez pas assez de crédits disponibles."
+                    }
+                }
+            }
+        },
+        "This request has expired. Start a new action to generate again.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cette demande a expiré. Lancez une nouvelle action pour générer à nouveau."
+                    }
+                }
+            }
+        },
+        "Couldn't restore your generation. Contact support before starting another.": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Impossible de restaurer votre génération. Contactez l’assistance avant d’en lancer une autre."
+                    }
+                }
+            }
+        },
+        "Generating your images…": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Génération de vos images…"
+                    }
+                }
+            }
+        },
+        "Saved to your library.": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Enregistré dans votre bibliothèque."
+                    }
+                }
+            }
+        },
+        "Create your companion": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Créez votre compagnon"
+                    }
+                }
+            }
+        },
+        "Your generation": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Votre génération"
+                    }
+                }
+            }
+        },
+        "You can close this screen and return to check the same request.": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Vous pouvez fermer cet écran et revenir pour consulter la même demande."
+                    }
+                }
+            }
+        },
+        "Generation": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Génération"
+                    }
+                }
+            }
+        },
+        "Avatar": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Avatar"
+                    }
+                }
+            }
+        },
+        "Fitness levels": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Niveaux de forme"
+                    }
+                }
+            }
+        },
+        "Group photo": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Photo de groupe"
+                    }
+                }
+            }
+        },
+        "Choose one of your saved avatars for five fitness levels.": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Choisissez un de vos avatars enregistrés pour créer cinq niveaux de forme."
+                    }
+                }
+            }
+        },
+        "Choose two to five of your saved avatars, in cast order.": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Choisissez deux à cinq de vos avatars enregistrés, dans l’ordre des personnages."
+                    }
+                }
+            }
+        },
+        "Create an avatar first. Your saved avatars will appear here.": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Créez d’abord un avatar. Vos avatars enregistrés apparaîtront ici."
+                    }
+                }
+            }
+        },
+        "Scene": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Scène"
+                    }
+                }
+            }
+        },
+        "Describe what your characters are doing.": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Décrivez ce que font vos personnages."
+                    }
+                }
+            }
+        },
+        "This generation is not available yet.": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cette génération n’est pas encore disponible."
+                    }
+                }
+            }
+        },
+        "Generate": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Générer"
+                    }
+                }
+            }
+        },
+        "Your generated images": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Vos images générées"
+                    }
+                }
+            }
+        },
+        "Use as companion": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Choisir comme compagnon"
+                    }
+                }
+            }
+        },
+        "Soft": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Peu actif"
+                    }
+                }
+            }
+        },
+        "Average": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Moyen"
+                    }
+                }
+            }
+        },
+        "Fit": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "En forme"
+                    }
+                }
+            }
+        },
+        "Strong": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Très en forme"
+                    }
+                }
+            }
+        },
+        "Generate images": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Générer des images"
+                    }
+                }
+            }
+        },
+        "Generate companion avatars, five fitness levels, and group photos. See your credits, return to interrupted generations, and keep your images in your account.": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Générez des avatars de compagnon, cinq niveaux de forme et des photos de groupe. Consultez vos crédits, reprenez les générations interrompues et conservez vos images sur votre compte."
+                    }
+                }
+            }
+        },
+        "ai.credits": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld credit available"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld credits available"
+                                }
+                            }
+                        }
+                    }
+                },
+                "fr": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld crédit disponible"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld crédits disponibles"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "ai.credits-reserved": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld reserved"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld reserved"
+                                }
+                            }
+                        }
+                    }
+                },
+                "fr": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld réservé"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld réservés"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "ai.generation-price": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld credit per generation"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld credits per generation"
+                                }
+                            }
+                        }
+                    }
+                },
+                "fr": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld crédit par génération"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld crédits par génération"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "Generated images stay available in your account, even when you close the app before generation finishes.": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les images générées restent disponibles sur votre compte, même si vous fermez l’app avant la fin de la génération."
+                    }
+                }
+            }
+        },
+        "Resting": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Au repos"
+                    }
+                }
+            }
         }
     },
     "version": "1.0"

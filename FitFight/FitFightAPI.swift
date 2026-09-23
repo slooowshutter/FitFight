@@ -684,6 +684,75 @@ struct FitFightAPI {
         )
     }
 
+    /// Reuse this key for the same user action. Poll the returned request instead of starting again.
+    func startAvatarGeneration(
+        description: String,
+        idempotencyKey: UUID,
+        accessToken: String
+    ) async throws -> FitFightAIRequest {
+        let response: FitFightAIRequest = try await post(
+            path: "ai/runs",
+            accessToken: accessToken,
+            body: FitFightAvatarRequest(parameters: .init(description: description)),
+            idempotencyKey: idempotencyKey.uuidString.lowercased(),
+            expected: [200, 202]
+        )
+        if let failure = response.failure { throw failure }
+        return response
+    }
+
+    func startFitnessGeneration(
+        avatarRequestID: UUID,
+        identityDetails: String,
+        idempotencyKey: UUID,
+        accessToken: String
+    ) async throws -> FitFightAIRequest {
+        let response: FitFightAIRequest = try await post(
+            path: "ai/runs",
+            accessToken: accessToken,
+            body: FitFightFitnessRequest(parameters: .init(avatarRequestID: avatarRequestID, identityDetails: identityDetails)),
+            idempotencyKey: idempotencyKey.uuidString.lowercased(),
+            expected: [200, 202]
+        )
+        if let failure = response.failure { throw failure }
+        return response
+    }
+
+    func startGroupPhotoGeneration(
+        characters: [FitFightAICharacter],
+        scene: String,
+        idempotencyKey: UUID,
+        accessToken: String
+    ) async throws -> FitFightAIRequest {
+        let response: FitFightAIRequest = try await post(
+            path: "ai/runs",
+            accessToken: accessToken,
+            body: FitFightGroupPhotoRequest(parameters: .init(characters: characters, scene: scene)),
+            idempotencyKey: idempotencyKey.uuidString.lowercased(),
+            expected: [200, 202]
+        )
+        if let failure = response.failure { throw failure }
+        return response
+    }
+
+    func aiAllowance(accessToken: String) async throws -> FitFightAIAllowance {
+        try await get(path: "ai/allowance", accessToken: accessToken, expected: [200])
+    }
+
+    func aiLibrary(accessToken: String) async throws -> [FitFightAILibraryEntry] {
+        try await get(path: "ai/library", accessToken: accessToken, expected: [200])
+    }
+
+    func aiRequest(requestID: UUID, accessToken: String) async throws -> FitFightAIRequest {
+        let response: FitFightAIRequest = try await get(
+            path: "ai/runs/\(requestID.uuidString.lowercased())",
+            accessToken: accessToken,
+            expected: [200]
+        )
+        if let failure = response.failure { throw failure }
+        return response
+    }
+
     func storeAppleAuthorizationCode(
         _ authorizationCode: String,
         accessToken: String
@@ -771,6 +840,7 @@ struct FitFightAPI {
         avatarMediaId: UUID? = nil,
         companionId: String? = nil,
         companionPrompt: String? = nil,
+        companionImage: FitFightAICompanionSelection? = nil,
         timeZone: String? = nil,
         accessToken: String
     ) async throws -> FitFightProfile {
@@ -784,6 +854,7 @@ struct FitFightAPI {
                 avatarMediaId: avatarMediaId,
                 companionId: companionId,
                 companionPrompt: companionPrompt,
+                companionImage: companionImage,
                 timeZone: timeZone
             ))
         )
@@ -1385,6 +1456,9 @@ struct FitFightAPI {
             request.setValue("application/json", forHTTPHeaderField: "Accept")
             request.setValue(AppVersion.marketing, forHTTPHeaderField: "X-FitFight-Version")
             request.setValue(AppVersion.build, forHTTPHeaderField: "X-FitFight-Build")
+            if path.hasPrefix("ai/") {
+                request.setValue(UUID().uuidString.lowercased(), forHTTPHeaderField: "X-FitFight-Trace-ID")
+            }
             if let trace {
                 request.setValue(trace.id.uuidString.lowercased(), forHTTPHeaderField: "X-FitFight-Trace-ID")
             }
@@ -1415,6 +1489,10 @@ struct FitFightAPI {
                 let payload = try? Self.decoder.decode(APIErrorResponse.self, from: data)
                 if payload?.code == "update_required" || payload?.code == "release_unavailable" {
                     await AppUpdateChecker.shared.rejectRequest(updateRequired: payload?.code == "update_required")
+                }
+                if payload?.code.hasPrefix("ai_") == true,
+                   let aiError = try? Self.decoder.decode(FitFightAIError.self, from: data) {
+                    throw aiError
                 }
                 throw FitFightAPIError.http(
                     status: status,
@@ -1480,6 +1558,7 @@ private struct ProfileUpdate: Encodable {
     let avatarMediaId: UUID?
     let companionId: String?
     let companionPrompt: String?
+    let companionImage: FitFightAICompanionSelection?
     let timeZone: String?
 
     enum CodingKeys: String, CodingKey {
@@ -1488,6 +1567,7 @@ private struct ProfileUpdate: Encodable {
         case avatarMediaId = "avatar_media_id"
         case companionId = "companion_id"
         case companionPrompt = "companion_prompt"
+        case companionImage = "companion_image"
         case timeZone = "time_zone"
     }
 
@@ -1497,6 +1577,7 @@ private struct ProfileUpdate: Encodable {
         try container.encodeIfPresent(displayName, forKey: .displayName)
         try container.encodeIfPresent(avatarMediaId, forKey: .avatarMediaId)
         try container.encodeIfPresent(companionId, forKey: .companionId)
+        try container.encodeIfPresent(companionImage, forKey: .companionImage)
         try container.encodeIfPresent(timeZone, forKey: .timeZone)
         if companionId != nil {
             try container.encode(companionPrompt, forKey: .companionPrompt)

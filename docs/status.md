@@ -108,6 +108,47 @@ automatic Vercel deployment while these changes are prepared.
 
 **Deployment order and live state:** Read-only staging and production `/api/health` checks at 11:45 UTC on 23 Sep returned `schema: ready` and `profile_api: true`; they do not show that this workspace's code is deployed. No merge, hosted database write, backend deployment, TestFlight upload, or production promotion was performed for this change. Before an authorized staging promotion, verify the transaction against a disposable cloud database and preserve representative older create requests and responses. Deploy the compatible backend through `develop`, verify authenticated creation and invitations on staging with admitted builds, and keep the same API contract for any later authorized `preview` and `main` promotions.
 
+## Full of life onboarding, prepared 23 Sep 2026
+
+Marc selected onboarding option 10 for native implementation. The first-run flow
+is account, username, companion, Apple Health with a same-step count reveal, a real
+Fight offer, and reminders. Confirmed joins celebrate after reminders. Explore
+still visits reminders. The old Feedback introduction is removed. Existing
+accounts bypass completed setup; interrupted setup is stored per account.
+
+Native screens use the existing Night/Day tokens, Nunito, stock companion art,
+320 ms page/element entrances and 65 ms staggering. Companion selection animates
+only the hero artwork; controls stay mounted. System Reduce Motion suppresses
+motion and counting. Health reads, sign-in and Fight membership use existing
+services and `/api/v1` contracts. No API model, backend or database schema changed.
+
+Code is prepared on `build-onboarding`. The final [GitHub-hosted native checks,
+full simulator build and signed simulator package](https://github.com/slooowshutter/FitFight/actions/runs/35792404282)
+passed at `7a62986b`. Checks include onboarding progress and account isolation,
+confirmed membership ordering, Google sign-in, Health/Feed refresh state, supported
+API decoding, English/French localization, token parity and project compilation.
+Back returns to the Health reveal, skipped Health stays on step four, and joining
+keeps the primary action mounted during refresh. A branch push runs these hosted
+checks; it does not upload TestFlight. PR #299 is open; no merge to develop, release-branch promotion, or TestFlight upload was requested.
+Physical-device permission and animation verification remain pending.
+
+The [private reference](https://fitfight-onboarding.marc719509.chatgpt.site) now
+contains only Full of life. Other treatments and the picker are removed. Twelve
+complete prototype journeys and 36 companion-selection checks passed; source and
+DOM checks confirm the original timing, stable Health heading and reduced-motion
+controls. Native membership remains joined when navigating back; no UI action
+pretends that a confirmed server membership was undone.
+
+**Develop merge, 23 Sep:** `build-onboarding` now includes develop `1e984aa9`.
+The six-step flow, new keyboard dismissal, incoming Specials and notification
+features, both release-note sets, and all localization entries are preserved.
+No onboarding API contract or database schema changed in this branch. After the
+merge, Web API typechecking and all 423 unit tests passed locally, along with
+English/French localization, native API boundary, Fight localization, native
+state, remote photo, and Xcode project syntax checks. The combined revision still
+needs GitHub-hosted simulator and disposable database checks. No live deployment,
+TestFlight upload, or merge to `develop`, `preview`, or `main` occurred here.
+
 ## TestFlight version toast prepared 23 Sep 2026
 
 The native app now shows an optional update as a toast when a newer public

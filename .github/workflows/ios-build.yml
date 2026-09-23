@@ -14,6 +14,7 @@ on:
             - "scripts/test_fight_discovery.py"
             - "scripts/test_profile_challenges.py"
             - "scripts/test_profile_interactions.py"
+            - "scripts/test_onboarding_state.py"
             - "scripts/test_profile_navigation.py"
             - "scripts/test_profile_refresh.py"
             - "scripts/test_native_state.py"
@@ -37,7 +38,7 @@ on:
             - "fastlane/**"
             - ".github/workflows/ios-build.yml"
     push:
-        branches: [main, develop, preview, profiles-friends-and-stats, exclusive-animal-avatars]
+        branches: [main, develop, preview, profiles-friends-and-stats, build-onboarding]
         paths:
             - "FitFight/**"
             - "FitFightNotificationService/**"
@@ -49,6 +50,7 @@ on:
             - "scripts/test_fight_discovery.py"
             - "scripts/test_profile_challenges.py"
             - "scripts/test_profile_interactions.py"
+            - "scripts/test_onboarding_state.py"
             - "scripts/test_profile_navigation.py"
             - "scripts/test_profile_refresh.py"
             - "scripts/test_native_state.py"
@@ -175,6 +177,9 @@ jobs:
 
             - name: Verify calendar rematches
               run: python3 scripts/test_profile_challenges.py
+
+            - name: Verify first-Fight onboarding progress and account isolation
+              run: python3 scripts/test_onboarding_state.py
 
             - name: Verify Profile joins and round navigation
               run: python3 scripts/test_profile_interactions.py

@@ -1,11 +1,47 @@
 # Backend
 
-Production Metric is **Steps**. Phone vs server status: [`status.md`](status.md). Fights, memberships, scores, and data sources are writable only by the backend. Native Accept and Decline use authenticated commands; database grants deny direct client mutations. For Apple Health, it asks HealthKit for Apple's merged cumulative total over each exact Fight window and sends those totals to one authenticated Next.js endpoint. It may also send Apple's merged daily buckets for the active Fight days needed by charts; those buckets never determine the Fight score. The same request may include private activity totals and workout summaries that are not used for scoring. The backend validates the User, Fight membership, server-issued windows and cutoffs, then stores the exact-window snapshots and updates standings in a TypeScript-owned Postgres transaction. There are no app-facing database RPCs.
+Production scoring Metric is **Steps**. The native app sends Apple's merged
+Fight-window totals and checkpoints through the existing `/api/v1/healthkit/steps`
+contract. The prepared activity pipeline also accepts merged daily totals,
+workout summaries, and explicit workout deletion IDs through
+`/api/v1/healthkit/activity`. Individual HealthKit samples stay on the phone.
+The backend saves incoming records, resolves current measurements, and publishes
+Fight standings and compatible older-client mirrors. There are no app-facing
+Postgres RPCs.
 
 [`system-design.md`](system-design.md) is the golden guide. This folder is the first slice of it, not the whole thing. Do not add Active Minutes, Workout Count, WHOOP, Strava, payments, or a website until the backlog says so. Fight posts and photo uploads go through the API below.
 
 Hosted production (no secrets): https://pvqntpteehdvhqyctwum.supabase.co  
 Hosted staging / git `develop` (no secrets): https://zstzbfocunthczzubggz.supabase.co
+
+## Activity pipeline (prepared 23 Sep 2026)
+
+This branch adds `private.activity_raw` for durable received totals, workout
+summaries, and deletion events, then `private.activity_metrics` for current
+measurements with scope, value, unit, interval, source, input IDs, and resolver
+version. Neither table is exposed to mobile database clients. Exact retries reuse
+one raw row; new readings replace current metrics. A workout tombstone wins over
+a stale replay. Workout counts, duration, and walk/run workout distance are
+derived from effective workout records and never added to Apple-merged daily
+Steps, energy, or distance.
+
+The existing Steps endpoint keeps its request and decoded response shape for
+installed clients. It now validates and stores Fight readings, merged days, and
+any older-client activity extras as raw rows. The new activity endpoint accepts
+at most 1,000 daily totals, 200 workout summaries, and 500 deletion UUIDs per
+page. Its `received` count acknowledges durable intake; `processing` reports
+`processed` or `pending`. Each request attempts bounded resolution. The
+close-fights worker resumes pending, failed, or expired-lease rows. Profile
+statistics read correctable `activity_metrics` day rows. Fight charts and
+standings use the published Fight revision; finalized outcomes remain frozen.
+`metric_days` and `step_days` remain as legacy mirrors. Account deletion removes
+both new stores.
+
+Rollout order after authorization: apply the additive migration and backfill,
+deploy the compatible backend, then distribute the native build. Old backend
+instances may keep writing legacy daily rows during rollout; those reach the new
+profile projection on the next user sync. Keep `/api/v1`, old tables, and client
+permissions through the supported-build overlap. This branch has no live deploy.
 
 ## Application database boundary
 

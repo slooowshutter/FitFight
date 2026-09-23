@@ -27,7 +27,7 @@ export default function PrivacyPage() {
             <article className="legal-content">
                 <p className="eyebrow">YOUR DATA, IN PLAIN LANGUAGE</p>
                 <h1>Privacy Policy</h1>
-                <p className="legal-updated">Effective 19 September 2026</p>
+                <p className="legal-updated">Effective 23 September 2026</p>
                 <p className="legal-intro">
                     FitFight lets named participants compete on who records the
                     most Steps during a private Fight. This policy explains the
@@ -67,12 +67,14 @@ export default function PrivacyPage() {
                         <li>
                             <strong>Apple Health:</strong> with your permission,
                             FitFight reads Step Count and other movement types
-                            (active and resting energy, distance, exercise,
-                            stand, flights, and workouts). Steps fights still
-                            send the merged step total for each exact Fight
-                            window plus the relevant daily step totals used by
-                            Fight charts. Other activity totals stay on your
-                            account and are not shown to other participants.
+                            (energy, distance, exercise, stand, flights, and
+                            workouts). It uploads Apple-merged daily totals
+                            across the history you allow FitFight to read,
+                            exact Fight-window Steps totals and chart
+                            checkpoints, workout summaries, and explicit
+                            workout deletion IDs. Only Steps score current
+                            Fights. Other activity stays private to your
+                            account.
                         </li>
                         <li>
                             <strong>Photos, videos, and posts:</strong> your
@@ -119,14 +121,15 @@ export default function PrivacyPage() {
                     <h2>Apple Health</h2>
                     <p>
                         Apple Health access is read-only. FitFight does not
-                        write to Apple Health. The current app does not send raw
-                        Health samples, GPS routes, heart rate, or device and
-                        source metadata. It may send merged daily activity
-                        totals and workout summaries (type, time, optional
-                        active minutes, distance, energy, and effort) so
-                        FitFight can prepare later challenge types. Those extra
-                        readings are not used to score today&apos;s Steps fights
-                        and are not shown to other people.
+                        write to Apple Health or upload individual Health
+                        samples, GPS routes, heart rate, or device and source
+                        metadata. It stores merged daily activity totals and
+                        workout summaries (type, time, optional active minutes,
+                        distance, energy, and effort). Local change queries
+                        identify days to refresh; their sample records and
+                        checkpoints stay on your phone. These readings maintain
+                        your activity history and do not add to the Steps score
+                        or show other activity to Fight participants.
                     </p>
                     <p>
                         Participants in the same private Fight can see each

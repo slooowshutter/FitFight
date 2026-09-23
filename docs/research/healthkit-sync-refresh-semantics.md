@@ -1,9 +1,41 @@
 # HealthKit refresh and synchronization semantics
 
-**Research and design proposal, 20 Sep 2026.** Not implemented. This note verifies
-Apple's public contracts and proposes synchronization guarantees. It makes no app,
-API, schema, deployment, or release change. It complements
+**Research from 20 Sep, implementation prepared 23 Sep 2026.** This note records
+Apple's public contracts and the chosen synchronization design. The implementation
+is on `explain-activity-sync-tables`; no migration, backend, native build, or privacy
+copy from this branch has been deployed. It complements
 [the earlier Steps collection research](healthkit-steps-collection-options.md).
+
+## Implementation decision, 23 Sep
+
+Individual HealthKit quantity and category samples stay on the phone. They are
+read locally only to identify changed days. The server receives Apple's merged
+Steps and other supported daily totals, exact Fight-window Steps readings and
+checkpoints, workout summaries, and explicit workout deletion UUIDs. The
+serialized received records enter `private.activity_raw`; the resolver publishes
+current measurements to `private.activity_metrics`. Workout-derived day metrics
+never add to Apple's merged daily values.
+
+The app rereads the most recent 40 civil days on each sync. First sync imports
+all accessible merged daily history in acknowledged pages of at most 1,000 days,
+plus accessible workouts through an all-history anchored query. Each daily type
+has an anchored local change query with a fixed start at bootstrap minus 40 days;
+its anchor advances after the affected merged days are acknowledged. Workout
+anchors advance after summaries and deletion UUIDs are acknowledged. Late
+changes earlier than that fixed daily predicate may be missed. Deleted objects
+are temporary in HealthKit, so a long absence can also miss a workout deletion.
+
+The existing `/api/v1/healthkit/steps` contract stays for installed builds. The
+new app sends Fight readings there, then sends daily totals and workouts through
+`POST /api/v1/healthkit/activity`. The backend retains old readers and writes a
+legacy Steps mirror. A bounded resolver and the close-fights worker retry saved
+pending records. Personal history can be corrected; final Fight results remain
+frozen. Hosted CI proves code and disposable database behavior, while actual
+background delivery and HealthKit authorization still require device checks.
+
+The sections below preserve the original research and pre-change baseline. This
+implementation decision supersedes proposals to upload individual samples or
+sample deletions.
 
 ## Confirmed requirements from Marc, 20 Sep
 
@@ -88,11 +120,11 @@ the same resolver.
 - Preserve the existing finalized-Fight policy while allowing personal history
   and active Fight calculations to receive corrections.
 
-The original-record intake is still proposed. The current application continues
-to write the selected workout fields and aggregates directly to its existing
-tables until the new collector and backend are implemented and deployed.
+The branch implementation uses the two new activity tables and new collector.
+The currently deployed application continues to use the older tables until an
+authorized migration and backend/native rollout.
 
-## Current FitFight implementation, inspected 20 Sep
+## Pre-change FitFight implementation, inspected 20 Sep
 
 These are static code findings in this checkout, not a verification of every
 installed binary or a reproduction against a user's live HealthKit store.
@@ -256,7 +288,7 @@ record contains a shared identifier. [Sync identifier][sync-id], [WWDC20][wwdc]
 
 ## Proposed records-to-metrics pipeline
 
-For metrics that need individual records, use this flow:
+For workout records and received merged totals, the prepared pipeline uses this flow:
 
 ```text
 HealthKit bootstrap/delta
@@ -284,9 +316,8 @@ to Apple's merged total. HealthKit can also condense/coalesce Steps samples.
 [Statistics][statistics], [WWDC20][wwdc], [Step count][steps]
 
 For FitFight Steps, the proposed pipeline therefore also receives authoritative
-merged statistics for affected Fight windows and cumulative checkpoints. Raw
-records can provide change detection and diagnostics without becoming a competing
-score. Keep a score and its chart on the same cutoff/revision; do not assume that
+merged statistics for affected Fight windows and cumulative checkpoints. Local quantity samples provide change detection without leaving the phone
+or becoming a competing score. Keep a score and its chart on the same cutoff/revision; do not assume that
 independently rounded daily totals exactly sum to a separately queried total.
 
 A periodic or recovery statistics reread remains useful. Users can change Health

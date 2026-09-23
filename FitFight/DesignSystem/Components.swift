@@ -869,6 +869,7 @@ struct FFListRow: View {
                 Text(subtitle)
                     .ffType(.caption)
                     .foregroundStyle(theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
             VStack(alignment: .trailing, spacing: 2) {

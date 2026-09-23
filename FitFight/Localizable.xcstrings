@@ -13256,6 +13256,50 @@
                 }
             }
         },
+        "Ending soonest": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Fin la plus proche"
+                    }
+                }
+            }
+        },
+        "Ending latest": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Fin la plus lointaine"
+                    }
+                }
+            }
+        },
+        "Recently started": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Début le plus récent"
+                    }
+                }
+            }
+        },
+        "Tap outside an entry to close the keyboard. Sort Current Fights by end or start time and see each exact deadline.": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Touchez un espace vide pour fermer le clavier. Triez les défis en cours par date de fin ou de début et voyez l'heure exacte de chaque fin."
+                    }
+                }
+            }
+        },
         "Show feedback": {
             "extractionState": "manual",
             "localizations": {

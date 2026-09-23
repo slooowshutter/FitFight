@@ -1,12 +1,22 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **20 Sep 2026**. Production release: **1.1.1 (202)**.
+Read this before building. Last updated **23 Sep 2026**. Production release: **1.1.1 (202)**.
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
 ---
 
-**Last TestFlight:** 19 Sep 2026 at 13:14 UTC. **1.1.2 (204)** from preview merge `c80e642`, including develop `f206592`. [Upload and Apple processing succeeded](https://github.com/slooowshutter/FitFight/actions/runs/35444706489): `VALID`, unexpired, available to Internal Tester. This upload did not submit or assign external groups. The published release registry lists `latest` 1.1.1 (201) and `review`/`internal` 1.1.2 (204). At the 13:18 UTC recheck, staging's live release endpoint still returned candidate 203 with enforcement off; its metadata propagation does not block internal build 204. Production remains 1.1.1 (202).
+**Last verified TestFlight upload in this document:** 19 Sep 2026 at 13:14 UTC. **1.1.2 (204)** from preview merge `c80e642`, including develop `f206592`. [Upload and Apple processing succeeded](https://github.com/slooowshutter/FitFight/actions/runs/35444706489): `VALID`, unexpired, available to Internal Tester. This upload did not submit or assign external groups. The published release registry lists `latest` 1.1.1 (201) and `review`/`internal` 1.1.2 (204). At the 13:18 UTC recheck, staging's live release endpoint still returned candidate 203 with enforcement off; its metadata propagation does not block internal build 204. Production remains 1.1.1 (202).
+
+## Fight clock, keyboard, and Current Fights sort: prepared 23 Sep 2026
+
+**Code:** The protected closer selects at most 25 fights whose next state transition is due. It no longer spends its batch or 200-row read cap on fights waiting within the final Steps grace period. The exact `ends_at` and grace deadline now count as due. The production Vercel close-fights schedule is prepared for every 15 minutes; Preview still needs its separate hosted Supabase Cron job. Current Fights defaults to earliest end, offers latest end and recently started, and shows the countdown with the exact local deadline. Tapping noninteractive screen space dismisses the keyboard on entry forms; scrolling can also dismiss it. The app has an English/French `1.1.2` release note.
+
+**Compatibility:** No `/api/v1` request or response shape, database schema, direct-access grant, or marketing version changes. The worker route remains protected and still drains notification intents. Read-only `/api/app-release` checks on 23 Sep returned staging `latest` 1.1.1 (201), `review`/`internal` 1.1.2 (205), `enforced: false`; production returned `latest` 1.1.1 (202), no candidate, `enforced: true`. These clients keep their existing requests and decoders. Stage the compatible backend before distributing the native build; the new Production cron schedule takes effect only after an authorized `main` promotion.
+
+**Checks:** Web typechecking and all 325 unit tests passed. The fixed-clock test demonstrated the exact end and grace boundaries; the existing security integration suite covers early completion from exact final snapshots. New disposable database tests cover 25 waiting fights, more than 200 waiting fights, the grace deadline, and reminder idempotence. English/French localization, native API boundary, and destructive-SQL checks passed. The database integration tests, GitHub-hosted iPhone simulator, native compilation, compact-phone and larger-text layout, Night/Day layout, and physical-device reminder still need cloud verification.
+
+**Hosted state:** A read-only Vercel check found the `fit-fight` project under the Enterprise `blendai` team, which supports the 15-minute cron interval. Production has a `CRON_SECRET` variable. Neither `CRON_SECRET` nor `FITFIGHT_CRON_SECRET` was listed for Preview. No staging Cron job, Vault value, route logs, or three-run history was verified. No hosted setting, deployment, merge, or TestFlight upload was made for this change. The staging Preview secret and matching hosted Supabase Vault/job setup are required before scheduled staging verification.
 
 ## Preview promotion, 19 Sep 2026
 

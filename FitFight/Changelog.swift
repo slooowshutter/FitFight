@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.1.2",
             year: 2026,
             month: 9,
+            day: 23,
+            notes: "Tap outside an entry to close the keyboard. Sort Current Fights by end or start time and see each exact deadline."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
             day: 19,
             notes: "Signing in with Google opens the FitFight account that already uses that email, including Sign in with Apple."
         ),

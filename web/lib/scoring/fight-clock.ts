@@ -39,13 +39,13 @@ export function nextFightState(input: FightClockInput): FightState {
     if (state === "scheduled" && nowMs >= startsAtMs) {
         next = "live";
     }
-    if ((next === "live" || state === "live") && nowMs > endsAtMs) {
+    if ((next === "live" || state === "live") && nowMs >= endsAtMs) {
         next = "awaiting_final_sync";
     }
 
     if (
         next === "awaiting_final_sync" &&
-        (nowMs > graceEndsMs || allSourcesCompleteThroughEnd)
+        (nowMs >= graceEndsMs || allSourcesCompleteThroughEnd)
     ) {
         return "final";
     }
@@ -67,7 +67,7 @@ export function fightNeedsCloserTick(input: FightDueInput): boolean {
         return nowMs >= startsAtMs;
     }
     if (state === "live") {
-        return nowMs > endsAtMs;
+        return nowMs >= endsAtMs;
     }
     return state === "awaiting_final_sync";
 }

@@ -12,6 +12,18 @@ enum FightsListFilter: CaseIterable {
     }
 }
 
+enum CurrentFightsSort: CaseIterable, Hashable {
+    case endingSoonest, endingLatest, recentlyStarted
+
+    var title: String {
+        switch self {
+        case .endingSoonest: String(appLocalized: "Ending soonest")
+        case .endingLatest: String(appLocalized: "Ending latest")
+        case .recentlyStarted: String(appLocalized: "Recently started")
+        }
+    }
+}
+
 struct FightsListView: View {
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var session: SessionStore
@@ -19,6 +31,7 @@ struct FightsListView: View {
     @Environment(\.ffTheme) private var theme
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var filter: FightsListFilter
+    @State private var currentSort: CurrentFightsSort = .endingSoonest
 
     init(filter: FightsListFilter = .current) {
         _filter = State(initialValue: filter)
@@ -85,13 +98,35 @@ struct FightsListView: View {
             }
 
             if filter == .current {
-                ForEach(model.live) { fight in
+                if !model.live.isEmpty {
+                    HStack {
+                        Text(String(appLocalized: "Sort by"))
+                            .ffType(.caption)
+                            .foregroundStyle(theme.textSecondary)
+                        Spacer(minLength: 8)
+                        Menu {
+                            Picker(String(appLocalized: "Sort by"), selection: $currentSort) {
+                                ForEach(CurrentFightsSort.allCases, id: \.self) { option in
+                                    Text(option.title).tag(option)
+                                }
+                            }
+                        } label: {
+                            Label(currentSort.title, systemImage: "arrow.up.arrow.down")
+                                .ffType(.label)
+                                .foregroundStyle(theme.mossText)
+                                .frame(minHeight: 44)
+                        }
+                        .accessibilityLabel(String(appLocalized: "Sort by"))
+                        .accessibilityValue(currentSort.title)
+                    }
+                }
+                ForEach(sortedCurrentFights) { fight in
                     let standing = difference(in: fight)
                     let opponent = opponent(in: fight)
                     FFListRow(
                         monogram: opponent?.initials ?? "?",
                         title: fight.listTitle,
-                        subtitle: fight.timeLeftLabel,
+                        subtitle: fight.timeAndDeadlineLabel,
                         metric: fight.isUpcoming ? String(appLocalized: "Scheduled") : standing.text,
                         ahead: standing.ahead,
                         metricIsGap: !fight.isUpcoming && standing.isGap,
@@ -132,6 +167,20 @@ struct FightsListView: View {
         case .current: model.live
         case .invited: model.invitations
         case .past: model.finished
+        }
+    }
+
+    private var sortedCurrentFights: [Fight] {
+        model.live.sorted { lhs, rhs in
+            switch currentSort {
+            case .endingSoonest:
+                if lhs.windowEnd != rhs.windowEnd { return lhs.windowEnd < rhs.windowEnd }
+            case .endingLatest:
+                if lhs.windowEnd != rhs.windowEnd { return lhs.windowEnd > rhs.windowEnd }
+            case .recentlyStarted:
+                if lhs.windowStart != rhs.windowStart { return lhs.windowStart > rhs.windowStart }
+            }
+            return lhs.id < rhs.id
         }
     }
 

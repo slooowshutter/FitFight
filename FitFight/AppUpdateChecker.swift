@@ -74,9 +74,10 @@ final class AppUpdateChecker: ObservableObject {
     @Published private(set) var status: Status = .checking
     @Published private(set) var policy: AppReleasePolicy?
     @Published private(set) var isChecking = false
+    @Published private(set) var pendingToastRelease: AppRelease?
 
     var allowsUse: Bool { status != .updateRequired }
-    var showsUpdate: Bool { status == .updateAvailable || status == .updateRequired }
+    var requiresUpdate: Bool { status == .updateRequired }
     var offeredRelease: AppRelease? { isTestFlight ? policy?.latest : policy?.offeredRelease }
     let isTestFlight: Bool
 
@@ -85,33 +86,34 @@ final class AppUpdateChecker: ObservableObject {
     private let releaseURL: URL
     private let defaults: UserDefaults
     private let session: URLSession
+    private let now: () -> Date
     private let cacheKey: String
     private let requiredKey: String
-    private let dismissedKey: String
-    private var dismissedRelease: AppRelease?
+    private let reminderDateKey: String
+    private var lastNotifiedAt: Date?
     private var inFlight: Task<Bool, Never>?
 
     init(version: String, build: String, releaseURL: URL, isTestFlight: Bool = false,
          defaults: UserDefaults = .standard,
-         session: URLSession = .shared) {
+         session: URLSession = .shared,
+         now: @escaping () -> Date = Date.init) {
         self.version = version
         self.build = build
         self.releaseURL = releaseURL
         self.isTestFlight = isTestFlight
         self.defaults = defaults
         self.session = session
+        self.now = now
         cacheKey = "fitfight.release-policy.\(releaseURL.absoluteString)"
         requiredKey = "fitfight.release-required.\(releaseURL.absoluteString).\(version).\(build)"
-        dismissedKey = "fitfight.release-dismissed.\(releaseURL.absoluteString).\(version).\(build)"
+        reminderDateKey = "fitfight.release-reminded.\(releaseURL.absoluteString).\(version).\(build).date"
         if let data = defaults.data(forKey: cacheKey),
            let cached = try? JSONDecoder().decode(AppReleasePolicy.self, from: data) {
             policy = cached
         }
         if isTestFlight {
             defaults.removeObject(forKey: requiredKey)
-            if let data = defaults.data(forKey: dismissedKey) {
-                dismissedRelease = try? JSONDecoder().decode(AppRelease.self, from: data)
-            }
+            lastNotifiedAt = defaults.object(forKey: reminderDateKey) as? Date
         }
         if !isTestFlight && defaults.bool(forKey: requiredKey) {
             status = .updateRequired
@@ -145,15 +147,27 @@ final class AppUpdateChecker: ObservableObject {
                     self.defaults.removeObject(forKey: self.requiredKey)
                     if policy.allows(version: self.version, build: self.build) {
                         self.status = .current
+                        self.pendingToastRelease = nil
                     } else if let latest = policy.latest {
                         // Internal/review membership does not prove what this tester can install.
                         let isNewer = latest.isNewer(thanVersion: self.version, build: self.build)
-                        let isDismissed = self.dismissedRelease.map {
-                            !latest.isNewer(thanVersion: $0.version, build: String($0.build))
-                        } ?? false
-                        self.status = isNewer && !isDismissed ? .updateAvailable : .current
+                        self.status = isNewer ? .updateAvailable : .current
+                        if isNewer {
+                            let notifiedAt = self.now()
+                            let remindedRecently = self.lastNotifiedAt.map {
+                                notifiedAt.timeIntervalSince($0) < 3 * 24 * 60 * 60
+                            } ?? false
+                            if !remindedRecently {
+                                self.lastNotifiedAt = notifiedAt
+                                self.defaults.set(notifiedAt, forKey: self.reminderDateKey)
+                                self.pendingToastRelease = latest
+                            }
+                        } else {
+                            self.pendingToastRelease = nil
+                        }
                     } else {
                         self.status = .unavailable
+                        self.pendingToastRelease = nil
                     }
                 } else if policy.allows(version: self.version, build: self.build) {
                     self.policy = policy
@@ -174,6 +188,7 @@ final class AppUpdateChecker: ObservableObject {
                 }
             } catch {
                 if self.isTestFlight || self.status != .updateRequired { self.status = .unavailable }
+                if self.isTestFlight { self.pendingToastRelease = nil }
             }
             return self.allowsUse
         }
@@ -185,17 +200,15 @@ final class AppUpdateChecker: ObservableObject {
         allowsUse
     }
 
-    func dismissUpdate() {
-        guard isTestFlight, let release = offeredRelease else { return }
-        dismissedRelease = release
-        defaults.set(try? JSONEncoder().encode(release), forKey: dismissedKey)
-        status = .current
+    func dismissToast() {
+        pendingToastRelease = nil
     }
 
     func rejectRequest(updateRequired: Bool) {
         if isTestFlight {
             // An older backend may still send 426 during deployment; it must not lock the app.
             status = .unavailable
+            pendingToastRelease = nil
             defaults.removeObject(forKey: requiredKey)
         } else if updateRequired {
             status = .updateRequired

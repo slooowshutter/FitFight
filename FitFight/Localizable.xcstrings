@@ -4164,6 +4164,56 @@
                 }
             }
         },
+        "New FitFight version": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nouvelle version de FitFight"
+                    }
+                }
+            }
+        },
+        "Ready in TestFlight.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Disponible dans TestFlight."
+                    }
+                }
+            }
+        },
+        "Preview update card": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Aperçu de la carte de mise à jour"
+                    }
+                }
+            }
+        },
+        "Large notice at the top.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Grand avis en haut de l'écran."
+                    }
+                }
+            }
+        },
+        "If you stay on an older TestFlight build, an update toast returns at most once every three days.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Si vous gardez une ancienne version TestFlight, un avis de mise à jour revient au maximum une fois tous les trois jours."
+                    }
+                }
+            }
+        },
         "Open TestFlight to check for the update. If it isn’t available yet, cancel and keep using FitFight.": {
             "localizations": {
                 "fr": {

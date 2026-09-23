@@ -24,6 +24,31 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Deployment order and live state:** Read-only staging and production `/api/health` checks at 11:45 UTC on 23 Sep returned `schema: ready` and `profile_api: true`; they do not show that this workspace's code is deployed. No merge, hosted database write, backend deployment, TestFlight upload, or production promotion was performed for this change. Before an authorized staging promotion, verify the transaction against a disposable cloud database and preserve representative older create requests and responses. Deploy the compatible backend through `develop`, verify authenticated creation and invitations on staging with admitted builds, and keep the same API contract for any later authorized `preview` and `main` promotions.
 
+## TestFlight version toast prepared 23 Sep 2026
+
+The native app now shows an optional update as a toast when a newer public
+TestFlight build is available. It offers Update and Close, disappears after 10
+seconds unless VoiceOver is running, and can appear again after three days if
+the app is still behind, even across app launches or newer public releases.
+Marc selected the top card. Its reusable toast has an optional action
+button height, set to 48pt for the update action. You -> Developer keeps one
+preview, which stays open until closed. The existing
+`./scripts/run-companion-preview.sh` launches this preview in a
+fixture session under You -> Developer, without a login or live release check.
+Production still uses its mandatory update screen. No release API
+field or `/api/v1` contract changed.
+
+**Live release policy read on 23 Sep:** staging `latest` 1.1.1 (201),
+`review`/`internal` 1.1.2 (205), enforcement off; production `latest` 1.1.1
+(202), no review/internal candidate, enforcement on. The toast uses only
+staging's installable `latest`, so internal build 205 does not offer an
+unavailable beta update. Existing installed clients keep their current update
+behavior until they install this native change.
+
+**Verification:** English/French localization validation passed. The updated
+native release regression and simulator compile still need GitHub-hosted
+`macos-26` CI. No PR, merge, upload, or live deployment was performed here.
+
 ## Preview promotion, 19 Sep 2026
 
 Marc authorized merging all current develop work into preview for internal

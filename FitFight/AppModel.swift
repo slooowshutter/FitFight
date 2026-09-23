@@ -208,6 +208,7 @@ final class AppModel: ObservableObject {
     @Published var showingVersions = false
     @Published var showingPreferences = false
     @Published var showingDebugMenu = false
+    @Published var showingUpdateToastPreview = false
     @Published var feedbackRequestFilter = RequestFilter()
     @Published var companionPreviewNotice: String?
     @Published var joined: Set<String> = []

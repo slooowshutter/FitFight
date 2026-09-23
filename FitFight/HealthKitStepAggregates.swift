@@ -26,48 +26,11 @@ enum HealthKitStepAggregates {
     ) async throws -> FitFightHealthKitStepSync {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = timeZone
-        let earliestDay = context.fightWindows
-            .map { calendar.startOfDay(for: $0.startsAt) }
-            .min()
-        let totalsByDay: [String: Int]
-        if let earliestDay {
-            try Task.checkCancellation()
-            totalsByDay = try await trace.measure(.healthKitDaily) {
-                try await dailyTotals(
-                    store: store,
-                    type: type,
-                    start: earliestDay,
-                    end: context.serverNow,
-                    calendar: calendar
-                )
-            }
-        } else {
-            totalsByDay = [:]
-        }
-
-        var mergedDays: [FitFightHealthKitStepSync.MergedDay] = []
-        if var cursor = earliestDay {
-            while cursor < context.serverNow {
-                guard let nextDay = calendar.date(byAdding: .day, value: 1, to: cursor) else { break }
-                let day = dayStamp(cursor, calendar: calendar)
-                let endsAt = min(nextDay, context.serverNow)
-                if context.fightWindows.contains(where: {
-                    cursor < $0.cutoffAt && endsAt > $0.startsAt
-                }), let steps = totalsByDay[day] {
-                    mergedDays.append(FitFightHealthKitStepSync.MergedDay(
-                        day: day,
-                        startsAt: iso8601(cursor),
-                        endsAt: iso8601(endsAt),
-                        steps: steps
-                    ))
-                }
-                cursor = nextDay
-            }
-        }
+        let mergedDays: [FitFightHealthKitStepSync.MergedDay] = []
 
         var fightAggregates: [FitFightHealthKitStepSync.FightAggregate] = []
         fightAggregates.reserveCapacity(context.fightWindows.count)
-        var sawAccessibleSteps = !totalsByDay.isEmpty
+        var sawAccessibleSteps = false
         for window in context.fightWindows {
             try Task.checkCancellation()
             var checkpoints: [FightStepCheckpoint]? = nil
@@ -129,42 +92,6 @@ enum HealthKitStepAggregates {
             mergedDays: mergedDays,
             fightAggregates: fightAggregates
         )
-    }
-
-    private static func dailyTotals(
-        store: HKHealthStore,
-        type: HKQuantityType,
-        start: Date,
-        end: Date,
-        calendar: Calendar
-    ) async throws -> [String: Int] {
-        try await withCheckedThrowingContinuation { continuation in
-            let predicate = HKQuery.predicateForSamples(
-                withStart: start,
-                end: end,
-                options: .strictStartDate
-            )
-            let query = HKStatisticsCollectionQuery(
-                quantityType: type,
-                quantitySamplePredicate: predicate,
-                options: [.cumulativeSum],
-                anchorDate: calendar.startOfDay(for: start),
-                intervalComponents: DateComponents(day: 1)
-            )
-            query.initialResultsHandler = { _, collection, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-                var totals: [String: Int] = [:]
-                collection?.enumerateStatistics(from: start, to: end) { statistics, _ in
-                    guard let count = integerCount(from: statistics.sumQuantity()) else { return }
-                    totals[dayStamp(statistics.startDate, calendar: calendar)] = count
-                }
-                continuation.resume(returning: totals)
-            }
-            store.execute(query)
-        }
     }
 
     private static func total(

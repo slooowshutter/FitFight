@@ -183,6 +183,26 @@ struct FitFightHealthKitStepSyncResult: Decodable, Equatable {
     }
 }
 
+struct FitFightHealthKitActivityBatch: Encodable {
+    var collectedAt: String
+    var timeZone: String
+    var totals: [FitFightHealthKitStepSync.ActivityDay]
+    var workouts: [FitFightHealthKitStepSync.Workout]
+    var deletedWorkouts: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case collectedAt = "collected_at"
+        case timeZone = "time_zone"
+        case totals, workouts
+        case deletedWorkouts = "deleted_workouts"
+    }
+}
+
+struct FitFightHealthKitActivityResult: Decodable {
+    var received: Int
+    var processing: String
+}
+
 struct FitFightHealthKitDiagnosticSnapshot: Encodable {
     var backgroundRefreshStatus: String
     var deliveryRegistrationStatus: String
@@ -634,6 +654,21 @@ struct FitFightAPI {
             body: body,
             trace: trace,
             traceStage: .upload
+        )
+    }
+
+    func syncHealthKitActivity(
+        _ batch: FitFightHealthKitActivityBatch,
+        accessToken: String,
+        trace: HealthKitSyncTrace
+    ) async throws -> FitFightHealthKitActivityResult {
+        try await request(
+            path: "healthkit/activity",
+            method: "POST",
+            accessToken: accessToken,
+            body: Self.encoder.encode(batch),
+            trace: trace,
+            traceStage: .activityUpload
         )
     }
 

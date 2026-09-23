@@ -1,6 +1,26 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Steps up to date · Other activity didn't sync. Tap to retry.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les pas sont à jour · Les autres activités n’ont pas été synchronisées. Touchez pour réessayer."
+                    }
+                }
+            }
+        },
+        "Apple Health syncs all supported activity and workouts, including older history and later corrections.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Apple Santé synchronise toutes les activités et séances prises en charge, y compris l’historique et les corrections ultérieures."
+                    }
+                }
+            }
+        },
         "Signing in with Google opens the FitFight account that already uses that email, including Sign in with Apple.": {
             "localizations": {
                 "fr": {

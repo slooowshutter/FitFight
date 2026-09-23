@@ -2,13 +2,68 @@ import Foundation
 import HealthKit
 
 enum HealthKitActivityAggregates {
-    static let lookbackDays = 29
-
     struct QuantityKind {
         let metric: String
         let unitName: String
         let type: HKQuantityType
         let unit: HKUnit
+    }
+
+    struct TotalKind {
+        let metric: String
+        let unitName: String
+        let type: HKSampleType
+        let unit: HKUnit?
+    }
+
+    static var totalKinds: [TotalKind] {
+        var kinds = quantityKinds.map {
+            TotalKind(metric: $0.metric, unitName: $0.unitName, type: $0.type, unit: $0.unit)
+        }
+        if let steps = HKQuantityType.quantityType(forIdentifier: .stepCount) {
+            kinds.insert(TotalKind(metric: "steps", unitName: "steps", type: steps, unit: .count()), at: 0)
+        }
+        if let stand = HKCategoryType.categoryType(forIdentifier: .appleStandHour) {
+            kinds.append(TotalKind(metric: "stand_hours", unitName: "count", type: stand, unit: nil))
+        }
+        return kinds
+    }
+
+    static func mergedDays(
+        store: HKHealthStore,
+        kind: TotalKind,
+        start: Date,
+        end: Date,
+        calendar: Calendar,
+        zeroDays: Set<String>
+    ) async throws -> [FitFightHealthKitStepSync.ActivityDay] {
+        let totals: [String: Double]
+        if let quantityType = kind.type as? HKQuantityType, let unit = kind.unit {
+            totals = try await dailyTotals(
+                store: store, type: quantityType, unit: unit,
+                start: start, end: end, calendar: calendar
+            )
+        } else {
+            totals = try await standHours(store: store, start: start, end: end, calendar: calendar)
+        }
+        var days: [FitFightHealthKitStepSync.ActivityDay] = []
+        var cursor = start
+        while cursor < end {
+            guard let nextDay = calendar.date(byAdding: .day, value: 1, to: cursor) else { break }
+            let day = HealthKitStepAggregates.dayStamp(cursor, calendar: calendar)
+            if let measured = totals[day] ?? (zeroDays.contains(day) ? 0 : nil) {
+                days.append(FitFightHealthKitStepSync.ActivityDay(
+                    day: day,
+                    startsAt: HealthKitStepAggregates.iso8601(cursor),
+                    endsAt: HealthKitStepAggregates.iso8601(min(nextDay, end)),
+                    metric: kind.metric,
+                    value: kind.metric == "steps" ? measured.rounded() : measured,
+                    unit: kind.unitName
+                ))
+            }
+            cursor = nextDay
+        }
+        return days
     }
 
     static var readTypes: Set<HKObjectType> {
@@ -70,108 +125,6 @@ enum HealthKitActivityAggregates {
         return kinds
     }
 
-    static func read(
-        store: HKHealthStore,
-        context: FitFightHealthKitContext,
-        timeZone: TimeZone = .current
-    ) async -> (
-        days: [FitFightHealthKitStepSync.ActivityDay],
-        workouts: [FitFightHealthKitStepSync.Workout]?
-    ) {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = timeZone
-        let today = calendar.startOfDay(for: context.serverNow)
-        let lookback = calendar.date(byAdding: .day, value: -lookbackDays, to: today) ?? today
-        let fightStart = context.fightWindows.map { calendar.startOfDay(for: $0.startsAt) }.min()
-        let start = [lookback, fightStart].compactMap { $0 }.min() ?? lookback
-
-        var totals: [String: [String: Double]] = [:]
-        var syncedWorkouts: [FitFightHealthKitStepSync.Workout]?
-        await withTaskGroup(of: (String, [String: Double])?.self) { group in
-            for kind in quantityKinds {
-                group.addTask {
-                    let values = try? await dailyTotals(
-                        store: store,
-                        type: kind.type,
-                        unit: kind.unit,
-                        start: start,
-                        end: context.serverNow,
-                        calendar: calendar
-                    )
-                    return values.map { (kind.metric, $0) }
-                }
-            }
-            group.addTask {
-                let values = try? await standHours(
-                    store: store,
-                    start: start,
-                    end: context.serverNow,
-                    calendar: calendar
-                )
-                return values.map { ("stand_hours", $0) }
-            }
-            for await result in group {
-                guard let result else { continue }
-                totals[result.0] = result.1
-            }
-        }
-
-        do {
-            let samples = try await Self.workouts(
-                store: store,
-                start: start,
-                end: context.serverNow
-            )
-            syncedWorkouts = samples
-            var counts: [String: Double] = [:]
-            var seconds: [String: Double] = [:]
-            var walkRun: [String: Double] = [:]
-            for workout in samples {
-                guard let started = parseServerDate(workout.startedAt) else { continue }
-                let day = HealthKitStepAggregates.dayStamp(started, calendar: calendar)
-                counts[day, default: 0] += 1
-                seconds[day, default: 0] += workout.durationSeconds
-                if workout.activityType == "walking" || workout.activityType == "running",
-                   let distance = workout.distanceM {
-                    walkRun[day, default: 0] += distance
-                }
-            }
-            totals["workout_count"] = counts
-            totals["workout_time"] = seconds
-            totals["walk_run_workout_distance"] = walkRun
-        } catch {
-            syncedWorkouts = nil
-        }
-
-        let units = Dictionary(uniqueKeysWithValues: quantityKinds.map { ($0.metric, $0.unitName) })
-            .merging(["stand_hours": "count", "workout_count": "count", "workout_time": "s", "walk_run_workout_distance": "m"]) { kind, _ in kind }
-
-        var days: [FitFightHealthKitStepSync.ActivityDay] = []
-        var cursor = start
-        while cursor < context.serverNow {
-            guard let nextDay = calendar.date(byAdding: .day, value: 1, to: cursor) else { break }
-            let day = HealthKitStepAggregates.dayStamp(cursor, calendar: calendar)
-            let endsAt = min(nextDay, context.serverNow)
-            for (metric, byDay) in totals {
-                guard let value = byDay[day], let unit = units[metric] else { continue }
-                days.append(FitFightHealthKitStepSync.ActivityDay(
-                    day: day,
-                    startsAt: HealthKitStepAggregates.iso8601(cursor),
-                    endsAt: HealthKitStepAggregates.iso8601(endsAt),
-                    metric: metric,
-                    value: value,
-                    unit: unit
-                ))
-            }
-            cursor = nextDay
-        }
-        days.sort { lhs, rhs in
-            if lhs.day != rhs.day { return lhs.day < rhs.day }
-            return lhs.metric < rhs.metric
-        }
-        return (days, syncedWorkouts)
-    }
-
     private static func dailyTotals(
         store: HKHealthStore,
         type: HKQuantityType,
@@ -183,8 +136,7 @@ enum HealthKitActivityAggregates {
         try await withCheckedThrowingContinuation { continuation in
             let predicate = HKQuery.predicateForSamples(
                 withStart: start,
-                end: end,
-                options: .strictStartDate
+                end: end
             )
             let query = HKStatisticsCollectionQuery(
                 quantityType: type,
@@ -245,10 +197,11 @@ enum HealthKitActivityAggregates {
         return totals
     }
 
-    private static func workouts(
+    static func workouts(
         store: HKHealthStore,
         start: Date,
-        end: Date
+        end: Date,
+        limit: Int = 200
     ) async throws -> [FitFightHealthKitStepSync.Workout] {
         let samples: [HKWorkout] = try await withCheckedThrowingContinuation { continuation in
             let predicate = HKQuery.predicateForSamples(
@@ -259,7 +212,7 @@ enum HealthKitActivityAggregates {
             let query = HKSampleQuery(
                 sampleType: .workoutType(),
                 predicate: predicate,
-                limit: 200,
+                limit: limit,
                 sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)]
             ) { _, samples, error in
                 if let error {
@@ -270,32 +223,34 @@ enum HealthKitActivityAggregates {
             }
             store.execute(query)
         }
-        return samples.compactMap { workout -> FitFightHealthKitStepSync.Workout? in
-            guard workout.endDate > workout.startDate,
-                  workout.endDate <= end,
-                  workout.duration >= 0,
-                  workout.duration <= 7 * 24 * 60 * 60
-            else { return nil }
-            return FitFightHealthKitStepSync.Workout(
-                healthkitUuid: workout.uuid.uuidString.lowercased(),
-                startedAt: HealthKitStepAggregates.iso8601(workout.startDate),
-                endedAt: HealthKitStepAggregates.iso8601(workout.endDate),
-                activityType: activityTypeName(workout.workoutActivityType),
-                durationSeconds: max(0, workout.duration),
-                activeMinutes: quantityValue(
-                    HKQuantityType.quantityType(forIdentifier: .appleExerciseTime)
-                        .flatMap { workout.statistics(for: $0)?.sumQuantity() },
-                    unit: .minute()
-                ),
-                distanceM: workoutDistanceMeters(workout),
-                energyKcal: quantityValue(
-                    HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)
-                        .flatMap { workout.statistics(for: $0)?.sumQuantity() },
-                    unit: .kilocalorie()
-                ),
-                effort: workoutEffort(workout)
-            )
-        }
+        return samples.compactMap { workoutRecord($0, end: end) }
+    }
+
+    static func workoutRecord(_ workout: HKWorkout, end: Date) -> FitFightHealthKitStepSync.Workout? {
+        guard workout.endDate > workout.startDate,
+              workout.endDate <= end,
+              workout.duration >= 0,
+              workout.duration <= 7 * 24 * 60 * 60
+        else { return nil }
+        return FitFightHealthKitStepSync.Workout(
+            healthkitUuid: workout.uuid.uuidString.lowercased(),
+            startedAt: HealthKitStepAggregates.iso8601(workout.startDate),
+            endedAt: HealthKitStepAggregates.iso8601(workout.endDate),
+            activityType: activityTypeName(workout.workoutActivityType),
+            durationSeconds: max(0, workout.duration),
+            activeMinutes: quantityValue(
+                HKQuantityType.quantityType(forIdentifier: .appleExerciseTime)
+                    .flatMap { workout.statistics(for: $0)?.sumQuantity() },
+                unit: .minute()
+            ),
+            distanceM: workoutDistanceMeters(workout),
+            energyKcal: quantityValue(
+                HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)
+                    .flatMap { workout.statistics(for: $0)?.sumQuantity() },
+                unit: .kilocalorie()
+            ),
+            effort: workoutEffort(workout)
+        )
     }
 
     private static func workoutDistanceMeters(_ workout: HKWorkout) -> Double? {

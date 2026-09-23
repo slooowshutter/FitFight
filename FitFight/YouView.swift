@@ -269,7 +269,7 @@ struct YouView: View {
             } label: {
                 FFGroupedRow(
                     title: String(appLocalized: "Apple Health Steps"),
-                    subtitle: steps.connection == .upToDate ? String(appLocalized: "Up to date") : steps.detailText,
+                    subtitle: steps.detailText,
                     systemImage: "heart",
                     enabled: steps.status != .reading && !model.isRefreshingFights,
                     subtitleTone: healthSubtitleTone,
@@ -370,7 +370,7 @@ struct YouView: View {
     private var healthSubtitleTone: FFTone {
         switch steps.connection {
         case .syncFailed, .noAccessibleSteps: return .ember
-        case .upToDate: return .moss
+        case .upToDate: return steps.diagnostics.activitySyncFailed == true ? .ember : .moss
         case .syncing, .notConnected: return .neutral
         }
     }

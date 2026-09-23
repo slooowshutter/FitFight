@@ -46,6 +46,4 @@ export const PATCH = apiRoute<{ postID: string }>(async (request, { params }) =>
     return json(await archiveFeedbackPost(userId, postId, parsed.data));
 });
 
-export function OPTIONS(request: Request) {
-    return corsPreflight(request);
-}
+export const OPTIONS = corsPreflight;

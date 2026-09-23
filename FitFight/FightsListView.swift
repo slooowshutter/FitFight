@@ -90,10 +90,14 @@ struct FightsListView: View {
 
             if filter == .invited {
                 ForEach(model.invitations) { fight in
-                    InvitationRow(fight: fight)
+                    JoinOfferRow(
+                        title: fight.listTitle,
+                        subtitle: fight.listSubtitle,
+                        avatar: AnyView(CompanionAvatar(fight.inviter ?? fight.standings.first?.person))
+                    ) { model.openFightID = fight.id }
                 }
                 ForEach(model.suggestedFights.filter { !$0.alreadyMember }) { fight in
-                    SuggestedFightRow(fight: fight) { Task { await model.openJoinable(fight, session: session) } }
+                    JoinOfferRow(suggested: fight) { Task { await model.openJoinable(fight, session: session) } }
                 }
             }
 
@@ -130,7 +134,6 @@ struct FightsListView: View {
                         metric: fight.isUpcoming ? String(appLocalized: "Scheduled") : standing.text,
                         ahead: standing.ahead,
                         metricIsGap: !fight.isUpcoming && standing.isGap,
-                        photoURL: opponent?.photoURL,
                         avatar: AnyView(CompanionAvatar(opponent)),
                         action: { model.openFightID = fight.id }
                     )
@@ -214,61 +217,30 @@ struct FightsListView: View {
     }
 }
 
-struct InvitationRow: View {
-    let fight: Fight
-    @EnvironmentObject private var model: AppModel
-    @Environment(\.ffTheme) private var theme
-
-    var body: some View {
-        HStack(spacing: 13) {
-            let inviter = fight.inviter ?? fight.standings.first?.person
-            CompanionAvatar(inviter)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(fight.listTitle)
-                    .ffType(.heading)
-                    .foregroundStyle(theme.text)
-                Text(fight.listSubtitle)
-                    .ffType(.caption)
-                    .foregroundStyle(theme.textSecondary)
-            }
-            Spacer(minLength: 8)
-            Button {
-                model.openFightID = fight.id
-            } label: {
-                FFPill(String(appLocalized: "Join"), style: .solidMoss)
-            }
-            .buttonStyle(FFPressStyle())
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(theme.mossWash, in: RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
-        .ffBorder(theme.mossText.opacity(0.18), radius: theme.radius.card)
-        .contentShape(Rectangle())
-        .onTapGesture { model.openFightID = fight.id }
-    }
-}
-
-struct SuggestedFightRow: View {
-    let fight: FitFightJoinableFight
+/// An invitation or a suggested fight: moss wash, two lines, and a pill. The whole row opens it.
+struct JoinOfferRow: View {
+    let title: String
+    let subtitle: String
+    var pill = String(appLocalized: "Join")
+    let avatar: AnyView
     let onOpen: () -> Void
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
         Button(action: onOpen) {
             HStack(spacing: 13) {
-                FFAvatar(monogram: String(fight.ownerHandle.prefix(2)).uppercased())
+                avatar
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(verbatim: Fight.displayTitle(name: fight.name, actionText: fight.actionText))
+                    Text(verbatim: title)
                         .ffType(.heading)
                         .foregroundStyle(theme.text)
-                        .lineLimit(1)
-                    Text(String(format: String(appLocalized: "suggested.participants"), fight.memberCount))
+                    Text(verbatim: subtitle)
                         .ffType(.caption)
                         .foregroundStyle(theme.textSecondary)
                 }
                 Spacer(minLength: 8)
-                FFPill(fight.hasJoined ? String(appLocalized: "Open fight") : String(appLocalized: "Join"), style: .solidMoss)
+                FFPill(pill, style: .solidMoss)
                     .fixedSize()
             }
             .padding(.horizontal, 16)
@@ -278,6 +250,18 @@ struct SuggestedFightRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(FFPressStyle())
+    }
+}
+
+extension JoinOfferRow {
+    init(suggested fight: FitFightJoinableFight, onOpen: @escaping () -> Void) {
+        self.init(
+            title: Fight.displayTitle(name: fight.name, actionText: fight.actionText),
+            subtitle: String(format: String(appLocalized: "suggested.participants"), fight.memberCount),
+            pill: fight.hasJoined ? String(appLocalized: "Open fight") : String(appLocalized: "Join"),
+            avatar: AnyView(FFAvatar(monogram: String(fight.ownerHandle.prefix(2)).uppercased())),
+            onOpen: onOpen
+        )
     }
 }
 

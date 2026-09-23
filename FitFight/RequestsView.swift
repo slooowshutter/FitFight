@@ -451,7 +451,7 @@ final class FeedbackStore: ObservableObject {
 @MainActor
 enum RequestsScreenshot {
     static func board() -> RequestsView {
-        RequestsView(store: .previewBoard())
+        RequestsView(store: .previewBoard(), filter: .constant(RequestFilter()))
     }
 
     static func detail() -> some View {
@@ -519,13 +519,7 @@ private struct RequestFiltersSheet: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            HStack {
-                Text(String(appLocalized: "Sort & filter")).ffType(.title)
-                Spacer()
-                Button(String(appLocalized: "Close")) { dismiss() }
-                    .ffType(.label).foregroundStyle(theme.mossText)
-                    .frame(minWidth: 44, minHeight: 44)
-            }
+            FFSheetHeader(title: String(appLocalized: "Sort & filter")) { dismiss() }
             if staticRender {
                 Color.clear
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -641,37 +635,18 @@ private struct RequestArchiveSheet: View {
     }
 }
 
-enum RequestsChrome {
-    case sheet
-    case tab
-}
-
+/// The Feedback tab's board. The tab owns the title and the compose sheet.
 struct RequestsView: View {
     @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
-    @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
     @ObservedObject var store: FeedbackStore
-    var chrome: RequestsChrome
-    var filterSource: Binding<RequestFilter>?
-    @State private var filter: RequestFilter
-    @State private var composing = false
+    @Binding var filter: RequestFilter
     @State private var openPostID: UUID?
     @State private var showingFilters = false
     @State private var deletingPost: FitFightFeedbackPost?
     @State private var archivingPost: FitFightFeedbackPost?
-
-    init(
-        store: FeedbackStore,
-        chrome: RequestsChrome = .sheet,
-        filter: Binding<RequestFilter>? = nil
-    ) {
-        _store = ObservedObject(wrappedValue: store)
-        self.chrome = chrome
-        self.filterSource = filter
-        _filter = State(initialValue: filter?.wrappedValue ?? RequestFilter())
-    }
 
     var body: some View {
         Group {
@@ -692,17 +667,17 @@ struct RequestsView: View {
             }
         }
         .background(theme.bg.ignoresSafeArea())
-        .task(id: activeFilter) {
+        .task(id: filter) {
             guard !staticRender else { return }
-            await store.load(session: session, kind: activeFilter.kind, status: activeFilter.status.rawValue, sort: activeFilter.sort.rawValue)
+            await store.load(session: session, kind: filter.kind, status: filter.status.rawValue, sort: filter.sort.rawValue)
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active && !staticRender {
-                Task { await store.load(session: session, kind: activeFilter.kind, status: activeFilter.status.rawValue, sort: activeFilter.sort.rawValue) }
+                Task { await store.load(session: session, kind: filter.kind, status: filter.status.rawValue, sort: filter.sort.rawValue) }
             }
         }
         .sheet(isPresented: $showingFilters) {
-            RequestFiltersSheet(draft: activeFilter) { filterSelection.wrappedValue = $0 }
+            RequestFiltersSheet(draft: filter) { filter = $0 }
                 .fitFightTheme(theme)
                 .presentationBackground(theme.overlay)
                 .presentationCornerRadius(theme.radius.shell)
@@ -711,7 +686,6 @@ struct RequestsView: View {
         }
         .sheet(item: $archivingPost) { post in
             RequestArchiveSheet(post: post, store: store)
-                .environmentObject(session)
                 .fitFightTheme(theme)
                 .presentationBackground(theme.overlay)
                 .presentationCornerRadius(theme.radius.shell)
@@ -729,41 +703,10 @@ struct RequestsView: View {
         } message: { _ in
             Text("This removes the request, comments, and votes for everyone. This cannot be undone.")
         }
-        .sheet(isPresented: $composing, onDismiss: {
-            guard !staticRender else { return }
-            Task { await store.load(session: session, kind: activeFilter.kind, status: activeFilter.status.rawValue, sort: activeFilter.sort.rawValue) }
-        }) {
-            ComposeRequestView(store: store)
-                .environmentObject(session)
-                .fitFightTheme(theme)
-                .presentationBackground(theme.bg)
-        }
-    }
-
-    private var activeFilter: RequestFilter {
-        filterSource?.wrappedValue ?? filter
-    }
-
-    private var filterSelection: Binding<RequestFilter> {
-        filterSource ?? $filter
     }
 
     private var list: some View {
         VStack(spacing: 0) {
-            if chrome == .sheet {
-                HStack {
-                    Text("Bugs & requests")
-                        .ffType(.title)
-                        .foregroundStyle(theme.text)
-                    Spacer()
-                    Button("Close") { dismiss() }
-                        .ffType(.label)
-                        .foregroundStyle(theme.mossText)
-                }
-                .padding(.horizontal, theme.space.screenPadding)
-                .padding(.vertical, 12)
-            }
-
             HStack {
                 Text(String(appLocalized: "feedback.post-count", defaultValue: "\(store.posts.count) posts"))
                     .ffType(.label)
@@ -780,7 +723,7 @@ struct RequestsView: View {
                 // Match the header action's column without shrinking the label's tap area.
                 .frame(width: 36)
                 .accessibilityLabel(String(appLocalized: "Filter feedback"))
-                .accessibilityValue("\(activeFilter.status.title), \(activeFilter.type.title), \(activeFilter.sort.title)")
+                .accessibilityValue("\(filter.status.title), \(filter.type.title), \(filter.sort.title)")
             }
             .padding(.horizontal, theme.space.screenPadding)
             .padding(.bottom, 12)
@@ -799,18 +742,9 @@ struct RequestsView: View {
                         postsStack
                     }
                     .refreshable {
-                        await store.load(session: session, kind: activeFilter.kind, status: activeFilter.status.rawValue, sort: activeFilter.sort.rawValue)
+                        await store.load(session: session, kind: filter.kind, status: filter.status.rawValue, sort: filter.sort.rawValue)
                     }
                 }
-            }
-
-            if chrome == .sheet {
-                FFScreenCTA(title: String(appLocalized: "New request")) {
-                    store.error = nil
-                    composing = true
-                }
-                .padding(.horizontal, theme.space.screenPadding)
-                .padding(.bottom, 16)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -844,8 +778,8 @@ struct RequestsView: View {
             if store.posts.isEmpty && !store.isLoading {
                 FFEmptyState(
                     systemImage: "bubble.left.and.bubble.right",
-                    title: activeFilter == RequestFilter() ? String(appLocalized: "No requests yet") : String(appLocalized: "No matching feedback"),
-                    message: activeFilter == RequestFilter()
+                    title: filter == RequestFilter() ? String(appLocalized: "No requests yet") : String(appLocalized: "No matching feedback"),
+                    message: filter == RequestFilter()
                         ? String(appLocalized: "Post a bug or a feature request. Other people can upvote and comment with their username.")
                         : String(appLocalized: "Try changing the filters to see other feedback.")
                 )
@@ -893,7 +827,7 @@ private struct RequestMediaStack: View {
                     compactRow
                 } else {
                     ForEach(media) { item in
-                        RequestMediaItem(media: item)
+                        MediaAttachment(media: item)
                     }
                 }
             }
@@ -929,21 +863,23 @@ private struct RequestMediaStack: View {
     }
 }
 
-private struct RequestMediaItem: View {
+/// A Feed or Feedback attachment: photo, inline video, or a file link.
+/// Photos open the viewer when `onOpenPhoto` is set.
+struct MediaAttachment: View {
     let media: FitFightMedia
+    var onOpenPhoto: ((URL) -> Void)? = nil
     @Environment(\.ffTheme) private var theme
     @State private var player: AVPlayer?
 
     var body: some View {
         if let url = media.url, RequestAttachment.showsPhoto(media) {
-            Color.clear
-                .aspectRatio(ratio, contentMode: .fit)
-                .frame(maxWidth: .infinity)
-                .fixedSize(horizontal: false, vertical: true)
-                .overlay {
-                    RemotePhoto(url: url, kind: .photo) { theme.control }
-                }
-                .clipShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
+            if let onOpenPhoto {
+                Button { onOpenPhoto(url) } label: { photo(url) }
+                    .buttonStyle(FFHapticPlainStyle())
+                    .accessibilityLabel(String(appLocalized: "View photo"))
+            } else {
+                photo(url)
+            }
         } else if let url = media.url, RequestAttachment.showsVideo(media) {
             VideoPlayer(player: player)
                 .frame(maxWidth: .infinity)
@@ -977,8 +913,16 @@ private struct RequestMediaItem: View {
         }
     }
 
-    private var ratio: CGFloat {
-        CGFloat(max(media.width, 1)) / CGFloat(max(media.height, 1))
+    private func photo(_ url: URL) -> some View {
+        Color.clear
+            .aspectRatio(CGFloat(max(media.width, 1)) / CGFloat(max(media.height, 1)), contentMode: .fit)
+            .frame(maxWidth: .infinity)
+            .fixedSize(horizontal: false, vertical: true)
+            .overlay {
+                RemotePhoto(url: url, kind: .photo) { theme.control }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
     }
 }
 
@@ -1069,7 +1013,6 @@ private struct RequestDetailView: View {
             HStack(alignment: .top, spacing: 10) {
                 FFNavDetail(
                     title: post?.title ?? String(appLocalized: "Request"),
-                    subtitle: nil,
                     onBack: { dismiss() }
                 )
                 if let post, !post.mine || store.canDelete || store.canArchive {
@@ -1158,7 +1101,6 @@ private struct RequestDetailView: View {
         .sheet(isPresented: $showingArchive) {
             if let post {
                 RequestArchiveSheet(post: post, store: store)
-                    .environmentObject(session)
                     .fitFightTheme(theme)
                     .presentationBackground(theme.overlay)
                     .presentationCornerRadius(theme.radius.shell)
@@ -1368,7 +1310,6 @@ private struct RequestPostMenu: View {
 
 struct ComposeRequestView: View {
     @ObservedObject var store: FeedbackStore
-    var heading: String = String(appLocalized: "New request")
     var onPosted: (() -> Void)? = nil
     @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
@@ -1406,17 +1347,9 @@ struct ComposeRequestView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text(heading)
-                    .ffType(.title)
-                    .foregroundStyle(theme.text)
-                Spacer()
-                Button("Close") { dismiss() }
-                    .ffType(.label)
-                    .foregroundStyle(theme.mossText)
-            }
-            .padding(.horizontal, theme.space.screenPadding)
-            .padding(.vertical, 12)
+            FFSheetHeader(title: String(appLocalized: "New request")) { dismiss() }
+                .padding(.horizontal, theme.space.screenPadding)
+                .padding(.vertical, 12)
 
             Group {
                 if staticRender {
@@ -1654,9 +1587,6 @@ struct ComposeRequestView: View {
         let dest = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: false)
             .appendingPathExtension(ext)
-        if FileManager.default.fileExists(atPath: dest.path) {
-            try FileManager.default.removeItem(at: dest)
-        }
         try FileManager.default.copyItem(at: url, to: dest)
         return dest
     }

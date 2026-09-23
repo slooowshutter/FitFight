@@ -99,91 +99,24 @@ enum CompanionEffortStage: Int, CaseIterable, Identifiable {
         if case .steps(let count) = status { return matching(todaySteps: count) }
         return .rest
     }
-
-    func label(for sport: CompanionSport) -> String {
-        sport.stageLabel(self)
-    }
 }
 
-enum CompanionSport: String, CaseIterable, Identifiable, Codable {
+/// Only restored from older builds that offered a sport picker; the goat has hiking poses.
+enum CompanionSport: String {
     case hiking, running, football, ski, walking
-
-    var id: String { rawValue }
-
-    var name: String {
-        switch self {
-        case .hiking: String(appLocalized: "Hiking")
-        case .running: String(appLocalized: "Running")
-        case .football: String(appLocalized: "Football")
-        case .ski: String(appLocalized: "Ski")
-        case .walking: String(appLocalized: "Walking")
-        }
-    }
-
-    func stageLabel(_ stage: CompanionEffortStage) -> String {
-        switch (self, stage) {
-        case (.hiking, .rest): String(appLocalized: "Resting")
-        case (.hiking, .headingOut): String(appLocalized: "Heading out")
-        case (.hiking, .onTheMove): String(appLocalized: "On the trail")
-        case (.hiking, .pushing): String(appLocalized: "Climbing")
-        case (.hiking, .peak): String(appLocalized: "At the peak")
-        case (.running, .rest): String(appLocalized: "On the bench")
-        case (.running, .headingOut): String(appLocalized: "Warming up")
-        case (.running, .onTheMove): String(appLocalized: "Jogging")
-        case (.running, .pushing): String(appLocalized: "Racing")
-        case (.running, .peak): String(appLocalized: "Finish line")
-        case (.football, .rest): String(appLocalized: "On the sideline")
-        case (.football, .headingOut): String(appLocalized: "Warming up")
-        case (.football, .onTheMove): String(appLocalized: "On the pitch")
-        case (.football, .pushing): String(appLocalized: "In the match")
-        case (.football, .peak): String(appLocalized: "After the whistle")
-        case (.ski, .rest): String(appLocalized: "In the lodge")
-        case (.ski, .headingOut): String(appLocalized: "At the lift")
-        case (.ski, .onTheMove): String(appLocalized: "On the slope")
-        case (.ski, .pushing): String(appLocalized: "Carving")
-        case (.ski, .peak): String(appLocalized: "At the summit")
-        case (.walking, .rest): String(appLocalized: "At home")
-        case (.walking, .headingOut): String(appLocalized: "Stepping out")
-        case (.walking, .onTheMove): String(appLocalized: "On the path")
-        case (.walking, .pushing): String(appLocalized: "A long loop")
-        case (.walking, .peak): String(appLocalized: "Back with a view")
-        }
-    }
-}
-
-enum CompanionEmotion: String, CaseIterable, Identifiable, Codable {
-    case calm, determined, smug, playful, fierce
-
-    var id: String { rawValue }
-
-    var name: String {
-        switch self {
-        case .calm: String(appLocalized: "Calm")
-        case .determined: String(appLocalized: "Determined")
-        case .smug: String(appLocalized: "Smug")
-        case .playful: String(appLocalized: "Playful")
-        case .fierce: String(appLocalized: "Fierce")
-        }
-    }
 }
 
 private struct CompanionIdentityRecord: Codable {
     var animal: String
     var sport: String
-    var emotion: String
-    var breed: String
-    var accessories: String
     var isCustom: Bool?
 }
 
-/// Account-backed companion. Custom descriptions are stored on the profile for later generation.
+/// Account-backed companion selection and reusable custom descriptions.
 @MainActor
 final class CompanionStore: ObservableObject {
     @Published var selection: StockCompanion = .badger
     @Published var sport: CompanionSport = .hiking { didSet { persist() } }
-    @Published var emotion: CompanionEmotion = .calm { didSet { persist() } }
-    @Published var breed = "" { didSet { persist() } }
-    @Published var accessories = "" { didSet { persist() } }
     @Published var isCustom = false
     @Published var customPrompt = ""
     @Published private(set) var savedPrompts: [String] = []
@@ -209,6 +142,7 @@ final class CompanionStore: ObservableObject {
     }
 
     static func deleteLocalLibrary(for userId: UUID) {
+        UserDefaults.standard.removeObject(forKey: "ff.ai.pending." + userId.uuidString)
         UserDefaults.standard.removeObject(forKey: libraryPrefix + userId.uuidString)
         UserDefaults.standard.removeObject(forKey: pendingPrefix + userId.uuidString)
         UserDefaults.standard.removeObject(forKey: pendingPromptPrefix + userId.uuidString)
@@ -361,9 +295,6 @@ final class CompanionStore: ObservableObject {
         else { return }
         isRestoring = true
         sport = CompanionSport(rawValue: saved.sport) ?? .hiking
-        emotion = CompanionEmotion(rawValue: saved.emotion) ?? .calm
-        breed = saved.breed
-        accessories = saved.accessories
         if saved.isCustom != true, let animal = StockCompanion(rawValue: saved.animal) {
             applyChoice(id: animal.rawValue, prompt: nil)
         }
@@ -375,9 +306,6 @@ final class CompanionStore: ObservableObject {
         let record = CompanionIdentityRecord(
             animal: selection.rawValue,
             sport: sport.rawValue,
-            emotion: emotion.rawValue,
-            breed: breed,
-            accessories: accessories,
             isCustom: isCustom
         )
         UserDefaults.standard.set(try? JSONEncoder().encode(record), forKey: Self.storageKey)
@@ -507,6 +435,7 @@ struct CompanionIntroduction: View {
     enum Surface { case fights, newFight, you }
     let surface: Surface
     @EnvironmentObject private var companions: CompanionStore
+    @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var steps: HealthKitStepsStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -631,7 +560,7 @@ struct CompanionIntroduction: View {
     @ViewBuilder
     private var youCharacter: some View {
         if companions.isCustom {
-            Color.clear
+            RemotePhoto(url: session.profile?.photoURL, contentMode: .fit) { Color.clear }
         } else {
             CompanionCharacter(animal: companions.selection, sport: companions.sport, effort: youEffort)
         }
@@ -802,6 +731,7 @@ struct CompanionPicker: View {
     @State private var error = ""
     @State private var libraryError = ""
     @State private var loadingLibrary = false
+    @State private var showingGeneration = false
     @FocusState private var promptFocused: Bool
 
     private let promptLimit = 1000
@@ -997,6 +927,15 @@ struct CompanionPicker: View {
                     fullWidth: true,
                     action: { Task { await saveCustom() } }
                 )
+                FFButton(
+                    title: String(localized: "Generate images"),
+                    kind: .secondary,
+                    enabled: !isSaving && !CompanionPreview.isEnabled,
+                    fullWidth: true
+                ) {
+                    promptFocused = false
+                    showingGeneration = true
+                }
             } else if let draft, category.animals.contains(draft) {
                 Text(isSaving ? String(appLocalized: "Saving…") : draft.caption)
                     .ffType(.body)
@@ -1015,6 +954,9 @@ struct CompanionPicker: View {
             #endif
         }
         .interactiveDismissDisabled(session.needsCompanionSelection)
+        .sheet(isPresented: $showingGeneration) {
+            AICompanionView(initialDescription: customPrompt)
+        }
         .onAppear {
             if customPrompt.isEmpty { customPrompt = companions.customPrompt }
             if companions.isCustom || startWithCustom {

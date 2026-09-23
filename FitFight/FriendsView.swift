@@ -19,11 +19,8 @@ struct FriendsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text(String(appLocalized: "Friends")).ffType(.heading)
-                Spacer()
-                Button(String(appLocalized: "Close")) { dismiss() }.frame(minHeight: 44)
-            }.padding(.horizontal, theme.space.screenPadding).padding(.top, 12)
+            FFSheetHeader(title: String(appLocalized: "Friends"), role: .heading) { dismiss() }
+                .padding(.horizontal, theme.space.screenPadding).padding(.top, 12)
             ScrollView {
                 VStack(alignment: .leading, spacing: theme.space.cardGap) {
                     HStack {

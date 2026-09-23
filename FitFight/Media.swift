@@ -1,5 +1,30 @@
 import Foundation
 
+private let fractionalServerDate: ISO8601DateFormatter = {
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    return formatter
+}()
+private let plainServerDate = ISO8601DateFormatter()
+
+/// Server timestamps arrive with or without fractional seconds. Sorting and rows parse
+/// them on every render, so the formatters are built once.
+func parseServerDate(_ raw: String) -> Date? {
+    fractionalServerDate.date(from: raw) ?? plainServerDate.date(from: raw)
+}
+
+/// Two letters from the display name, falling back to the handle.
+func monogram(displayName: String, handle: String) -> String {
+    let parts = displayName.split(separator: " ").filter { !$0.isEmpty }
+    if parts.count >= 2 {
+        return String(parts[0].prefix(1) + parts[1].prefix(1)).uppercased()
+    }
+    if let first = parts.first, !first.isEmpty {
+        return String(first.prefix(2)).uppercased()
+    }
+    return String(handle.prefix(2)).uppercased()
+}
+
 struct FitFightMedia: Codable, Equatable, Hashable, Identifiable {
     let id: UUID
     let kind: String
@@ -74,8 +99,8 @@ struct FitFightFightPost: Codable, Equatable, Hashable, Identifiable {
     let author: Author
     let media: [FitFightMedia]
     let tags: [Tag]
-    let reactions: [Reaction]
-    let commentCount: Int
+    var reactions: [Reaction]
+    var commentCount: Int
     let mine: Bool
     let broadcast: Bool
     let channels: [Channel]
@@ -114,18 +139,11 @@ struct FitFightFightPost: Codable, Equatable, Hashable, Identifiable {
         let displayName: String
         let avatar: FitFightMedia?
         var companionId: String? = nil
+        var companionImageURL: URL? = nil
+        var photoURL: URL? { companionId == "custom" ? companionImageURL ?? avatar?.url : avatar?.url }
 
         var atHandle: String { "@\(handle)" }
-        var initials: String {
-            let parts = displayName.split(separator: " ").filter { !$0.isEmpty }
-            if parts.count >= 2 {
-                return String(parts[0].prefix(1) + parts[1].prefix(1)).uppercased()
-            }
-            if let first = parts.first, !first.isEmpty {
-                return String(first.prefix(2)).uppercased()
-            }
-            return String(handle.prefix(2)).uppercased()
-        }
+        var initials: String { monogram(displayName: displayName, handle: handle) }
 
         enum CodingKeys: String, CodingKey {
             case userId = "user_id"
@@ -133,6 +151,7 @@ struct FitFightFightPost: Codable, Equatable, Hashable, Identifiable {
             case displayName = "display_name"
             case avatar
             case companionId = "companion_id"
+            case companionImageURL = "companion_image_url"
         }
     }
 
@@ -168,13 +187,7 @@ struct FitFightFightPost: Codable, Equatable, Hashable, Identifiable {
         self.channels = channels
     }
 
-    var createdDate: Date {
-        let iso = ISO8601DateFormatter()
-        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let date = iso.date(from: createdAt) { return date }
-        iso.formatOptions = [.withInternetDateTime]
-        return iso.date(from: createdAt) ?? .distantPast
-    }
+    var createdDate: Date { parseServerDate(createdAt) ?? .distantPast }
 
     var isMain: Bool { audience == "main" }
 
@@ -192,22 +205,10 @@ struct FitFightFightPost: Codable, Equatable, Hashable, Identifiable {
         reactions: [Reaction]? = nil,
         commentCount: Int? = nil
     ) -> FitFightFightPost {
-        FitFightFightPost(
-            id: id,
-            audience: audience,
-            fightId: fightId,
-            fightName: fightName,
-            body: body,
-            createdAt: createdAt,
-            author: author,
-            media: media,
-            tags: tags,
-            reactions: reactions ?? self.reactions,
-            commentCount: commentCount ?? self.commentCount,
-            mine: mine,
-            broadcast: broadcast,
-            channels: channels
-        )
+        var copy = self
+        copy.reactions = reactions ?? self.reactions
+        copy.commentCount = commentCount ?? self.commentCount
+        return copy
     }
 
     enum CodingKeys: String, CodingKey {
@@ -253,13 +254,7 @@ struct FitFightFightPostComment: Codable, Equatable, Hashable, Identifiable {
     var likeCount: Int? = nil
     var likedByMe: Bool? = nil
 
-    var createdDate: Date {
-        let iso = ISO8601DateFormatter()
-        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let date = iso.date(from: createdAt) { return date }
-        iso.formatOptions = [.withInternetDateTime]
-        return iso.date(from: createdAt) ?? .distantPast
-    }
+    var createdDate: Date { parseServerDate(createdAt) ?? .distantPast }
 
     enum CodingKeys: String, CodingKey {
         case id, body, author, mine

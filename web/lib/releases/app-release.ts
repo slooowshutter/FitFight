@@ -7,6 +7,16 @@ import {
     type AppReleasePolicy,
 } from "@/lib/types/releases/app-release";
 
+const STAGING_PROJECT = "https://zstzbfocunthczzubggz.supabase.co";
+const POLICY_TTL_MS = 60_000;
+
+let cachedPolicy: {
+    project: string;
+    policy: AppReleasePolicy;
+    expiresAtMs: number;
+} | null = null;
+
+/** Successful policies are reused for a minute per project; failures are never cached. */
 export async function appReleasePolicy(): Promise<AppReleasePolicy> {
     const project = appReleaseProjectSchema.safeParse(
         process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, ""),
@@ -17,6 +27,13 @@ export async function appReleasePolicy(): Promise<AppReleasePolicy> {
             "config",
             "App release environment is not configured",
         );
+    }
+    if (
+        cachedPolicy &&
+        cachedPolicy.project === project.data &&
+        Date.now() < cachedPolicy.expiresAtMs
+    ) {
+        return cachedPolicy.policy;
     }
 
     let payload: unknown;
@@ -37,42 +54,60 @@ export async function appReleasePolicy(): Promise<AppReleasePolicy> {
         );
     }
 
-    const channel =
-        project.data === "https://zstzbfocunthczzubggz.supabase.co"
-            ? "staging"
-            : "prod";
+    const channel = project.data === STAGING_PROJECT ? "staging" : "prod";
     const parsed = appReleaseManifestSchema.safeParse(payload);
+    let policy: AppReleasePolicy;
     if (parsed.success) {
         // TestFlight availability can differ per tester, so its updates are advisory.
-        return channel === "staging"
-            ? { ...parsed.data.staging, enforced: false }
-            : parsed.data.prod;
+        policy =
+            channel === "staging"
+                ? { ...parsed.data.staging, enforced: false }
+                : parsed.data.prod;
+    } else {
+        const selected =
+            payload &&
+            typeof payload === "object" &&
+            !Array.isArray(payload) &&
+            channel in payload
+                ? Reflect.get(payload, channel)
+                : undefined;
+        const salvaged = (
+            channel === "staging"
+                ? stagingAppReleasePolicySchema
+                : prodAppReleasePolicySchema
+        ).safeParse(selected);
+        if (!salvaged.success) {
+            throw new ApiError(
+                503,
+                "release_unavailable",
+                "Could not read the latest app release",
+            );
+        }
+        policy =
+            channel === "staging"
+                ? { ...salvaged.data, enforced: false }
+                : salvaged.data;
     }
-    const selected =
-        payload &&
-        typeof payload === "object" &&
-        !Array.isArray(payload) &&
-        channel in payload
-            ? Reflect.get(payload, channel)
-            : undefined;
-    const salvaged = (
-        channel === "staging"
-            ? stagingAppReleasePolicySchema
-            : prodAppReleasePolicySchema
-    ).safeParse(selected);
-    if (!salvaged.success) {
-        throw new ApiError(
-            503,
-            "release_unavailable",
-            "Could not read the latest app release",
-        );
-    }
-    return channel === "staging"
-        ? { ...salvaged.data, enforced: false }
-        : salvaged.data;
+    cachedPolicy = {
+        project: project.data,
+        policy,
+        expiresAtMs: Date.now() + POLICY_TTL_MS,
+    };
+    return policy;
+}
+
+export function resetAppReleasePolicyCacheForTests(): void {
+    cachedPolicy = null;
 }
 
 export async function requireLatestAppRelease(request: Request): Promise<void> {
+    // Staging policies are never enforced, so their requests skip the manifest.
+    if (
+        process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "") ===
+        STAGING_PROJECT
+    ) {
+        return;
+    }
     let policy: AppReleasePolicy;
     try {
         policy = await appReleasePolicy();

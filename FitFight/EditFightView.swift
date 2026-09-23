@@ -46,7 +46,6 @@ struct EditFightView: View {
                 id: row.person.id,
                 handle: SessionStore.strippedHandle(row.person.handle),
                 name: row.person.name,
-                photoURL: row.person.photoURL,
                 isOwner: row.person.id == ownerID || (row.person.isYou && fight.inviter?.isYou == true),
                 invited: row.invited,
                 deferred: row.deferred,
@@ -239,7 +238,7 @@ struct EditFightView: View {
         let handle = SessionStore.strippedHandle(username)
         usernameError = nil
         guard SessionStore.isValidHandle(handle) else {
-            usernameError = String(appLocalized: "Use 2–30 letters, numbers, or underscores.")
+            usernameError = String(appLocalized: "Use 2-30 letters, numbers, or underscores.")
             return
         }
         if handle == session.profile?.handle {
@@ -258,7 +257,6 @@ struct EditFightView: View {
                 id: "handle:\(handle)",
                 handle: handle,
                 name: "@\(handle)",
-                photoURL: nil,
                 isOwner: false,
                 invited: true,
                 deferred: false,

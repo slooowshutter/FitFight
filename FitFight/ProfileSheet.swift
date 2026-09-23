@@ -47,15 +47,10 @@ struct ProfileSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text(preview == nil ? String(appLocalized: "Profile") : String(appLocalized: "Profile preview"))
-                    .ffType(.heading)
-                Spacer()
-                Button(String(appLocalized: "Close")) { dismiss() }
-                    .ffType(.label)
-                    .foregroundStyle(theme.mossText)
-                    .frame(minWidth: 44, minHeight: 44)
-            }
+            FFSheetHeader(
+                title: preview == nil ? String(appLocalized: "Profile") : String(appLocalized: "Profile preview"),
+                role: .heading
+            ) { dismiss() }
             .padding(.horizontal, theme.space.screenPadding)
             .padding(.top, 12)
             ScrollView {
@@ -165,7 +160,7 @@ struct ProfileSheet: View {
                                     .ffType(.micro).foregroundStyle(theme.textSecondary)
                                 Text(day.finalized ? String(appLocalized: "Complete day") : String(appLocalized: "Partial day"))
                                     .ffType(.micro).foregroundStyle(theme.textSecondary)
-                                if let updated = FightRow.parse(day.updatedAt) {
+                                if let updated = parseServerDate(day.updatedAt) {
                                     HStack(spacing: 4) {
                                         Text(String(appLocalized: "Last updated"))
                                         Text(updated, format: .relative(presentation: .named))

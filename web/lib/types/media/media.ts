@@ -206,3 +206,19 @@ export type CreateMediaUploadRequest = z.infer<
 >;
 export type MediaUploadResponse = z.infer<typeof mediaUploadResponseSchema>;
 export type MediaResponse = z.infer<typeof mediaResponseSchema>;
+
+export type AvatarMediaColumns = {
+    avatar_id: string | null;
+    avatar_kind: MediaKind | null;
+    avatar_purpose: MediaPurpose | null;
+    avatar_status: MediaStatus | null;
+    avatar_object_path: string | null;
+    avatar_original_filename: string | null;
+    avatar_content_type: MediaObject["content_type"] | null;
+    avatar_byte_size: string | number | null;
+    avatar_width: number | null;
+    avatar_height: number | null;
+    avatar_duration_ms: number | null;
+    avatar_sha256: string | null;
+    avatar_created_at: Date | string | null;
+};

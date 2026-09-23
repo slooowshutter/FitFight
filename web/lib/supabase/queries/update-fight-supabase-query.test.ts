@@ -157,7 +157,7 @@ test("owner can rename a live fight without touching membership", async (t) => {
             visibility: "invite_only",
         }),
         undefined,
-        new Date("2026-09-20T12:00:00Z"),
+        new Date("2026-09-15T12:00:00Z"),
     );
     assert.deepEqual(result, { id: fightId, state: "live" });
     assert.equal(fightPatches, 1);

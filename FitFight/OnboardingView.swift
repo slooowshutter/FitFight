@@ -19,7 +19,7 @@ struct OnboardingView: View {
             Text("Pick a username")
                 .ffType(.title)
                 .foregroundStyle(theme.text)
-            Text("People challenge you with this. Letters, numbers, underscore. 2–30 characters.")
+            Text("People challenge you with this. Letters, numbers, underscore. 2-30 characters.")
                 .ffType(.body)
                 .foregroundStyle(theme.textSecondary)
                 .lineSpacing(3)

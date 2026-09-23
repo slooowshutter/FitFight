@@ -1,0 +1,8 @@
+{
+    "request_id": "22222222-2222-4222-8222-222222222222",
+    "workflow": "group_photo",
+    "status": "completed",
+    "data": {
+        "image_url": "https://cdn.tryblend.ai/group/photo.png"
+    }
+}

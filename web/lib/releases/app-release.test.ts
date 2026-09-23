@@ -1,9 +1,15 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { beforeEach, test } from "node:test";
 import { GET } from "@/app/api/app-release/route";
 import { ApiError } from "@/lib/http";
-import { appReleasePolicy, requireLatestAppRelease } from "./app-release";
+import {
+    appReleasePolicy,
+    requireLatestAppRelease,
+    resetAppReleasePolicyCacheForTests,
+} from "./app-release";
 import { verifyUser } from "@/lib/supabase/queries/auth-supabase-query";
+
+beforeEach(() => resetAppReleasePolicyCacheForTests());
 
 const manifest = {
     staging: {
@@ -118,6 +124,7 @@ test("TestFlight version headers never prevent API access", async (t) => {
             },
         }),
     );
+    await appReleasePolicy();
     assert.equal(fetch.mock.calls[0].arguments[1]?.cache, "no-store");
 });
 
@@ -574,4 +581,21 @@ test("continuing on an older TestFlight build still requires authentication and 
         verifyUser(request),
         (error: unknown) => error instanceof ApiError && error.status === 401,
     );
+});
+
+test("a second policy read within a minute reuses the last manifest", async (t) => {
+    const previousProject = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    process.env.NEXT_PUBLIC_SUPABASE_URL =
+        "https://pvqntpteehdvhqyctwum.supabase.co";
+    t.after(() => {
+        if (previousProject === undefined)
+            delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+        else process.env.NEXT_PUBLIC_SUPABASE_URL = previousProject;
+    });
+    const fetch = t.mock.method(globalThis, "fetch", async () =>
+        Response.json(manifest),
+    );
+    await appReleasePolicy();
+    assert.deepEqual(await appReleasePolicy(), manifest.prod);
+    assert.equal(fetch.mock.callCount(), 1);
 });

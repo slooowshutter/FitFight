@@ -8,6 +8,4 @@ export const GET = apiRoute(async () => {
     return json({ apns_configured: isApnsConfigured() });
 });
 
-export function OPTIONS(request: Request) {
-    return corsPreflight(request);
-}
+export const OPTIONS = corsPreflight;

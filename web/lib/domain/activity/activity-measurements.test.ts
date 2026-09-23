@@ -28,7 +28,7 @@ test("a merged daily total becomes one day measurement that knows whether the da
             value: 4_000,
             unit: "steps",
         },
-    });
+    })[0];
     assert.deepEqual(
         {
             scope: partial?.scope,
@@ -48,7 +48,7 @@ test("a merged daily total becomes one day measurement that knows whether the da
 });
 
 test("a selected deletion removes the workout instead of producing a measurement", () => {
-    assert.equal(
+    assert.deepEqual(
         measurementFromRaw({
             ...raw,
             record_kind: "deletion",
@@ -56,7 +56,7 @@ test("a selected deletion removes the workout instead of producing a measurement
             record_key: "22222222-2222-4222-8222-222222222222",
             payload: { healthkit_uuid: "22222222-2222-4222-8222-222222222222" },
         }),
-        null,
+        [],
     );
 });
 
@@ -65,7 +65,7 @@ test("workout day totals count workouts once and never mix in merged daily total
         { id: "33333333-3333-4333-8333-333333333333", type: "running", start: "2026-09-22T06:00:00.000Z", minutes: 30, distance: 5_000 },
         { id: "44444444-4444-4444-8444-444444444444", type: "yoga", start: "2026-09-22T18:00:00.000Z", minutes: 60, distance: null },
         { id: "55555555-5555-4555-8555-555555555555", type: "walking", start: "2026-09-22T22:30:00.000Z", minutes: 20, distance: 1_500 },
-    ].map((workout) =>
+    ].flatMap((workout) =>
         measurementFromRaw({
             ...raw,
             id: workout.id,
@@ -82,8 +82,10 @@ test("workout day totals count workouts once and never mix in merged daily total
             },
         }),
     );
+    assert.equal(workouts.filter((row) => row.metric === "duration").length, 3);
+    assert.deepEqual(workouts.filter((row) => row.metric === "distance").map((row) => row.value), [5_000, 1_500]);
     const derived = workoutDayMeasurements(
-        workouts.filter((workout) => workout !== null),
+        workouts,
         new Date("2026-09-24T12:00:00.000Z"),
     );
     assert.deepEqual(

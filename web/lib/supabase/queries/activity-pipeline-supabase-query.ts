@@ -294,9 +294,7 @@ async function resolveActivity(
                 raw.ends_at desc nulls last, raw.collected_at desc, raw.received_at desc, raw.id desc
         `,
     );
-    const measurements = selected
-        .map(measurementFromRaw)
-        .filter((measurement) => measurement !== null);
+    const measurements = selected.flatMap(measurementFromRaw);
     const workoutKeys = selected
         .filter((raw) => raw.record_type === "workout")
         .map((raw) => raw.record_key);
@@ -310,17 +308,23 @@ async function resolveActivity(
           ).map((row) => row.day)
         : [];
 
-    await saveMeasurements(sql, userId, sourceId, measurements);
-    const deletedKeys = selected
-        .filter((raw) => raw.record_kind === "deletion")
-        .map((raw) => raw.record_key);
-    if (deletedKeys.length > 0) {
+    if (workoutKeys.length > 0) {
         await sql`
-            delete from private.activity_metrics
-            where source_id = ${sourceId} and scope = 'workout'
-                and scope_key = any(${sql.array(deletedKeys)}::text[])
+            delete from private.activity_metrics as current
+            where current.source_id = ${sourceId} and current.scope = 'workout'
+                and current.scope_key = any(${sql.array(workoutKeys)}::text[])
+                and not exists (
+                    select 1
+                    from jsonb_to_recordset(${sql.json(measurements)}::jsonb) as next (
+                        scope text, scope_key text, metric text
+                    )
+                    where next.scope = 'workout'
+                        and next.scope_key = current.scope_key
+                        and next.metric = current.metric
+                )
         `;
     }
+    await saveMeasurements(sql, userId, sourceId, measurements);
     const workoutDays = [
         ...new Set([
             ...previousWorkoutDays,
@@ -595,7 +599,7 @@ async function mirrorLegacyStepDays(
     const days = selected.flatMap((raw) => {
         const measurement =
             raw.record_type === "steps" && raw.record_key.startsWith("day:")
-                ? measurementFromRaw(raw)
+                ? measurementFromRaw(raw)[0]
                 : null;
         return measurement?.time_zone
             ? [

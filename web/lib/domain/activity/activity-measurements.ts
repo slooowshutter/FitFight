@@ -16,45 +16,58 @@ export const workoutDayMetricValues = [
     "walk_run_workout_distance",
 ] as const;
 
-/**
- * Replace-not-increment: an identity's current measurement comes only from its selected raw row.
- * A selected deletion means the workout no longer exists, so it returns null.
- */
+/** One current input creates one row per measured quantity, never an increment of a prior row. */
 export function measurementFromRaw(
     raw: SelectedActivityRaw,
-): ActivityMeasurement | null {
+): ActivityMeasurement[] {
     if (raw.record_kind === "deletion") {
-        return null;
+        return [];
     }
     if (raw.record_kind === "workout") {
         const workout = workoutPayloadSchema.parse(raw.payload);
         const zone = raw.time_zone ?? "UTC";
         const endsAt = new Date(workout.ended_at).toISOString();
-        return {
-            scope: "workout",
+        const base = {
+            scope: "workout" as const,
             scope_key: raw.record_key,
-            metric: "workout",
             starts_at: new Date(workout.started_at).toISOString(),
             ends_at: endsAt,
             observed_through: endsAt,
             day: civilDayStamp(new Date(workout.started_at), zone),
             time_zone: zone,
             fight_id: null,
-            value: workout.duration_seconds,
-            unit: "s",
-            details: {
-                activity_type: workout.activity_type,
-                active_minutes: workout.active_minutes ?? null,
-                distance_m: workout.distance_m ?? null,
-                energy_kcal: workout.energy_kcal ?? null,
-                effort: workout.effort ?? null,
-            },
             input_ids: [raw.id],
         };
+        const measurements: ActivityMeasurement[] = [{
+            ...base,
+            metric: "duration",
+            value: workout.duration_seconds,
+            unit: "s",
+            details: { activity_type: workout.activity_type },
+        }];
+        const values = [
+            { metric: "active_minutes", value: workout.active_minutes, unit: "min" },
+            { metric: "distance", value: workout.distance_m, unit: "m" },
+            { metric: "active_energy", value: workout.energy_kcal, unit: "kcal" },
+        ];
+        for (const item of values) {
+            if (item.value !== null && item.value !== undefined) {
+                measurements.push({
+                    ...base,
+                    metric: item.metric,
+                    value: item.value,
+                    unit: item.unit,
+                    details: item.metric === "distance"
+                        ? { activity_type: workout.activity_type }
+                        : {},
+                });
+            }
+        }
+        return measurements;
     }
     if (raw.record_key.startsWith("fight:")) {
         const total = fightTotalPayloadSchema.parse(raw.payload);
-        return {
+        return [{
             scope: "fight_window",
             scope_key: total.fight_id,
             metric: "steps",
@@ -68,10 +81,10 @@ export function measurementFromRaw(
             unit: "steps",
             details: { step_checkpoints: total.step_checkpoints },
             input_ids: [raw.id],
-        };
+        }];
     }
     const total = dayTotalPayloadSchema.parse(raw.payload);
-    return {
+    return [{
         scope: "day",
         scope_key: total.day,
         metric: total.metric,
@@ -88,7 +101,7 @@ export function measurementFromRaw(
         unit: total.unit,
         details: {},
         input_ids: [raw.id],
-    };
+    }];
 }
 
 /**
@@ -106,14 +119,16 @@ export function workoutDayMeasurements(
         }
         byDay.set(workout.day, [...(byDay.get(workout.day) ?? []), workout]);
     }
-    return [...byDay].flatMap(([day, dayWorkouts]) => {
-        const zone = dayWorkouts[0].time_zone ?? "UTC";
+    return [...byDay].flatMap(([day, dayMeasurements]) => {
+        const durations = dayMeasurements.filter((row) => row.metric === "duration");
+        if (durations.length === 0) {
+            return [];
+        }
+        const zone = durations[0].time_zone ?? "UTC";
         const bounds = civilDayBounds(day, zone);
-        const walkRun = dayWorkouts.filter(
-            (workout) =>
-                ["walking", "running"].includes(
-                    String(workout.details.activity_type),
-                ) && typeof workout.details.distance_m === "number",
+        const walkRun = dayMeasurements.filter(
+            (row) => row.metric === "distance" &&
+                ["walking", "running"].includes(String(row.details.activity_type)),
         );
         const base = {
             scope: "day" as const,
@@ -132,28 +147,25 @@ export function workoutDayMeasurements(
             {
                 ...base,
                 metric: "workout_count",
-                value: dayWorkouts.length,
+                value: durations.length,
                 unit: "count",
-                input_ids: dayWorkouts.flatMap((workout) => workout.input_ids),
+                input_ids: durations.flatMap((row) => row.input_ids),
             },
             {
                 ...base,
                 metric: "workout_time",
-                value: dayWorkouts.reduce((sum, workout) => sum + workout.value, 0),
+                value: durations.reduce((sum, row) => sum + row.value, 0),
                 unit: "s",
-                input_ids: dayWorkouts.flatMap((workout) => workout.input_ids),
+                input_ids: durations.flatMap((row) => row.input_ids),
             },
         ];
         if (walkRun.length > 0) {
             derived.push({
                 ...base,
                 metric: "walk_run_workout_distance",
-                value: walkRun.reduce(
-                    (sum, workout) => sum + Number(workout.details.distance_m),
-                    0,
-                ),
+                value: walkRun.reduce((sum, row) => sum + row.value, 0),
                 unit: "m",
-                input_ids: walkRun.flatMap((workout) => workout.input_ids),
+                input_ids: walkRun.flatMap((row) => row.input_ids),
             });
         }
         return derived;

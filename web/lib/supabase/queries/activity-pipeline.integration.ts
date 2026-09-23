@@ -158,6 +158,8 @@ test("two devices, deletions, stale replays and corrections converge on one effe
     let resolved = await metrics(f.owner);
     assert.equal(resolved.find((row) => row.metric === "workout_count")?.value, 2);
     assert.equal(resolved.find((row) => row.metric === "workout_time")?.value, 3_600);
+    assert.ok(resolved.some((row) => row.scope === "workout" && row.metric === "distance" && row.value === 6_000));
+    assert.ok(resolved.some((row) => row.scope === "workout" && row.metric === "active_energy" && row.value === 400));
 
     await receiveHealthKitActivity(f.owner, healthKitActivityBatchSchema.parse({
         collected_at: later, time_zone: zone, deleted_workouts: [run.healthkit_uuid.toUpperCase()],
@@ -166,7 +168,8 @@ test("two devices, deletions, stale replays and corrections converge on one effe
         collected_at: new Date().toISOString(), time_zone: zone, workouts: [run],
     }), database);
     resolved = await metrics(f.owner);
-    assert.equal(resolved.filter((row) => row.scope === "workout").length, 1, "A replay cannot resurrect a deleted workout");
+    assert.equal(new Set(resolved.filter((row) => row.scope === "workout").map((row) => row.scope_key)).size,
+        1, "A replay cannot resurrect a deleted workout");
     assert.equal(resolved.find((row) => row.metric === "workout_count")?.value, 1);
     assert.equal(resolved.find((row) => row.metric === "walk_run_workout_distance")?.value, 3_000);
 

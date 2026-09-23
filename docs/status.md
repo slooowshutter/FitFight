@@ -64,6 +64,13 @@ native API boundary, push state, and Xcode project syntax checks also passed.
 The linked cloud checks above cover the notification code before this merge;
 the merged revision still needs its PR CI run.
 
+**Latest merge, 23 Sep:** With develop `3c9309c7` included, local Web API
+typechecking and all 387 tests passed. Xcode project syntax, localization,
+notification preferences, native API boundary, and remote photo checks also
+passed. The AI native generation check requires GitHub-hosted macOS, and this
+combined revision still needs PR simulator and disposable database CI. No
+hosted migration or deployment occurred.
+
 **Rollout:** apply the additive migration, deploy the compatible backend, let old
 backend instances drain, then distribute the app. Verify the existing hosted
 15-minute closer job in each environment; its live activation has not been
@@ -1399,6 +1406,66 @@ the native changes with a 1.1.1 release note. Production still requires its sepa
 authorized `preview` to `main` promotion. This work has not merged a release branch,
 changed the hosted database, or uploaded a TestFlight build. Physical
 device interaction and HealthKit verification remain separate from cloud checks.
+
+## Blend workflows: URL storage simplification, 19 Sep 2026
+
+**Code prepared, not deployed.** Avatar, Five Fitness Levels and Group Photo remain
+on `blend-backend-client`. Marc confirmed that Blend is his service and retains the
+image files. FitFight now stores the original URLs and metadata only. The phone's
+download/re-upload flow, PNG conversion, upload-progress persistence and separate
+image-attachment endpoint are removed. Completion and credit settlement save the
+library rows in one database transaction, including background completion.
+
+You -> Make it yours -> Generate images still displays credits, resumes the same
+paid action after interruption and shows the account library. Avatar and Fitness
+images can be selected as companions. Group photos stay in the library. Automatic
+fitness-pose switching and fight-image assignment remain outside this change.
+
+**Compatibility:** `/api/v1` is unchanged. Existing uploaded-photo API fields and
+fixtures stay intact. `PATCH /me` adds an optional owned result selection and
+profile/Fight/Feed responses add optional `companion_image_url`. Existing shared
+identity `avatar_url` fields can directly return a Blend URL. Old profile edits
+that omit companion changes preserve the selected image. Native coverage includes
+a frozen copy of the pre-change profile decoder; no released fixture was replaced.
+Only the never-deployed AI library fixture and attachment contract changed.
+
+The library migration has not been deployed and is revised in this branch to store
+URLs instead of media-object references. It also adds the private request description
+and nullable profile image URL. Rollout remains schema first, compatible backend
+second, then the new native client. Existing client permissions are preserved.
+
+**Test simplification:** Removed upload/attachment tests and five overlapping mocked
+checks already covered by database or HTTP tests. Retained credit arithmetic,
+last-credit concurrency, once-only settlement, duplicate-start protection, ownership,
+provider-contract and interruption tests. The database library scenario asserts exact
+provider URLs, no image downloads or Storage calls, automatic complete saving,
+owned companion selection, old profile command behavior, pruning and deletion.
+
+**Cloud checks passed:**
+
+- [Web API](https://github.com/slooowshutter/FitFight/actions/runs/35445062344): TypeScript, all 380 backend tests and contract parsing on `e98ab95`; backend code is unchanged in the final implementation.
+- [Database](https://github.com/slooowshutter/FitFight/actions/runs/35445411309): migrations, schema lint, pgTAP, real transaction tests before and after the permission cutoff, legacy build 113 compatibility and deletion/backfill checks on `e414239`.
+- [iOS simulator](https://github.com/slooowshutter/FitFight/actions/runs/35445411296): full app compilation, native recovery/account isolation, pre-change profile decoding and existing native regressions on `e414239`.
+
+Localization, native API boundary, remote image loading, migration guard, project
+syntax and whitespace checks also passed. Cloud compilation caught a thumbnail
+still using the removed media field; the view was corrected to read the Blend URL.
+The existing standings test stayed unchanged when an unnecessary prefetch edit was
+reverted. Only documentation changed after these runs. No local iOS or database
+runtime was used. A full Next.js production build was not rerun; the earlier build
+required a database credential for homepage prerendering.
+
+**Live:** Read-only checks at **13:02 UTC on 19 Sep** found staging latest
+**1.1.1 (201)** and review/internal **1.1.2 (203)**, enforcement off. Production
+latest remains **1.1.1 (202)**, no review/internal build, enforcement on. Both
+`/api/v1/ai/library` routes still return 404. These are manifest observations,
+not installed-binary or live feature tests.
+
+**Still needed:** Authorized staging deployment of all three migrations and backend,
+Blend key and limits, Fitness/Group prices, explicit grants and a frequent hosted
+reconciler. Starts remain disabled by default. No PR, release-branch merge,
+hosted migration, TestFlight upload or paid generation was performed. See
+[workflow contracts and rollout](blend-workflows.md).
 
 ## Website download destinations: prepared 17 Sep 2026
 

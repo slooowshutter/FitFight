@@ -1380,7 +1380,7 @@ final class AppModel: ObservableObject {
             handle: profile.atHandle,
             initials: profile.initials,
             isYou: isYou,
-            photoURL: profile.avatar?.url,
+            photoURL: profile.photoURL,
             companionId: profile.companionId
         )
     }

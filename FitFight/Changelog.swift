@@ -43,6 +43,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 19,
+            notes: "Generated images stay available in your account, even when you close the app before generation finishes."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 19,
             notes: "Signing in with Google opens the FitFight account that already uses that email, including Sign in with Apple."
         ),
         ReleaseNote(
@@ -107,6 +114,13 @@ enum Changelog {
             month: 9,
             day: 19,
             notes: "The comment Send button turns green as soon as you type. Empty or spaces-only comments keep it gray and disabled."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 18,
+            notes: "Generate companion avatars, five fitness levels, and group photos. See your credits, return to interrupted generations, and keep your images in your account."
         ),
         ReleaseNote(
             version: "1.1.2",

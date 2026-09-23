@@ -15,6 +15,7 @@ export const fightPostAuthorSchema = z
         display_name: z.string(),
         avatar: mediaObjectSchema.nullable(),
         companion_id: companionIdSchema.nullable().default(null),
+        companion_image_url: z.string().url().optional(),
     })
     .strict();
 

@@ -46,6 +46,7 @@
         A10000000000000000000314 /* HealthKitStepsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000304 /* HealthKitStepsStore.swift */; };
         A10000000000000000000315 /* BuildEnv.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000305 /* BuildEnv.swift */; };
         A10000000000000000000316 /* APIConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000306 /* APIConfig.swift */; };
+        B91700000000000000000001 /* AIWorkflowRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = B91700000000000000000002 /* AIWorkflowRequest.swift */; };
         A10000000000000000000317 /* FitFightAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000307 /* FitFightAPI.swift */; };
         A10000000000000000000319 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000309 /* WelcomeView.swift */; };
         A1000000000000000000031B /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000030B /* OnboardingView.swift */; };
@@ -96,6 +97,8 @@
         A0573E386FD2FA2A4A357CC4 /* SuggestedFightsOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AD1CDE4182F6C6E52321063 /* SuggestedFightsOnboardingView.swift */; };
         FF2026092000000000000001 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF2026092000000000000002; };
         FF2026092000000000000003 /* FitFightNotificationService.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = FF2026092000000000000004; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+        B91800000000000000000001 /* AICompanionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B91800000000000000000002 /* AICompanionStore.swift */; };
+        B91800000000000000000003 /* AICompanionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B91800000000000000000004 /* AICompanionView.swift */; };
         B71900000000000000000100 /* GoogleSignInConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = B71900000000000000000000 /* GoogleSignInConfig.swift */; };
         B71900000000000000000101 /* SignInControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = B71900000000000000000001 /* SignInControls.swift */; };
         B71900000000000000000E01 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = B71900000000000000000F01 /* GoogleSignIn */; };
@@ -158,6 +161,7 @@
         A10000000000000000000304 /* HealthKitStepsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitStepsStore.swift; sourceTree = "<group>"; };
         A10000000000000000000305 /* BuildEnv.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Generated/BuildEnv.swift; sourceTree = "<group>"; };
         A10000000000000000000306 /* APIConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIConfig.swift; sourceTree = "<group>"; };
+        B91700000000000000000002 /* AIWorkflowRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIWorkflowRequest.swift; sourceTree = "<group>"; };
         A10000000000000000000307 /* FitFightAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FitFightAPI.swift; sourceTree = "<group>"; };
         A10000000000000000000309 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
         A1000000000000000000030B /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
@@ -202,6 +206,8 @@
         FF2026092000000000000002 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
         FF2026092000000000000004 /* FitFightNotificationService.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FitFightNotificationService.appex; sourceTree = BUILT_PRODUCTS_DIR; };
         FF2026092000000000000005 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+        B91800000000000000000002 /* AICompanionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AICompanionStore.swift; sourceTree = "<group>"; };
+        B91800000000000000000004 /* AICompanionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AICompanionView.swift; sourceTree = "<group>"; };
         B71900000000000000000000 /* GoogleSignInConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleSignInConfig.swift; sourceTree = "<group>"; };
         B71900000000000000000001 /* SignInControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInControls.swift; sourceTree = "<group>"; };
         B71900000000000000000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -247,6 +253,9 @@
                 A10000000000000000000420 /* CrashReporting.swift */,
                 A10000000000000000000306 /* APIConfig.swift */,
                 A10000000000000000000307 /* FitFightAPI.swift */,
+                B91700000000000000000002 /* AIWorkflowRequest.swift */,
+                B91800000000000000000004 /* AICompanionView.swift */,
+                B91800000000000000000002 /* AICompanionStore.swift */,
                 A10000000000000000000388 /* FeedbackClientMetadata.swift */,
                 A10000000000000000000350 /* Profile.swift */,
                 77DE13D2DDFE478AAAB22CF3 /* AppLocalization.swift */,
@@ -484,6 +493,9 @@
                 A10000000000000000000421 /* CrashReporting.swift in Sources */,
                 A10000000000000000000316 /* APIConfig.swift in Sources */,
                 A10000000000000000000317 /* FitFightAPI.swift in Sources */,
+                B91700000000000000000001 /* AIWorkflowRequest.swift in Sources */,
+                B91800000000000000000003 /* AICompanionView.swift in Sources */,
+                B91800000000000000000001 /* AICompanionStore.swift in Sources */,
                 A10000000000000000000389 /* FeedbackClientMetadata.swift in Sources */,
                 A10000000000000000000351 /* Profile.swift in Sources */,
                 923EA6A21D2D4018B21AFFD9 /* AppLocalization.swift in Sources */,

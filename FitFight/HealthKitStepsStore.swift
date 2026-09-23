@@ -244,7 +244,7 @@ final class HealthKitStepsStore: ObservableObject {
         UserDefaults.standard.set(userId.uuidString, forKey: Self.pendingLocalDeletionKey)
         await uploader.discardLegacy(userId: userId)
         do { try HealthKitUploadState.discardLegacy(userId: userId) } catch { return false }
-        HealthKitActivitySync.clear(userId: userId, api: api)
+        HealthKitActivitySync.clear(userId: userId)
         UserDefaults.standard.removeObject(forKey: Self.askedKey(userId: userId))
         UserDefaults.standard.removeObject(forKey: Self.diagnosticsKey(userId: userId))
         UserDefaults.standard.removeObject(forKey: Self.pendingSyncKey)
@@ -283,9 +283,12 @@ final class HealthKitStepsStore: ObservableObject {
             do {
                 try await trace.measure(.authorization) {
                     try await store.requestAuthorization(
-                    toShare: [],
-                    read: HealthKitActivityAggregates.readTypes
-                )
+                        toShare: [],
+                        read: HealthKitActivityAggregates.readTypes
+                    )
+                }
+                if let userID {
+                    HealthKitActivitySync.clear(userId: userID)
                 }
             } catch {
                 trace.fail(Self.errorCode(for: error))
@@ -392,9 +395,6 @@ final class HealthKitStepsStore: ObservableObject {
             let syncToken = try await trace.measure(.session) { try await session.freshAccessToken() }
             guard activeUserId == userId, session.authSession?.user.id == userId else { throw CancellationError() }
             _ = try await api.syncHealthKitSteps(sync, accessToken: syncToken, trace: trace)
-            if trigger == .observer {
-                await onBackendSync?()
-            }
 
             var activityFailure: Error?
             do {
@@ -426,6 +426,9 @@ final class HealthKitStepsStore: ObservableObject {
                 $0.failureReference = activityFailure.map { HealthKitSyncTrace.Failure($0).reference }
                 $0.failureDetail = activityFailure == nil
                     ? nil : String(appLocalized: "Steps up to date · Other activity didn't sync. Tap to retry.")
+            }
+            if trigger == .observer {
+                await onBackendSync?()
             }
             return activityFailure == nil
         } catch {

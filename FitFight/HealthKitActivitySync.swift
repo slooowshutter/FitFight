@@ -22,8 +22,11 @@ enum HealthKitActivitySync {
         var workoutAnchorData: Data?
     }
 
-    static func clear(userId: UUID, api: FitFightAPI) {
-        UserDefaults.standard.removeObject(forKey: stateKey(userId: userId, api: api))
+    static func clear(userId: UUID) {
+        let prefix = "ff.healthkit.activity.\(userId.uuidString.lowercased())."
+        for key in UserDefaults.standard.dictionaryRepresentation().keys where key.hasPrefix(prefix) {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
     }
 
     static func synchronize(

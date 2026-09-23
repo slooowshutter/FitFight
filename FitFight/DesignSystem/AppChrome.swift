@@ -121,9 +121,6 @@ struct FFScreen<Content: View>: View {
                 }
         }
         .scrollBounceBehavior(.always, axes: .vertical)
-        #if DEBUG && targetEnvironment(simulator)
-        .defaultScrollAnchor(ProcessInfo.processInfo.environment["FF_HEADER_PROBE"] == "1" ? .bottom : .top)
-        #endif
         .ffRefreshable(refresh != nil) {
             await runRefresh()
         }

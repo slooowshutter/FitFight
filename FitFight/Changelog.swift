@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.1.2",
             year: 2026,
             month: 9,
+            day: 23,
+            notes: "Scrolling screens keep a clear top header, so section titles and cards no longer show behind the iPhone status bar or the version line on You."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
             day: 19,
             notes: "Signing in with Google opens the FitFight account that already uses that email, including Sign in with Apple."
         ),

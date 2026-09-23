@@ -38,7 +38,6 @@ struct NotificationOnboardingView: View {
                 }
             }
             OnboardingSkip(title: String(appLocalized: "Not now")) {
-                push.declinePrePrompt()
                 push.markPromptHandledThisSession()
                 onFinished()
             }

@@ -438,7 +438,7 @@ final class HealthKitStepsStore: ObservableObject {
             if trigger == .observer {
                 await onBackendSync?()
             }
-            return activityFailure == nil
+            return activityFailure == nil && !activityProcessingPending
         } catch {
             let code = Self.errorCode(for: error)
             let detail = Self.failureDetail(for: error)

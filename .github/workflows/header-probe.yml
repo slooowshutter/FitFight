@@ -35,19 +35,20 @@ jobs:
                   xcrun simctl io "$UDID" screenshot header-probe.png
             - name: Assert status area is clear
               run: |
-                  python3 -m pip install --quiet pillow
-                  python3 - <<'PY'
+                  python3 -m venv .venv
+                  .venv/bin/pip install --quiet pillow
+                  .venv/bin/python - <<'PY'
                   from PIL import Image
 
                   image = Image.open('header-probe.png').convert('RGB')
                   width, height = image.size
                   magenta = sum(
-                      1 for y in range(min(190, height)) for x in range(width)
+                      1 for y in range(min(205, height)) for x in range(width)
                       if (lambda r, g, b: r > 180 and b > 180 and g < 100)(*image.getpixel((x, y)))
                   )
-                  print(f'screenshot={width}x{height}, magenta pixels in status area={magenta}')
+                  print(f'screenshot={width}x{height}, magenta pixels in pinned top header={magenta}')
                   if magenta:
-                      raise SystemExit('Scrolled content overlaps the status area')
+                      raise SystemExit('Scrolled content overlaps the pinned top header')
                   PY
             - uses: actions/upload-artifact@v4
               if: always()

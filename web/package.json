@@ -6,7 +6,7 @@
         "build": "next build",
         "start": "next start",
         "typecheck": "tsc --noEmit",
-        "test": "tsx --test lib/admin/*.test.ts lib/apple/*.test.ts lib/apns/*.test.ts lib/cursor/*.test.ts lib/google/*.test.ts lib/ingest/*.test.ts lib/notifications/*.test.ts lib/openrouter/*.test.ts lib/scoring/*.test.ts lib/domain/**/*.test.ts lib/observability/*.test.ts lib/releases/*.test.ts lib/notion/*.test.ts lib/supabase/queries/*.test.ts",
+        "test": "tsx --test lib/admin/*.test.ts lib/apple/*.test.ts lib/apns/*.test.ts lib/blend/*.test.ts lib/cursor/*.test.ts lib/google/*.test.ts lib/ingest/*.test.ts lib/notifications/*.test.ts lib/openrouter/*.test.ts lib/scoring/*.test.ts lib/domain/**/*.test.ts lib/observability/*.test.ts lib/releases/*.test.ts lib/notion/*.test.ts lib/supabase/queries/*.test.ts",
         "test:database": "tsx --test --test-concurrency=1 lib/supabase/queries/*.integration.ts",
         "test:legacy-113": "tsx --test lib/supabase/queries/legacy-client-113.compatibility.ts"
     },
@@ -14,6 +14,7 @@
         "node": ">=20"
     },
     "dependencies": {
+        "@apple/app-store-server-library": "3.1.0",
         "@supabase/supabase-js": "^2.76.1",
         "@vercel/analytics": "^2.0.1",
         "next": "^15.5.2",

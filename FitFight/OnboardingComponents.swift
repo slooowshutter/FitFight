@@ -87,6 +87,7 @@ struct OnboardingPage<Content: View, Actions: View>: View {
                 .modifier(OnboardingEntrance(horizontal: true))
         }
         .scrollDismissesKeyboard(.interactively)
+        .ffKeyboardDismissOnBackgroundTap()
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 8) { actions }
                 .padding(.horizontal, 20)

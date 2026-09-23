@@ -1,0 +1,7 @@
+{
+    "request_id": "22222222-2222-4222-8222-222222222222",
+    "workflow": "avatar",
+    "status": "start_unconfirmed",
+    "code": "ai_start_unconfirmed",
+    "error": "We couldn't confirm whether this request started. Check again later."
+}

@@ -105,7 +105,7 @@ struct YouView: View {
             }
             #endif
 
-            if session.isFitFightAdmin {
+            if session.isFitFightAdmin || (CompanionPreview.isEnabled && !ScreenshotExport.isEnabled) {
                 FFSection(title: String(appLocalized: "Developer")) {
                     developer
                 }
@@ -172,6 +172,7 @@ struct YouView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This permanently deletes your profile, photos, uploaded Steps, referrals, invitations, fights you created, and bugs or requests you posted; removes you from other fights; and signs you out. This can’t be undone.")
+            Text("Deleting your account does not refund Apple purchases. Paid Specials are not resold. Contact support for purchase recovery.")
         }
     }
 
@@ -199,7 +200,7 @@ struct YouView: View {
                     CompanionAvatar(
                         personID: session.profile?.userId.uuidString,
                         companionID: session.profile?.companionId, isYou: true,
-                        monogram: session.profile?.initials ?? "FF", photoURL: session.profile?.avatar?.url, size: 68
+                        monogram: session.profile?.initials ?? "FF", photoURL: session.profile?.photoURL, size: 68
                     )
                 }
                 .buttonStyle(FFHapticPlainStyle())
@@ -440,32 +441,43 @@ struct YouView: View {
 
     private var developer: some View {
         FFGroupedRows {
+            if !CompanionPreview.isEnabled {
+                FFGroupedRow(
+                    title: String(appLocalized: "Replay onboarding"),
+                    subtitle: String(appLocalized: "Health, challenge reminders, and Bugs & requests. Your account and fights stay."),
+                    systemImage: "arrow.counterclockwise",
+                    subtitleTone: .neutral,
+                    trailing: AnyView(FFChevron()),
+                    action: { showingOnboardingPreview = true }
+                )
+                FFDivider()
+                FFGroupedRow(
+                    title: "Slide haptics",
+                    subtitle: "Twenty Slide to start vibrations. This page is only on your account.",
+                    systemImage: "iphone.radiowaves.left.and.right",
+                    subtitleTone: .neutral,
+                    trailing: AnyView(FFChevron()),
+                    action: { showingSlideHapticsLab = true }
+                )
+                FFDivider()
+            }
             FFGroupedRow(
-                title: String(appLocalized: "Replay onboarding"),
-                subtitle: String(appLocalized: "Health, challenge reminders, and Bugs & requests. Your account and fights stay."),
-                systemImage: "arrow.counterclockwise",
-                subtitleTone: .neutral,
-                trailing: AnyView(FFChevron()),
-                action: { showingOnboardingPreview = true }
+                title: String(appLocalized: "Preview update card"),
+                subtitle: String(appLocalized: "Large notice at the top."),
+                systemImage: "rectangle",
+                action: { model.showingUpdateToastPreview = true }
             )
-            FFDivider()
-            FFGroupedRow(
-                title: "Slide haptics",
-                subtitle: "Twenty Slide to start vibrations. This page is only on your account.",
-                systemImage: "iphone.radiowaves.left.and.right",
-                subtitleTone: .neutral,
-                trailing: AnyView(FFChevron()),
-                action: { showingSlideHapticsLab = true }
-            )
-            FFDivider()
-            FFGroupedRow(
-                title: String(appLocalized: "Broadcast"),
-                subtitle: String(appLocalized: "Write one post. Everyone signed in sees it on Feed."),
-                systemImage: "megaphone",
-                subtitleTone: .neutral,
-                trailing: AnyView(FFChevron()),
-                action: { showingBroadcastCompose = true }
-            )
+            if !CompanionPreview.isEnabled {
+                FFDivider()
+                FFGroupedRow(
+                    title: String(appLocalized: "Broadcast"),
+                    subtitle: String(appLocalized: "Write one post. Everyone signed in sees it on Feed."),
+                    systemImage: "megaphone",
+                    subtitleTone: .neutral,
+                    trailing: AnyView(FFChevron()),
+                    action: { showingBroadcastCompose = true }
+                )
+            }
         }
     }
 

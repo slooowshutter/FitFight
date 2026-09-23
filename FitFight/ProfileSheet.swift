@@ -111,6 +111,10 @@ struct ProfileSheet: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(verbatim: profile.identity.displayName).ffType(.title)
                 Text(verbatim: "@\(profile.identity.handle)").ffType(.caption).foregroundStyle(theme.textSecondary)
+                if let id = profile.identity.companionId, let animal = StockCompanion(rawValue: id), animal.isLimited {
+                    Text(animal.caption).ffType(.caption).foregroundStyle(theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
         }
         if preview == nil && profile.friendship != "self" {

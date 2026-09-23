@@ -30,7 +30,7 @@ export default function PrivacyPage() {
             <article className="legal-content">
                 <p className="eyebrow">VOS DONNÉES, EN TOUTE CLARTÉ</p>
                 <h1>Politique de confidentialité</h1>
-                <p className="legal-updated">En vigueur le 17 septembre 2026</p>
+                <p className="legal-updated">En vigueur le 21 septembre 2026</p>
                 <p className="legal-intro">
                     FitFight permet à des participants identifiés de comparer le
                     nombre de pas enregistrés pendant un défi privé. Cette
@@ -227,6 +227,32 @@ export default function PrivacyPage() {
                         autorisation spécifique aux deux participants. Le partage
                         du profil et l’autorisation Santé ne permettent pas ce
                         traitement externe.
+                    </p>
+                </section>
+
+                <section>
+                    <h2>Achats de compagnons Spéciaux</h2>
+                    <p>
+                        Apple traite les paiements des Spéciaux. FitFight ne
+                        reçoit pas vos coordonnées bancaires. Nous transmettons
+                        à Apple un identifiant d’achat aléatoire et conservons
+                        les identifiants de transaction vérifiés, le Spécial
+                        acheté, la date, le prix et la devise lorsqu’ils sont
+                        fournis, ainsi que l’état de propriété, de remboursement
+                        et de réservation. Ces données permettent de livrer et
+                        de restaurer les achats, et d’éviter de vendre deux fois
+                        le même compagnon exclusif.
+                    </p>
+                    <p>
+                        L’achat appartient au compte FitFight utilisé lors du
+                        paiement. Changer de compagnon ne le libère pas.
+                        Supprimer ce compte ne demande pas de remboursement à
+                        Apple. Nous supprimons le lien vers le profil supprimé
+                        et conservons le suivi de l’achat et de l’illustration
+                        retirée de la vente pour les vérifications, la
+                        récupération et les litiges. Contactez l’assistance pour
+                        récupérer un achat ou demander un examen des données
+                        conservées. Apple décide des remboursements.
                     </p>
                 </section>
 

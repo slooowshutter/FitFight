@@ -417,7 +417,10 @@ final class SessionStore: ObservableObject {
             throw HandleError.notSignedIn
         }
         let token = try await freshAccessToken()
-        let updated = try await api.updateProfile(avatarMediaId: media.id, accessToken: token)
+        let updated = try await api.updateProfile(
+            avatarMediaId: media.id,
+            accessToken: token
+        )
         try Task.checkCancellation()
         guard authSession?.user.id == userId else { throw CancellationError() }
         cacheProfile(updated, for: userId)
@@ -428,7 +431,7 @@ final class SessionStore: ObservableObject {
         return try await api.companionPrompts(accessToken: token)
     }
 
-    func setCompanion(id: String, prompt: String?) async throws {
+    func setCompanion(id: String? = nil, prompt: String? = nil, image: FitFightAICompanionSelection? = nil) async throws {
         guard !screenshotSignedIn else { throw CompanionPreview.WriteUnavailable() }
         guard let userId = authSession?.user.id ?? client.auth.currentUser?.id else {
             throw HandleError.notSignedIn
@@ -437,6 +440,7 @@ final class SessionStore: ObservableObject {
         let updated = try await api.updateProfile(
             companionId: id,
             companionPrompt: prompt,
+            companionImage: image,
             accessToken: token
         )
         try Task.checkCancellation()

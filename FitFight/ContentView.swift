@@ -19,7 +19,7 @@ struct ContentView: View {
             if ProcessInfo.processInfo.environment["FF_HEADER_PROBE"] == "1" {
                 FFScreen(top: AnyView(VersionBanner())) {
                     Color.clear.frame(height: 400)
-                    Color.magenta.frame(height: 120)
+                    Color(red: 1, green: 0, blue: 1).frame(height: 120)
                     Color.clear.frame(height: 540)
                 }
             } else {

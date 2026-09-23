@@ -103,7 +103,7 @@ jobs:
             - name: Validate English and French localizations
               run: python3 scripts/check_localizations.py
 
-            - name: Verify app update prompts and cancellation
+            - name: Verify app update reminders and production gate
               timeout-minutes: 1
               run: |
                   swiftc -swift-version 5 -target "$(uname -m)-apple-macosx13.0" FitFight/AppUpdateChecker.swift tests/AppUpdateCheckerTests.swift -o /tmp/fitfight-update-tests

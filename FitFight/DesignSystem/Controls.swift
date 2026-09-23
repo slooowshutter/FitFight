@@ -158,6 +158,118 @@ struct FFField<Content: View>: View {
     }
 }
 
+// MARK: - Toast
+
+struct FFToastAction {
+    let title: String
+    /// Optional minimum in points; the tap target stays at least 44.
+    var buttonHeight: CGFloat? = nil
+    let perform: () -> Void
+}
+
+struct FFToast: View {
+    let systemImage: String
+    let title: String
+    let message: String
+    var tone: FFTone = .moss
+    var action: FFToastAction? = nil
+    var onClose: (() -> Void)?
+    var raised: Bool = true
+
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: action == nil ? 0 : 12) {
+            HStack(spacing: action == nil ? 12 : 10) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(iconInk)
+                    .frame(width: 32, height: 32)
+                    .background(iconFill, in: Circle())
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .ffType(action == nil ? .button : .label)
+                        .foregroundStyle(theme.text)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(message)
+                        .ffType(.caption)
+                        .foregroundStyle(theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                if let onClose {
+                    Button(action: onClose) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: action == nil ? 11 : 12, weight: action == nil ? .heavy : .bold))
+                            .foregroundStyle(theme.textDim)
+                            .frame(width: action == nil ? 28 : 44, height: action == nil ? 28 : 44)
+                            .background(action == nil ? theme.hairline : .clear, in: Circle())
+                    }
+                    .buttonStyle(FFHapticPlainStyle())
+                    .accessibilityLabel(String(appLocalized: "Close"))
+                }
+            }
+            if let action {
+                Button(action: action.perform) {
+                    Text(action.title)
+                        .ffType(.button)
+                        .foregroundStyle(theme.text)
+                        .padding(.horizontal, 16)
+                        .frame(maxWidth: .infinity)
+                        .frame(minHeight: max(44, action.buttonHeight ?? 44))
+                        .background(theme.control, in: Capsule())
+                        .overlay { Capsule().strokeBorder(theme.line, lineWidth: 1) }
+                }
+                .buttonStyle(FFPressStyle())
+            }
+        }
+        .padding(.leading, 16)
+        .padding(.trailing, action == nil ? 16 : 8)
+        .padding(.vertical, 14)
+        .background(wash, in: RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
+        .background(theme.overlay, in: RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
+        .ffBorder(edge, radius: theme.radius.card)
+        .shadow(color: .black.opacity(raised ? 0.8 : 0), radius: raised ? 20 : 0, y: raised ? 14 : 0)
+        .accessibilityElement(children: .contain)
+    }
+
+    private var wash: Color {
+        switch tone {
+        case .moss: return theme.mossFill.opacity(0.20)
+        case .ember: return theme.emberFill.opacity(0.18)
+        case .gold: return theme.gold.opacity(0.20)
+        case .neutral: return .clear
+        }
+    }
+
+    private var edge: Color {
+        switch tone {
+        case .moss: return theme.mossText.opacity(0.24)
+        case .ember: return theme.emberText.opacity(0.26)
+        case .gold: return theme.gold.opacity(0.25)
+        case .neutral: return theme.line
+        }
+    }
+
+    private var iconInk: Color {
+        switch tone {
+        case .moss: return theme.mossOn
+        case .ember: return theme.emberOn
+        case .gold: return theme.goldInk
+        case .neutral: return theme.textSecondary
+        }
+    }
+
+    private var iconFill: Color {
+        switch tone {
+        case .moss: return theme.mossFill
+        case .ember: return theme.emberFill
+        case .gold: return theme.gold
+        case .neutral: return theme.chip
+        }
+    }
+}
+
 struct FFEmptyState: View {
     let systemImage: String
     let title: String

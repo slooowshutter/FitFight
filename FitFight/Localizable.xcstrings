@@ -4154,6 +4154,56 @@
                 }
             }
         },
+        "New FitFight version": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nouvelle version de FitFight"
+                    }
+                }
+            }
+        },
+        "Ready in TestFlight.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Disponible dans TestFlight."
+                    }
+                }
+            }
+        },
+        "Preview update card": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Aperçu de la carte de mise à jour"
+                    }
+                }
+            }
+        },
+        "Large notice at the top.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Grand avis en haut de l'écran."
+                    }
+                }
+            }
+        },
+        "A new TestFlight version appears in a toast, with reminders for that version three days apart.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Une nouvelle version TestFlight apparaît dans un avis. Les rappels pour cette version sont espacés de trois jours."
+                    }
+                }
+            }
+        },
         "Open TestFlight to check for the update. If it isn’t available yet, cancel and keep using FitFight.": {
             "localizations": {
                 "fr": {

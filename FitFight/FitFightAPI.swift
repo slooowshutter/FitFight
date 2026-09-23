@@ -184,23 +184,85 @@ struct FitFightHealthKitStepSyncResult: Decodable, Equatable {
 }
 
 struct FitFightHealthKitActivityBatch: Encodable {
+    struct Sample: Encodable {
+        var healthkitUuid: String
+        var metric: String
+        var startedAt: String
+        var endedAt: String
+        var value: Double
+        var unit: String
+        var sourceBundleId: String
+        var sourceName: String
+        var sourceVersion: String?
+        var deviceModel: String?
+        var externalUuid: String?
+        var syncIdentifier: String?
+        var syncVersion: Int?
+
+        enum CodingKeys: String, CodingKey {
+            case healthkitUuid = "healthkit_uuid"
+            case metric
+            case startedAt = "started_at"
+            case endedAt = "ended_at"
+            case value, unit
+            case sourceBundleId = "source_bundle_id"
+            case sourceName = "source_name"
+            case sourceVersion = "source_version"
+            case deviceModel = "device_model"
+            case externalUuid = "external_uuid"
+            case syncIdentifier = "sync_identifier"
+            case syncVersion = "sync_version"
+        }
+    }
+
+    struct DeletedSample: Encodable {
+        var healthkitUuid: String
+        var metric: String
+
+        enum CodingKeys: String, CodingKey {
+            case healthkitUuid = "healthkit_uuid"
+            case metric
+        }
+    }
+
     var collectedAt: String
     var timeZone: String
     var totals: [FitFightHealthKitStepSync.ActivityDay]
     var workouts: [FitFightHealthKitStepSync.Workout]
     var deletedWorkouts: [String]
+    var samples: [Sample]
+    var deletedSamples: [DeletedSample]
 
     enum CodingKeys: String, CodingKey {
         case collectedAt = "collected_at"
         case timeZone = "time_zone"
-        case totals, workouts
+        case totals, workouts, samples
         case deletedWorkouts = "deleted_workouts"
+        case deletedSamples = "deleted_samples"
     }
 }
 
 struct FitFightHealthKitActivityResult: Decodable {
+    struct AffectedSample: Decodable {
+        var metric: String
+        var startsAt: String
+        var endsAt: String
+
+        enum CodingKeys: String, CodingKey {
+            case metric
+            case startsAt = "starts_at"
+            case endsAt = "ends_at"
+        }
+    }
+
     var received: Int
     var processing: String
+    var affectedSamples: [AffectedSample]?
+
+    enum CodingKeys: String, CodingKey {
+        case received, processing
+        case affectedSamples = "affected_samples"
+    }
 }
 
 struct FitFightHealthKitDiagnosticSnapshot: Encodable {

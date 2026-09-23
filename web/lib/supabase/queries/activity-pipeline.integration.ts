@@ -134,6 +134,57 @@ test("an installed build's Steps upload is received, resolved, and published lik
     assert.deepEqual(await metrics(f.owner), resolved, "A retry never increments a total");
 });
 
+test("raw HealthKit samples retain provenance, delete by UUID, and never add to merged Steps", async (t) => {
+    const f = await fixture(t);
+    const at = new Date(Date.now() - 1_000).toISOString();
+    const day = civilDayStamp(new Date(Date.now() - 86_400_000), zone);
+    const startedAt = new Date(civilDayBounds(day, zone).startsAt.getTime() + 9 * 3_600_000).toISOString();
+    const sample = {
+        healthkit_uuid: randomUUID(), metric: "steps", started_at: startedAt,
+        ended_at: new Date(Date.parse(startedAt) + 600_000).toISOString(),
+        value: 250, unit: "steps", source_bundle_id: "com.apple.health",
+        source_name: "Apple Watch", source_version: "12.0", device_model: "Watch",
+    };
+    const page = healthKitActivityBatchSchema.parse({
+        collected_at: at, time_zone: zone,
+        totals: [dayTotal("steps", day, 9_000, at)], samples: [sample],
+    });
+    assert.deepEqual(await receiveHealthKitActivity(f.owner, page, database),
+        { received: 2, processing: "processed" });
+    const [stored] = await database<{ payload: Record<string, unknown> }[]>`
+        select payload from private.activity_raw where user_id = ${f.owner}
+            and record_kind = 'sample'
+    `;
+    assert.equal(stored.payload.source_bundle_id, "com.apple.health");
+    assert.ok((await metrics(f.owner)).some((row) => row.scope === "sample" && row.value === 250));
+    assert.equal((await metrics(f.owner)).find((row) => row.scope === "day" && row.metric === "steps")?.value,
+        9_000, "Raw samples cannot inflate Apple's total");
+
+    await receiveHealthKitActivity(f.owner, healthKitActivityBatchSchema.parse({
+        collected_at: new Date().toISOString(), time_zone: zone, samples: [sample],
+    }), database);
+    const [count] = await database`
+        select count(*)::int as n from private.activity_raw
+        where user_id = ${f.owner} and record_kind = 'sample'
+    `;
+    assert.equal(count.n, 1, "A second device with the same UUID and content is idempotent");
+
+    const deleted = await receiveHealthKitActivity(f.owner, healthKitActivityBatchSchema.parse({
+        collected_at: new Date().toISOString(), time_zone: zone,
+        deleted_samples: [{ healthkit_uuid: sample.healthkit_uuid, metric: "steps" }],
+    }), database);
+    assert.deepEqual(deleted.affected_samples, [{
+        metric: "steps", starts_at: sample.started_at, ends_at: sample.ended_at,
+    }]);
+    await receiveHealthKitActivity(f.owner, healthKitActivityBatchSchema.parse({
+        collected_at: new Date().toISOString(), time_zone: zone, samples: [sample],
+    }), database);
+    assert.ok(!(await metrics(f.owner)).some((row) => row.scope === "sample"),
+        "A delayed sample replay cannot resurrect a deletion");
+    assert.equal((await metrics(f.owner)).find((row) => row.scope === "day" && row.metric === "steps")?.value,
+        9_000, "The official total is replaced only by an explicit merged reading");
+});
+
 test("two devices, deletions, stale replays and corrections converge on one effective history", async (t) => {
     const f = await fixture(t);
     const collectedAt = new Date(Date.now() - 60_000).toISOString();

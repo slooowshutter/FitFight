@@ -8,42 +8,44 @@ copy from this branch has been deployed. It complements
 
 ## Implementation decision, 23 Sep
 
-Individual HealthKit quantity and category samples stay on the phone. They are
-read locally only to identify changed days. The server receives Apple's merged
-Steps and other supported daily totals, exact Fight-window Steps readings and
-checkpoints, workout summaries, and explicit workout deletion UUIDs. The
-serialized received records enter `private.activity_raw`; the resolver publishes
-current measurements to `private.activity_metrics`. Workout-derived day metrics
-never add to Apple's merged daily values.
+The app uploads each supported HealthKit quantity and category sample and workout
+with its stable UUID, interval, measurements, unit, and limited source metadata.
+Explicit deletion UUIDs are uploaded too. The server first persists each record
+or tombstone in `private.activity_raw`, then resolves current sample, workout,
+day, and Fight-window measurements in `private.activity_metrics`. Retried pages
+and two devices reporting the same UUID do not add another measurement. A
+tombstone prevents a delayed upload from restoring a deleted sample.
 
-The app rereads the most recent 40 civil days on each sync. First sync imports
-all accessible merged daily history in acknowledged pages of at most 1,000 days,
-plus accessible workouts through an all-history anchored query. Each daily type
-has an anchored local change query with a fixed start at bootstrap minus 40 days;
-its anchor advances after the affected merged days are acknowledged. Workout
-anchors advance after summaries and deletion UUIDs are acknowledged. Late
-changes earlier than that fixed daily predicate may be missed. Deleted objects
-are temporary in HealthKit, so a long absence can also miss a workout deletion.
+Apple's merged daily totals and exact Fight-window Steps readings remain separate,
+labeled inputs. Samples and workout measurements never add to those totals. The
+app rereads the most recent 40 civil days on each sync and imports accessible
+merged daily history in acknowledged pages of at most 1,000 days. An unbounded
+per-type anchored query imports accessible individual sample history in pages of
+100 records, then sends additions and explicit deletions after each acknowledged
+anchor. Workout changes use their own anchor. A late sample change can refresh an
+older day's merged total. A deletion response returns a previously received
+sample's interval so the phone can reread its affected days. A missing HealthKit
+reading does not prove zero, because revoked read access can also appear empty.
 
-The existing `/api/v1/healthkit/steps` contract stays for installed builds. The
-new app sends Fight readings there, then sends daily totals and workouts through
-`POST /api/v1/healthkit/activity`. The backend retains old readers and writes a
-legacy Steps mirror. A bounded resolver and the close-fights worker retry saved
-pending records. Personal history can be corrected; final Fight results remain
-frozen. Hosted CI proves code and disposable database behavior, while actual
-background delivery and HealthKit authorization still require device checks.
+The existing `/api/v1/healthkit/steps` contract remains for installed builds. The
+new app sends Fight readings there, then daily totals, workouts, and sample
+changes through `POST /api/v1/healthkit/activity`. The backend retains old
+readers and a legacy Steps mirror. A bounded resolver and the close-fights worker
+retry saved pending records. Personal history can be corrected; final Fight
+results remain frozen. Hosted CI proves code and disposable database behavior,
+while actual background delivery and HealthKit authorization still require
+device checks. HealthKit deletion notices are temporary, so a long absence may
+still miss a deletion until a separate reconciliation is built.
 
-The sections below preserve the original research and pre-change baseline. This
-implementation decision supersedes proposals to upload individual samples or
-sample deletions.
+The sections below preserve the original research and pre-change baseline.
 
 ## Confirmed requirements from Marc, 20 Sep
 
 The requested architecture has two shared activity stores:
 `private.activity_raw` for received provider records and changes, followed by
 `private.activity_metrics` for their normalized measurements. Workouts and Steps
-use this same path. The requirements below are the original design direction. The 23 Sep
-implementation decision above defines which records actually leave the phone.
+use this same path. The implementation decision above describes the approved
+record upload and its remaining HealthKit limits.
 Neither document authorizes deployment or a destructive migration.
 
 - Register observation and background delivery for every supported HealthKit
@@ -99,8 +101,8 @@ the same resolver.
 | --- | --- | --- |
 | Merged totals: Fight Steps, chart checkpoints, daily totals | Statistics query from window start to the collection cutoff | A few values per window. Rechecks values even when source priority changes without a sample addition or deletion |
 | Workouts | Anchored additions and explicit deletion UUIDs since the saved checkpoint | Workout summaries are records with stable IDs |
-| Quantity and category samples | Local anchored change query within the fixed recent predicate; send refreshed merged day totals only | Individual samples and sample deletion IDs stay on the phone |
-| First sync, reinstall, new device, lost checkpoint | Full accessible merged daily history and workout summaries, paged; local sample anchors use the fixed recent predicate | Establishes the checkpoint |
+| Quantity and category samples | Unbounded per-type anchored additions and explicit deletion UUIDs; reread changed merged days | Each sample is retained privately by UUID and resolved separately from merged totals |
+| First sync, reinstall, new device, lost checkpoint | Full accessible merged daily history, sample records, and workout summaries, paged | Establishes each checkpoint |
 
 - Totals: retain the exact start-to-cutoff merged Steps query for each active
   Fight. Store each reading as a labeled total with its window boundaries, time
@@ -111,10 +113,10 @@ the same resolver.
   seconds. Anchored results carry explicit deletions. A full reread would infer
   deletion from absence, and denied read access returns empty results without
   an error.
-- A reported new or deleted record dated outside the 40-day reread window
-  marks its day as changed. The phone reruns that day's merged statistics.
-  The current local anchor has a fixed start at bootstrap minus 40 days, so
-  it can miss later changes to older activity.
+- A reported new sample outside the 40-day reread window refreshes its merged
+  day. For an explicit deletion, the server returns the earlier received
+  sample's interval to identify affected days. The anchor has no date predicate,
+  so a late change can reach accessible older history.
 - Advance a type's checkpoint only after the server acknowledges durable
   intake. A failed upload resends the same changes.
 - Known gap: HealthKit keeps deleted objects only temporarily, so a long absence
@@ -220,7 +222,7 @@ Proposed refresh contract:
 
 1. Bootstrap merged daily totals across accessible history and workouts through
    an all-history anchor. Page through results until caught up. Quantity/category
-   change anchors use the fixed recent predicate; a fixed result cap must not
+   change anchors use no date predicate; a fixed result cap must not
    silently mean "complete."
 2. Keep a separate anchor for each account/environment, local HealthKit store
    generation, sample type, and query configuration. Treat anchors as opaque local
@@ -295,7 +297,7 @@ record contains a shared identifier. [Sync identifier][sync-id], [WWDC20][wwdc]
 
 ## Proposed records-to-metrics pipeline
 
-For workout records and received merged totals, the prepared pipeline uses this flow:
+For individual samples, workout records, and received merged totals, the prepared pipeline uses this flow:
 
 ```text
 HealthKit bootstrap/delta
@@ -323,8 +325,7 @@ to Apple's merged total. HealthKit can also condense/coalesce Steps samples.
 [Statistics][statistics], [WWDC20][wwdc], [Step count][steps]
 
 For FitFight Steps, the proposed pipeline therefore also receives authoritative
-merged statistics for affected Fight windows and cumulative checkpoints. Local quantity samples provide change detection without leaving the phone
-or becoming a competing score. Keep a score and its chart on the same cutoff/revision; do not assume that
+merged statistics for affected Fight windows and cumulative checkpoints. Uploaded quantity samples remain distinct measurements and never become a competing score. Keep a score and its chart on the same cutoff/revision; do not assume that
 independently rounded daily totals exactly sum to a separately queried total.
 
 A periodic or recovery statistics reread remains useful. Users can change Health

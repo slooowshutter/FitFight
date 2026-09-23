@@ -1,12 +1,12 @@
 {
     "sourceLanguage": "en",
     "strings": {
-        "FitFight imports the Apple Health activity history you allow, including daily totals and workouts. Only Steps score Fights. Individual Health samples stay on your iPhone. We’ll ask for permission next.": {
+        "FitFight uploads the Apple Health activity you allow, including individual records, daily totals, and workouts. Only Apple’s merged Steps score Fights. Your records are stored privately. We’ll ask for permission next.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "FitFight importe l’historique d’activité Santé d’Apple auquel vous donnez accès, y compris les totaux quotidiens et les entraînements. Seuls les pas comptent pour les défis. Les échantillons individuels restent sur votre iPhone. Nous allons demander votre autorisation."
+                        "value": "FitFight envoie les activités Santé d’Apple que vous autorisez, notamment les échantillons individuels, les totaux quotidiens et les entraînements. Seuls les pas fusionnés par Apple comptent pour les défis. Vos données restent privées. Nous allons demander votre autorisation."
                     }
                 }
             }
@@ -51,12 +51,12 @@
                 }
             }
         },
-        "Apple Health syncs all supported activity and workouts, including older history and later corrections.": {
+        "Apple Health syncs detailed activity and workout history, including late changes and deletions. Fight Steps still use Apple’s merged total.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Apple Santé synchronise toutes les activités et séances prises en charge, y compris l’historique et les corrections ultérieures."
+                        "value": "Santé d’Apple synchronise l’historique détaillé des activités et entraînements, y compris les changements tardifs et les suppressions. Les pas des défis utilisent toujours le total fusionné par Apple."
                     }
                 }
             }

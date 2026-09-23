@@ -23,7 +23,7 @@ create table private.activity_raw (
     processed_at timestamptz,
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now(),
-    constraint activity_raw_kind check (record_kind in ('total', 'workout', 'deletion')),
+    constraint activity_raw_kind check (record_kind in ('total', 'workout', 'sample', 'deletion')),
     constraint activity_raw_state check (
         processing_state in ('pending', 'processing', 'processed', 'failed')
     ),
@@ -73,8 +73,10 @@ create table private.activity_metrics (
     calculation_version integer not null,
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now(),
-    constraint activity_metrics_scope check (scope in ('workout', 'day', 'fight_window')),
-    constraint activity_metrics_window check (ends_at > starts_at),
+    constraint activity_metrics_scope check (scope in ('workout', 'sample', 'day', 'fight_window')),
+    constraint activity_metrics_window check (
+        ends_at > starts_at or (scope = 'sample' and ends_at = starts_at)
+    ),
     constraint activity_metrics_observed check (observed_through <= ends_at),
     constraint activity_metrics_value_nonnegative check (value >= 0),
     constraint activity_metrics_details_object check (jsonb_typeof(details) = 'object'),

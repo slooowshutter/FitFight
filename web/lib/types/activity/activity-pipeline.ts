@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { fightStepCheckpointSchema } from "@/lib/types/fights/fight-step-checkpoint";
 import { healthKitWorkoutSchema } from "@/lib/types/healthkit/healthkit-activity";
+import { healthKitSampleSchema } from "@/lib/types/healthkit/healthkit-activity-batch";
 
-export const activityRecordKindValues = ["total", "workout", "deletion"] as const;
+export const activityRecordKindValues = ["total", "workout", "sample", "deletion"] as const;
 
 export type JsonValue =
     | string
@@ -22,7 +23,7 @@ export const jsonValueSchema: z.ZodType<JsonValue> = z.lazy(() =>
         z.record(jsonValueSchema),
     ]),
 );
-export const activityScopeValues = ["workout", "day", "fight_window"] as const;
+export const activityScopeValues = ["workout", "sample", "day", "fight_window"] as const;
 
 const timestampSchema = z
     .string()
@@ -51,6 +52,7 @@ export const fightTotalPayloadSchema = z.object({
 });
 
 export const workoutPayloadSchema = healthKitWorkoutSchema;
+export const samplePayloadSchema = healthKitSampleSchema;
 
 /** The newest effective raw row for one record identity, as selected by the resolver. */
 export const selectedActivityRawSchema = z.object({
@@ -93,6 +95,7 @@ export type ActivityRecordKind = (typeof activityRecordKindValues)[number];
 export type DayTotalPayload = z.infer<typeof dayTotalPayloadSchema>;
 export type FightTotalPayload = z.infer<typeof fightTotalPayloadSchema>;
 export type WorkoutPayload = z.infer<typeof workoutPayloadSchema>;
+export type SamplePayload = z.infer<typeof samplePayloadSchema>;
 export type SelectedActivityRaw = z.infer<typeof selectedActivityRawSchema>;
 export type ClaimedActivityRaw = z.infer<typeof claimedActivityRawSchema>;
 export type ActivityMeasurement = z.infer<typeof activityMeasurementSchema>;

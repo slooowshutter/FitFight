@@ -47,6 +47,43 @@ test("a merged daily total becomes one day measurement that knows whether the da
     );
 });
 
+test("individual samples stay separate from Apple's merged daily totals", () => {
+    const input = {
+        healthkit_uuid: "66666666-6666-4666-8666-666666666666",
+        metric: "steps",
+        started_at: "2026-09-22T09:00:00.000Z",
+        ended_at: "2026-09-22T09:10:00.000Z",
+        value: 250,
+        unit: "steps",
+        source_bundle_id: "com.apple.health",
+        source_name: "Apple Watch",
+    };
+    const batch = healthKitActivityBatchSchema.parse({
+        collected_at: raw.collected_at,
+        time_zone: raw.time_zone,
+        samples: [input],
+    });
+    assert.equal(batch.samples[0].healthkit_uuid, input.healthkit_uuid);
+    const measurement = measurementFromRaw({
+        ...raw,
+        record_kind: "sample", record_type: "steps",
+        record_key: input.healthkit_uuid, payload: input,
+    });
+    assert.deepEqual(measurement.map((row) => [row.scope, row.metric, row.value]),
+        [["sample", "steps", 250]]);
+    assert.equal(measurement[0].details.source_bundle_id, "com.apple.health");
+    assert.equal(healthKitActivityBatchSchema.safeParse({
+        collected_at: raw.collected_at, time_zone: raw.time_zone,
+        samples: [{ ...input, unit: "kcal" }],
+    }).success, false);
+    assert.equal(healthKitActivityBatchSchema.safeParse({
+        collected_at: raw.collected_at, time_zone: raw.time_zone,
+        samples: [input], deleted_samples: [{
+            healthkit_uuid: input.healthkit_uuid, metric: "steps",
+        }],
+    }).success, false);
+});
+
 test("a selected deletion removes the workout instead of producing a measurement", () => {
     assert.deepEqual(
         measurementFromRaw({

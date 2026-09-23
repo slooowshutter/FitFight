@@ -22,6 +22,8 @@ import {
 } from "@/lib/types/activity/activity-pipeline";
 import {
     healthKitTotalMetricValues,
+    healthKitSampleMetricValues,
+    healthKitAffectedSampleSchema,
     type ActivityProcessing,
     type HealthKitActivityBatch,
     type HealthKitActivityBatchResponse,
@@ -82,14 +84,15 @@ export async function receiveHealthKitActivity(
     input: HealthKitActivityBatch,
     database: Sql = createDatabaseClient(),
 ): Promise<HealthKitActivityBatchResponse> {
-    const received = await database.begin("read write", async (sql) => {
+    const intake = await database.begin("read write", async (sql) => {
         const [source] = await sql<{ id: string; server_now: string }[]>`
             insert into public.data_sources (
                 user_id, provider, source_label, connection_route, capabilities,
                 status, consent_version, connected_at, last_success_at
             ) values (
                 ${userId}, 'apple_health', 'Apple Health', 'healthkit',
-                ${sql.array([...healthKitTotalMetricValues, ...workoutDayMetricValues])}::text[],
+                ${sql.array([...new Set([...healthKitTotalMetricValues,
+                    ...healthKitSampleMetricValues, ...workoutDayMetricValues])])}::text[],
                 'healthy', 1, now(), now()
             )
             on conflict (user_id, provider, connection_route) do update
@@ -108,7 +111,21 @@ export async function receiveHealthKitActivity(
                 "collected_at cannot be in the future",
             );
         }
-        return insertActivityRaw(sql, userId, source.id, input.collected_at, [
+        const affectedSamples = input.deleted_samples.length === 0 ? [] :
+            healthKitAffectedSampleSchema.array().parse(await sql`
+                select distinct on (raw.record_type, raw.record_key)
+                    raw.record_type as metric, raw.starts_at::text as starts_at,
+                    raw.ends_at::text as ends_at
+                from private.activity_raw as raw
+                join unnest(
+                    ${sql.array(input.deleted_samples.map((sample) => sample.metric))}::text[],
+                    ${sql.array(input.deleted_samples.map((sample) => sample.healthkit_uuid))}::text[]
+                ) as wanted (metric, healthkit_uuid)
+                    on wanted.metric = raw.record_type and wanted.healthkit_uuid = raw.record_key
+                where raw.source_id = ${source.id} and raw.record_kind = 'sample'
+                order by raw.record_type, raw.record_key, raw.collected_at desc
+            `);
+        const received = await insertActivityRaw(sql, userId, source.id, input.collected_at, [
             ...input.totals.map((total) => ({
                 record_kind: "total" as const,
                 record_type: total.metric,
@@ -135,6 +152,38 @@ export async function receiveHealthKitActivity(
                 time_zone: input.time_zone,
                 payload: workoutPayload(workout),
             })),
+            ...input.samples.map((sample) => ({
+                record_kind: "sample" as const,
+                record_type: sample.metric,
+                record_key: sample.healthkit_uuid,
+                starts_at: sample.started_at,
+                ends_at: sample.ended_at,
+                time_zone: input.time_zone,
+                payload: {
+                    healthkit_uuid: sample.healthkit_uuid,
+                    metric: sample.metric,
+                    started_at: new Date(sample.started_at).toISOString(),
+                    ended_at: new Date(sample.ended_at).toISOString(),
+                    value: sample.value,
+                    unit: sample.unit,
+                    source_bundle_id: sample.source_bundle_id,
+                    source_name: sample.source_name,
+                    source_version: sample.source_version ?? null,
+                    device_model: sample.device_model ?? null,
+                    external_uuid: sample.external_uuid ?? null,
+                    sync_identifier: sample.sync_identifier ?? null,
+                    sync_version: sample.sync_version ?? null,
+                },
+            })),
+            ...input.deleted_samples.map((sample) => ({
+                record_kind: "deletion" as const,
+                record_type: sample.metric,
+                record_key: sample.healthkit_uuid,
+                starts_at: null,
+                ends_at: null,
+                time_zone: input.time_zone,
+                payload: sample,
+            })),
             ...input.deleted_workouts.map((id) => ({
                 record_kind: "deletion" as const,
                 record_type: "workout",
@@ -145,8 +194,17 @@ export async function receiveHealthKitActivity(
                 payload: { healthkit_uuid: id },
             })),
         ]);
+        return { received, affectedSamples };
     });
-    return { received, processing: await processActivity({ userId }, database) };
+    const processing = await processActivity({ userId }, database);
+    return intake.affectedSamples.length > 0
+        ? { received: intake.received, processing,
+            affected_samples: intake.affectedSamples.map((sample) => ({
+                metric: sample.metric,
+                starts_at: new Date(sample.starts_at).toISOString(),
+                ends_at: new Date(sample.ends_at).toISOString(),
+            })) }
+        : { received: intake.received, processing };
 }
 
 /** Normalized workout content, so the same workout hashes equally from every client. */
@@ -295,6 +353,27 @@ async function resolveActivity(
         `,
     );
     const measurements = selected.flatMap(measurementFromRaw);
+    const sampleIds = selected.filter((raw) => raw.record_kind === "sample" ||
+        (raw.record_kind === "deletion" && raw.record_type !== "workout"));
+    if (sampleIds.length > 0) {
+        await sql`
+            delete from private.activity_metrics as current
+            using unnest(
+                ${sql.array(sampleIds.map((raw) => raw.record_type))}::text[],
+                ${sql.array(sampleIds.map((raw) => raw.record_key))}::text[]
+            ) as selected_sample (metric, healthkit_uuid)
+            where current.source_id = ${sourceId} and current.scope = 'sample'
+                and current.metric = selected_sample.metric
+                and current.scope_key = selected_sample.healthkit_uuid
+                and not exists (
+                    select 1 from jsonb_to_recordset(${sql.json(measurements)}::jsonb)
+                        as incoming (scope text, scope_key text, metric text)
+                    where incoming.scope = 'sample'
+                        and incoming.scope_key = current.scope_key
+                        and incoming.metric = current.metric
+                )
+        `;
+    }
     const workoutKeys = selected
         .filter((raw) => raw.record_type === "workout")
         .map((raw) => raw.record_key);

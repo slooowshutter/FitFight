@@ -8,12 +8,11 @@ enum HealthKitActivitySync {
     private static let anchorPageSize = 100
 
     private struct MetricProgress: Codable {
-        var predicateStart: Date
         var historyCursor: Date?
         var historyComplete = false
         var acknowledgedThrough: Date?
         var anchorData: Data?
-        var knownDays: Set<String> = []
+        var sampleBootstrapComplete = false
     }
 
     private struct Progress: Codable {
@@ -51,8 +50,8 @@ enum HealthKitActivitySync {
             progress = Progress(timeZoneIdentifier: timeZone.identifier)
         }
 
-        for kind in HealthKitActivityAggregates.totalKinds where progress.metrics[kind.metric] == nil {
-            progress.metrics[kind.metric] = MetricProgress(predicateStart: recentStart)
+        for kind in HealthKitActivityAggregates.sampleKinds where progress.metrics[kind.metric] == nil {
+            progress.metrics[kind.metric] = MetricProgress()
         }
         try save(progress, key: key)
         var processingComplete = true
@@ -72,12 +71,7 @@ enum HealthKitActivitySync {
                 totals: page, workouts: [], deletions: [], cutoff: cutoff,
                 timeZone: timeZone, api: api, session: session, trace: trace, userId: userId
             )
-            processingComplete = pageProcessed && processingComplete
-            for row in page {
-                var metric = progress.metrics[row.metric]!
-                metric.knownDays.insert(row.day)
-                progress.metrics[row.metric] = metric
-            }
+            processingComplete = pageProcessed.processed && processingComplete
             try save(progress, key: key)
         }
 
@@ -102,7 +96,7 @@ enum HealthKitActivitySync {
                 totals: [], workouts: workouts, deletions: deletions, cutoff: cutoff,
                 timeZone: timeZone, api: api, session: session, trace: trace, userId: userId
             )
-            processingComplete = pageProcessed && processingComplete
+            processingComplete = pageProcessed.processed && processingComplete
             workoutAnchor = page.anchor
             progress.workoutAnchorData = try archiveAnchor(workoutAnchor)
             try save(progress, key: key)
@@ -118,7 +112,7 @@ enum HealthKitActivitySync {
                 deletions: [], cutoff: cutoff, timeZone: timeZone,
                 api: api, session: session, trace: trace, userId: userId
             )
-            processingComplete = pageProcessed && processingComplete
+            processingComplete = pageProcessed.processed && processingComplete
         }
 
         for kind in HealthKitActivityAggregates.totalKinds {
@@ -144,8 +138,7 @@ enum HealthKitActivitySync {
                             totals: rows, workouts: [], deletions: [], cutoff: cutoff,
                             timeZone: timeZone, api: api, session: session, trace: trace, userId: userId
                         )
-                        processingComplete = pageProcessed && processingComplete
-                        metric.knownDays.formUnion(rows.map(\.day))
+                        processingComplete = pageProcessed.processed && processingComplete
                         cursor = next
                         metric.historyCursor = cursor
                         progress.metrics[kind.metric] = metric
@@ -157,50 +150,87 @@ enum HealthKitActivitySync {
                 try save(progress, key: key)
             }
 
+        }
+
+        let affectedDateFormatter = ISO8601DateFormatter()
+        affectedDateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        for kind in HealthKitActivityAggregates.sampleKinds {
+            try Task.checkCancellation()
+            var metric = progress.metrics[kind.metric]!
             var anchor = readAnchor(metric.anchorData)
             while true {
                 try Task.checkCancellation()
-                let predicate = HKQuery.predicateForSamples(withStart: metric.predicateStart, end: nil)
+                // No date predicate: an anchored change can concern any accessible historical day.
                 let page = try await changes(
-                    store: store, type: kind.type, predicate: predicate,
+                    store: store, type: kind.type, predicate: nil,
                     anchor: anchor, limit: anchorPageSize
                 )
-                var first = page.added.map(\.startDate).min()
-                var last = page.added.map(\.endDate).max()
-                if !page.deleted.isEmpty {
-                    first = metric.predicateStart
-                    last = cutoff
+                let deleted = Set(page.deleted.map { $0.uuid.uuidString.lowercased() })
+                let samples = try page.added
+                    .filter { !deleted.contains($0.uuid.uuidString.lowercased()) }
+                    .map { try HealthKitActivityAggregates.sampleRecord($0, kind: kind) }
+                let deletions = page.deleted.map {
+                    FitFightHealthKitActivityBatch.DeletedSample(
+                        healthkitUuid: $0.uuid.uuidString.lowercased(), metric: kind.metric
+                    )
                 }
-                if let first, let last {
-                    var cursor = calendar.startOfDay(for: max(first, metric.predicateStart))
-                    let lastDay = calendar.startOfDay(for: min(last, cutoff))
-                    let affectedEnd = min(calendar.date(byAdding: .day, value: 1, to: lastDay) ?? cutoff, cutoff)
-                    while cursor < affectedEnd {
-                        try Task.checkCancellation()
-                        let next = min(calendar.date(byAdding: .day, value: historyPageDays, to: cursor) ?? affectedEnd, affectedEnd)
-                        let firstDay = HealthKitStepAggregates.dayStamp(cursor, calendar: calendar)
-                        let finalDay = HealthKitStepAggregates.dayStamp(next.addingTimeInterval(-0.001), calendar: calendar)
-                        let zeros = page.deleted.isEmpty ? Set<String>() : Set(metric.knownDays.filter {
-                            $0 >= firstDay && $0 <= finalDay
-                        })
-                        let rows = try await HealthKitActivityAggregates.mergedDays(
-                            store: store, kind: kind, start: cursor, end: next,
-                            calendar: calendar, zeroDays: zeros
+                let pageResult = try await upload(
+                    totals: [], workouts: [], deletions: [], samples: samples,
+                    deletedSamples: deletions, cutoff: cutoff, timeZone: timeZone,
+                    api: api, session: session, trace: trace, userId: userId
+                )
+                processingComplete = pageResult.processed && processingComplete
+
+                if metric.sampleBootstrapComplete,
+                   let totalKind = HealthKitActivityAggregates.totalKinds.first(where: { $0.metric == kind.metric }) {
+                    var first = page.added.map(\.startDate).min()
+                    var last = page.added.map(\.endDate).max()
+                    for interval in pageResult.affectedSamples where interval.metric == kind.metric {
+                        guard let start = affectedDateFormatter.date(from: interval.startsAt),
+                              let end = affectedDateFormatter.date(from: interval.endsAt) else {
+                            throw HealthKitActivityAggregates.SampleReadError.invalidSample
+                        }
+                        first = min(first ?? start, start)
+                        last = max(last ?? end, end)
+                    }
+                    if !page.deleted.isEmpty && pageResult.affectedSamples.isEmpty {
+                        first = metric.historyCursor ?? recentStart
+                        last = cutoff
+                    }
+                    if let first, let last {
+                        var cursor = calendar.startOfDay(for: first)
+                        let lastDay = calendar.startOfDay(for: min(last, cutoff))
+                        let affectedEnd = min(
+                            calendar.date(byAdding: .day, value: 1, to: lastDay) ?? cutoff, cutoff
                         )
-                        let pageProcessed = try await upload(
-                            totals: rows, workouts: [], deletions: [], cutoff: cutoff,
-                            timeZone: timeZone, api: api, session: session, trace: trace, userId: userId
-                        )
-                        processingComplete = pageProcessed && processingComplete
-                        metric.knownDays.formUnion(rows.map(\.day))
-                        cursor = next
+                        while cursor < affectedEnd {
+                            try Task.checkCancellation()
+                            let next = min(
+                                calendar.date(byAdding: .day, value: historyPageDays, to: cursor) ?? affectedEnd,
+                                affectedEnd
+                            )
+                            // An empty HealthKit read can mean revoked permission, so never infer zero.
+                            let rows = try await HealthKitActivityAggregates.mergedDays(
+                                store: store, kind: totalKind, start: cursor, end: next,
+                                calendar: calendar, zeroDays: []
+                            )
+                            let totalResult = try await upload(
+                                totals: rows, workouts: [], deletions: [], cutoff: cutoff,
+                                timeZone: timeZone, api: api, session: session,
+                                trace: trace, userId: userId
+                            )
+                            processingComplete = totalResult.processed && processingComplete
+                            cursor = next
+                        }
                     }
                 }
                 anchor = page.anchor
                 metric.anchorData = try archiveAnchor(anchor)
+                let caughtUp = page.added.count + page.deleted.count < anchorPageSize
+                if caughtUp { metric.sampleBootstrapComplete = true }
                 progress.metrics[kind.metric] = metric
                 try save(progress, key: key)
-                if page.added.count + page.deleted.count < anchorPageSize { break }
+                if caughtUp { break }
             }
         }
         return processingComplete
@@ -210,14 +240,17 @@ enum HealthKitActivitySync {
         totals: [FitFightHealthKitStepSync.ActivityDay],
         workouts: [FitFightHealthKitStepSync.Workout],
         deletions: [String],
+        samples: [FitFightHealthKitActivityBatch.Sample] = [],
+        deletedSamples: [FitFightHealthKitActivityBatch.DeletedSample] = [],
         cutoff: Date,
         timeZone: TimeZone,
         api: FitFightAPI,
         session: SessionStore,
         trace: HealthKitSyncTrace,
         userId: UUID
-    ) async throws -> Bool {
-        guard !totals.isEmpty || !workouts.isEmpty || !deletions.isEmpty else { return true }
+    ) async throws -> (processed: Bool, affectedSamples: [FitFightHealthKitActivityResult.AffectedSample]) {
+        guard !totals.isEmpty || !workouts.isEmpty || !deletions.isEmpty ||
+              !samples.isEmpty || !deletedSamples.isEmpty else { return (true, []) }
         try Task.checkCancellation()
         guard session.authSession?.user.id == userId else { throw CancellationError() }
         let token = try await session.freshAccessToken()
@@ -227,10 +260,12 @@ enum HealthKitActivitySync {
             timeZone: timeZone.identifier,
             totals: totals,
             workouts: workouts,
-            deletedWorkouts: deletions
+            deletedWorkouts: deletions,
+            samples: samples,
+            deletedSamples: deletedSamples
         )
         let result = try await api.syncHealthKitActivity(batch, accessToken: token, trace: trace)
-        return result.processing == "processed"
+        return (result.processing == "processed", result.affectedSamples ?? [])
     }
 
     private static func earliestSample(store: HKHealthStore, type: HKSampleType) async throws -> Date? {

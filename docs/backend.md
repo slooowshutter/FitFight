@@ -4,7 +4,7 @@ Production scoring Metric is **Steps**. The native app sends Apple's merged
 Fight-window totals and checkpoints through the existing `/api/v1/healthkit/steps`
 contract. The prepared activity pipeline also accepts merged daily totals,
 workout summaries, and explicit workout deletion IDs through
-`/api/v1/healthkit/activity`. Individual HealthKit samples stay on the phone.
+`/api/v1/healthkit/activity`. Individual HealthKit samples enter the private raw store.
 The backend saves incoming records, resolves current measurements, and publishes
 Fight standings and compatible older-client mirrors. There are no app-facing
 Postgres RPCs.
@@ -16,11 +16,12 @@ Hosted staging / git `develop` (no secrets): https://zstzbfocunthczzubggz.supaba
 
 ## Activity pipeline (prepared 23 Sep 2026)
 
-This branch adds `private.activity_raw` for durable received totals, workout
-summaries, and deletion events, then `private.activity_metrics` for current
+This branch adds `private.activity_raw` for durable received totals, individual
+quantity/category samples, workout summaries, and deletion events, then
+`private.activity_metrics` for current
 measurements with scope, value, unit, interval, source, input IDs, and resolver
 version. Neither table is exposed to mobile database clients. Exact retries reuse
-one raw row; new readings replace current metrics. A workout tombstone wins over
+one raw row; new readings replace current metrics. A workout or sample tombstone wins over
 a stale replay. Each workout has separate duration, active-minutes, distance,
 and active-energy measurements when those values exist. Effort remains in the
 received record and duration details until its HealthKit unit is identified.
@@ -30,9 +31,11 @@ workout records and never added to Apple-merged daily Steps, energy, or distance
 The existing Steps endpoint keeps its request and decoded response shape for
 installed clients. It now validates and stores Fight readings, merged days, and
 any older-client activity extras as raw rows. The new activity endpoint accepts
-at most 1,000 daily totals, 200 workout summaries, and 500 deletion UUIDs per
-page. Its `received` count acknowledges durable intake; `processing` reports
-`processed` or `pending`. Each request attempts bounded resolution. The
+at most 1,000 daily totals, 200 workout summaries, 100 individual samples,
+and 500 deletion UUIDs of each kind per page. Its `received` count acknowledges
+durable intake; `processing` reports
+`processed` or `pending`. A deleted sample's previously stored interval is
+returned for merged-day refresh. Each request attempts bounded resolution. The
 close-fights worker resumes pending, failed, or expired-lease rows. Profile
 statistics read correctable `activity_metrics` day rows. Fight charts and
 standings use the published Fight revision; finalized outcomes remain frozen.

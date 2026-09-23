@@ -12,13 +12,14 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Code and affected contract:** The branch `explain-activity-sync-tables` adds
 `private.activity_raw` for received Apple-merged daily and exact Fight totals,
-workout summaries, and explicit workout deletions. A bounded TypeScript resolver
-publishes `private.activity_metrics`, including separate workout duration,
+individual supported quantity/category samples, workout summaries, and explicit
+sample/workout deletions. A bounded TypeScript resolver publishes
+`private.activity_metrics`, including sample measurements and separate workout duration,
 active-minutes, distance, and energy rows, plus Fight scores/charts and the legacy
 Steps mirror. Profile Steps reads the newest legacy or new row during rollout.
 Personal history can be corrected; finalized Fight results stay frozen. The phone
-keeps individual HealthKit samples and local anchors, registers all supported
-types for background observation, imports accessible history in acknowledged
+keeps per-type anchors locally, registers all supported types for background
+observation, imports accessible sample and merged-total history in acknowledged
 pages, and distinguishes durable receipt awaiting processing from partial
 activity failure after a successful Steps upload. The new `POST /api/v1/healthkit/activity` is additive. Existing
 `POST /api/v1/healthkit/steps` requests and decoded response fields remain valid;
@@ -38,8 +39,8 @@ passed strict typechecking, tests, and contract checks at `85c5ec8`.
 passed migrations, legacy-client checks, pgTAP, and transaction tests at the same
 backend revision. [Hosted iOS](https://github.com/slooowshutter/FitFight/actions/runs/35878380337)
 passed native regressions, English/French localization, full simulator compilation,
-and app packaging at `b27c6e0`. Later branch changes only clarify documentation
-and restore normal CI triggers. Background delivery, initial history duration,
+and app packaging at `b27c6e0`. These runs predate the individual sample upload
+and do not verify it. Background delivery, initial history duration,
 and corrections from a real HealthKit store remain device checks. No individual
 user data was used in CI.
 
@@ -49,9 +50,9 @@ native build reaches staging TestFlight. Keep `/api/v1`, the old tables, and old
 client behavior during overlap. None of those steps has happened from this
 branch: no merge, hosted migration, backend/privacy deployment, TestFlight upload,
 production promotion, or PR. A later authorized rollout must check both
-staging and production separately. Local sample-change detection starts at
-bootstrap minus 40 days; earlier late changes and temporary HealthKit workout
-deletion history remain known limits. The daily worker resumes persisted rows
+staging and production separately. Sample anchors have no date predicate;
+temporary HealthKit deletion history and empty reads after permission revocation
+remain known limits. The daily worker resumes persisted rows
 until a more frequent hosted cron is activated.
 
 ## Fight creation transaction: reviewed 23 Sep 2026

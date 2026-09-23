@@ -128,18 +128,17 @@ export default function PrivacyPage() {
                     <h2>Santé d’Apple</h2>
                     <p>
                         L’accès à Santé d’Apple est en lecture seule. FitFight
-                        n’y écrit aucune donnée et n’envoie pas les
-                        échantillons Santé individuels, itinéraires GPS,
-                        fréquences cardiaques ni métadonnées d’appareil ou de
-                        source. L’app conserve les totaux quotidiens fusionnés
-                        et les résumés d’entraînement : type, horaires,
-                        minutes actives, distance, énergie et effort lorsqu’ils
-                        sont disponibles. Les requêtes locales détectent les
-                        jours à actualiser ; les échantillons et les points de
-                        reprise restent sur votre téléphone. Ces données
-                        maintiennent votre historique d’activité sans
-                        augmenter le score de pas ni montrer les autres
-                        activités aux participants.
+                        envoie les échantillons individuels autorisés avec leur
+                        identifiant Santé, leurs horaires, valeurs, unités, nom
+                        et identifiant de l’app source, version de la source,
+                        modèle d’appareil si disponible et certains identifiants
+                        de synchronisation. L’app conserve aussi les totaux
+                        quotidiens fusionnés, les résumés d’entraînement et les
+                        suppressions explicites. FitFight ne lit ni itinéraires
+                        GPS ni fréquences cardiaques. Les points de reprise
+                        restent sur votre téléphone. Les échantillons bruts
+                        restent privés et ne sont jamais ajoutés au score de
+                        pas fusionné par Apple ni montrés aux participants.
                     </p>
                     <p>
                         Les participants d’un même défi privé peuvent voir les

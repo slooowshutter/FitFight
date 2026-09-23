@@ -25,7 +25,7 @@ Technical draft updated 23 Sep 2026. Test these instructions on the selected pro
 >
 > APPLE HEALTH AND SHARING
 >
-> FitFight requests read access to Step Count and other movement data, including energy, distance, exercise, stand, flights, and workouts. Steps alone score current Fights. The app sends Apple's merged total and chart checkpoints for each exact Fight window, merged daily totals across accessible history, workout summaries (type, time, active minutes, distance, energy, and effort when available), and explicit workout deletion IDs. Individual Health samples, local anchors, GPS routes, heart rate, and device/source metadata stay on the phone.
+> FitFight requests read access to Step Count and other movement data, including energy, distance, exercise, stand, flights, and workouts. Steps alone score current Fights. The app sends Apple's merged total and chart checkpoints for each exact Fight window, merged daily totals across accessible history, supported individual quantity and category samples with limited source metadata, workout summaries (type, time, active minutes, distance, energy, and effort when available), and explicit sample and workout deletion IDs. Local anchors, GPS routes, and heart rate stay on the phone.
 >
 > Fight participants see each other's username, profile photo, Fight and daily Steps totals, rank, duration, agreed action, and posts shared with their Fight. Other activity totals and workout summaries remain private to the account. Public Fight listings show join details to signed-in users; posts stay within the selected Fight memberships.
 >

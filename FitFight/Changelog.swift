@@ -29,7 +29,7 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 23,
-            notes: "Apple Health syncs all supported activity and workouts, including older history and later corrections."
+            notes: "Apple Health syncs detailed activity and workout history, including late changes and deletions. Fight Steps still use Apple’s merged total."
         ),
         ReleaseNote(
             version: "1.1.2",

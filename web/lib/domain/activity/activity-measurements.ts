@@ -2,12 +2,13 @@ import { civilDayBounds, civilDayStamp } from "@/lib/scoring/civil-day";
 import {
     dayTotalPayloadSchema,
     fightTotalPayloadSchema,
+    samplePayloadSchema,
     workoutPayloadSchema,
     type ActivityMeasurement,
     type SelectedActivityRaw,
 } from "@/lib/types/activity/activity-pipeline";
 
-export const ACTIVITY_RESOLVER_VERSION = 1;
+export const ACTIVITY_RESOLVER_VERSION = 2;
 
 /** Day metrics FitFight derives from workout records instead of accepting client sums. */
 export const workoutDayMetricValues = [
@@ -22,6 +23,34 @@ export function measurementFromRaw(
 ): ActivityMeasurement[] {
     if (raw.record_kind === "deletion") {
         return [];
+    }
+    if (raw.record_kind === "sample") {
+        const sample = samplePayloadSchema.parse(raw.payload);
+        const startsAt = new Date(sample.started_at).toISOString();
+        const endsAt = new Date(sample.ended_at).toISOString();
+        return [{
+            scope: "sample",
+            scope_key: sample.healthkit_uuid,
+            metric: sample.metric,
+            starts_at: startsAt,
+            ends_at: endsAt,
+            observed_through: endsAt,
+            day: civilDayStamp(new Date(startsAt), raw.time_zone ?? "UTC"),
+            time_zone: raw.time_zone,
+            fight_id: null,
+            value: sample.value,
+            unit: sample.unit,
+            details: {
+                source_bundle_id: sample.source_bundle_id,
+                source_name: sample.source_name,
+                source_version: sample.source_version ?? null,
+                device_model: sample.device_model ?? null,
+                external_uuid: sample.external_uuid ?? null,
+                sync_identifier: sample.sync_identifier ?? null,
+                sync_version: sample.sync_version ?? null,
+            },
+            input_ids: [raw.id],
+        }];
     }
     if (raw.record_kind === "workout") {
         const workout = workoutPayloadSchema.parse(raw.payload);

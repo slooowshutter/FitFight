@@ -4,9 +4,10 @@ Technical record updated 23 Sep 2026. Marc authorized the production rollout and
 
 ## Activity pipeline, prepared 23 Sep 2026
 
-The branch imports accessible Apple-merged daily history and workout summaries,
-including explicit workout deletion IDs. Individual quantity/category samples,
-source/device metadata, GPS routes, and local anchors stay on the phone. Existing
+The branch imports accessible Apple-merged daily history, individual supported
+quantity/category samples, and workout summaries, including explicit deletion
+IDs. Limited source and device metadata accompanies samples. GPS routes and local
+anchors stay on the phone. Existing
 Health App Privacy answers already include Health linked to the user for App
 Functionality, but the revised collection scope and public English/French privacy
 policy must be reviewed against the final candidate before App Review submission.
@@ -29,7 +30,7 @@ Declare these collected data types:
 
 | App Privacy type      | What FitFight collects                                                                                             | Linked to the user | Purpose           |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------ | -----------------: | ----------------- |
-| Health                | Apple Health Fight Steps, merged daily activity history, workout summaries and explicit workout deletion IDs        |                Yes | App Functionality |
+| Health                | Apple Health Fight Steps, merged daily activity, individual samples, workout summaries, and deletion IDs        |                Yes | App Functionality |
 | Name                  | Name supplied by Sign in with Apple, when available                                                                |                Yes | App Functionality |
 | Email Address         | Apple email, Apple private-relay email, or Google email                                                            |                Yes | App Functionality |
 | User ID               | Apple subject, Supabase account ID, FitFight username, referral relationships, and crash-report account identifier |                Yes | App Functionality |
@@ -80,7 +81,7 @@ The editable 1.1.1 questionnaire now declares Health or Wellness Topics, Messagi
 | Field                                                      | Answer                                                                                                                                |
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | Regulated medical device                                   | No: FitFight does not diagnose, prevent, monitor, or treat disease                                                                    |
-| HealthKit                                                  | Read-only Steps and supported movement history; no individual sample upload or Health writes                                          |
+| HealthKit                                                  | Read-only supported movement history, including individual samples; no Health writes                                          |
 | In-app purchases                                           | None                                                                                                                                  |
 | Gambling, entry fees, money settlement, payouts, or prizes | None                                                                                                                                  |
 | Advertising / IDFA                                         | None; the app does not request tracking permission                                                                                    |

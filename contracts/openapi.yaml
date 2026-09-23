@@ -1378,7 +1378,7 @@ paths:
     /healthkit/activity:
         post:
             operationId: syncHealthKitActivity
-            summary: Receive Apple-merged daily totals and workout records, then resolve them.
+            summary: Receive Apple-merged totals, workouts, and individual HealthKit sample changes.
             description: >-
                 A 200 means every record is durably received, so the app may advance its
                 collection checkpoints. `processing` says whether the resolver already published
@@ -2947,6 +2947,14 @@ components:
                     maxItems: 500
                     description: HealthKit UUIDs of explicitly deleted workouts.
                     items: { type: string, format: uuid }
+                samples:
+                    type: array
+                    maxItems: 100
+                    items: { $ref: "#/components/schemas/HealthKitSample" }
+                deleted_samples:
+                    type: array
+                    maxItems: 500
+                    items: { $ref: "#/components/schemas/HealthKitDeletedSample" }
         HealthKitDayTotal:
             type: object
             additionalProperties: false
@@ -2985,6 +2993,41 @@ components:
                     description: The civil-day end, or collected_at for the current day.
                 value: { type: number, minimum: 0 }
                 unit: { type: string }
+        HealthKitSample:
+            type: object
+            additionalProperties: false
+            required: [healthkit_uuid, metric, started_at, ended_at, value, unit, source_bundle_id, source_name]
+            properties:
+                healthkit_uuid: { type: string, format: uuid }
+                metric:
+                    type: string
+                    description: A supported daily metric, physical_effort, workout_effort_score, or estimated_workout_effort_score.
+                started_at: { type: string, format: date-time }
+                ended_at: { type: string, format: date-time }
+                value: { type: number, minimum: 0 }
+                unit: { type: string }
+                source_bundle_id: { type: string }
+                source_name: { type: string }
+                source_version: { type: string, nullable: true }
+                device_model: { type: string, nullable: true }
+                external_uuid: { type: string, nullable: true }
+                sync_identifier: { type: string, nullable: true }
+                sync_version: { type: integer, minimum: 0, nullable: true }
+        HealthKitDeletedSample:
+            type: object
+            additionalProperties: false
+            required: [healthkit_uuid, metric]
+            properties:
+                healthkit_uuid: { type: string, format: uuid }
+                metric: { type: string }
+        HealthKitAffectedSample:
+            type: object
+            additionalProperties: false
+            required: [metric, starts_at, ends_at]
+            properties:
+                metric: { type: string }
+                starts_at: { type: string, format: date-time }
+                ends_at: { type: string, format: date-time }
         HealthKitActivityBatchResult:
             type: object
             additionalProperties: false
@@ -2992,6 +3035,10 @@ components:
             properties:
                 received: { type: integer, minimum: 0 }
                 processing: { type: string, enum: [processed, pending] }
+                affected_samples:
+                    type: array
+                    description: Intervals of deleted samples previously received, used to reread merged days.
+                    items: { $ref: "#/components/schemas/HealthKitAffectedSample" }
         HealthKitDiagnosticSnapshot:
             type: object
             additionalProperties: false

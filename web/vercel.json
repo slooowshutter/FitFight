@@ -18,7 +18,8 @@
     ],
     "git": {
         "deploymentEnabled": {
-            "profiles-friends-and-stats": false
+            "profiles-friends-and-stats": false,
+            "ig-style-notifications": false
         }
     }
 }

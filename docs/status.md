@@ -8,6 +8,86 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last documented TestFlight upload:** 19 Sep 2026 at 13:14 UTC. **1.1.2 (204)** from preview merge `c80e642`, including develop `f206592`. [Upload and Apple processing succeeded](https://github.com/slooowshutter/FitFight/actions/runs/35444706489): `VALID`, unexpired, available to Internal Tester. This upload did not submit or assign external groups. The published release registry then listed `latest` 1.1.1 (201) and `review`/`internal` 1.1.2 (204). At the 13:18 UTC recheck on 19 Sep, staging's live release endpoint still returned candidate 203 with enforcement off; its metadata propagation did not block internal build 204. Production remained 1.1.1 (202). See the 23 Sep live policy check below for current advertised builds.
 
+## Quieter notifications and complete controls: prepared 20 Sep 2026
+
+**Code:** You > Settings > Preferences > Notifications has a master switch and
+every automatic category. Invitations, the 24-hour ending reminder, one conditional
+post-end final-sync request, final results, comments, replies, reactions, and
+mentions default on. Fight ended, daily status, feed posts, and the one-week
+reminder default off. The week reminder only applies to 30-calendar-day fights.
+Reactions and opted-in posts combine into one summary around 20:00 in the account's
+saved time zone. Existing saved choices remain. Repeated grace countdowns are
+removed. Delivery uses @usernames, Fight/deadline context, and post/comment excerpts.
+A notification service extension can attach a single post's photo. English/French
+copy and a 1.1.2 release note are included. See [the complete behavior](notifications.md).
+
+**Contract:** `GET/PATCH /api/v1/notifications/preferences` keeps all six released
+fields and partial updates, with eight additive switches. The legacy
+`challenge_reminder` field continues to control its ended/sync/result group;
+individual writes maintain the aggregate. Migration
+`20260920172636_notification_controls_and_digests.sql` retains old outbox kinds,
+slots, and grants while adding preferences and summary metadata. Feed visibility
+is unaffected by notification preferences. Old builds open the first related
+Fight from a multi-post digest; the new app opens Notifications & activity.
+
+**Supported clients:** read-only release checks on 20 Sep returned staging latest
+**1.1.1 (201)**, review **1.1.2 (204)**, internal **1.1.2 (205)**, enforcement off;
+production latest **1.1.1 (202)**, no review/internal candidates, enforcement on.
+The six-field preference models from sources `d97145a` (201), `e2783be` (202),
+`c80e642a` (204), and `bd7283d1` (205) are identical. Frozen decoder/encoder fixtures
+retain that contract, including old responses and partial legacy patches.
+
+**Cloud backend checks:** at `32d341c2`, [Web API typecheck and all 320 tests](https://github.com/slooowshutter/FitFight/actions/runs/35527589992)
+passed. [Disposable database verification](https://github.com/slooowshutter/FitFight/actions/runs/35527589944)
+passed migrations/lint, 255 pgTAP checks, build 113 compatibility, and all 46
+transaction tests before and after the deferred client-permission cutoff.
+Historical migration replay also passed. Notification coverage includes concurrent
+partial writes and digest workers, defaults and opt-outs, local evening timing and
+DST, distinct actor/post counts, exact destinations, blocks, removed reactions,
+deleted posts, mention fallback, and a single conditional final-sync request.
+
+**Native verification:** [all native regressions and the simulator build](https://github.com/slooowshutter/FitFight/actions/runs/35528448727)
+passed at `ce74cc6e`, including frozen preference decoders, partial patches,
+defaults, and the photo URL allowlist. [English/French cloud captures](https://github.com/slooowshutter/FitFight/actions/runs/35528448726)
+passed and were visually checked in Night and Day: all switches, default states,
+and wrapped explanations remain visible. Capture mode shares the screen content
+with a static viewport, following Preferences; the app retains its ScrollView.
+Rows expose localized VoiceOver labels, state, and action. Static captures do not
+verify touch interaction, VoiceOver operation, or system text scaling.
+Localization, native API-boundary, migration-safety, and whitespace checks passed.
+Temporary feature-branch CI triggers were removed after verification. No native
+compilation ran on the workstation.
+
+**Integration checks, 23 Sep:** After merging develop `a1b79cb1`, local Web API
+typechecking and all 322 tests passed. Notification preference, localization,
+native API boundary, push state, and Xcode project syntax checks also passed.
+The linked cloud checks above cover the notification code before this merge;
+the merged revision still needs its PR CI run.
+
+**Latest merge, 23 Sep:** With develop `3c9309c7` included, local Web API
+typechecking and all 387 tests passed. Xcode project syntax, localization,
+notification preferences, native API boundary, and remote photo checks also
+passed. The AI native generation check requires GitHub-hosted macOS, and this
+combined revision still needs PR simulator and disposable database CI. No
+hosted migration or deployment occurred.
+
+**Closer merge, 23 Sep:** With develop `27f75330` included, local Web API
+typechecking and all 387 tests passed, plus localization, notification
+preferences, native state, native API boundary, and Fight localization checks.
+The incoming disposable database test now expects the single conditional
+final-sync request used by this branch. The combined revision still needs PR
+simulator and disposable database CI; no hosted job or deployment changed.
+
+**Rollout:** apply the additive migration, deploy the compatible backend, let old
+backend instances drain, then distribute the app. The prepared production
+15-minute Vercel schedule activates only after an authorized `main` promotion;
+staging needs a separate hosted Supabase Cron job and matching Preview secret.
+Verify both schedules before rollout. Signed archive
+provisioning for `com.fitfight.mvp.notifications` and physical-device APNs/photo
+delivery remain release checks. No deployment, release-branch merge, live
+notification send, or TestFlight upload was performed. The feature branch disables
+automatic Vercel deployment while these changes are prepared.
+
 ## Fight clock, keyboard, and Current Fights sort: prepared 23 Sep 2026
 
 **Code:** The protected closer selects at most 25 fights whose next state transition is due. It no longer spends its batch or 200-row read cap on fights waiting within the final Steps grace period. The exact `ends_at` and grace deadline now count as due. The production Vercel close-fights schedule is prepared for every 15 minutes; Preview still needs its separate hosted Supabase Cron job. Current Fights defaults to earliest end, offers latest end and recently started, and shows the countdown with the exact local deadline. Tapping noninteractive screen space dismisses the keyboard on entry forms; scrolling can also dismiss it. The app has an English/French `1.1.2` release note.
@@ -199,6 +279,7 @@ GitHub-hosted CI. Normal workflow branch triggers are restored after verificatio
 A complete Google consent/login still requires an interactive retry after installing
 the replacement. No hosted auth configuration, API, or database contract changed for
 this fix. No PR, merge, deployment, or TestFlight upload was made.
+
 ## Compact suggested fight cards: prepared 19 Sep 2026
 
 **Code:** Suggested fights on New and under Fights > Invited use compact rows

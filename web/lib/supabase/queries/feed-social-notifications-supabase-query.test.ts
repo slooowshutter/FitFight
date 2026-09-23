@@ -93,7 +93,7 @@ function createSql(options: {
             return Promise.resolve(options.parent ? [options.parent] : []);
         }
         if (sql.includes("from public.profiles as profile")) {
-            return Promise.resolve(options.recipients ?? []);
+            return Promise.resolve((options.recipients ?? []).map((row) => ({ enabled: null, mention: null, ...row })));
         }
         if (sql.includes("from public.profiles")) {
             return Promise.resolve(options.actor ? [options.actor] : []);
@@ -117,14 +117,14 @@ test("mention handles come from @tags and ignore emails", () => {
 });
 
 test("social alert copy names the person and stays off health numbers", () => {
-    const alert = socialNotificationAlert("feed_post", "Alex", "en");
+    const alert = socialNotificationAlert("feed_post", "alex", "en");
     assert.equal(alert.title, "FitFight");
-    assert.equal(alert.body, "Alex posted in the feed.");
+    assert.equal(alert.body, "@alex posted in the feed.");
     assert.doesNotMatch(alert.body, /step/i);
     assert.doesNotMatch(alert.body, /score/i);
     assert.equal(
-        socialNotificationAlert("comment_reply", "Alex", "fr").body,
-        "Alex a répondu à ton commentaire.",
+        socialNotificationAlert("comment_reply", "alex", "fr").body,
+        "@alex a répondu à ton commentaire.",
     );
 });
 
@@ -194,7 +194,7 @@ test("a fight post notifies other members and skips the author", async () => {
     };
     assert.equal(row.user_id, otherId);
     assert.equal(row.kind, "feed_post");
-    assert.equal(row.alert_body, "Alex posted in the feed.");
+    assert.equal(row.alert_body, "@alex posted in the feed.");
     assert.equal(row.fight_id, fightId);
     assert.equal(row.route, `/fights/${fightId}?post=${postId}`);
 });
@@ -379,7 +379,7 @@ test("a reaction notifies the post author once", async () => {
     assert.equal(inserted.length, 1);
     const row = inserted[0] as { kind: string; alert_body: string };
     assert.equal(row.kind, "post_reaction");
-    assert.equal(row.alert_body, "Alex a réagi à ta publication.");
+    assert.equal(row.alert_body, "@alex a réagi à ta publication.");
 });
 
 test("reacting to your own post does not enqueue", async () => {
@@ -459,7 +459,7 @@ test("a mention names the person and skips the author", async () => {
     assert.equal(row.user_id, otherId);
     assert.equal(row.kind, "mention");
     assert.equal(row.copy_key, "mention_post");
-    assert.equal(row.alert_body, "Alex tagged you in a post.");
+    assert.equal(row.alert_body, "@alex tagged you in a post.");
     assert.doesNotMatch(row.alert_body, /score/i);
     assert.doesNotMatch(row.alert_body, /step/i);
     assert.equal(row.route, `/fights/${fightId}?post=${postId}`);
@@ -504,7 +504,7 @@ test("a comment mention names the person and skips a matching post-comment alert
     };
     assert.equal(row.kind, "mention");
     assert.equal(row.copy_key, "mention_comment");
-    assert.equal(row.alert_body, "Alex t’a mentionné dans un commentaire.");
+    assert.equal(row.alert_body, "@alex t’a mentionné dans un commentaire.");
     assert.equal(
         row.route,
         `/fights/${fightId}?post=${postId}&comment=${commentId}`,

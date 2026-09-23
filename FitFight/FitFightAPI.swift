@@ -1736,14 +1736,30 @@ struct FitFightNotificationDeliveryStatus: Decodable {
 }
 
 struct FitFightNotificationPreferences: Codable, Equatable {
-    var feedPost: Bool = true
+    var enabled: Bool = true
+    var fightInvite: Bool = true
+    var ending24h: Bool = true
+    var endingWeek: Bool = false
+    var fightEnded: Bool = false
+    var finalSync: Bool = true
+    var fightFinalized: Bool = true
+    var mention: Bool = true
+    var feedPost: Bool = false
     var postComment: Bool = true
     var commentReply: Bool = true
     var postReaction: Bool = true
     var challengeReminder: Bool = true
-    var dailyStatus: Bool = true
+    var dailyStatus: Bool = false
 
     enum CodingKeys: String, CodingKey {
+        case enabled = "enabled"
+        case fightInvite = "fight_invite"
+        case ending24h = "ending_24h"
+        case endingWeek = "ending_week"
+        case fightEnded = "fight_ended"
+        case finalSync = "final_sync"
+        case fightFinalized = "fight_finalized"
+        case mention = "mention"
         case feedPost = "feed_post"
         case postComment = "post_comment"
         case commentReply = "comment_reply"
@@ -1751,9 +1767,37 @@ struct FitFightNotificationPreferences: Codable, Equatable {
         case challengeReminder = "challenge_reminder"
         case dailyStatus = "daily_status"
     }
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        feedPost = try container.decode(Bool.self, forKey: .feedPost)
+        postComment = try container.decode(Bool.self, forKey: .postComment)
+        commentReply = try container.decode(Bool.self, forKey: .commentReply)
+        postReaction = try container.decode(Bool.self, forKey: .postReaction)
+        challengeReminder = try container.decode(Bool.self, forKey: .challengeReminder)
+        dailyStatus = try container.decode(Bool.self, forKey: .dailyStatus)
+        enabled = try container.decodeIfPresent(Bool.self, forKey: .enabled) ?? true
+        fightInvite = try container.decodeIfPresent(Bool.self, forKey: .fightInvite) ?? true
+        ending24h = try container.decodeIfPresent(Bool.self, forKey: .ending24h) ?? challengeReminder
+        endingWeek = try container.decodeIfPresent(Bool.self, forKey: .endingWeek) ?? false
+        fightEnded = try container.decodeIfPresent(Bool.self, forKey: .fightEnded) ?? false
+        finalSync = try container.decodeIfPresent(Bool.self, forKey: .finalSync) ?? challengeReminder
+        fightFinalized = try container.decodeIfPresent(Bool.self, forKey: .fightFinalized) ?? challengeReminder
+        mention = try container.decodeIfPresent(Bool.self, forKey: .mention) ?? true
+    }
 }
 
 struct FitFightNotificationPreferencesUpdate: Encodable {
+    var enabled: Bool?
+    var fightInvite: Bool?
+    var ending24h: Bool?
+    var endingWeek: Bool?
+    var fightEnded: Bool?
+    var finalSync: Bool?
+    var fightFinalized: Bool?
+    var mention: Bool?
     var feedPost: Bool?
     var postComment: Bool?
     var commentReply: Bool?
@@ -1762,6 +1806,14 @@ struct FitFightNotificationPreferencesUpdate: Encodable {
     var dailyStatus: Bool?
 
     enum CodingKeys: String, CodingKey {
+        case enabled = "enabled"
+        case fightInvite = "fight_invite"
+        case ending24h = "ending_24h"
+        case endingWeek = "ending_week"
+        case fightEnded = "fight_ended"
+        case finalSync = "final_sync"
+        case fightFinalized = "fight_finalized"
+        case mention = "mention"
         case feedPost = "feed_post"
         case postComment = "post_comment"
         case commentReply = "comment_reply"

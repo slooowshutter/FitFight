@@ -62,7 +62,8 @@ test("daily status selects only opted-in users with an authorized active device 
         candidateQuery,
         /left join private.notification_preferences as preferences on preferences.user_id = member.user_id/,
     );
-    assert.match(candidateQuery, /coalesce\(preferences.daily_status, true\)/);
+    assert.match(candidateQuery, /coalesce\(preferences.daily_status, false\)/);
+    assert.match(candidateQuery, /coalesce\(preferences.enabled, true\)/);
     assert.match(
         candidateQuery,
         /join lateral \( select locale from private.device_installations/,

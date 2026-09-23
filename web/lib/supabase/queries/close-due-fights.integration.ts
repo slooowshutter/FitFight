@@ -70,7 +70,7 @@ test("a newly ended fight closes despite 25 older fights awaiting final Steps", 
         select count(*)::int as n from private.notification_intents
         where fight_id = ${dueFight}
     `;
-    assert.equal(intents.n, 4, "end alert and three grace reminders enqueue once");
+    assert.equal(intents.n, 2, "end alert and one final-sync request enqueue once");
 });
 
 test("a newly ended fight closes beyond the former 200-row read cap", async (t) => {

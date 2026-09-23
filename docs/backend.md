@@ -33,12 +33,15 @@ delete, and report for any post use `/api/v1/posts/{id}/...`.
 Listing a fight includes posts from other windows in the same recurring series.
 Roster members (`accepted` or `deferred`) can read and post. Invited-only
 members cannot. Delete own posts; report or hide another author.
-`GET/PATCH /api/v1/notifications/preferences` reads and updates per-type
-toggles (fight posts, comments, replies, reactions, challenge reminders, daily
-status). Missing rows default on. Creating a fight post notifies other members
-of that fight; a comment notifies the post author; a reply notifies the parent
-commenter, not sibling commenters; a reaction notifies the post author. The closer
-still drains APNs. Lock-screen copy names the person and does not include Steps.
+`GET/PATCH /api/v1/notifications/preferences` reads and partially updates a master
+switch and individual invitation, ending reminder, final-sync, result, daily,
+post, comment, reply, reaction, and mention switches. New-account feed posts,
+daily status, fight-ended alerts, and the optional one-week reminder default off.
+Saved choices are preserved. Reactions and opted-in feed posts collect into one
+evening summary; comments notify the post author, and replies notify the parent
+commenter. The closer queues reminders and summaries and drains APNs. Lock-screen
+copy uses @usernames, Fight names, deadlines, and post/comment excerpts; a
+single-post alert may include its photo. See [notification behavior and rollout](notifications.md).
 The verified session owns the operation. TypeScript normalizes and validates handles,
 sets their timestamp, and translates uniqueness conflicts to `409 handle_taken`.
 Missing/deleted profiles return `401 profile_missing`; account deletion remains `DELETE`.

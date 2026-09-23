@@ -11,6 +11,4 @@ export const DELETE = apiRoute<{ userID: string }>(async (request, { params }) =
     return json(await changeFriendship(userId, profileUserIDSchema.parse(params.userID), "remove"));
 });
 
-export function OPTIONS(request: Request) {
-    return corsPreflight(request);
-}
+export const OPTIONS = corsPreflight;

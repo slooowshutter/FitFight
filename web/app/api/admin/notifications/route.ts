@@ -1,10 +1,17 @@
-import { createHash, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { sendApnsAlert } from "@/lib/apns/apns-client";
 import { readApnsEnvironment } from "@/lib/apns/apns-config";
-import { ApiError, ERROR_CODES, apiRoute, json, readJson } from "@/lib/http";
+import {
+    ApiError,
+    ERROR_CODES,
+    apiRoute,
+    json,
+    readJson,
+    requireCronSecret,
+} from "@/lib/http";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
+import { readNotificationPreferences } from "@/lib/supabase/queries/notification-preferences-supabase-query";
 import { lookupProfileByHandle } from "@/lib/supabase/queries/create-invite-supabase-query";
 import {
     decryptInstallationToken,
@@ -16,22 +23,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 export const POST = apiRoute(async (request) => {
-    const secret = process.env.CRON_SECRET ?? process.env.FITFIGHT_CRON_SECRET;
-    if (!secret) {
-        throw new ApiError(503, ERROR_CODES.config, "Cron secret is not set");
-    }
-    const bearer = request.headers
-        .get("authorization")
-        ?.match(/^Bearer (\S+)$/i)?.[1];
-    if (
-        !bearer ||
-        !timingSafeEqual(
-            createHash("sha256").update(bearer).digest(),
-            createHash("sha256").update(secret).digest(),
-        )
-    ) {
-        throw new ApiError(401, ERROR_CODES.unauthorized, "Unauthorized");
-    }
+    requireCronSecret(request);
 
     const input = z
         .object({
@@ -48,6 +40,8 @@ export const POST = apiRoute(async (request) => {
         createAdminClient(),
         input.username,
     );
+    const prefs = await readNotificationPreferences(profile.user_id);
+    if (!prefs.enabled) return json({ accepted: false, reason: "notifications_disabled" });
     const [installation] = await readActiveDeviceInstallations(
         profile.user_id,
         createDatabaseClient(),

@@ -12,6 +12,18 @@ enum FightsListFilter: CaseIterable {
     }
 }
 
+enum CurrentFightsSort: CaseIterable, Hashable {
+    case endingSoonest, endingLatest, recentlyStarted
+
+    var title: String {
+        switch self {
+        case .endingSoonest: String(appLocalized: "Ending soonest")
+        case .endingLatest: String(appLocalized: "Ending latest")
+        case .recentlyStarted: String(appLocalized: "Recently started")
+        }
+    }
+}
+
 struct FightsListView: View {
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var session: SessionStore
@@ -19,6 +31,7 @@ struct FightsListView: View {
     @Environment(\.ffTheme) private var theme
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var filter: FightsListFilter
+    @State private var currentSort: CurrentFightsSort = .endingSoonest
 
     init(filter: FightsListFilter = .current) {
         _filter = State(initialValue: filter)
@@ -77,25 +90,50 @@ struct FightsListView: View {
 
             if filter == .invited {
                 ForEach(model.invitations) { fight in
-                    InvitationRow(fight: fight)
+                    JoinOfferRow(
+                        title: fight.listTitle,
+                        subtitle: fight.listSubtitle,
+                        avatar: AnyView(CompanionAvatar(fight.inviter ?? fight.standings.first?.person))
+                    ) { model.openFightID = fight.id }
                 }
                 ForEach(model.suggestedFights.filter { !$0.alreadyMember }) { fight in
-                    SuggestedFightRow(fight: fight) { Task { await model.openJoinable(fight, session: session) } }
+                    JoinOfferRow(suggested: fight) { Task { await model.openJoinable(fight, session: session) } }
                 }
             }
 
             if filter == .current {
-                ForEach(model.live) { fight in
+                if !model.live.isEmpty {
+                    HStack {
+                        Text(String(appLocalized: "Sort by"))
+                            .ffType(.caption)
+                            .foregroundStyle(theme.textSecondary)
+                        Spacer(minLength: 8)
+                        Menu {
+                            Picker(String(appLocalized: "Sort by"), selection: $currentSort) {
+                                ForEach(CurrentFightsSort.allCases, id: \.self) { option in
+                                    Text(option.title).tag(option)
+                                }
+                            }
+                        } label: {
+                            Label(currentSort.title, systemImage: "arrow.up.arrow.down")
+                                .ffType(.label)
+                                .foregroundStyle(theme.mossText)
+                                .frame(minHeight: 44)
+                        }
+                        .accessibilityLabel(String(appLocalized: "Sort by"))
+                        .accessibilityValue(currentSort.title)
+                    }
+                }
+                ForEach(sortedCurrentFights) { fight in
                     let standing = difference(in: fight)
                     let opponent = opponent(in: fight)
                     FFListRow(
                         monogram: opponent?.initials ?? "?",
                         title: fight.listTitle,
-                        subtitle: fight.timeLeftLabel,
+                        subtitle: fight.timeAndDeadlineLabel,
                         metric: fight.isUpcoming ? String(appLocalized: "Scheduled") : standing.text,
                         ahead: standing.ahead,
                         metricIsGap: !fight.isUpcoming && standing.isGap,
-                        photoURL: opponent?.photoURL,
                         avatar: AnyView(CompanionAvatar(opponent)),
                         action: { model.openFightID = fight.id }
                     )
@@ -135,6 +173,20 @@ struct FightsListView: View {
         }
     }
 
+    private var sortedCurrentFights: [Fight] {
+        model.live.sorted { lhs, rhs in
+            switch currentSort {
+            case .endingSoonest:
+                if lhs.windowEnd != rhs.windowEnd { return lhs.windowEnd < rhs.windowEnd }
+            case .endingLatest:
+                if lhs.windowEnd != rhs.windowEnd { return lhs.windowEnd > rhs.windowEnd }
+            case .recentlyStarted:
+                if lhs.windowStart != rhs.windowStart { return lhs.windowStart > rhs.windowStart }
+            }
+            return lhs.id < rhs.id
+        }
+    }
+
     /// The number on the right is your distance from whoever you are actually
     /// racing: the leader when you are behind, the runner-up when you are ahead.
     /// Nobody else has a score yet in a fresh fight, so that row shows your total.
@@ -165,61 +217,30 @@ struct FightsListView: View {
     }
 }
 
-struct InvitationRow: View {
-    let fight: Fight
-    @EnvironmentObject private var model: AppModel
-    @Environment(\.ffTheme) private var theme
-
-    var body: some View {
-        HStack(spacing: 13) {
-            let inviter = fight.inviter ?? fight.standings.first?.person
-            CompanionAvatar(inviter)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(fight.listTitle)
-                    .ffType(.heading)
-                    .foregroundStyle(theme.text)
-                Text(fight.listSubtitle)
-                    .ffType(.caption)
-                    .foregroundStyle(theme.textSecondary)
-            }
-            Spacer(minLength: 8)
-            Button {
-                model.openFightID = fight.id
-            } label: {
-                FFPill(String(appLocalized: "Join"), style: .solidMoss)
-            }
-            .buttonStyle(FFPressStyle())
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(theme.mossWash, in: RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
-        .ffBorder(theme.mossText.opacity(0.18), radius: theme.radius.card)
-        .contentShape(Rectangle())
-        .onTapGesture { model.openFightID = fight.id }
-    }
-}
-
-struct SuggestedFightRow: View {
-    let fight: FitFightJoinableFight
+/// An invitation or a suggested fight: moss wash, two lines, and a pill. The whole row opens it.
+struct JoinOfferRow: View {
+    let title: String
+    let subtitle: String
+    var pill = String(appLocalized: "Join")
+    let avatar: AnyView
     let onOpen: () -> Void
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
         Button(action: onOpen) {
             HStack(spacing: 13) {
-                FFAvatar(monogram: String(fight.ownerHandle.prefix(2)).uppercased())
+                avatar
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(verbatim: Fight.displayTitle(name: fight.name, actionText: fight.actionText))
+                    Text(verbatim: title)
                         .ffType(.heading)
                         .foregroundStyle(theme.text)
-                        .lineLimit(1)
-                    Text(String(format: String(appLocalized: "suggested.participants"), fight.memberCount))
+                    Text(verbatim: subtitle)
                         .ffType(.caption)
                         .foregroundStyle(theme.textSecondary)
                 }
                 Spacer(minLength: 8)
-                FFPill(fight.hasJoined ? String(appLocalized: "Open fight") : String(appLocalized: "Join"), style: .solidMoss)
+                FFPill(pill, style: .solidMoss)
                     .fixedSize()
             }
             .padding(.horizontal, 16)
@@ -229,6 +250,18 @@ struct SuggestedFightRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(FFPressStyle())
+    }
+}
+
+extension JoinOfferRow {
+    init(suggested fight: FitFightJoinableFight, onOpen: @escaping () -> Void) {
+        self.init(
+            title: Fight.displayTitle(name: fight.name, actionText: fight.actionText),
+            subtitle: String(format: String(appLocalized: "suggested.participants"), fight.memberCount),
+            pill: fight.hasJoined ? String(appLocalized: "Open fight") : String(appLocalized: "Join"),
+            avatar: AnyView(FFAvatar(monogram: String(fight.ownerHandle.prefix(2)).uppercased())),
+            onOpen: onOpen
+        )
     }
 }
 

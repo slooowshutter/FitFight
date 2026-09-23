@@ -16,6 +16,4 @@ export const POST = apiRoute<{ uploadID: string }>(
     },
 );
 
-export function OPTIONS(request: Request) {
-    return corsPreflight(request);
-}
+export const OPTIONS = corsPreflight;

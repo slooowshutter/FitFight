@@ -77,7 +77,8 @@ struct FightPostEngagement: View {
                             ids.append(fightId)
                         }
                         return ids
-                    }()
+                    }(),
+                    loadsOnFirstMention: true
                 ) {
                     HStack(alignment: .center, spacing: 0) {
                         TextField(
@@ -130,6 +131,7 @@ struct FightPostEngagement: View {
                 }
             }
         }
+        .ffKeyboardDismissOnBackgroundTap()
         .task {
             if post.commentCount > 0 || targetCommentID != nil {
                 open = true
@@ -168,7 +170,6 @@ struct FightPostEngagement: View {
         }
         .sheet(isPresented: $showingReactions) {
             FightPostReactionsSheet(post: post)
-                .environmentObject(session)
                 .fitFightTheme(theme)
                 .presentationBackground(theme.bg)
         }
@@ -313,7 +314,7 @@ struct FightPostEngagement: View {
                     companionID: comment.author.companionId,
                     isYou: comment.mine,
                     monogram: comment.author.initials,
-                    photoURL: comment.author.avatar?.url,
+                    photoURL: comment.author.photoURL,
                     size: 28
                 )
                 .frame(width: 44, height: 44, alignment: .topLeading)
@@ -597,16 +598,7 @@ private struct FightPostReactionsSheet: View {
 
     var body: some View {
         FFScreen(clearance: false) {
-            HStack {
-                Text(String(appLocalized: "Reactions"))
-                    .ffType(.title)
-                    .foregroundStyle(theme.text)
-                Spacer()
-                Button(String(appLocalized: "Close")) { dismiss() }
-                    .ffType(.label)
-                    .foregroundStyle(theme.mossText)
-                    .buttonStyle(FFHapticPlainStyle())
-            }
+            FFSheetHeader(title: String(appLocalized: "Reactions")) { dismiss() }
             if !people.isEmpty {
                 FFCard {
                     ForEach(people) { person in

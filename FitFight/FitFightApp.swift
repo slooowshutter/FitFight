@@ -35,14 +35,6 @@ final class FitFightAppDelegate: NSObject, UIApplicationDelegate {
 
     func application(
         _ application: UIApplication,
-        didFailToRegisterForRemoteNotificationsWithError error: Error
-    ) {
-        guard !CompanionPreview.isEnabled else { return }
-        PushNotificationService.shared.handleRegistrationFailure()
-    }
-
-    func application(
-        _ application: UIApplication,
         handleEventsForBackgroundURLSession identifier: String,
         completionHandler: @escaping () -> Void
     ) {
@@ -61,6 +53,7 @@ struct FitFightApp: App {
     @StateObject private var themeStore: ThemeStore
     @StateObject private var model: AppModel
     @StateObject private var companions = CompanionStore()
+    @StateObject private var specialPurchases = SpecialPurchases()
     @StateObject private var preferences = AccountPreferencesStore()
     @StateObject private var appUpdate = AppUpdateChecker.shared
     @StateObject private var session: SessionStore
@@ -68,6 +61,9 @@ struct FitFightApp: App {
     @StateObject private var feed = FeedStore()
     @StateObject private var fightLiveUpdates = FightLiveUpdates()
     @StateObject private var push = PushNotificationService.shared
+    /// Control Center, alerts, and permission sheets only make the app inactive; the
+    /// foreground refresh waits for a real return from the background.
+    @State private var returnedFromBackground = false
 
     init() {
         #if DEBUG && targetEnvironment(simulator)
@@ -78,6 +74,12 @@ struct FitFightApp: App {
             let state = CompanionPreview.DisplayState(rawValue: ProcessInfo.processInfo.environment["FF_COMPANION_STATE"] ?? "") ?? .populated
             let model = CompanionPreview.model(state: state)
             model.showCompanionPreviewState(state)
+            let companions = CompanionStore()
+            if ProcessInfo.processInfo.environment["FF_COMPANION_PICKER"] == "1" {
+                model.tab = .you
+                companions.selection = .limitedPangolin
+                companions.showingPicker = true
+            }
             if ScreenshotExport.isEnabled {
                 switch ProcessInfo.processInfo.environment["FF_SHOT"] {
                 case "fight": model.openFightID = CompanionPreview.duelID
@@ -96,6 +98,7 @@ struct FitFightApp: App {
             _session = StateObject(wrappedValue: session)
             _steps = StateObject(wrappedValue: steps)
             _feed = StateObject(wrappedValue: feed)
+            _companions = StateObject(wrappedValue: companions)
             return
         }
         #endif
@@ -114,6 +117,7 @@ struct FitFightApp: App {
                 .environmentObject(themeStore)
                 .environmentObject(model)
                 .environmentObject(companions)
+                .environmentObject(specialPurchases)
                 .environmentObject(preferences)
                 .environment(\.locale, AppLocalization.locale)
                 .environmentObject(session)
@@ -122,6 +126,10 @@ struct FitFightApp: App {
                 .environmentObject(appUpdate)
                 .environmentObject(push)
                 .fitFightTheme(themeStore.theme)
+                .task(id: session.profile?.userId) {
+                    guard !CompanionPreview.isEnabled, !ScreenshotExport.isEnabled else { return }
+                    await specialPurchases.observe(session: session)
+                }
                 .onChange(of: session.authSession?.user.id, initial: true) { _, userID in
                     guard !CompanionPreview.isEnabled, !ScreenshotExport.isEnabled else { return }
                     preferences.activate(userID: userID)
@@ -137,8 +145,8 @@ struct FitFightApp: App {
                         await push.registerIfAuthorized()
                     }
                 }
-                .task(id: scenePhase == .active ? session.authSession?.user.id : nil) {
-                    guard scenePhase == .active, !CompanionPreview.isEnabled, !ScreenshotExport.isEnabled else { return }
+                .task(id: scenePhase != .background ? session.authSession?.user.id : nil) {
+                    guard scenePhase != .background, !CompanionPreview.isEnabled, !ScreenshotExport.isEnabled else { return }
                     await preferences.refresh(session: session)
                 }
                 .task {
@@ -167,9 +175,9 @@ struct FitFightApp: App {
                     await session.devAdoptSessionIfNeeded()
                     #endif
                 }
-                .task(id: scenePhase == .active && appUpdate.allowsUse ? session.authSession?.user.id : nil) {
+                .task(id: scenePhase != .background && appUpdate.allowsUse ? session.authSession?.user.id : nil) {
                     guard !CompanionPreview.isEnabled, !ScreenshotExport.isEnabled else { return }
-                    let userID = scenePhase == .active && appUpdate.allowsUse ? session.authSession?.user.id : nil
+                    let userID = scenePhase != .background && appUpdate.allowsUse ? session.authSession?.user.id : nil
                     await fightLiveUpdates.activate(client: session.client, userID: userID) {
                         guard session.authSession?.user.id == userID, appUpdate.allowsUse else { return }
                         await model.refreshFromServer(session: session, performMaintenance: false)
@@ -198,7 +206,8 @@ struct FitFightApp: App {
                     guard appUpdate.allowsUse else { return }
                     model.restoreCachedFights(session: session)
                     await model.refreshFights(session: session, steps: steps)
-                    if !session.needsOnboarding,
+                    if session.firstFightOnboarding == nil,
+                       !session.needsOnboarding,
                        !session.needsHealthOnboarding,
                        !session.needsNotificationOnboarding,
                        !session.needsRequestsOnboarding {
@@ -226,7 +235,9 @@ struct FitFightApp: App {
                 }
                 .onChange(of: scenePhase) { _, phase in
                     guard !CompanionPreview.isEnabled else { return }
-                    guard phase == .active, session.authSession != nil else { return }
+                    if phase == .background { returnedFromBackground = true }
+                    guard phase == .active, returnedFromBackground, session.authSession != nil else { return }
+                    returnedFromBackground = false
                     model.feedRevision += 1
                     Task {
                         guard await AppUpdateChecker.shared.permitsRequests() else { return }

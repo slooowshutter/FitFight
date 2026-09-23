@@ -15,18 +15,17 @@ struct FriendsView: View {
     @State private var error: String?
     @State private var generation = 0
     @State private var lookupGeneration = 0
+    @FocusState private var handleFocused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text(String(appLocalized: "Friends")).ffType(.heading)
-                Spacer()
-                Button(String(appLocalized: "Close")) { dismiss() }.frame(minHeight: 44)
-            }.padding(.horizontal, theme.space.screenPadding).padding(.top, 12)
+            FFSheetHeader(title: String(appLocalized: "Friends"), role: .heading) { dismiss() }
+                .padding(.horizontal, theme.space.screenPadding).padding(.top, 12)
             ScrollView {
                 VStack(alignment: .leading, spacing: theme.space.cardGap) {
                     HStack {
                         TextField(String(appLocalized: "Exact username"), text: $handle)
+                            .focused($handleFocused)
                             .textInputAutocapitalization(.never).autocorrectionDisabled().ffType(.body)
                             .onSubmit { Task { await lookup() } }
                         FFButton(title: String(appLocalized: "Find"), kind: .secondary, busy: loading) { Task { await lookup() } }
@@ -50,9 +49,15 @@ struct FriendsView: View {
                     if nextCursor != nil {
                         FFButton(title: String(appLocalized: "Load more"), kind: .ghost, busy: loading) { Task { await load(more: true) } }
                     }
-                }.padding(theme.space.screenPadding)
+                }
+                .padding(theme.space.screenPadding)
+                .ffKeyboardDismissOnBackgroundTap()
             }
-        }.foregroundStyle(theme.text).background(theme.bg.ignoresSafeArea())
+            .scrollDismissesKeyboard(.interactively)
+        }
+        .foregroundStyle(theme.text)
+        .ffKeyboardDismissOnBackgroundTap()
+        .background(theme.bg.ignoresSafeArea())
         .task(id: kind) { await load() }
         .onChange(of: scenePhase) { _, phase in
             generation += 1; lookupGeneration += 1; people = []; found = nil; nextCursor = nil

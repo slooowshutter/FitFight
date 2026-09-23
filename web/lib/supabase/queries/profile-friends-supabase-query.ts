@@ -55,7 +55,7 @@ export async function listProfileFriends(userId: string, query: FriendsQuery, da
     return database.begin(async (sql) => {
         await sql`select id as user_id from public.profiles where id = ${userId} and deleted_at is null for share`;
         const rows = profileFriendListRowSchema.array().parse(await sql`
-            select profile.id as user_id, profile.handle, profile.display_name, profile.companion_id, null avatar_url,
+            select profile.id as user_id, profile.handle, profile.display_name, profile.companion_id, case when profile.companion_id = 'custom' then profile.companion_image_url end avatar_url,
                 friendship.state, friendship.requester_id, media.object_path avatar_path
             from private.profile_friendships friendship
             join public.profiles profile on profile.id = case when friendship.user_low = ${userId}
@@ -78,7 +78,7 @@ export async function listProfileFriends(userId: string, query: FriendsQuery, da
         const afterCursor = filtered.filter((row) => !query.cursor || row.user_id > query.cursor);
         const people = await Promise.all(afterCursor.slice(0, query.limit).map(async (row) => ({
             user_id: row.user_id, handle: row.handle, display_name: row.display_name, companion_id: row.companion_id,
-            avatar_url: row.avatar_path ? await signMediaUrl(row.avatar_path) : null,
+            avatar_url: row.avatar_url ?? (row.avatar_path ? await signMediaUrl(row.avatar_path) : null),
         })));
         return {
             people,

@@ -1,24 +1,30 @@
-import CoreText
 import SwiftUI
 import UIKit
 
 /// The design system was drawn in Nunito at 500/600/700/800 — the kit loads it from
 /// Google Fonts. SF renders the same point sizes narrower and squarer, which is what
-/// made the native build read as a different app, so the family ships in the bundle.
+/// made the native build read as a different app, so the family ships in the bundle
+/// and is registered through UIAppFonts in Info.plist.
 enum FFFont {
-    static func uiFont(size: CGFloat, weight: Int) -> UIFont {
-        _ = registered
-        let named = UIFont(name: postScriptName(weight), size: size)
-        return tabularFigures(named ?? .systemFont(ofSize: size, weight: systemWeight(weight)))
+    private static let lock = NSLock()
+    private static var fonts: [Key: Font] = [:]
+
+    private struct Key: Hashable {
+        let size: CGFloat
+        let weight: Int
     }
 
-    private static let registered: Bool = {
-        for name in ["Medium", "SemiBold", "Bold", "ExtraBold"].map({ "Nunito-\($0)" }) {
-            guard let url = Bundle.main.url(forResource: name, withExtension: "ttf") else { continue }
-            _ = CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
-        }
-        return true
-    }()
+    /// Every body re-evaluation asks for fonts, so each size and weight is built once.
+    static func font(size: CGFloat, weight: Int) -> Font {
+        let key = Key(size: size, weight: weight)
+        lock.lock()
+        defer { lock.unlock() }
+        if let font = fonts[key] { return font }
+        let named = UIFont(name: postScriptName(weight), size: size)
+        let font = Font(tabularFigures(named ?? .systemFont(ofSize: size, weight: systemWeight(weight))))
+        fonts[key] = font
+        return font
+    }
 
     private static func postScriptName(_ weight: Int) -> String {
         switch weight {
@@ -50,6 +56,6 @@ enum FFFont {
 
 extension Font {
     static func ff(_ size: CGFloat, _ weight: Int = 700) -> Font {
-        Font(FFFont.uiFont(size: size, weight: weight))
+        FFFont.font(size: size, weight: weight)
     }
 }

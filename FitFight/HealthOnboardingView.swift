@@ -1,61 +1,113 @@
 import SwiftUI
 
-/// First-run Apple Health ask, right after the username. Permission stays on this phone.
 struct HealthOnboardingView: View {
-    var onFinished: (() -> Void)? = nil
-
+    let showingResult: Bool
+    let animal: StockCompanion
+    @Binding var busy: Bool
+    let onResult: () -> Void
+    let onFinished: () -> Void
+    @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var steps: HealthKitStepsStore
     @Environment(\.ffTheme) private var theme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.ffStaticRender) private var staticRender
+    @State private var displayedSteps = 0.0
 
-    @State private var isConnecting = false
+    private var todaySteps: Int? {
+        if case .steps(let count) = steps.status { return count }
+        return nil
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Spacer(minLength: 24)
-            Text("Connect Apple Health")
-                .ffType(.title)
-                .foregroundStyle(theme.text)
-            Text("FitFight reads your steps and other movement from Apple Health. Fights still use steps. We’ll ask iPhone for permission next. You can change this later in You.")
-                .ffType(.body)
-                .foregroundStyle(theme.textSecondary)
-                .lineSpacing(3)
-                .padding(.top, 10)
-            FFScreenCTA(
-                title: isConnecting ? String(appLocalized: "Connecting…") : String(appLocalized: "Continue"),
-                enabled: !isConnecting
-            ) {
-                Task { await connect() }
-            }
-            .padding(.top, 28)
-            Button {
-                finish()
-            } label: {
-                Text("Not now")
-                    .ffType(.label)
-                    .foregroundStyle(theme.textSecondary)
+        OnboardingPage {
+            if showingResult {
+                OnboardingHeading(title: todaySteps != nil
+                    ? String(appLocalized: "onboarding.steps.title", defaultValue: "Look at you,\nalready moving.")
+                    : String(appLocalized: "onboarding.no-steps.title", defaultValue: "Your starting line\nis still here."))
+                FFCard {
+                    VStack(spacing: 12) {
+                        Image(animal.image).resizable().scaledToFit().frame(height: 170)
+                            .accessibilityHidden(true)
+                        if let todaySteps {
+                            OnboardingStepCount(value: reduceMotion || staticRender ? Double(todaySteps) : displayedSteps)
+                                .font(.ff(48, 800)).monospacedDigit().foregroundStyle(theme.mossText)
+                                .accessibilityLabel(todaySteps.formatted())
+                            Text(String(appLocalized: "steps today"))
+                                .font(.ff(15, 700)).foregroundStyle(theme.textSecondary)
+                        } else {
+                            Text(String(appLocalized: "No accessible step data"))
+                                .ffType(.heading)
+                            Text(String(appLocalized: "Connect later from You → Apple Health."))
+                                .ffType(.body).foregroundStyle(theme.textSecondary)
+                        }
+                    }
                     .frame(maxWidth: .infinity)
-                    .padding(.top, 16)
+                    .multilineTextAlignment(.center)
+                }
+                .modifier(OnboardingEntrance(order: 1))
+                Text(String(appLocalized: "Only steps taken during the Fight count."))
+                    .ffType(.caption).foregroundStyle(theme.textSecondary)
+                    .frame(maxWidth: .infinity).multilineTextAlignment(.center)
+            } else {
+                OnboardingHeading(
+                    title: String(appLocalized: "onboarding.health.title", defaultValue: "Let your steps\ndo the talking."),
+                    subtitle: String(appLocalized: "Connect Apple Health to count your steps in Fights."),
+                    centered: false
+                )
+                HStack(spacing: 48) {
+                    Image(systemName: "heart.fill")
+                        .font(.system(size: 40)).foregroundStyle(theme.emberText)
+                    Image(animal.image).resizable().scaledToFit().frame(width: 140, height: 165)
+                }
+                .frame(maxWidth: .infinity)
+                .accessibilityHidden(true)
+                ForEach([
+                    ["figure.walk", String(appLocalized: "Uploads the Apple Health activity you allow, including individual records and workouts. Stored privately.")],
+                    ["person.2", String(appLocalized: "Fight participants see your steps and standings.")],
+                    ["lock", String(appLocalized: "You control access in Apple Health.")]
+                ], id: \.first) { row in
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: row[0]).frame(width: 24)
+                        Text(row[1]).fixedSize(horizontal: false, vertical: true)
+                    }
+                    .ffType(.body).foregroundStyle(theme.textSecondary)
+                }
             }
-            .buttonStyle(FFHapticPlainStyle())
-            .disabled(isConnecting)
-            Spacer(minLength: 24)
+        } actions: {
+            if showingResult {
+                FFScreenCTA(title: String(appLocalized: "Find your first Fight")) { onFinished() }
+            } else {
+                FFScreenCTA(title: String(appLocalized: "Connect Apple Health"), enabled: !busy, busy: busy) {
+                    Task {
+                        guard !busy else { return }
+                        busy = true
+                        defer { busy = false }
+                        await steps.refresh(requestAccess: true, trace: HealthKitSyncTrace(trigger: .manual))
+                        guard !Task.isCancelled else { return }
+                        onResult()
+                        // Upload right away; returning from the permission sheet no longer triggers a refresh.
+                        Task { await model.refreshFights(session: session, steps: steps, trigger: .manual) }
+                    }
+                }
+                OnboardingSkip(title: String(appLocalized: "I'll do this later"), action: onResult)
+                    .disabled(busy)
+            }
         }
-        .padding(.horizontal, theme.space.screenPadding)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .background(theme.bg)
+        .task(id: todaySteps) {
+            guard showingResult, let todaySteps else { return }
+            withAnimation(reduceMotion || staticRender ? nil : .easeOut(duration: 1)) {
+                displayedSteps = Double(todaySteps)
+            }
+        }
     }
+}
 
-    private func connect() async {
-        isConnecting = true
-        defer { isConnecting = false }
-        let trace = HealthKitSyncTrace(trigger: .manual)
-        await steps.refresh(requestAccess: true, trace: trace)
-        finish()
+private struct OnboardingStepCount: View, Animatable {
+    var value: Double
+    var animatableData: Double {
+        get { value }
+        set { value = newValue }
     }
-
-    private func finish() {
-        session.finishHealthOnboarding()
-        onFinished?()
-    }
+    var body: some View { Text(Int(value.rounded()).formatted()) }
 }

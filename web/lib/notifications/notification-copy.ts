@@ -5,6 +5,22 @@ const copy: Record<
     ReturnType<typeof notificationCopyKeySchema.parse>,
     Record<NotificationLocale, { title: string; body: string }>
 > = {
+    ending_24h: {
+        en: { title: "One day left", body: "Your fight ends tomorrow." },
+        fr: { title: "Encore un jour", body: "Ton défi se termine demain." },
+    },
+    ending_week: {
+        en: { title: "One week left", body: "Your month-long fight ends in one week." },
+        fr: { title: "Encore une semaine", body: "Ton défi d’un mois se termine dans une semaine." },
+    },
+    final_sync: {
+        en: { title: "Submit your final steps", body: "Your fight has ended. Open FitFight to submit your final steps." },
+        fr: { title: "Envoie tes derniers pas", body: "Ton défi est terminé. Ouvre FitFight pour envoyer tes derniers pas." },
+    },
+    social_digest: {
+        en: { title: "Your evening summary", body: "There is new activity in your fights." },
+        fr: { title: "Ton résumé du soir", body: "Il y a du nouveau dans tes défis." },
+    },
     fight_ended_everyone: {
         en: { title: "FitFight", body: "A fight ended. Open FitFight." },
         fr: {
@@ -123,7 +139,7 @@ const socialKinds = [
 
 function actorLabel(name: string, locale: NotificationLocale): string {
     const cleaned = name.replace(/\s+/g, " ").trim().slice(0, 40);
-    if (cleaned.length > 0) return cleaned;
+    if (cleaned.length > 0) return `@${cleaned.replace(/^@/, "")}`;
     return locale === "fr" ? "Quelqu’un" : "Someone";
 }
 

@@ -21,6 +21,7 @@ import type {
     UpdateFightPostRequest,
 } from "@/lib/types/feed/fight-post";
 import { companionIdSchema } from "@/lib/types/companions/companion";
+import type { AvatarMediaColumns } from "@/lib/types/media/media";
 import {
     eligibleMentionUserIds,
     enqueueFightFeedPostNotifications,
@@ -28,7 +29,9 @@ import {
     mentionHandlesFromBody,
 } from "./feed-social-notifications-supabase-query";
 import {
+    isoUtc,
     loadReadyMedia,
+    mapAvatar,
     mapMedia,
     signMediaUrls,
     type MediaRow,
@@ -44,7 +47,7 @@ export type VisibleFightPost = {
     app_wide: boolean;
 };
 
-type PostRow = {
+type PostRow = AvatarMediaColumns & {
     id: string;
     audience: FeedAudience;
     fight_id: string | null;
@@ -56,19 +59,7 @@ type PostRow = {
     author_handle: string;
     author_display_name: string;
     author_companion_id: string | null;
-    avatar_id: string | null;
-    avatar_kind: MediaRow["kind"] | null;
-    avatar_purpose: MediaRow["purpose"] | null;
-    avatar_status: MediaRow["status"] | null;
-    avatar_object_path: string | null;
-    avatar_original_filename: string | null;
-    avatar_content_type: MediaRow["content_type"] | null;
-    avatar_byte_size: string | number | null;
-    avatar_width: number | null;
-    avatar_height: number | null;
-    avatar_duration_ms: number | null;
-    avatar_sha256: string | null;
-    avatar_created_at: Date | string | null;
+    author_companion_image_url: string | null;
 };
 
 type AttachmentRow = MediaRow & { post_id: string };
@@ -92,15 +83,11 @@ type CountRow = {
     n: number;
 };
 
-function isoUtc(value: Date | string): string {
-    return new Date(value).toISOString().replace(/\.\d{3}Z$/, "Z");
-}
-
-function cursorStamp(value: Date | string): string {
+export function cursorStamp(value: Date | string): string {
     return value instanceof Date ? value.toISOString() : value;
 }
 
-function parseCursor(
+export function parseCursor(
     cursor: string | undefined,
 ): { createdAt: string; id: string } | null {
     if (!cursor) return null;
@@ -231,44 +218,6 @@ export async function loadVisiblePost(
         500,
         ERROR_CODES.internal,
         `Unhandled audience ${_exhaustive}`,
-    );
-}
-
-function avatarFromPost(row: PostRow, url: string | null) {
-    if (
-        !row.avatar_id ||
-        !row.avatar_kind ||
-        !row.avatar_purpose ||
-        !row.avatar_status ||
-        !row.avatar_object_path ||
-        !row.avatar_original_filename ||
-        !row.avatar_content_type ||
-        row.avatar_byte_size === null ||
-        row.avatar_width === null ||
-        row.avatar_height === null ||
-        !row.avatar_sha256 ||
-        !row.avatar_created_at
-    ) {
-        return null;
-    }
-    return mapMedia(
-        {
-            id: row.avatar_id,
-            owner_id: row.author_id,
-            kind: row.avatar_kind,
-            purpose: row.avatar_purpose,
-            status: row.avatar_status,
-            object_path: row.avatar_object_path,
-            original_filename: row.avatar_original_filename,
-            content_type: row.avatar_content_type,
-            byte_size: row.avatar_byte_size,
-            width: row.avatar_width,
-            height: row.avatar_height,
-            duration_ms: row.avatar_duration_ms,
-            sha256: row.avatar_sha256,
-            created_at: row.avatar_created_at,
-        },
-        url,
     );
 }
 
@@ -408,15 +357,11 @@ async function mapPosts(
             user_id: row.author_id,
             handle: row.author_handle,
             display_name: row.author_display_name,
-            avatar: avatarFromPost(
-                row,
-                row.avatar_object_path
-                    ? (urls.get(row.avatar_object_path) ?? null)
-                    : null,
-            ),
+            avatar: mapAvatar(row, row.author_id, urls),
             companion_id: companionIdSchema
                 .nullable()
                 .parse(row.author_companion_id),
+            ...(row.author_companion_id === "custom" && row.author_companion_image_url ? { companion_image_url: row.author_companion_image_url } : {}),
         },
         media: attachments
             .filter((attachment) => attachment.post_id === row.id)
@@ -450,6 +395,7 @@ export async function listFightPosts(
                     to_char(post.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as created_at,
                     post.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
                     profile.companion_id as author_companion_id,
+                    profile.companion_image_url as author_companion_image_url,
                     avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
                     avatar.status::text as avatar_status, avatar.object_path as avatar_object_path,
                     avatar.original_filename as avatar_original_filename, avatar.content_type as avatar_content_type,
@@ -581,6 +527,7 @@ export async function listFightPosts(
                     to_char(post.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as created_at,
                     post.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
                     profile.companion_id as author_companion_id,
+                    profile.companion_image_url as author_companion_image_url,
                     avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
                     avatar.status::text as avatar_status, avatar.object_path as avatar_object_path,
                     avatar.original_filename as avatar_original_filename, avatar.content_type as avatar_content_type,
@@ -771,6 +718,7 @@ async function loadPostRows(ids: string[], database: Sql): Promise<PostRow[]> {
             coalesce(fight.name, '') as fight_name, post.body, post.created_at,
             post.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
             profile.companion_id as author_companion_id,
+                    profile.companion_image_url as author_companion_image_url,
             avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
             avatar.status::text as avatar_status, avatar.object_path as avatar_object_path,
             avatar.original_filename as avatar_original_filename, avatar.content_type as avatar_content_type,
@@ -1135,28 +1083,17 @@ export async function listFeedPeople(
     }
 
     const rows = await database<
-        (MediaRow & {
-            user_id: string;
-            handle: string;
-            display_name: string;
-            companion_id: string | null;
-            avatar_id: string | null;
-            avatar_kind: MediaRow["kind"] | null;
-            avatar_purpose: MediaRow["purpose"] | null;
-            avatar_status: MediaRow["status"] | null;
-            avatar_object_path: string | null;
-            avatar_original_filename: string | null;
-            avatar_content_type: MediaRow["content_type"] | null;
-            avatar_byte_size: string | number | null;
-            avatar_width: number | null;
-            avatar_height: number | null;
-            avatar_duration_ms: number | null;
-            avatar_sha256: string | null;
-            avatar_created_at: Date | string | null;
-        })[]
+        (MediaRow &
+            AvatarMediaColumns & {
+                user_id: string;
+                handle: string;
+                display_name: string;
+                companion_id: string | null;
+                companion_image_url: string | null;
+            })[]
     >`
         select distinct
-            profile.id as user_id, profile.handle, profile.display_name, profile.companion_id,
+            profile.id as user_id, profile.handle, profile.display_name, profile.companion_id, profile.companion_image_url,
             avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
             avatar.status::text as avatar_status, avatar.object_path as avatar_object_path,
             avatar.original_filename as avatar_original_filename, avatar.content_type as avatar_content_type,
@@ -1222,47 +1159,13 @@ export async function listFeedPeople(
     );
     const people = [];
     for (const row of rows) {
-        let avatar = null;
-        if (
-            row.avatar_id &&
-            row.avatar_kind &&
-            row.avatar_purpose &&
-            row.avatar_status &&
-            row.avatar_object_path &&
-            row.avatar_original_filename &&
-            row.avatar_content_type &&
-            row.avatar_byte_size !== null &&
-            row.avatar_width !== null &&
-            row.avatar_height !== null &&
-            row.avatar_sha256 &&
-            row.avatar_created_at
-        ) {
-            avatar = mapMedia(
-                {
-                    id: row.avatar_id,
-                    owner_id: row.user_id,
-                    kind: row.avatar_kind,
-                    purpose: row.avatar_purpose,
-                    status: row.avatar_status,
-                    object_path: row.avatar_object_path,
-                    original_filename: row.avatar_original_filename,
-                    content_type: row.avatar_content_type,
-                    byte_size: row.avatar_byte_size,
-                    width: row.avatar_width,
-                    height: row.avatar_height,
-                    duration_ms: row.avatar_duration_ms,
-                    sha256: row.avatar_sha256,
-                    created_at: row.avatar_created_at,
-                },
-                urls.get(row.avatar_object_path) ?? null,
-            );
-        }
         people.push({
             user_id: row.user_id,
             handle: row.handle,
             display_name: row.display_name,
-            avatar,
+            avatar: mapAvatar(row, row.user_id, urls),
             companion_id: companionIdSchema.nullable().parse(row.companion_id),
+            ...(row.companion_id === "custom" && row.companion_image_url ? { companion_image_url: row.companion_image_url } : {}),
         });
     }
     return { people };

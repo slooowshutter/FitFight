@@ -29,6 +29,4 @@ export const DELETE = apiRoute(async (request) => {
     return json({ revoked: true });
 });
 
-export function OPTIONS(request: Request) {
-    return corsPreflight(request);
-}
+export const OPTIONS = corsPreflight;

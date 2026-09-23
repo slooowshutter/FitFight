@@ -6,6 +6,7 @@ import postgres from "postgres";
 import { deleteAccount } from "./delete-account-supabase-query";
 import { declineMembership } from "./decline-membership-supabase-query";
 import { syncHealthKitAggregates } from "./healthkit-aggregates-supabase-query";
+import { processActivity } from "./activity-pipeline-supabase-query";
 import { saveHealthKitDiagnosticSnapshot } from "./healthkit-diagnostics-supabase-query";
 import { recalculateFight } from "./recalculate-fight-supabase-query";
 import { healthKitDiagnosticSnapshotSchema } from "@/lib/types/healthkit/healthkit-diagnostic";
@@ -420,7 +421,7 @@ test("batched uploads preserve independent fight scores, corrections, replay, an
     );
 });
 
-test("a failed bulk rank update rolls back the entire Apple Health upload", async (t) => {
+test("a failed Fight rank update retains intake and resumes without partial standings", async (t) => {
     const f = await fixture(t);
     const completeThrough = f.now.toISOString();
     const day = f.startsAt.slice(0, 10);
@@ -431,77 +432,45 @@ test("a failed bulk rank update rolls back the entire Apple Health upload", asyn
         check (rank is distinct from 1)
     `;
     try {
-        await assert.rejects(
-            syncHealthKitAggregates(
-                f.owner,
-                {
-                    complete_through: completeThrough,
-                    time_zone: "UTC",
-                    merged_days: [
-                        {
-                            day,
-                            starts_at: dayStart,
-                            ends_at: dayEnd,
-                            steps: 81,
-                        },
-                    ],
-                    fight_aggregates: [
-                        {
-                            fight_id: f.fightId,
-                            starts_at: f.startsAt,
-                            ends_at: f.endsAt,
-                            cutoff_at: f.endsAt,
-                            steps: 81,
-                        },
-                    ],
-                },
-                database,
-            ),
-            /security_test_aggregate_failure/,
-        );
+        const result = await syncHealthKitAggregates(f.owner, {
+            complete_through: completeThrough,
+            time_zone: "UTC",
+            merged_days: [{ day, starts_at: dayStart, ends_at: dayEnd, steps: 81 }],
+            fight_aggregates: [{
+                fight_id: f.fightId, starts_at: f.startsAt, ends_at: f.endsAt,
+                cutoff_at: f.endsAt, steps: 81,
+            }],
+        }, database);
+        assert.equal(result.processing, "pending");
         const members = await database`
             select current_value, rank, final_steps_complete from public.fight_members
             where fight_id = ${f.fightId}
         `;
-        assert.ok(
-            members.every(
-                (row) =>
-                    row.current_value === null &&
-                    row.rank === null &&
-                    !row.final_steps_complete,
-            ),
-        );
+        assert.ok(members.every((row) =>
+            row.current_value === null && row.rank === null && !row.final_steps_complete,
+        ));
         const [source] = await database`
-            select complete_through from public.data_sources where id = ${f.sourceIds[0]}
+            select complete_through::text as complete_through from public.data_sources
+            where id = ${f.sourceIds[0]}
         `;
-        assert.equal(source.complete_through, null);
-        assert.equal(
-            (
-                await database`
+        assert.equal(Date.parse(source.complete_through), Date.parse(completeThrough));
+        const [failed] = await database`
+            select processing_state from private.activity_raw
+            where user_id = ${f.owner} and record_key = ${`fight:${f.fightId}`}
+        `;
+        assert.equal(failed.processing_state, "failed");
+        assert.equal((await database`
             select id from private.fight_score_snapshots where fight_id = ${f.fightId}
-        `
-            ).length,
-            0,
-        );
-        assert.equal(
-            (
-                await database`
-            select day from public.metric_days where user_id = ${f.owner}
-        `
-            ).length,
-            0,
-        );
-        assert.equal(
-            (
-                await database`
-            select day from public.step_days where user_id = ${f.owner}
-        `
-            ).length,
-            0,
-        );
+        `).length, 0);
     } finally {
         await database`alter table public.fight_members drop constraint security_test_aggregate_failure`;
     }
+    assert.equal(await processActivity({ userId: f.owner }, database), "processed");
+    const [member] = await database`
+        select current_value::float8 as current_value, rank from public.fight_members
+        where fight_id = ${f.fightId} and user_id = ${f.owner}
+    `;
+    assert.deepEqual(member, { current_value: 81, rank: 1 });
 });
 
 test("finalization waits for an in-flight score transaction and reads its committed snapshot", async (t) => {

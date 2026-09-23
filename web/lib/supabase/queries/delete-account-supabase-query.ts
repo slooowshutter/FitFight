@@ -45,6 +45,10 @@ export async function deleteAccount(
             // Keep the account and object paths available for another deletion attempt if Storage fails.
             await removeStoragePaths(media.map((row) => row.object_path));
 
+            await sql`
+                update private.special_editions set state = 'available', account_id = null, attempt_id = null
+                where state = 'reserved' and account_id = (select id from private.special_accounts where user_id = ${userId})
+            `;
             await sql`delete from public.feedback_votes where user_id = ${userId}`;
             await sql`delete from public.feedback_comments where author_id = ${userId}`;
             await sql`delete from public.feedback_posts where author_id = ${userId}`;
@@ -69,6 +73,8 @@ export async function deleteAccount(
             await sql`delete from public.fight_series where owner_id = ${userId}`;
             await sql`delete from public.fight_series_members where user_id = ${userId}`;
             await sql`delete from private.fight_score_snapshots where user_id = ${userId}`;
+            await sql`delete from private.activity_metrics where user_id = ${userId}`;
+            await sql`delete from private.activity_raw where user_id = ${userId}`;
             await sql`delete from private.metric_observations where user_id = ${userId}`;
             await sql`delete from private.provider_events where user_id = ${userId}`;
             await sql`delete from private.provider_uploads where user_id = ${userId}`;

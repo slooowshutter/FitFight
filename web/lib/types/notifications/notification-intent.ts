@@ -11,6 +11,10 @@ export const notificationKindValues = [
     "post_reaction",
     "fight_invite",
     "mention",
+    "ending_24h",
+    "ending_week",
+    "final_sync",
+    "social_digest",
 ] as const;
 export const notificationSlotValues = [
     "t0",
@@ -20,6 +24,8 @@ export const notificationSlotValues = [
     "final",
     "daily",
     "event",
+    "before_24h",
+    "before_week",
 ] as const;
 export const notificationIntentStatusValues = [
     "pending",
@@ -60,6 +66,10 @@ export const notificationCopyKeyValues = [
     "fight_invite",
     "mention_post",
     "mention_comment",
+    "ending_24h",
+    "ending_week",
+    "final_sync",
+    "social_digest",
 ] as const;
 
 export const notificationCopyKeySchema = z.enum(notificationCopyKeyValues);

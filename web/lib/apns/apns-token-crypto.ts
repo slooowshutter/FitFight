@@ -1,9 +1,5 @@
-import {
-    createCipheriv,
-    createDecipheriv,
-    createHash,
-    randomBytes,
-} from "node:crypto";
+import { createHash } from "node:crypto";
+import { openAes256Gcm, sealAes256Gcm } from "@/lib/crypto/aes-256-gcm";
 import { readApnsEnvironment } from "./apns-config";
 
 export type EncryptedApnsDeviceToken = {
@@ -23,20 +19,11 @@ export function encryptApnsDeviceToken(
     if (!environment) {
         throw new Error("APNS_TOKEN_ENCRYPTION_KEY is not configured");
     }
-    const encryptionIv = randomBytes(12);
-    const cipher = createCipheriv(
-        "aes-256-gcm",
-        Buffer.from(environment.tokenEncryptionKey, "base64"),
-        encryptionIv,
-    );
-    const encrypted = Buffer.concat([
-        cipher.update(token, "utf8"),
-        cipher.final(),
-    ]);
+    const sealed = sealAes256Gcm(token, environment.tokenEncryptionKey);
     return {
-        encryptedToken: encrypted.toString("base64"),
-        encryptionIv: encryptionIv.toString("base64"),
-        encryptionTag: cipher.getAuthTag().toString("base64"),
+        encryptedToken: sealed.ciphertext,
+        encryptionIv: sealed.iv,
+        encryptionTag: sealed.tag,
     };
 }
 
@@ -47,14 +34,12 @@ export function decryptApnsDeviceToken(
     if (!environment) {
         throw new Error("APNS_TOKEN_ENCRYPTION_KEY is not configured");
     }
-    const decipher = createDecipheriv(
-        "aes-256-gcm",
-        Buffer.from(environment.tokenEncryptionKey, "base64"),
-        Buffer.from(token.encryptionIv, "base64"),
+    return openAes256Gcm(
+        {
+            ciphertext: token.encryptedToken,
+            iv: token.encryptionIv,
+            tag: token.encryptionTag,
+        },
+        environment.tokenEncryptionKey,
     );
-    decipher.setAuthTag(Buffer.from(token.encryptionTag, "base64"));
-    return Buffer.concat([
-        decipher.update(Buffer.from(token.encryptedToken, "base64")),
-        decipher.final(),
-    ]).toString("utf8");
 }

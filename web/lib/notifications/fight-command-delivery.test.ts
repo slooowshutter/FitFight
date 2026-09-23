@@ -121,6 +121,11 @@ for (const entry of [
                             },
                         };
                     }
+                    if (specifier.endsWith("/process-notification-outbox-after-response")) {
+                        return loadProduction(
+                            "lib/notifications/process-notification-outbox-after-response.ts",
+                        );
+                    }
                     if (specifier.endsWith("/suggest-fight-supabase-query")) {
                         return loadProduction(
                             "lib/supabase/queries/suggest-fight-supabase-query.ts",

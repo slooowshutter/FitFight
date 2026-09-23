@@ -5,6 +5,7 @@ import {
 } from "@/lib/types/observability/server-error-log";
 
 const SECRET_ENV_KEYS = [
+    "BLEND_API_KEY",
     "APPLE_SIGN_IN_PRIVATE_KEY",
     "APPLE_SIGN_IN_TOKEN_ENCRYPTION_KEY",
     "APNS_PRIVATE_KEY",
@@ -135,6 +136,7 @@ export function serverErrorLogEntry(
                 : cause,
         postgres,
         detail: api?.detail,
+        client_context: api?.clientContext,
     });
     return serverErrorLogInsertSchema.parse({
         user_id: userIdFromAuthorization(input.request),
@@ -206,11 +208,11 @@ export async function recordApiFailure(
 
 function apiErrorFields(
     error: unknown,
-): { code: string; message: string; detail: unknown } | null {
+): { code: string; message: string; detail: unknown; clientContext: unknown } | null {
     if (!(error instanceof Error) || error.name !== "ApiError") {
         return null;
     }
-    const candidate = error as Error & { code?: unknown; detail?: unknown };
+    const candidate = error as Error & { code?: unknown; detail?: unknown; clientContext?: unknown };
     if (typeof candidate.code !== "string" || candidate.code.length === 0) {
         return null;
     }
@@ -218,6 +220,7 @@ function apiErrorFields(
         code: candidate.code,
         message: candidate.message,
         detail: candidate.detail,
+        clientContext: candidate.clientContext,
     };
 }
 

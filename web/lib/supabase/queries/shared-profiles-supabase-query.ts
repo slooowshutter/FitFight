@@ -27,6 +27,7 @@ export async function loadProfileAccess(sql: TransactionSql, viewerId: string, t
     const [row] = await sql`
         select jsonb_build_object('user_id', profile.id, 'handle', profile.handle,
             'display_name', profile.display_name, 'companion_id', profile.companion_id) identity,
+            case when profile.companion_id = 'custom' then profile.companion_image_url end companion_image_url,
             media.object_path avatar_path, coalesce(profile.time_zone, 'UTC') time_zone,
             coalesce(to_jsonb(settings), ${sql.json(defaultProfileSettings)}::jsonb) settings,
             jsonb_build_object(
@@ -127,30 +128,55 @@ export async function readSharedProfile(
         `;
         const context = profileStatisticsContextSchema.parse(contextRow);
         const values = access.activity ? activityDaySchema.array().parse(await sql`
+            with days as (
+                select metric.day, metric.value, metric.time_zone, metric.updated_at,
+                    metric.observed_through >= metric.ends_at as finalized, 1 as priority
+                from private.activity_metrics as metric
+                join public.data_sources as source on source.id = metric.source_id
+                where metric.user_id = ${targetId} and metric.scope = 'day' and metric.metric = 'steps'
+                    and source.provider = 'apple_health'
+                union all
+                select legacy.day, legacy.value, legacy.time_zone, legacy.updated_at,
+                    legacy.finalized_at is not null as finalized, 0 as priority
+                from public.metric_days as legacy
+                join public.data_sources as source on source.id = legacy.source_id
+                where legacy.user_id = ${targetId} and legacy.metric = 'steps'
+                    and source.provider = 'apple_health'
+            )
             select distinct on (days.day) days.day::text, days.value::float8 steps,
-                days.time_zone, days.updated_at::text, (days.finalized_at is not null) finalized
-            from public.metric_days days
-            join public.data_sources source on source.id = days.source_id
-            where days.user_id = ${targetId} and days.metric = 'steps'
-                and source.provider = 'apple_health'
-                and days.day >= ${context.today}::date - ${row.settings.activity_days - 1}::integer
+                days.time_zone, days.updated_at::text, days.finalized
+            from days
+            where days.day >= ${context.today}::date - ${row.settings.activity_days - 1}::integer
                 and days.day <= ${context.today}::date
-            order by days.day, days.updated_at desc
+            order by days.day, days.updated_at desc, days.priority desc
         `) : [];
         let statistics: SharedProfile["step_statistics"] = null;
         if (access.activity) {
             const history = relationship.owner ? activityDaySchema.array().parse(await sql`
+                with days as (
+                    select metric.day, metric.value, metric.time_zone, metric.updated_at,
+                        metric.observed_through >= metric.ends_at as finalized, 1 as priority
+                    from private.activity_metrics as metric
+                    join public.data_sources as source on source.id = metric.source_id
+                    where metric.user_id = ${targetId} and metric.scope = 'day' and metric.metric = 'steps'
+                        and source.provider = 'apple_health'
+                    union all
+                    select legacy.day, legacy.value, legacy.time_zone, legacy.updated_at,
+                        legacy.finalized_at is not null as finalized, 0 as priority
+                    from public.metric_days as legacy
+                    join public.data_sources as source on source.id = legacy.source_id
+                    where legacy.user_id = ${targetId} and legacy.metric = 'steps'
+                        and source.provider = 'apple_health'
+                )
                 select distinct on (days.day) days.day::text, days.value::float8 steps,
-                    days.time_zone, days.updated_at::text, (days.finalized_at is not null) finalized
-                from public.metric_days days
-                join public.data_sources source on source.id = days.source_id
-                where days.user_id = ${targetId} and days.metric = 'steps' and source.provider = 'apple_health'
-                order by days.day, days.updated_at desc
+                    days.time_zone, days.updated_at::text, days.finalized
+                from days
+                order by days.day, days.updated_at desc, days.priority desc
             `) : values;
             statistics = profileStepStatistics(history, context, relationship.owner ? null : row.settings.activity_days);
         }
         return sharedProfileSchema.parse({
-            identity: { ...row.identity, avatar_url: row.avatar_path ? await signMediaUrl(row.avatar_path) : null },
+            identity: { ...row.identity, avatar_url: row.companion_image_url ?? (row.avatar_path ? await signMediaUrl(row.avatar_path) : null) },
             access: relationship.owner ? "owner" : access.shared ? "shared" : "private",
             competitive: row.settings.competitive,
             friendship: preview ? "none" : row.friendship,
@@ -242,7 +268,7 @@ export async function lookupSharedProfile(userId: string, handle: string, databa
     if (!targetId) throw new ApiError(404, "not_found", "Profile unavailable");
     return database.begin(async (sql) => {
         const row = await loadProfileAccess(sql, userId, targetId);
-        return { ...row.identity, avatar_url: row.avatar_path ? await signMediaUrl(row.avatar_path) : null };
+        return { ...row.identity, avatar_url: row.companion_image_url ?? (row.avatar_path ? await signMediaUrl(row.avatar_path) : null) };
     });
 }
 

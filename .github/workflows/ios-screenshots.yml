@@ -6,6 +6,7 @@ on:
     pull_request:
         paths:
             - "FitFight/**"
+            - "FitFightNotificationService/**"
             - "FitFight.xcodeproj/**"
             - "scripts/check_localizations.py"
             - "scripts/package_simulator_app.py"
@@ -16,6 +17,7 @@ on:
         branches: [main, develop, preview]
         paths:
             - "FitFight/**"
+            - "FitFightNotificationService/**"
             - "FitFight.xcodeproj/**"
             - "scripts/check_localizations.py"
             - "scripts/package_simulator_app.py"

@@ -3,10 +3,6 @@ import SwiftUI
 
 enum MetricKind: String, Codable, Hashable {
     case steps
-
-    var eyebrow: String {
-        String(appLocalized: "Steps total")
-    }
 }
 
 enum FightStatus: String, Codable, Hashable {
@@ -56,22 +52,6 @@ struct Person: Codable, Identifiable, Hashable {
     var isYou: Bool = false
     var photoURL: URL? = nil
     var companionId: String? = nil
-
-    /// The design's cast photographs, cut out of the mocks into the asset catalogue.
-    var photo: String { "Avatar-\(isYou ? "maya" : id)" }
-}
-
-extension FFAvatar {
-    init(_ person: Person?, size: CGFloat = 24, selected: Bool = false, pending: Bool = false) {
-        self.init(
-            monogram: person?.initials ?? "?",
-            size: size,
-            selected: selected,
-            photo: person?.photo,
-            photoURL: person?.photoURL,
-            dimmed: pending
-        )
-    }
 }
 
 struct Standing: Codable, Identifiable, Hashable {
@@ -103,7 +83,6 @@ struct FightDay: Codable, Identifiable, Hashable {
 
 struct Fight: Codable, Identifiable, Hashable {
     var id: String
-    var code: String
     var name: String
     var metric: MetricKind
     var lengthDays: Int
@@ -113,15 +92,10 @@ struct Fight: Codable, Identifiable, Hashable {
     var status: FightStatus
     var rank: Int
     var of: Int
-    var pending: Int
-    var kickerPrefix: String = ""
     var kickerEmphasis: String
-    var kickerRest: String = ""
     var listSubtitle: String
     var inviter: Person? = nil
     var invitePitch: String? = nil
-    var inviteAction: String? = nil
-    var paceNote: String? = nil
     var standingsMeta: String? = nil
     var standings: [Standing]
     var days: [FightDay] = []
@@ -201,13 +175,7 @@ struct Fight: Codable, Identifiable, Hashable {
     }
 
     var timeAndDeadlineLabel: String {
-        if hasPassedDeadline {
-            return deadlineLabel
-        }
-        return String(
-            appLocalized: "fight.duration-end",
-            defaultValue: "\(timeLeftLabel) · ends \(Self.deadlineStamp(windowEnd))"
-        )
+        hasPassedDeadline ? deadlineLabel : "\(timeLeftLabel) · \(deadlineLabel)"
     }
 
     private var hasPassedDeadline: Bool {
@@ -244,6 +212,7 @@ final class AppModel: ObservableObject {
     @Published var showingVersions = false
     @Published var showingPreferences = false
     @Published var showingDebugMenu = false
+    @Published var showingUpdateToastPreview = false
     @Published var feedbackRequestFilter = RequestFilter()
     @Published var companionPreviewNotice: String?
     @Published var joined: Set<String> = []
@@ -272,7 +241,6 @@ final class AppModel: ObservableObject {
 
     private var session: SessionStore?
     private let api = FitFightAPI()
-    private var inviteTokens: [String: String] = [:]
     private var cachedUserID: UUID?
     private var snapshotGeneration = 0
     private var discoveryUserID: UUID?
@@ -294,24 +262,22 @@ final class AppModel: ObservableObject {
     private static let pendingFightRouteKey = "fitfight.pendingFightRoute"
     private static let pendingDailyStatusKey = "fitfight.pendingDailyStatus"
 
-    static func storePendingFightRoute(_ route: String, dailyStatus: Bool = false) {
+    static func storePendingFightRoute(_ route: String) {
         let trimmed = route.trimmingCharacters(in: .whitespacesAndNewlines)
         let withSlash = trimmed.hasPrefix("/") ? trimmed : "/\(trimmed)"
         let components = URLComponents(string: "https://fitfight.app\(withSlash)")
         let path = (components?.path.isEmpty == false) ? components!.path : withSlash
-        let queryDailyStatus = components?.queryItems?.contains { item in
+        let dailyStatus = components?.queryItems?.contains { item in
             item.name == "daily_status" && (item.value == "1" || item.value?.lowercased() == "true")
         } ?? false
         let query = components?.percentEncodedQuery.map { "?\($0)" } ?? ""
         UserDefaults.standard.set(path + query, forKey: pendingFightRouteKey)
-        UserDefaults.standard.set(dailyStatus || queryDailyStatus, forKey: pendingDailyStatusKey)
+        UserDefaults.standard.set(dailyStatus, forKey: pendingDailyStatusKey)
     }
 
     private static var fightsCachePrefix: String {
         "fitfight.fights.\(AppLocalization.languageCode)."
     }
-
-    static var preview: AppModel { AppModel(fixtures: true) }
 
     static var shouldLoadFixtures: Bool {
         let env = ProcessInfo.processInfo.environment
@@ -343,11 +309,12 @@ final class AppModel: ObservableObject {
     #endif
 
     init(fixtures: Bool) {
-        let bundle = AppModelFixtures.load()
-        you = bundle.you
         if fixtures {
+            let bundle = AppModelFixtures.load()
+            you = bundle.you
             fights = bundle.fights
         } else {
+            you = Person(id: "", name: String(appLocalized: "You"), handle: "", initials: "", isYou: true)
             fights = []
         }
     }
@@ -727,7 +694,7 @@ final class AppModel: ObservableObject {
         }
         defer { isCreatingFight = false }
         createError = nil
-        guard let session, let access = session.authSession?.accessToken, api.isConfigured else {
+        guard let session, session.authSession != nil, api.isConfigured else {
             createError = String(appLocalized: "Sign in to start a fight.")
             return
         }
@@ -780,7 +747,7 @@ final class AppModel: ObservableObject {
         do {
             let created = try await api.createFight(
                 payload,
-                accessToken: access,
+                accessToken: try await session.freshAccessToken(),
                 idempotencyKey: UUID().uuidString
             )
             await syncStepsAfterMembershipChange(session: session)
@@ -788,8 +755,7 @@ final class AppModel: ObservableObject {
             tab = .fights
             openFightID = created.id.uuidString
         } catch {
-            createError = (error as? LiveFightError)?.errorDescription
-                ?? (error as? FitFightAPIError)?.errorDescription
+            createError = (error as? FitFightAPIError)?.errorDescription
                 ?? String(appLocalized: "Couldn’t start the fight.")
         }
     }
@@ -814,7 +780,7 @@ final class AppModel: ObservableObject {
         isUpdatingFight = true
         defer { isUpdatingFight = false }
         createError = nil
-        guard let access = session?.authSession?.accessToken, api.isConfigured else {
+        guard let session, session.authSession != nil, api.isConfigured else {
             createError = String(appLocalized: "Sign in to edit this fight.")
             return false
         }
@@ -865,14 +831,13 @@ final class AppModel: ObservableObject {
                     inviteHandles: handles.isEmpty ? nil : handles,
                     removeUserIds: removals.isEmpty ? nil : removals
                 ),
-                accessToken: access
+                accessToken: try await session.freshAccessToken()
             )
             invalidateFightDiscovery()
             await refreshFromServer()
             return true
         } catch {
-            createError = (error as? LiveFightError)?.errorDescription
-                ?? (error as? FitFightAPIError)?.errorDescription
+            createError = (error as? FitFightAPIError)?.errorDescription
                 ?? String(appLocalized: "Couldn’t save the fight.")
             return false
         }
@@ -887,7 +852,7 @@ final class AppModel: ObservableObject {
         isDeletingFight = true
         defer { isDeletingFight = false }
         createError = nil
-        guard let access = session?.authSession?.accessToken, api.isConfigured else {
+        guard let session, session.authSession != nil, api.isConfigured else {
             createError = String(appLocalized: "Sign in to delete this fight.")
             return false
         }
@@ -896,28 +861,16 @@ final class AppModel: ObservableObject {
             return false
         }
         do {
-            try await api.cancel(fightID: fightID, accessToken: access)
+            try await api.cancel(fightID: fightID, accessToken: try await session.freshAccessToken())
             invalidateFightDiscovery()
             openFightID = nil
             await refreshFromServer()
             return true
         } catch {
-            createError = (error as? LiveFightError)?.errorDescription
-                ?? (error as? FitFightAPIError)?.errorDescription
+            createError = (error as? FitFightAPIError)?.errorDescription
                 ?? String(appLocalized: "Couldn’t delete the fight.")
             return false
         }
-    }
-
-    func acceptInvite(token: String, start: String = "now") async throws {
-        guard !CompanionPreview.isEnabled else { throw CompanionPreview.WriteUnavailable() }
-        createError = nil
-        guard let session, let access = session.authSession?.accessToken else {
-            throw FitFightAPIError.notConfigured
-        }
-        let summary = try await api.accept(token: token, accessToken: access, start: start)
-        inviteTokens[summary.id.uuidString] = token
-        await syncStepsAfterMembershipChange(session: session)
     }
 
     func acceptFight(id: String, start: String = "now") async {
@@ -928,15 +881,6 @@ final class AppModel: ObservableObject {
         createError = nil
         if let pending = pendingJoinable, pending.id == id, pending.pendingJoin {
             await joinPendingFight(pending, start: start)
-            return
-        }
-        if let token = inviteTokens[id], api.isConfigured {
-            do {
-                try await acceptInvite(token: token, start: start)
-            } catch {
-                createError = (error as? FitFightAPIError)?.errorDescription
-                    ?? String(appLocalized: "Couldn’t accept.")
-            }
             return
         }
         guard let session, session.authSession != nil, let fightID = UUID(uuidString: id) else {
@@ -1112,6 +1056,9 @@ final class AppModel: ObservableObject {
             await refreshFromServer()
             return
         }
+        if let profile = session.profile {
+            you = Self.person(from: profile, isYou: true)
+        }
         pendingJoinable = Self.fight(from: summary, you: you)
         if tab != .newFight {
             tab = .newFight
@@ -1137,15 +1084,14 @@ final class AppModel: ObservableObject {
             createError = String(appLocalized: "Enter the 4-character code.")
             return
         }
-        guard let userID = session.authSession?.user.id,
-              let access = session.authSession?.accessToken, api.isConfigured,
+        guard let userID = session.authSession?.user.id, api.isConfigured,
               session.profile != nil, !session.needsOnboarding else {
             UserDefaults.standard.set(code, forKey: Self.pendingJoinCodeKey)
             createError = String(appLocalized: "Sign in to join this fight.")
             return
         }
         do {
-            let summary = try await api.joinableFight(code: code, accessToken: access)
+            let summary = try await api.joinableFight(code: code, accessToken: try await session.freshAccessToken())
             guard session.authSession?.user.id == userID else { return }
             if UserDefaults.standard.string(forKey: Self.pendingJoinCodeKey) == code {
                 UserDefaults.standard.removeObject(forKey: Self.pendingJoinCodeKey)
@@ -1164,13 +1110,8 @@ final class AppModel: ObservableObject {
         let parts = url.path.split(separator: "/")
         guard parts.count == 2 else { return }
         if parts[0] == "fights", let fightID = UUID(uuidString: String(parts[1])) {
-            let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
-            let dailyStatus = items.contains { item in
-                item.name == "daily_status" && (item.value == "1" || item.value?.lowercased() == "true")
-            }
             Self.storePendingFightRoute(
-                "/fights/\(fightID.uuidString.lowercased())" + (url.query.map { "?\($0)" } ?? ""),
-                dailyStatus: dailyStatus
+                "/fights/\(fightID.uuidString.lowercased())" + (url.query.map { "?\($0)" } ?? "")
             )
             await consumePendingLinks(session: session)
             return
@@ -1255,7 +1196,7 @@ final class AppModel: ObservableObject {
     }
 
     private func joinPendingFight(_ fight: Fight, start: String = "now") async {
-        guard let session, let access = session.authSession?.accessToken, api.isConfigured else {
+        guard let session, session.authSession != nil, api.isConfigured else {
             createError = String(appLocalized: "Sign in to join this fight.")
             return
         }
@@ -1264,7 +1205,9 @@ final class AppModel: ObservableObject {
             return
         }
         do {
-            _ = try await api.joinFight(code: fight.joinCode, fightID: fightID, accessToken: access, start: start)
+            _ = try await api.joinFight(
+                code: fight.joinCode, fightID: fightID, accessToken: try await session.freshAccessToken(), start: start
+            )
             joined.insert(fight.id)
             await syncStepsAfterMembershipChange(session: session)
             pendingJoinable = nil
@@ -1279,7 +1222,7 @@ final class AppModel: ObservableObject {
     func leaveFight(id: String) async {
         guard !CompanionPreview.isEnabled else { createError = CompanionPreview.writeUnavailable; return }
         createError = nil
-        guard let access = session?.authSession?.accessToken, api.isConfigured else {
+        guard let session, session.authSession != nil, api.isConfigured else {
             createError = String(appLocalized: "Sign in to leave this fight.")
             return
         }
@@ -1288,7 +1231,7 @@ final class AppModel: ObservableObject {
             return
         }
         do {
-            _ = try await api.leaveFight(fightID: fightID, accessToken: access)
+            _ = try await api.leaveFight(fightID: fightID, accessToken: try await session.freshAccessToken())
             invalidateFightDiscovery()
             openFightID = nil
             joined.remove(id)
@@ -1326,7 +1269,6 @@ final class AppModel: ObservableObject {
         let remaining = RemainingTime.phrase(until: ends)
         return Fight(
             id: created.id.uuidString,
-            code: "",
             name: payload.name,
             metric: .steps,
             lengthDays: lengthDays,
@@ -1335,7 +1277,6 @@ final class AppModel: ObservableObject {
             status: .live,
             rank: 1,
             of: 1,
-            pending: payload.inviteHandles?.count ?? 0,
             kickerEmphasis: String(
                 appLocalized: "fight.time-left",
                 defaultValue: "\(remaining) left"
@@ -1352,8 +1293,8 @@ final class AppModel: ObservableObject {
     }
 
     private static func fight(from summary: FitFightJoinableFight, you: Person) -> Fight {
-        let starts = FightRow.parse(summary.startsAt) ?? Date()
-        let ends = FightRow.parse(summary.endsAt) ?? starts.addingTimeInterval(86400)
+        let starts = parseServerDate(summary.startsAt) ?? Date()
+        let ends = parseServerDate(summary.endsAt) ?? starts.addingTimeInterval(86400)
         let lengthDays = max(1, Calendar.current.dateComponents([.day], from: starts, to: ends).day ?? 1)
         let owner = Person(
             id: summary.ownerHandle,
@@ -1365,7 +1306,6 @@ final class AppModel: ObservableObject {
         let offersJoinNext = summary.canJoinNext ?? (summary.recurring && Self.isAfterFightStartDay(starts) && !summary.alreadyMember)
         return Fight(
             id: summary.fightId.uuidString,
-            code: summary.joinCode,
             name: summary.name,
             metric: .steps,
             lengthDays: lengthDays,
@@ -1374,7 +1314,6 @@ final class AppModel: ObservableObject {
             status: .invited,
             rank: 0,
             of: max(summary.memberCount, 1),
-            pending: 0,
             kickerEmphasis: String(
                 appLocalized: "fight.challenged-you",
                 defaultValue: "@\(summary.ownerHandle) challenged you"
@@ -1385,7 +1324,6 @@ final class AppModel: ObservableObject {
                 appLocalized: "fight.challenged-you",
                 defaultValue: "@\(summary.ownerHandle) challenged you"
             ),
-            inviteAction: String(appLocalized: "Join fight"),
             standings: [
                 Standing(person: you, score: 0),
                 Standing(person: owner, score: 0),
@@ -1446,7 +1384,7 @@ final class AppModel: ObservableObject {
             handle: profile.atHandle,
             initials: profile.initials,
             isYou: isYou,
-            photoURL: profile.avatar?.url,
+            photoURL: profile.photoURL,
             companionId: profile.companionId
         )
     }
@@ -1461,11 +1399,10 @@ final class AppModel: ObservableObject {
     }
 
     func presentDailyStatusRecap(for fightID: String) async {
-        guard let access = session?.authSession?.accessToken,
-              api.isConfigured,
+        guard let session, session.authSession != nil, api.isConfigured,
               let id = UUID(uuidString: fightID) else { return }
         do {
-            let recap = try await api.dailyStatusRecap(fightID: id, accessToken: access)
+            let recap = try await api.dailyStatusRecap(fightID: id, accessToken: try await session.freshAccessToken())
             dailyStatusRecap = DailyStatusRecap(fightID: fightID, body: recap.recap)
         } catch {
             dailyStatusRecap = nil
@@ -1479,6 +1416,11 @@ final class AppModel: ObservableObject {
         guard let components = URLComponents(string: route) else { return }
         let parts = components.path.split(separator: "/").map(String.init)
         guard parts.count == 2, parts[0] == "fights", UUID(uuidString: parts[1]) != nil else { return }
+        if components.queryItems?.contains(where: { $0.name == "activity" && $0.value == "1" }) == true {
+            tab = .you
+            showingActivity = true
+            return
+        }
         if let postID = components.queryItems?.first(where: { $0.name == "post" })?.value.flatMap(UUID.init(uuidString:)) {
             let commentID = components.queryItems?.first(where: { $0.name == "comment" })?.value.flatMap(UUID.init(uuidString:))
             tab = .feed
@@ -1502,8 +1444,6 @@ final class AppModel: ObservableObject {
         formatScore: (Double, MetricKind) -> String
     ) -> Fight? {
         if row.state == "draft" || mine?.state == "declined" || mine?.state == "withdrawn" { return nil }
-
-        let pendingMembers = members.filter { $0.state == "invited" }
 
         let starts = row.startsAtDate
         let ends = row.endsAtDate
@@ -1578,12 +1518,8 @@ final class AppModel: ObservableObject {
         let actionText = row.actionText?.trimmingCharacters(in: .whitespacesAndNewlines)
         let action = actionText?.isEmpty == false ? (actionText ?? "") : ""
 
-        let short = row.id.uuidString.replacingOccurrences(of: "-", with: "")
-        let code = series?.joinCode ?? ("FIGHT-" + String(short.prefix(3)).uppercased())
-
         var fight = Fight(
             id: row.id.uuidString,
-            code: code,
             name: row.name,
             metric: .steps,
             lengthDays: lengthDays,
@@ -1592,7 +1528,6 @@ final class AppModel: ObservableObject {
             status: status,
             rank: rank,
             of: of,
-            pending: pendingMembers.count,
             kickerEmphasis: "",
             listSubtitle: "",
             inviter: owner,
@@ -1630,12 +1565,9 @@ final class AppModel: ObservableObject {
         let tiedForFirst = fight.isTiedForFirst
         let ownerName = fight.inviter?.name ?? String(appLocalized: "Someone")
 
-        fight.kickerPrefix = ""
         fight.kickerEmphasis = ""
-        fight.kickerRest = ""
         fight.listSubtitle = ""
         fight.invitePitch = nil
-        fight.inviteAction = nil
         fight.endedLabel = nil
 
         switch status {
@@ -1644,7 +1576,6 @@ final class AppModel: ObservableObject {
                 appLocalized: "fight.challenged-you",
                 defaultValue: "\(ownerName) challenged you"
             )
-            fight.inviteAction = fight.pendingJoin ? String(appLocalized: "Join fight") : String(appLocalized: "Accept")
             fight.kickerEmphasis = fight.invitePitch ?? ""
             fight.listSubtitle = fight.pendingJoin
                 ? "\(ownerName) · \(fight.of)"
@@ -1668,11 +1599,6 @@ final class AppModel: ObservableObject {
                     appLocalized: "fight.finished-position",
                     defaultValue: "\(fight.endedLabel ?? String(appLocalized: "Ended")) · \(Self.ordinal(rank)) of \(of)"
                 )
-                if fight.serverState == "final" {
-                    fight.kickerPrefix = rank == 1 ? String(appLocalized: "Won by") : String(appLocalized: "Finished")
-                } else {
-                    fight.kickerPrefix = String(appLocalized: "Finished")
-                }
                 fight.kickerEmphasis = Self.ordinal(rank)
             }
         case .pending:
@@ -1707,17 +1633,12 @@ final class AppModel: ObservableObject {
             } else if let youRow, let leader = joined.first, !youRow.invited {
                 if youRow.person.id == leader.person.id, let runnerUp = joined.dropFirst().first {
                     let gap = leader.score - runnerUp.score
-                    fight.kickerPrefix = gap == 0 ? "" : String(appLocalized: "Leading by")
                     fight.kickerEmphasis = gap == 0
                         ? String(appLocalized: "Tied")
                         : String(
                             appLocalized: "fight.steps-value",
                             defaultValue: "\(formatScore(gap, .steps)) steps"
                         )
-                    fight.kickerRest = String(
-                        appLocalized: "fight.time-to-go",
-                        defaultValue: "with \(remainingLabel) to go"
-                    )
                     fight.listSubtitle = gap == 0
                         ? String(
                             appLocalized: "fight.tied-time-to-go",
@@ -1740,12 +1661,6 @@ final class AppModel: ObservableObject {
                         : String(
                             appLocalized: "fight.steps-value",
                             defaultValue: "\(formatScore(gap, .steps)) steps"
-                        )
-                    fight.kickerRest = gap == 0
-                        ? ""
-                        : String(
-                            appLocalized: "fight.behind-person",
-                            defaultValue: "behind \(leader.person.name)"
                         )
                     fight.listSubtitle = gap == 0
                         ? String(appLocalized: "Tied")
@@ -1818,23 +1733,6 @@ final class AppModel: ObservableObject {
     }
 }
 
-enum LiveFightError: LocalizedError {
-    case notSignedIn
-    case unknownHandle(String)
-
-    var errorDescription: String? {
-        switch self {
-        case .notSignedIn:
-            return String(appLocalized: "Sign in to start a fight.")
-        case .unknownHandle(let handle):
-            return String(
-                appLocalized: "fight.unknown-handle",
-                defaultValue: "No one with @\(handle). They need to open the app and pick a username first."
-            )
-        }
-    }
-}
-
 private func localizedDuration(hours: Int, days: Int) -> String {
     if hours <= 6 {
         return String(
@@ -1869,7 +1767,6 @@ private enum AppModelFixtures {
         let fights = [
             Fight(
                 id: "sweat",
-                code: "FIGHT-742",
                 name: isFrench ? "Défi transpiration 7 jours" : "7-Day Sweat Ladder",
                 metric: .steps,
                 lengthDays: 7,
@@ -1878,9 +1775,7 @@ private enum AppModelFixtures {
                 status: .live,
                 rank: 2,
                 of: 3,
-                pending: 0,
                 kickerEmphasis: "12.0k",
-                kickerRest: String(appLocalized: "behind @leo_runs"),
                 listSubtitle: String(appLocalized: "12.0k behind @leo_runs"),
                 inviter: you,
                 standings: [
@@ -1909,7 +1804,6 @@ private enum AppModelFixtures {
             ),
             Fight(
                 id: "derby",
-                code: "FIGHT-118",
                 name: isFrench ? "Derby des pas" : "Step Derby",
                 metric: .steps,
                 lengthDays: 7,
@@ -1918,10 +1812,7 @@ private enum AppModelFixtures {
                 status: .live,
                 rank: 1,
                 of: 5,
-                pending: 1,
-                kickerPrefix: String(appLocalized: "Holding"),
                 kickerEmphasis: String(appLocalized: "1st"),
-                kickerRest: String(appLocalized: "with 2d to go"),
                 listSubtitle: String(appLocalized: "Holding 1st with 2d to go"),
                 standings: [
                     Standing(person: you, score: 61400, lastSyncedAt: syncedJustNow),
@@ -1934,7 +1825,6 @@ private enum AppModelFixtures {
             ),
             Fight(
                 id: "club",
-                code: "FIGHT-655",
                 name: isFrench ? "Club des 10 000" : "10K Club",
                 metric: .steps,
                 lengthDays: 7,
@@ -1943,9 +1833,7 @@ private enum AppModelFixtures {
                 status: .live,
                 rank: 2,
                 of: 4,
-                pending: 2,
                 kickerEmphasis: String(appLocalized: "3.2k steps"),
-                kickerRest: String(appLocalized: "behind @sam_sweats"),
                 listSubtitle: String(appLocalized: "3.2k steps behind @sam_sweats"),
                 standings: [
                     Standing(person: sam, score: 44800, lastSyncedAt: syncedToday),
@@ -1957,7 +1845,6 @@ private enum AppModelFixtures {
             ),
             Fight(
                 id: "desk",
-                code: "FIGHT-556",
                 name: isFrench ? "Revanche du bureau" : "Desk Job Revenge",
                 metric: .steps,
                 lengthDays: 3,
@@ -1966,12 +1853,10 @@ private enum AppModelFixtures {
                 status: .invited,
                 rank: 0,
                 of: 4,
-                pending: 2,
                 kickerEmphasis: String(appLocalized: "@theo_rows challenged you"),
                 listSubtitle: String(appLocalized: "@theo_rows · 3 days"),
                 inviter: theo,
                 invitePitch: String(appLocalized: "@theo_rows challenged you"),
-                inviteAction: String(appLocalized: "Accept"),
                 standingsMeta: String(appLocalized: "2 in · 2 not replied"),
                 standings: [
                     Standing(person: theo, score: 0),
@@ -1981,7 +1866,6 @@ private enum AppModelFixtures {
             ),
             Fight(
                 id: "sprint",
-                code: "FIGHT-221",
                 name: isFrench ? "Sprint en ville" : "City Sprint",
                 metric: .steps,
                 lengthDays: 7,
@@ -1990,19 +1874,16 @@ private enum AppModelFixtures {
                 status: .invited,
                 rank: 0,
                 of: 3,
-                pending: 0,
                 kickerEmphasis: String(appLocalized: "@ivy_climbs challenged you"),
                 listSubtitle: String(appLocalized: "@ivy_climbs · 7 days"),
                 inviter: ivy,
                 invitePitch: String(appLocalized: "@ivy_climbs challenged you"),
-                inviteAction: String(appLocalized: "Join"),
                 standings: [
                     Standing(person: ivy, score: 0)
                 ]
             ),
             Fight(
                 id: "weekend",
-                code: "FIGHT-088",
                 name: isFrench ? "Duel de pas du week-end" : "Weekend Step Duel",
                 metric: .steps,
                 lengthDays: 2,
@@ -2011,8 +1892,6 @@ private enum AppModelFixtures {
                 status: .finished,
                 rank: 1,
                 of: 2,
-                pending: 0,
-                kickerPrefix: String(appLocalized: "Leading by"),
                 kickerEmphasis: String(appLocalized: "2.2k steps"),
                 listSubtitle: String(appLocalized: "Ended Jul 13 · 1st of 2"),
                 standingsMeta: String(appLocalized: "2 in"),

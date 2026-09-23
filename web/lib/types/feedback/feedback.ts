@@ -1,4 +1,10 @@
 import { z } from "zod";
+import {
+    blockFeedAuthorRequestSchema,
+    blockFeedAuthorResponseSchema,
+    reportFightPostRequestSchema,
+    reportFightPostResponseSchema,
+} from "@/lib/types/feed/fight-post";
 import { mediaObjectSchema } from "@/lib/types/media/media";
 
 export const feedbackKindValues = ["bug", "feature"] as const;
@@ -90,38 +96,13 @@ export const listFeedbackQuerySchema = z
     })
     .strict();
 
-export const feedbackPostReportReasonValues = [
-    "spam",
-    "abuse",
-    "other",
-] as const;
-export const feedbackPostReportReasonSchema = z.enum(
-    feedbackPostReportReasonValues,
-);
+export const reportFeedbackPostRequestSchema = reportFightPostRequestSchema;
 
-export const reportFeedbackPostRequestSchema = z
-    .object({
-        reason: feedbackPostReportReasonSchema,
-    })
-    .strict();
+export const reportFeedbackPostResponseSchema = reportFightPostResponseSchema;
 
-export const reportFeedbackPostResponseSchema = z
-    .object({
-        reported: z.literal(true),
-    })
-    .strict();
+export const blockFeedbackAuthorRequestSchema = blockFeedAuthorRequestSchema;
 
-export const blockFeedbackAuthorRequestSchema = z
-    .object({
-        user_id: z.string().uuid(),
-    })
-    .strict();
-
-export const blockFeedbackAuthorResponseSchema = z
-    .object({
-        blocked: z.literal(true),
-    })
-    .strict();
+export const blockFeedbackAuthorResponseSchema = blockFeedAuthorResponseSchema;
 
 export const feedbackPostSummarySchema = z
     .object({

@@ -2,7 +2,7 @@
 
 Read this before building. Last updated **23 Sep 2026**. Production release: **1.1.1 (202)**.
 
-Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
+Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments other than the approved Specials purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
 ---
 
@@ -14,6 +14,98 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Verification:** A [hosted iPhone 17 simulator probe](https://github.com/slooowshutter/FitFight/actions/runs/35873299914) of the original screen shell reproduced the overlap with 40,182 colored pixels in the pinned header region. The [corrected hosted build and capture](https://github.com/slooowshutter/FitFight/actions/runs/35875860093) passed with zero colored pixels there. The simulator-only probe and temporary CI workflow were removed. A [hosted build and You capture](https://github.com/slooowshutter/FitFight/actions/runs/35878501603) passed with the TestFlight update toast code present. Local localization, native state, native API boundary, and whitespace checks passed. No merge into develop/preview/main, TestFlight upload, or production deployment has occurred.
 
+**Latest merge:** After merging develop `4ec2450d`, Web typechecking and all 423 unit tests passed locally. Localization, Xcode project syntax, native state, native API boundary, onboarding, profile interaction, Fight localization, and Special purchase checks also passed. The combined revision still needs its PR simulator build. No deployment or TestFlight upload occurred.
+
+## Quieter notifications and complete controls: prepared 20 Sep 2026
+
+**Code:** You > Settings > Preferences > Notifications has a master switch and
+every automatic category. Invitations, the 24-hour ending reminder, one conditional
+post-end final-sync request, final results, comments, replies, reactions, and
+mentions default on. Fight ended, daily status, feed posts, and the one-week
+reminder default off. The week reminder only applies to 30-calendar-day fights.
+Reactions and opted-in posts combine into one summary around 20:00 in the account's
+saved time zone. Existing saved choices remain. Repeated grace countdowns are
+removed. Delivery uses @usernames, Fight/deadline context, and post/comment excerpts.
+A notification service extension can attach a single post's photo. English/French
+copy and a 1.1.2 release note are included. See [the complete behavior](notifications.md).
+
+**Contract:** `GET/PATCH /api/v1/notifications/preferences` keeps all six released
+fields and partial updates, with eight additive switches. The legacy
+`challenge_reminder` field continues to control its ended/sync/result group;
+individual writes maintain the aggregate. Migration
+`20260920172636_notification_controls_and_digests.sql` retains old outbox kinds,
+slots, and grants while adding preferences and summary metadata. Feed visibility
+is unaffected by notification preferences. Old builds open the first related
+Fight from a multi-post digest; the new app opens Notifications & activity.
+
+**Supported clients:** read-only release checks on 20 Sep returned staging latest
+**1.1.1 (201)**, review **1.1.2 (204)**, internal **1.1.2 (205)**, enforcement off;
+production latest **1.1.1 (202)**, no review/internal candidates, enforcement on.
+The six-field preference models from sources `d97145a` (201), `e2783be` (202),
+`c80e642a` (204), and `bd7283d1` (205) are identical. Frozen decoder/encoder fixtures
+retain that contract, including old responses and partial legacy patches.
+
+**Cloud backend checks:** at `32d341c2`, [Web API typecheck and all 320 tests](https://github.com/slooowshutter/FitFight/actions/runs/35527589992)
+passed. [Disposable database verification](https://github.com/slooowshutter/FitFight/actions/runs/35527589944)
+passed migrations/lint, 255 pgTAP checks, build 113 compatibility, and all 46
+transaction tests before and after the deferred client-permission cutoff.
+Historical migration replay also passed. Notification coverage includes concurrent
+partial writes and digest workers, defaults and opt-outs, local evening timing and
+DST, distinct actor/post counts, exact destinations, blocks, removed reactions,
+deleted posts, mention fallback, and a single conditional final-sync request.
+
+**Native verification:** [all native regressions and the simulator build](https://github.com/slooowshutter/FitFight/actions/runs/35528448727)
+passed at `ce74cc6e`, including frozen preference decoders, partial patches,
+defaults, and the photo URL allowlist. [English/French cloud captures](https://github.com/slooowshutter/FitFight/actions/runs/35528448726)
+passed and were visually checked in Night and Day: all switches, default states,
+and wrapped explanations remain visible. Capture mode shares the screen content
+with a static viewport, following Preferences; the app retains its ScrollView.
+Rows expose localized VoiceOver labels, state, and action. Static captures do not
+verify touch interaction, VoiceOver operation, or system text scaling.
+Localization, native API-boundary, migration-safety, and whitespace checks passed.
+Temporary feature-branch CI triggers were removed after verification. No native
+compilation ran on the workstation.
+
+**Integration checks, 23 Sep:** After merging develop `a1b79cb1`, local Web API
+typechecking and all 322 tests passed. Notification preference, localization,
+native API boundary, push state, and Xcode project syntax checks also passed.
+The linked cloud checks above cover the notification code before this merge;
+the merged revision still needs its PR CI run.
+
+**Latest merge, 23 Sep:** With develop `3c9309c7` included, local Web API
+typechecking and all 387 tests passed. Xcode project syntax, localization,
+notification preferences, native API boundary, and remote photo checks also
+passed. The AI native generation check requires GitHub-hosted macOS, and this
+combined revision still needs PR simulator and disposable database CI. No
+hosted migration or deployment occurred.
+
+**Closer merge, 23 Sep:** With develop `27f75330` included, local Web API
+typechecking and all 387 tests passed, plus localization, notification
+preferences, native state, native API boundary, and Fight localization checks.
+The incoming disposable database test now expects the single conditional
+final-sync request used by this branch. The combined revision still needs PR
+simulator and disposable database CI; no hosted job or deployment changed.
+
+**Rollout:** apply the additive migration, deploy the compatible backend, let old
+backend instances drain, then distribute the app. The prepared production
+15-minute Vercel schedule activates only after an authorized `main` promotion;
+staging needs a separate hosted Supabase Cron job and matching Preview secret.
+Verify both schedules before rollout. Signed archive
+provisioning for `com.fitfight.mvp.notifications` and physical-device APNs/photo
+delivery remain release checks. No deployment, release-branch merge, live
+notification send, or TestFlight upload was performed. The feature branch disables
+automatic Vercel deployment while these changes are prepared.
+
+## Fight clock, keyboard, and Current Fights sort: prepared 23 Sep 2026
+
+**Code:** The protected closer selects at most 25 fights whose next state transition is due. It no longer spends its batch or 200-row read cap on fights waiting within the final Steps grace period. The exact `ends_at` and grace deadline now count as due. The production Vercel close-fights schedule is prepared for every 15 minutes; Preview still needs its separate hosted Supabase Cron job. Current Fights defaults to earliest end, offers latest end and recently started, and shows the countdown with the exact local deadline. Tapping noninteractive screen space dismisses the keyboard on entry forms; scrolling can also dismiss it. The app has an English/French `1.1.2` release note.
+
+**Compatibility:** No `/api/v1` request or response shape, database schema, direct-access grant, or marketing version changes. The worker route remains protected and still drains notification intents. Read-only `/api/app-release` checks on 23 Sep returned staging `latest` 1.1.1 (201), `review`/`internal` 1.1.2 (205), `enforced: false`; production returned `latest` 1.1.1 (202), no candidate, `enforced: true`. These clients keep their existing requests and decoders. Stage the compatible backend before distributing the native build; the new Production cron schedule takes effect only after an authorized `main` promotion.
+
+**Checks:** Web typechecking and all 389 unit tests passed after bringing in current develop. The fixed-clock test demonstrated the exact end and grace boundaries; the existing security integration suite covers early completion from exact final snapshots. New disposable database tests cover 25 waiting fights, more than 200 waiting fights, the grace deadline, and reminder idempotence. English/French localization, native API boundary, native state, and destructive-SQL checks passed. The database integration tests, GitHub-hosted iPhone simulator, native compilation, compact-phone and larger-text layout, Night/Day layout, and physical-device reminder still need cloud verification.
+
+**Hosted state:** A read-only Vercel check found the `fit-fight` project under the Enterprise `blendai` team, which supports the 15-minute cron interval. Production has a `CRON_SECRET` variable. Neither `CRON_SECRET` nor `FITFIGHT_CRON_SECRET` was listed for Preview. No staging Cron job, Vault value, route logs, or three-run history was verified. No hosted setting or deployment changed, and this work has not entered develop, preview, main, or TestFlight. The staging Preview secret and matching hosted Supabase Vault/job setup are required before scheduled staging verification.
+
 ## Fight creation transaction: reviewed 23 Sep 2026
 
 **Code and contract:** `POST /api/v1/fights` still accepts the existing create request, including omitted `start`, `visibility`, and `recurring` fields, and returns the existing `{ id, state }` response. The backend now resolves and deduplicates invitees before writing, then inserts the series, round, owner and invited memberships, invite records, and notification intents in one Postgres transaction. The route, request schema, response shape, tables, and client permissions are unchanged. This backend change needs no database migration or native API update; it does not authorize retiring older clients.
@@ -23,6 +115,47 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 **Checks:** In this workspace on 23 Sep, `npm run typecheck` and all **324** `npm test` cases passed from `web/`. The Fight creation tests cover immediate and scheduled rounds, default fields, duplicate invite handles, and the new SQL statements through a mocked transaction. No disposable cloud database transaction test, released-client HTTP regression against this changed backend, or new GitHub cloud CI run has been recorded for this workspace.
 
 **Deployment order and live state:** Read-only staging and production `/api/health` checks at 11:45 UTC on 23 Sep returned `schema: ready` and `profile_api: true`; they do not show that this workspace's code is deployed. No merge, hosted database write, backend deployment, TestFlight upload, or production promotion was performed for this change. Before an authorized staging promotion, verify the transaction against a disposable cloud database and preserve representative older create requests and responses. Deploy the compatible backend through `develop`, verify authenticated creation and invitations on staging with admitted builds, and keep the same API contract for any later authorized `preview` and `main` promotions.
+
+## Full of life onboarding, prepared 23 Sep 2026
+
+Marc selected onboarding option 10 for native implementation. The first-run flow
+is account, username, companion, Apple Health with a same-step count reveal, a real
+Fight offer, and reminders. Confirmed joins celebrate after reminders. Explore
+still visits reminders. The old Feedback introduction is removed. Existing
+accounts bypass completed setup; interrupted setup is stored per account.
+
+Native screens use the existing Night/Day tokens, Nunito, stock companion art,
+320 ms page/element entrances and 65 ms staggering. Companion selection animates
+only the hero artwork; controls stay mounted. System Reduce Motion suppresses
+motion and counting. Health reads, sign-in and Fight membership use existing
+services and `/api/v1` contracts. No API model, backend or database schema changed.
+
+Code is prepared on `build-onboarding`. The final [GitHub-hosted native checks,
+full simulator build and signed simulator package](https://github.com/slooowshutter/FitFight/actions/runs/35792404282)
+passed at `7a62986b`. Checks include onboarding progress and account isolation,
+confirmed membership ordering, Google sign-in, Health/Feed refresh state, supported
+API decoding, English/French localization, token parity and project compilation.
+Back returns to the Health reveal, skipped Health stays on step four, and joining
+keeps the primary action mounted during refresh. A branch push runs these hosted
+checks; it does not upload TestFlight. PR #299 is open; no merge to develop, release-branch promotion, or TestFlight upload was requested.
+Physical-device permission and animation verification remain pending.
+
+The [private reference](https://fitfight-onboarding.marc719509.chatgpt.site) now
+contains only Full of life. Other treatments and the picker are removed. Twelve
+complete prototype journeys and 36 companion-selection checks passed; source and
+DOM checks confirm the original timing, stable Health heading and reduced-motion
+controls. Native membership remains joined when navigating back; no UI action
+pretends that a confirmed server membership was undone.
+
+**Develop merge, 23 Sep:** `build-onboarding` now includes develop `1e984aa9`.
+The six-step flow, new keyboard dismissal, incoming Specials and notification
+features, both release-note sets, and all localization entries are preserved.
+No onboarding API contract or database schema changed in this branch. After the
+merge, Web API typechecking and all 423 unit tests passed locally, along with
+English/French localization, native API boundary, Fight localization, native
+state, remote photo, and Xcode project syntax checks. The combined revision still
+needs GitHub-hosted simulator and disposable database checks. No live deployment,
+TestFlight upload, or merge to `develop`, `preview`, or `main` occurred here.
 
 ## TestFlight version toast prepared 23 Sep 2026
 
@@ -48,6 +181,252 @@ behavior until they install this native change.
 **Verification:** English/French localization validation passed. The updated
 native release regression and simulator compile still need GitHub-hosted
 `macos-26` CI. No PR, merge, upload, or live deployment was performed here.
+
+## Specials review fixes, 23 Sep 2026
+
+Marc asked to fix every finding from the 22 Sep branch review. These are code
+changes only; nothing was pushed, merged, deployed or uploaded.
+
+- **Unpaid holds lapse after 30 minutes.** Reading the store releases older
+  holds, so an abandoned checkout, a declined Ask to Buy, an app killed during
+  Apple's sheet, a deleted account or a deliberate never-paid reservation can no
+  longer lock a Special forever. A late verified charge is still recorded: owned
+  if the Special is free, otherwise a conflict with Apple's refund request. The
+  app releases the hold when StoreKit throws (no network, Screen Time) and clears
+  a submitted attempt once the server no longer holds it.
+- **Specials are hidden while sales are off.** With `APPLE_SPECIALS_ENABLED=false`
+  the picker shows only a Special the account already owns, so production builds
+  no longer show 40 unbuyable items.
+- **App Review Sandbox shelf.** The app adds `?storekit=sandbox` when
+  `AppTransaction` reports Sandbox. On production, an account with no hold or
+  purchase then moves to the separate Sandbox inventory, so reviewers buy without
+  touching real stock. App Store users never send it. The hint is unsigned: a
+  false claim only strands the claimant's own purchases, and a TestFlight tester
+  replaying Sandbox evidence to production could at most show a Sandbox Special
+  on their own profile.
+- **The TestFlight notification check is advisory** and no longer blocks uploads.
+- **Removed the unshipped free-claim layer:** `/api/v1/me/companions/limited`,
+  the profile unique index and its `companion_taken` mapping, the write-only
+  `special_notifications` table and the unused native wrappers. Checkout still
+  returns `409 companion_taken`. The two unapplied migrations are now one,
+  `20260920222056_paid_specials.sql`; `20260920185244_limited_companions.sql` no
+  longer exists.
+- **Offline saves restored for stock and custom animals.** Only Specials wait for
+  the server.
+- One changelog note replaces the three Specials notes. The one-shot Apple setup,
+  key audit and cutout workflows were deleted; their scripts remain. The branch
+  name triggers, preview render step and `vercel.json` entry stay until merge
+  because this branch still needs them for CI.
+
+**Verified locally on 23 Sep:** web typecheck; 360 of 361 web unit tests (the
+failure is `update-fight-supabase-query.test.ts`, whose fixed 21 Sep end date is
+now past; this branch does not touch it and develop CI will hit it too); full
+iOS simulator build; all 20 native check scripts, including new purchase
+scenarios that fail on the previous code; native API contracts; OpenAPI parse.
+The merged migration and the real query functions ran against a local
+PostgreSQL 16 with Supabase stand-ins: lapse at 30 minutes, harmless stale
+cancels, late charge as conflict, owner-only equip, the review shelf and staging
+refusing Production accounts. The disposable Supabase suite, including updated
+lapse and Sandbox-shelf integration tests, has not run; it needs a push.
+
+## Paid Specials implementation, 21 Sep 2026
+
+Marc authorized finishing the Apple purchase flow at **EUR 0.99 per Special**.
+The native app now reserves before checkout, displays Apple's localized price,
+binds StoreKit to a server-created account token, restores purchases, handles
+pending payments, and offers Apple refund requests for unfulfilled charges.
+Unpaid reservations lapse after 30 minutes (23 Sep change above). A lost reservation response reuses the same attempt;
+a submitted attempt is never automatically repurchased. Paid ownership is
+permanent, separate from the selected profile animal, and limited to one Special
+per account and one owner per artwork. Refunds retire the artwork instead of
+reselling it; reversals reinstate ownership. Deletion removes the profile link
+but retains purchase reconciliation records and the retired artwork.
+
+**Contract and compatibility:** additive `/api/v1/me/specials`, `/checkout` and
+`/transactions` endpoints. `/api/v1/me` keeps its existing request/response
+shape; the new `403 special_purchase_required` applies to unowned new Specials.
+The private ledger and an integrity trigger protect profile writers. The
+three-state limited-availability response was removed on 23 Sep. Existing released-client
+fixtures remain unchanged. The unpublished free-edition test was replaced with
+permanent paid-ownership, concurrent checkout, refund and restore scenarios.
+No existing free Special profile needs conversion in shipped clients because
+this collection has not been distributed. Existing unchanged Special selections
+are tolerated by the migration for an older in-flight backend write; they do not
+grant a purchase or reserve paid inventory.
+
+**Configuration:** Vercel Preview now has `APPLE_IAP_ENVIRONMENT=Sandbox` and
+`APPLE_SPECIALS_ENABLED=true`; Production has `Production` and `false`.
+These settings are saved for subsequent deployments, not evidence of a deployed
+checkout. The previously verified purchase keys and 40 EUR 0.99 prices remain.
+[Apple setup run 35542291302](https://github.com/slooowshutter/FitFight/actions/runs/35542291302)
+now verifies all 40 draft products available in 175 current Apple territories.
+No product was submitted for review.
+Banking and tax forms are still the Account Holder's responsibility. The signed
+agreement does not need to be signed again.
+
+**Verified code and cloud checks:** at `57e2b4b1`, the [Web API run](https://github.com/slooowshutter/FitFight/actions/runs/35543678359)
+passed generated Next.js route signatures, strict TypeScript, all **361**
+unit/security tests and OpenAPI parsing. The [disposable database run](https://github.com/slooowshutter/FitFight/actions/runs/35543678377)
+passed schema lint, pgTAP, all **54** transaction/compatibility tests both before
+and after the separately deferred client permission cutoff, legacy build 113,
+and deletion/row-backfill migration fixtures. The optimized Next.js build also
+passed against that disposable database, including static page generation.
+The eight purchase scenarios cover concurrent checkout, matching cancellation,
+permanent ownership, conflicts, refunds, reversals, delayed delivery, immutable
+transaction binding and account deletion. Existing HTTP regression requests and
+response assertions cover builds 113, 190, 200, 201, 202, 203, 204 and 205; their
+new-Special setup now establishes paid ownership first.
+
+The [native run at `f801ca11`](https://github.com/slooowshutter/FitFight/actions/runs/35543330392)
+passed the full iOS simulator build, localization and API-boundary checks,
+purchase-controller recovery/cancellation/account-binding tests, and existing
+native regressions. Subsequent commits changed backend route validation and CI,
+not native code. English/French Day/Night captures, including large text, were
+exported and inspected: cutouts are transparent, the selected caption stays in
+the footer, and long profile names fit. These captures use fixture mode and do
+not verify StoreKit product lookup or a charge. No genuine Apple Sandbox
+purchase has been made. CI now generates Next.js route validators before
+TypeScript checks and runs the optimized backend build with its disposable DB.
+
+**Live deployment:** unchanged. A 21 Sep read-only recheck still shows staging
+latest 201, review/internal 205 with enforcement off; production latest 202 with
+enforcement on. Migrations must precede backend deployment and TestFlight.
+Feature-branch Vercel deployment remains disabled. No PR, develop/preview/main
+merge, TestFlight upload or App Store submission has been performed. The preview
+upload workflow requires the working staging endpoint and configures only the
+Sandbox V2 notification URL; since 23 Sep, Apple's test-delivery check only warns.
+This gate has not run against a deployed payment endpoint yet. Production remains
+separately gated: the App Review account allowlist (23 Sep) and final legal/payout setup.
+
+**Next release and device check:** after an authorized PR and develop/preview
+promotion, the release job requests Apple's signed Sandbox test notification
+before upload (advisory since 23 Sep). Update in TestFlight, open You's companion picker, choose
+Specials and confirm the Apple purchase sheet. TestFlight never charges real
+money. Check cancellation before purchase, successful ownership, restart and
+Restore purchases, and a second account seeing the same artwork as taken.
+Use the regular Apple Account; a dedicated Sandbox account is only needed for
+extra controls such as clearing Apple purchase history or interrupted payments.
+Banking/tax setup, production reviewer isolation and App Store submission remain
+separate from this TestFlight test.
+
+## Specials companion collection and payment preparation, 20 Sep 2026
+
+**Companion code, before paid purchases:** all 40 supplied photos are bundled as transparent PNGs with specific animal names in All and the new
+Specials category. Each has English/French names and a funny caption on
+You and shared profiles. Tapping previews the image, name and caption above a
+persistent Save button; it no longer immediately saves. Taken editions are
+marked and disabled. Each photo, including alternate species poses, is one
+edition with one active owner per environment. An account has one current
+companion, and switching or account deletion releases its edition. A unique
+index prevents simultaneous claims; failed saves retain the previous companion
+and never create an offline claim. Stock animals/custom descriptions remain
+unlimited. Marketing version remains 1.1.2 with a new release note.
+
+**Compatibility:** `/api/v1/me` keeps its request and response shapes and existing
+`handle_taken` error. New IDs are strings; `409 companion_taken` applies to new
+limited selections. The authenticated read `/api/v1/me/companions/limited` (removed 23 Sep)
+returned only `{ id, availability }`, never owner IDs. Existing fixtures are
+retained. Regression coverage includes legacy builds 113, 190, 200, 201, 202,
+203, 204, and 205, ordinary profile edits while a limited edition is selected,
+legacy stock requests with explicit null prompts, and the frozen production
+profile decoder. Older apps retain their existing photo/initials fallback for
+unbundled artwork.
+
+**Read-only live evidence:** on 20 Sep, staging `/api/app-release` returned latest
+1.1.1 (201), review/internal 1.1.2 (205), enforcement off. Production returned
+latest 1.1.1 (202), review/internal null, enforcement on. Legacy staging clients
+therefore remain in scope. No hosted database, release policy, or live backend
+was changed by this work.
+
+**Rollout:** apply `20260920185244_limited_companions.sql` (merged into `20260920222056_paid_specials.sql` on 23 Sep), deploy the compatible
+backend, allow old backend instances with closed companion enums to drain, then
+distribute the native app through an authorized preview promotion. Production
+requires its own authorized promotion and verification. No PR, merge, TestFlight
+upload, or production deployment is included.
+
+**Cloud verification:** at `f06f0b56`, the [Web API check](https://github.com/slooowshutter/FitFight/actions/runs/35531913350),
+[disposable database checks](https://github.com/slooowshutter/FitFight/actions/runs/35531913228),
+[full simulator build and native regressions](https://github.com/slooowshutter/FitFight/actions/runs/35531913341),
+and [reproducible ISNet cutout job](https://github.com/slooowshutter/FitFight/actions/runs/35531913284)
+all passed. The database suite preserves older-client fixtures before and after
+the separately deferred direct-client permission cutoff. Actual running simulator
+captures show the Specials category, image grid, selected caption and Save footer
+in English/French and Day/Night. All 80 bundled full-image/portrait assets are RGBA
+PNGs; the original opaque JPGs remain source references. Light/dark cutout sheets
+were inspected, including a correction that preserves the pangolin's pale sock.
+
+**Paid purchase request:** Marc subsequently requested paid Specials through
+Apple. This supersedes the free claim/release behavior above, which must not ship
+as the completed paid feature. StoreKit non-consumable purchases are the appropriate
+Apple mechanism. This section records earlier preparation; the newer paid
+implementation section above is the current code state. Marc's original "users can only have one" instruction is being
+treated as one permanently owned Special per account. On 21 Sep, Marc set the
+price to EUR 0.99 each. France is the base territory, with Apple's automatic
+equivalent prices elsewhere. The paid implementation and its verification are described in the newer section
+above. Pending reservations persisted until 23 Sep, when unpaid holds began lapsing after 30 minutes; deleted-account purchase recovery requires
+support and cannot transfer a live owner’s purchase. See [the Apple research](research/apple-specials-purchases.md)
+for the limitations of combining one-of-one stock with delayed StoreKit payments.
+
+**Receipt-verification preparation:** `web/lib/apple/special-purchase.ts` uses
+Apple's App Store Server Library 3.1.0 and bundled public Apple root certificates
+with online certificate checks. It verifies the submitted JWS, the account,
+animal, purchase type and environment, then fetches and verifies Apple's current
+transaction. Current refund fields remain in the result for later reconciliation;
+an old signed receipt is never a fallback when Apple's lookup fails. This module
+did not grant ownership or have a route/native caller at that preparation step. That verification-only commit added no API,
+database, or native model changes beyond the separately tested companion baseline.
+At `7dd49c4d`, [cloud Web API checks](https://github.com/slooowshutter/FitFight/actions/runs/35539628204)
+passed strict TypeScript, all 353 backend tests (including 28 purchase tests),
+and contract parsing. Business cases use a mocked Apple boundary; the forgery
+test exercises the real verifier. A genuine Sandbox purchase and refund have
+not been verified. The unchanged companion database baseline passed its
+[latest completed database run](https://github.com/slooowshutter/FitFight/actions/runs/35539222143).
+The earlier branch push reports a completed Vercel preview check. Automatic
+Vercel deployments are now disabled for `exclusive-animal-avatars` while the paid
+flow is incomplete; GitHub-hosted verification remains enabled. This work has
+not promoted the branch to staging or production.
+
+**Apple setup:** [cloud preparation](https://github.com/slooowshutter/FitFight/actions/runs/35538448305)
+created all 40 non-consumable product records and verified Family Sharing is off
+for every product. Product IDs use `com.fitfight.mvp.special.` followed by the
+animal ID without `limited-`, with remaining hyphens replaced by underscores.
+All 40 draft prices are now set to **EUR 0.99** with France as the base territory
+and automatic Apple equivalents elsewhere. The [pricing job](https://github.com/slooowshutter/FitFight/actions/runs/35541096200)
+read back and verified every saved price, including no scheduled end date.
+The setup reuses matching schedules and stops rather than replacing conflicting
+pricing. Two earlier runs stopped before pricing: Apple's territory API requires
+collection lookup, and price-point territory data needs an explicit include.
+Sale availability was subsequently configured for all 40 drafts in run
+35542291302. Review submissions remain unconfigured. All 80
+English/French localizations are prepared. The [metadata job](https://github.com/slooowshutter/FitFight/actions/runs/35538808865)
+passed on its second attempt after an Apple HTTP 500 interrupted the first pass.
+Existing drafts and localizations were reused, preserving product IDs.
+
+After Marc signed in, the dedicated `FitFight Specials` In-App Purchase key was
+created and downloaded once. Its private key, key ID, and issuer ID are stored as
+`APPLE_IAP_PRIVATE_KEY`, `APPLE_IAP_KEY_ID`, and `APPLE_IAP_ISSUER_ID` in GitHub
+secrets and Vercel Preview/Production sensitive environment variables. A backup
+outside the repository has owner-only file permissions. The private key passed
+an OpenSSL structural check. [Cloud authorization checks](https://github.com/slooowshutter/FitFight/actions/runs/35539159367)
+returned HTTP 200 from the read-only notification-history API in both Production
+and Sandbox, with no purchase data logged. Live transaction verification is
+still outstanding.
+On 21 Sep, Apple's Business page lists the Paid Apps Agreement as **Pending User
+Info**, dated 20 Sep 2026. The signing step is complete. Bank Accounts offers
+**Add Bank Account**, with no bank listed, and the requested **U.S. Form W-9**
+shows **Missing Tax Info**. Marc needs to provide these legal and payout details;
+the agent has not entered or submitted them. No live payment or purchase
+entitlement has been created.
+
+**TestFlight testing:** Apple confirms TestFlight purchases always use Sandbox
+and do not charge real money. The currently installed build still lacks checkout.
+Once an authorized preview build with this implementation is available, update through
+TestFlight, open You's companion picker, select Specials, and confirm the purchase
+with Apple's sheet. Normal beta purchases use the tester's usual Apple Account.
+A dedicated Sandbox Apple Account is needed only to use controls such as clearing
+purchase history or simulating interrupted payments. Production inventory must
+remain separate. Verify purchase, cancel, restart/restore and a second account
+being unable to claim the same Special before calling payments ready.
 
 ## Preview promotion, 19 Sep 2026
 
@@ -195,6 +574,7 @@ GitHub-hosted CI. Normal workflow branch triggers are restored after verificatio
 A complete Google consent/login still requires an interactive retry after installing
 the replacement. No hosted auth configuration, API, or database contract changed for
 this fix. No PR, merge, deployment, or TestFlight upload was made.
+
 ## Compact suggested fight cards: prepared 19 Sep 2026
 
 **Code:** Suggested fights on New and under Fights > Invited use compact rows

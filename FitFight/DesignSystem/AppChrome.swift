@@ -114,12 +114,15 @@ struct FFScreen<Content: View>: View {
                 // Root screens are one viewport wide. Child HStacks can wrap or
                 // truncate, but can no longer widen the scroll view and rubber-band.
                 .containerRelativeFrame(.horizontal)
+                .ffKeyboardDismissOnBackgroundTap()
                 .background(alignment: .top) {
                     if refresh != nil {
                         FFAlwaysBounceVertical(tintColor: UIColor(theme.gold))
                     }
                 }
         }
+        .scrollDismissesKeyboard(.interactively)
+        .ffKeyboardDismissOnBackgroundTap()
         .scrollBounceBehavior(.always, axes: .vertical)
         .ffRefreshable(refresh != nil) {
             await runRefresh()
@@ -175,6 +178,24 @@ struct FFScreen<Content: View>: View {
         .padding(.top, theme.space.base)
         .padding(.bottom, clearance ? theme.space.tabBarClearance : theme.space.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+extension View {
+    /// Background hit testing leaves fields, buttons, pickers, and rows in control of their taps.
+    func ffKeyboardDismissOnBackgroundTap() -> some View {
+        background {
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    UIApplication.shared.sendAction(
+                        #selector(UIResponder.resignFirstResponder),
+                        to: nil,
+                        from: nil,
+                        for: nil
+                    )
+                }
+        }
     }
 }
 

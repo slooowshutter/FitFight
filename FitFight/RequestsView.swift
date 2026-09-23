@@ -576,6 +576,7 @@ private struct RequestArchiveSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.ffTheme) private var theme
     @State private var reason = ""
+    @FocusState private var reasonFocused: Bool
 
     var body: some View {
         VStack(spacing: 16) {
@@ -597,6 +598,7 @@ private struct RequestArchiveSheet: View {
                         .ffType(.body).foregroundStyle(theme.textSecondary)
                     if !post.archived {
                         TextField(String(appLocalized: "Public reason (optional)"), text: $reason, axis: .vertical)
+                            .focused($reasonFocused)
                             .ffType(.body)
                             .lineLimit(3...6)
                             .padding(14)
@@ -608,7 +610,9 @@ private struct RequestArchiveSheet: View {
                         FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
                     }
                 }
+                .ffKeyboardDismissOnBackgroundTap()
             }
+            .scrollDismissesKeyboard(.interactively)
             FFScreenCTA(
                 title: post.archived ? String(appLocalized: "Reopen feedback") : String(appLocalized: "Archive feedback"),
                 enabled: reason.trimmingCharacters(in: .whitespacesAndNewlines).count <= 280 && !store.isArchiving && !store.isDeleting,
@@ -623,6 +627,7 @@ private struct RequestArchiveSheet: View {
             }
         }
         .foregroundStyle(theme.text)
+        .ffKeyboardDismissOnBackgroundTap()
         .padding(.horizontal, theme.space.screenPadding)
         .padding(.top, 16)
         .padding(.bottom, 12)
@@ -1091,6 +1096,7 @@ private struct RequestDetailView: View {
                 .padding(.vertical, 12)
             }
         }
+        .ffKeyboardDismissOnBackgroundTap()
         .background(theme.bg.ignoresSafeArea())
         .sheet(isPresented: $showingArchive) {
             if let post {
@@ -1244,6 +1250,7 @@ private struct RequestDetailView: View {
         .padding(.top, 16)
         .padding(.bottom, 24)
         .fixedSize(horizontal: false, vertical: staticRender)
+        .ffKeyboardDismissOnBackgroundTap()
     }
 
     private var canComment: Bool {
@@ -1366,6 +1373,7 @@ struct ComposeRequestView: View {
             .padding(.bottom, 16)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .ffKeyboardDismissOnBackgroundTap()
         .background(theme.bg.ignoresSafeArea())
         .onChange(of: mediaItems) { _, items in
             Task { await loadPickedMedia(items) }
@@ -1498,6 +1506,7 @@ struct ComposeRequestView: View {
         .padding(.horizontal, theme.space.screenPadding)
         .padding(.bottom, 24)
         .fixedSize(horizontal: false, vertical: staticRender)
+        .ffKeyboardDismissOnBackgroundTap()
     }
 
     private var remainingSlots: Int {

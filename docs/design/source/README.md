@@ -11,6 +11,7 @@ This folder contains the current approved design and the archived design dump it
 | [`tokens.json`](./tokens.json)                                                   | Machine-readable SwiftUI tokens. This must remain byte-for-byte identical to `FitFight/DesignSystem/tokens.json`.        |
 | [`kit/companion-app-proposal.html`](./kit/companion-app-proposal.html)           | Selected Companion screen direction, retained as the tappable reference. Existing native behavior remains authoritative. |
 | [`companion/`](./companion/README.md)                                            | Preserved artwork, asset manifest, reproducible crops, and native review captures.                                       |
+| [`kit/onboarding-prototype.html`](./kit/onboarding-prototype.html)                | Full of life, Marc's selected onboarding. One tappable reference with simulated services; native screens use real services. |
 
 The approved system has two bases, Night and Day, and fixed semantic colour families:
 

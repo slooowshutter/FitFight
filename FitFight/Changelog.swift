@@ -25,18 +25,25 @@ enum Changelog {
     /// Newest first. Add a row here whenever we ship a user-facing change.
     static let releases: [ReleaseNote] = [
         ReleaseNote(
-            version: "1.1.1",
+            version: "1.1.2",
             year: 2026,
             month: 9,
-            day: 19,
-            notes: "Generated images stay available in your account, even when you close the app before generation finishes."
+            day: 23,
+            notes: "A livelier first Fight: choose your companion, reveal your steps, find a Fight, and set reminders in six simple steps."
         ),
         ReleaseNote(
-            version: "1.1.1",
+            version: "1.1.2",
             year: 2026,
             month: 9,
-            day: 18,
-            notes: "Generate companion avatars, five fitness levels, and group photos. See your credits, return to interrupted generations, and keep your images in your account."
+            day: 23,
+            notes: "40 Specials: one-of-a-kind animal companions, each with its own funny line. Buy one through Apple and keep it, even when you switch animals."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 23,
+            notes: "Tap outside an entry to close the keyboard. Sort Current Fights by end or start time and see each exact deadline."
         ),
         ReleaseNote(
             version: "1.1.2",
@@ -51,6 +58,27 @@ enum Changelog {
             month: 9,
             day: 23,
             notes: "If you stay on an older TestFlight build, an update toast returns at most once every three days."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 21,
+            notes: "Long companion names now fit on You, keeping both customization buttons fully visible."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 20,
+            notes: "Choose every notification separately or pause them all. Reactions and optional feed updates arrive in one evening summary. Fight reminders are clearer, use usernames, and can show post photos."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 19,
+            notes: "Generated images stay available in your account, even when you close the app before generation finishes."
         ),
         ReleaseNote(
             version: "1.1.2",
@@ -121,6 +149,13 @@ enum Changelog {
             month: 9,
             day: 19,
             notes: "The comment Send button turns green as soon as you type. Empty or spaces-only comments keep it gray and disabled."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 18,
+            notes: "Generate companion avatars, five fitness levels, and group photos. See your credits, return to interrupted generations, and keep your images in your account."
         ),
         ReleaseNote(
             version: "1.1.2",

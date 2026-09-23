@@ -107,32 +107,81 @@ test("Auth, profile commands, and deletion work before and after direct client a
     );
     assert.equal(backToStock.companion_id, "fox");
     assert.equal(backToStock.companion_prompt, null);
-    assert.deepEqual(await readCompanionPrompts(userId, database), [custom.companion_prompt]);
-    const secondPrompt = "An otter with a blue scarf";
-    await updateProfile(userId, { companion_id: "custom", companion_prompt: secondPrompt }, admin);
-    await updateProfile(userId, {
-        companion_id: "custom",
-        companion_prompt: custom.companion_prompt,
-    }, admin);
-    assert.deepEqual(await readCompanionPrompts(userId, database), [custom.companion_prompt, secondPrompt]);
-    // Older native builds explicitly send null when choosing a stock animal.
-    await updateProfile(userId, { companion_id: "goat", companion_prompt: null }, admin);
-    assert.deepEqual(await readCompanionPrompts(userId, database), [custom.companion_prompt, secondPrompt]);
-    assert.deepEqual(await readCompanionPrompts(peerId, database), []);
-    await assert.rejects(updateProfile(userId, {
-        companion_id: "custom",
-        companion_prompt: null,
-    }, admin));
-    assert.deepEqual(await readCompanionPrompts(userId, database), [custom.companion_prompt, secondPrompt]);
-    await Promise.all([
-        updateProfile(userId, { companion_id: "custom", companion_prompt: "A mountain goat" }, admin),
-        updateProfile(userId, { companion_id: "custom", companion_prompt: "A forest fox" }, admin),
+    assert.deepEqual(await readCompanionPrompts(userId, database), [
+        custom.companion_prompt,
     ]);
-    assert.deepEqual(new Set(await readCompanionPrompts(userId, database)), new Set([
-        custom.companion_prompt, secondPrompt, "A mountain goat", "A forest fox",
-    ]));
-    const forbiddenLibrary = await client.schema("private").from("companion_libraries").select("*");
-    assert.ok(forbiddenLibrary.error, "Saved descriptions must not be exposed through the Data API");
+    const secondPrompt = "An otter with a blue scarf";
+    await updateProfile(
+        userId,
+        { companion_id: "custom", companion_prompt: secondPrompt },
+        admin,
+    );
+    await updateProfile(
+        userId,
+        {
+            companion_id: "custom",
+            companion_prompt: custom.companion_prompt,
+        },
+        admin,
+    );
+    assert.deepEqual(await readCompanionPrompts(userId, database), [
+        custom.companion_prompt,
+        secondPrompt,
+    ]);
+    // Older native builds explicitly send null when choosing a stock animal.
+    await updateProfile(
+        userId,
+        { companion_id: "goat", companion_prompt: null },
+        admin,
+    );
+    assert.deepEqual(await readCompanionPrompts(userId, database), [
+        custom.companion_prompt,
+        secondPrompt,
+    ]);
+    assert.deepEqual(await readCompanionPrompts(peerId, database), []);
+    await assert.rejects(
+        updateProfile(
+            userId,
+            {
+                companion_id: "custom",
+                companion_prompt: null,
+            },
+            admin,
+        ),
+    );
+    assert.deepEqual(await readCompanionPrompts(userId, database), [
+        custom.companion_prompt,
+        secondPrompt,
+    ]);
+    await Promise.all([
+        updateProfile(
+            userId,
+            { companion_id: "custom", companion_prompt: "A mountain goat" },
+            admin,
+        ),
+        updateProfile(
+            userId,
+            { companion_id: "custom", companion_prompt: "A forest fox" },
+            admin,
+        ),
+    ]);
+    assert.deepEqual(
+        new Set(await readCompanionPrompts(userId, database)),
+        new Set([
+            custom.companion_prompt,
+            secondPrompt,
+            "A mountain goat",
+            "A forest fox",
+        ]),
+    );
+    const forbiddenLibrary = await client
+        .schema("private")
+        .from("companion_libraries")
+        .select("*");
+    assert.ok(
+        forbiddenLibrary.error,
+        "Saved descriptions must not be exposed through the Data API",
+    );
     assert.ok(
         updated.handle_set_at && Date.parse(updated.handle_set_at) >= before,
     );
@@ -202,5 +251,9 @@ test("Auth, profile commands, and deletion work before and after direct client a
     const [library] = await database`
         select count(*)::integer as count from private.companion_libraries where user_id = ${userId}
     `;
-    assert.equal(library.count, 0, "Account deletion must also delete saved descriptions");
+    assert.equal(
+        library.count,
+        0,
+        "Account deletion must also delete saved descriptions",
+    );
 });

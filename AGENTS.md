@@ -53,7 +53,7 @@ Current map: [`docs/status.md`](docs/status.md). Sign-in, username, direct-usern
 
 Details: [docs/status.md](docs/status.md) · [docs/product.md](docs/product.md) · [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) · [docs/system-design.md](docs/system-design.md) · [docs/backend.md](docs/backend.md) · [docs/shipping.md](docs/shipping.md) · [docs/history.md](docs/history.md) · [docs/design/source/README.md](docs/design/source/README.md)
 
-[`docs/system-design.md`](docs/system-design.md) is the golden guide for production. Follow it so new work fits. Do **not** implement that document. Do **not** build Active Minutes, Workout Count, WHOOP, Strava, payments, notifications, social, or a broader website until the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. The privacy and support pages are the only approved public web surfaces.
+[`docs/system-design.md`](docs/system-design.md) is the golden guide for production. Follow it so new work fits. Do **not** implement that document. Do **not** build Active Minutes, Workout Count, WHOOP, Strava, payments other than the approved Specials purchases, notifications, social, or a broader website until the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. The privacy and support pages are the only approved public web surfaces.
 
 Right now the product is the minimum private Steps challenge. Do not restore old mock or experimental surfaces merely because historical design files or database columns still contain them.
 

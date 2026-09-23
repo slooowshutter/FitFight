@@ -1,5 +1,6 @@
 -- Hosted Supabase only. Apply in the dashboard after CRON_SECRET is in Vault.
--- Calls the same worker as Vercel daily backup: close due fights + drain notification outbox.
+-- Staging Preview needs its own schedule: Vercel Cron runs only on Production.
+-- Calls the protected worker to close due fights and drain notification outbox.
 --
 -- select cron.schedule(
 --   'fitfight-scheduled-work-15m',

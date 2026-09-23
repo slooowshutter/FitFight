@@ -4,7 +4,7 @@ name: Database
 on:
     pull_request:
     push:
-        branches: [main, develop, preview, profiles-friends-and-stats]
+        branches: [main, develop, preview, profiles-friends-and-stats, exclusive-animal-avatars]
 
 concurrency:
     group: database-${{ github.ref }}
@@ -69,6 +69,14 @@ jobs:
                   export SUPABASE_CLIENT_ACCESS_CLOSED=false
                   cd web
                   npm run test:database
+
+            - name: Build the backend against the disposable database
+              working-directory: web
+              env:
+                  NEXT_PUBLIC_SUPABASE_URL: https://zstzbfocunthczzubggz.supabase.co
+              run: |
+                  export DATABASE_URL="$(jq -er .DB_URL "$RUNNER_TEMP/supabase-test.json")"
+                  npm run build
 
             - name: Verify later client permission cutoff
               run: |

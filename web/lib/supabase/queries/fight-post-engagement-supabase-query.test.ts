@@ -203,7 +203,7 @@ test("a created comment returns the authoritative visible count after insertion 
             inserted = true;
             return Promise.resolve([{ id: fixture.comment.id }]);
         }
-        if (sql.startsWith("select handle, display_name")) {
+        if (sql.startsWith("select handle from public.profiles")) {
             return Promise.resolve([{ handle: "maya", display_name: "Maya" }]);
         }
         if (sql.startsWith("select comment.id")) {

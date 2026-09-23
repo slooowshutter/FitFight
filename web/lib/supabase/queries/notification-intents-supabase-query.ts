@@ -2,7 +2,6 @@ import type { Sql, TransactionSql } from "postgres";
 import { inviteNotificationAlert } from "@/lib/notifications/notification-copy";
 import type { NotificationLocale } from "@/lib/types/notifications/device-installation";
 import type {
-    NotificationCopyKey,
     NotificationKind,
     NotificationSlot,
 } from "@/lib/types/notifications/notification-intent";
@@ -89,77 +88,30 @@ export async function enqueueAwaitingFinalSyncNotifications(
     members: MemberCompletion[],
 ): Promise<void> {
     const endsAtMs = Date.parse(endsAt);
-    const rows = members.flatMap((member) => {
-        const t0Copy: NotificationCopyKey = member.final_steps_complete
-            ? "fight_ended_everyone"
-            : "fight_ended_sync";
-        return [
-            {
-                idempotency_key: idempotencyKey(
-                    fightId,
-                    member.user_id,
-                    "fight_ended",
-                    "t0",
-                ),
-                user_id: member.user_id,
-                fight_id: fightId,
-                kind: "fight_ended" as const,
-                slot: "t0" as const,
-                not_before: new Date(endsAtMs).toISOString(),
-                expires_at: new Date(endsAtMs + 2 * HOUR_MS).toISOString(),
-                route: routeForFight(fightId),
-                copy_key: t0Copy,
-            },
-            {
-                idempotency_key: idempotencyKey(
-                    fightId,
-                    member.user_id,
-                    "grace_reminder",
-                    "t12",
-                ),
-                user_id: member.user_id,
-                fight_id: fightId,
-                kind: "grace_reminder" as const,
-                slot: "t12" as const,
-                not_before: new Date(endsAtMs + 12 * HOUR_MS).toISOString(),
-                expires_at: new Date(endsAtMs + 14 * HOUR_MS).toISOString(),
-                route: routeForFight(fightId),
-                copy_key: "grace_12h" as const,
-            },
-            {
-                idempotency_key: idempotencyKey(
-                    fightId,
-                    member.user_id,
-                    "grace_reminder",
-                    "t18",
-                ),
-                user_id: member.user_id,
-                fight_id: fightId,
-                kind: "grace_reminder" as const,
-                slot: "t18" as const,
-                not_before: new Date(endsAtMs + 18 * HOUR_MS).toISOString(),
-                expires_at: new Date(endsAtMs + 20 * HOUR_MS).toISOString(),
-                route: routeForFight(fightId),
-                copy_key: "grace_6h" as const,
-            },
-            {
-                idempotency_key: idempotencyKey(
-                    fightId,
-                    member.user_id,
-                    "grace_reminder",
-                    "t23",
-                ),
-                user_id: member.user_id,
-                fight_id: fightId,
-                kind: "grace_reminder" as const,
-                slot: "t23" as const,
-                not_before: new Date(endsAtMs + 23 * HOUR_MS).toISOString(),
-                expires_at: new Date(endsAtMs + 24 * HOUR_MS).toISOString(),
-                route: routeForFight(fightId),
-                copy_key: "grace_1h" as const,
-            },
-        ];
-    });
+    const rows = members.flatMap((member) => [
+        {
+            idempotency_key: idempotencyKey(fightId, member.user_id, "fight_ended", "t0"),
+            user_id: member.user_id,
+            fight_id: fightId,
+            kind: "fight_ended",
+            slot: "t0",
+            not_before: new Date(endsAtMs).toISOString(),
+            expires_at: new Date(endsAtMs + 2 * HOUR_MS).toISOString(),
+            route: routeForFight(fightId),
+            copy_key: "fight_ended_everyone",
+        },
+        ...(!member.final_steps_complete ? [{
+            idempotency_key: idempotencyKey(fightId, member.user_id, "final_sync", "t0"),
+            user_id: member.user_id,
+            fight_id: fightId,
+            kind: "final_sync",
+            slot: "t0",
+            not_before: new Date(endsAtMs).toISOString(),
+            expires_at: new Date(endsAtMs + 24 * HOUR_MS).toISOString(),
+            route: routeForFight(fightId),
+            copy_key: "final_sync",
+        }] : []),
+    ]);
     await insertNotificationIntents(sql, rows);
 }
 
@@ -201,7 +153,7 @@ export async function supersedeGraceNotifications(
             processed_at = now()
         where fight_id = ${fightId}
             and status = 'pending'
-            and slot in ('t12', 't18', 't23')
+            and (slot in ('t12', 't18', 't23') or kind = 'final_sync')
     `;
 }
 
@@ -218,7 +170,7 @@ export async function skipGraceNotificationsForMember(
         where fight_id = ${fightId}
             and user_id = ${userId}
             and status = 'pending'
-            and slot in ('t12', 't18', 't23')
+            and (slot in ('t12', 't18', 't23') or kind = 'final_sync')
     `;
 }
 
@@ -248,6 +200,10 @@ export async function enqueueFightInviteNotifications(
             and installation.revoked_at is null
         where profile.id in ${sql(input.userIds)}
             and profile.deleted_at is null
+            and not exists (
+                select 1 from private.notification_preferences prefs
+                where prefs.user_id = profile.id and (not prefs.enabled or not prefs.fight_invite)
+            )
         order by profile.id, installation.last_registered_at desc nulls last
     `;
     const rows = recipients.map((recipient) => {

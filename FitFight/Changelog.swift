@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.1.2",
             year: 2026,
             month: 9,
+            day: 23,
+            notes: "If you stay on an older TestFlight build, an update toast returns at most once every three days."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
             day: 20,
             notes: "Choose every notification separately or pause them all. Reactions and optional feed updates arrive in one evening summary. Fight reminders are clearer, use usernames, and can show post photos."
         ),

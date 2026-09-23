@@ -359,8 +359,9 @@ export default function PrivacyPage() {
                         sans contacter l’assistance. La suppression efface votre
                         profil et votre nom d’utilisateur, les photos, vidéos et
                         fichiers envoyés, les publications et commentaires, les
-                        totaux de pas et d’activité et les résumés
-                        d’entraînement, les relations d’amitié, les
+                        totaux de pas et d’activité, les échantillons
+                        individuels et les résumés d’entraînement, les
+                        relations d’amitié, les
                         invitations, participations et scores, les bugs et
                         demandes que vous avez publiés, ainsi que tous les défis
                         que vous avez créés. Elle vous retire également des

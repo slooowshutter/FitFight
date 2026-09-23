@@ -33,16 +33,16 @@ is off. Disposable database regressions exercise old Steps uploads and direct
 Steps readers as well as new activity requests. This is source-level evidence,
 not a released-binary or signed-in device check for build 205.
 
-**Cloud checks:** [Web API](https://github.com/slooowshutter/FitFight/actions/runs/35877860532)
-passed strict typechecking, tests, and contract checks at `85c5ec8`.
-[Disposable Database](https://github.com/slooowshutter/FitFight/actions/runs/35877860423)
-passed migrations, legacy-client checks, pgTAP, and transaction tests at the same
-backend revision. [Hosted iOS](https://github.com/slooowshutter/FitFight/actions/runs/35878380337)
+**Cloud checks:** [Web API](https://github.com/slooowshutter/FitFight/actions/runs/35888258868)
+passed strict typechecking, full tests, and contract checks at `6cad60f`.
+[Disposable Database](https://github.com/slooowshutter/FitFight/actions/runs/35888258957)
+passed migrations, legacy-client compatibility, pgTAP, and transaction tests,
+including sample UUID replay and deletion, at the same commit.
+[Hosted iOS](https://github.com/slooowshutter/FitFight/actions/runs/35888258895)
 passed native regressions, English/French localization, full simulator compilation,
-and app packaging at `b27c6e0`. These runs predate the individual sample upload
-and do not verify it. Background delivery, initial history duration,
-and corrections from a real HealthKit store remain device checks. No individual
-user data was used in CI.
+and app packaging. Background delivery, initial history duration, and corrections
+from a real HealthKit store remain device checks. No individual user data was used
+in CI.
 
 **Deployment order and live state:** Apply the additive migration and backfill,
 then deploy the compatible backend and English/French privacy pages before a new

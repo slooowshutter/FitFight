@@ -325,8 +325,9 @@ export default function PrivacyPage() {
                         <strong>You → Settings → Delete account</strong>. You do
                         not need to contact support. Deletion removes your
                         profile, username, uploaded photos, videos, files, Fight
-                        posts and comments, uploaded Apple Health Fight, daily,
-                        activity totals, individual samples, and workout summaries, friendships, invitations, Fight memberships, scores,
+                        posts and comments, uploaded Apple Health Fight and
+                        daily totals, individual samples, workout summaries,
+                        friendships, invitations, Fight memberships, scores,
                         bugs and feature requests you posted, and every Fight
                         you created. It also removes your participation from
                         Fights created by someone else.

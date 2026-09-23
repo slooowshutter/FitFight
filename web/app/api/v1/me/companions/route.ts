@@ -10,6 +10,4 @@ export const GET = apiRoute(async (request) => {
     return json(await readCompanionPrompts(userId));
 });
 
-export function OPTIONS(request: Request) {
-    return corsPreflight(request);
-}
+export const OPTIONS = corsPreflight;

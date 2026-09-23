@@ -61,12 +61,6 @@ final class PushNotificationService: NSObject, ObservableObject {
         markPrePromptHandled()
     }
 
-    func declinePrePrompt() {
-        askedThisSession = true
-        showPrePrompt = false
-        markPrePromptHandled()
-    }
-
     func markPromptHandledThisSession() {
         askedThisSession = true
         showPrePrompt = false
@@ -123,10 +117,6 @@ final class PushNotificationService: NSObject, ObservableObject {
         }
         installationTask = work
         await work.value
-    }
-
-    func handleRegistrationFailure() {
-        // Missing push capability or simulator — no user-facing error.
     }
 
     private var hasHandledPrePrompt: Bool {

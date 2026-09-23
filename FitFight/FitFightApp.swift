@@ -35,14 +35,6 @@ final class FitFightAppDelegate: NSObject, UIApplicationDelegate {
 
     func application(
         _ application: UIApplication,
-        didFailToRegisterForRemoteNotificationsWithError error: Error
-    ) {
-        guard !CompanionPreview.isEnabled else { return }
-        PushNotificationService.shared.handleRegistrationFailure()
-    }
-
-    func application(
-        _ application: UIApplication,
         handleEventsForBackgroundURLSession identifier: String,
         completionHandler: @escaping () -> Void
     ) {
@@ -68,6 +60,9 @@ struct FitFightApp: App {
     @StateObject private var feed = FeedStore()
     @StateObject private var fightLiveUpdates = FightLiveUpdates()
     @StateObject private var push = PushNotificationService.shared
+    /// Control Center, alerts, and permission sheets only make the app inactive; the
+    /// foreground refresh waits for a real return from the background.
+    @State private var returnedFromBackground = false
 
     init() {
         #if DEBUG && targetEnvironment(simulator)
@@ -137,8 +132,8 @@ struct FitFightApp: App {
                         await push.registerIfAuthorized()
                     }
                 }
-                .task(id: scenePhase == .active ? session.authSession?.user.id : nil) {
-                    guard scenePhase == .active, !CompanionPreview.isEnabled, !ScreenshotExport.isEnabled else { return }
+                .task(id: scenePhase != .background ? session.authSession?.user.id : nil) {
+                    guard scenePhase != .background, !CompanionPreview.isEnabled, !ScreenshotExport.isEnabled else { return }
                     await preferences.refresh(session: session)
                 }
                 .task {
@@ -167,9 +162,9 @@ struct FitFightApp: App {
                     await session.devAdoptSessionIfNeeded()
                     #endif
                 }
-                .task(id: scenePhase == .active && appUpdate.allowsUse ? session.authSession?.user.id : nil) {
+                .task(id: scenePhase != .background && appUpdate.allowsUse ? session.authSession?.user.id : nil) {
                     guard !CompanionPreview.isEnabled, !ScreenshotExport.isEnabled else { return }
-                    let userID = scenePhase == .active && appUpdate.allowsUse ? session.authSession?.user.id : nil
+                    let userID = scenePhase != .background && appUpdate.allowsUse ? session.authSession?.user.id : nil
                     await fightLiveUpdates.activate(client: session.client, userID: userID) {
                         guard session.authSession?.user.id == userID, appUpdate.allowsUse else { return }
                         await model.refreshFromServer(session: session, performMaintenance: false)
@@ -226,7 +221,9 @@ struct FitFightApp: App {
                 }
                 .onChange(of: scenePhase) { _, phase in
                     guard !CompanionPreview.isEnabled else { return }
-                    guard phase == .active, session.authSession != nil else { return }
+                    if phase == .background { returnedFromBackground = true }
+                    guard phase == .active, returnedFromBackground, session.authSession != nil else { return }
+                    returnedFromBackground = false
                     model.feedRevision += 1
                     Task {
                         guard await AppUpdateChecker.shared.permitsRequests() else { return }

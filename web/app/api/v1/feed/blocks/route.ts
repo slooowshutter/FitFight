@@ -17,6 +17,4 @@ export const POST = apiRoute(async (request) => {
     return json(await blockFeedAuthor(userId, parsed.data.user_id));
 });
 
-export function OPTIONS(request: Request) {
-    return corsPreflight(request);
-}
+export const OPTIONS = corsPreflight;

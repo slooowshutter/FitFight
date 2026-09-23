@@ -41,22 +41,6 @@ struct AppReleasePolicy: Codable, Equatable {
         self.enforced = enforced
     }
 
-    init(from decoder: Decoder) throws {
-        let values = try decoder.container(keyedBy: CodingKeys.self)
-        latest = try values.decodeIfPresent(AppRelease.self, forKey: .latest)
-        review = try values.decodeIfPresent(AppRelease.self, forKey: .review)
-        internalLatest = try values.decodeIfPresent(AppRelease.self, forKey: .internalLatest)
-        enforced = try values.decode(Bool.self, forKey: .enforced)
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var values = encoder.container(keyedBy: CodingKeys.self)
-        try values.encode(latest, forKey: .latest)
-        try values.encode(review, forKey: .review)
-        try values.encodeIfPresent(internalLatest, forKey: .internalLatest)
-        try values.encode(enforced, forKey: .enforced)
-    }
-
     func allows(version: String, build: String) -> Bool {
         [latest, review, internalLatest].compactMap { $0 }.contains { $0.matches(version: version, build: build) }
     }

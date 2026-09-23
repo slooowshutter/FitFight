@@ -1,24 +1,16 @@
 import SwiftUI
 
 /// Every token and component the app is built from, in the kit's own order.
-/// Internal reference rendered only by the screenshot workflow.
+/// Internal reference: Debug menu and the screenshot workflow.
 struct DesignSystemView: View {
     @EnvironmentObject private var themeStore: ThemeStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
 
     // Live state for the interactive pieces, seeded with the kit's values.
-    @State private var slider: Double = 12_000
-    @State private var stepper = 10_000
     @State private var notifications = true
     @State private var units = "km"
-    @State private var filter = "Live"
-    @State private var metric = "Steps"
-    @State private var tab = "Standings"
     @State private var duration = "1 week"
-    @State private var toast: FFTone?
-    @State private var showDrawer = false
-    @State private var showDialog = false
 
     var body: some View {
         Group {
@@ -31,36 +23,6 @@ struct DesignSystemView: View {
             }
         }
         .background(theme.bg.ignoresSafeArea())
-        .overlay(alignment: .bottom) {
-            if let toast {
-                FFToast(
-                    glyph: toast == .moss ? "W" : "!",
-                    title: toast == .moss ? "You won Sleep Streak" : "Nina passed you",
-                    message: toast == .moss
-                        ? "7 of 7 nights. Sam owes you a coffee."
-                        : "She climbed 280 m more. Three days left.",
-                    tone: toast,
-                    onClose: { self.toast = nil }
-                )
-                .padding(theme.space.screenPadding)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-        }
-        .overlay {
-            if showDialog {
-                FFDialog(
-                    title: "Leave Sunday Climb?",
-                    message: "Nina takes the win and your 12 day streak resets. This can't be undone.",
-                    confirmTitle: "Leave",
-                    onCancel: { showDialog = false },
-                    onConfirm: { showDialog = false }
-                )
-            }
-        }
-        .ffDrawer(isPresented: $showDrawer, theme: theme) {
-            drawerBody
-        }
-        .animation(theme.motion.sheet.animation, value: toast == nil)
     }
 
     private var sections: some View {
@@ -72,10 +34,9 @@ struct DesignSystemView: View {
             badgesAndAvatars
             cards
             controls
-            overlays
+            emptyState
             progress
             comparison
-            history
             navigation
             motion
         }
@@ -214,7 +175,6 @@ struct DesignSystemView: View {
                         FFButton(title: "Primary") {}
                         FFButton(title: "Ember", kind: .ember) {}
                         FFButton(title: "Secondary", kind: .secondary) {}
-                        FFButton(title: "Outline", kind: .outline) {}
                         FFButton(title: "Ghost", kind: .ghost) {}
                         FFButton(title: "Disabled", enabled: false) {}
                     }
@@ -223,21 +183,18 @@ struct DesignSystemView: View {
                         FFButton(title: "Small", size: .small) {}
                         FFButton(title: "Medium", size: .medium) {}
                         FFButton(title: "Large", size: .large) {}
-                        FFIconButton(systemName: "plus") {}
                     }
                 }
             }
             FFCard {
                 VStack(alignment: .leading, spacing: 12) {
-                    FFEyebrow("Screen CTA — tap to continue")
+                    FFEyebrow("Screen CTA: tap to continue")
                     Text("A full-width button with a centered label. Sliding confirmation is reserved for creating a fight.")
                         .ffType(.body)
                         .foregroundStyle(theme.textSecondary)
                         .lineSpacing(3)
                         .fixedSize(horizontal: false, vertical: true)
                     FFScreenCTA(title: "Challenge Marc") {}
-                    FFScreenCTA(title: "Send it", kind: .ember) {}
-                    FFAddRow(title: "Add — dashed affordance", subtitle: "Empty slots and \"start something\" rows") {}
                 }
             }
         }
@@ -290,13 +247,6 @@ struct DesignSystemView: View {
                         avatarSample("TD", 54, "selected", selected: true)
                         Spacer(minLength: 0)
                     }
-                    FFEyebrow("Stacked group")
-                    HStack(spacing: 10) {
-                        FFAvatarStack(monograms: ["MB", "NK", "MR", "TD", "AM"], ring: theme.card)
-                        Text("5 in this fight")
-                            .ffType(.body)
-                            .foregroundStyle(theme.textSecondary)
-                    }
                 }
             }
         }
@@ -316,37 +266,14 @@ struct DesignSystemView: View {
     private var cards: some View {
         VStack(alignment: .leading, spacing: 16) {
             FFSectionHeader(title: "05 · Cards")
-            FFEyebrow("Hero — moss fill, one per screen")
-            FFHeroCard(
-                eyebrow: "Ends in 3 days",
-                tag: "Head to head",
-                title: "Step Derby vs Marc",
-                metric: "26,410",
-                caption: "steps · you lead by 4,310",
-                monogram: "MB",
-                progress: 0.54
-            )
-            FFEyebrow("Stat tile — grid of two")
-            HStack(spacing: 12) {
-                FFStatTile(
-                    tag: "Goal", tone: .ember, note: "day 5",
-                    title: "10K a day", metric: "7,240",
-                    caption: "of 10,000 steps", progress: 0.72
-                )
-                FFStatTile(
-                    tag: "Streak", tone: .gold, note: "12 days",
-                    title: "Sleep by 11", metric: "7h 20m",
-                    caption: "last night", progress: 0.9
-                )
-            }
-            FFEyebrow("List row — selected state")
+            FFEyebrow("List row")
             FFListRow(
                 monogram: "MB", title: "Step Derby", subtitle: "Head to head · steps",
-                metric: "26,410", delta: "up 4,310", ahead: true, selected: true
+                metric: "4,310", ahead: true, metricIsGap: true
             )
             FFListRow(
-                monogram: "NK", title: "Sunday Climb", subtitle: "Head to head · elevation",
-                metric: "840", delta: "280 m back", ahead: false
+                monogram: "NK", title: "Sunday Climb", subtitle: "Head to head · steps",
+                metric: "280", ahead: false, metricIsGap: true
             )
             FFEyebrow("Notice — ember wash")
             FFNotice(text: "2 invites expire in 2 days", tone: .ember, systemImage: "clock")
@@ -365,11 +292,6 @@ struct DesignSystemView: View {
                     trailing: AnyView(FFPill("Connect", style: .solidMoss))
                 )
             }
-            FFEyebrow("Ring card — progress as a dial")
-            FFRingCard(
-                progress: 0.54, title: "Step Derby", subtitle: "vs Marc · steps",
-                metric: "26,410", delta: "up 4,310"
-            )
         }
     }
 
@@ -380,23 +302,6 @@ struct DesignSystemView: View {
             FFSectionHeader(title: "06 · Controls")
             FFCard {
                 VStack(alignment: .leading, spacing: 16) {
-                    FFEyebrow("Slider — drag it")
-                    HStack(alignment: .firstTextBaseline) {
-                        Text("Daily target").ffType(.button).foregroundStyle(theme.text)
-                        Spacer(minLength: 0)
-                        Text(Int(slider).formatted(.number))
-                            .font(.ff(22, 800))
-                            .tracking(22 * -0.025)
-                            .foregroundStyle(theme.text)
-                    }
-                    FFSlider(value: $slider, range: 2000...25000, step: 500)
-                    HStack {
-                        Text("2,000").ffType(.micro).foregroundStyle(theme.textFaint)
-                        Spacer(minLength: 0)
-                        Text("25,000 steps").ffType(.micro).foregroundStyle(theme.textFaint)
-                    }
-                    FFEyebrow("Stepper")
-                    FFStepper(value: $stepper, step: 1000, minimum: 1000, unit: "steps a day")
                     FFEyebrow("Switch & segmented")
                     HStack(spacing: 12) {
                         Text("Notifications").ffType(.rowTitle).foregroundStyle(theme.text)
@@ -407,13 +312,6 @@ struct DesignSystemView: View {
                         Text("Units").ffType(.rowTitle).foregroundStyle(theme.text)
                         Spacer(minLength: 0)
                         FFSegmented(items: ["km", "mi"], selection: $units) { $0 }
-                    }
-                    FFEyebrow("Filter chips")
-                    HStack(spacing: 8) {
-                        ForEach([("Live", 4), ("Invites", 2), ("Done", 12)], id: \.0) { name, count in
-                            FFChip(title: name, count: count, selected: filter == name) { filter = name }
-                        }
-                        Spacer(minLength: 0)
                     }
                 }
             }
@@ -440,66 +338,14 @@ struct DesignSystemView: View {
                     }
                 }
             }
-            FFCard {
-                VStack(alignment: .leading, spacing: 18) {
-                    FFEyebrow("Combo box — open it")
-                    FFCombo(items: Self.metrics, selection: $metric)
-                    FFEyebrow("Tabs")
-                    FFTabs(items: Self.tabOrder, selection: $tab) { $0 }
-                    FFCard(padding: 16, fill: theme.card) {
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text(Self.tabs[tab]?.0 ?? "")
-                                .ffType(.rowTitle)
-                                .foregroundStyle(theme.text)
-                            Text(Self.tabs[tab]?.1 ?? "")
-                                .ffType(.body)
-                                .foregroundStyle(theme.textSecondary)
-                                .lineSpacing(3)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-                    FFEyebrow("Popover")
-                    FFPopover(
-                        title: "Nina climbed 1,120 m",
-                        message: "Two hill runs on Saturday. You have three days to make up 280 m."
-                    )
-                    FFEyebrow("Carousel — swipe it")
-                    FFCarousel(cards: Self.carousel)
-                    FFEyebrow("Toast — fire it")
-                    HStack(spacing: 10) {
-                        FFButton(title: "Win toast", size: .small) { fire(.moss) }
-                        FFButton(title: "Ember toast", kind: .ember, size: .small) { fire(.ember) }
-                        Spacer(minLength: 0)
-                    }
-                }
-            }
         }
     }
 
-    private func fire(_ tone: FFTone) {
-        toast = tone
-        Task {
-            try? await Task.sleep(for: .seconds(4))
-            if toast == tone { toast = nil }
-        }
-    }
+    // MARK: 07 - empty state
 
-    // MARK: 07 — overlays
-
-    private var overlays: some View {
+    private var emptyState: some View {
         VStack(alignment: .leading, spacing: 16) {
-            FFSectionHeader(title: "07 · Overlays")
-            Text("The drawer is the default — it reaches the thumb. Dialogs are for decisions that can destroy something.")
-                .ffType(.body)
-                .foregroundStyle(theme.textSecondary)
-                .lineSpacing(4)
-                .fixedSize(horizontal: false, vertical: true)
-            HStack(spacing: 10) {
-                FFButton(title: "Open drawer", kind: .secondary) { showDrawer = true }
-                FFButton(title: "Leave this fight", kind: .outline) { showDialog = true }
-                Spacer(minLength: 0)
-            }
-            FFEyebrow("Empty state")
+            FFSectionHeader(title: "07 · Empty state")
             FFCard {
                 FFEmptyState(
                     systemImage: "trophy",
@@ -512,45 +358,12 @@ struct DesignSystemView: View {
         }
     }
 
-    private var drawerBody: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("Log a walk")
-                .font(.ff(18, 800))
-                .tracking(18 * -0.015)
-                .foregroundStyle(theme.text)
-            Text("Counts toward Step Derby.")
-                .ffType(.body)
-                .foregroundStyle(theme.textSecondary)
-                .padding(.top, 4)
-            VStack(spacing: 8) {
-                drawerRow("Distance", "3.2 km")
-                drawerRow("Steps", "4,180")
-            }
-            .padding(.top, 16)
-            FFButton(title: "Add it", size: .large, fullWidth: true) { showDrawer = false }
-                .padding(.top, 16)
-            Spacer(minLength: 0)
-        }
-    }
-
-    private func drawerRow(_ title: String, _ value: String) -> some View {
-        HStack(spacing: 10) {
-            Text(title).ffType(.button).foregroundStyle(theme.text)
-            Spacer(minLength: 0)
-            Text(value).ffType(.button).foregroundStyle(theme.textSecondary)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
-        .ffBorder(theme.hairline, radius: theme.radius.field)
-    }
-
     // MARK: 08 — progress
 
     private var progress: some View {
         VStack(alignment: .leading, spacing: 16) {
             FFSectionHeader(title: "08 · Progress")
-            Text("One component, four contexts. Gold on a moss fill, ember or moss on a card, ring when the number matters more than the trend. Track is always the same 9% white.")
+            Text("One component: ember or moss on a card. Track is always the same 9% white.")
                 .ffType(.body)
                 .foregroundStyle(theme.textSecondary)
                 .lineSpacing(4)
@@ -569,37 +382,6 @@ struct DesignSystemView: View {
                         }
                         FFProgressBar(value: 1, fill: theme.mossFill)
                         FFProgressBar(value: 0.84, fill: theme.textFaint)
-                    }
-                }
-            }
-            FFCard {
-                VStack(alignment: .leading, spacing: 20) {
-                    FFEyebrow("Rings — 76 / 56 / 40pt")
-                    HStack(spacing: 22) {
-                        FFRing(value: 0.54, size: 76, lineWidth: 9) {
-                            Text("54%").font(.ff(15, 800)).foregroundStyle(theme.text)
-                        }
-                        FFRing(value: 0.38, size: 56, lineWidth: 7, fill: theme.emberFill) {
-                            Text("38%").font(.ff(12, 800)).foregroundStyle(theme.text)
-                        }
-                        FFRing(value: 1, size: 40, lineWidth: 5) {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 12, weight: .heavy))
-                                .foregroundStyle(theme.mossText)
-                        }
-                        Spacer(minLength: 0)
-                    }
-                    FFEyebrow("Streak strip — 7 day")
-                    FFStreakStrip(days: [
-                        ("M", .hit), ("T", .hit), ("W", .hit), ("T", .miss),
-                        ("F", .hit), ("S", .today), ("S", .future)
-                    ])
-                    HStack(spacing: 12) {
-                        Text("Hit · missed · today · not yet")
-                            .ffType(.body)
-                            .foregroundStyle(theme.textSecondary)
-                        Spacer(minLength: 0)
-                        FFPill("12 day streak", style: .gold)
                     }
                 }
             }
@@ -622,25 +404,15 @@ struct DesignSystemView: View {
     private var comparison: some View {
         VStack(alignment: .leading, spacing: 16) {
             FFSectionHeader(title: "09 · Comparison & ranking")
-            FFEyebrow("VS block — the head-to-head")
-            FFVSBlock(
-                you: ("AM", "You", "26,410", 1, nil),
-                them: ("MB", "Marc", "22,100", 0.84, nil),
-                delta: "+4,310",
-                footnote: "Steps · 7 day fight",
-                timeLeft: "3 days left"
-            )
-            FFEyebrow("Losing variant")
-            FFBehindRow(monogram: "AM", title: "Sunday Climb", detail: "280 m behind Nina", value: "840")
             FFEyebrow("Leaderboard row — you always highlighted")
             VStack(spacing: 8) {
-                FFLeaderboardRow(rank: 1, monogram: "NK", name: "Nina", value: "412", move: .up)
-                FFLeaderboardRow(rank: 2, monogram: "MB", name: "Marc", value: "388", move: .same)
-                FFLeaderboardRow(rank: 3, monogram: "MR", name: "Maya", value: "341", move: .up)
-                FFLeaderboardRow(rank: 4, monogram: "AM", name: "You", value: "312", move: .down, isYou: true, caption: "Synced 3 Sep, 12:41")
-                FFLeaderboardRow(rank: 5, monogram: "TD", name: "Theo", value: "204", move: .same)
+                FFLeaderboardRow(rank: 1, monogram: "NK", name: "Nina", value: "412")
+                FFLeaderboardRow(rank: 2, monogram: "MB", name: "Marc", value: "388")
+                FFLeaderboardRow(rank: 3, monogram: "MR", name: "Maya", value: "341")
+                FFLeaderboardRow(rank: 4, monogram: "AM", name: "You", value: "312", isYou: true, captionAt: { _ in "Synced 3 Sep, 12:41" })
+                FFLeaderboardRow(rank: 5, monogram: "TD", name: "Theo", value: "204")
             }
-            Text("Rank 1 takes gold ink. Movement arrows are moss up, ember down, ash-faint dash for no change. The row never names its own metric — the screen header does.")
+            Text("Rank 1 takes gold ink. The row never names its own metric; the screen header does.")
                 .ffType(.caption)
                 .foregroundStyle(theme.textFaint)
                 .lineSpacing(3)
@@ -648,88 +420,23 @@ struct DesignSystemView: View {
         }
     }
 
-    // MARK: 10 — history
-
-    private var history: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            FFSectionHeader(title: "10 · History")
-            FFCard {
-                VStack(alignment: .leading, spacing: 0) {
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            FFEyebrow("Sparkline · 12 weeks")
-                            Text("18,420")
-                                .font(.ff(26, 800))
-                                .tracking(26 * -0.03)
-                                .foregroundStyle(theme.text)
-                                .padding(.top, 5)
-                            Text("up 31% since May")
-                                .ffType(.caption)
-                                .foregroundStyle(theme.mossText)
-                        }
-                        Spacer(minLength: 0)
-                        FFPill("Steps")
-                    }
-                    FFSparkline(values: Self.spark)
-                        .padding(.top, 18)
-                    HStack {
-                        ForEach(["May", "Jun", "Jul", "Aug"], id: \.self) { month in
-                            Text(month).ffType(.micro).foregroundStyle(theme.textFaint)
-                            if month != "Aug" { Spacer(minLength: 0) }
-                        }
-                    }
-                    .padding(.top, 10)
-                }
-            }
-            FFCard {
-                VStack(alignment: .leading, spacing: 14) {
-                    FFEyebrow("Bar chart · this week")
-                    FFBarChart(bars: Self.weekBars)
-                    Text("Today is gold, days inside the current fight are moss, earlier days drop to 42% moss. No gridlines, no axis — the number lives above the chart.")
-                        .ffType(.caption)
-                        .foregroundStyle(theme.textFaint)
-                        .lineSpacing(3)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-        }
-    }
-
-    // MARK: 11 — navigation, feed & pickers
+    // MARK: 10 - navigation & pickers
 
     private var navigation: some View {
         VStack(alignment: .leading, spacing: 16) {
-            FFSectionHeader(title: "11 · Navigation, feed & pickers")
-            FFEyebrow("Nav header — three shapes")
-            FFNavTitle(title: "Fights", subtitle: "4 live · 2 waiting", actionSymbol: "plus", action: {})
-            FFNavDetail(title: "Step Derby", subtitle: "3 days left", onBack: {}, onMore: {})
-            FFNavFlow(title: "New challenge", step: "Step 1 of 3", onClose: {}, skipTitle: "Skip", onSkip: {})
-            FFEyebrow("Activity feed row")
-            FFFeedRow(glyph: "W", tone: .moss, title: "You won Sleep Streak", message: "7 of 7 nights · Sam owes you a coffee", time: "2h")
-            FFFeedRow(glyph: "!", tone: .ember, title: "Nina passed you", message: "Sunday Climb · she leads by 280 m", time: "5h")
-            FFFeedRow(glyph: "+", tone: .neutral, title: "Theo invited you", message: "Coffee Run · most km in a week", time: "1d")
+            FFSectionHeader(title: "10 · Navigation & pickers")
+            FFEyebrow("Nav header")
+            FFNavDetail(title: "Step Derby", onBack: {})
             FFEyebrow("Duration picker")
             FFDurationPicker(options: ["3 days", "1 week", "1 month", "Custom"], selection: $duration)
-            FFEyebrow("Date range — start and end are filled, middle is wash")
-            FFDateRange(days: [22, 23, 24, 25, 26, 27, 28], start: 23, end: 27)
-            Text("Sep 23 – 27 · 5 days")
-                .ffType(.caption)
-                .foregroundStyle(theme.textFaint)
-            FFEyebrow("Skeletons — while a connector fetches")
-            FFSkeletonRow()
-            Text("Skeletons mirror the real card's geometry exactly. Never a spinner on a card — a spinner only for a full-screen first load.")
-                .ffType(.caption)
-                .foregroundStyle(theme.textFaint)
-                .lineSpacing(3)
-                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
-    // MARK: 12 — motion
+    // MARK: 11 - motion
 
     private var motion: some View {
         VStack(alignment: .leading, spacing: 16) {
-            FFSectionHeader(title: "12 · Motion")
+            FFSectionHeader(title: "11 · Motion")
             FFGroupedRows {
                 ForEach(Array(Self.motionTokens.enumerated()), id: \.offset) { index, token in
                     if index > 0 { FFDivider() }
@@ -757,34 +464,6 @@ struct DesignSystemView: View {
     }
 
     // MARK: - Kit sample data
-
-    private static let metrics = [
-        FFComboItem(name: "Steps", source: "Apple Watch"),
-        FFComboItem(name: "Distance", source: "Strava"),
-        FFComboItem(name: "Active minutes", source: "Whoop"),
-        FFComboItem(name: "Sleep", source: "Whoop")
-    ]
-
-    private static let tabOrder = ["Standings", "Activity", "Rules"]
-
-    private static let tabs: [String: (String, String)] = [
-        "Standings": ("You lead by 4,310", "Three days left. Marc has never closed a gap this big."),
-        "Activity": ("Marc walked 8.2 km", "Two hours ago · counted 11,400 steps toward the fight."),
-        "Rules": ("Most steps in 7 days", "Apple Watch and Strava both count. Manual entries are capped at 5,000 a day.")
-    ]
-
-    private static let carousel = [
-        FFCarouselCard(tag: "1v1", tone: .moss, name: "Steps", value: "26,410", unit: "this week"),
-        FFCarouselCard(tag: "1v1", tone: .ember, name: "Elevation", value: "840", unit: "metres climbed"),
-        FFCarouselCard(tag: "Goal", tone: .gold, name: "Sleep", value: "7h 20m", unit: "last night")
-    ]
-
-    private static let spark: [Double] = [8, 11, 9, 14, 12, 17, 15, 19, 16, 21, 24, 22]
-
-    private static let weekBars: [(label: String, value: Double, tone: FFBarTone)] = [
-        ("M", 17, .past), ("T", 15, .past), ("W", 19, .past), ("T", 16, .past),
-        ("F", 21, .active), ("S", 24, .active), ("S", 22, .today)
-    ]
 
     private static let motionTokens: [(String, String, String)] = [
         ("instant", "0ms", "Selection, chip and tab state — never animate a filter"),

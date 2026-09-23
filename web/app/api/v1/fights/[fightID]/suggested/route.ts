@@ -1,4 +1,3 @@
-import { after } from "next/server";
 import {
     apiRoute,
     corsPreflight,
@@ -7,8 +6,7 @@ import {
     requireUuid,
 } from "@/lib/http";
 import { verifyUser } from "@/lib/supabase/queries/auth-supabase-query";
-import { createDatabaseClient } from "@/lib/supabase/postgres";
-import { processNotificationOutbox } from "@/lib/supabase/queries/process-notification-outbox-supabase-query";
+import { processNotificationOutboxAfterResponse } from "@/lib/notifications/process-notification-outbox-after-response";
 import { setFightSuggested } from "@/lib/supabase/queries/suggest-fight-supabase-query";
 import { suggestFightRequestSchema } from "@/lib/types/fights/suggest-fight";
 
@@ -30,13 +28,9 @@ export const PATCH = apiRoute<{ fightID: string }>(
             fightId,
             parsed.data.suggested,
         );
-        after(async () => {
-            await processNotificationOutbox(new Date(), createDatabaseClient());
-        });
+        processNotificationOutboxAfterResponse();
         return json(result);
     },
 );
 
-export function OPTIONS(request: Request) {
-    return corsPreflight(request);
-}
+export const OPTIONS = corsPreflight;

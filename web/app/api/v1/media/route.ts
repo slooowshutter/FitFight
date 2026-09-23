@@ -17,6 +17,4 @@ export const POST = apiRoute(async (request) => {
     return json(await createMediaUpload(userId, parsed.data), 201);
 });
 
-export function OPTIONS(request: Request) {
-    return corsPreflight(request);
-}
+export const OPTIONS = corsPreflight;

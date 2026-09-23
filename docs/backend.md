@@ -47,7 +47,7 @@ measurement becomes authoritative without waiting for another user sync.
 Keep `/api/v1`, old tables, and client permissions through the supported-build
 overlap. This branch has no live deploy.
 
-After the migration is deployed, this read-only query follows the latest raw
+After the migration is deployed, this read-only query follows recent raw
 records for handle `marc` to their current measurements. Replace the handle to
 inspect another account. Raw rows without a linked measurement are still shown,
 including superseded readings and deletions.

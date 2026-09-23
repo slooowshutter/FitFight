@@ -13,12 +13,14 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 **Code and affected contract:** The branch `explain-activity-sync-tables` adds
 `private.activity_raw` for received Apple-merged daily and exact Fight totals,
 workout summaries, and explicit workout deletions. A bounded TypeScript resolver
-publishes `private.activity_metrics`, Fight scores/charts, and the legacy Steps
-mirror. Personal history can be corrected; finalized Fight results stay frozen.
-The phone keeps individual HealthKit samples and local anchors, registers all
-supported types for background observation, imports accessible history in
-acknowledged pages, and reports partial activity failure after a successful
-Steps upload. The new `POST /api/v1/healthkit/activity` is additive. Existing
+publishes `private.activity_metrics`, including separate workout duration,
+active-minutes, distance, and energy rows, plus Fight scores/charts and the legacy
+Steps mirror. Profile Steps reads the newest legacy or new row during rollout.
+Personal history can be corrected; finalized Fight results stay frozen. The phone
+keeps individual HealthKit samples and local anchors, registers all supported
+types for background observation, imports accessible history in acknowledged
+pages, and distinguishes durable receipt awaiting processing from partial
+activity failure after a successful Steps upload. The new `POST /api/v1/healthkit/activity` is additive. Existing
 `POST /api/v1/healthkit/steps` requests and decoded response fields remain valid;
 its optional `processing` response field is ignored by older Swift decoders.
 
@@ -30,15 +32,16 @@ is off. Disposable database regressions exercise old Steps uploads and direct
 Steps readers as well as new activity requests. This is source-level evidence,
 not a released-binary or signed-in device check for build 205.
 
-**Cloud checks:** [Web API](https://github.com/slooowshutter/FitFight/actions/runs/35872572242)
-and [disposable Database](https://github.com/slooowshutter/FitFight/actions/runs/35872572227)
-passed after the backend fixes. [Web API after the English/French privacy edits](https://github.com/slooowshutter/FitFight/actions/runs/35873902894)
-passed. The [hosted simulator run](https://github.com/slooowshutter/FitFight/actions/runs/35874769562)
-passed native regressions and full simulator compilation at `1146030`. Later
-branch commits changed backend code, workflows, and documentation but no Swift.
-Background delivery,
-initial history duration, and corrections from a real HealthKit store remain
-device checks. No individual user data was used in CI.
+**Cloud checks:** [Web API](https://github.com/slooowshutter/FitFight/actions/runs/35877860532)
+passed strict typechecking, tests, and contract checks at `85c5ec8`.
+[Disposable Database](https://github.com/slooowshutter/FitFight/actions/runs/35877860423)
+passed migrations, legacy-client checks, pgTAP, and transaction tests at the same
+backend revision. [Hosted iOS](https://github.com/slooowshutter/FitFight/actions/runs/35878380337)
+passed native regressions, English/French localization, full simulator compilation,
+and app packaging at `b27c6e0`. Later branch changes only clarify documentation
+and restore normal CI triggers. Background delivery, initial history duration,
+and corrections from a real HealthKit store remain device checks. No individual
+user data was used in CI.
 
 **Deployment order and live state:** Apply the additive migration and backfill,
 then deploy the compatible backend and English/French privacy pages before a new

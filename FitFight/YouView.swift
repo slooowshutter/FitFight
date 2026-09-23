@@ -171,7 +171,7 @@ struct YouView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This permanently deletes your profile, photos, uploaded Steps, referrals, invitations, fights you created, and bugs or requests you posted; removes you from other fights; and signs you out. This can’t be undone.")
+            Text("This permanently deletes your profile, photos, uploaded Apple Health activity, referrals, invitations, fights you created, and bugs or requests you posted; removes you from other fights; and signs you out. This can’t be undone.")
         }
     }
 
@@ -268,7 +268,7 @@ struct YouView: View {
                 }
             } label: {
                 FFGroupedRow(
-                    title: String(appLocalized: "Apple Health Steps"),
+                    title: String(appLocalized: "Apple Health activity"),
                     subtitle: steps.detailText,
                     systemImage: "heart",
                     enabled: steps.status != .reading && !model.isRefreshingFights,
@@ -381,7 +381,12 @@ struct YouView: View {
             return FFPill(String(appLocalized: "Retry"), style: .softEmber)
         case .syncing:
             return FFPill(String(appLocalized: "Syncing"), style: .neutral)
-        case .upToDate, .noAccessibleSteps:
+        case .upToDate:
+            if steps.diagnostics.activitySyncFailed == true {
+                return FFPill(String(appLocalized: "Retry"), style: .softEmber)
+            }
+            return FFPill(String(appLocalized: "Connected"), style: .softMoss)
+        case .noAccessibleSteps:
             return FFPill(String(appLocalized: "Connected"), style: .softMoss)
         case .notConnected:
             return FFPill(String(appLocalized: "Connect"), style: .solidMoss)

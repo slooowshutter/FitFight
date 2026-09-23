@@ -13,7 +13,7 @@ struct HealthOnboardingView: View {
     var body: some View {
         OnboardingPage(
             title: "Connect Apple Health",
-            message: "FitFight reads your steps and other movement from Apple Health. Fights still use steps. We’ll ask iPhone for permission next. You can change this later in You.",
+            message: "FitFight imports the Apple Health activity history you allow, including daily totals and workouts. Only Steps score Fights. Individual Health samples stay on your iPhone. We’ll ask for permission next.",
             actionTitle: isConnecting ? String(appLocalized: "Connecting…") : String(appLocalized: "Continue"),
             working: isConnecting,
             onSkip: finish

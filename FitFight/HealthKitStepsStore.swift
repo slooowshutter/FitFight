@@ -392,6 +392,9 @@ final class HealthKitStepsStore: ObservableObject {
             let syncToken = try await trace.measure(.session) { try await session.freshAccessToken() }
             guard activeUserId == userId, session.authSession?.user.id == userId else { throw CancellationError() }
             _ = try await api.syncHealthKitSteps(sync, accessToken: syncToken, trace: trace)
+            if trigger == .observer {
+                await onBackendSync?()
+            }
 
             var activityFailure: Error?
             do {
@@ -423,9 +426,6 @@ final class HealthKitStepsStore: ObservableObject {
                 $0.failureReference = activityFailure.map { HealthKitSyncTrace.Failure($0).reference }
                 $0.failureDetail = activityFailure == nil
                     ? nil : String(appLocalized: "Steps up to date · Other activity didn't sync. Tap to retry.")
-            }
-            if trigger == .observer {
-                await onBackendSync?()
             }
             return activityFailure == nil
         } catch {

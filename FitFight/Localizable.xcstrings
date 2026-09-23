@@ -1,6 +1,36 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "FitFight imports the Apple Health activity history you allow, including daily totals and workouts. Only Steps score Fights. Individual Health samples stay on your iPhone. We’ll ask for permission next.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "FitFight importe l’historique d’activité Santé d’Apple auquel vous donnez accès, y compris les totaux quotidiens et les entraînements. Seuls les pas comptent pour les défis. Les échantillons individuels restent sur votre iPhone. Nous allons demander votre autorisation."
+                    }
+                }
+            }
+        },
+        "Apple Health activity": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Activité Santé d’Apple"
+                    }
+                }
+            }
+        },
+        "This permanently deletes your profile, photos, uploaded Apple Health activity, referrals, invitations, fights you created, and bugs or requests you posted; removes you from other fights; and signs you out. This can’t be undone.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cela supprime définitivement votre profil, vos photos, vos activités Santé d’Apple envoyées, vos parrainages, invitations, défis créés, signalements et demandes ; vous retire des autres défis et vous déconnecte. Cette action est irréversible."
+                    }
+                }
+            }
+        },
         "Steps up to date · Other activity didn't sync. Tap to retry.": {
             "localizations": {
                 "fr": {

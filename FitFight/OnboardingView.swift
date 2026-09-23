@@ -76,6 +76,7 @@ struct OnboardingView: View {
         }
         .padding(.horizontal, theme.space.screenPadding)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .ffKeyboardDismissOnBackgroundTap()
         .background(theme.bg)
         .onChange(of: pickerItem) { _, item in
             Task { await loadPhoto(item) }

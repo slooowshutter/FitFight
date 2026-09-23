@@ -25,6 +25,13 @@ enum Changelog {
     /// Newest first. Add a row here whenever we ship a user-facing change.
     static let releases: [ReleaseNote] = [
         ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 23,
+            notes: "Tap outside an entry to close the keyboard. Sort Current Fights by end or start time and see each exact deadline."
+        ),
+        ReleaseNote(
             version: "1.1.1",
             year: 2026,
             month: 9,

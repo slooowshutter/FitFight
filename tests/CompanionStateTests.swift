@@ -11,6 +11,7 @@ final class SessionStore {
     var prompts: [String] = []
     var suspendLoad = false
     var pendingLoad: CheckedContinuation<[String], Error>?
+    var rejectSave = false
 
     func companionPrompts() async throws -> [String] {
         if suspendLoad {
@@ -20,6 +21,7 @@ final class SessionStore {
     }
 
     func setCompanion(id: String, prompt: String?) async throws {
+        if rejectSave { throw URLError(.cannotConnectToHost) }
         profile?.companionId = id
         profile?.companionPrompt = prompt
         if let prompt {
@@ -56,6 +58,24 @@ enum CompanionStateTests {
         precondition(store.customPrompt == prompt, "Profile refresh must preserve the prompt")
         precondition(!store.isCustom && store.selection == .fox)
         precondition(store.savedPrompts == [prompt])
+
+        session.rejectSave = true
+        do {
+            try await store.choose(id: "limited-pangolin", prompt: nil, session: session)
+            preconditionFailure("A rejected claim must reach the picker")
+        } catch { }
+        precondition(store.selection == .fox && session.profile?.companionId == "fox")
+        precondition(!CompanionStore.hasPendingChoice(for: userId), "A failed claim must never be replayed offline")
+        session.rejectSave = false
+        try await store.choose(id: "limited-pangolin", prompt: nil, session: session)
+        precondition(store.selection == .limitedPangolin)
+        precondition(store.animal(for: userId.uuidString, companionID: "limited-pangolin") == .limitedPangolin)
+        session.rejectSave = true
+        try await store.choose(id: "fox", prompt: nil, session: session)
+        precondition(store.selection == .fox && CompanionStore.hasPendingChoice(for: userId), "Stock picks still save offline")
+        session.rejectSave = false
+        await store.publishPending(session: session)
+        precondition(session.profile?.companionId == "fox" && !CompanionStore.hasPendingChoice(for: userId))
 
         let restored = CompanionStore()
         restored.apply(session.profile)
@@ -103,6 +123,8 @@ enum CompanionStateTests {
         precondition(CompanionCategory.water.animals.contains(.otter))
         precondition(CompanionCategory.forest.animals.contains(.fox))
         precondition(CompanionCategory.jungle.animals.contains(.sloth))
+        precondition(CompanionCategory.limited.animals.count == 40)
+        precondition(CompanionCategory.limited.animals.allSatisfy { $0.isLimited && !$0.caption.isEmpty })
         print("Companion retention, reuse, relaunch, account isolation, and habitat filters passed")
     }
 }

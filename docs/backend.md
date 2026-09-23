@@ -486,3 +486,38 @@ the new TestFlight build. Older builds that directly accept or decline through
 Supabase will receive a permission error after the migration. Feature-branch pushes
 alone do not apply the hosted migration. No existing finalized scores or hosted
 previously-deleted accounts are rewritten by this change.
+
+## Specials: paid limited companions (updated 23 Sep 2026)
+
+The 40 supplied animal photos have stable `limited-*` companion IDs and sell as
+non-consumable StoreKit products at EUR 0.99. Each photo, including alternate
+poses of one species, is a single edition. `private.special_editions` holds one
+row per edition per Apple environment (`Sandbox`, `Production`), so each
+deployment's inventory and App Review's Sandbox purchases stay separate.
+`private.special_accounts` binds a FitFight user to one environment and supplies
+the StoreKit `appAccountToken`. `private.special_transactions` records every
+verified charge, including refunds and conflicts.
+
+An account may hold or own one Special. Ownership is permanent and separate
+from the equipped profile companion; switching animals never releases it. A
+refund retires the edition and clears it from the profile; a reversal restores
+ownership. `private.require_special_ownership` rejects equipping an unowned
+Special from any writer, including older backends and direct clients, and
+`PATCH /api/v1/me` maps it to `403 special_purchase_required`.
+
+`POST /api/v1/me/specials/checkout` reserves an edition before the Apple sheet or
+cancels the matching attempt. Unpaid holds lapse 30 minutes after they are made:
+`readSpecialStore` releases them before reading, and a reserved row's
+`updated_at` is its reservation time; resuming the same checkout restarts it.
+Account deletion frees a hold at once. A charge that arrives later is owned if
+the edition is still free and the account has no other Special; otherwise it is
+recorded as a conflict and the app offers Apple's refund request. A refund only
+retires an edition its purchase held or owned. On production, accounts listed in
+`APPLE_IAP_REVIEW_USER_IDS` use the Sandbox shelf for App Review once they have
+no hold or purchase; nobody else can reach it.
+
+Deploy `20260920222056_paid_specials.sql`, then the backend, then distribute the
+app. Let older backend instances drain first, because their schemas list only
+the previous companion IDs. Existing API contracts are unchanged; the Specials
+endpoints are additive. Older apps show their photo or initials fallback for
+`limited-*` IDs they do not bundle. No app-facing RPC is introduced.

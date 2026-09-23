@@ -29,7 +29,21 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 23,
+            notes: "40 Specials: one-of-a-kind animal companions, each with its own funny line. Buy one through Apple and keep it, even when you switch animals."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 23,
             notes: "If you stay on an older TestFlight build, an update toast returns at most once every three days."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 21,
+            notes: "Long companion names now fit on You, keeping both customization buttons fully visible."
         ),
         ReleaseNote(
             version: "1.1.2",

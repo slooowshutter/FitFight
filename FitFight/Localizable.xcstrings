@@ -1,6 +1,26 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "40 Specials: one-of-a-kind animal companions, each with its own funny line. Buy one through Apple and keep it, even when you switch animals.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "40 Spéciaux : des compagnons animaux uniques, chacun avec sa petite phrase. Achetez-en un via Apple et gardez-le, même en changeant d’animal."
+                    }
+                }
+            }
+        },
+        "Long companion names now fit on You, keeping both customization buttons fully visible.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les longs noms de compagnons s’affichent entièrement dans Vous, avec les deux boutons de personnalisation bien visibles."
+                    }
+                }
+            }
+        },
         "Signing in with Google opens the FitFight account that already uses that email, including Sign in with Apple.": {
             "localizations": {
                 "fr": {
@@ -11776,6 +11796,1082 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Modifiez les filtres pour afficher d’autres retours."
+                    }
+                }
+            }
+        },
+        "Pangolin": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Pangolin"
+                    }
+                }
+            }
+        },
+        "Packed a snack. Called it endurance.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "A pris un goûter. Appelle ça de l’endurance."
+                    }
+                }
+            }
+        },
+        "Platypus": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ornithorynque"
+                    }
+                }
+            }
+        },
+        "Built like a committee. Walks like a legend.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Conçu en réunion. Marche comme une légende."
+                    }
+                }
+            }
+        },
+        "Spotted Quoll": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Chat marsupial tacheté"
+                    }
+                }
+            }
+        },
+        "Spots the finish line. Ignores the warm-up.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Repère l’arrivée. Ignore l’échauffement."
+                    }
+                }
+            }
+        },
+        "Fennec Fox": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Fennec"
+                    }
+                }
+            }
+        },
+        "Heard you were skipping leg day.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "A entendu que tu séchais les jambes."
+                    }
+                }
+            }
+        },
+        "Musk Ox": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Bœuf musqué"
+                    }
+                }
+            }
+        },
+        "Built for winter. Dressed for PE.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Taillé pour l’hiver. Habillé pour le sport."
+                    }
+                }
+            }
+        },
+        "Kookaburra": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Kookaburra"
+                    }
+                }
+            }
+        },
+        "Laughs at your excuses. Then takes a break.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Rit de tes excuses. Puis fait une pause."
+                    }
+                }
+            }
+        },
+        "Porcupine": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Porc-épic"
+                    }
+                }
+            }
+        },
+        "Personal space is part of the training plan.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "La distance de sécurité fait partie du programme."
+                    }
+                }
+            }
+        },
+        "Bharal": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Bharal"
+                    }
+                }
+            }
+        },
+        "Your hill is the warm-up.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ta côte, c’est son échauffement."
+                    }
+                }
+            }
+        },
+        "Golden Snub-Nosed Monkey": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Rhinopithèque doré"
+                    }
+                }
+            }
+        },
+        "Golden fur. Questionable pacing.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Pelage doré. Gestion de l’effort discutable."
+                    }
+                }
+            }
+        },
+        "Proboscis Monkey": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nasique"
+                    }
+                }
+            }
+        },
+        "Wins every race by a nose.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Gagne chaque course d’un nez."
+                    }
+                }
+            }
+        },
+        "Tree Kangaroo": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Kangourou arboricole"
+                    }
+                }
+            }
+        },
+        "Took the stairs. All the way up the tree.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "A pris les escaliers. Jusqu’en haut de l’arbre."
+                    }
+                }
+            }
+        },
+        "Gila Monster": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Monstre de Gila"
+                    }
+                }
+            }
+        },
+        "A monster at taking it easy.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Un monstre de la récupération."
+                    }
+                }
+            }
+        },
+        "Tarsier": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tarsier"
+                    }
+                }
+            }
+        },
+        "Wide awake. Deeply suspicious of cardio.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Bien réveillé. Très méfiant envers le cardio."
+                    }
+                }
+            }
+        },
+        "Maned Wolf": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Loup à crinière"
+                    }
+                }
+            }
+        },
+        "All legs. No shortcuts.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tout en jambes. Aucun raccourci."
+                    }
+                }
+            }
+        },
+        "Fire Salamander": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Salamandre tachetée"
+                    }
+                }
+            }
+        },
+        "Warming up is a personal brand.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "L’échauffement, c’est sa marque de fabrique."
+                    }
+                }
+            }
+        },
+        "Serval, Easy Pace": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Serval, tranquille"
+                    }
+                }
+            }
+        },
+        "Long legs. Leisurely agenda.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Grandes jambes. Petit programme."
+                    }
+                }
+            }
+        },
+        "Puffin": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Macareux"
+                    }
+                }
+            }
+        },
+        "Flight mode off. Step count on.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Mode avion désactivé. Compteur de pas activé."
+                    }
+                }
+            }
+        },
+        "Numbat, Sprint Mode": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Numbat, mode sprint"
+                    }
+                }
+            }
+        },
+        "Small stripes. Unreasonably big ambitions.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Petites rayures. Ambitions démesurées."
+                    }
+                }
+            }
+        },
+        "Coati, Snooze Mode": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Coati, mode sieste"
+                    }
+                }
+            }
+        },
+        "Yawn first. Personal best later.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "D’abord le bâillement. Le record attendra."
+                    }
+                }
+            }
+        },
+        "Galago": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Galago"
+                    }
+                }
+            }
+        },
+        "Night owl energy. Morning walk regrets.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Énergie nocturne. Regrets à la marche du matin."
+                    }
+                }
+            }
+        },
+        "Frilled Lizard": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Lézard à collerette"
+                    }
+                }
+            }
+        },
+        "Dressed for drama. Stayed for the steps.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Venu pour le spectacle. Resté pour les pas."
+                    }
+                }
+            }
+        },
+        "Okapi": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Okapi"
+                    }
+                }
+            }
+        },
+        "Half stripes. Full commitment to a nap.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "À moitié rayé. À fond pour la sieste."
+                    }
+                }
+            }
+        },
+        "Hoatzin": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Hoazin"
+                    }
+                }
+            }
+        },
+        "Pre-workout is coffee and a long sit.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Avant le sport : café et fauteuil."
+                    }
+                }
+            }
+        },
+        "Quokka": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Quokka"
+                    }
+                }
+            }
+        },
+        "Smiling through a very optional workout.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Sourit malgré une séance très facultative."
+                    }
+                }
+            }
+        },
+        "Numbat, Steady Stride": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Numbat, bon rythme"
+                    }
+                }
+            }
+        },
+        "Counts ants on rest days. Steps on the others.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Compte les fourmis au repos. Les pas le reste du temps."
+                    }
+                }
+            }
+        },
+        "Sifaka": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Sifaka"
+                    }
+                }
+            }
+        },
+        "Sideways is still a direction.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "De côté, ça reste une direction."
+                    }
+                }
+            }
+        },
+        "Secretary Bird, On Duty": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Messager sagittaire, en service"
+                    }
+                }
+            }
+        },
+        "Booked your defeat between two meetings.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "A calé ta défaite entre deux réunions."
+                    }
+                }
+            }
+        },
+        "Rock Hyrax": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Daman des rochers"
+                    }
+                }
+            }
+        },
+        "Tiny legs. Elephant-sized confidence.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Petites pattes. Confiance d’éléphant."
+                    }
+                }
+            }
+        },
+        "Serval, Sprint Mode": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Serval, mode sprint"
+                    }
+                }
+            }
+        },
+        "Already at the finish. Pretending to stretch.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Déjà à l’arrivée. Fait semblant de s’étirer."
+                    }
+                }
+            }
+        },
+        "Banded Mongoose": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Mangouste rayée"
+                    }
+                }
+            }
+        },
+        "Runs in a pack. Keeps a solo victory speech.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Court en bande. Prépare un discours en solo."
+                    }
+                }
+            }
+        },
+        "Axolotl": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Axolotl"
+                    }
+                }
+            }
+        },
+        "Regrows limbs. Still skips leg day.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ses pattes repoussent. Sèche quand même les jambes."
+                    }
+                }
+            }
+        },
+        "Thorny Devil, Easy Pace": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Diable cornu, tranquille"
+                    }
+                }
+            }
+        },
+        "Prickly about pace. Soft on rest days.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Pointilleux sur l’allure. Souple sur les jours de repos."
+                    }
+                }
+            }
+        },
+        "Coati, Sprint Mode": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Coati, mode sprint"
+                    }
+                }
+            }
+        },
+        "Sniffed out a shortcut. Took the long way.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "A flairé un raccourci. A pris le grand tour."
+                    }
+                }
+            }
+        },
+        "Tamandua": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tamandua"
+                    }
+                }
+            }
+        },
+        "Long snout. Short list of excuses.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Long museau. Courte liste d’excuses."
+                    }
+                }
+            }
+        },
+        "Paca": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Paca"
+                    }
+                }
+            }
+        },
+        "Times every lap. Rounds down the snack breaks.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Chronomètre les tours. Arrondit les pauses goûter."
+                    }
+                }
+            }
+        },
+        "Jerboa": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Gerboise"
+                    }
+                }
+            }
+        },
+        "Tiny footprint. Dramatic entrance.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Petite empreinte. Entrée spectaculaire."
+                    }
+                }
+            }
+        },
+        "Thorny Devil, Coffee Break": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Diable cornu, pause café"
+                    }
+                }
+            }
+        },
+        "Sharp outfit. Extremely soft schedule.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tenue piquante. Planning très doux."
+                    }
+                }
+            }
+        },
+        "Kakapo": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Kakapo"
+                    }
+                }
+            }
+        },
+        "Flight cancelled. Walking reluctantly.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Vol annulé. Marche à contrecœur."
+                    }
+                }
+            }
+        },
+        "Secretary Bird, Off Duty": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Messager sagittaire, en pause"
+                    }
+                }
+            }
+        },
+        "This meeting could have been a nap.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cette réunion aurait pu être une sieste."
+                    }
+                }
+            }
+        },
+        "Markhor": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Markhor"
+                    }
+                }
+            }
+        },
+        "Spiralling horns. Perfectly level coffee.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cornes en spirale. Café parfaitement stable."
+                    }
+                }
+            }
+        },
+        "Taken": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Déjà pris"
+                    }
+                }
+            }
+        },
+        "Checking availability…": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Vérification des disponibilités…"
+                    }
+                }
+            }
+        },
+        "Not saved yet": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Pas encore enregistré"
+                    }
+                }
+            }
+        },
+        "Specials": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Spéciaux"
+                    }
+                }
+            }
+        },
+        "Couldn’t load specials. Try again.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Impossible de charger les spéciaux. Réessaie."
+                    }
+                }
+            }
+        },
+        "That special was just claimed. Choose another companion.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ce spécial vient d’être pris. Choisis un autre compagnon."
+                    }
+                }
+            }
+        },
+        "Your special": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Votre Spécial"
+                    }
+                }
+            }
+        },
+        "One of each. One Special per account. Buy once and keep it, even when you change companions.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Un seul exemplaire de chaque. Un Spécial par compte. Achetez-le une fois et gardez-le, même en changeant de compagnon."
+                    }
+                }
+            }
+        },
+        "Restore purchases": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Restaurer les achats"
+                    }
+                }
+            }
+        },
+        "A purchase is in progress. Your Special is held for 30 minutes. Restore purchases to check it.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Un achat est en cours. Votre Spécial est réservé pendant 30 minutes. Restaurez les achats pour vérifier."
+                    }
+                }
+            }
+        },
+        "Request a refund from Apple": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Demander un remboursement à Apple"
+                    }
+                }
+            }
+        },
+        "Purchases unavailable": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Achats indisponibles"
+                    }
+                }
+            }
+        },
+        "Reserved for you": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Réservé pour vous"
+                    }
+                }
+            }
+        },
+        "Cancel checkout": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Annuler cet achat"
+                    }
+                }
+            }
+        },
+        "Deleting your account does not refund Apple purchases. Paid Specials are not resold. Contact support for purchase recovery.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Supprimer votre compte ne rembourse pas les achats Apple. Les Spéciaux achetés ne sont pas revendus. Contactez l’assistance pour récupérer un achat."
+                    }
+                }
+            }
+        },
+        "Purchase this Special before using it.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Achetez ce Spécial avant de l’utiliser."
+                    }
+                }
+            }
+        },
+        "You already own a Special or have a purchase in progress.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Vous possédez déjà un Spécial ou avez un achat en cours."
+                    }
+                }
+            }
+        },
+        "Special purchases are not available yet.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les achats de Spéciaux ne sont pas encore disponibles."
+                    }
+                }
+            }
+        },
+        "This purchase belongs to another FitFight account. Sign in to that account or contact support.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cet achat appartient à un autre compte FitFight. Connectez-vous à ce compte ou contactez l’assistance."
+                    }
+                }
+            }
+        },
+        "Apple is processing your purchase. Your Special is held for 30 minutes.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Apple traite votre achat. Votre Spécial est réservé pendant 30 minutes."
+                    }
+                }
+            }
+        },
+        "Purchase status is unknown. Restore purchases before trying again.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "L’état de l’achat est inconnu. Restaurez les achats avant de réessayer."
+                    }
+                }
+            }
+        },
+        "Purchases checked. Your owned Special is ready to use.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Achats vérifiés. Votre Spécial est prêt à être utilisé."
+                    }
+                }
+            }
+        },
+        "Purchases checked. No completed purchase was found for this account.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Achats vérifiés. Aucun achat terminé n’a été trouvé pour ce compte."
+                    }
+                }
+            }
+        },
+        "Apple could not verify this purchase.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Apple n’a pas pu vérifier cet achat."
+                    }
+                }
+            }
+        },
+        "This purchase could not be assigned. Request a refund from Apple below.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cet achat n’a pas pu vous être attribué. Demandez un remboursement à Apple ci-dessous."
+                    }
+                }
+            }
+        },
+        "Refund requested. Apple will decide and notify you.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Remboursement demandé. Apple vous informera de sa décision."
+                    }
+                }
+            }
+        },
+        "special.buy": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Buy for %@"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Acheter pour %@"
                     }
                 }
             }

@@ -31,6 +31,63 @@ Use Supavisor transaction mode (port `6543`) for `DATABASE_URL`, with prepared s
 
 After a `web/` push, Vercel deploys. iOS uses the User JWT as `Authorization: Bearer <jwt>`.
 
+## Specials purchase setup
+
+The dedicated In-App Purchase credentials are stored as sensitive Vercel
+Preview/Production variables and GitHub secrets: `APPLE_IAP_KEY_ID`,
+`APPLE_IAP_ISSUER_ID`, and `APPLE_IAP_PRIVATE_KEY`. The purchase key is separate
+from the Sign in with Apple and App Store Connect distribution keys.
+
+The 40 non-consumable product records have English/French metadata and Family
+Sharing disabled. All are priced at EUR 0.99 with France as the base territory
+and Apple's automatic equivalent prices elsewhere. The Account Holder has
+signed the Paid Apps Agreement. Apple still requests payout banking and tax
+information from the Account Holder.
+
+Deployment variables (configured separately from the private keys):
+
+| Variable | Preview | Production |
+| --- | --- | --- |
+| `APPLE_IAP_ENVIRONMENT` | `Sandbox` | `Production` |
+| `APPLE_SPECIALS_ENABLED` | `true` | `false` |
+| `APPLE_IAP_REVIEW_USER_IDS` | empty | App Review account IDs |
+
+The paid migration must land before the backend, then the native app. StoreKit
+reserves an edition through `/api/v1/me/specials/checkout` before presenting the
+Apple sheet. A stable server-created account token binds the purchase. Unpaid
+holds lapse after 30 minutes. A later verified charge is owned if the Special is
+still free and the account has no other Special, otherwise it is a refundable
+conflict. The app releases a hold when the user cancels or Apple refuses the
+purchase before charging.
+
+`lib/apple/special-purchase.ts` verifies both the submitted receipt and Apple's
+current transaction. `/api/v1/me/specials/transactions` persists the result in a
+private purchase ledger. Ownership survives companion changes and account
+deletion. Refunds retire the artwork and remove it from the profile; a later
+refund reversal restores ownership. A conflicting verified charge is retained
+and the app offers Apple's refund-request sheet. Apple determines refunds.
+
+The preview release job requires the deployed staging endpoint, then configures
+App Store Server Notifications V2. Apple's test-delivery check only warns:
+`https://staging.fitfight.app/api/apple/specials/notifications/sandbox`.
+The production path is `/api/apple/specials/notifications/production` on the
+production domain, only with its separately authorized rollout. Request and
+verify an Apple test notification before device testing. Notifications and
+restores share signature verification and the same transactional ledger.
+
+Production sale remains disabled, and the app hides Specials while it is. Enable
+it on production while a build is in review. App Review buys in Sandbox, so give
+it a dedicated sign-in and list that FitFight user ID in production
+`APPLE_IAP_REVIEW_USER_IDS`; only listed accounts use the separate Sandbox shelf.
+See [current evidence](../docs/status.md)
+and [Apple purchase research](../docs/research/apple-specials-purchases.md).
+
+`lib/apple/apple-root-certificates.json` contains public DER root certificates
+downloaded from [Apple PKI](https://www.apple.com/certificateauthority/), with
+source URLs and SHA-256 fingerprints. JSON bundling keeps these trust roots in
+the server build; no private key belongs in that file. Certificate-chain and
+online revocation checking use Apple's `SignedDataVerifier`.
+
 ## Local
 
 ```bash

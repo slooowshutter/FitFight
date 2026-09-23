@@ -56,6 +56,12 @@ struct APIContractTests {
             from: JSONSerialization.data(withJSONObject: withCompanionJSON))
         precondition(withCompanion.companionId == "fox")
         precondition(withCompanion.companionPrompt == nil)
+        withCompanionJSON["companion_id"] = "limited-pangolin"
+        let limitedData = try JSONSerialization.data(withJSONObject: withCompanionJSON)
+        let limitedCompanion = try decoder.decode(FitFightProfile.self, from: limitedData)
+        let releasedProfile = try decoder.decode(Build201Profile.self, from: limitedData)
+        precondition(limitedCompanion.companionId == "limited-pangolin")
+        precondition(releasedProfile.companionId == "limited-pangolin" && releasedProfile.companionPrompt == nil)
         withCompanionJSON["companion_id"] = "custom"
         withCompanionJSON["companion_prompt"] = "a cream frenchie with gold sunglasses"
         let customCompanion = try decoder.decode(FitFightProfile.self,
@@ -138,5 +144,46 @@ private struct Build201FightPostComment: Decodable {
         case postId = "post_id"
         case parentId = "parent_id"
         case createdAt = "created_at"
+    }
+}
+
+// Frozen production profile decoder, also used by public build 201.
+
+private struct Build201Profile: Codable, Equatable {
+    let userId: UUID
+    let handle: String
+    let displayName: String
+    let handleSetAt: String?
+    var referralCode: UUID?
+    var avatar: FitFightMedia?
+    var companionId: String? = nil
+    var companionPrompt: String? = nil
+
+    var atHandle: String { "@\(handle)" }
+
+    var looksGenerated: Bool {
+        handle.hasPrefix("user_") && handle.count == 17
+    }
+
+    var initials: String {
+        let parts = displayName.split(separator: " ").filter { !$0.isEmpty }
+        if parts.count >= 2 {
+            return String(parts[0].prefix(1) + parts[1].prefix(1)).uppercased()
+        }
+        if let first = parts.first, !first.isEmpty {
+            return String(first.prefix(2)).uppercased()
+        }
+        return String(handle.prefix(2)).uppercased()
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case handle
+        case displayName = "display_name"
+        case handleSetAt = "handle_set_at"
+        case referralCode = "referral_code"
+        case avatar
+        case companionId = "companion_id"
+        case companionPrompt = "companion_prompt"
     }
 }

@@ -14,7 +14,8 @@
     ],
     "git": {
         "deploymentEnabled": {
-            "profiles-friends-and-stats": false
+            "profiles-friends-and-stats": false,
+            "exclusive-animal-avatars": false
         }
     }
 }

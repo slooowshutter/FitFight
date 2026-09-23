@@ -1482,6 +1482,114 @@ paths:
                                 required: [stored]
                                 properties:
                                     stored: { const: true }
+    /me/specials:
+        get:
+            operationId: readSpecialStore
+            summary: Read the authenticated account's purchase token and exclusive inventory.
+            description: Unpaid holds older than 30 minutes are released before the inventory is read. On production, accounts configured for App Review use the separate Sandbox shelf.
+            security: [{ bearerAuth: [] }]
+            responses:
+                "200":
+                    description: Current purchase state, never cached. No other owner identifiers are returned.
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/SpecialStore" }
+                "401": { description: Invalid or deleted account. }
+                "503": { description: Purchase configuration unavailable. }
+    /me/specials/checkout:
+        post:
+            operationId: specialCheckout
+            summary: Reserve an edition before Apple checkout or cancel the matching attempt.
+            description: An unpaid hold lapses 30 minutes after it is made. A later verified charge is owned if the Special is still free and the account has no other Special, otherwise a refundable conflict. Only a matching unfulfilled reservation can be cancelled. One held or permanently owned Special per account.
+            security: [{ bearerAuth: [] }]
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            additionalProperties: false
+                            required: [action, companion_id, attempt_id]
+                            properties:
+                                action: { type: string, enum: [reserve, cancel] }
+                                companion_id: { type: string, pattern: '^limited-' }
+                                attempt_id: { type: string, format: uuid }
+            responses:
+                "200":
+                    description: Applied or idempotently replayed.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [saved]
+                                properties:
+                                    saved: { const: true }
+                "400": { description: Invalid command. }
+                "401": { description: Invalid or deleted account. }
+                "409": { description: companion_taken or special_limit. }
+                "503": { description: Sales disabled or configuration unavailable. }
+    /me/specials/transactions:
+        post:
+            operationId: claimSpecialPurchase
+            summary: Verify Apple evidence and durably record ownership, refund or conflict.
+            description: The server verifies both submitted and current Apple records. The account token, product and environment must match server state. A conflict is a recorded charge requiring an Apple refund request, never a grant.
+            security: [{ bearerAuth: [] }]
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            additionalProperties: false
+                            required: [companion_id, signed_transaction]
+                            properties:
+                                companion_id: { type: string, pattern: '^limited-' }
+                                signed_transaction: { type: string, minLength: 1, maxLength: 30000 }
+            responses:
+                "200":
+                    description: Durable outcome, safe to replay.
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/SpecialClaimResult" }
+                "400": { description: Invalid or unsupported signed purchase. }
+                "401": { description: Invalid or deleted account. }
+                "403": { description: Account, product or environment mismatch. }
+                "409": { description: Immutable purchase binding conflicts. }
+                "502": { description: Current Apple evidence could not be verified. }
+                "503": { description: Verification or configuration temporarily unavailable. }
+    /api/apple/specials/notifications/{environment}:
+        servers: [{ url: / }]
+        post:
+            operationId: receiveSpecialNotification
+            summary: Apply a verified App Store Server Notification V2.
+            description: Apple signature authentication. The envelope and any transaction are verified for the configured environment before acknowledgement. A notification without a transaction changes nothing.
+            parameters:
+                - name: environment
+                  in: path
+                  required: true
+                  schema: { type: string, enum: [sandbox, production] }
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required: [signedPayload]
+                            properties:
+                                signedPayload: { type: string, minLength: 1, maxLength: 100000 }
+            responses:
+                "200":
+                    description: Handled or replayed.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [received]
+                                properties:
+                                    received: { const: true }
+                "400": { description: Invalid signature, payload or deployment environment. }
+                "404": { description: Unknown environment. }
+                "503": { description: Verification temporarily unavailable. }
     /me:
         get:
             operationId: readProfile
@@ -1501,7 +1609,7 @@ paths:
         patch:
             operationId: updateProfile
             summary: Update the authenticated User's handle, display name, or both.
-            description: Omitted fields remain unchanged. The server derives ownership and sets handle_set_at when a handle is supplied.
+            description: Omitted fields remain unchanged. The server derives ownership and sets handle_set_at when a handle is supplied. Equipping an unowned Special returns 403 special_purchase_required; paid ownership is never changed by this endpoint.
             security: [{ bearerAuth: [] }]
             parameters:
                 - { $ref: "#/components/parameters/AppVersion" }
@@ -1521,6 +1629,7 @@ paths:
                     description: validation for an empty patch, invalid field, or caller-supplied ownership/timestamp.
                 "401":
                     description: unauthorized for an invalid session; profile_missing for a missing or deleted account.
+                "403": { description: special_purchase_required when equipping a Special this account does not own. }
                 "409":
                     description: handle_taken when the username already belongs to an account.
         delete:
@@ -2602,6 +2711,10 @@ components:
                 display_name: { type: string }
                 handle_set_at: { type: [string, "null"], format: date-time }
                 referral_code: { type: string, format: uuid }
+                companion_id:
+                    type: [string, "null"]
+                    description: Stable animal edition ID or custom; older clients tolerate unfamiliar strings.
+                companion_prompt: { type: [string, "null"] }
                 time_zone:
                     type: string
                     description: Saved personal IANA time zone, or UTC for legacy unset accounts; optional for older responses.
@@ -2610,6 +2723,13 @@ components:
             additionalProperties: false
             minProperties: 1
             properties:
+                companion_id:
+                    type: string
+                    description: Stock animal ID, the ID of a Special this account owns (see /me/specials), or custom. Switching animals never releases a purchased Special.
+                companion_prompt:
+                    type: [string, "null"]
+                    maxLength: 1000
+                    description: Required and nonempty for custom; null for stock and limited editions.
                 time_zone:
                     type: string
                     description: Save a personal IANA time zone. Omission preserves the existing setting.
@@ -2649,6 +2769,32 @@ components:
                 enforced:
                     type: boolean
                     description: Always false on staging, where TestFlight updates are optional. Production follows the published mandatory-update policy.
+        SpecialClaimResult:
+            type: object
+            required: [outcome, transaction_id, companion_id]
+            properties:
+                outcome: { type: string, enum: [owned, refunded, conflict] }
+                transaction_id: { type: string }
+                companion_id: { type: string, pattern: '^limited-' }
+        SpecialStore:
+            type: object
+            required: [app_account_token, environment, purchases_enabled, editions, conflicts]
+            properties:
+                app_account_token: { type: string, format: uuid }
+                environment: { type: string, enum: [Sandbox, Production] }
+                purchases_enabled: { type: boolean }
+                editions:
+                    type: array
+                    items:
+                        type: object
+                        required: [id, product_id, status]
+                        properties:
+                            id: { type: string, pattern: '^limited-' }
+                            product_id: { type: string }
+                            status: { type: string, enum: [available, reserved, yours, taken, refunded] }
+                conflicts:
+                    type: array
+                    items: { $ref: "#/components/schemas/SpecialClaimResult" }
         ApiError:
             type: object
             additionalProperties: false

@@ -53,6 +53,7 @@ struct FitFightApp: App {
     @StateObject private var themeStore: ThemeStore
     @StateObject private var model: AppModel
     @StateObject private var companions = CompanionStore()
+    @StateObject private var specialPurchases = SpecialPurchases()
     @StateObject private var preferences = AccountPreferencesStore()
     @StateObject private var appUpdate = AppUpdateChecker.shared
     @StateObject private var session: SessionStore
@@ -73,6 +74,12 @@ struct FitFightApp: App {
             let state = CompanionPreview.DisplayState(rawValue: ProcessInfo.processInfo.environment["FF_COMPANION_STATE"] ?? "") ?? .populated
             let model = CompanionPreview.model(state: state)
             model.showCompanionPreviewState(state)
+            let companions = CompanionStore()
+            if ProcessInfo.processInfo.environment["FF_COMPANION_PICKER"] == "1" {
+                model.tab = .you
+                companions.selection = .limitedPangolin
+                companions.showingPicker = true
+            }
             if ScreenshotExport.isEnabled {
                 switch ProcessInfo.processInfo.environment["FF_SHOT"] {
                 case "fight": model.openFightID = CompanionPreview.duelID
@@ -91,6 +98,7 @@ struct FitFightApp: App {
             _session = StateObject(wrappedValue: session)
             _steps = StateObject(wrappedValue: steps)
             _feed = StateObject(wrappedValue: feed)
+            _companions = StateObject(wrappedValue: companions)
             return
         }
         #endif
@@ -109,6 +117,7 @@ struct FitFightApp: App {
                 .environmentObject(themeStore)
                 .environmentObject(model)
                 .environmentObject(companions)
+                .environmentObject(specialPurchases)
                 .environmentObject(preferences)
                 .environment(\.locale, AppLocalization.locale)
                 .environmentObject(session)
@@ -117,6 +126,10 @@ struct FitFightApp: App {
                 .environmentObject(appUpdate)
                 .environmentObject(push)
                 .fitFightTheme(themeStore.theme)
+                .task(id: session.profile?.userId) {
+                    guard !CompanionPreview.isEnabled, !ScreenshotExport.isEnabled else { return }
+                    await specialPurchases.observe(session: session)
+                }
                 .onChange(of: session.authSession?.user.id, initial: true) { _, userID in
                     guard !CompanionPreview.isEnabled, !ScreenshotExport.isEnabled else { return }
                     preferences.activate(userID: userID)

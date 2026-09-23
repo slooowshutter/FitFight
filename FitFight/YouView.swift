@@ -172,6 +172,7 @@ struct YouView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This permanently deletes your profile, photos, uploaded Steps, referrals, invitations, fights you created, and bugs or requests you posted; removes you from other fights; and signs you out. This can’t be undone.")
+            Text("Deleting your account does not refund Apple purchases. Paid Specials are not resold. Contact support for purchase recovery.")
         }
     }
 

@@ -199,6 +199,10 @@ test("a processing failure keeps the received page, and the worker resumes it", 
     assert.deepEqual(await receiveHealthKitActivity(f.owner, page, database), { received: 1, processing: "pending" });
     const [failed] = await database`select processing_state, processing_error is not null as has_error from private.activity_raw where user_id = ${f.owner}`;
     assert.deepEqual(failed, { processing_state: "failed", has_error: true });
+    await database`update private.activity_raw set processing_attempts = 5 where user_id = ${f.owner}`;
+    assert.equal(await processActivity({ userId: f.owner }, database), "pending",
+        "Exhausted failures remain unprocessed in the acknowledgement");
+    await database`update private.activity_raw set processing_attempts = 1 where user_id = ${f.owner}`;
 
     await database`alter table private.activity_metrics drop constraint activity_metrics_test_block`;
     assert.deepEqual(await receiveHealthKitActivity(f.owner, page, database), { received: 1, processing: "processed" },

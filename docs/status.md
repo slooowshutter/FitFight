@@ -1,12 +1,22 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **20 Sep 2026**. Production release: **1.1.1 (202)**.
+Read this before building. Last updated **23 Sep 2026**. Production release: **1.1.1 (202)**.
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
 ---
 
-**Last TestFlight:** 19 Sep 2026 at 13:14 UTC. **1.1.2 (204)** from preview merge `c80e642`, including develop `f206592`. [Upload and Apple processing succeeded](https://github.com/slooowshutter/FitFight/actions/runs/35444706489): `VALID`, unexpired, available to Internal Tester. This upload did not submit or assign external groups. The published release registry lists `latest` 1.1.1 (201) and `review`/`internal` 1.1.2 (204). At the 13:18 UTC recheck, staging's live release endpoint still returned candidate 203 with enforcement off; its metadata propagation does not block internal build 204. Production remains 1.1.1 (202).
+**Last documented TestFlight upload:** 19 Sep 2026 at 13:14 UTC. **1.1.2 (204)** from preview merge `c80e642`, including develop `f206592`. [Upload and Apple processing succeeded](https://github.com/slooowshutter/FitFight/actions/runs/35444706489): `VALID`, unexpired, available to Internal Tester. This upload did not submit or assign external groups. The published release registry then listed `latest` 1.1.1 (201) and `review`/`internal` 1.1.2 (204). At the 13:18 UTC recheck on 19 Sep, staging's live release endpoint still returned candidate 203 with enforcement off; its metadata propagation did not block internal build 204. Production remained 1.1.1 (202). See the 23 Sep live policy check below for current advertised builds.
+
+## Fight creation transaction: reviewed 23 Sep 2026
+
+**Code and contract:** `POST /api/v1/fights` still accepts the existing create request, including omitted `start`, `visibility`, and `recurring` fields, and returns the existing `{ id, state }` response. The backend now resolves and deduplicates invitees before writing, then inserts the series, round, owner and invited memberships, invite records, and notification intents in one Postgres transaction. The route, request schema, response shape, tables, and client permissions are unchanged. This backend change needs no database migration or native API update; it does not authorize retiring older clients.
+
+**Supported builds checked:** Read-only `/api/app-release` checks at **11:45 UTC on 23 Sep** returned staging `latest` **1.1.1 (201)**, `review`/`internal` **1.1.2 (205)**, `enforced: false`; production `latest` **1.1.1 (202)**, no review/internal build, `enforced: true`. These are admitted release-policy builds, not proof that build 205 or every older installed TestFlight client has been exercised against this branch. The existing create request defaults and `{ id, state }` response remain compatible with the released native call shape. Legacy clients must remain supported on staging while enforcement is off.
+
+**Checks:** In this workspace on 23 Sep, `npm run typecheck` and all **324** `npm test` cases passed from `web/`. The Fight creation tests cover immediate and scheduled rounds, default fields, duplicate invite handles, and the new SQL statements through a mocked transaction. No disposable cloud database transaction test, released-client HTTP regression against this changed backend, or new GitHub cloud CI run has been recorded for this workspace.
+
+**Deployment order and live state:** Read-only staging and production `/api/health` checks at 11:45 UTC on 23 Sep returned `schema: ready` and `profile_api: true`; they do not show that this workspace's code is deployed. No merge, hosted database write, backend deployment, TestFlight upload, or production promotion was performed for this change. Before an authorized staging promotion, verify the transaction against a disposable cloud database and preserve representative older create requests and responses. Deploy the compatible backend through `develop`, verify authenticated creation and invitations on staging with admitted builds, and keep the same API contract for any later authorized `preview` and `main` promotions.
 
 ## Preview promotion, 19 Sep 2026
 

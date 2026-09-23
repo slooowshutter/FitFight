@@ -19,7 +19,8 @@ final class ProfileScreenStore: ObservableObject {
         error = nil
     }
 
-    func load(userID: UUID, session: SessionStore, preview: String? = nil) async {
+    /// You shows only the record and statistics, so it skips the history request.
+    func load(userID: UUID, session: SessionStore, preview: String? = nil, includeHistory: Bool = true) async {
         clear()
         let requestGeneration = generation
         let accountID = session.authSession?.user.id
@@ -27,13 +28,11 @@ final class ProfileScreenStore: ObservableObject {
         defer { if requestGeneration == generation { loading = false } }
         do {
             let token = try await session.freshAccessToken()
-            let loaded = try await FitFightAPI().sharedProfile(userID: userID, preview: preview, accessToken: token)
-            let page: ProfileHistoryPage?
-            if preview == nil {
-                page = try await FitFightAPI().profileHistory(userID: userID, shared: userID != accountID, accessToken: token)
-            } else {
-                page = nil
-            }
+            async let profileRequest = FitFightAPI().sharedProfile(userID: userID, preview: preview, accessToken: token)
+            let page: ProfileHistoryPage? = preview == nil && includeHistory
+                ? try await FitFightAPI().profileHistory(userID: userID, shared: userID != accountID, accessToken: token)
+                : nil
+            let loaded = try await profileRequest
             try Task.checkCancellation()
             guard requestGeneration == generation, accountID == session.authSession?.user.id else { return }
             profile = loaded

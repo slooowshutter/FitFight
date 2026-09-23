@@ -5,6 +5,10 @@
     <key>UIAppFonts</key>
     <array>
         <string>GoogleSans.ttf</string>
+        <string>Nunito-Medium.ttf</string>
+        <string>Nunito-SemiBold.ttf</string>
+        <string>Nunito-Bold.ttf</string>
+        <string>Nunito-ExtraBold.ttf</string>
     </array>
     <key>CFBundleURLTypes</key>
     <array>

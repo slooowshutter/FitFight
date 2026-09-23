@@ -24,6 +24,4 @@ export const POST = apiRoute(async (request, { timing }) => {
     );
 }, "healthkit_upload");
 
-export function OPTIONS(request: Request) {
-    return corsPreflight(request);
-}
+export const OPTIONS = corsPreflight;

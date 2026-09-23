@@ -34,29 +34,20 @@ enum SupabaseConfig {
     }
 
     static let projectURL: URL = {
-        if let raw = firstNonEmpty(BuildEnv.supabaseURL, bundleString("FFSupabaseURL")),
+        if let raw = configuredValue(BuildEnv.supabaseURL, infoKey: "FFSupabaseURL"),
            let url = URL(string: raw) {
             return url
         }
         return fallbackURL
     }()
 
-    static let publishableKey = firstNonEmpty(
-        BuildEnv.supabasePublishableKey,
-        bundleString("FFSupabasePublishableKey")
-    ) ?? fallbackPublishableKey
+    static let publishableKey = configuredValue(BuildEnv.supabasePublishableKey, infoKey: "FFSupabasePublishableKey")
+        ?? fallbackPublishableKey
+}
 
-    static var isConfigured: Bool {
-        publishableKey.hasPrefix("sb_publishable_")
-    }
-
-    private static func bundleString(_ key: String) -> String {
-        (Bundle.main.object(forInfoDictionaryKey: key) as? String) ?? ""
-    }
-
-    private static func firstNonEmpty(_ values: String...) -> String? {
-        values
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .first { !$0.isEmpty }
-    }
+/// A CI-injected `BuildEnv` value wins, then Info.plist; blank means unset.
+func configuredValue(_ injected: String, infoKey: String) -> String? {
+    [injected, Bundle.main.object(forInfoDictionaryKey: infoKey) as? String ?? ""]
+        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        .first { !$0.isEmpty }
 }

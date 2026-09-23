@@ -21,6 +21,4 @@ export const PATCH = apiRoute(async (request) => {
     return json(await updateAccountPreferences(userId, parsed.data));
 });
 
-export function OPTIONS(request: Request) {
-    return corsPreflight(request);
-}
+export const OPTIONS = corsPreflight;

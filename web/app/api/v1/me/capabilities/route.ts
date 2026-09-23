@@ -8,4 +8,4 @@ export const GET = apiRoute(async (request) => {
     const { userId } = await verifyUser(request);
     return json({ manage_fights: canAdministerFights(userId) });
 });
-export function OPTIONS(request: Request) { return corsPreflight(request); }
+export const OPTIONS = corsPreflight;

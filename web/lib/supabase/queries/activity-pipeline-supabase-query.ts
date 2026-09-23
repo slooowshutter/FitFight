@@ -257,7 +257,6 @@ export async function processActivity(
         from private.activity_raw
         where user_id = ${userId}
             and processing_state <> 'processed'
-            and (processing_state <> 'failed' or processing_attempts < ${MAX_PROCESSING_ATTEMPTS})
     `;
     return remaining.count === 0 ? "processed" : "pending";
 }

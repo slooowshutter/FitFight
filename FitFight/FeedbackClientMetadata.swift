@@ -151,38 +151,4 @@ extension FitFightFeedbackMetadata: Codable {
         case screenWidth = "screen_width"
         case screenHeight = "screen_height"
     }
-
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encodeIfPresent(appVersion, forKey: .appVersion)
-        try container.encodeIfPresent(appBuild, forKey: .appBuild)
-        try container.encodeIfPresent(backend, forKey: .backend)
-        try container.encodeIfPresent(bundleId, forKey: .bundleId)
-        try container.encodeIfPresent(language, forKey: .language)
-        try container.encodeIfPresent(preferredLanguages, forKey: .preferredLanguages)
-        try container.encodeIfPresent(locale, forKey: .locale)
-        try container.encodeIfPresent(region, forKey: .region)
-        try container.encodeIfPresent(timeZone, forKey: .timeZone)
-        try container.encodeIfPresent(calendar, forKey: .calendar)
-        try container.encodeIfPresent(hourCycle, forKey: .hourCycle)
-        try container.encodeIfPresent(measurementSystem, forKey: .measurementSystem)
-        try container.encodeIfPresent(os, forKey: .os)
-        try container.encodeIfPresent(osVersion, forKey: .osVersion)
-        try container.encodeIfPresent(deviceModel, forKey: .deviceModel)
-        try container.encodeIfPresent(idiom, forKey: .idiom)
-        try container.encodeIfPresent(look, forKey: .look)
-        try container.encodeIfPresent(appearance, forKey: .appearance)
-        try container.encodeIfPresent(layoutDirection, forKey: .layoutDirection)
-        try container.encodeIfPresent(contentSize, forKey: .contentSize)
-        try container.encodeIfPresent(reduceMotion, forKey: .reduceMotion)
-        try container.encodeIfPresent(boldText, forKey: .boldText)
-        try container.encodeIfPresent(increaseContrast, forKey: .increaseContrast)
-        try container.encodeIfPresent(voiceOver, forKey: .voiceOver)
-        try container.encodeIfPresent(lowPowerMode, forKey: .lowPowerMode)
-        try container.encodeIfPresent(thermalState, forKey: .thermalState)
-        try container.encodeIfPresent(backgroundRefresh, forKey: .backgroundRefresh)
-        try container.encodeIfPresent(screenScale, forKey: .screenScale)
-        try container.encodeIfPresent(screenWidth, forKey: .screenWidth)
-        try container.encodeIfPresent(screenHeight, forKey: .screenHeight)
-    }
 }

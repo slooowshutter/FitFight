@@ -21,6 +21,4 @@ export const GET = apiRoute(async (request) => {
     return json(await listFeedPeople(userId, parsed.data));
 });
 
-export function OPTIONS(request: Request) {
-    return corsPreflight(request);
-}
+export const OPTIONS = corsPreflight;

@@ -13,6 +13,4 @@ export const GET = apiRoute<{ userID: string }>(async (request, { params }) => {
     return json(await readSharedProfile(userId, targetId, query.preview));
 });
 
-export function OPTIONS(request: Request) {
-    return corsPreflight(request);
-}
+export const OPTIONS = corsPreflight;

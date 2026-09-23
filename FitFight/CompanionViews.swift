@@ -99,80 +99,16 @@ enum CompanionEffortStage: Int, CaseIterable, Identifiable {
         if case .steps(let count) = status { return matching(todaySteps: count) }
         return .rest
     }
-
-    func label(for sport: CompanionSport) -> String {
-        sport.stageLabel(self)
-    }
 }
 
-enum CompanionSport: String, CaseIterable, Identifiable, Codable {
+/// Only restored from older builds that offered a sport picker; the goat has hiking poses.
+enum CompanionSport: String {
     case hiking, running, football, ski, walking
-
-    var id: String { rawValue }
-
-    var name: String {
-        switch self {
-        case .hiking: String(appLocalized: "Hiking")
-        case .running: String(appLocalized: "Running")
-        case .football: String(appLocalized: "Football")
-        case .ski: String(appLocalized: "Ski")
-        case .walking: String(appLocalized: "Walking")
-        }
-    }
-
-    func stageLabel(_ stage: CompanionEffortStage) -> String {
-        switch (self, stage) {
-        case (.hiking, .rest): String(appLocalized: "Resting")
-        case (.hiking, .headingOut): String(appLocalized: "Heading out")
-        case (.hiking, .onTheMove): String(appLocalized: "On the trail")
-        case (.hiking, .pushing): String(appLocalized: "Climbing")
-        case (.hiking, .peak): String(appLocalized: "At the peak")
-        case (.running, .rest): String(appLocalized: "On the bench")
-        case (.running, .headingOut): String(appLocalized: "Warming up")
-        case (.running, .onTheMove): String(appLocalized: "Jogging")
-        case (.running, .pushing): String(appLocalized: "Racing")
-        case (.running, .peak): String(appLocalized: "Finish line")
-        case (.football, .rest): String(appLocalized: "On the sideline")
-        case (.football, .headingOut): String(appLocalized: "Warming up")
-        case (.football, .onTheMove): String(appLocalized: "On the pitch")
-        case (.football, .pushing): String(appLocalized: "In the match")
-        case (.football, .peak): String(appLocalized: "After the whistle")
-        case (.ski, .rest): String(appLocalized: "In the lodge")
-        case (.ski, .headingOut): String(appLocalized: "At the lift")
-        case (.ski, .onTheMove): String(appLocalized: "On the slope")
-        case (.ski, .pushing): String(appLocalized: "Carving")
-        case (.ski, .peak): String(appLocalized: "At the summit")
-        case (.walking, .rest): String(appLocalized: "At home")
-        case (.walking, .headingOut): String(appLocalized: "Stepping out")
-        case (.walking, .onTheMove): String(appLocalized: "On the path")
-        case (.walking, .pushing): String(appLocalized: "A long loop")
-        case (.walking, .peak): String(appLocalized: "Back with a view")
-        }
-    }
-}
-
-enum CompanionEmotion: String, CaseIterable, Identifiable, Codable {
-    case calm, determined, smug, playful, fierce
-
-    var id: String { rawValue }
-
-    var name: String {
-        switch self {
-        case .calm: String(appLocalized: "Calm")
-        case .determined: String(appLocalized: "Determined")
-        case .smug: String(appLocalized: "Smug")
-        case .playful: String(appLocalized: "Playful")
-        case .fierce: String(appLocalized: "Fierce")
-        }
-    }
 }
 
 private struct CompanionIdentityRecord: Codable {
     var animal: String
     var sport: String
-    var emotion: String
-    var breed: String
-    var accessories: String
     var isCustom: Bool?
 }
 
@@ -181,9 +117,6 @@ private struct CompanionIdentityRecord: Codable {
 final class CompanionStore: ObservableObject {
     @Published var selection: StockCompanion = .badger
     @Published var sport: CompanionSport = .hiking { didSet { persist() } }
-    @Published var emotion: CompanionEmotion = .calm { didSet { persist() } }
-    @Published var breed = "" { didSet { persist() } }
-    @Published var accessories = "" { didSet { persist() } }
     @Published var isCustom = false
     @Published var customPrompt = ""
     @Published private(set) var savedPrompts: [String] = []
@@ -361,9 +294,6 @@ final class CompanionStore: ObservableObject {
         else { return }
         isRestoring = true
         sport = CompanionSport(rawValue: saved.sport) ?? .hiking
-        emotion = CompanionEmotion(rawValue: saved.emotion) ?? .calm
-        breed = saved.breed
-        accessories = saved.accessories
         if saved.isCustom != true, let animal = StockCompanion(rawValue: saved.animal) {
             applyChoice(id: animal.rawValue, prompt: nil)
         }
@@ -375,9 +305,6 @@ final class CompanionStore: ObservableObject {
         let record = CompanionIdentityRecord(
             animal: selection.rawValue,
             sport: sport.rawValue,
-            emotion: emotion.rawValue,
-            breed: breed,
-            accessories: accessories,
             isCustom: isCustom
         )
         UserDefaults.standard.set(try? JSONEncoder().encode(record), forKey: Self.storageKey)

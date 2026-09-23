@@ -11,6 +11,4 @@ export const POST = apiRoute(async (request) => {
     return json(result);
 });
 
-export function OPTIONS(request: Request) {
-    return corsPreflight(request);
-}
+export const OPTIONS = corsPreflight;

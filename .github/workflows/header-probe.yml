@@ -16,9 +16,10 @@ jobs:
               run: |
                   xcodebuild -project FitFight.xcodeproj -scheme FitFight -configuration Debug \
                     -destination 'generic/platform=iOS Simulator' -derivedDataPath build \
+                    ARCHS=arm64 \
                     CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES CODE_SIGN_STYLE=Manual \
                     CODE_SIGN_IDENTITY=- build > /tmp/header-build.log 2>&1 || \
-                    (tail -100 /tmp/header-build.log && exit 1)
+                    (grep -nE 'error:|BUILD FAILED' /tmp/header-build.log | tail -40 && exit 1)
             - name: Capture scrolled header
               run: |
                   set -euo pipefail

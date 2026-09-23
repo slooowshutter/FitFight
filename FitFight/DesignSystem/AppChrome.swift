@@ -140,6 +140,10 @@ struct FFScreen<Content: View>: View {
                     .transition(.opacity)
                 }
             }
+            .frame(minHeight: theme.space.sm)
+            .frame(maxWidth: .infinity)
+            // The inset must cover the status area while the scroll view moves beneath it.
+            .background(theme.bg.ignoresSafeArea(edges: .top))
         }
         .onChange(of: refresh?.message ?? "") { _, message in
             if !message.isEmpty {

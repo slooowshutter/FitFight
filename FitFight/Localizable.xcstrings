@@ -21,6 +21,16 @@
                 }
             }
         },
+        "Scrolling screens keep a clear top header, so section titles and cards no longer show behind the iPhone status bar or the version line on You.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les écrans défilants gardent un en-tête dégagé : les titres et les cartes ne passent plus derrière la barre d’état de l’iPhone ni derrière la version en haut de Vous."
+                    }
+                }
+            }
+        },
         "Signing in with Google opens the FitFight account that already uses that email, including Sign in with Apple.": {
             "localizations": {
                 "fr": {

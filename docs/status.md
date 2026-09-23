@@ -8,6 +8,14 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last documented TestFlight upload:** 19 Sep 2026 at 13:14 UTC. **1.1.2 (204)** from preview merge `c80e642`, including develop `f206592`. [Upload and Apple processing succeeded](https://github.com/slooowshutter/FitFight/actions/runs/35444706489): `VALID`, unexpired, available to Internal Tester. This upload did not submit or assign external groups. The published release registry then listed `latest` 1.1.1 (201) and `review`/`internal` 1.1.2 (204). At the 13:18 UTC recheck on 19 Sep, staging's live release endpoint still returned candidate 203 with enforcement off; its metadata propagation did not block internal build 204. Production remained 1.1.1 (202). See the 23 Sep live policy check below for current advertised builds.
 
+## Top header overlap: prepared 23 Sep 2026
+
+**Code:** The shared `FFScreen` now keeps an eight-point pinned top inset and paints it through the iPhone safe area. Scrolling sections cannot show behind the status bar or the version line on You. The version label remains on You only. A 1.1.2 release note and English/French copy are included. No API, database, or release setting changed.
+
+**Verification:** A [hosted iPhone 17 simulator probe](https://github.com/slooowshutter/FitFight/actions/runs/35873299914) of the original screen shell reproduced the overlap with 40,182 colored pixels in the pinned header region. The [corrected hosted build and capture](https://github.com/slooowshutter/FitFight/actions/runs/35875860093) passed with zero colored pixels there. The simulator-only probe and temporary CI workflow were removed. A [hosted build and You capture](https://github.com/slooowshutter/FitFight/actions/runs/35878501603) passed with the TestFlight update toast code present. Local localization, native state, native API boundary, and whitespace checks passed. No merge into develop/preview/main, TestFlight upload, or production deployment has occurred.
+
+**Latest merge:** After merging develop `4ec2450d`, Web typechecking and all 423 unit tests passed locally. Localization, Xcode project syntax, native state, native API boundary, onboarding, profile interaction, Fight localization, and Special purchase checks also passed. The combined revision still needs its PR simulator build. No deployment or TestFlight upload occurred.
+
 ## Quieter notifications and complete controls: prepared 20 Sep 2026
 
 **Code:** You > Settings > Preferences > Notifications has a master switch and

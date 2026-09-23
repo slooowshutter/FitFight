@@ -43,7 +43,7 @@ export function measurementFromRaw(
             metric: "duration",
             value: workout.duration_seconds,
             unit: "s",
-            details: { activity_type: workout.activity_type },
+            details: { activity_type: workout.activity_type, effort: workout.effort ?? null },
         }];
         const values = [
             { metric: "active_minutes", value: workout.active_minutes, unit: "min" },

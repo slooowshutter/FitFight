@@ -41,8 +41,9 @@ Rollout order after authorization: apply the additive migration and backfill,
 deploy the compatible backend, then distribute the native build. Old backend
 instances may keep writing legacy daily rows during rollout. The Profile reader
 selects the newest row from both stores during this overlap; a later activity
-measurement becomes authoritative without waiting for another user sync. Keep `/api/v1`, old tables, and client
-permissions through the supported-build overlap. This branch has no live deploy.
+measurement becomes authoritative without waiting for another user sync.
+Keep `/api/v1`, old tables, and client permissions through the supported-build
+overlap. This branch has no live deploy.
 
 ## Application database boundary
 

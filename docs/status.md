@@ -35,7 +35,8 @@ and [disposable Database](https://github.com/slooowshutter/FitFight/actions/runs
 passed after the backend fixes. [Web API after the English/French privacy edits](https://github.com/slooowshutter/FitFight/actions/runs/35873902894)
 passed. The [hosted simulator run](https://github.com/slooowshutter/FitFight/actions/runs/35874769562)
 passed native regressions and full simulator compilation at `1146030`. Later
-branch commits changed only workflows and documentation. Background delivery,
+branch commits changed backend code, workflows, and documentation but no Swift.
+Background delivery,
 initial history duration, and corrections from a real HealthKit store remain
 device checks. No individual user data was used in CI.
 

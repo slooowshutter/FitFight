@@ -34,9 +34,10 @@ not a released-binary or signed-in device check for build 205.
 and [disposable Database](https://github.com/slooowshutter/FitFight/actions/runs/35872572227)
 passed after the backend fixes. [Web API after the English/French privacy edits](https://github.com/slooowshutter/FitFight/actions/runs/35873902894)
 passed. The [hosted simulator run](https://github.com/slooowshutter/FitFight/actions/runs/35874769562)
-is queued for native compilation and regressions. Background delivery, initial
-history duration, and corrections from a real HealthKit store remain device
-checks. No individual user data was used in CI.
+passed native regressions and full simulator compilation at `1146030`. Later
+branch commits changed only workflows and documentation. Background delivery,
+initial history duration, and corrections from a real HealthKit store remain
+device checks. No individual user data was used in CI.
 
 **Deployment order and live state:** Apply the additive migration and backfill,
 then deploy the compatible backend and English/French privacy pages before a new

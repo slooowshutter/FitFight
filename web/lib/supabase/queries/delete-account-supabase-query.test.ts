@@ -64,6 +64,8 @@ test("account deletion removes owned Fights and every user-owned row before the 
         "public.fight_series",
         "public.fight_series_members",
         "private.fight_score_snapshots",
+        "private.activity_metrics",
+        "private.activity_raw",
         "private.metric_observations",
         "private.provider_events",
         "private.provider_uploads",

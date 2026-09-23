@@ -1,4 +1,5 @@
 import { ApiError, ERROR_CODES, apiRoute, json } from "@/lib/http";
+import { processActivity } from "@/lib/supabase/queries/activity-pipeline-supabase-query";
 import { closeDueFights } from "@/lib/supabase/queries/close-due-fights-supabase-query";
 import { pruneProfileEvents } from "@/lib/supabase/queries/profile-events-supabase-query";
 
@@ -24,8 +25,10 @@ function requireCron(request: Request): void {
 async function handle(request: Request) {
     requireCron(request);
     await pruneProfileEvents();
+    // Resume received activity first, so a Fight closes with every reading that already arrived.
+    const activity = await processActivity({ limit: 500, budgetMs: 20_000 });
     const result = await closeDueFights();
-    return json({ ok: true, ...result });
+    return json({ ok: true, activity, ...result });
 }
 
 export const GET = apiRoute(handle);

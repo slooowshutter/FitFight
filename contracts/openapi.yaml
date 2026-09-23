@@ -1375,6 +1375,33 @@ paths:
                                 {
                                     $ref: "#/components/schemas/HealthKitStepSyncResult",
                                 }
+    /healthkit/activity:
+        post:
+            operationId: syncHealthKitActivity
+            summary: Receive Apple-merged daily totals and workout records, then resolve them.
+            description: >-
+                A 200 means every record is durably received, so the app may advance its
+                collection checkpoints. `processing` says whether the resolver already published
+                the resulting measurements or will finish later. Retrying the same page is safe.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            { $ref: "#/components/schemas/HealthKitActivityBatch" }
+            responses:
+                "200":
+                    description: Records received
+                    content:
+                        application/json:
+                            schema:
+                                {
+                                    $ref: "#/components/schemas/HealthKitActivityBatchResult",
+                                }
     /healthkit/diagnostics:
         post:
             operationId: saveHealthKitDiagnosticSnapshot
@@ -2896,6 +2923,75 @@ components:
                 complete_through: { type: string, format: date-time }
                 synced_days: { type: integer, minimum: 0 }
                 synced_fights: { type: integer, minimum: 0 }
+                processing:
+                    type: string
+                    enum: [processed, pending]
+                    description: Added for new clients. Older backends omit it; older apps ignore it.
+        HealthKitActivityBatch:
+            type: object
+            additionalProperties: false
+            required: [collected_at, time_zone]
+            properties:
+                collected_at: { type: string, format: date-time }
+                time_zone: { type: string, minLength: 1, maxLength: 100 }
+                totals:
+                    type: array
+                    maxItems: 1000
+                    items: { $ref: "#/components/schemas/HealthKitDayTotal" }
+                workouts:
+                    type: array
+                    maxItems: 200
+                    items: { $ref: "#/components/schemas/HealthKitWorkout" }
+                deleted_workouts:
+                    type: array
+                    maxItems: 500
+                    description: HealthKit UUIDs of explicitly deleted workouts.
+                    items: { type: string, format: uuid }
+        HealthKitDayTotal:
+            type: object
+            additionalProperties: false
+            required: [metric, day, starts_at, ends_at, value, unit]
+            description: Apple's merged total for one civil day in the batch time zone.
+            properties:
+                metric:
+                    type: string
+                    enum:
+                        [
+                            steps,
+                            active_energy,
+                            resting_energy,
+                            walking_running_distance,
+                            exercise_minutes,
+                            stand_minutes,
+                            stand_hours,
+                            flights_climbed,
+                            cycling_distance,
+                            swimming_distance,
+                            move_time_minutes,
+                            wheelchair_distance,
+                            wheelchair_pushes,
+                            swimming_strokes,
+                            rowing_distance,
+                            paddle_distance,
+                            skating_distance,
+                            cross_country_ski_distance,
+                            downhill_snow_distance,
+                        ]
+                day: { type: string, format: date }
+                starts_at: { type: string, format: date-time }
+                ends_at:
+                    type: string
+                    format: date-time
+                    description: The civil-day end, or collected_at for the current day.
+                value: { type: number, minimum: 0 }
+                unit: { type: string }
+        HealthKitActivityBatchResult:
+            type: object
+            additionalProperties: false
+            required: [received, processing]
+            properties:
+                received: { type: integer, minimum: 0 }
+                processing: { type: string, enum: [processed, pending] }
         HealthKitDiagnosticSnapshot:
             type: object
             additionalProperties: false

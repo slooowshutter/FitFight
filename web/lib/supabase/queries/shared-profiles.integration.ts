@@ -19,6 +19,24 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = env.SUPABASE_TEST_SERVICE_KEY;
 const database = postgres(env.DATABASE_URL, { max: 5 });
 after(() => database.end());
 
+/** Profiles read resolved day measurements; seed them the way the activity resolver stores them. */
+async function seedStepDays(
+    userId: string,
+    sourceId: string,
+    days: PromiseLike<{ day: string; value: number; time_zone: string; complete: boolean }[]>,
+) {
+    for (const row of await days) {
+        await database`
+            insert into private.activity_metrics(user_id, source_id, scope, scope_key, metric, starts_at, ends_at,
+                observed_through, day, time_zone, value, unit, input_ids, calculation_version)
+            select ${userId}, ${sourceId}, 'day', ${row.day}::date::text, 'steps', bounds.starts_at, bounds.ends_at,
+                case when ${row.complete} then bounds.ends_at else bounds.starts_at + interval '1 hour' end,
+                ${row.day}::date, ${row.time_zone}, ${row.value}, 'steps', array[gen_random_uuid()], 1
+            from (select ${row.day}::date::timestamp at time zone ${row.time_zone} as starts_at,
+                (${row.day}::date + 1)::timestamp at time zone ${row.time_zone} as ends_at) bounds`;
+    }
+}
+
 test("shared activity uses one saved personal time zone across travel", async (t) => {
     const users = [randomUUID(), randomUUID()];
     const [owner, friend] = users;
@@ -30,11 +48,11 @@ test("shared activity uses one saved personal time zone across travel", async (t
     await database`update public.profiles set time_zone = 'Pacific/Kiritimati' where user_id = ${owner}`;
     await database`insert into public.data_sources(id, user_id, provider, source_label, connection_route)
         values (${sourceId}, ${owner}, 'apple_health', 'Apple Health', 'healthkit')`;
-    await database`insert into public.metric_days(user_id, source_id, metric, day, value, time_zone, unit, input_hash, normalization_version, calculation_version, finalized_at)
-        select ${owner}, ${sourceId}, 'steps', (now() at time zone 'Pacific/Kiritimati')::date - day,
-            8000, case when day >= 7 then 'Etc/GMT+12' else 'Pacific/Kiritimati' end,
-            'steps', repeat('0', 64), 1, 1, case when day > 0 then now() else null end
-        from generate_series(0, 8) day`;
+    await seedStepDays(owner, sourceId, database`
+        select (now() at time zone 'Pacific/Kiritimati')::date - day as day, 8000 as value,
+            case when day >= 7 then 'Etc/GMT+12' else 'Pacific/Kiritimati' end as time_zone,
+            day > 0 as complete
+        from generate_series(0, 8) day`);
     await changeFriendship(friend, owner, "request", database);
     await changeFriendship(owner, friend, "accept", database);
     await updateProfileSettings(owner, { activity_audience: "friends", activity_days: 7 }, database);
@@ -158,10 +176,10 @@ test("step statistics keep owner records private and clip every shared aggregate
     await database`update public.profiles set time_zone = 'UTC' where user_id = ${owner}`;
     await database`insert into public.data_sources(id, user_id, provider, source_label, connection_route)
         values (${sourceId}, ${owner}, 'apple_health', 'Apple Health', 'healthkit')`;
-    await database`insert into public.metric_days(user_id, source_id, metric, day, value, time_zone, unit, input_hash, normalization_version, calculation_version, finalized_at)
-        select ${owner}, ${sourceId}, 'steps', current_date - day,
-            case when day = 40 then 50000 else 8000 end, 'UTC', 'steps', repeat('0', 64), 1, 1,
-            case when day > 0 then now() else null end from generate_series(0, 40) day`;
+    await seedStepDays(owner, sourceId, database`
+        select current_date - day as day, case when day = 40 then 50000 else 8000 end as value,
+            'UTC' as time_zone, day > 0 as complete
+        from generate_series(0, 40) day`);
     const own = await readSharedProfile(owner, owner, undefined, database);
     assert.equal(own.step_statistics?.scope_days, null);
     assert.equal(own.step_statistics?.best_day?.steps, 50_000);
@@ -517,8 +535,9 @@ test("only active accepted opponents see private records, with independent bound
         await database`insert into public.fight_members(fight_id, user_id, state) values (${fightId}, ${id}, ${state})`;
     }
     await database`insert into public.data_sources(id, user_id, provider, source_label, connection_route) values (${sourceId}, ${owner}, 'apple_health', 'Apple Health', 'healthkit')`;
-    await database`insert into public.metric_days(user_id, source_id, metric, day, value, time_zone, unit, input_hash, normalization_version, calculation_version)
-        select ${owner}, ${sourceId}, 'steps', current_date - day, 1000, 'UTC', 'steps', repeat('0', 64), 1, 1 from generate_series(0, 40) day`;
+    await seedStepDays(owner, sourceId, database`
+        select current_date - day as day, 1000 as value, 'UTC' as time_zone, false as complete
+        from generate_series(0, 40) day`);
     await updateProfileSettings(owner, { competitive: true, activity_audience: "opponents", activity_days: 7 }, database);
     const shared = await readSharedProfile(opponent, owner, undefined, database);
     assert.equal(shared.access, "shared");

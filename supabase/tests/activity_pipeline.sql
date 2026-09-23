@@ -1,0 +1,14 @@
+begin;
+select plan(10);
+select has_table('private', 'activity_raw', 'Received activity stays private');
+select has_table('private', 'activity_metrics', 'Resolved activity stays private');
+select ok((select relrowsecurity and relforcerowsecurity from pg_class where oid = 'private.activity_raw'::regclass), 'Received activity forces RLS');
+select ok((select relrowsecurity and relforcerowsecurity from pg_class where oid = 'private.activity_metrics'::regclass), 'Resolved activity forces RLS');
+select is(has_table_privilege('anon', 'private.activity_raw', 'SELECT,INSERT,UPDATE,DELETE'), false, 'Anonymous clients cannot access received activity');
+select is(has_table_privilege('authenticated', 'private.activity_raw', 'SELECT,INSERT,UPDATE,DELETE'), false, 'App clients cannot access received activity');
+select is(has_table_privilege('authenticated', 'private.activity_metrics', 'SELECT,INSERT,UPDATE,DELETE'), false, 'App clients cannot access resolved activity');
+select is(has_table_privilege('fitfight_backend_reader', 'private.activity_metrics', 'SELECT'), false, 'The snapshot reader role cannot read personal activity');
+select ok(has_table_privilege('service_role', 'private.activity_raw', 'SELECT,INSERT,UPDATE,DELETE'), 'Backend can receive and resolve activity');
+select col_is_unique('private', 'activity_raw', array['source_id', 'record_kind', 'record_type', 'record_key', 'payload_hash'], 'An exact retry maps to one received record');
+select * from finish();
+rollback;

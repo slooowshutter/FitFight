@@ -21,25 +21,42 @@ function createDatabaseStub(
         const strings = first as unknown as TemplateStringsArray;
         const query = strings.join("?");
         queries.push({ query, values });
+        if (query.includes("as count")) {
+            return Promise.resolve([{ count: 0 }]);
+        }
         return Promise.resolve(respond(query, values));
     }) as unknown as Sql;
     Object.assign(transaction, {
         array: (values: readonly unknown[]) => values,
         json,
     });
-    const database = Object.assign(
-        (() =>
-            Promise.reject(
-                new Error("query must run inside a transaction"),
-            )) as unknown as Sql,
-        {
-            begin: async (
-                _options: string,
-                callback: (sql: Sql) => Promise<unknown>,
-            ) => callback(transaction),
-        },
-    );
+    // Intake runs in a transaction; the resolver's claim and status count run outside one.
+    const database = Object.assign(transaction, {
+        begin: async (
+            _options: string,
+            callback: (sql: Sql) => Promise<unknown>,
+        ) => callback(transaction),
+    });
     return { database, queries };
+}
+
+/** The raw records one Steps upload hands to the resolver. */
+function receivedRecords(
+    queries: Array<{ query: string; values: readonly unknown[] }>,
+) {
+    const intake = queries.find(({ query }) =>
+        query.includes("insert into private.activity_raw"),
+    );
+    const payload = intake?.values.find(
+        (value) =>
+            typeof value === "object" && value !== null && "value" in value,
+    ) as { value: Array<Record<string, unknown>> } | undefined;
+    return (payload?.value ?? []).map((record) => ({
+        kind: record.record_kind,
+        type: record.record_type,
+        key: record.record_key,
+        payload: record.payload as Record<string, unknown>,
+    }));
 }
 
 const validAggregate = {
@@ -265,11 +282,10 @@ test("Fight history accepts a cutoff just after a Fight-day midnight", async () 
         }),
         database,
     );
-    assert.ok(
-        queries.some(({ query }) =>
-            query.includes("insert into private.fight_score_snapshots"),
-        ),
-    );
+    const [fight] = receivedRecords(queries);
+    assert.equal(fight.key, `fight:${validAggregate.fight_aggregates[0].fight_id.toLowerCase()}`);
+    assert.equal(fight.payload.cutoff_at, cutoffAt);
+    assert.equal((fight.payload.step_checkpoints as unknown[]).length, 3);
 });
 
 test("Apple Health aggregate sync accepts one merged total per Fight", () => {
@@ -520,13 +536,10 @@ test("Apple Health aggregate sync bounds aggregate counts", () => {
     );
 });
 
-test("Apple Health aggregate upload query count stays bounded across fights and rosters", async () => {
+test("Apple Health aggregate upload query count stays bounded across fights", async () => {
     const statementCounts: number[] = [];
     const userId = "5b2216f4-762d-4890-a516-63046a01df31";
-    for (const [fightCount, memberCount] of [
-        [1, 2],
-        [5, 20],
-    ]) {
+    for (const fightCount of [1, 5]) {
         const input = healthKitAggregateSyncSchema.parse({
             ...validAggregate,
             fight_aggregates: Array.from(
@@ -546,71 +559,28 @@ test("Apple Health aggregate upload query count stays bounded across fights and 
             stake_minor: null,
             default_goal_value: null,
         }));
-        const { database, queries } = createDatabaseStub((query, values) => {
+        const { database, queries } = createDatabaseStub((query) => {
             if (query.includes("returning id, complete_through"))
                 return [sourceRow];
             if (query.includes("from public.fights as fight")) return fights;
-            if (query.includes("from private.fight_score_snapshots")) {
-                return fights.map((fight) => ({
-                    fight_id: fight.fight_id,
-                    value: "42000",
-                }));
-            }
-            if (
-                query.includes("from public.fight_members") &&
-                query.includes("state = 'accepted'")
-            ) {
-                const requestedFights = fights.filter((fight) =>
-                    values.includes(fight.fight_id),
-                );
-                return (
-                    requestedFights.length ? requestedFights : fights
-                ).flatMap((fight) =>
-                    Array.from({ length: memberCount }, (_, index) => ({
-                        fight_id: fight.fight_id,
-                        user_id:
-                            index === 0
-                                ? userId
-                                : `a0000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
-                        current_value: String(42_000 - index),
-                        final_value: null,
-                        personal_target: null,
-                    })),
-                );
-            }
             return [];
         });
 
         const result = await syncHealthKitAggregates(userId, input, database);
         assert.equal(result.synced_fights, fightCount);
         statementCounts.push(queries.length);
-        const rankUpdates = queries.filter(({ query }) =>
-            query.includes("set rank"),
-        );
-        assert.equal(rankUpdates.length, 1);
-        const rankPayload = rankUpdates[0].values[0];
-        assert.deepEqual(
-            rankPayload,
-            json(
-                fights.flatMap((fight) =>
-                    Array.from({ length: memberCount }, (_, index) => ({
-                        fight_id: fight.fight_id,
-                        user_id:
-                            index === 0
-                                ? userId
-                                : `a0000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
-                        rank: index + 1,
-                        outcome_minor: 0,
-                    })),
-                ),
-            ),
+        assert.equal(
+            receivedRecords(queries).filter((record) =>
+                String(record.key).startsWith("fight:"),
+            ).length,
+            fightCount,
         );
     }
 
     assert.equal(
         statementCounts[1],
         statementCounts[0],
-        "fight and roster size must not add database round trips",
+        "the number of Fights must not add database round trips",
     );
     assert.ok(
         statementCounts.every((count) => count <= 8),
@@ -638,6 +608,7 @@ test("Apple Health aggregate sync records an empty successful sync transaction",
         complete_through: "2026-08-30T13:53:27.350Z",
         synced_days: 0,
         synced_fights: 0,
+        processing: "processed",
     });
     assert.deepEqual(
         healthKitAggregateSyncResponseSchema.parse(result),
@@ -819,118 +790,28 @@ test("Apple Health aggregate sync rejects merged days outside submitted Fights",
     );
 });
 
-test("Apple Health aggregate sync writes merged days without raw observations", async () => {
+const liveFightRow = {
+    fight_id: "b4c1285d-0232-4d15-b8cc-1a916ba2bbf7",
+    starts_at: "2026-08-27 16:06:36.729+00",
+    ends_at: "2026-09-03 16:06:35.093+00",
+    outcome_rule: "highest_total",
+    time_zone: "Europe/Paris",
+    stake_minor: null,
+    default_goal_value: null,
+};
+
+test("Apple Health aggregate sync receives every reading before resolving it", async () => {
     const { database, queries } = createDatabaseStub((query) => {
-        if (query.includes("returning id")) {
+        if (query.includes("returning id, complete_through")) {
             return [sourceRow];
         }
         if (query.includes("from public.fights as fight")) {
-            return [
-                {
-                    fight_id: "b4c1285d-0232-4d15-b8cc-1a916ba2bbf7",
-                    starts_at: "2026-08-27 16:06:36.729+00",
-                    ends_at: "2026-09-03 16:06:35.093+00",
-                    outcome_rule: "highest_total",
-                    time_zone: "Europe/Paris",
-                    stake_minor: null,
-                    default_goal_value: null,
-                },
-            ];
-        }
-        if (query.includes("from private.fight_score_snapshots")) {
-            return [{ fight_id: "b4c1285d-0232-4d15-b8cc-1a916ba2bbf7" }];
-        }
-        if (
-            query.includes("from public.fight_members") &&
-            query.includes("state = 'accepted'")
-        ) {
-            return [
-                {
-                    fight_id: "b4c1285d-0232-4d15-b8cc-1a916ba2bbf7",
-                    user_id: "5b2216f4-762d-4890-a516-63046a01df31",
-                    current_value: "42000",
-                    final_value: null,
-                    personal_target: null,
-                },
-            ];
+            return [liveFightRow];
         }
         return [];
     });
 
-    await syncHealthKitAggregates(
-        "5b2216f4-762d-4890-a516-63046a01df31",
-        healthKitAggregateSyncSchema.parse(validAggregate),
-        database,
-    );
-
-    assert.ok(
-        queries.some(({ query }) =>
-            query.includes("insert into public.metric_days"),
-        ),
-    );
-    assert.ok(
-        queries.some(({ query }) =>
-            query.includes("insert into public.step_days"),
-        ),
-    );
-    assert.ok(
-        queries.some(({ query }) =>
-            query.includes("where public.metric_days.finalized_at is null"),
-        ),
-    );
-    assert.ok(
-        queries.every(({ query }) => !query.includes("metric_observations")),
-    );
-    assert.ok(queries.every(({ query }) => !query.includes("provider_events")));
-    assert.ok(
-        queries.every(
-            ({ query }) => !query.includes("healthkit_activity_days"),
-        ),
-    );
-    assert.ok(
-        queries.every(({ query }) => !query.includes("healthkit_workouts")),
-    );
-});
-
-test("Apple Health aggregate sync stores private activity without changing Steps scoring writes", async () => {
-    const { database, queries } = createDatabaseStub((query) => {
-        if (query.includes("returning id")) {
-            return [sourceRow];
-        }
-        if (query.includes("from public.fights as fight")) {
-            return [
-                {
-                    fight_id: "b4c1285d-0232-4d15-b8cc-1a916ba2bbf7",
-                    starts_at: "2026-08-27 16:06:36.729+00",
-                    ends_at: "2026-09-03 16:06:35.093+00",
-                    outcome_rule: "highest_total",
-                    time_zone: "Europe/Paris",
-                    stake_minor: null,
-                    default_goal_value: null,
-                },
-            ];
-        }
-        if (query.includes("from private.fight_score_snapshots")) {
-            return [{ fight_id: "b4c1285d-0232-4d15-b8cc-1a916ba2bbf7" }];
-        }
-        if (
-            query.includes("from public.fight_members") &&
-            query.includes("state = 'accepted'")
-        ) {
-            return [
-                {
-                    fight_id: "b4c1285d-0232-4d15-b8cc-1a916ba2bbf7",
-                    user_id: "5b2216f4-762d-4890-a516-63046a01df31",
-                    current_value: "42000",
-                    final_value: null,
-                    personal_target: null,
-                },
-            ];
-        }
-        return [];
-    });
-
-    await syncHealthKitAggregates(
+    const result = await syncHealthKitAggregates(
         "5b2216f4-762d-4890-a516-63046a01df31",
         healthKitAggregateSyncSchema.parse({
             ...validAggregate,
@@ -958,240 +839,55 @@ test("Apple Health aggregate sync stores private activity without changing Steps
         database,
     );
 
-    assert.ok(
-        queries.some(({ query }) =>
-            query.includes("insert into public.metric_days"),
-        ),
+    assert.equal(result.processing, "processed");
+    assert.deepEqual(
+        receivedRecords(queries).map(({ kind, type, key }) => ({ kind, type, key })),
+        [
+            { kind: "total", type: "steps", key: "fight:b4c1285d-0232-4d15-b8cc-1a916ba2bbf7" },
+            { kind: "total", type: "steps", key: "day:2026-08-30" },
+            { kind: "total", type: "exercise_minutes", key: "day:2026-08-30" },
+            { kind: "workout", type: "workout", key: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" },
+        ],
     );
-    assert.ok(
-        queries.some(({ query }) =>
-            query.includes("insert into private.healthkit_activity_days"),
-        ),
-    );
-    assert.ok(
-        queries.some(({ query }) =>
-            query.includes("insert into private.healthkit_workouts"),
-        ),
-    );
-    assert.ok(
-        queries.some(({ query }) =>
-            query.includes("insert into private.fight_score_snapshots"),
-        ),
-    );
-});
-
-test("Apple Health Steps sync succeeds when private activity writes fail", async (t) => {
-    const log = t.mock.method(console, "error", () => {});
-    const { database, queries } = createDatabaseStub((query) => {
-        if (query.includes("insert into private.healthkit_workouts")) {
-            throw Object.assign(
-                new Error(
-                    'column "active_minutes" of relation "healthkit_workouts" does not exist',
-                ),
-                {
-                    code: "42703",
-                },
-            );
-        }
-        if (query.includes("returning id")) {
-            return [sourceRow];
-        }
-        if (query.includes("from public.fights as fight")) {
-            return [
-                {
-                    fight_id: "b4c1285d-0232-4d15-b8cc-1a916ba2bbf7",
-                    starts_at: "2026-08-27 16:06:36.729+00",
-                    ends_at: "2026-09-03 16:06:35.093+00",
-                    outcome_rule: "highest_total",
-                    time_zone: "Europe/Paris",
-                    stake_minor: null,
-                    default_goal_value: null,
-                },
-            ];
-        }
-        if (query.includes("from private.fight_score_snapshots")) {
-            return [{ fight_id: "b4c1285d-0232-4d15-b8cc-1a916ba2bbf7" }];
-        }
-        if (
-            query.includes("from public.fight_members") &&
-            query.includes("state = 'accepted'")
-        ) {
-            return [
-                {
-                    fight_id: "b4c1285d-0232-4d15-b8cc-1a916ba2bbf7",
-                    user_id: "5b2216f4-762d-4890-a516-63046a01df31",
-                    current_value: "42000",
-                    final_value: null,
-                    personal_target: null,
-                },
-            ];
-        }
-        return [];
+    const [fight] = receivedRecords(queries);
+    assert.deepEqual(fight.payload, {
+        fight_id: "b4c1285d-0232-4d15-b8cc-1a916ba2bbf7",
+        starts_at: "2026-08-27T16:06:36.729Z",
+        ends_at: "2026-09-03T16:06:35.093Z",
+        cutoff_at: "2026-08-30T13:53:27.350Z",
+        time_zone: "Europe/Paris",
+        steps: 42_000,
+        step_checkpoints: null,
     });
-
-    const result = await syncHealthKitAggregates(
-        "5b2216f4-762d-4890-a516-63046a01df31",
-        healthKitAggregateSyncSchema.parse({
-            ...validAggregate,
-            activity_days: [
-                {
-                    day: "2026-08-30",
-                    starts_at: "2026-08-29T22:00:00.000Z",
-                    ends_at: "2026-08-30T13:53:27.350Z",
-                    metric: "exercise_minutes",
-                    value: 32,
-                    unit: "min",
-                },
-            ],
-            workouts: [
-                {
-                    healthkit_uuid: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-                    started_at: "2026-08-30T08:00:00.000Z",
-                    ended_at: "2026-08-30T09:00:00.000Z",
-                    activity_type: "running",
-                    duration_seconds: 3600,
-                },
-            ],
-        }),
-        database,
+    const intake = queries.findIndex(({ query }) =>
+        query.includes("insert into private.activity_raw"),
     );
-
-    assert.equal(result.synced_fights, 1);
-    assert.ok(
-        queries.some(({ query }) =>
-            query.includes("insert into private.fight_score_snapshots"),
-        ),
+    const claim = queries.findIndex(({ query }) =>
+        query.includes("set processing_state = 'processing'"),
     );
-    assert.equal(log.mock.callCount(), 1);
-    assert.equal(
-        log.mock.calls[0].arguments[0],
-        "fitfight_healthkit_extras_failed",
-    );
+    assert.ok(intake >= 0 && claim > intake, "Readings are durable before resolution");
+    for (const table of [
+        "fight_score_snapshots",
+        "metric_days",
+        "healthkit_activity_days",
+        "healthkit_workouts",
+        "metric_observations",
+        "provider_events",
+    ]) {
+        assert.ok(
+            queries.slice(0, claim).every(({ query }) => !query.includes(table)),
+            `${table} is written only by the resolver, if at all`,
+        );
+    }
 });
 
-test("Apple Health aggregate sync makes the newest Fight snapshot authoritative without finalizing", async () => {
+test("Apple Health aggregate sync ignores client workout day sums and never infers deletions", async () => {
     const { database, queries } = createDatabaseStub((query) => {
         if (query.includes("returning id, complete_through")) {
             return [sourceRow];
         }
         if (query.includes("from public.fights as fight")) {
-            return [
-                {
-                    fight_id: "b4c1285d-0232-4d15-b8cc-1a916ba2bbf7",
-                    starts_at: "2026-08-27 16:06:36.729+00",
-                    ends_at: "2026-09-03 16:06:35.093+00",
-                    outcome_rule: "highest_total",
-                    time_zone: "Europe/Paris",
-                    stake_minor: null,
-                    default_goal_value: null,
-                },
-            ];
-        }
-        if (
-            query.includes("from private.fight_score_snapshots") &&
-            query.includes("order by fight_id, cutoff_at desc")
-        ) {
-            return [{ fight_id: "b4c1285d-0232-4d15-b8cc-1a916ba2bbf7" }];
-        }
-        if (
-            query.includes("from public.fight_members") &&
-            query.includes("state = 'accepted'")
-        ) {
-            return [
-                {
-                    fight_id: "b4c1285d-0232-4d15-b8cc-1a916ba2bbf7",
-                    user_id: "5b2216f4-762d-4890-a516-63046a01df31",
-                    current_value: "42000",
-                    final_value: null,
-                    personal_target: null,
-                },
-            ];
-        }
-        return [];
-    });
-
-    const result = await syncHealthKitAggregates(
-        "5b2216f4-762d-4890-a516-63046a01df31",
-        healthKitAggregateSyncSchema.parse({
-            ...validAggregate,
-            merged_days: [],
-        }),
-        database,
-    );
-
-    assert.equal(result.synced_fights, 1);
-    assert.ok(
-        queries.some(({ query }) =>
-            query.includes("insert into private.fight_score_snapshots"),
-        ),
-    );
-    assert.ok(
-        queries.some(
-            ({ query }) =>
-                query.includes("set current_value") &&
-                query.includes("selected_source_id") &&
-                query.includes("last_synced_at") &&
-                query.includes("final_steps_complete"),
-        ),
-    );
-    const memberUpdate = queries.find(({ query }) =>
-        query.includes("set current_value"),
-    );
-    assert.ok(
-        memberUpdate?.values.some((value) =>
-            JSON.stringify(value).includes('"final_steps_complete":false'),
-        ),
-    );
-    assert.ok(queries.some(({ query }) => query.includes("set rank")));
-    assert.ok(
-        queries.some(({ query }) =>
-            query.includes("and member.finalized_at is null"),
-        ),
-    );
-    assert.ok(queries.every(({ query }) => !/set\s+final_value/i.test(query)));
-});
-
-test("Apple Health aggregate sync marks exact Fight-end coverage complete", async () => {
-    const completeThrough = "2026-09-03T16:06:35.093Z";
-    const { database, queries } = createDatabaseStub((query) => {
-        if (query.includes("returning id, complete_through")) {
-            return [
-                {
-                    ...sourceRow,
-                    complete_through: completeThrough,
-                    server_now: "2026-09-03T17:00:00.000Z",
-                },
-            ];
-        }
-        if (query.includes("from public.fights as fight")) {
-            return [
-                {
-                    fight_id: "b4c1285d-0232-4d15-b8cc-1a916ba2bbf7",
-                    starts_at: "2026-08-27 16:06:36.729+00",
-                    ends_at: "2026-09-03 16:06:35.093+00",
-                    outcome_rule: "highest_total",
-                    time_zone: "Europe/Paris",
-                    stake_minor: null,
-                    default_goal_value: null,
-                },
-            ];
-        }
-        if (query.includes("from private.fight_score_snapshots")) {
-            return [{ fight_id: "b4c1285d-0232-4d15-b8cc-1a916ba2bbf7" }];
-        }
-        if (
-            query.includes("from public.fight_members") &&
-            query.includes("state = 'accepted'")
-        ) {
-            return [
-                {
-                    fight_id: "b4c1285d-0232-4d15-b8cc-1a916ba2bbf7",
-                    user_id: "5b2216f4-762d-4890-a516-63046a01df31",
-                    current_value: "50000",
-                    final_value: null,
-                    personal_target: null,
-                },
-            ];
+            return [liveFightRow];
         }
         return [];
     });
@@ -1200,27 +896,27 @@ test("Apple Health aggregate sync marks exact Fight-end coverage complete", asyn
         "5b2216f4-762d-4890-a516-63046a01df31",
         healthKitAggregateSyncSchema.parse({
             ...validAggregate,
-            complete_through: completeThrough,
             merged_days: [],
-            fight_aggregates: [
+            activity_days: [
                 {
-                    ...validAggregate.fight_aggregates[0],
-                    cutoff_at: completeThrough,
-                    steps: 50_000,
+                    day: "2026-08-30",
+                    starts_at: "2026-08-29T22:00:00.000Z",
+                    ends_at: "2026-08-30T13:53:27.350Z",
+                    metric: "workout_count",
+                    value: 3,
+                    unit: "count",
                 },
             ],
+            workouts: [],
         }),
         database,
     );
 
-    const memberUpdate = queries.find(({ query }) =>
-        query.includes("set current_value"),
+    assert.deepEqual(
+        receivedRecords(queries).map(({ type }) => type),
+        ["steps"],
     );
-    assert.ok(
-        memberUpdate?.values.some((value) =>
-            JSON.stringify(value).includes('"final_steps_complete":true'),
-        ),
-    );
+    assert.ok(queries.every(({ query }) => !query.includes("delete from")));
 });
 
 test("Apple Health Steps endpoint exposes the authenticated sync route", async () => {

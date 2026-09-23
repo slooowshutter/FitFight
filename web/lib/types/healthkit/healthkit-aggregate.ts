@@ -2,6 +2,7 @@ import { z } from "zod";
 import { timeZoneSchema } from "@/lib/types/time/time-zone";
 import { civilDayBounds, isCivilDay } from "@/lib/scoring/civil-day";
 import { fightStepCheckpointSchema } from "@/lib/types/fights/fight-step-checkpoint";
+import { activityProcessingSchema } from "@/lib/types/healthkit/healthkit-activity-batch";
 import {
     MAX_ACTIVITY_DAYS,
     MAX_ACTIVITY_LOOKBACK_MS,
@@ -267,6 +268,8 @@ export const healthKitAggregateSyncResponseSchema = z
         complete_through: dateTimeSchema,
         synced_days: z.number().int().min(0),
         synced_fights: z.number().int().min(0),
+        /** Received data is durable either way; `pending` means scores publish on a later pass. */
+        processing: activityProcessingSchema,
     })
     .strict();
 

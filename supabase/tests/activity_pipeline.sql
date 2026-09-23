@@ -9,6 +9,6 @@ select is(has_table_privilege('authenticated', 'private.activity_raw', 'SELECT,I
 select is(has_table_privilege('authenticated', 'private.activity_metrics', 'SELECT,INSERT,UPDATE,DELETE'), false, 'App clients cannot access resolved activity');
 select is(has_table_privilege('fitfight_backend_reader', 'private.activity_metrics', 'SELECT'), false, 'The snapshot reader role cannot read personal activity');
 select ok(has_table_privilege('service_role', 'private.activity_raw', 'SELECT,INSERT,UPDATE,DELETE'), 'Backend can receive and resolve activity');
-select col_is_unique('private', 'activity_raw', array['source_id', 'record_kind', 'record_type', 'record_key', 'payload_hash'], 'An exact retry maps to one received record');
+select col_is_unique('private', 'activity_raw', array['source_id', 'record_type', 'record_key', 'record_kind', 'payload_hash'], 'An exact retry maps to one received record');
 select * from finish();
 rollback;

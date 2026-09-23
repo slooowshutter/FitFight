@@ -313,7 +313,7 @@ struct FightPostEngagement: View {
                     companionID: comment.author.companionId,
                     isYou: comment.mine,
                     monogram: comment.author.initials,
-                    photoURL: comment.author.avatar?.url,
+                    photoURL: comment.author.photoURL,
                     size: 28
                 )
                 .frame(width: 44, height: 44, alignment: .topLeading)

@@ -694,6 +694,75 @@ struct FitFightAPI {
         )
     }
 
+    /// Reuse this key for the same user action. Poll the returned request instead of starting again.
+    func startAvatarGeneration(
+        description: String,
+        idempotencyKey: UUID,
+        accessToken: String
+    ) async throws -> FitFightAIRequest {
+        let response: FitFightAIRequest = try await post(
+            path: "ai/runs",
+            accessToken: accessToken,
+            body: FitFightAvatarRequest(parameters: .init(description: description)),
+            idempotencyKey: idempotencyKey.uuidString.lowercased(),
+            expected: [200, 202]
+        )
+        if let failure = response.failure { throw failure }
+        return response
+    }
+
+    func startFitnessGeneration(
+        avatarRequestID: UUID,
+        identityDetails: String,
+        idempotencyKey: UUID,
+        accessToken: String
+    ) async throws -> FitFightAIRequest {
+        let response: FitFightAIRequest = try await post(
+            path: "ai/runs",
+            accessToken: accessToken,
+            body: FitFightFitnessRequest(parameters: .init(avatarRequestID: avatarRequestID, identityDetails: identityDetails)),
+            idempotencyKey: idempotencyKey.uuidString.lowercased(),
+            expected: [200, 202]
+        )
+        if let failure = response.failure { throw failure }
+        return response
+    }
+
+    func startGroupPhotoGeneration(
+        characters: [FitFightAICharacter],
+        scene: String,
+        idempotencyKey: UUID,
+        accessToken: String
+    ) async throws -> FitFightAIRequest {
+        let response: FitFightAIRequest = try await post(
+            path: "ai/runs",
+            accessToken: accessToken,
+            body: FitFightGroupPhotoRequest(parameters: .init(characters: characters, scene: scene)),
+            idempotencyKey: idempotencyKey.uuidString.lowercased(),
+            expected: [200, 202]
+        )
+        if let failure = response.failure { throw failure }
+        return response
+    }
+
+    func aiAllowance(accessToken: String) async throws -> FitFightAIAllowance {
+        try await get(path: "ai/allowance", accessToken: accessToken, expected: [200])
+    }
+
+    func aiLibrary(accessToken: String) async throws -> [FitFightAILibraryEntry] {
+        try await get(path: "ai/library", accessToken: accessToken, expected: [200])
+    }
+
+    func aiRequest(requestID: UUID, accessToken: String) async throws -> FitFightAIRequest {
+        let response: FitFightAIRequest = try await get(
+            path: "ai/runs/\(requestID.uuidString.lowercased())",
+            accessToken: accessToken,
+            expected: [200]
+        )
+        if let failure = response.failure { throw failure }
+        return response
+    }
+
     func storeAppleAuthorizationCode(
         _ authorizationCode: String,
         accessToken: String
@@ -795,6 +864,7 @@ struct FitFightAPI {
         avatarMediaId: UUID? = nil,
         companionId: String? = nil,
         companionPrompt: String? = nil,
+        companionImage: FitFightAICompanionSelection? = nil,
         timeZone: String? = nil,
         accessToken: String
     ) async throws -> FitFightProfile {
@@ -808,6 +878,7 @@ struct FitFightAPI {
                 avatarMediaId: avatarMediaId,
                 companionId: companionId,
                 companionPrompt: companionPrompt,
+                companionImage: companionImage,
                 timeZone: timeZone
             ))
         )
@@ -1409,6 +1480,9 @@ struct FitFightAPI {
             request.setValue("application/json", forHTTPHeaderField: "Accept")
             request.setValue(AppVersion.marketing, forHTTPHeaderField: "X-FitFight-Version")
             request.setValue(AppVersion.build, forHTTPHeaderField: "X-FitFight-Build")
+            if path.hasPrefix("ai/") {
+                request.setValue(UUID().uuidString.lowercased(), forHTTPHeaderField: "X-FitFight-Trace-ID")
+            }
             if let trace {
                 request.setValue(trace.id.uuidString.lowercased(), forHTTPHeaderField: "X-FitFight-Trace-ID")
             }
@@ -1439,6 +1513,10 @@ struct FitFightAPI {
                 let payload = try? Self.decoder.decode(APIErrorResponse.self, from: data)
                 if payload?.code == "update_required" || payload?.code == "release_unavailable" {
                     await AppUpdateChecker.shared.rejectRequest(updateRequired: payload?.code == "update_required")
+                }
+                if payload?.code.hasPrefix("ai_") == true,
+                   let aiError = try? Self.decoder.decode(FitFightAIError.self, from: data) {
+                    throw aiError
                 }
                 throw FitFightAPIError.http(
                     status: status,
@@ -1504,6 +1582,7 @@ private struct ProfileUpdate: Encodable {
     let avatarMediaId: UUID?
     let companionId: String?
     let companionPrompt: String?
+    let companionImage: FitFightAICompanionSelection?
     let timeZone: String?
 
     enum CodingKeys: String, CodingKey {
@@ -1512,6 +1591,7 @@ private struct ProfileUpdate: Encodable {
         case avatarMediaId = "avatar_media_id"
         case companionId = "companion_id"
         case companionPrompt = "companion_prompt"
+        case companionImage = "companion_image"
         case timeZone = "time_zone"
     }
 
@@ -1521,6 +1601,7 @@ private struct ProfileUpdate: Encodable {
         try container.encodeIfPresent(displayName, forKey: .displayName)
         try container.encodeIfPresent(avatarMediaId, forKey: .avatarMediaId)
         try container.encodeIfPresent(companionId, forKey: .companionId)
+        try container.encodeIfPresent(companionImage, forKey: .companionImage)
         try container.encodeIfPresent(timeZone, forKey: .timeZone)
         if companionId != nil {
             try container.encode(companionPrompt, forKey: .companionPrompt)
@@ -1679,14 +1760,30 @@ struct FitFightNotificationDeliveryStatus: Decodable {
 }
 
 struct FitFightNotificationPreferences: Codable, Equatable {
-    var feedPost: Bool = true
+    var enabled: Bool = true
+    var fightInvite: Bool = true
+    var ending24h: Bool = true
+    var endingWeek: Bool = false
+    var fightEnded: Bool = false
+    var finalSync: Bool = true
+    var fightFinalized: Bool = true
+    var mention: Bool = true
+    var feedPost: Bool = false
     var postComment: Bool = true
     var commentReply: Bool = true
     var postReaction: Bool = true
     var challengeReminder: Bool = true
-    var dailyStatus: Bool = true
+    var dailyStatus: Bool = false
 
     enum CodingKeys: String, CodingKey {
+        case enabled = "enabled"
+        case fightInvite = "fight_invite"
+        case ending24h = "ending_24h"
+        case endingWeek = "ending_week"
+        case fightEnded = "fight_ended"
+        case finalSync = "final_sync"
+        case fightFinalized = "fight_finalized"
+        case mention = "mention"
         case feedPost = "feed_post"
         case postComment = "post_comment"
         case commentReply = "comment_reply"
@@ -1694,9 +1791,37 @@ struct FitFightNotificationPreferences: Codable, Equatable {
         case challengeReminder = "challenge_reminder"
         case dailyStatus = "daily_status"
     }
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        feedPost = try container.decode(Bool.self, forKey: .feedPost)
+        postComment = try container.decode(Bool.self, forKey: .postComment)
+        commentReply = try container.decode(Bool.self, forKey: .commentReply)
+        postReaction = try container.decode(Bool.self, forKey: .postReaction)
+        challengeReminder = try container.decode(Bool.self, forKey: .challengeReminder)
+        dailyStatus = try container.decode(Bool.self, forKey: .dailyStatus)
+        enabled = try container.decodeIfPresent(Bool.self, forKey: .enabled) ?? true
+        fightInvite = try container.decodeIfPresent(Bool.self, forKey: .fightInvite) ?? true
+        ending24h = try container.decodeIfPresent(Bool.self, forKey: .ending24h) ?? challengeReminder
+        endingWeek = try container.decodeIfPresent(Bool.self, forKey: .endingWeek) ?? false
+        fightEnded = try container.decodeIfPresent(Bool.self, forKey: .fightEnded) ?? false
+        finalSync = try container.decodeIfPresent(Bool.self, forKey: .finalSync) ?? challengeReminder
+        fightFinalized = try container.decodeIfPresent(Bool.self, forKey: .fightFinalized) ?? challengeReminder
+        mention = try container.decodeIfPresent(Bool.self, forKey: .mention) ?? true
+    }
 }
 
 struct FitFightNotificationPreferencesUpdate: Encodable {
+    var enabled: Bool?
+    var fightInvite: Bool?
+    var ending24h: Bool?
+    var endingWeek: Bool?
+    var fightEnded: Bool?
+    var finalSync: Bool?
+    var fightFinalized: Bool?
+    var mention: Bool?
     var feedPost: Bool?
     var postComment: Bool?
     var commentReply: Bool?
@@ -1705,6 +1830,14 @@ struct FitFightNotificationPreferencesUpdate: Encodable {
     var dailyStatus: Bool?
 
     enum CodingKeys: String, CodingKey {
+        case enabled = "enabled"
+        case fightInvite = "fight_invite"
+        case ending24h = "ending_24h"
+        case endingWeek = "ending_week"
+        case fightEnded = "fight_ended"
+        case finalSync = "final_sync"
+        case fightFinalized = "fight_finalized"
+        case mention = "mention"
         case feedPost = "feed_post"
         case postComment = "post_comment"
         case commentReply = "comment_reply"

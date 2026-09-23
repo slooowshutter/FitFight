@@ -5,6 +5,7 @@ on:
     pull_request:
         paths:
             - "FitFight/**"
+            - "FitFightNotificationService/**"
             - "FitFight.xcodeproj/**"
             - "tests/**"
             - "contracts/fixtures/**"
@@ -23,9 +24,11 @@ on:
             - "scripts/test_companion_state.py"
             - "scripts/test_special_purchases.py"
             - "scripts/apple-specials-notifications.rb"
+            - "scripts/test_ai_companion_state.py"
             - "scripts/test_fight_live_updates.py"
             - "scripts/test_fight_chart_scores.py"
             - "scripts/test_push_state.py"
+            - "scripts/test_notification_preferences.py"
             - "scripts/test_feedback_compatibility.py"
             - "scripts/test_slide_haptics.py"
             - "scripts/test_feed_activity.py"
@@ -37,6 +40,7 @@ on:
         branches: [main, develop, preview, profiles-friends-and-stats, exclusive-animal-avatars]
         paths:
             - "FitFight/**"
+            - "FitFightNotificationService/**"
             - "FitFight.xcodeproj/**"
             - "tests/**"
             - "contracts/fixtures/**"
@@ -55,9 +59,11 @@ on:
             - "scripts/test_companion_state.py"
             - "scripts/test_special_purchases.py"
             - "scripts/apple-specials-notifications.rb"
+            - "scripts/test_ai_companion_state.py"
             - "scripts/test_fight_live_updates.py"
             - "scripts/test_fight_chart_scores.py"
             - "scripts/test_push_state.py"
+            - "scripts/test_notification_preferences.py"
             - "scripts/test_feedback_compatibility.py"
             - "scripts/test_slide_haptics.py"
             - "scripts/test_feed_activity.py"
@@ -158,6 +164,9 @@ jobs:
             - name: Verify push signout and session restoration
               run: python3 scripts/test_push_state.py
 
+            - name: Verify notification preferences and released clients
+              run: python3 scripts/test_notification_preferences.py
+
             - name: Verify notification targets and activity loading
               run: python3 scripts/test_feed_activity.py
 
@@ -172,8 +181,11 @@ jobs:
 
             - name: Verify native API contracts
               run: |
-                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx14.0" FitFight/AppLocalization.swift FitFight/Media.swift FitFight/Profile.swift FitFight/FightSnapshot.swift tests/APIContractTests.swift -o /tmp/fitfight-contract-tests
+                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx14.0" FitFight/AppLocalization.swift FitFight/AIWorkflowRequest.swift FitFight/Media.swift FitFight/Profile.swift FitFight/FightSnapshot.swift tests/APIContractTests.swift -o /tmp/fitfight-contract-tests
                   /tmp/fitfight-contract-tests contracts/fixtures
+
+            - name: Verify generation recovery and account isolation
+              run: python3 scripts/test_ai_companion_state.py
 
             - name: Verify feedback and released-client decoding
               run: python3 scripts/test_feedback_compatibility.py
@@ -217,7 +229,7 @@ jobs:
                   CONTAINER=$(xcrun simctl get_app_container "$UDID" com.fitfight.mvp data)
                   for LANGUAGE in en fr; do
                       SIMCTL_CHILD_FF_COMPANION_PREVIEW=1 SIMCTL_CHILD_FF_COMPANION_EXPORT=1 xcrun simctl launch "$UDID" com.fitfight.mvp -AppleLanguages "($LANGUAGE)" -AppleLocale "$LANGUAGE"
-                      for i in $(seq 1 45); do
+                      for ((i = 0; i < 45; i++)); do
                           if [ -f "$CONTAINER/Documents/companion-shots/done.txt" ]; then break; fi
                           sleep 2
                       done

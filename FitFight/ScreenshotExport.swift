@@ -111,6 +111,11 @@ enum ScreenshotExport {
             )
         }
 
+        write(
+            sheet(NotificationSettingsView(), themeStore: light, model: model),
+            name: "light-notifications", height: tallHeight, to: folder
+        )
+
         // The design system page is one long scroll. ImageRenderer returns nil well
         // before the texture limit, so it is exported as a run of slices instead of
         // one tall canvas.
@@ -283,6 +288,12 @@ enum ScreenshotExport {
             },
             Shot(name: "05-preferences") { store, model in
                 sheet(PreferencesView(), themeStore: store, model: model)
+            },
+            Shot(name: "05-notifications") { store, model in
+                sheet(NotificationSettingsView(), themeStore: store, model: model)
+            },
+            Shot(name: "05-notifications-large-text") { store, model in
+                sheet(NotificationSettingsView().environment(\.dynamicTypeSize, .accessibility2), themeStore: store, model: model)
             },
             Shot(name: "05-feed") { store, model in
                 frame(FeedView(), tab: .feed, themeStore: store, model: model)

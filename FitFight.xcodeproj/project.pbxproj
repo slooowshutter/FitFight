@@ -47,6 +47,7 @@
         A10000000000000000000314 /* HealthKitStepsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000304 /* HealthKitStepsStore.swift */; };
         A10000000000000000000315 /* BuildEnv.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000305 /* BuildEnv.swift */; };
         A10000000000000000000316 /* APIConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000306 /* APIConfig.swift */; };
+        B91700000000000000000001 /* AIWorkflowRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = B91700000000000000000002 /* AIWorkflowRequest.swift */; };
         A10000000000000000000317 /* FitFightAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000307 /* FitFightAPI.swift */; };
         A10000000000000000000319 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000309 /* WelcomeView.swift */; };
         A1000000000000000000031B /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000030B /* OnboardingView.swift */; };
@@ -95,6 +96,10 @@
         99AAAB8BD6F184E568149D1D /* EditProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41EE371C708EECCC762EB820 /* EditProfileView.swift */; };
         61856F7155495A28A4B93A60 /* FriendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C2AC1044B8F11786123D48E /* FriendsView.swift */; };
         A0573E386FD2FA2A4A357CC4 /* SuggestedFightsOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AD1CDE4182F6C6E52321063 /* SuggestedFightsOnboardingView.swift */; };
+        FF2026092000000000000001 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF2026092000000000000002; };
+        FF2026092000000000000003 /* FitFightNotificationService.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = FF2026092000000000000004; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+        B91800000000000000000001 /* AICompanionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B91800000000000000000002 /* AICompanionStore.swift */; };
+        B91800000000000000000003 /* AICompanionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B91800000000000000000004 /* AICompanionView.swift */; };
         B71900000000000000000100 /* GoogleSignInConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = B71900000000000000000000 /* GoogleSignInConfig.swift */; };
         B71900000000000000000101 /* SignInControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = B71900000000000000000001 /* SignInControls.swift */; };
         B71900000000000000000E01 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = B71900000000000000000F01 /* GoogleSignIn */; };
@@ -103,7 +108,12 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+        FF2026092000000000000006 = {isa = PBXContainerItemProxy; containerPortal = A10000000000000000000060; proxyType = 1; remoteGlobalIDString = FF202609200000000000000A; remoteInfo = FitFightNotificationService; };
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+        FF2026092000000000000007 /* Embed App Extensions */ = {isa = PBXCopyFilesBuildPhase; buildActionMask = 2147483647; dstPath = ""; dstSubfolderSpec = 13; files = (FF2026092000000000000003, ); name = "Embed App Extensions"; runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
         C12109202600000000000002 /* SpecialPurchases.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpecialPurchases.swift; sourceTree = "<group>"; };
@@ -153,6 +163,7 @@
         A10000000000000000000304 /* HealthKitStepsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitStepsStore.swift; sourceTree = "<group>"; };
         A10000000000000000000305 /* BuildEnv.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Generated/BuildEnv.swift; sourceTree = "<group>"; };
         A10000000000000000000306 /* APIConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIConfig.swift; sourceTree = "<group>"; };
+        B91700000000000000000002 /* AIWorkflowRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIWorkflowRequest.swift; sourceTree = "<group>"; };
         A10000000000000000000307 /* FitFightAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FitFightAPI.swift; sourceTree = "<group>"; };
         A10000000000000000000309 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
         A1000000000000000000030B /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
@@ -194,6 +205,11 @@
         41EE371C708EECCC762EB820 /* EditProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditProfileView.swift; sourceTree = "<group>"; };
         2C2AC1044B8F11786123D48E /* FriendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendsView.swift; sourceTree = "<group>"; };
         7AD1CDE4182F6C6E52321063 /* SuggestedFightsOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestedFightsOnboardingView.swift; sourceTree = "<group>"; };
+        FF2026092000000000000002 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
+        FF2026092000000000000004 /* FitFightNotificationService.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FitFightNotificationService.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+        FF2026092000000000000005 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+        B91800000000000000000002 /* AICompanionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AICompanionStore.swift; sourceTree = "<group>"; };
+        B91800000000000000000004 /* AICompanionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AICompanionView.swift; sourceTree = "<group>"; };
         B71900000000000000000000 /* GoogleSignInConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleSignInConfig.swift; sourceTree = "<group>"; };
         B71900000000000000000001 /* SignInControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInControls.swift; sourceTree = "<group>"; };
         B71900000000000000000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -240,6 +256,9 @@
                 A10000000000000000000420 /* CrashReporting.swift */,
                 A10000000000000000000306 /* APIConfig.swift */,
                 A10000000000000000000307 /* FitFightAPI.swift */,
+                B91700000000000000000002 /* AIWorkflowRequest.swift */,
+                B91800000000000000000004 /* AICompanionView.swift */,
+                B91800000000000000000002 /* AICompanionStore.swift */,
                 A10000000000000000000388 /* FeedbackClientMetadata.swift */,
                 A10000000000000000000350 /* Profile.swift */,
                 77DE13D2DDFE478AAAB22CF3 /* AppLocalization.swift */,
@@ -334,6 +353,7 @@
             isa = PBXGroup;
             children = (
                 A10000000000000000000010 /* FitFight.app */,
+                FF2026092000000000000004 /* FitFightNotificationService.appex */,
             );
             name = Products;
             sourceTree = "<group>";
@@ -343,9 +363,11 @@
             children = (
                 A10000000000000000000030 /* FitFight */,
                 A10000000000000000000031 /* Products */,
+                FF2026092000000000000008 /* FitFightNotificationService */,
             );
             sourceTree = "<group>";
         };
+        FF2026092000000000000008 /* FitFightNotificationService */ = {isa = PBXGroup; children = (FF2026092000000000000002, FF2026092000000000000005, ); path = FitFightNotificationService; sourceTree = "<group>"; };
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -356,10 +378,12 @@
                 A10000000000000000000050 /* Sources */,
                 A10000000000000000000020 /* Frameworks */,
                 A10000000000000000000051 /* Resources */,
+                FF2026092000000000000007 /* Embed App Extensions */,
             );
             buildRules = (
             );
             dependencies = (
+                FF202609200000000000000C,
             );
             name = FitFight;
             packageProductDependencies = (
@@ -371,6 +395,7 @@
             productReference = A10000000000000000000010 /* FitFight.app */;
             productType = "com.apple.product-type.application";
         };
+        FF202609200000000000000A /* FitFightNotificationService */ = {isa = PBXNativeTarget; buildConfigurationList = FF202609200000000000000B; buildPhases = (FF2026092000000000000009, ); buildRules = (); dependencies = (); name = FitFightNotificationService; productName = FitFightNotificationService; productReference = FF2026092000000000000004; productType = "com.apple.product-type.app-extension"; };
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -406,6 +431,7 @@
             projectRoot = "";
             targets = (
                 A10000000000000000000040 /* FitFight */,
+                FF202609200000000000000A /* FitFightNotificationService */,
             );
         };
 /* End PBXProject section */
@@ -471,6 +497,9 @@
                 A10000000000000000000421 /* CrashReporting.swift in Sources */,
                 A10000000000000000000316 /* APIConfig.swift in Sources */,
                 A10000000000000000000317 /* FitFightAPI.swift in Sources */,
+                B91700000000000000000001 /* AIWorkflowRequest.swift in Sources */,
+                B91800000000000000000003 /* AICompanionView.swift in Sources */,
+                B91800000000000000000001 /* AICompanionStore.swift in Sources */,
                 A10000000000000000000389 /* FeedbackClientMetadata.swift in Sources */,
                 A10000000000000000000351 /* Profile.swift in Sources */,
                 923EA6A21D2D4018B21AFFD9 /* AppLocalization.swift in Sources */,
@@ -518,9 +547,11 @@
             );
             runOnlyForDeploymentPostprocessing = 0;
         };
+        FF2026092000000000000009 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (FF2026092000000000000001, ); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+        FF202609200000000000000C = {isa = PBXTargetDependency; target = FF202609200000000000000A; targetProxy = FF2026092000000000000006; };
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -723,6 +754,40 @@
             };
             name = Release;
         };
+        FF202609200000000000000D /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {
+            APPLICATION_EXTENSION_API_ONLY = YES;
+            CODE_SIGN_STYLE = Automatic;
+            CURRENT_PROJECT_VERSION = 1;
+            DEVELOPMENT_TEAM = C92DPD8ME2;
+            GENERATE_INFOPLIST_FILE = YES;
+            INFOPLIST_FILE = FitFightNotificationService/Info.plist;
+            IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+            LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks", );
+            MARKETING_VERSION = 1.1.2;
+            PRODUCT_BUNDLE_IDENTIFIER = com.fitfight.mvp.notifications;
+            PRODUCT_NAME = "$(TARGET_NAME)";
+            SKIP_INSTALL = YES;
+            SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+            SWIFT_VERSION = 5.0;
+            TARGETED_DEVICE_FAMILY = 1;
+        }; name = Debug; };
+        FF202609200000000000000E /* Release */ = {isa = XCBuildConfiguration; buildSettings = {
+            APPLICATION_EXTENSION_API_ONLY = YES;
+            CODE_SIGN_STYLE = Automatic;
+            CURRENT_PROJECT_VERSION = 1;
+            DEVELOPMENT_TEAM = C92DPD8ME2;
+            GENERATE_INFOPLIST_FILE = YES;
+            INFOPLIST_FILE = FitFightNotificationService/Info.plist;
+            IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+            LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks", );
+            MARKETING_VERSION = 1.1.2;
+            PRODUCT_BUNDLE_IDENTIFIER = com.fitfight.mvp.notifications;
+            PRODUCT_NAME = "$(TARGET_NAME)";
+            SKIP_INSTALL = YES;
+            SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+            SWIFT_VERSION = 5.0;
+            TARGETED_DEVICE_FAMILY = 1;
+        }; name = Release; };
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -744,6 +809,7 @@
             defaultConfigurationIsVisible = 0;
             defaultConfigurationName = Release;
         };
+        FF202609200000000000000B = {isa = XCConfigurationList; buildConfigurations = (FF202609200000000000000D, FF202609200000000000000E, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */

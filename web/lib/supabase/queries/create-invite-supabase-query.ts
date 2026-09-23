@@ -188,14 +188,10 @@ export async function createInvite(
             .select("handle, display_name")
             .eq("id", ownerId)
             .maybeSingle();
-        const display = owner?.display_name?.replace(/\s+/g, " ").trim();
         await enqueueFightInviteNotifications(sql, {
             fightId,
             fightName: fight.name,
-            actorName:
-                display && display.length > 0
-                    ? display
-                    : (owner?.handle ?? "user"),
+            actorName: owner?.handle ?? "",
             userIds: [profile.user_id],
         });
     }

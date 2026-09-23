@@ -8,6 +8,96 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last documented TestFlight upload:** 19 Sep 2026 at 13:14 UTC. **1.1.2 (204)** from preview merge `c80e642`, including develop `f206592`. [Upload and Apple processing succeeded](https://github.com/slooowshutter/FitFight/actions/runs/35444706489): `VALID`, unexpired, available to Internal Tester. This upload did not submit or assign external groups. The published release registry then listed `latest` 1.1.1 (201) and `review`/`internal` 1.1.2 (204). At the 13:18 UTC recheck on 19 Sep, staging's live release endpoint still returned candidate 203 with enforcement off; its metadata propagation did not block internal build 204. Production remained 1.1.1 (202). See the 23 Sep live policy check below for current advertised builds.
 
+## Quieter notifications and complete controls: prepared 20 Sep 2026
+
+**Code:** You > Settings > Preferences > Notifications has a master switch and
+every automatic category. Invitations, the 24-hour ending reminder, one conditional
+post-end final-sync request, final results, comments, replies, reactions, and
+mentions default on. Fight ended, daily status, feed posts, and the one-week
+reminder default off. The week reminder only applies to 30-calendar-day fights.
+Reactions and opted-in posts combine into one summary around 20:00 in the account's
+saved time zone. Existing saved choices remain. Repeated grace countdowns are
+removed. Delivery uses @usernames, Fight/deadline context, and post/comment excerpts.
+A notification service extension can attach a single post's photo. English/French
+copy and a 1.1.2 release note are included. See [the complete behavior](notifications.md).
+
+**Contract:** `GET/PATCH /api/v1/notifications/preferences` keeps all six released
+fields and partial updates, with eight additive switches. The legacy
+`challenge_reminder` field continues to control its ended/sync/result group;
+individual writes maintain the aggregate. Migration
+`20260920172636_notification_controls_and_digests.sql` retains old outbox kinds,
+slots, and grants while adding preferences and summary metadata. Feed visibility
+is unaffected by notification preferences. Old builds open the first related
+Fight from a multi-post digest; the new app opens Notifications & activity.
+
+**Supported clients:** read-only release checks on 20 Sep returned staging latest
+**1.1.1 (201)**, review **1.1.2 (204)**, internal **1.1.2 (205)**, enforcement off;
+production latest **1.1.1 (202)**, no review/internal candidates, enforcement on.
+The six-field preference models from sources `d97145a` (201), `e2783be` (202),
+`c80e642a` (204), and `bd7283d1` (205) are identical. Frozen decoder/encoder fixtures
+retain that contract, including old responses and partial legacy patches.
+
+**Cloud backend checks:** at `32d341c2`, [Web API typecheck and all 320 tests](https://github.com/slooowshutter/FitFight/actions/runs/35527589992)
+passed. [Disposable database verification](https://github.com/slooowshutter/FitFight/actions/runs/35527589944)
+passed migrations/lint, 255 pgTAP checks, build 113 compatibility, and all 46
+transaction tests before and after the deferred client-permission cutoff.
+Historical migration replay also passed. Notification coverage includes concurrent
+partial writes and digest workers, defaults and opt-outs, local evening timing and
+DST, distinct actor/post counts, exact destinations, blocks, removed reactions,
+deleted posts, mention fallback, and a single conditional final-sync request.
+
+**Native verification:** [all native regressions and the simulator build](https://github.com/slooowshutter/FitFight/actions/runs/35528448727)
+passed at `ce74cc6e`, including frozen preference decoders, partial patches,
+defaults, and the photo URL allowlist. [English/French cloud captures](https://github.com/slooowshutter/FitFight/actions/runs/35528448726)
+passed and were visually checked in Night and Day: all switches, default states,
+and wrapped explanations remain visible. Capture mode shares the screen content
+with a static viewport, following Preferences; the app retains its ScrollView.
+Rows expose localized VoiceOver labels, state, and action. Static captures do not
+verify touch interaction, VoiceOver operation, or system text scaling.
+Localization, native API-boundary, migration-safety, and whitespace checks passed.
+Temporary feature-branch CI triggers were removed after verification. No native
+compilation ran on the workstation.
+
+**Integration checks, 23 Sep:** After merging develop `a1b79cb1`, local Web API
+typechecking and all 322 tests passed. Notification preference, localization,
+native API boundary, push state, and Xcode project syntax checks also passed.
+The linked cloud checks above cover the notification code before this merge;
+the merged revision still needs its PR CI run.
+
+**Latest merge, 23 Sep:** With develop `3c9309c7` included, local Web API
+typechecking and all 387 tests passed. Xcode project syntax, localization,
+notification preferences, native API boundary, and remote photo checks also
+passed. The AI native generation check requires GitHub-hosted macOS, and this
+combined revision still needs PR simulator and disposable database CI. No
+hosted migration or deployment occurred.
+
+**Closer merge, 23 Sep:** With develop `27f75330` included, local Web API
+typechecking and all 387 tests passed, plus localization, notification
+preferences, native state, native API boundary, and Fight localization checks.
+The incoming disposable database test now expects the single conditional
+final-sync request used by this branch. The combined revision still needs PR
+simulator and disposable database CI; no hosted job or deployment changed.
+
+**Rollout:** apply the additive migration, deploy the compatible backend, let old
+backend instances drain, then distribute the app. The prepared production
+15-minute Vercel schedule activates only after an authorized `main` promotion;
+staging needs a separate hosted Supabase Cron job and matching Preview secret.
+Verify both schedules before rollout. Signed archive
+provisioning for `com.fitfight.mvp.notifications` and physical-device APNs/photo
+delivery remain release checks. No deployment, release-branch merge, live
+notification send, or TestFlight upload was performed. The feature branch disables
+automatic Vercel deployment while these changes are prepared.
+
+## Fight clock, keyboard, and Current Fights sort: prepared 23 Sep 2026
+
+**Code:** The protected closer selects at most 25 fights whose next state transition is due. It no longer spends its batch or 200-row read cap on fights waiting within the final Steps grace period. The exact `ends_at` and grace deadline now count as due. The production Vercel close-fights schedule is prepared for every 15 minutes; Preview still needs its separate hosted Supabase Cron job. Current Fights defaults to earliest end, offers latest end and recently started, and shows the countdown with the exact local deadline. Tapping noninteractive screen space dismisses the keyboard on entry forms; scrolling can also dismiss it. The app has an English/French `1.1.2` release note.
+
+**Compatibility:** No `/api/v1` request or response shape, database schema, direct-access grant, or marketing version changes. The worker route remains protected and still drains notification intents. Read-only `/api/app-release` checks on 23 Sep returned staging `latest` 1.1.1 (201), `review`/`internal` 1.1.2 (205), `enforced: false`; production returned `latest` 1.1.1 (202), no candidate, `enforced: true`. These clients keep their existing requests and decoders. Stage the compatible backend before distributing the native build; the new Production cron schedule takes effect only after an authorized `main` promotion.
+
+**Checks:** Web typechecking and all 389 unit tests passed after bringing in current develop. The fixed-clock test demonstrated the exact end and grace boundaries; the existing security integration suite covers early completion from exact final snapshots. New disposable database tests cover 25 waiting fights, more than 200 waiting fights, the grace deadline, and reminder idempotence. English/French localization, native API boundary, native state, and destructive-SQL checks passed. The database integration tests, GitHub-hosted iPhone simulator, native compilation, compact-phone and larger-text layout, Night/Day layout, and physical-device reminder still need cloud verification.
+
+**Hosted state:** A read-only Vercel check found the `fit-fight` project under the Enterprise `blendai` team, which supports the 15-minute cron interval. Production has a `CRON_SECRET` variable. Neither `CRON_SECRET` nor `FITFIGHT_CRON_SECRET` was listed for Preview. No staging Cron job, Vault value, route logs, or three-run history was verified. No hosted setting or deployment changed, and this work has not entered develop, preview, main, or TestFlight. The staging Preview secret and matching hosted Supabase Vault/job setup are required before scheduled staging verification.
+
 ## Fight creation transaction: reviewed 23 Sep 2026
 
 **Code and contract:** `POST /api/v1/fights` still accepts the existing create request, including omitted `start`, `visibility`, and `recurring` fields, and returns the existing `{ id, state }` response. The backend now resolves and deduplicates invitees before writing, then inserts the series, round, owner and invited memberships, invite records, and notification intents in one Postgres transaction. The route, request schema, response shape, tables, and client permissions are unchanged. This backend change needs no database migration or native API update; it does not authorize retiring older clients.
@@ -435,6 +525,7 @@ GitHub-hosted CI. Normal workflow branch triggers are restored after verificatio
 A complete Google consent/login still requires an interactive retry after installing
 the replacement. No hosted auth configuration, API, or database contract changed for
 this fix. No PR, merge, deployment, or TestFlight upload was made.
+
 ## Compact suggested fight cards: prepared 19 Sep 2026
 
 **Code:** Suggested fights on New and under Fights > Invited use compact rows
@@ -1579,6 +1670,66 @@ the native changes with a 1.1.1 release note. Production still requires its sepa
 authorized `preview` to `main` promotion. This work has not merged a release branch,
 changed the hosted database, or uploaded a TestFlight build. Physical
 device interaction and HealthKit verification remain separate from cloud checks.
+
+## Blend workflows: URL storage simplification, 19 Sep 2026
+
+**Code prepared, not deployed.** Avatar, Five Fitness Levels and Group Photo remain
+on `blend-backend-client`. Marc confirmed that Blend is his service and retains the
+image files. FitFight now stores the original URLs and metadata only. The phone's
+download/re-upload flow, PNG conversion, upload-progress persistence and separate
+image-attachment endpoint are removed. Completion and credit settlement save the
+library rows in one database transaction, including background completion.
+
+You -> Make it yours -> Generate images still displays credits, resumes the same
+paid action after interruption and shows the account library. Avatar and Fitness
+images can be selected as companions. Group photos stay in the library. Automatic
+fitness-pose switching and fight-image assignment remain outside this change.
+
+**Compatibility:** `/api/v1` is unchanged. Existing uploaded-photo API fields and
+fixtures stay intact. `PATCH /me` adds an optional owned result selection and
+profile/Fight/Feed responses add optional `companion_image_url`. Existing shared
+identity `avatar_url` fields can directly return a Blend URL. Old profile edits
+that omit companion changes preserve the selected image. Native coverage includes
+a frozen copy of the pre-change profile decoder; no released fixture was replaced.
+Only the never-deployed AI library fixture and attachment contract changed.
+
+The library migration has not been deployed and is revised in this branch to store
+URLs instead of media-object references. It also adds the private request description
+and nullable profile image URL. Rollout remains schema first, compatible backend
+second, then the new native client. Existing client permissions are preserved.
+
+**Test simplification:** Removed upload/attachment tests and five overlapping mocked
+checks already covered by database or HTTP tests. Retained credit arithmetic,
+last-credit concurrency, once-only settlement, duplicate-start protection, ownership,
+provider-contract and interruption tests. The database library scenario asserts exact
+provider URLs, no image downloads or Storage calls, automatic complete saving,
+owned companion selection, old profile command behavior, pruning and deletion.
+
+**Cloud checks passed:**
+
+- [Web API](https://github.com/slooowshutter/FitFight/actions/runs/35445062344): TypeScript, all 380 backend tests and contract parsing on `e98ab95`; backend code is unchanged in the final implementation.
+- [Database](https://github.com/slooowshutter/FitFight/actions/runs/35445411309): migrations, schema lint, pgTAP, real transaction tests before and after the permission cutoff, legacy build 113 compatibility and deletion/backfill checks on `e414239`.
+- [iOS simulator](https://github.com/slooowshutter/FitFight/actions/runs/35445411296): full app compilation, native recovery/account isolation, pre-change profile decoding and existing native regressions on `e414239`.
+
+Localization, native API boundary, remote image loading, migration guard, project
+syntax and whitespace checks also passed. Cloud compilation caught a thumbnail
+still using the removed media field; the view was corrected to read the Blend URL.
+The existing standings test stayed unchanged when an unnecessary prefetch edit was
+reverted. Only documentation changed after these runs. No local iOS or database
+runtime was used. A full Next.js production build was not rerun; the earlier build
+required a database credential for homepage prerendering.
+
+**Live:** Read-only checks at **13:02 UTC on 19 Sep** found staging latest
+**1.1.1 (201)** and review/internal **1.1.2 (203)**, enforcement off. Production
+latest remains **1.1.1 (202)**, no review/internal build, enforcement on. Both
+`/api/v1/ai/library` routes still return 404. These are manifest observations,
+not installed-binary or live feature tests.
+
+**Still needed:** Authorized staging deployment of all three migrations and backend,
+Blend key and limits, Fitness/Group prices, explicit grants and a frequent hosted
+reconciler. Starts remain disabled by default. No PR, release-branch merge,
+hosted migration, TestFlight upload or paid generation was performed. See
+[workflow contracts and rollout](blend-workflows.md).
 
 ## Website download destinations: prepared 17 Sep 2026
 

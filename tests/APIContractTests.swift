@@ -7,6 +7,42 @@ struct APIContractTests {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
 
+        let allowance = try decoder.decode(FitFightAIAllowance.self,
+            from: Data(contentsOf: fixtures.appendingPathComponent("ai-allowance.json")))
+        precondition(allowance.available == 2 && allowance.reserved == 1 && allowance.avatarPrice == 1)
+        let pendingAI = try decoder.decode(FitFightAIRequest.self,
+            from: Data(contentsOf: fixtures.appendingPathComponent("ai-run-pending.json")))
+        precondition(pendingAI.status == .pending && pendingAI.pollAfterSeconds == 3)
+        precondition(pendingAI.failure == nil && pendingAI.imageURL == nil)
+        let completedAI = try decoder.decode(FitFightAIRequest.self,
+            from: Data(contentsOf: fixtures.appendingPathComponent("ai-run-completed.json")))
+        precondition(completedAI.status == .completed && completedAI.imageURL?.scheme == "https")
+        precondition(completedAI.pollAfterSeconds == nil && completedAI.failure == nil)
+        let fitnessAI = try decoder.decode(FitFightAIRequest.self,
+            from: Data(contentsOf: fixtures.appendingPathComponent("ai-run-fitness.json")))
+        precondition(fitnessAI.workflow == .fitness && fitnessAI.status == .completed)
+        precondition(fitnessAI.imageURL == nil && fitnessAI.fitnessImages?.strong.lastPathComponent == "strong.png")
+        let groupAI = try decoder.decode(FitFightAIRequest.self,
+            from: Data(contentsOf: fixtures.appendingPathComponent("ai-run-group-photo.json")))
+        precondition(groupAI.workflow == .groupPhoto && groupAI.imageURL?.lastPathComponent == "photo.png")
+        precondition(groupAI.fitnessImages == nil)
+        precondition(allowance.fitnessPrice == nil && allowance.groupPhotoPrice == nil)
+        let aiLibrary = try decoder.decode([FitFightAILibraryEntry].self,
+            from: Data(contentsOf: fixtures.appendingPathComponent("ai-library.json")))
+        precondition(aiLibrary.map(\.workflow) == [.avatar, .fitness, .groupPhoto])
+        precondition(aiLibrary[1].images.map(\.stage) == ["resting", "soft", "average", "fit", "strong"])
+        precondition(aiLibrary[0].images[0].url.absoluteString == "https://supabase.tryblend.ai/avatar-image_url.png")
+        let unconfirmedAI = try decoder.decode(FitFightAIRequest.self,
+            from: Data(contentsOf: fixtures.appendingPathComponent("ai-run-unconfirmed.json")))
+        precondition(unconfirmedAI.failure?.code == "ai_start_unconfirmed")
+        precondition(unconfirmedAI.failure?.requestID == unconfirmedAI.requestID)
+        let busyAI = try decoder.decode(FitFightAIError.self,
+            from: Data(contentsOf: fixtures.appendingPathComponent("ai-error.json")))
+        precondition(busyAI.retryAfterSeconds == 30 && busyAI.requestID == pendingAI.requestID)
+        // Older errors remain decodable without the additive recovery fields.
+        let olderAI = try decoder.decode(FitFightAIError.self,
+            from: Data("{\"code\":\"ai_failed\",\"error\":\"Try again later.\"}".utf8))
+        precondition(olderAI.retryAfterSeconds == nil && olderAI.requestID == nil)
         let legacyCommentData = try Data(contentsOf: fixtures.appendingPathComponent("post-comment-list-legacy-response.json"))
         let currentCommentData = try Data(contentsOf: fixtures.appendingPathComponent("post-comment-list-like-response.json"))
         let legacyComments = try decoder.decode(FitFightFightPostCommentList.self, from: legacyCommentData)
@@ -42,6 +78,19 @@ struct APIContractTests {
         precondition(profile.companionId == nil)
         precondition(profile.companionPrompt == nil)
         precondition(profile.timeZone == nil, "Older profiles remain decodable")
+        var generatedProfile = profile
+        generatedProfile.companionId = "custom"
+        generatedProfile.companionImageURL = aiLibrary[0].images[0].url
+        precondition(generatedProfile.photoURL == aiLibrary[0].images[0].url)
+        let restoredGeneratedProfile = try decoder.decode(FitFightProfile.self, from: JSONEncoder().encode(generatedProfile))
+        precondition(restoredGeneratedProfile == generatedProfile)
+        let oldProfile = try decoder.decode(Build201Profile.self, from: profileData)
+        let oldReaderWithGeneratedImage = try decoder.decode(Build201Profile.self, from: JSONEncoder().encode(generatedProfile))
+        precondition(oldReaderWithGeneratedImage.userId == oldProfile.userId)
+        precondition(oldReaderWithGeneratedImage.handle == oldProfile.handle)
+        precondition(oldReaderWithGeneratedImage.avatar == oldProfile.avatar)
+        precondition(oldReaderWithGeneratedImage.companionId == "custom")
+
         var zonedProfileJSON = try JSONSerialization.jsonObject(with: profileData) as! [String: Any]
         zonedProfileJSON["time_zone"] = "Pacific/Kiritimati"
         let zonedProfile = try decoder.decode(FitFightProfile.self,

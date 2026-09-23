@@ -200,7 +200,7 @@ struct YouView: View {
                     CompanionAvatar(
                         personID: session.profile?.userId.uuidString,
                         companionID: session.profile?.companionId, isYou: true,
-                        monogram: session.profile?.initials ?? "FF", photoURL: session.profile?.avatar?.url, size: 68
+                        monogram: session.profile?.initials ?? "FF", photoURL: session.profile?.photoURL, size: 68
                     )
                 }
                 .buttonStyle(FFHapticPlainStyle())

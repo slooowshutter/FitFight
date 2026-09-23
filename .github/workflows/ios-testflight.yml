@@ -187,6 +187,7 @@ jobs:
                       raise SystemExit("Deploy the profile API and backend-reader migration before distributing this native build")
                   PY
 
+            # The sandbox probe calls staging.fitfight.app, so that domain must already alias a backend that returns validation.
             - name: Configure and verify Sandbox purchase notifications
               env:
                   APPLE_IAP_KEY_ID: ${{ secrets.APPLE_IAP_KEY_ID }}

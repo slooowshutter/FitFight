@@ -10,7 +10,7 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ## Preview promotion, 23 Sep 2026
 
-Marc asked to merge current `develop` into `preview` for TestFlight. This merge is develop `f77ee7e`. Marketing version stays **1.1.2**. The simulator build for that develop commit passed. Its database workflow failed while pulling Supabase images, not on a migration error. The TestFlight upload starts from this preview push. Production stays **1.1.1 (202)** until a later `preview` to `main` ship.
+Marc asked to merge current `develop` into `preview` for TestFlight. This merge is develop `f77ee7e`. Marketing version stays **1.1.2**. The simulator build for that develop commit passed. Its database workflow failed while pulling Supabase images, not on a migration error. The first preview upload failed because `staging.fitfight.app` still served the previous backend. Marc then aliased that domain to the preview deployment. This follow-up push retries TestFlight. Production stays **1.1.1 (202)** until a later `preview` to `main` ship.
 
 ## Apple Health activity pipeline: prepared 23 Sep 2026
 

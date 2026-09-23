@@ -17,6 +17,16 @@ enum FitFightAPIError: LocalizedError {
                 return String(appLocalized: "Couldn’t check for updates")
             case "handle_not_found":
                 return String(appLocalized: "That username does not have a FitFight account yet.")
+            case "companion_taken":
+                return String(appLocalized: "That special was just claimed. Choose another companion.")
+            case "special_purchase_required":
+                return String(appLocalized: "Purchase this Special before using it.")
+            case "special_limit":
+                return String(appLocalized: "You already own a Special or have a purchase in progress.")
+            case "special_unavailable":
+                return String(appLocalized: "Special purchases are not available yet.")
+            case "special_account":
+                return String(appLocalized: "This purchase belongs to another FitFight account. Sign in to that account or contact support.")
             case "already_member":
                 return String(appLocalized: "That person is already in this fight.")
             case "fight_not_joinable":
@@ -832,6 +842,20 @@ struct FitFightAPI {
 
     func companionPrompts(accessToken: String) async throws -> [String] {
         try await get(path: "me/companions", accessToken: accessToken)
+    }
+
+    func specials(accessToken: String) async throws -> SpecialStoreSnapshot {
+        try await get(path: "me/specials", accessToken: accessToken, expected: [200])
+    }
+
+    func specialCheckout(action: String, companionId: String, attemptId: UUID, accessToken: String) async throws {
+        let _: DiscardBody = try await post(path: "me/specials/checkout", accessToken: accessToken,
+            body: ["action": action, "companion_id": companionId, "attempt_id": attemptId.uuidString.lowercased()], expected: [200])
+    }
+
+    func claimSpecial(companionId: String, signedTransaction: String, accessToken: String) async throws -> SpecialClaimResult {
+        try await post(path: "me/specials/transactions", accessToken: accessToken,
+            body: ["companion_id": companionId, "signed_transaction": signedTransaction], expected: [200])
     }
 
     func updateProfile(

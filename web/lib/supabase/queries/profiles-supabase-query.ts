@@ -142,6 +142,15 @@ export async function updateProfile(
         .is("deleted_at", null)
         .select(PROFILE_COLUMNS)
         .maybeSingle();
+    if (
+        error?.code === "P0001" &&
+        error.message.includes("special_purchase_required")
+    )
+        throw new ApiError(
+            403,
+            "special_purchase_required",
+            "Purchase this Special before using it",
+        );
     if (error?.code === "23505")
         throw new ApiError(409, "handle_taken", "That username is taken");
     if (error?.code === "23514")

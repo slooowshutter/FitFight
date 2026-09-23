@@ -174,6 +174,10 @@ struct Fight: Codable, Identifiable, Hashable {
         )
     }
 
+    var timeAndDeadlineLabel: String {
+        hasPassedDeadline ? deadlineLabel : "\(timeLeftLabel) · \(deadlineLabel)"
+    }
+
     private var hasPassedDeadline: Bool {
         daysLeft == nil || status == .finished || status == .pending || windowEnd <= Date()
     }

@@ -84,13 +84,12 @@ struct APIContractTests {
         precondition(generatedProfile.photoURL == aiLibrary[0].images[0].url)
         let restoredGeneratedProfile = try decoder.decode(FitFightProfile.self, from: JSONEncoder().encode(generatedProfile))
         precondition(restoredGeneratedProfile == generatedProfile)
-        let oldProfile = try decoder.decode(PreBlendProfile.self, from: profileData)
-        let oldReaderWithGeneratedImage = try decoder.decode(PreBlendProfile.self, from: JSONEncoder().encode(generatedProfile))
+        let oldProfile = try decoder.decode(Build201Profile.self, from: profileData)
+        let oldReaderWithGeneratedImage = try decoder.decode(Build201Profile.self, from: JSONEncoder().encode(generatedProfile))
         precondition(oldReaderWithGeneratedImage.userId == oldProfile.userId)
         precondition(oldReaderWithGeneratedImage.handle == oldProfile.handle)
         precondition(oldReaderWithGeneratedImage.avatar == oldProfile.avatar)
         precondition(oldReaderWithGeneratedImage.companionId == "custom")
-
 
         var zonedProfileJSON = try JSONSerialization.jsonObject(with: profileData) as! [String: Any]
         zonedProfileJSON["time_zone"] = "Pacific/Kiritimati"
@@ -106,6 +105,12 @@ struct APIContractTests {
             from: JSONSerialization.data(withJSONObject: withCompanionJSON))
         precondition(withCompanion.companionId == "fox")
         precondition(withCompanion.companionPrompt == nil)
+        withCompanionJSON["companion_id"] = "limited-pangolin"
+        let limitedData = try JSONSerialization.data(withJSONObject: withCompanionJSON)
+        let limitedCompanion = try decoder.decode(FitFightProfile.self, from: limitedData)
+        let releasedProfile = try decoder.decode(Build201Profile.self, from: limitedData)
+        precondition(limitedCompanion.companionId == "limited-pangolin")
+        precondition(releasedProfile.companionId == "limited-pangolin" && releasedProfile.companionPrompt == nil)
         withCompanionJSON["companion_id"] = "custom"
         withCompanionJSON["companion_prompt"] = "a cream frenchie with gold sunglasses"
         let customCompanion = try decoder.decode(FitFightProfile.self,
@@ -191,8 +196,9 @@ private struct Build201FightPostComment: Decodable {
     }
 }
 
+// Frozen production profile decoder, also used by public build 201.
 
-private struct PreBlendProfile: Codable, Equatable {
+private struct Build201Profile: Codable, Equatable {
     let userId: UUID
     let handle: String
     let displayName: String
@@ -201,9 +207,6 @@ private struct PreBlendProfile: Codable, Equatable {
     var avatar: FitFightMedia?
     var companionId: String? = nil
     var companionPrompt: String? = nil
-    var timeZone: String? = nil
-
-    var calendarTimeZone: TimeZone { timeZone.flatMap(TimeZone.init(identifier:)) ?? .current }
 
     var atHandle: String { "@\(handle)" }
 
@@ -231,6 +234,5 @@ private struct PreBlendProfile: Codable, Equatable {
         case avatar
         case companionId = "companion_id"
         case companionPrompt = "companion_prompt"
-        case timeZone = "time_zone"
     }
 }

@@ -170,6 +170,7 @@ enum ScreenshotExport {
                     .environmentObject(steps)
                     .environmentObject(feed)
                     .environmentObject(companions)
+                    .environmentObject(SpecialPurchases())
                     .environmentObject(AccountPreferencesStore())
                     .environment(\.ffTheme, store.theme)
                     .environment(\.colorScheme, store.theme.colorScheme)
@@ -194,6 +195,7 @@ enum ScreenshotExport {
                 ("review", AnyView(NewFightView(opening: .create, initialStep: 4)), .newFight),
                 ("you", AnyView(YouView()), .you),
                 ("picker", AnyView(CompanionPicker(selection: .badger)), .you),
+                ("picker-limited", AnyView(CompanionPicker(selection: .limitedPangolin)), .you),
                 ("feed", AnyView(FeedView()), .feed),
                 ("compose", AnyView(FeedComposeSheet()), .feed),
             ]
@@ -212,11 +214,24 @@ enum ScreenshotExport {
                 })
                 write(wrap(view, .fights), name: "\(mode.rawValue)-chart-\(kind.rawValue)", height: canvas.height, to: folder, scale: 1)
             }
-            for (name, view, tab) in shots where ["fights", "group", "new", "you", "picker"].contains(name) {
+            for (name, view, tab) in shots where ["fights", "group", "new", "you", "picker", "picker-limited"].contains(name) {
                 write(
                     AnyView(wrap(view, tab).environment(\.dynamicTypeSize, .accessibility3)),
                     name: "\(mode.rawValue)-\(name)-large-text", height: canvas.height, to: folder, scale: 1
                 )
+            }
+            let longNameCompanions = CompanionStore()
+            longNameCompanions.selection = .limitedSecretaryBirdStride
+            for width in [CGFloat(375), 393] {
+                for size in [DynamicTypeSize.large, .accessibility3] {
+                    write(
+                        AnyView(wrap(AnyView(YouView().environmentObject(longNameCompanions)), .you)
+                            .environment(\.dynamicTypeSize, size)),
+                        name: "\(mode.rawValue)-you-special-\(Int(width))\(size == .large ? "" : "-large-text")",
+                        size: CGSize(width: width, height: size == .large ? canvas.height : tallHeight),
+                        scale: 1, to: folder
+                    )
+                }
             }
             for state in CompanionPreview.DisplayState.allCases where state != .populated && state != .offline {
                 model.showCompanionPreviewState(state)

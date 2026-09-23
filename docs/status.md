@@ -2,7 +2,7 @@
 
 Read this before building. Last updated **23 Sep 2026**. Production release: **1.1.1 (202)**.
 
-Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
+Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments other than the approved Specials purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
 ---
 
@@ -132,6 +132,252 @@ behavior until they install this native change.
 **Verification:** English/French localization validation passed. The updated
 native release regression and simulator compile still need GitHub-hosted
 `macos-26` CI. No PR, merge, upload, or live deployment was performed here.
+
+## Specials review fixes, 23 Sep 2026
+
+Marc asked to fix every finding from the 22 Sep branch review. These are code
+changes only; nothing was pushed, merged, deployed or uploaded.
+
+- **Unpaid holds lapse after 30 minutes.** Reading the store releases older
+  holds, so an abandoned checkout, a declined Ask to Buy, an app killed during
+  Apple's sheet, a deleted account or a deliberate never-paid reservation can no
+  longer lock a Special forever. A late verified charge is still recorded: owned
+  if the Special is free, otherwise a conflict with Apple's refund request. The
+  app releases the hold when StoreKit throws (no network, Screen Time) and clears
+  a submitted attempt once the server no longer holds it.
+- **Specials are hidden while sales are off.** With `APPLE_SPECIALS_ENABLED=false`
+  the picker shows only a Special the account already owns, so production builds
+  no longer show 40 unbuyable items.
+- **App Review Sandbox shelf.** The app adds `?storekit=sandbox` when
+  `AppTransaction` reports Sandbox. On production, an account with no hold or
+  purchase then moves to the separate Sandbox inventory, so reviewers buy without
+  touching real stock. App Store users never send it. The hint is unsigned: a
+  false claim only strands the claimant's own purchases, and a TestFlight tester
+  replaying Sandbox evidence to production could at most show a Sandbox Special
+  on their own profile.
+- **The TestFlight notification check is advisory** and no longer blocks uploads.
+- **Removed the unshipped free-claim layer:** `/api/v1/me/companions/limited`,
+  the profile unique index and its `companion_taken` mapping, the write-only
+  `special_notifications` table and the unused native wrappers. Checkout still
+  returns `409 companion_taken`. The two unapplied migrations are now one,
+  `20260920222056_paid_specials.sql`; `20260920185244_limited_companions.sql` no
+  longer exists.
+- **Offline saves restored for stock and custom animals.** Only Specials wait for
+  the server.
+- One changelog note replaces the three Specials notes. The one-shot Apple setup,
+  key audit and cutout workflows were deleted; their scripts remain. The branch
+  name triggers, preview render step and `vercel.json` entry stay until merge
+  because this branch still needs them for CI.
+
+**Verified locally on 23 Sep:** web typecheck; 360 of 361 web unit tests (the
+failure is `update-fight-supabase-query.test.ts`, whose fixed 21 Sep end date is
+now past; this branch does not touch it and develop CI will hit it too); full
+iOS simulator build; all 20 native check scripts, including new purchase
+scenarios that fail on the previous code; native API contracts; OpenAPI parse.
+The merged migration and the real query functions ran against a local
+PostgreSQL 16 with Supabase stand-ins: lapse at 30 minutes, harmless stale
+cancels, late charge as conflict, owner-only equip, the review shelf and staging
+refusing Production accounts. The disposable Supabase suite, including updated
+lapse and Sandbox-shelf integration tests, has not run; it needs a push.
+
+## Paid Specials implementation, 21 Sep 2026
+
+Marc authorized finishing the Apple purchase flow at **EUR 0.99 per Special**.
+The native app now reserves before checkout, displays Apple's localized price,
+binds StoreKit to a server-created account token, restores purchases, handles
+pending payments, and offers Apple refund requests for unfulfilled charges.
+Unpaid reservations lapse after 30 minutes (23 Sep change above). A lost reservation response reuses the same attempt;
+a submitted attempt is never automatically repurchased. Paid ownership is
+permanent, separate from the selected profile animal, and limited to one Special
+per account and one owner per artwork. Refunds retire the artwork instead of
+reselling it; reversals reinstate ownership. Deletion removes the profile link
+but retains purchase reconciliation records and the retired artwork.
+
+**Contract and compatibility:** additive `/api/v1/me/specials`, `/checkout` and
+`/transactions` endpoints. `/api/v1/me` keeps its existing request/response
+shape; the new `403 special_purchase_required` applies to unowned new Specials.
+The private ledger and an integrity trigger protect profile writers. The
+three-state limited-availability response was removed on 23 Sep. Existing released-client
+fixtures remain unchanged. The unpublished free-edition test was replaced with
+permanent paid-ownership, concurrent checkout, refund and restore scenarios.
+No existing free Special profile needs conversion in shipped clients because
+this collection has not been distributed. Existing unchanged Special selections
+are tolerated by the migration for an older in-flight backend write; they do not
+grant a purchase or reserve paid inventory.
+
+**Configuration:** Vercel Preview now has `APPLE_IAP_ENVIRONMENT=Sandbox` and
+`APPLE_SPECIALS_ENABLED=true`; Production has `Production` and `false`.
+These settings are saved for subsequent deployments, not evidence of a deployed
+checkout. The previously verified purchase keys and 40 EUR 0.99 prices remain.
+[Apple setup run 35542291302](https://github.com/slooowshutter/FitFight/actions/runs/35542291302)
+now verifies all 40 draft products available in 175 current Apple territories.
+No product was submitted for review.
+Banking and tax forms are still the Account Holder's responsibility. The signed
+agreement does not need to be signed again.
+
+**Verified code and cloud checks:** at `57e2b4b1`, the [Web API run](https://github.com/slooowshutter/FitFight/actions/runs/35543678359)
+passed generated Next.js route signatures, strict TypeScript, all **361**
+unit/security tests and OpenAPI parsing. The [disposable database run](https://github.com/slooowshutter/FitFight/actions/runs/35543678377)
+passed schema lint, pgTAP, all **54** transaction/compatibility tests both before
+and after the separately deferred client permission cutoff, legacy build 113,
+and deletion/row-backfill migration fixtures. The optimized Next.js build also
+passed against that disposable database, including static page generation.
+The eight purchase scenarios cover concurrent checkout, matching cancellation,
+permanent ownership, conflicts, refunds, reversals, delayed delivery, immutable
+transaction binding and account deletion. Existing HTTP regression requests and
+response assertions cover builds 113, 190, 200, 201, 202, 203, 204 and 205; their
+new-Special setup now establishes paid ownership first.
+
+The [native run at `f801ca11`](https://github.com/slooowshutter/FitFight/actions/runs/35543330392)
+passed the full iOS simulator build, localization and API-boundary checks,
+purchase-controller recovery/cancellation/account-binding tests, and existing
+native regressions. Subsequent commits changed backend route validation and CI,
+not native code. English/French Day/Night captures, including large text, were
+exported and inspected: cutouts are transparent, the selected caption stays in
+the footer, and long profile names fit. These captures use fixture mode and do
+not verify StoreKit product lookup or a charge. No genuine Apple Sandbox
+purchase has been made. CI now generates Next.js route validators before
+TypeScript checks and runs the optimized backend build with its disposable DB.
+
+**Live deployment:** unchanged. A 21 Sep read-only recheck still shows staging
+latest 201, review/internal 205 with enforcement off; production latest 202 with
+enforcement on. Migrations must precede backend deployment and TestFlight.
+Feature-branch Vercel deployment remains disabled. No PR, develop/preview/main
+merge, TestFlight upload or App Store submission has been performed. The preview
+upload workflow requires the working staging endpoint and configures only the
+Sandbox V2 notification URL; since 23 Sep, Apple's test-delivery check only warns.
+This gate has not run against a deployed payment endpoint yet. Production remains
+separately gated: the App Review account allowlist (23 Sep) and final legal/payout setup.
+
+**Next release and device check:** after an authorized PR and develop/preview
+promotion, the release job requests Apple's signed Sandbox test notification
+before upload (advisory since 23 Sep). Update in TestFlight, open You's companion picker, choose
+Specials and confirm the Apple purchase sheet. TestFlight never charges real
+money. Check cancellation before purchase, successful ownership, restart and
+Restore purchases, and a second account seeing the same artwork as taken.
+Use the regular Apple Account; a dedicated Sandbox account is only needed for
+extra controls such as clearing Apple purchase history or interrupted payments.
+Banking/tax setup, production reviewer isolation and App Store submission remain
+separate from this TestFlight test.
+
+## Specials companion collection and payment preparation, 20 Sep 2026
+
+**Companion code, before paid purchases:** all 40 supplied photos are bundled as transparent PNGs with specific animal names in All and the new
+Specials category. Each has English/French names and a funny caption on
+You and shared profiles. Tapping previews the image, name and caption above a
+persistent Save button; it no longer immediately saves. Taken editions are
+marked and disabled. Each photo, including alternate species poses, is one
+edition with one active owner per environment. An account has one current
+companion, and switching or account deletion releases its edition. A unique
+index prevents simultaneous claims; failed saves retain the previous companion
+and never create an offline claim. Stock animals/custom descriptions remain
+unlimited. Marketing version remains 1.1.2 with a new release note.
+
+**Compatibility:** `/api/v1/me` keeps its request and response shapes and existing
+`handle_taken` error. New IDs are strings; `409 companion_taken` applies to new
+limited selections. The authenticated read `/api/v1/me/companions/limited` (removed 23 Sep)
+returned only `{ id, availability }`, never owner IDs. Existing fixtures are
+retained. Regression coverage includes legacy builds 113, 190, 200, 201, 202,
+203, 204, and 205, ordinary profile edits while a limited edition is selected,
+legacy stock requests with explicit null prompts, and the frozen production
+profile decoder. Older apps retain their existing photo/initials fallback for
+unbundled artwork.
+
+**Read-only live evidence:** on 20 Sep, staging `/api/app-release` returned latest
+1.1.1 (201), review/internal 1.1.2 (205), enforcement off. Production returned
+latest 1.1.1 (202), review/internal null, enforcement on. Legacy staging clients
+therefore remain in scope. No hosted database, release policy, or live backend
+was changed by this work.
+
+**Rollout:** apply `20260920185244_limited_companions.sql` (merged into `20260920222056_paid_specials.sql` on 23 Sep), deploy the compatible
+backend, allow old backend instances with closed companion enums to drain, then
+distribute the native app through an authorized preview promotion. Production
+requires its own authorized promotion and verification. No PR, merge, TestFlight
+upload, or production deployment is included.
+
+**Cloud verification:** at `f06f0b56`, the [Web API check](https://github.com/slooowshutter/FitFight/actions/runs/35531913350),
+[disposable database checks](https://github.com/slooowshutter/FitFight/actions/runs/35531913228),
+[full simulator build and native regressions](https://github.com/slooowshutter/FitFight/actions/runs/35531913341),
+and [reproducible ISNet cutout job](https://github.com/slooowshutter/FitFight/actions/runs/35531913284)
+all passed. The database suite preserves older-client fixtures before and after
+the separately deferred direct-client permission cutoff. Actual running simulator
+captures show the Specials category, image grid, selected caption and Save footer
+in English/French and Day/Night. All 80 bundled full-image/portrait assets are RGBA
+PNGs; the original opaque JPGs remain source references. Light/dark cutout sheets
+were inspected, including a correction that preserves the pangolin's pale sock.
+
+**Paid purchase request:** Marc subsequently requested paid Specials through
+Apple. This supersedes the free claim/release behavior above, which must not ship
+as the completed paid feature. StoreKit non-consumable purchases are the appropriate
+Apple mechanism. This section records earlier preparation; the newer paid
+implementation section above is the current code state. Marc's original "users can only have one" instruction is being
+treated as one permanently owned Special per account. On 21 Sep, Marc set the
+price to EUR 0.99 each. France is the base territory, with Apple's automatic
+equivalent prices elsewhere. The paid implementation and its verification are described in the newer section
+above. Pending reservations persisted until 23 Sep, when unpaid holds began lapsing after 30 minutes; deleted-account purchase recovery requires
+support and cannot transfer a live owner’s purchase. See [the Apple research](research/apple-specials-purchases.md)
+for the limitations of combining one-of-one stock with delayed StoreKit payments.
+
+**Receipt-verification preparation:** `web/lib/apple/special-purchase.ts` uses
+Apple's App Store Server Library 3.1.0 and bundled public Apple root certificates
+with online certificate checks. It verifies the submitted JWS, the account,
+animal, purchase type and environment, then fetches and verifies Apple's current
+transaction. Current refund fields remain in the result for later reconciliation;
+an old signed receipt is never a fallback when Apple's lookup fails. This module
+did not grant ownership or have a route/native caller at that preparation step. That verification-only commit added no API,
+database, or native model changes beyond the separately tested companion baseline.
+At `7dd49c4d`, [cloud Web API checks](https://github.com/slooowshutter/FitFight/actions/runs/35539628204)
+passed strict TypeScript, all 353 backend tests (including 28 purchase tests),
+and contract parsing. Business cases use a mocked Apple boundary; the forgery
+test exercises the real verifier. A genuine Sandbox purchase and refund have
+not been verified. The unchanged companion database baseline passed its
+[latest completed database run](https://github.com/slooowshutter/FitFight/actions/runs/35539222143).
+The earlier branch push reports a completed Vercel preview check. Automatic
+Vercel deployments are now disabled for `exclusive-animal-avatars` while the paid
+flow is incomplete; GitHub-hosted verification remains enabled. This work has
+not promoted the branch to staging or production.
+
+**Apple setup:** [cloud preparation](https://github.com/slooowshutter/FitFight/actions/runs/35538448305)
+created all 40 non-consumable product records and verified Family Sharing is off
+for every product. Product IDs use `com.fitfight.mvp.special.` followed by the
+animal ID without `limited-`, with remaining hyphens replaced by underscores.
+All 40 draft prices are now set to **EUR 0.99** with France as the base territory
+and automatic Apple equivalents elsewhere. The [pricing job](https://github.com/slooowshutter/FitFight/actions/runs/35541096200)
+read back and verified every saved price, including no scheduled end date.
+The setup reuses matching schedules and stops rather than replacing conflicting
+pricing. Two earlier runs stopped before pricing: Apple's territory API requires
+collection lookup, and price-point territory data needs an explicit include.
+Sale availability was subsequently configured for all 40 drafts in run
+35542291302. Review submissions remain unconfigured. All 80
+English/French localizations are prepared. The [metadata job](https://github.com/slooowshutter/FitFight/actions/runs/35538808865)
+passed on its second attempt after an Apple HTTP 500 interrupted the first pass.
+Existing drafts and localizations were reused, preserving product IDs.
+
+After Marc signed in, the dedicated `FitFight Specials` In-App Purchase key was
+created and downloaded once. Its private key, key ID, and issuer ID are stored as
+`APPLE_IAP_PRIVATE_KEY`, `APPLE_IAP_KEY_ID`, and `APPLE_IAP_ISSUER_ID` in GitHub
+secrets and Vercel Preview/Production sensitive environment variables. A backup
+outside the repository has owner-only file permissions. The private key passed
+an OpenSSL structural check. [Cloud authorization checks](https://github.com/slooowshutter/FitFight/actions/runs/35539159367)
+returned HTTP 200 from the read-only notification-history API in both Production
+and Sandbox, with no purchase data logged. Live transaction verification is
+still outstanding.
+On 21 Sep, Apple's Business page lists the Paid Apps Agreement as **Pending User
+Info**, dated 20 Sep 2026. The signing step is complete. Bank Accounts offers
+**Add Bank Account**, with no bank listed, and the requested **U.S. Form W-9**
+shows **Missing Tax Info**. Marc needs to provide these legal and payout details;
+the agent has not entered or submitted them. No live payment or purchase
+entitlement has been created.
+
+**TestFlight testing:** Apple confirms TestFlight purchases always use Sandbox
+and do not charge real money. The currently installed build still lacks checkout.
+Once an authorized preview build with this implementation is available, update through
+TestFlight, open You's companion picker, select Specials, and confirm the purchase
+with Apple's sheet. Normal beta purchases use the tester's usual Apple Account.
+A dedicated Sandbox Apple Account is needed only to use controls such as clearing
+purchase history or simulating interrupted payments. Production inventory must
+remain separate. Verify purchase, cancel, restart/restore and a second account
+being unable to claim the same Special before calling payments ready.
 
 ## Preview promotion, 19 Sep 2026
 

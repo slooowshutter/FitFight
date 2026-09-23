@@ -202,6 +202,29 @@ test("step statistics keep owner records private and clip every shared aggregate
     await updateProfileSettings(owner, { activity_audience: "off" }, database);
     assert.equal((await readSharedProfile(friend, owner, undefined, database)).step_statistics, null);
     await updateProfileSettings(owner, { activity_audience: "friends" }, database);
+    const [legacyDay] = await database<{ day: string }[]>`
+        select (current_date - 1)::text as day
+    `;
+    await database`
+        insert into public.metric_days (
+            user_id, source_id, metric, day, time_zone, value, unit, input_hash,
+            normalization_version, calculation_version, finalized_at, updated_at
+        ) values (
+            ${owner}, ${sourceId}, 'steps', ${legacyDay.day}, 'UTC', 12_345, 'steps',
+            repeat('a', 64), 1, 1, now(), now() + interval '1 minute'
+        )
+    `;
+    assert.equal((await readSharedProfile(owner, owner, undefined, database)).activity?.values
+        .find((day) => day.day === legacyDay.day)?.steps, 12_345,
+        "An old backend write remains visible after the one-time backfill");
+    await database`
+        update private.activity_metrics
+        set value = 13_000, updated_at = now() + interval '2 minutes'
+        where user_id = ${owner} and day = ${legacyDay.day} and metric = 'steps'
+    `;
+    assert.equal((await readSharedProfile(owner, owner, undefined, database)).activity?.values
+        .find((day) => day.day === legacyDay.day)?.steps, 13_000,
+        "A newer activity measurement becomes authoritative");
     await changeFriendship(owner, friend, "remove", database);
     assert.equal((await readSharedProfile(friend, owner, undefined, database)).step_statistics, null);
     await blockProfile(friend, owner, database);

@@ -3,14 +3,13 @@ import type { Sql } from "postgres";
 import { randomJoinCode } from "@/lib/domain/fights/join-code";
 import { ApiError, ERROR_CODES } from "@/lib/http";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createDatabaseClient } from "@/lib/supabase/postgres";
 import type { FightRow, ProfileRow } from "@/lib/types/database";
 import type { CreateFightInput } from "@/lib/types/fights/create-fight";
 import { ensureAppleHealthSource } from "./apple-health-source-supabase-query";
-import {
-    createInvite,
-    lookupProfileByHandle,
-} from "./create-invite-supabase-query";
+import { lookupProfileByHandle } from "./create-invite-supabase-query";
 import { fightSummary } from "./fight-access-supabase-query";
+import { enqueueFightInviteNotifications } from "./notification-intents-supabase-query";
 
 export function storedFightIdentity(
     name: string | undefined,
@@ -56,7 +55,7 @@ async function allocateJoinCode(admin: SupabaseClient): Promise<string> {
 export async function createFight(
     userId: string,
     input: CreateFightInput,
-    sql?: Sql,
+    database: Sql = createDatabaseClient(),
 ) {
     if (input.metric && input.metric !== "steps") {
         throw new ApiError(
@@ -69,8 +68,8 @@ export async function createFight(
     const admin = createAdminClient();
     const { data: profileData, error: profileError } = await admin
         .from("profiles")
-        .select("user_id, handle, display_name, time_zone")
-        .eq("user_id", userId)
+        .select("user_id:id, handle, display_name, time_zone")
+        .eq("id", userId)
         .maybeSingle();
     if (profileError) {
         throw new ApiError(500, ERROR_CODES.db_error, "Could not load profile");
@@ -114,6 +113,7 @@ export async function createFight(
     const handles = (input.inviteHandles ?? [])
         .map((handle) => handle.trim())
         .filter((handle) => handle.length > 0);
+    const inviteeIds = new Set<string>();
     for (const handle of handles) {
         const invitee = await lookupProfileByHandle(admin, handle);
         if (invitee.user_id === userId) {
@@ -123,111 +123,90 @@ export async function createFight(
                 "Cannot invite yourself",
             );
         }
+        inviteeIds.add(invitee.user_id);
     }
+    const invitees = [...inviteeIds];
     const state = input.start === "now" ? "live" : "scheduled";
     const source = await ensureAppleHealthSource(userId, { admin });
+    const joinCode = await allocateJoinCode(admin);
     const durationSeconds = Math.round(
         (Date.parse(endsAt) - Date.parse(startsAt)) / 1000,
     );
-    const { data: series, error: seriesError } = await admin
-        .from("fight_series")
-        .insert({
-            owner_id: userId,
-            join_code: await allocateJoinCode(admin),
-            visibility: input.visibility,
-            recurring: input.recurring,
-            duration_seconds: durationSeconds,
-            name: stored.name,
-            action_text: stored.actionText,
-            time_zone: input.timeZone,
-        })
-        .select("id")
-        .single();
-    if (seriesError || !series) {
-        throw new ApiError(
-            500,
-            ERROR_CODES.db_error,
-            "Could not create fight series",
-        );
-    }
-    const seriesId = series.id as string;
+    const ownerName = profile.display_name?.replace(/\s+/g, " ").trim();
 
-    const { data: inserted, error: insertError } = await admin
-        .from("fights")
-        .insert({
-            owner_id: userId,
-            name: stored.name,
-            state,
-            starts_at: startsAt,
-            ends_at: endsAt,
-            time_zone: input.timeZone,
-            metric: "steps",
-            outcome_rule: input.outcomeRule,
-            goal_policy: input.goalPolicy,
-            default_goal_value: input.defaultGoalValue ?? null,
-            stake_kind: input.stakeKind,
-            stake_minor: input.stakeMinor ?? null,
-            currency:
-                input.stakeKind === "money"
-                    ? input.currency
-                    : (input.currency ?? null),
-            action_text: stored.actionText,
-            series_id: seriesId,
-        })
-        .select("id, state")
-        .single();
-    if (insertError || !inserted) {
-        throw new ApiError(500, ERROR_CODES.db_error, "Could not create fight");
-    }
-
-    const { error: currentError } = await admin
-        .from("fight_series")
-        .update({ current_fight_id: inserted.id })
-        .eq("id", seriesId);
-    if (currentError) {
-        throw new ApiError(
-            500,
-            ERROR_CODES.db_error,
-            "Could not attach series to fight",
-        );
-    }
-
-    const nowIso = new Date().toISOString();
-    const { error: memberError } = await admin.from("fight_members").insert({
-        fight_id: inserted.id,
-        user_id: userId,
-        state: "accepted",
-        accepted_at: nowIso,
-        selected_source_id: source.id,
-        source_label: source.sourceLabel,
+    // One transaction: a failure can no longer leave a series without its round, a
+    // round without its owner, or only some of the invitations.
+    const inserted = await database.begin(async (sql) => {
+        const [series] = await sql<{ id: string }[]>`
+            insert into public.fight_series (
+                owner_id, join_code, visibility, recurring, duration_seconds,
+                name, action_text, time_zone
+            )
+            values (
+                ${userId}, ${joinCode}, ${input.visibility}, ${input.recurring}, ${durationSeconds},
+                ${stored.name}, ${stored.actionText}, ${input.timeZone}
+            )
+            returning id
+        `;
+        const [fight] = await sql<Pick<FightRow, "id" | "state">[]>`
+            insert into public.fights (
+                owner_id, name, state, starts_at, ends_at, time_zone, metric,
+                outcome_rule, goal_policy, default_goal_value, stake_kind,
+                stake_minor, currency, action_text, series_id
+            )
+            values (
+                ${userId}, ${stored.name}, ${state}, ${startsAt}, ${endsAt}, ${input.timeZone}, 'steps',
+                ${input.outcomeRule}, ${input.goalPolicy}, ${input.defaultGoalValue ?? null}, ${input.stakeKind},
+                ${input.stakeMinor ?? null},
+                ${input.stakeKind === "money" ? input.currency : (input.currency ?? null)},
+                ${stored.actionText}, ${series.id}
+            )
+            returning id, state::text as state
+        `;
+        await sql`
+            update public.fight_series set current_fight_id = ${fight.id} where id = ${series.id}
+        `;
+        const now = new Date().toISOString();
+        await sql`
+            insert into public.fight_members (
+                fight_id, user_id, state, accepted_at, selected_source_id, source_label
+            )
+            values (${fight.id}, ${userId}, 'accepted', ${now}, ${source.id}, ${source.sourceLabel})
+        `;
+        await sql`
+            insert into public.fight_series_members (series_id, user_id, state, joined_at)
+            values (${series.id}, ${userId}, 'accepted', ${now})
+        `;
+        if (invitees.length > 0) {
+            await sql`
+                insert into public.fight_members (fight_id, user_id, state)
+                select ${fight.id}, profile.user_id, 'invited'
+                from public.profiles as profile
+                where profile.user_id in ${sql(invitees)}
+            `;
+            await sql`
+                insert into public.fight_series_members (series_id, user_id, state)
+                select ${series.id}, profile.user_id, 'invited'
+                from public.profiles as profile
+                where profile.user_id in ${sql(invitees)}
+            `;
+            // New Fights are joined by id, so the invite token itself is never shown.
+            await sql`
+                insert into public.fight_invites (fight_id, invited_user_id, token_hash, expires_at)
+                select ${fight.id}, profile.user_id,
+                    encode(sha256(gen_random_bytes(32)), 'hex'), ${endsAt}::timestamptz
+                from public.profiles as profile
+                where profile.user_id in ${sql(invitees)}
+            `;
+            await enqueueFightInviteNotifications(sql, {
+                fightId: fight.id,
+                fightName: stored.name,
+                actorName: ownerName ? ownerName : profile.handle,
+                userIds: invitees,
+            });
+        }
+        return fight;
     });
-    if (memberError) {
-        throw new ApiError(
-            500,
-            ERROR_CODES.db_error,
-            "Could not add owner as member",
-        );
-    }
-
-    const { error: seriesMemberError } = await admin
-        .from("fight_series_members")
-        .insert({
-            series_id: seriesId,
-            user_id: userId,
-            state: "accepted",
-            joined_at: nowIso,
-        });
-    if (seriesMemberError) {
-        throw new ApiError(
-            500,
-            ERROR_CODES.db_error,
-            "Could not add owner to series",
-        );
-    }
-
-    for (const handle of handles) {
-        await createInvite(userId, inserted.id as string, handle, admin, sql);
-    }
 
     return fightSummary(inserted as Pick<FightRow, "id" | "state">);
 }

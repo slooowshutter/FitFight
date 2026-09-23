@@ -16,6 +16,4 @@ export const GET = apiRoute(async (request, { timing }) => {
     );
 }, "healthkit_context");
 
-export function OPTIONS(request: Request) {
-    return corsPreflight(request);
-}
+export const OPTIONS = corsPreflight;

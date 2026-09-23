@@ -13,6 +13,4 @@ export const POST = apiRoute<{ userID: string }>(async (request, { params }) => 
     return json(await reportProfile(userId, targetId, input.reason));
 });
 
-export function OPTIONS(request: Request) {
-    return corsPreflight(request);
-}
+export const OPTIONS = corsPreflight;

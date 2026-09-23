@@ -13,7 +13,7 @@ struct ProfileIdentityLink<Label: View>: View {
         if let userID {
             Button { showingProfile = true } label: { label.frame(minHeight: 44).contentShape(Rectangle()) }
             .buttonStyle(FFHapticPlainStyle())
-            .accessibilityHint(String(localized: "Open profile"))
+            .accessibilityHint(String(appLocalized: "Open profile"))
             .sheet(isPresented: $showingProfile, onDismiss: onClosed) {
                 ProfileSheet(userID: userID, source: source)
                     .fitFightTheme(theme)
@@ -47,15 +47,10 @@ struct ProfileSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text(preview == nil ? String(localized: "Profile") : String(localized: "Profile preview"))
-                    .ffType(.heading)
-                Spacer()
-                Button(String(localized: "Close")) { dismiss() }
-                    .ffType(.label)
-                    .foregroundStyle(theme.mossText)
-                    .frame(minWidth: 44, minHeight: 44)
-            }
+            FFSheetHeader(
+                title: preview == nil ? String(appLocalized: "Profile") : String(appLocalized: "Profile preview"),
+                role: .heading
+            ) { dismiss() }
             .padding(.horizontal, theme.space.screenPadding)
             .padding(.top, 12)
             ScrollView {
@@ -63,7 +58,7 @@ struct ProfileSheet: View {
                     if store.loading { ProgressView().frame(maxWidth: .infinity) }
                     if let error = store.error ?? actionError {
                         FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
-                        FFButton(title: String(localized: "Retry"), kind: .secondary) {
+                        FFButton(title: String(appLocalized: "Retry"), kind: .secondary) {
                             Task { await store.load(userID: userID, session: session, preview: preview) }
                         }
                     }
@@ -89,19 +84,19 @@ struct ProfileSheet: View {
         }
         .onChange(of: session.authSession?.user.id) { _, _ in store.clear(); dismiss() }
         .onDisappear { store.clear() }
-        .confirmationDialog(String(localized: "Block this person?"), isPresented: $confirmingBlock, titleVisibility: .visible) {
-            Button(String(localized: "Block"), role: .destructive) { Task { await act("block") } }
+        .confirmationDialog(String(appLocalized: "Block this person?"), isPresented: $confirmingBlock, titleVisibility: .visible) {
+            Button(String(appLocalized: "Block"), role: .destructive) { Task { await act("block") } }
         } message: {
-            Text(String(localized: "This removes the friendship and hides profiles and shared artwork. Existing Fight results stay."))
+            Text(String(appLocalized: "This removes the friendship and hides profiles and shared artwork. Existing Fight results stay."))
         }
-        .confirmationDialog(String(localized: "Remove friend?"), isPresented: $confirmingRemoval, titleVisibility: .visible) {
-            Button(String(localized: "Remove friend"), role: .destructive) { Task { await act("remove") } }
+        .confirmationDialog(String(appLocalized: "Remove friend?"), isPresented: $confirmingRemoval, titleVisibility: .visible) {
+            Button(String(appLocalized: "Remove friend"), role: .destructive) { Task { await act("remove") } }
         }
-        .alert(String(localized: "Report profile"), isPresented: $reporting) {
-            TextField(String(localized: "Reason"), text: $reportReason)
-            Button(String(localized: "Send report")) { Task { await act("report") } }
+        .alert(String(appLocalized: "Report profile"), isPresented: $reporting) {
+            TextField(String(appLocalized: "Reason"), text: $reportReason)
+            Button(String(appLocalized: "Send report")) { Task { await act("report") } }
                 .disabled(reportReason.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            Button(String(localized: "Cancel"), role: .cancel) {}
+            Button(String(appLocalized: "Cancel"), role: .cancel) {}
         }
     }
 
@@ -120,25 +115,25 @@ struct ProfileSheet: View {
         }
         if preview == nil && profile.friendship != "self" {
             friendshipActions(profile)
-            FFButton(title: String(localized: "Challenge"), fullWidth: true) { challenge(profile) }
+            FFButton(title: String(appLocalized: "Challenge"), fullWidth: true) { challenge(profile) }
         }
         if profile.access == "private" {
-            FFNotice(text: String(localized: "Private profile. Friends and current opponents can see what this person shares."), tone: .neutral, systemImage: "lock")
+            FFNotice(text: String(appLocalized: "Private profile. Friends and current opponents can see what this person shares."), tone: .neutral, systemImage: "lock")
         } else if !profile.competitive && profile.access != "owner" {
-            Text(String(localized: "Casual profile. Competitive statistics are hidden."))
+            Text(String(appLocalized: "Casual profile. Competitive statistics are hidden."))
                 .ffType(.caption).foregroundStyle(theme.textSecondary)
         }
         if let record = profile.record { ProfileRecordCard(record: record) }
         if let rivalry = profile.rivalry {
-            FFSection(title: String(localized: "Your rivalry")) {
+            FFSection(title: String(appLocalized: "Your rivalry")) {
                 FFCard {
                     VStack(alignment: .leading, spacing: 12) {
                         if rivalry.wins + rivalry.losses + rivalry.draws == 0 {
-                            Text(String(localized: "No head-to-head results yet")).ffType(.body)
+                            Text(String(appLocalized: "No head-to-head results yet")).ffType(.body)
                         } else {
-                            Text(String(format: String(localized: "profile.rivalry-score"), rivalry.wins, rivalry.losses, rivalry.draws))
+                            Text(String(format: String(appLocalized: "profile.rivalry-score"), rivalry.wins, rivalry.losses, rivalry.draws))
                                 .ffType(.heading)
-                            Text(String(localized: "Decided 1v1 Fights only. Group results appear in history."))
+                            Text(String(appLocalized: "Decided 1v1 Fights only. Group results appear in history."))
                                 .ffType(.caption).foregroundStyle(theme.textSecondary)
                         }
                     }
@@ -149,39 +144,39 @@ struct ProfileSheet: View {
             ProfileStepStatisticsView(statistics: statistics)
         }
         if let activity = profile.activity {
-            FFSection(title: String(format: String(localized: "profile.steps-period"), activity.days)) {
+            FFSection(title: String(format: String(appLocalized: "profile.steps-period"), activity.days)) {
                 FFCard {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text(String(localized: "Only stored days are shown. Missing days are unknown, not zero."))
+                        Text(String(appLocalized: "Only stored days are shown. Missing days are unknown, not zero."))
                             .ffType(.caption).foregroundStyle(theme.textSecondary)
                         ForEach(activity.values) { day in
                             VStack(alignment: .leading, spacing: 4) {
                                 HStack {
                                     Text(verbatim: day.day)
                                     Spacer()
-                                    Text(day.steps.formatted(.number.precision(.fractionLength(0))))
+                                    Text(day.steps.formatted(.number.precision(.fractionLength(0)).locale(AppLocalization.locale)))
                                 }.ffType(.label)
-                                Text(verbatim: day.timeZone ?? String(localized: "Historical time zone unavailable"))
+                                Text(verbatim: day.timeZone ?? String(appLocalized: "Historical time zone unavailable"))
                                     .ffType(.micro).foregroundStyle(theme.textSecondary)
-                                Text(day.finalized ? String(localized: "Complete day") : String(localized: "Partial day"))
+                                Text(day.finalized ? String(appLocalized: "Complete day") : String(appLocalized: "Partial day"))
                                     .ffType(.micro).foregroundStyle(theme.textSecondary)
-                                if let updated = FightRow.parse(day.updatedAt) {
+                                if let updated = parseServerDate(day.updatedAt) {
                                     HStack(spacing: 4) {
-                                        Text(String(localized: "Last updated"))
+                                        Text(String(appLocalized: "Last updated"))
                                         Text(updated, format: .relative(presentation: .named))
                                     }.ffType(.micro).foregroundStyle(theme.textSecondary)
                                 }
                             }
                         }
-                        if activity.values.isEmpty { Text(String(localized: "No shared days available")).ffType(.body) }
+                        if activity.values.isEmpty { Text(String(appLocalized: "No shared days available")).ffType(.body) }
                     }
                 }
             }
         }
         if preview == nil {
-            FFSection(title: profile.friendship == "self" ? String(localized: "Fight history") : String(localized: "Fights together")) {
+            FFSection(title: profile.friendship == "self" ? String(appLocalized: "Fight history") : String(appLocalized: "Fights together")) {
                 if store.history.isEmpty {
-                    Text(profile.friendship == "self" ? String(localized: "No results yet") : String(localized: "No Fights together yet"))
+                    Text(profile.friendship == "self" ? String(appLocalized: "No results yet") : String(appLocalized: "No Fights together yet"))
                         .ffType(.body).foregroundStyle(theme.textSecondary)
                 }
                 ForEach(store.history) { row in
@@ -196,16 +191,16 @@ struct ProfileSheet: View {
                     }
                 }
                 if store.nextCursor != nil {
-                    FFButton(title: String(localized: "Load more"), kind: .ghost, busy: store.loading) {
+                    FFButton(title: String(appLocalized: "Load more"), kind: .ghost, busy: store.loading) {
                         Task { await store.loadMore(userID: userID, session: session) }
                     }
                 }
             }
             if profile.friendship != "self" {
                 HStack {
-                    Button(String(localized: "Report profile")) { reporting = true }
+                    Button(String(appLocalized: "Report profile")) { reporting = true }
                     Spacer()
-                    Button(String(localized: "Block"), role: .destructive) { confirmingBlock = true }
+                    Button(String(appLocalized: "Block"), role: .destructive) { confirmingBlock = true }
                 }.ffType(.label).frame(minHeight: 44).disabled(busy)
             }
         }
@@ -216,14 +211,14 @@ struct ProfileSheet: View {
         HStack {
             switch profile.friendship {
             case "outgoing":
-                FFButton(title: String(localized: "Requested, cancel"), kind: .secondary, busy: busy, fullWidth: true) { Task { await act("remove") } }
+                FFButton(title: String(appLocalized: "Requested, cancel"), kind: .secondary, busy: busy, fullWidth: true) { Task { await act("remove") } }
             case "incoming":
-                FFButton(title: String(localized: "Accept"), busy: busy) { Task { await act("accept") } }
-                FFButton(title: String(localized: "Decline"), kind: .secondary, busy: busy) { Task { await act("decline") } }
+                FFButton(title: String(appLocalized: "Accept"), busy: busy) { Task { await act("accept") } }
+                FFButton(title: String(appLocalized: "Decline"), kind: .secondary, busy: busy) { Task { await act("decline") } }
             case "friends":
-                FFButton(title: String(localized: "Friends"), kind: .secondary, busy: busy, fullWidth: true) { confirmingRemoval = true }
+                FFButton(title: String(appLocalized: "Friends"), kind: .secondary, busy: busy, fullWidth: true) { confirmingRemoval = true }
             default:
-                FFButton(title: String(localized: "Add friend"), busy: busy, fullWidth: true) { Task { await act("request") } }
+                FFButton(title: String(appLocalized: "Add friend"), busy: busy, fullWidth: true) { Task { await act("request") } }
             }
         }
     }
@@ -271,21 +266,21 @@ struct ProfileRecordCard: View {
             VStack(alignment: .leading, spacing: 16) {
                 let layout = dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12)) : AnyLayout(HStackLayout(spacing: 14))
                 layout {
-                    metric(String(localized: "Fights played"), value: record.played.formatted())
-                    metric(String(localized: "Wins"), value: record.wins.formatted())
-                    metric(String(localized: "Win rate"), value: record.winRate.map { $0.formatted(.percent.precision(.fractionLength(0))) } ?? String(localized: "No results yet"))
+                    metric(String(appLocalized: "Fights played"), value: record.played.formatted(.number.locale(AppLocalization.locale)))
+                    metric(String(appLocalized: "Wins"), value: record.wins.formatted(.number.locale(AppLocalization.locale)))
+                    metric(String(appLocalized: "Win rate"), value: record.winRate.map { $0.formatted(.percent.precision(.fractionLength(0)).locale(AppLocalization.locale)) } ?? String(appLocalized: "No results yet"))
                 }
                 ForEach(["public", "private", "unknown"], id: \.self) { category in
                     if let counts = record.categories[category], counts.played > 0 {
                         HStack {
-                            Text(category == "public" ? String(localized: "Public Fights") : category == "private" ? String(localized: "Private Fights") : String(localized: "Category unknown"))
+                            Text(category == "public" ? String(appLocalized: "Public Fights") : category == "private" ? String(appLocalized: "Private Fights") : String(appLocalized: "Category unknown"))
                             Spacer()
-                            Text(String(format: String(localized: "profile.category-record"), counts.wins, counts.played))
+                            Text(String(format: String(appLocalized: "profile.category-record"), counts.wins, counts.played))
                         }.ffType(.caption).foregroundStyle(theme.textSecondary)
                     }
                 }
                 if record.excluded > 0 {
-                    Text(String(localized: "Ongoing, cancelled, solo and unverifiable historical results are excluded from win rate."))
+                    Text(String(appLocalized: "Ongoing, cancelled, solo and unverifiable historical results are excluded from win rate."))
                         .ffType(.caption).foregroundStyle(theme.textSecondary)
                 }
             }
@@ -304,32 +299,32 @@ private struct ProfileHistoryContent: View {
     @Environment(\.ffTheme) private var theme
     private var result: String {
         switch row.result {
-        case "win": return String(localized: "Won")
-        case "loss": return String(localized: "Lost")
-        case "draw": return String(localized: "Draw")
-        case "withdrawn": return String(localized: "Withdrew")
-        case "removed": return String(localized: "Removed")
-        case "incomplete": return String(localized: "Incomplete final sync")
-        case "cancelled": return String(localized: "Cancelled")
-        case "ongoing": return String(localized: "Ongoing")
-        case "solo": return String(localized: "Solo Fight")
-        case "not_entered": return String(localized: "Did not enter")
-        default: return String(localized: "Historical result unavailable")
+        case "win": return String(appLocalized: "Won")
+        case "loss": return String(appLocalized: "Lost")
+        case "draw": return String(appLocalized: "Draw")
+        case "withdrawn": return String(appLocalized: "Withdrew")
+        case "removed": return String(appLocalized: "Removed")
+        case "incomplete": return String(appLocalized: "Incomplete final sync")
+        case "cancelled": return String(appLocalized: "Cancelled")
+        case "ongoing": return String(appLocalized: "Ongoing")
+        case "solo": return String(appLocalized: "Solo Fight")
+        case "not_entered": return String(appLocalized: "Did not enter")
+        default: return String(appLocalized: "Historical result unavailable")
         }
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(verbatim: row.name ?? String(localized: "Fight result")).ffType(.heading)
+            Text(verbatim: row.name ?? String(appLocalized: "Fight result")).ffType(.heading)
             HStack {
                 Text(result)
                 Spacer()
                 if let placement = row.placement {
-                    Text(String(format: String(localized: "profile.placement"), placement, row.fieldSize))
+                    Text(String(format: String(appLocalized: "profile.placement"), placement, row.fieldSize))
                 }
             }.ffType(.label)
             Text(verbatim: String(row.endsAt.prefix(10))).ffType(.caption).foregroundStyle(theme.textSecondary)
             if row.complete == false && row.result != "incomplete" {
-                Text(String(localized: "Incomplete final sync")).ffType(.caption).foregroundStyle(theme.textSecondary)
+                Text(String(appLocalized: "Incomplete final sync")).ffType(.caption).foregroundStyle(theme.textSecondary)
             }
         }
     }

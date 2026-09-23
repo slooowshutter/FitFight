@@ -1,4 +1,3 @@
-import AVKit
 import PhotosUI
 import SwiftUI
 import UIKit
@@ -352,8 +351,6 @@ private func postableFights(_ fights: [Fight]) -> [Fight] {
 }
 
 struct FeedView: View {
-    var showsChrome: Bool = true
-
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var feed: FeedStore
@@ -365,13 +362,11 @@ struct FeedView: View {
 
     var body: some View {
         FFScreen(refresh: feedRefresh) {
-            if showsChrome {
-                FFScreenTitle(
-                    title: String(localized: "Feed"),
-                    subtitle: String(localized: "Posts from fights you’re in."),
-                    trailing: AnyView(composeButton)
-                )
-            }
+            FFScreenTitle(
+                title: String(appLocalized: "Feed"),
+                subtitle: String(appLocalized: "Posts from fights you’re in."),
+                trailing: AnyView(composeButton)
+            )
             if let error = feed.error, !error.isEmpty {
                 FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
             }
@@ -381,7 +376,7 @@ struct FeedView: View {
                 }
             } else if feed.posts.isEmpty && !feed.isLoading {
                 FFCard {
-                    Text(String(localized: "Nothing here yet. Tap + to post."))
+                    Text(String(appLocalized: "Nothing here yet. Tap + to post."))
                         .ffType(.body)
                         .foregroundStyle(theme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -399,9 +394,6 @@ struct FeedView: View {
         }
         .sheet(isPresented: $composing) {
             FeedComposeSheet()
-                .environmentObject(model)
-                .environmentObject(session)
-                .environmentObject(feed)
                 .fitFightTheme(theme)
                 .presentationBackground(theme.bg)
         }
@@ -415,7 +407,7 @@ struct FeedView: View {
     private var feedRefresh: FFRefreshConfig {
         FFRefreshConfig(
             isRefreshing: isRefreshingFeed,
-            message: String(localized: "Loading"),
+            message: String(appLocalized: "Loading"),
             action: {
                 isRefreshingFeed = true
                 defer { isRefreshingFeed = false }
@@ -425,7 +417,7 @@ struct FeedView: View {
     }
 
     private var composeButton: some View {
-        FeedComposeButton { composing = true }
+        FFComposeButton(label: String(appLocalized: "New post")) { composing = true }
     }
 }
 
@@ -458,18 +450,10 @@ struct FeedComposeSheet: View {
 
     var body: some View {
         FFScreen(clearance: false) {
-            HStack {
-                Text(broadcastOnly ? String(localized: "Broadcast") : String(localized: "New post"))
-                    .ffType(.title)
-                    .foregroundStyle(theme.text)
-                Spacer()
-                Button(String(localized: "Close")) { dismiss() }
-                    .ffType(.label)
-                    .foregroundStyle(theme.mossText)
-            }
+            FFSheetHeader(title: broadcastOnly ? String(appLocalized: "Broadcast") : String(appLocalized: "New post")) { dismiss() }
             Text(
                 broadcastOnly
-                    ? String(localized: "This post appears on Feed for everyone signed in.")
+                    ? String(appLocalized: "This post appears on Feed for everyone signed in.")
                     : "Your post will only appear in the channels you select. You can choose more than one."
             )
                 .ffType(.caption)
@@ -482,7 +466,7 @@ struct FeedComposeSheet: View {
                 }
             } else if fights.isEmpty && defaultFightID == nil {
                 FFCard {
-                    Text(String(localized: "Join a fight first, then post from here."))
+                    Text(String(appLocalized: "Join a fight first, then post from here."))
                         .ffType(.body)
                         .foregroundStyle(theme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -523,16 +507,16 @@ struct FeedDestinationMenu: View {
 
     private var label: String {
         if destinations.isEmpty {
-            return String(localized: "Choose where")
+            return String(appLocalized: "Choose where")
         }
         if everythingSelected {
-            return String(localized: "All fights")
+            return String(appLocalized: "All fights")
         }
         if destinations.count == 1, let id = destinations.first?.fightId {
             return fights.first(where: { $0.id.caseInsensitiveCompare(id.uuidString) == .orderedSame })?.listTitle
-                ?? String(localized: "Choose where")
+                ?? String(appLocalized: "Choose where")
         }
-        return String(localized: "\(destinations.count) fights")
+        return String(appLocalized: "\(destinations.count) fights")
     }
 
     var body: some View {
@@ -547,7 +531,7 @@ struct FeedDestinationMenu: View {
                         destinations = allFightDestinations.union([.main])
                     }
                 } label: {
-                    destinationLabel(String(localized: "All fights"), selected: everythingSelected)
+                    destinationLabel(String(appLocalized: "All fights"), selected: everythingSelected)
                 }
                 ForEach(fights) { fight in
                     if let id = UUID(uuidString: fight.id) {
@@ -563,7 +547,7 @@ struct FeedDestinationMenu: View {
             }
             .menuOrder(.fixed)
             .menuActionDismissBehavior(.disabled)
-            .accessibilityLabel(String(localized: "Choose where"))
+            .accessibilityLabel(String(appLocalized: "Choose where"))
             .accessibilityValue(label)
         }
     }
@@ -598,24 +582,6 @@ struct FeedDestinationMenu: View {
     }
 }
 
-private struct FeedComposeButton: View {
-    let action: () -> Void
-
-    @Environment(\.ffTheme) private var theme
-
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: "plus")
-                .font(.system(size: 16, weight: .bold))
-                .foregroundStyle(theme.mossOn)
-                .frame(width: 36, height: 36)
-                .background(theme.mossFill, in: Circle())
-        }
-        .buttonStyle(FFHapticPlainStyle())
-        .accessibilityLabel(String(localized: "New post"))
-    }
-}
-
 struct FightPostsSection: View {
     let fightID: UUID
     @ObservedObject var fightFeed: FeedStore
@@ -631,12 +597,12 @@ struct FightPostsSection: View {
         VStack(alignment: .leading, spacing: theme.space.cardGap) {
             HStack(alignment: .center, spacing: 12) {
                 if fightFeed.posts.isEmpty && !fightFeed.isLoading {
-                    Text(String(localized: "Tap + to post to this fight."))
+                    Text(String(appLocalized: "Tap + to post to this fight."))
                         .ffType(.caption)
                         .foregroundStyle(theme.textSecondary)
                 }
                 Spacer(minLength: 0)
-                FeedComposeButton { composing = true }
+                FFComposeButton(label: String(appLocalized: "New post")) { composing = true }
             }
             if let error = fightFeed.error, !error.isEmpty {
                 Text(error)
@@ -702,7 +668,7 @@ private struct FeedPostList: View {
                             .ffType(.caption)
                             .foregroundStyle(theme.emberText)
                             .lineLimit(2)
-                        Button(String(localized: "Try again")) {
+                        Button(String(appLocalized: "Try again")) {
                             Task { await store.load(session: session, fightID: fightID, more: true) }
                         }
                         .ffType(.label)
@@ -711,7 +677,7 @@ private struct FeedPostList: View {
                     } else if store.isLoadingMore {
                         ProgressView()
                             .tint(theme.textSecondary)
-                            .accessibilityLabel(String(localized: "Loading"))
+                            .accessibilityLabel(String(appLocalized: "Loading"))
                     }
                 }
                 .frame(maxWidth: .infinity, minHeight: 44)
@@ -755,7 +721,7 @@ struct FightPostComposer: View {
         FFCard {
             VStack(alignment: .leading, spacing: 12) {
                 if staticRender {
-                    Text(String(localized: "Add a note or some proof…"))
+                    Text(String(appLocalized: "Add a note or some proof…"))
                         .ffType(.body)
                         .foregroundStyle(theme.textTertiary)
                         .frame(maxWidth: .infinity, minHeight: 63, alignment: .topLeading)
@@ -766,7 +732,7 @@ struct FightPostComposer: View {
                         main: destinations.contains { $0.type == "main" || $0.type == "broadcast" },
                         fightIDs: destinations.compactMap(\.fightId)
                     ) {
-                        TextField(String(localized: "Add a note or some proof…"), text: $bodyText, axis: .vertical)
+                        TextField(String(appLocalized: "Add a note or some proof…"), text: $bodyText, axis: .vertical)
                             .ffType(.body)
                             .foregroundStyle(theme.text)
                             .lineLimit(3...6)
@@ -798,7 +764,7 @@ struct FightPostComposer: View {
                     HStack(spacing: 8) {
                         Image(systemName: "video.fill")
                             .foregroundStyle(theme.mossText)
-                        Text(String(localized: "Video"))
+                        Text(String(appLocalized: "Video"))
                             .ffType(.caption)
                             .foregroundStyle(theme.textSecondary)
                     }
@@ -826,7 +792,7 @@ struct FightPostComposer: View {
                             presentMedia(.library, waitForSourceDialog: false)
                         }
                     } label: {
-                        Label(String(localized: "Media"), systemImage: "photo.on.rectangle.angled")
+                        Label(String(appLocalized: "Media"), systemImage: "photo.on.rectangle.angled")
                             .ffType(.label)
                             .foregroundStyle(theme.mossText)
                     }
@@ -835,7 +801,7 @@ struct FightPostComposer: View {
                     if isLoadingMedia { ProgressView().tint(theme.mossText) }
                     Spacer(minLength: 8)
                     FFButton(
-                        title: feed.isSaving ? String(localized: "Posting…") : String(localized: "Post"),
+                        title: feed.isSaving ? String(appLocalized: "Posting…") : String(appLocalized: "Post"),
                         kind: .primary,
                         fullWidth: false
                     ) {
@@ -845,14 +811,14 @@ struct FightPostComposer: View {
                 }
             }
         }
-        .confirmationDialog(String(localized: "Add media"), isPresented: $showMediaSource, titleVisibility: .visible) {
-            Button(String(localized: "Take Photo")) {
+        .confirmationDialog(String(appLocalized: "Add media"), isPresented: $showMediaSource, titleVisibility: .visible) {
+            Button(String(appLocalized: "Take Photo")) {
                 pendingMedia = .camera
             }
-            Button(String(localized: "Photo Library")) {
+            Button(String(appLocalized: "Photo Library")) {
                 pendingMedia = .library
             }
-            Button(String(localized: "Cancel"), role: .cancel) {}
+            Button(String(appLocalized: "Cancel"), role: .cancel) {}
         }
         .onChange(of: showMediaSource) { _, presented in
             guard !presented else { return }
@@ -920,7 +886,7 @@ struct FightPostComposer: View {
             item.supportedContentTypes.contains { $0.conforms(to: .movie) }
         }
         guard videos.isEmpty || (items.count == 1 && images.isEmpty) else {
-            feed.error = String(localized: "Choose up to four photos or one video per post.")
+            feed.error = String(appLocalized: "Choose up to four photos or one video per post.")
             return
         }
         do {
@@ -1033,7 +999,7 @@ struct FightPostCard: View {
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(FFHapticPlainStyle())
-                        .accessibilityLabel(String(localized: "Post actions"))
+                        .accessibilityLabel(String(appLocalized: "Post actions"))
                     }
                 }
                 if !post.tags.isEmpty {
@@ -1048,46 +1014,35 @@ struct FightPostCard: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 ForEach(post.media) { media in
-                    if let url = media.url {
-                        if media.kind == "video" {
-                            FightPostVideo(url: url)
-                        } else {
-                            FightPostPhoto(
-                                url: url,
-                                width: media.width,
-                                height: media.height,
-                                onOpen: { onOpenPhoto(url) }
-                            )
-                        }
-                    }
+                    MediaAttachment(media: media, onOpenPhoto: onOpenPhoto)
                 }
                 FightPostEngagement(post: post, targetCommentID: targetCommentID, onTargetCommentLoaded: onTargetCommentLoaded)
             }
         }
-        .confirmationDialog(String(localized: "Post"), isPresented: $showActions, titleVisibility: .hidden) {
+        .confirmationDialog(String(appLocalized: "Post"), isPresented: $showActions, titleVisibility: .hidden) {
             if post.mine {
-                Button(String(localized: "Edit")) {
+                Button(String(appLocalized: "Edit")) {
                     draft = post.body
                     editing = true
                 }
-                Button(String(localized: "Delete"), role: .destructive) {
+                Button(String(appLocalized: "Delete"), role: .destructive) {
                     confirmDelete = true
                 }
             } else {
-                Button(String(localized: "Report")) {
+                Button(String(appLocalized: "Report")) {
                     Task { await feed.report(session: session, post: post) }
                 }
-                Button(String(localized: "Hide this person"), role: .destructive) {
+                Button(String(appLocalized: "Hide this person"), role: .destructive) {
                     Task { await feed.hide(session: session, authorID: post.author.userId) }
                 }
             }
-            Button(String(localized: "Cancel"), role: .cancel) {}
+            Button(String(appLocalized: "Cancel"), role: .cancel) {}
         }
-        .alert(String(localized: "Delete this post?"), isPresented: $confirmDelete) {
-            Button(String(localized: "Delete"), role: .destructive) {
+        .alert(String(appLocalized: "Delete this post?"), isPresented: $confirmDelete) {
+            Button(String(appLocalized: "Delete"), role: .destructive) {
                 Task { await feed.delete(session: session, post: post) }
             }
-            Button(String(localized: "Cancel"), role: .cancel) {}
+            Button(String(appLocalized: "Cancel"), role: .cancel) {}
         }
         .sheet(isPresented: $editing) {
             FightPostEditSheet(
@@ -1127,18 +1082,10 @@ private struct FightPostEditSheet: View {
 
     var body: some View {
         FFScreen(clearance: false) {
-            HStack {
-                Text(String(localized: "Edit post"))
-                    .ffType(.title)
-                    .foregroundStyle(theme.text)
-                Spacer()
-                Button(String(localized: "Close")) { dismiss() }
-                    .ffType(.label)
-                    .foregroundStyle(theme.mossText)
-            }
+            FFSheetHeader(title: String(appLocalized: "Edit post")) { dismiss() }
             FFCard {
                 FeedMentionField(text: $draft, people: $mentionPeople, main: main, fightIDs: fightIDs) {
-                    TextField(String(localized: "Add a note or some proof…"), text: $draft, axis: .vertical)
+                    TextField(String(appLocalized: "Add a note or some proof…"), text: $draft, axis: .vertical)
                         .ffType(.body)
                         .foregroundStyle(theme.text)
                         .lineLimit(3...8)
@@ -1153,7 +1100,7 @@ private struct FightPostEditSheet: View {
                 FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
             }
             FFButton(
-                title: feed.isSaving ? String(localized: "Saving…") : String(localized: "Save"),
+                title: feed.isSaving ? String(appLocalized: "Saving…") : String(appLocalized: "Save"),
                 kind: .primary,
                 fullWidth: true
             ) {
@@ -1167,37 +1114,6 @@ private struct FightPostEditSheet: View {
 struct FeedOpenedPhoto: Identifiable {
     let url: URL
     var id: String { url.absoluteString }
-}
-
-private struct FightPostPhoto: View {
-    let url: URL
-    let width: Int
-    let height: Int
-    let onOpen: () -> Void
-
-    @Environment(\.ffTheme) private var theme
-
-    var body: some View {
-        Button(action: onOpen) {
-            Color.clear
-                .aspectRatio(ratio, contentMode: .fit)
-                .frame(maxWidth: .infinity)
-                .fixedSize(horizontal: false, vertical: true)
-                .overlay {
-                    RemotePhoto(url: url, kind: .photo) {
-                        theme.control
-                    }
-                }
-                .clipShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
-                .contentShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
-        }
-        .buttonStyle(FFHapticPlainStyle())
-        .accessibilityLabel(String(localized: "View photo"))
-    }
-
-    private var ratio: CGFloat {
-        CGFloat(max(width, 1)) / CGFloat(max(height, 1))
-    }
 }
 
 struct FightPostPhotoViewer: View {
@@ -1220,7 +1136,7 @@ struct FightPostPhotoViewer: View {
             VStack {
                 HStack {
                     Spacer()
-                    Button(String(localized: "Close")) { dismiss() }
+                    Button(String(appLocalized: "Close")) { dismiss() }
                         .ffType(.label)
                         .foregroundStyle(theme.mossText)
                         .frame(minWidth: 44, minHeight: 44)
@@ -1230,28 +1146,6 @@ struct FightPostPhotoViewer: View {
             }
             .padding(.horizontal, theme.space.screenPadding)
         }
-    }
-}
-
-private struct FightPostVideo: View {
-    let url: URL
-    @Environment(\.ffTheme) private var theme
-    @State private var player: AVPlayer?
-
-    var body: some View {
-        VideoPlayer(player: player)
-            .frame(maxWidth: .infinity)
-            .frame(height: 220)
-            .clipShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
-            .onAppear {
-                if player == nil {
-                    player = AVPlayer(url: url)
-                }
-            }
-            .onDisappear {
-                player?.pause()
-                player = nil
-            }
     }
 }
 

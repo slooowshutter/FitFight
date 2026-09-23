@@ -13,7 +13,7 @@ args = parser.parse_args()
 engine = (root / "FitFight/DesignSystem/SlideHaptics.swift").read_text()
 engine = "\n".join(line for line in engine.splitlines() if not line.startswith("import "))
 components = (root / "FitFight/DesignSystem/Components.swift").read_text()
-gesture = components[components.index("    private func slideGesture("):components.index("\n}\n\n/// Dashed")]
+gesture = components[components.index("    private func slideGesture("):components.index("\n}\n\n// MARK: - Badges")]
 recipe = components[components.index("    private var resolvedRecipe:"):components.index("    private let knobSize:")]
 lab = (root / "FitFight/SlideHapticsLabView.swift").read_text()
 settings = lab[lab.index("    private var settings:"):lab.index("    private var rumbleControls:")]
@@ -28,6 +28,6 @@ else:
         executable = Path(directory) / "SlideHapticTests"
         generated.write_text(source)
         subprocess.run([
-            "swiftc", "-swift-version", "5", "-parse-as-library", str(generated), "-o", str(executable),
+            "swiftc", "-swift-version", "5", "-parse-as-library", str(root / "FitFight/AppLocalization.swift"), str(generated), "-o", str(executable),
         ], check=True)
         subprocess.run([str(executable)], check=True, timeout=20)

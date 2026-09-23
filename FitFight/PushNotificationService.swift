@@ -61,12 +61,6 @@ final class PushNotificationService: NSObject, ObservableObject {
         markPrePromptHandled()
     }
 
-    func declinePrePrompt() {
-        askedThisSession = true
-        showPrePrompt = false
-        markPrePromptHandled()
-    }
-
     func markPromptHandledThisSession() {
         askedThisSession = true
         showPrePrompt = false
@@ -97,7 +91,7 @@ final class PushNotificationService: NSObject, ObservableObject {
         self.deviceToken = token
         guard apnsConfigured, permissionStatus == .authorized, !isSignedOut,
               let session, let userID = session.authSession?.user.id else { return }
-        let locale = Locale.current.language.languageCode?.identifier == "fr" ? "fr" : "en"
+        let locale = AppLocalization.languageCode
         #if DEBUG
         let environment = "sandbox"
         #else
@@ -123,10 +117,6 @@ final class PushNotificationService: NSObject, ObservableObject {
         }
         installationTask = work
         await work.value
-    }
-
-    func handleRegistrationFailure() {
-        // Missing push capability or simulator — no user-facing error.
     }
 
     private var hasHandledPrePrompt: Bool {

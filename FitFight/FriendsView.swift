@@ -18,37 +18,34 @@ struct FriendsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text(String(localized: "Friends")).ffType(.heading)
-                Spacer()
-                Button(String(localized: "Close")) { dismiss() }.frame(minHeight: 44)
-            }.padding(.horizontal, theme.space.screenPadding).padding(.top, 12)
+            FFSheetHeader(title: String(appLocalized: "Friends"), role: .heading) { dismiss() }
+                .padding(.horizontal, theme.space.screenPadding).padding(.top, 12)
             ScrollView {
                 VStack(alignment: .leading, spacing: theme.space.cardGap) {
                     HStack {
-                        TextField(String(localized: "Exact username"), text: $handle)
+                        TextField(String(appLocalized: "Exact username"), text: $handle)
                             .textInputAutocapitalization(.never).autocorrectionDisabled().ffType(.body)
                             .onSubmit { Task { await lookup() } }
-                        FFButton(title: String(localized: "Find"), kind: .secondary, busy: loading) { Task { await lookup() } }
+                        FFButton(title: String(appLocalized: "Find"), kind: .secondary, busy: loading) { Task { await lookup() } }
                     }
                     if let found { personRow(found, source: "lookup") }
-                    Picker(String(localized: "Friends"), selection: $kind) {
-                        Text(String(localized: "Friends")).tag("accepted")
-                        Text(String(format: String(localized: "profile.requests-count"), incomingCount)).tag("incoming")
-                        Text(String(localized: "Sent")).tag("outgoing")
+                    Picker(String(appLocalized: "Friends"), selection: $kind) {
+                        Text(String(appLocalized: "Friends")).tag("accepted")
+                        Text(String(format: String(appLocalized: "profile.requests-count"), incomingCount)).tag("incoming")
+                        Text(String(appLocalized: "Sent")).tag("outgoing")
                     }.pickerStyle(.segmented)
                     if let error {
                         FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
-                        FFButton(title: String(localized: "Retry"), kind: .secondary) { Task { await load() } }
+                        FFButton(title: String(appLocalized: "Retry"), kind: .secondary) { Task { await load() } }
                     }
                     if loading { ProgressView().frame(maxWidth: .infinity) }
                     if !loading && people.isEmpty && error == nil {
-                        Text(String(localized: "No friends or requests here yet. Search an exact username to connect."))
+                        Text(String(appLocalized: "No friends or requests here yet. Search an exact username to connect."))
                             .ffType(.body).foregroundStyle(theme.textSecondary)
                     }
                     ForEach(people) { personRow($0, source: "friends") }
                     if nextCursor != nil {
-                        FFButton(title: String(localized: "Load more"), kind: .ghost, busy: loading) { Task { await load(more: true) } }
+                        FFButton(title: String(appLocalized: "Load more"), kind: .ghost, busy: loading) { Task { await load(more: true) } }
                     }
                 }.padding(theme.space.screenPadding)
             }

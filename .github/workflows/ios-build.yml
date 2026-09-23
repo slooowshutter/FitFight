@@ -16,6 +16,10 @@ on:
             - "scripts/test_profile_navigation.py"
             - "scripts/test_profile_refresh.py"
             - "scripts/test_native_state.py"
+            - "scripts/test_account_preferences.py"
+            - "scripts/test_google_sign_in.py"
+            - "scripts/package_simulator_app.py"
+            - "scripts/test_fight_localization.py"
             - "scripts/test_companion_state.py"
             - "scripts/test_ai_companion_state.py"
             - "scripts/test_fight_live_updates.py"
@@ -29,7 +33,7 @@ on:
             - "fastlane/**"
             - ".github/workflows/ios-build.yml"
     push:
-        branches: [main, develop, preview, profiles-friends-and-stats, blend-backend-client]
+        branches: [main, develop, preview, profiles-friends-and-stats]
         paths:
             - "FitFight/**"
             - "FitFight.xcodeproj/**"
@@ -43,6 +47,10 @@ on:
             - "scripts/test_profile_navigation.py"
             - "scripts/test_profile_refresh.py"
             - "scripts/test_native_state.py"
+            - "scripts/test_account_preferences.py"
+            - "scripts/test_google_sign_in.py"
+            - "scripts/package_simulator_app.py"
+            - "scripts/test_fight_localization.py"
             - "scripts/test_companion_state.py"
             - "scripts/test_ai_companion_state.py"
             - "scripts/test_fight_live_updates.py"
@@ -103,9 +111,18 @@ jobs:
                   swiftc -swift-version 5 -target "$(uname -m)-apple-macosx13.0" FitFight/AppUpdateChecker.swift tests/AppUpdateCheckerTests.swift -o /tmp/fitfight-update-tests
                   /tmp/fitfight-update-tests
 
+            - name: Verify Google sign-in and environment selection
+              run: python3 scripts/test_google_sign_in.py
+
+            - name: Verify account preferences and language switching
+              run: python3 scripts/test_account_preferences.py
+
+            - name: Verify offline Fight localization
+              run: python3 scripts/test_fight_localization.py
+
             - name: Verify remaining-time labels
               run: |
-                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx13.0" FitFight/RemainingTime.swift tests/RemainingTimeTests.swift -o /tmp/fitfight-remaining-tests
+                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx14.0" FitFight/AppLocalization.swift FitFight/RemainingTime.swift tests/RemainingTimeTests.swift -o /tmp/fitfight-remaining-tests
                   /tmp/fitfight-remaining-tests
 
             - name: Verify remote photo cache keys
@@ -148,7 +165,7 @@ jobs:
 
             - name: Verify native API contracts
               run: |
-                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx13.0" FitFight/Media.swift FitFight/Profile.swift FitFight/FightSnapshot.swift FitFight/AIWorkflowRequest.swift tests/APIContractTests.swift -o /tmp/fitfight-contract-tests
+                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx14.0" FitFight/AppLocalization.swift FitFight/AIWorkflowRequest.swift FitFight/Media.swift FitFight/Profile.swift FitFight/FightSnapshot.swift tests/APIContractTests.swift -o /tmp/fitfight-contract-tests
                   /tmp/fitfight-contract-tests contracts/fixtures
 
             - name: Verify generation recovery and account isolation
@@ -176,5 +193,18 @@ jobs:
                     -scheme FitFight \
                     -configuration Debug \
                     -destination 'generic/platform=iOS Simulator' \
-                    CODE_SIGNING_ALLOWED=NO \
+                    -derivedDataPath build \
+                    CODE_SIGNING_ALLOWED=YES \
+                    CODE_SIGNING_REQUIRED=YES \
+                    CODE_SIGN_STYLE=Manual \
+                    CODE_SIGN_IDENTITY=- \
                     build
+
+            - name: Package simulator app with Keychain capabilities
+              run: python3 scripts/package_simulator_app.py build/Build/Products/Debug-iphonesimulator/FitFight.app FitFight-Simulator.zip
+
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: FitFight-Simulator
+                  path: FitFight-Simulator.zip
+                  retention-days: 7

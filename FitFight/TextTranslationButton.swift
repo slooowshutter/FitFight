@@ -4,6 +4,7 @@ import Translation
 
 struct TextTranslationButton: View {
     let text: String
+    var alignment: Alignment = .top
 
     @Environment(\.ffTheme) private var theme
     @State private var showingTranslation = false
@@ -17,11 +18,11 @@ struct TextTranslationButton: View {
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(theme.mossText)
                     .frame(height: 20)
-                    .frame(width: 44, height: 44, alignment: .top)
+                    .frame(width: 44, height: 44, alignment: alignment)
                     .contentShape(Rectangle())
             }
             .buttonStyle(FFHapticPlainStyle())
-            .accessibilityLabel(String(localized: "Translate"))
+            .accessibilityLabel(String(appLocalized: "Translate"))
             .translationPresentation(isPresented: $showingTranslation, text: text)
         }
     }
@@ -30,9 +31,8 @@ struct TextTranslationButton: View {
         guard text.rangeOfCharacter(from: .letters) != nil,
               let detectedLanguage = NLLanguageRecognizer.dominantLanguage(for: text),
               detectedLanguage != .undetermined,
-              let preferredLanguage = Locale.preferredLanguages.first,
               let source = Locale.Language(identifier: detectedLanguage.rawValue).languageCode,
-              let target = Locale.Language(identifier: preferredLanguage).languageCode else { return false }
+              let target = Locale.Language(identifier: AppLocalization.languageCode).languageCode else { return false }
         return source != target
     }
 }

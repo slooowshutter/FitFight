@@ -8,35 +8,35 @@ enum StockCompanion: String, CaseIterable, Identifiable {
 
     var name: String {
         switch self {
-        case .badger: String(localized: "Badger")
-        case .raccoon: String(localized: "Raccoon")
-        case .redPanda: String(localized: "Red Panda")
-        case .otter: String(localized: "Otter")
-        case .rabbit: String(localized: "Rabbit")
-        case .fox: String(localized: "Fox")
-        case .bear: String(localized: "Bear")
-        case .boar: String(localized: "Boar")
-        case .sloth: String(localized: "Sloth")
-        case .dog: String(localized: "Dog")
-        case .goat: String(localized: "Goat")
-        case .turtle: String(localized: "Turtle")
+        case .badger: String(appLocalized: "Badger")
+        case .raccoon: String(appLocalized: "Raccoon")
+        case .redPanda: String(appLocalized: "Red Panda")
+        case .otter: String(appLocalized: "Otter")
+        case .rabbit: String(appLocalized: "Rabbit")
+        case .fox: String(appLocalized: "Fox")
+        case .bear: String(appLocalized: "Bear")
+        case .boar: String(appLocalized: "Boar")
+        case .sloth: String(appLocalized: "Sloth")
+        case .dog: String(appLocalized: "Dog")
+        case .goat: String(appLocalized: "Goat")
+        case .turtle: String(appLocalized: "Turtle")
         }
     }
 
     var caption: String {
         switch self {
-        case .badger: String(localized: "Quietly competitive.")
-        case .raccoon: String(localized: "Always has a plan.")
-        case .redPanda: String(localized: "Looks relaxed. Isn’t.")
-        case .otter: String(localized: "Here for a good time.")
-        case .rabbit: String(localized: "Always one more lap.")
-        case .fox: String(localized: "Just a little smug.")
-        case .bear: String(localized: "Big strides. Soft heart.")
-        case .boar: String(localized: "A little unstoppable.")
-        case .sloth: String(localized: "Slow is still forward.")
-        case .dog: String(localized: "Always up for a walk.")
-        case .goat: String(localized: "Takes the uphill route.")
-        case .turtle: String(localized: "Never out of the race.")
+        case .badger: String(appLocalized: "Quietly competitive.")
+        case .raccoon: String(appLocalized: "Always has a plan.")
+        case .redPanda: String(appLocalized: "Looks relaxed. Isn’t.")
+        case .otter: String(appLocalized: "Here for a good time.")
+        case .rabbit: String(appLocalized: "Always one more lap.")
+        case .fox: String(appLocalized: "Just a little smug.")
+        case .bear: String(appLocalized: "Big strides. Soft heart.")
+        case .boar: String(appLocalized: "A little unstoppable.")
+        case .sloth: String(appLocalized: "Slow is still forward.")
+        case .dog: String(appLocalized: "Always up for a walk.")
+        case .goat: String(appLocalized: "Takes the uphill route.")
+        case .turtle: String(appLocalized: "Never out of the race.")
         }
     }
 
@@ -57,13 +57,13 @@ enum CompanionCategory: String, CaseIterable, Identifiable {
 
     var name: String {
         switch self {
-        case .all: String(localized: "All")
-        case .mountains: String(localized: "Mountains")
-        case .water: String(localized: "Water")
-        case .forest: String(localized: "Forest")
-        case .jungle: String(localized: "Jungle")
-        case .yours: String(localized: "Yours")
-        case .custom: String(localized: "Make it yours")
+        case .all: String(appLocalized: "All")
+        case .mountains: String(appLocalized: "Mountains")
+        case .water: String(appLocalized: "Water")
+        case .forest: String(appLocalized: "Forest")
+        case .jungle: String(appLocalized: "Jungle")
+        case .yours: String(appLocalized: "Yours")
+        case .custom: String(appLocalized: "Make it yours")
         }
     }
 
@@ -99,80 +99,16 @@ enum CompanionEffortStage: Int, CaseIterable, Identifiable {
         if case .steps(let count) = status { return matching(todaySteps: count) }
         return .rest
     }
-
-    func label(for sport: CompanionSport) -> String {
-        sport.stageLabel(self)
-    }
 }
 
-enum CompanionSport: String, CaseIterable, Identifiable, Codable {
+/// Only restored from older builds that offered a sport picker; the goat has hiking poses.
+enum CompanionSport: String {
     case hiking, running, football, ski, walking
-
-    var id: String { rawValue }
-
-    var name: String {
-        switch self {
-        case .hiking: String(localized: "Hiking")
-        case .running: String(localized: "Running")
-        case .football: String(localized: "Football")
-        case .ski: String(localized: "Ski")
-        case .walking: String(localized: "Walking")
-        }
-    }
-
-    func stageLabel(_ stage: CompanionEffortStage) -> String {
-        switch (self, stage) {
-        case (.hiking, .rest): String(localized: "Resting")
-        case (.hiking, .headingOut): String(localized: "Heading out")
-        case (.hiking, .onTheMove): String(localized: "On the trail")
-        case (.hiking, .pushing): String(localized: "Climbing")
-        case (.hiking, .peak): String(localized: "At the peak")
-        case (.running, .rest): String(localized: "On the bench")
-        case (.running, .headingOut): String(localized: "Warming up")
-        case (.running, .onTheMove): String(localized: "Jogging")
-        case (.running, .pushing): String(localized: "Racing")
-        case (.running, .peak): String(localized: "Finish line")
-        case (.football, .rest): String(localized: "On the sideline")
-        case (.football, .headingOut): String(localized: "Warming up")
-        case (.football, .onTheMove): String(localized: "On the pitch")
-        case (.football, .pushing): String(localized: "In the match")
-        case (.football, .peak): String(localized: "After the whistle")
-        case (.ski, .rest): String(localized: "In the lodge")
-        case (.ski, .headingOut): String(localized: "At the lift")
-        case (.ski, .onTheMove): String(localized: "On the slope")
-        case (.ski, .pushing): String(localized: "Carving")
-        case (.ski, .peak): String(localized: "At the summit")
-        case (.walking, .rest): String(localized: "At home")
-        case (.walking, .headingOut): String(localized: "Stepping out")
-        case (.walking, .onTheMove): String(localized: "On the path")
-        case (.walking, .pushing): String(localized: "A long loop")
-        case (.walking, .peak): String(localized: "Back with a view")
-        }
-    }
-}
-
-enum CompanionEmotion: String, CaseIterable, Identifiable, Codable {
-    case calm, determined, smug, playful, fierce
-
-    var id: String { rawValue }
-
-    var name: String {
-        switch self {
-        case .calm: String(localized: "Calm")
-        case .determined: String(localized: "Determined")
-        case .smug: String(localized: "Smug")
-        case .playful: String(localized: "Playful")
-        case .fierce: String(localized: "Fierce")
-        }
-    }
 }
 
 private struct CompanionIdentityRecord: Codable {
     var animal: String
     var sport: String
-    var emotion: String
-    var breed: String
-    var accessories: String
     var isCustom: Bool?
 }
 
@@ -181,9 +117,6 @@ private struct CompanionIdentityRecord: Codable {
 final class CompanionStore: ObservableObject {
     @Published var selection: StockCompanion = .badger
     @Published var sport: CompanionSport = .hiking { didSet { persist() } }
-    @Published var emotion: CompanionEmotion = .calm { didSet { persist() } }
-    @Published var breed = "" { didSet { persist() } }
-    @Published var accessories = "" { didSet { persist() } }
     @Published var isCustom = false
     @Published var customPrompt = ""
     @Published private(set) var savedPrompts: [String] = []
@@ -362,9 +295,6 @@ final class CompanionStore: ObservableObject {
         else { return }
         isRestoring = true
         sport = CompanionSport(rawValue: saved.sport) ?? .hiking
-        emotion = CompanionEmotion(rawValue: saved.emotion) ?? .calm
-        breed = saved.breed
-        accessories = saved.accessories
         if saved.isCustom != true, let animal = StockCompanion(rawValue: saved.animal) {
             applyChoice(id: animal.rawValue, prompt: nil)
         }
@@ -376,9 +306,6 @@ final class CompanionStore: ObservableObject {
         let record = CompanionIdentityRecord(
             animal: selection.rawValue,
             sport: sport.rawValue,
-            emotion: emotion.rawValue,
-            breed: breed,
-            accessories: accessories,
             isCustom: isCustom
         )
         UserDefaults.standard.set(try? JSONEncoder().encode(record), forKey: Self.storageKey)
@@ -410,7 +337,7 @@ struct CompanionCharacter: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(String(localized: "companion.greet", defaultValue: "Say hello to \(animal.name)"))
+        .accessibilityLabel(String(appLocalized: "companion.greet", defaultValue: "Say hello to \(animal.name)"))
         .task(id: greeting) {
             guard greeting else { return }
             do { try await Task.sleep(for: .milliseconds(220)) } catch { return }
@@ -604,7 +531,7 @@ struct CompanionIntroduction: View {
                         .font(.custom("Nunito-Bold", size: 12, relativeTo: .caption))
                         .foregroundStyle(theme.textSecondary)
                 }
-                Button(String(localized: "Make it yours")) {
+                Button(String(appLocalized: "Make it yours")) {
                     companions.pickerStartsWithCustom = true
                     companions.showingPicker = true
                 }
@@ -612,7 +539,7 @@ struct CompanionIntroduction: View {
                 .foregroundStyle(theme.mossText)
                 .frame(minHeight: 44)
                 .buttonStyle(FFHapticPlainStyle())
-                Button(String(localized: "Change animal")) {
+                Button(String(appLocalized: "Change animal")) {
                     companions.pickerStartsWithCustom = false
                     companions.showingPicker = true
                 }
@@ -663,7 +590,7 @@ struct CompanionIntroduction: View {
                 Text("-")
                     .ffType(.metric)
                     .foregroundStyle(theme.text)
-                Text(steps.isConnected ? String(localized: "Today’s steps unavailable") : String(localized: "Connect Apple Health"))
+                Text(steps.isConnected ? String(appLocalized: "Today’s steps unavailable") : String(appLocalized: "Connect Apple Health"))
                     .ffType(.caption)
                     .foregroundStyle(theme.textSecondary)
             }
@@ -680,8 +607,8 @@ struct CompanionScene: View {
             .resizable()
             .scaledToFit()
             .accessibilityLabel(name == "race"
-                ? String(localized: "Rabbit, Turtle, Fox and Badger running together")
-                : String(localized: "Rabbit, Fox, Badger and Turtle playing tennis"))
+                ? String(appLocalized: "Rabbit, Turtle, Fox and Badger running together")
+                : String(appLocalized: "Rabbit, Fox, Badger and Turtle playing tennis"))
     }
 }
 
@@ -741,9 +668,9 @@ struct CompanionFightSummary: View {
             }
 
             HStack(alignment: .firstTextBaseline, spacing: 12) {
-                Text(fight.isUpcoming ? String(localized: "Scheduled") : fight.isTiedForFirst && mine?.rank == 1 ? String(localized: "Tied") : fight.status == .finished
-                     ? String(localized: "fight.finished-rank", defaultValue: "Finished #\(fight.rank)")
-                     : String(localized: "fight.rank-of-count", defaultValue: "#\(fight.rank) of \(racing.count)"))
+                Text(fight.isUpcoming ? String(appLocalized: "Scheduled") : fight.isTiedForFirst && mine?.rank == 1 ? String(appLocalized: "Tied") : fight.status == .finished
+                     ? String(appLocalized: "fight.finished-rank", defaultValue: "Finished #\(fight.rank)")
+                     : String(appLocalized: "fight.rank-of-count", defaultValue: "#\(fight.rank) of \(racing.count)"))
                     .ffType(.label)
                     .foregroundStyle(!fight.isUpcoming && fight.rank == 1 ? theme.mossText : theme.textSecondary)
                 Spacer(minLength: 0)
@@ -764,19 +691,19 @@ struct CompanionFightSummary: View {
                         .font(.custom("Nunito-ExtraBold", size: 34, relativeTo: .largeTitle))
                         .monospacedDigit()
                         .foregroundStyle(theme.text)
-                    Text(String(localized: "companion.fight-total", defaultValue: "Your steps · \(fight.durationLabel)"))
+                    Text(String(appLocalized: "companion.fight-total", defaultValue: "Your steps · \(fight.durationLabel)"))
                         .ffType(.caption)
                         .foregroundStyle(theme.textSecondary)
                 }
                 if !typeSize.isAccessibilitySize { Spacer(minLength: 0) }
                 if let gap {
                     VStack(alignment: typeSize.isAccessibilitySize ? .leading : .trailing, spacing: 3) {
-                        Text(gap == 0 ? String(localized: "Tied")
+                        Text(gap == 0 ? String(appLocalized: "Tied")
                              : "\(gap > 0 ? "+" : "−")\(abs(gap).formatted(.number.precision(.fractionLength(0))))")
                             .font(.custom("Nunito-ExtraBold", size: 22, relativeTo: .title2))
                             .monospacedDigit()
                         if gap != 0 {
-                            Text(gap > 0 ? String(localized: "steps ahead") : String(localized: "steps behind"))
+                            Text(gap > 0 ? String(appLocalized: "steps ahead") : String(appLocalized: "steps behind"))
                                 .ffType(.caption)
                         }
                     }
@@ -832,7 +759,7 @@ struct CompanionPicker: View {
                     .foregroundStyle(theme.text)
                 Spacer()
                 if !session.needsCompanionSelection {
-                    Button(String(localized: "Close")) { dismiss() }
+                    Button(String(appLocalized: "Close")) { dismiss() }
                         .ffType(.label)
                         .foregroundStyle(theme.mossText)
                         .frame(minHeight: 44)
@@ -877,7 +804,7 @@ struct CompanionPicker: View {
                     .foregroundStyle(theme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                 if loadingLibrary {
-                    ProgressView().accessibilityLabel(String(localized: "Loading saved descriptions"))
+                    ProgressView().accessibilityLabel(String(appLocalized: "Loading saved descriptions"))
                 }
                 if !libraryError.isEmpty {
                     Text(libraryError)
@@ -911,7 +838,7 @@ struct CompanionPicker: View {
                     .buttonStyle(FFHapticPlainStyle())
                     .disabled(isSaving)
                     .accessibilityLabel(prompt)
-                    .accessibilityHint(String(localized: "Use this saved description"))
+                    .accessibilityHint(String(appLocalized: "Use this saved description"))
                     .accessibilityAddTraits(companions.isCustom && companions.customPrompt == prompt ? .isSelected : [])
                 }
             }
@@ -951,7 +878,7 @@ struct CompanionPicker: View {
                     .ffType(.body)
                     .foregroundStyle(theme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
-                Button(String(localized: "Change animal")) {
+                Button(String(appLocalized: "Change animal")) {
                     promptFocused = false
                     category = .all
                 }
@@ -961,9 +888,9 @@ struct CompanionPicker: View {
                 .buttonStyle(FFHapticPlainStyle())
                 .disabled(isSaving)
                 FFField(
-                    label: String(localized: "Your animal"),
+                    label: String(appLocalized: "Your animal"),
                     state: promptFocused ? .focused : .normal,
-                    help: String(localized: "Write the species, breed or race, accessories, colors, and anything else that should appear."),
+                    help: String(appLocalized: "Write the species, breed or race, accessories, colors, and anything else that should appear."),
                     counter: "\(customPrompt.count)/\(promptLimit)",
                     minHeight: 140
                 ) {
@@ -973,12 +900,12 @@ struct CompanionPicker: View {
                             .frame(maxWidth: .infinity, minHeight: 88, alignment: .topLeading)
                     } else {
                         TextField(
-                            String(localized: "Species, breed, accessories, colors…"),
+                            String(appLocalized: "Species, breed, accessories, colors…"),
                             text: $customPrompt,
                             axis: .vertical
                         )
                         .focused($promptFocused)
-                        .accessibilityLabel(String(localized: "Your animal"))
+                        .accessibilityLabel(String(appLocalized: "Your animal"))
                         .lineLimit(5...12)
                         .textInputAutocapitalization(.sentences)
                         .onChange(of: customPrompt) { _, value in
@@ -993,7 +920,7 @@ struct CompanionPicker: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 FFButton(
-                    title: String(localized: "Save companion"),
+                    title: String(appLocalized: "Save companion"),
                     kind: .primary,
                     enabled: canSaveCustom,
                     busy: isSaving,
@@ -1010,14 +937,14 @@ struct CompanionPicker: View {
                     showingGeneration = true
                 }
             } else if let draft, category.animals.contains(draft) {
-                Text(isSaving ? String(localized: "Saving…") : draft.caption)
+                Text(isSaving ? String(appLocalized: "Saving…") : draft.caption)
                     .ffType(.body)
                     .foregroundStyle(theme.textSecondary)
                     .frame(maxWidth: .infinity)
             }
             #if DEBUG && targetEnvironment(simulator)
             if CompanionPreview.isEnabled {
-                FFSection(title: String(localized: "Artwork study")) {
+                FFSection(title: String(appLocalized: "Artwork study")) {
                     CompanionScene(name: "tennis")
                     Text("Fixed demo cast. Artwork study only; this is not a Feed post.")
                         .ffType(.caption)
@@ -1050,7 +977,7 @@ struct CompanionPicker: View {
             } catch is CancellationError {
                 return
             } catch {
-                libraryError = String(localized: "Couldn’t load your saved descriptions.")
+                libraryError = String(appLocalized: "Couldn’t load your saved descriptions.")
             }
         }
     }
@@ -1072,7 +999,7 @@ struct CompanionPicker: View {
         } catch is CancellationError {
             return
         } catch {
-            self.error = String(localized: "Couldn’t save your companion. Try again.")
+            self.error = String(appLocalized: "Couldn’t save your companion. Try again.")
         }
     }
 
@@ -1091,7 +1018,7 @@ struct CompanionPicker: View {
         } catch is CancellationError {
             return
         } catch {
-            self.error = String(localized: "Couldn’t save your companion. Try again.")
+            self.error = String(appLocalized: "Couldn’t save your companion. Try again.")
         }
     }
 }

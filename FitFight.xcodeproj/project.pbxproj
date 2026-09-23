@@ -13,6 +13,7 @@
         A10000000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000012 /* ContentView.swift */; };
         A10000000000000000000003 /* AppVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000013 /* AppVersion.swift */; };
         A10000000000000000000004 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000014 /* Assets.xcassets */; };
+        C10000000000000000000101 /* PreviewAssets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000100 /* PreviewAssets.xcassets */; };
         A10000000000000000000005 /* Changelog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000015 /* Changelog.swift */; };
         A10000000000000000000006 /* VersionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000016 /* VersionsView.swift */; };
         A10000000000000000000431 /* NotificationSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000430 /* NotificationSettingsView.swift */; };
@@ -84,6 +85,9 @@
         A10000000000000000000413 /* RemoteImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000412 /* RemoteImage.swift */; };
         A10000000000000000000415 /* SlideHaptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000414 /* SlideHaptics.swift */; };
         A10000000000000000000417 /* SlideHapticsLabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000416 /* SlideHapticsLabView.swift */; };
+        923EA6A21D2D4018B21AFFD9 /* AppLocalization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77DE13D2DDFE478AAAB22CF3 /* AppLocalization.swift */; };
+        68E2E713C10A455189C0B48A /* AccountPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6E9D16C6C534B559C8F0679 /* AccountPreferences.swift */; };
+        E8935CD58CBF4714874982FC /* PreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 798E70F7F8A9400EBBF0C8B0 /* PreferencesView.swift */; };
         093BD4214450F0E24E960170 /* SharedProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6E984145AFCC236130CABCD /* SharedProfile.swift */; };
         C52EBF93D4D91888A73FA9FA /* ProfileScreenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F63B0748E91625E789AE99FD /* ProfileScreenStore.swift */; };
         5893F862B25C0EBA522F8DFA /* ProfileSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1FE342B3DFF37CEFC227E1 /* ProfileSheet.swift */; };
@@ -93,6 +97,11 @@
         A0573E386FD2FA2A4A357CC4 /* SuggestedFightsOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AD1CDE4182F6C6E52321063 /* SuggestedFightsOnboardingView.swift */; };
         B91800000000000000000001 /* AICompanionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B91800000000000000000002 /* AICompanionStore.swift */; };
         B91800000000000000000003 /* AICompanionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B91800000000000000000004 /* AICompanionView.swift */; };
+        B71900000000000000000100 /* GoogleSignInConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = B71900000000000000000000 /* GoogleSignInConfig.swift */; };
+        B71900000000000000000101 /* SignInControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = B71900000000000000000001 /* SignInControls.swift */; };
+        B71900000000000000000E01 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = B71900000000000000000F01 /* GoogleSignIn */; };
+        B71900000000000000000300 /* GoogleSans.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B71900000000000000000200 /* GoogleSans.ttf */; };
+        B71900000000000000000301 /* GoogleSans-OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = B71900000000000000000201 /* GoogleSans-OFL.txt */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -106,6 +115,7 @@
         A10000000000000000000012 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
         A10000000000000000000013 /* AppVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppVersion.swift; sourceTree = "<group>"; };
         A10000000000000000000014 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+        C10000000000000000000100 /* PreviewAssets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = PreviewAssets.xcassets; sourceTree = "<group>"; };
         A10000000000000000000015 /* Changelog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Changelog.swift; sourceTree = "<group>"; };
         A10000000000000000000016 /* VersionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VersionsView.swift; sourceTree = "<group>"; };
         A10000000000000000000430 /* NotificationSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationSettingsView.swift; sourceTree = "<group>"; };
@@ -176,6 +186,9 @@
         A10000000000000000000414 /* SlideHaptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlideHaptics.swift; sourceTree = "<group>"; };
         A10000000000000000000416 /* SlideHapticsLabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlideHapticsLabView.swift; sourceTree = "<group>"; };
         A10000000000000000000420 /* CrashReporting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrashReporting.swift; sourceTree = "<group>"; };
+        77DE13D2DDFE478AAAB22CF3 /* AppLocalization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLocalization.swift; sourceTree = "<group>"; };
+        B6E9D16C6C534B559C8F0679 /* AccountPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountPreferences.swift; sourceTree = "<group>"; };
+        798E70F7F8A9400EBBF0C8B0 /* PreferencesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesView.swift; sourceTree = "<group>"; };
         D6E984145AFCC236130CABCD /* SharedProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedProfile.swift; sourceTree = "<group>"; };
         F63B0748E91625E789AE99FD /* ProfileScreenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileScreenStore.swift; sourceTree = "<group>"; };
         1A1FE342B3DFF37CEFC227E1 /* ProfileSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSheet.swift; sourceTree = "<group>"; };
@@ -185,6 +198,11 @@
         7AD1CDE4182F6C6E52321063 /* SuggestedFightsOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestedFightsOnboardingView.swift; sourceTree = "<group>"; };
         B91800000000000000000002 /* AICompanionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AICompanionStore.swift; sourceTree = "<group>"; };
         B91800000000000000000004 /* AICompanionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AICompanionView.swift; sourceTree = "<group>"; };
+        B71900000000000000000000 /* GoogleSignInConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleSignInConfig.swift; sourceTree = "<group>"; };
+        B71900000000000000000001 /* SignInControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInControls.swift; sourceTree = "<group>"; };
+        B71900000000000000000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+        B71900000000000000000200 /* GoogleSans.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "GoogleSans.ttf"; sourceTree = "<group>"; };
+        B71900000000000000000201 /* GoogleSans-OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = file; path = "GoogleSans-OFL.txt"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -193,6 +211,7 @@
             buildActionMask = 2147483647;
             files = (
                 A1000000000000000000F002 /* Supabase in Frameworks */,
+                B71900000000000000000E01 /* GoogleSignIn in Frameworks */,
                 A1000000000000000000F012 /* PostHog in Frameworks */,
             );
             runOnlyForDeploymentPostprocessing = 0;
@@ -229,6 +248,9 @@
                 B91800000000000000000002 /* AICompanionStore.swift */,
                 A10000000000000000000388 /* FeedbackClientMetadata.swift */,
                 A10000000000000000000350 /* Profile.swift */,
+                77DE13D2DDFE478AAAB22CF3 /* AppLocalization.swift */,
+                B6E9D16C6C534B559C8F0679 /* AccountPreferences.swift */,
+                798E70F7F8A9400EBBF0C8B0 /* PreferencesView.swift */,
                 7AD1CDE4182F6C6E52321063 /* SuggestedFightsOnboardingView.swift */,
                 2C2AC1044B8F11786123D48E /* FriendsView.swift */,
                 41EE371C708EECCC762EB820 /* EditProfileView.swift */,
@@ -255,6 +277,9 @@
                 A10000000000000000000416 /* SlideHapticsLabView.swift */,
                 A10000000000000000000302 /* SessionStore.swift */,
                 A10000000000000000000303 /* AppleSignInControl.swift */,
+                B71900000000000000000002 /* Info.plist */,
+                B71900000000000000000001 /* SignInControls.swift */,
+                B71900000000000000000000 /* GoogleSignInConfig.swift */,
                 A10000000000000000000309 /* WelcomeView.swift */,
                 A1000000000000000000030B /* OnboardingView.swift */,
                 A10000000000000000000304 /* HealthKitStepsStore.swift */,
@@ -277,6 +302,7 @@
                 A10000000000000000000033 /* DesignSystem */,
                 A100000000000000000000C0 /* Fonts */,
                 A10000000000000000000014 /* Assets.xcassets */,
+                C10000000000000000000100 /* PreviewAssets.xcassets */,
             );
             path = FitFight;
             sourceTree = "<group>";
@@ -301,6 +327,8 @@
             isa = PBXGroup;
             children = (
                 A100000000000000000000A2 /* Nunito-Medium.ttf */,
+                B71900000000000000000201 /* GoogleSans-OFL.txt */,
+                B71900000000000000000200 /* GoogleSans.ttf */,
                 A100000000000000000000A3 /* Nunito-SemiBold.ttf */,
                 A100000000000000000000A4 /* Nunito-Bold.ttf */,
                 A100000000000000000000A5 /* Nunito-ExtraBold.ttf */,
@@ -341,6 +369,7 @@
             );
             name = FitFight;
             packageProductDependencies = (
+                B71900000000000000000F01 /* GoogleSignIn */,
                 A1000000000000000000F001 /* Supabase */,
                 A1000000000000000000F011 /* PostHog */,
             );
@@ -374,6 +403,7 @@
             );
             mainGroup = A10000000000000000000032;
             packageReferences = (
+                B71900000000000000000F00 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
                 A1000000000000000000F000 /* XCRemoteSwiftPackageReference "supabase-swift" */,
                 A1000000000000000000F010 /* XCRemoteSwiftPackageReference "posthog-ios" */,
             );
@@ -392,8 +422,11 @@
             buildActionMask = 2147483647;
             files = (
                 A10000000000000000000004 /* Assets.xcassets in Resources */,
+                C10000000000000000000101 /* PreviewAssets.xcassets in Resources */,
                 A1000000000000000000000A /* tokens.json in Resources */,
                 A100000000000000000000B2 /* Nunito-Medium.ttf in Resources */,
+                B71900000000000000000301 /* GoogleSans-OFL.txt in Resources */,
+                B71900000000000000000300 /* GoogleSans.ttf in Resources */,
                 A100000000000000000000B3 /* Nunito-SemiBold.ttf in Resources */,
                 A100000000000000000000B4 /* Nunito-Bold.ttf in Resources */,
                 A100000000000000000000B5 /* Nunito-ExtraBold.ttf in Resources */,
@@ -448,6 +481,9 @@
                 B91800000000000000000001 /* AICompanionStore.swift in Sources */,
                 A10000000000000000000389 /* FeedbackClientMetadata.swift in Sources */,
                 A10000000000000000000351 /* Profile.swift in Sources */,
+                923EA6A21D2D4018B21AFFD9 /* AppLocalization.swift in Sources */,
+                68E2E713C10A455189C0B48A /* AccountPreferences.swift in Sources */,
+                E8935CD58CBF4714874982FC /* PreferencesView.swift in Sources */,
                 A0573E386FD2FA2A4A357CC4 /* SuggestedFightsOnboardingView.swift in Sources */,
                 61856F7155495A28A4B93A60 /* FriendsView.swift in Sources */,
                 99AAAB8BD6F184E568149D1D /* EditProfileView.swift in Sources */,
@@ -476,6 +512,8 @@
                 A10000000000000000000367 /* HealthOnboardingView.swift in Sources */,
                 A10000000000000000000312 /* SessionStore.swift in Sources */,
                 A10000000000000000000313 /* AppleSignInControl.swift in Sources */,
+                B71900000000000000000101 /* SignInControls.swift in Sources */,
+                B71900000000000000000100 /* GoogleSignInConfig.swift in Sources */,
                 A10000000000000000000319 /* WelcomeView.swift in Sources */,
                 A1000000000000000000031B /* OnboardingView.swift in Sources */,
                 A10000000000000000000314 /* HealthKitStepsStore.swift in Sources */,
@@ -625,11 +663,12 @@
                 DEVELOPMENT_TEAM = C92DPD8ME2;
                 ENABLE_PREVIEWS = YES;
                 GENERATE_INFOPLIST_FILE = YES;
+                INFOPLIST_FILE = FitFight/Info.plist;
                 INFOPLIST_KEY_CFBundleDisplayName = FitFight;
                 INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
                 INFOPLIST_KEY_LSApplicationCategoryType = public.app-category.sports;
                 INFOPLIST_KEY_NSCameraUsageDescription = "FitFight uses the camera so you can take a photo and attach it to a fight post.";
-                INFOPLIST_KEY_NSHealthShareUsageDescription = "FitFight reads your Apple Health steps and other movement—energy, distance, exercise, stand, flights, and workouts. Steps fights share only your step totals with accepted participants. Other activity stays on your account until a future challenge type uses it.";
+                INFOPLIST_KEY_NSHealthShareUsageDescription = "FitFight reads your Apple Health steps and other movement: energy, distance, exercise, stand, flights, and workouts. Steps fights share only your step totals with accepted participants. Other activity stays on your account until a future challenge type uses it.";
                 INFOPLIST_KEY_NSHealthUpdateUsageDescription = "FitFight does not add to or change Apple Health. It only requests read-only access to the activity types in the read description.";
                 INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
                 INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -662,12 +701,14 @@
                 CURRENT_PROJECT_VERSION = 1;
                 DEVELOPMENT_TEAM = C92DPD8ME2;
                 ENABLE_PREVIEWS = YES;
+                EXCLUDED_SOURCE_FILE_NAMES = PreviewAssets.xcassets;
                 GENERATE_INFOPLIST_FILE = YES;
+                INFOPLIST_FILE = FitFight/Info.plist;
                 INFOPLIST_KEY_CFBundleDisplayName = FitFight;
                 INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
                 INFOPLIST_KEY_LSApplicationCategoryType = public.app-category.sports;
                 INFOPLIST_KEY_NSCameraUsageDescription = "FitFight uses the camera so you can take a photo and attach it to a fight post.";
-                INFOPLIST_KEY_NSHealthShareUsageDescription = "FitFight reads your Apple Health steps and other movement—energy, distance, exercise, stand, flights, and workouts. Steps fights share only your step totals with accepted participants. Other activity stays on your account until a future challenge type uses it.";
+                INFOPLIST_KEY_NSHealthShareUsageDescription = "FitFight reads your Apple Health steps and other movement: energy, distance, exercise, stand, flights, and workouts. Steps fights share only your step totals with accepted participants. Other activity stays on your account until a future challenge type uses it.";
                 INFOPLIST_KEY_NSHealthUpdateUsageDescription = "FitFight does not add to or change Apple Health. It only requests read-only access to the activity types in the read description.";
                 INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
                 INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -730,6 +771,14 @@
                 minimumVersion = 3.59.3;
             };
         };
+        B71900000000000000000F00 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+            isa = XCRemoteSwiftPackageReference;
+            repositoryURL = "https://github.com/google/GoogleSignIn-iOS.git";
+            requirement = {
+                kind = exactVersion;
+                version = 9.2.0;
+            };
+        };
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -742,6 +791,11 @@
             isa = XCSwiftPackageProductDependency;
             package = A1000000000000000000F010 /* XCRemoteSwiftPackageReference "posthog-ios" */;
             productName = PostHog;
+        };
+        B71900000000000000000F01 /* GoogleSignIn */ = {
+            isa = XCSwiftPackageProductDependency;
+            package = B71900000000000000000F00 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+            productName = GoogleSignIn;
         };
 /* End XCSwiftPackageProductDependency section */
     };

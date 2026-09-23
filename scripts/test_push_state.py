@@ -26,5 +26,5 @@ with tempfile.TemporaryDirectory(prefix="fitfight-push-tests-") as directory:
     swift = Path(directory) / "PushStateTests.swift"
     executable = Path(directory) / "push-state-tests"
     swift.write_text(harness)
-    subprocess.run(["swiftc", "-swift-version", "5", "-parse-as-library", str(swift), "-o", str(executable)], check=True)
+    subprocess.run(["swiftc", "-swift-version", "5", "-parse-as-library", str(root / "FitFight/AppLocalization.swift"), str(swift), "-o", str(executable)], check=True)
     subprocess.run([str(executable)], check=True, timeout=15)

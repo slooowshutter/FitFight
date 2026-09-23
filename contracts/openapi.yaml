@@ -1245,6 +1245,53 @@ paths:
                 "401": { description: Invalid session or deleted account }
                 "400": { description: Invalid time zone or request body }
                 "426": { description: App update required }
+    /posts/{postID}/comments/{commentID}/like:
+        put:
+            operationId: setFightPostCommentLike
+            summary: Set the authenticated user's heart on a visible comment or reply.
+            description: |
+                Idempotent desired state. Comment list and creation responses also include
+                additive like_count and liked_by_me fields. Installed clients can omit or
+                ignore these fields; their comment bodies, sorting and cursors stay valid.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+                - name: postID
+                  in: path
+                  required: true
+                  schema: { type: string, format: uuid }
+                - name: commentID
+                  in: path
+                  required: true
+                  schema: { type: string, format: uuid }
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            additionalProperties: false
+                            required: [liked]
+                            properties:
+                                liked: { type: boolean }
+            responses:
+                "200":
+                    description: Confirmed count and the authenticated user's saved heart.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties: false
+                                required: [like_count, liked_by_me]
+                                properties:
+                                    like_count: { type: integer, minimum: 0 }
+                                    liked_by_me: { type: boolean }
+                "400": { description: Invalid path or desired state }
+                "401": { description: Invalid session or deleted account }
+                "403": { description: The viewer cannot access the post }
+                "404": { description: Post or comment unavailable }
+                "426": { description: App update required }
     /posts/{postID}/reactions:
         get:
             operationId: listFightPostReactionPeople

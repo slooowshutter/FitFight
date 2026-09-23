@@ -12,33 +12,32 @@ struct FightComposerPerson: Identifiable, Equatable {
     let id: String
     let handle: String
     let name: String
-    let photoURL: URL?
     let isOwner: Bool
     let invited: Bool
     let deferred: Bool
     let pendingAdd: Bool
 
     func subtitle(createMode: Bool) -> String {
-        if isOwner { return String(localized: "Created this fight") }
+        if isOwner { return String(appLocalized: "Created this fight") }
         if pendingAdd {
             return createMode
-                ? String(localized: "Added to this fight")
-                : String(localized: "Will be invited")
+                ? String(appLocalized: "Added to this fight")
+                : String(appLocalized: "Will be invited")
         }
-        if deferred { return String(localized: "Next round") }
-        if invited { return String(localized: "Invited") }
-        return String(localized: "In this fight")
+        if deferred { return String(appLocalized: "Next round") }
+        if invited { return String(appLocalized: "Invited") }
+        return String(appLocalized: "In this fight")
     }
 }
 
 enum FightComposer {
     static func durationLabel(days: Int, customSchedule: Bool) -> String {
-        if customSchedule { return String(localized: "Custom") }
+        if customSchedule { return String(appLocalized: "Custom") }
         switch days {
-        case 3: return String(localized: "3 days")
-        case 14: return String(localized: "2 weeks")
-        case 30: return String(localized: "1 month")
-        default: return String(localized: "1 week")
+        case 3: return String(appLocalized: "3 days")
+        case 14: return String(appLocalized: "2 weeks")
+        case 30: return String(appLocalized: "1 month")
+        default: return String(appLocalized: "1 week")
         }
     }
 
@@ -75,8 +74,8 @@ struct FightComposerMetricPage: View {
 
             FFGroupedRows {
                 FFGroupedRow(
-                    title: String(localized: "Steps"),
-                    subtitle: String(localized: "Highest total wins · Apple Health"),
+                    title: String(appLocalized: "Steps"),
+                    subtitle: String(appLocalized: "Highest total wins · Apple Health"),
                     systemImage: "figure.walk",
                     subtitleTone: .moss,
                     trailing: AnyView(Image(systemName: "checkmark").foregroundStyle(theme.mossText))
@@ -111,10 +110,10 @@ struct FightComposerDurationPage: View {
                     .ffType(.heading)
                     .foregroundStyle(theme.text)
                 Text(customSchedule
-                     ? String(localized: "Choose the exact start and end. Only steps inside this window count.")
+                     ? String(appLocalized: "Choose the exact start and end. Only steps inside this window count.")
                      : startsImmediately
-                        ? String(localized: "It starts immediately. Steps after the exact end time do not count.")
-                        : String(localized: "Steps after the exact end time do not count."))
+                        ? String(appLocalized: "It starts immediately. Steps after the exact end time do not count.")
+                        : String(appLocalized: "Steps after the exact end time do not count."))
                     .ffType(.body)
                     .foregroundStyle(theme.textSecondary)
                     .lineSpacing(2)
@@ -126,23 +125,23 @@ struct FightComposerDurationPage: View {
                     .foregroundStyle(theme.text)
                 FFDurationPicker(
                     options: [
-                        String(localized: "3 days"),
-                        String(localized: "1 week"),
-                        String(localized: "2 weeks"),
-                        String(localized: "1 month"),
+                        String(appLocalized: "3 days"),
+                        String(appLocalized: "1 week"),
+                        String(appLocalized: "2 weeks"),
+                        String(appLocalized: "1 month"),
                     ],
                     selection: Binding(
                         get: { duration },
                         set: { selection in
                             customSchedule = false
-                            if selection == String(localized: "3 days") { durationDays = 3 }
-                            else if selection == String(localized: "2 weeks") { durationDays = 14 }
-                            else if selection == String(localized: "1 month") { durationDays = 30 }
+                            if selection == String(appLocalized: "3 days") { durationDays = 3 }
+                            else if selection == String(appLocalized: "2 weeks") { durationDays = 14 }
+                            else if selection == String(appLocalized: "1 month") { durationDays = 30 }
                             else { durationDays = 7 }
                         }
                     )
                 )
-                FFButton(title: String(localized: "Custom"), kind: customSchedule ? .primary : .secondary, fullWidth: true) {
+                FFButton(title: String(appLocalized: "Custom"), kind: customSchedule ? .primary : .secondary, fullWidth: true) {
                     customSchedule = true
                 }
             }
@@ -189,8 +188,8 @@ struct FightComposerDurationPage: View {
 
             FFGroupedRows {
                 FFGroupedRow(
-                    title: String(localized: "Repeat when it ends"),
-                    subtitle: String(localized: "The next window starts when this one ends"),
+                    title: String(appLocalized: "Repeat when it ends"),
+                    subtitle: String(appLocalized: "The next window starts when this one ends"),
                     systemImage: "arrow.clockwise",
                     subtitleTone: recurring ? .moss : .neutral,
                     trailing: AnyView(
@@ -224,8 +223,8 @@ struct FightComposerPeoplePage: View {
                     .foregroundStyle(theme.text)
                 Text(
                     visibilityJoinable
-                        ? String(localized: "Listed on Join. Anyone with the code or invite link can join. Usernames are optional.")
-                        : String(localized: "New fights start private. People still join with the code or invite link. Usernames are optional.")
+                        ? String(appLocalized: "Listed on Join. Anyone with the code or invite link can join. Usernames are optional.")
+                        : String(appLocalized: "New fights start private. People still join with the code or invite link. Usernames are optional.")
                 )
                     .ffType(.body)
                     .foregroundStyle(theme.textSecondary)
@@ -234,8 +233,8 @@ struct FightComposerPeoplePage: View {
 
             FFGroupedRows {
                 FFGroupedRow(
-                    title: String(localized: "Private"),
-                    subtitle: String(localized: "Default · code or invite link"),
+                    title: String(appLocalized: "Private"),
+                    subtitle: String(appLocalized: "Default · code or invite link"),
                     systemImage: "lock",
                     subtitleTone: visibilityJoinable ? .neutral : .moss,
                     trailing: visibilityJoinable
@@ -245,8 +244,8 @@ struct FightComposerPeoplePage: View {
                 )
                 FFDivider()
                 FFGroupedRow(
-                    title: String(localized: "Public"),
-                    subtitle: String(localized: "Listed on Join"),
+                    title: String(appLocalized: "Public"),
+                    subtitle: String(appLocalized: "Listed on Join"),
                     systemImage: "link",
                     subtitleTone: visibilityJoinable ? .moss : .neutral,
                     trailing: visibilityJoinable
@@ -264,7 +263,7 @@ struct FightComposerPeoplePage: View {
                 HStack(spacing: 8) {
                     Group {
                         if staticRender {
-                            Text(verbatim: username.isEmpty ? String(localized: "@username") : username)
+                            Text(verbatim: username.isEmpty ? String(appLocalized: "@username") : username)
                                 .foregroundStyle(username.isEmpty ? theme.textFaint : theme.text)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         } else {
@@ -286,7 +285,7 @@ struct FightComposerPeoplePage: View {
                     .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
                     .ffBorder(usernameError == nil ? theme.line : theme.emberText, radius: theme.radius.field)
                     FFButton(
-                        title: String(localized: "Add"),
+                        title: String(appLocalized: "Add"),
                         size: .small,
                         enabled: !username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                     ) {
@@ -321,7 +320,7 @@ struct FightComposerPeoplePage: View {
                             }
                             Spacer(minLength: 8)
                             if person.isOwner {
-                                FFPill(String(localized: "Owner"), style: .softMoss)
+                                FFPill(String(appLocalized: "Owner"), style: .softMoss)
                             } else {
                                 Button {
                                     people.removeAll { $0.id == person.id }
@@ -335,7 +334,7 @@ struct FightComposerPeoplePage: View {
                                 .buttonStyle(FFHapticPlainStyle())
                                 .accessibilityLabel(
                                     String(
-                                        localized: "fight.remove-handle",
+                                        appLocalized: "fight.remove-handle",
                                         defaultValue: "Remove @\(person.handle)"
                                     )
                                 )
@@ -371,16 +370,16 @@ struct FightComposerDetailsPage: View {
             }
 
             FightComposerLimitedField(
-                label: String(localized: "Title"),
-                placeholder: String(localized: "Weekend walk-off"),
+                label: String(appLocalized: "Title"),
+                placeholder: String(appLocalized: "Weekend walk-off"),
                 text: $fightTitle,
                 focus: titleFocused,
                 submitLabel: .next,
                 onSubmit: { actionFocused.wrappedValue = true }
             )
             FightComposerLimitedField(
-                label: String(localized: "Loser action"),
-                placeholder: String(localized: "Cook dinner"),
+                label: String(appLocalized: "Loser action"),
+                placeholder: String(appLocalized: "Cook dinner"),
                 text: $actionText,
                 focus: actionFocused,
                 submitLabel: .done,
@@ -463,10 +462,10 @@ struct FightComposerReviewPage: View {
         let title = fightTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         let action = actionText.trimmingCharacters(in: .whitespacesAndNewlines)
         let listing = visibilityJoinable
-            ? String(localized: "Listed on Join")
-            : String(localized: "Join with code or invite link")
-        let opponents = opponentHandles.map { "@\($0)" }.formatted(.list(type: .and))
-        let matchup = opponents.isEmpty ? String(localized: "people who join") : opponents
+            ? String(appLocalized: "Listed on Join")
+            : String(appLocalized: "Join with code or invite link")
+        let opponents = opponentHandles.map { "@\($0)" }.formatted(.list(type: .and).locale(AppLocalization.locale))
+        let matchup = opponents.isEmpty ? String(appLocalized: "people who join") : opponents
         let privacy = opponents.isEmpty
             ? listing
             : "\(listing) · \(opponents)"
@@ -474,23 +473,24 @@ struct FightComposerReviewPage: View {
             ? customEnd
             : FightComposer.endDate(from: durationStart, days: durationDays, timeZone: timeZone)
         let dateFormat = Date.FormatStyle(date: .abbreviated, time: .shortened, timeZone: timeZone)
+            .locale(AppLocalization.locale)
 
         return VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
-                Text(isEditing ? String(localized: "This fight") : String(localized: "Ready to fight?"))
+                Text(isEditing ? String(appLocalized: "This fight") : String(appLocalized: "Ready to fight?"))
                     .ffType(.heading)
                     .foregroundStyle(theme.text)
                 Text(isEditing
-                     ? String(localized: "Change a row, then save.")
-                     : String(localized: "Check the agreement before you start."))
+                     ? String(appLocalized: "Change a row, then save.")
+                     : String(appLocalized: "Check the agreement before you start."))
                     .ffType(.body)
                     .foregroundStyle(theme.textSecondary)
             }
 
             FFGroupedRows {
                 FFGroupedRow(
-                    title: String(localized: "Metric"),
-                    subtitle: String(localized: "Steps · highest total wins"),
+                    title: String(appLocalized: "Metric"),
+                    subtitle: String(appLocalized: "Steps · highest total wins"),
                     systemImage: "figure.walk",
                     subtitleTone: .neutral,
                     trailing: AnyView(Text("Change").ffType(.caption).foregroundStyle(theme.mossText)),
@@ -498,12 +498,12 @@ struct FightComposerReviewPage: View {
                 )
                 FFDivider()
                 FFGroupedRow(
-                    title: String(localized: "Duration"),
+                    title: String(appLocalized: "Duration"),
                     subtitle: (customSchedule ? String(
-                        localized: "fight.custom-window",
+                        appLocalized: "fight.custom-window",
                         defaultValue: "\(customStart.formatted(dateFormat)) → \(customEnd.formatted(dateFormat))"
                     ) : String(
-                        localized: "fight.duration-end",
+                        appLocalized: "fight.duration-end",
                         defaultValue: "\(duration) · ends \(windowEnd.formatted(dateFormat))"
                     )) + " · \(timeZone.identifier)",
                     systemImage: "calendar",
@@ -513,7 +513,7 @@ struct FightComposerReviewPage: View {
                 )
                 FFDivider()
                 FFGroupedRow(
-                    title: visibilityJoinable ? String(localized: "Public") : String(localized: "Private"),
+                    title: visibilityJoinable ? String(appLocalized: "Public") : String(appLocalized: "Private"),
                     subtitle: privacy,
                     systemImage: visibilityJoinable ? "link" : "lock",
                     subtitleTone: .neutral,
@@ -522,9 +522,9 @@ struct FightComposerReviewPage: View {
                 )
                 FFDivider()
                 FFGroupedRow(
-                    title: String(localized: "Title"),
+                    title: String(appLocalized: "Title"),
                     subtitle: title.isEmpty
-                        ? (action.isEmpty ? String(localized: "None") : String(localized: "Uses the action"))
+                        ? (action.isEmpty ? String(appLocalized: "None") : String(appLocalized: "Uses the action"))
                         : title,
                     systemImage: "textformat",
                     subtitleTone: .neutral,
@@ -533,8 +533,8 @@ struct FightComposerReviewPage: View {
                 )
                 FFDivider()
                 FFGroupedRow(
-                    title: String(localized: "Loser action"),
-                    subtitle: action.isEmpty ? String(localized: "None") : action,
+                    title: String(appLocalized: "Loser action"),
+                    subtitle: action.isEmpty ? String(appLocalized: "None") : action,
                     systemImage: "flag",
                     subtitleTone: .neutral,
                     trailing: AnyView(Text("Change").ffType(.caption).foregroundStyle(theme.mossText)),
@@ -542,16 +542,16 @@ struct FightComposerReviewPage: View {
                 )
                 FFDivider()
                 FFGroupedRow(
-                    title: String(localized: "Apple Health Steps"),
-                    subtitle: CompanionPreview.isEnabled ? String(localized: "Sample steps · preview") : healthConnected
-                        ? String(localized: "Ready to score this fight")
-                        : String(localized: "Connect to score this fight"),
+                    title: String(appLocalized: "Apple Health Steps"),
+                    subtitle: CompanionPreview.isEnabled ? String(appLocalized: "Sample steps · preview") : healthConnected
+                        ? String(appLocalized: "Ready to score this fight")
+                        : String(appLocalized: "Connect to score this fight"),
                     systemImage: "heart",
                     enabled: !healthBusy,
                     subtitleTone: healthConnected ? .moss : .ember,
                     trailing: AnyView(
                         FFPill(
-                            healthConnected ? String(localized: "Connected") : String(localized: "Connect"),
+                            healthConnected ? String(appLocalized: "Connected") : String(appLocalized: "Connect"),
                             style: healthConnected ? .softMoss : .solidMoss
                         )
                     ),
@@ -564,15 +564,15 @@ struct FightComposerReviewPage: View {
                 VStack(alignment: .leading, spacing: 5) {
                     Text(
                         String(
-                            localized: "fight.you-versus",
+                            appLocalized: "fight.you-versus",
                             defaultValue: "You vs \(matchup)"
                         )
                     )
                         .ffType(.rowTitle)
                         .foregroundStyle(theme.text)
                     Text(
-                        customSchedule ? String(localized: "Most Steps inside the selected window wins.") : String(
-                            localized: "fight.winner-after-duration",
+                        customSchedule ? String(appLocalized: "Most Steps inside the selected window wins.") : String(
+                            appLocalized: "fight.winner-after-duration",
                             defaultValue: "Most Steps wins after \(duration.lowercased())."
                         )
                     )
@@ -586,7 +586,7 @@ struct FightComposerReviewPage: View {
                     if !action.isEmpty {
                         Text(
                             String(
-                                localized: "fight.loser-will",
+                                appLocalized: "fight.loser-will",
                                 defaultValue: "The loser will \(action)."
                             )
                         )
@@ -611,7 +611,7 @@ struct FitFightTimeZonePicker: View {
             showingPicker = true
         } label: {
             HStack {
-                Text(String(localized: "Time zone"))
+                Text(String(appLocalized: "Time zone"))
                 Spacer(minLength: 8)
                 Text(verbatim: selection.identifier.replacingOccurrences(of: "_", with: " "))
                     .foregroundStyle(theme.textSecondary).multilineTextAlignment(.trailing)
@@ -641,12 +641,12 @@ struct FitFightTimeZonePicker: View {
                 }
                 .scrollContentBackground(.hidden)
                 .background(theme.bg)
-                .searchable(text: $search, prompt: String(localized: "Search time zones"))
-                .navigationTitle(String(localized: "Time zone"))
+                .searchable(text: $search, prompt: String(appLocalized: "Search time zones"))
+                .navigationTitle(String(appLocalized: "Time zone"))
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {
-                        Button(String(localized: "Done")) { showingPicker = false }
+                        Button(String(appLocalized: "Done")) { showingPicker = false }
                     }
                 }
             }.tint(theme.mossText).fitFightTheme(theme).presentationBackground(theme.bg)

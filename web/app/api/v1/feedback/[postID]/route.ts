@@ -1,4 +1,4 @@
-import { apiRoute, corsPreflight, json, requireUuid } from "@/lib/http";
+import { apiRoute, corsPreflight, json, readJson, requireUuid } from "@/lib/http";
 import { isFitFightAdmin } from "@/lib/admin/is-fitfight-admin";
 import {
     readAdminViewer,
@@ -7,7 +7,9 @@ import {
 import {
     deleteFeedbackPost,
     getFeedbackPost,
+    archiveFeedbackPost,
 } from "@/lib/supabase/queries/feedback-supabase-query";
+import { feedbackArchiveRequestSchema } from "@/lib/types/feedback/feedback";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,7 +26,8 @@ export const GET = apiRoute<{ postID: string }>(async (request, { params }) => {
             metadata: {},
         })),
         can_launch_fix: isFitFightAdmin(viewer),
-        can_delete: isFitFightAdmin(viewer),
+        can_delete: detail.post.mine || isFitFightAdmin(viewer),
+        can_archive: isFitFightAdmin(viewer),
     });
 });
 
@@ -35,6 +38,12 @@ export const DELETE = apiRoute<{ postID: string }>(async (request, { params }) =
     return json({ deleted: true });
 });
 
-export function OPTIONS(request: Request) {
-    return corsPreflight(request);
-}
+export const PATCH = apiRoute<{ postID: string }>(async (request, { params }) => {
+    const { userId } = await verifyUser(request);
+    const postId = requireUuid(params.postID, "postID");
+    const parsed = feedbackArchiveRequestSchema.safeParse(await readJson(request));
+    if (!parsed.success) throw parsed.error;
+    return json(await archiveFeedbackPost(userId, postId, parsed.data));
+});
+
+export const OPTIONS = corsPreflight;

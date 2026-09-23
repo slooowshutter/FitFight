@@ -6,18 +6,18 @@ enum FightDetailPane: Hashable {
     case stats
     case history
     case feed
-    case share
+    case details
 
     var title: String {
         switch self {
         case .stats:
-            return String(localized: "Stats")
+            return String(appLocalized: "Stats")
         case .history:
-            return String(localized: "History")
+            return String(appLocalized: "History")
         case .feed:
-            return String(localized: "Feed")
-        case .share:
-            return String(localized: "Share")
+            return String(appLocalized: "Feed")
+        case .details:
+            return String(appLocalized: "Details")
         }
     }
 }
@@ -55,7 +55,7 @@ struct FightDetailView: View {
             items.append(.history)
         }
         items.append(.feed)
-        if fight.joinCode != nil { items.append(.share) }
+        items.append(.details)
         return items
     }
 
@@ -111,8 +111,8 @@ struct FightDetailView: View {
                     if let fightID = UUID(uuidString: fight.id) {
                         FightPostsSection(fightID: fightID, fightFeed: fightFeed)
                     }
-                case .share:
-                    shareCard
+                case .details:
+                    detailsPane
                 }
             }
         }
@@ -129,9 +129,6 @@ struct FightDetailView: View {
         }
         .sheet(isPresented: $showingEdit) {
             EditFightView(fight: fight)
-                .environmentObject(model)
-                .environmentObject(session)
-                .environmentObject(steps)
                 .fitFightTheme(theme)
                 .presentationBackground(theme.bg)
         }
@@ -145,16 +142,16 @@ struct FightDetailView: View {
                 canAdminister = capabilities.manageFights
             } catch { }
         }
-        .confirmationDialog(String(localized: "Stop this Fight?"), isPresented: Binding(
+        .confirmationDialog(String(appLocalized: "Stop this Fight?"), isPresented: Binding(
             get: { adminAction != nil }, set: { if !$0 { adminAction = nil } }
         ), titleVisibility: .visible) {
-            Button(adminAction == "pause_series" ? String(localized: "Stop future rounds") : String(localized: "Stop current and future rounds"), role: .destructive) {
+            Button(adminAction == "pause_series" ? String(appLocalized: "Stop future rounds") : String(appLocalized: "Stop current and future rounds"), role: .destructive) {
                 let action = adminAction
                 adminAction = nil
                 Task { await administer(AdministerFightRequest(action: action)) }
             }
         } message: {
-            Text(String(localized: "Finalized results are kept. Stopping future rounds lets the current round finish."))
+            Text(String(appLocalized: "Finalized results are kept. Stopping future rounds lets the current round finish."))
         }
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
@@ -163,7 +160,7 @@ struct FightDetailView: View {
     private var fightsRefresh: FFRefreshConfig {
         FFRefreshConfig(
             isRefreshing: pane == .feed ? isRefreshingFeed : model.isRefreshingFights,
-            message: pane == .feed ? String(localized: "Loading") : model.refreshStatusText,
+            message: pane == .feed ? String(appLocalized: "Loading") : model.refreshStatusText,
             action: {
                 if pane == .feed, let fightID = UUID(uuidString: fight.id) {
                     isRefreshingFeed = true
@@ -200,7 +197,7 @@ struct FightDetailView: View {
 
         if canLeave {
             FFButton(
-                title: String(localized: "Leave fight"),
+                title: String(appLocalized: "Leave fight"),
                 kind: .ghost,
                 fullWidth: true
             ) {
@@ -219,14 +216,14 @@ struct FightDetailView: View {
     }
 
     private var standingsSection: some View {
-        FFSection(title: String(localized: "Standings")) {
+        FFSection(title: String(appLocalized: "Standings")) {
             VStack(alignment: .leading, spacing: theme.space.cardGap) {
                 if let meta = fight.standingsMeta {
                     Text(meta)
                         .ffType(.caption)
                         .foregroundStyle(theme.textSecondary)
                 }
-                standingsBands(for: fight, contextFight: fight)
+                standingsBands(for: fight)
                 ForEach(fight.standings.filter { $0.invited || $0.deferred }) { row in
                     standingRow(index: 0, row: row, contextFight: fight)
                 }
@@ -242,7 +239,7 @@ struct FightDetailView: View {
     }
 
     @ViewBuilder
-    private func standingsBands(for fight: Fight, contextFight: Fight) -> some View {
+    private func standingsBands(for fight: Fight) -> some View {
         let racing = fight.standings.filter { !$0.invited && !$0.deferred }
         let winners = winnerStandings(in: racing, fight: fight)
         let losers = racing.filter { row in !winners.contains(where: { $0.id == row.id }) }
@@ -250,7 +247,7 @@ struct FightDetailView: View {
         VStack(alignment: .leading, spacing: theme.space.cardGap) {
             VStack(alignment: .leading, spacing: theme.space.cardGap) {
                 ForEach(Array(winners.enumerated()), id: \.element.id) { index, row in
-                    standingRow(index: index, row: row, contextFight: contextFight, inWinnerBand: true)
+                    standingRow(index: index, row: row, contextFight: fight, inWinnerBand: true)
                 }
             }
             .padding(.horizontal, 4)
@@ -261,7 +258,7 @@ struct FightDetailView: View {
             if !losers.isEmpty {
                 standingsSeparator(for: fight)
                 ForEach(Array(losers.enumerated()), id: \.element.id) { index, row in
-                    standingRow(index: index + winners.count, row: row, contextFight: contextFight, inWinnerBand: false)
+                    standingRow(index: index + winners.count, row: row, contextFight: fight, inWinnerBand: false)
                 }
             }
         }
@@ -281,9 +278,9 @@ struct FightDetailView: View {
 
     private func standingsSeparatorLabel(for fight: Fight) -> String {
         if fight.status == .live {
-            return String(localized: "fight.standings-chasing", defaultValue: "Chasing the lead")
+            return String(appLocalized: "fight.standings-chasing", defaultValue: "Chasing the lead")
         }
-        return String(localized: "fight.standings-everyone-else", defaultValue: "Everyone else")
+        return String(appLocalized: "fight.standings-everyone-else", defaultValue: "Everyone else")
     }
 
     private func winnerStandings(in racing: [Standing], fight: Fight) -> [Standing] {
@@ -304,7 +301,7 @@ struct FightDetailView: View {
                     HStack(alignment: .top, spacing: 12) {
                         FFResultGlyph(model.fightResult(for: window))
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(historyWindowSubtitle(window))
+                            Text(window.deadlineLabel)
                                 .ffType(.caption)
                                 .foregroundStyle(theme.textSecondary)
                             Text(historyWindowResult(window))
@@ -313,7 +310,7 @@ struct FightDetailView: View {
                         }
                         Spacer(minLength: 0)
                     }
-                    standingsBands(for: window, contextFight: window)
+                    standingsBands(for: window)
                 }
             }
         }
@@ -321,13 +318,9 @@ struct FightDetailView: View {
 
     private func historyWindowTitle(_ window: Fight) -> String {
         String(
-            localized: "fight.history-window",
-            defaultValue: "\(Fight.deadlineStamp(window.windowStart)) – \(Fight.deadlineStamp(window.windowEnd))"
+            appLocalized: "fight.history-window",
+            defaultValue: "\(Fight.deadlineStamp(window.windowStart)) - \(Fight.deadlineStamp(window.windowEnd))"
         )
-    }
-
-    private func historyWindowSubtitle(_ window: Fight) -> String {
-        window.endedLabel ?? window.deadlineLabel
     }
 
     private func historyWindowResult(_ window: Fight) -> String {
@@ -336,22 +329,22 @@ struct FightDetailView: View {
             fight: window
         )
         if leaders.count > 1 {
-            return String(localized: "Tied")
+            return String(appLocalized: "Tied")
         }
         if let winner = leaders.first {
             return winner.person.isYou
-                ? String(localized: "You won")
+                ? String(appLocalized: "You won")
                 : String(
-                    localized: "fight.history-winner",
+                    appLocalized: "fight.history-winner",
                     defaultValue: "\(winner.person.name) won"
                 )
         }
-        return String(localized: "No result yet")
+        return String(appLocalized: "No result yet")
     }
 
     @ViewBuilder
     private var daysSection: some View {
-        FFSection(title: String(localized: "Every day so far")) {
+        FFSection(title: String(appLocalized: "Every day so far")) {
             daysCard(initialKind: isPendingSettlement ? .pace : nil)
         }
     }
@@ -367,7 +360,7 @@ struct FightDetailView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(FFHapticPlainStyle())
-                .accessibilityLabel(String(localized: "Back"))
+                .accessibilityLabel(String(appLocalized: "Back"))
                 VStack(alignment: .leading, spacing: 3) {
                     Text(fight.listTitle)
                         .font(.custom("Nunito-ExtraBold", size: 18, relativeTo: .headline))
@@ -383,32 +376,32 @@ struct FightDetailView: View {
                 .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                 if canAdminister, !pendingJoin {
                     Menu {
-                        Button(fight.suggested ? String(localized: "Remove suggestion") : String(localized: "Suggest")) {
+                        Button(fight.suggested ? String(appLocalized: "Remove suggestion") : String(appLocalized: "Suggest")) {
                             Task { await model.setFightSuggested(id: fight.id, suggested: !fight.suggested) }
                         }
                         .disabled(!fight.suggested && fight.visibility != "joinable")
                         if fight.visibility != "joinable" {
-                            Text(String(localized: "Only public Fights can be suggested."))
+                            Text(String(appLocalized: "Only public Fights can be suggested."))
                         }
-                        Button(fight.visibility == "joinable" ? String(localized: "Make private") : String(localized: "Make public")) {
+                        Button(fight.visibility == "joinable" ? String(appLocalized: "Make private") : String(appLocalized: "Make public")) {
                             Task { await administer(AdministerFightRequest(visibility: fight.visibility == "joinable" ? "invite_only" : "joinable")) }
                         }
-                        Button(fight.recurring ? String(localized: "Turn recurrence off") : String(localized: "Turn recurrence on")) {
+                        Button(fight.recurring ? String(appLocalized: "Turn recurrence off") : String(appLocalized: "Turn recurrence on")) {
                             Task { await administer(AdministerFightRequest(recurring: !fight.recurring)) }
                         }
-                        Button(String(localized: "Stop future rounds"), role: .destructive) { adminAction = "pause_series" }
-                        Button(String(localized: "Stop current and future rounds"), role: .destructive) { adminAction = "stop_round" }
+                        Button(String(appLocalized: "Stop future rounds"), role: .destructive) { adminAction = "pause_series" }
+                        Button(String(appLocalized: "Stop current and future rounds"), role: .destructive) { adminAction = "stop_round" }
                             .disabled(fight.status == .finished)
                     } label: {
                         Image(systemName: "slider.horizontal.3").frame(width: 44, height: 44).foregroundStyle(theme.mossText)
-                    }.disabled(adminBusy).accessibilityLabel(String(localized: "Manage Fight"))
+                    }.disabled(adminBusy).accessibilityLabel(String(appLocalized: "Manage Fight"))
                 }
                 if fight.canOwnerEdit, !pendingJoin {
                     Button {
                         model.createError = nil
                         showingEdit = true
                     } label: {
-                        Text(String(localized: "Edit"))
+                        Text(String(appLocalized: "Edit"))
                             .ffType(.label)
                             .foregroundStyle(theme.mossText)
                             .frame(height: 44)
@@ -452,7 +445,7 @@ struct FightDetailView: View {
                 Text(fight.kickerEmphasis)
                     .ffType(.title)
                     .foregroundStyle(settlementTitleColor)
-                Text(fight.endedLabel ?? fight.deadlineLabel)
+                Text(fight.deadlineLabel)
                     .ffType(.caption)
                     .foregroundStyle(theme.textSecondary)
                 if let grace = fight.graceEndsAt {
@@ -460,7 +453,7 @@ struct FightDetailView: View {
                         if grace > context.date {
                             Text(
                                 String(
-                                    localized: "fight.sync-time-left",
+                                    appLocalized: "fight.sync-time-left",
                                     defaultValue: "\(RemainingTime.phrase(from: context.date, until: grace)) left to sync"
                                 )
                             )
@@ -483,13 +476,13 @@ struct FightDetailView: View {
     private var deferredHero: some View {
         FFCard(padding: 24) {
             VStack(alignment: .leading, spacing: 8) {
-                FFTag(String(localized: "Next round"))
-                Text(String(localized: "You start next round"))
+                FFTag(String(appLocalized: "Next round"))
+                Text(String(appLocalized: "You start next round"))
                     .ffType(.title)
                     .foregroundStyle(theme.text)
                 Text(
                     String(
-                        localized: "fight.deferred-copy",
+                        appLocalized: "fight.deferred-copy",
                         defaultValue: "Your steps count from \(joinRoundNext). This round’s standings are still visible."
                     )
                 )
@@ -498,6 +491,63 @@ struct FightDetailView: View {
                 .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var detailsPane: some View {
+        let timeZone = fight.timeZone.flatMap(TimeZone.init(identifier:)) ?? .current
+        let dateFormat = Date.FormatStyle(date: .abbreviated, time: .shortened, timeZone: timeZone)
+            .locale(AppLocalization.locale)
+        let participantCount = fight.standings.filter { !$0.invited && !$0.deferred }.count
+
+        return VStack(alignment: .leading, spacing: theme.space.cardGap) {
+            FFSectionHeader(title: String(appLocalized: "Details"))
+            FFGroupedRows {
+                FFGroupedRow(
+                    title: String(appLocalized: "Start"),
+                    subtitle: fight.windowStart.formatted(dateFormat),
+                    systemImage: "calendar",
+                    subtitleTone: .neutral
+                )
+                FFDivider()
+                FFGroupedRow(
+                    title: String(appLocalized: "End"),
+                    subtitle: fight.windowEnd.formatted(dateFormat),
+                    systemImage: "calendar.badge.checkmark",
+                    subtitleTone: .neutral
+                )
+                FFDivider()
+                FFGroupedRow(
+                    title: String(appLocalized: "Time zone"),
+                    subtitle: timeZone.identifier,
+                    systemImage: "globe",
+                    subtitleTone: .neutral
+                )
+                if let creator = fight.inviter {
+                    FFDivider()
+                    FFGroupedRow(
+                        title: String(appLocalized: "Created by"),
+                        subtitle: creator.isYou ? String(appLocalized: "You") : creator.name,
+                        systemImage: "person",
+                        subtitleTone: .neutral
+                    )
+                }
+                FFDivider()
+                FFGroupedRow(
+                    title: String(appLocalized: "Participants"),
+                    subtitle: String(
+                        appLocalized: "fight.participant-count",
+                        defaultValue: "\(participantCount) in this fight"
+                    ),
+                    systemImage: "person.2",
+                    subtitleTone: .neutral
+                )
+            }
+            if fight.joinCode != nil {
+                FFSection(title: String(appLocalized: "Share")) {
+                    shareCard
+                }
+            }
         }
     }
 
@@ -520,17 +570,15 @@ struct FightDetailView: View {
                             UIPasteboard.general.string = code
                             copiedCode = true
                         } label: {
-                            Text(copiedCode ? String(localized: "Copied") : code)
+                            Text(copiedCode ? String(appLocalized: "Copied") : code)
                                 .ffType(.heading)
                                 .foregroundStyle(theme.mossText)
                                 .frame(minHeight: 44)
                         }
                         .buttonStyle(FFHapticPlainStyle())
-                        .accessibilityLabel(String(localized: "Copy code"))
+                        .accessibilityLabel(String(appLocalized: "Copy code"))
                         .accessibilityValue(code)
                     }
-                }
-                if let code = fight.joinCode {
                     let url = APIConfig.joinShareURL(code: code, referralCode: session.profile?.referralCode)
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
@@ -547,14 +595,14 @@ struct FightDetailView: View {
                             UIPasteboard.general.string = url.absoluteString
                             copiedLink = true
                         } label: {
-                            Text(copiedLink ? String(localized: "Copied") : String(localized: "Copy link"))
+                            Text(copiedLink ? String(appLocalized: "Copied") : String(appLocalized: "Copy link"))
                                 .ffType(.caption)
                                 .foregroundStyle(theme.mossText)
                         }
                         .buttonStyle(FFHapticPlainStyle())
                     }
                     ShareLink(item: url) {
-                        Label(String(localized: "Share fight"), systemImage: "square.and.arrow.up")
+                        Label(String(appLocalized: "Share fight"), systemImage: "square.and.arrow.up")
                             .ffType(.label)
                             .foregroundStyle(theme.mossText)
                     }
@@ -582,7 +630,7 @@ struct FightDetailView: View {
                         .foregroundStyle(theme.textSecondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     FFPill(
-                        row.deferred ? String(localized: "Next round") : String(localized: "Invited"),
+                        row.deferred ? String(appLocalized: "Next round") : String(appLocalized: "Invited"),
                         style: .gold
                     )
                 }
@@ -602,9 +650,7 @@ struct FightDetailView: View {
                     monogram: row.person.initials,
                     name: row.person.name,
                     value: model.formatScore(row.score, metric: contextFight.metric),
-                    move: .same,
                     isYou: row.person.isYou,
-                    photoURL: row.person.photoURL,
                     avatar: AnyView(CompanionAvatar(row.person, size: 38)),
                     captionUrgent: !inWinnerBand && row.person.isYou && contextFight.status == .live,
                     captionAt: { now in
@@ -641,8 +687,8 @@ struct FightDetailView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             FFPill(
                 needsSync
-                    ? String(localized: "fight.pending-sync", defaultValue: "Pending")
-                    : String(localized: "Synced"),
+                    ? String(appLocalized: "fight.pending-sync", defaultValue: "Pending")
+                    : String(appLocalized: "Synced"),
                 style: needsSync ? .gold : .neutral
             )
             Text(model.formatScore(row.score, metric: contextFight.metric))
@@ -661,18 +707,8 @@ struct FightDetailView: View {
 
     private func daysCard(initialKind: FightDayChartKind? = nil) -> some View {
         FFCard {
-            VStack(alignment: .leading, spacing: 0) {
-                FightDayChartsView(days: fight.days, standings: fight.standings, initialKind: initialKind) { value in
-                    model.formatScore(value, metric: fight.metric)
-                }
-                if let note = fight.paceNote {
-                    FFDivider(inset: 0)
-                        .padding(.vertical, 18)
-                    Text(note)
-                        .ffType(.caption)
-                        .foregroundStyle(theme.textSecondary)
-                        .lineSpacing(3)
-                }
+            FightDayChartsView(days: fight.days, standings: fight.standings, initialKind: initialKind) { value in
+                model.formatScore(value, metric: fight.metric)
             }
         }
     }
@@ -708,15 +744,26 @@ struct JoinFightPreview: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(
                         String(
-                            localized: "fight.duration-rule",
+                            appLocalized: "fight.duration-rule",
                             defaultValue: "\(fight.durationLabel) · Most steps wins"
                         )
                     )
                     .ffType(.label)
                     .foregroundStyle(theme.text)
-                    Text(fight.deadlineLabel)
-                        .ffType(.caption)
-                        .foregroundStyle(theme.textSecondary)
+                    Group {
+                        if fight.pendingJoin || fight.suggested {
+                            Text(verbatim: "\(Fight.deadlineStamp(fight.windowStart)) → \(Fight.deadlineStamp(fight.windowEnd))")
+                        } else {
+                            Text(fight.deadlineLabel)
+                        }
+                    }
+                    .ffType(.caption)
+                    .foregroundStyle(theme.textSecondary)
+                    if fight.recurring && (fight.pendingJoin || fight.suggested) {
+                        Text(String(appLocalized: "Repeats until you leave. Each round has its own result."))
+                            .ffType(.caption)
+                            .foregroundStyle(theme.textSecondary)
+                    }
                     if fight.hasAction, fight.actionText != fight.listTitle {
                         Text(fight.actionText)
                             .ffType(.body)
@@ -726,19 +773,25 @@ struct JoinFightPreview: View {
                 }
                 Rectangle().fill(theme.line).frame(height: 1)
 
+                if fight.pendingJoin || fight.suggested {
+                    Text(String(appLocalized: "Participants see your identity, Fight Steps, standings, and posts you share in this Fight. Joining does not enable profile or daily-history sharing."))
+                        .ffType(.caption)
+                        .foregroundStyle(theme.textSecondary)
+                }
+
                 VStack(alignment: .leading, spacing: 16) {
                     if fight.offersJoinNext {
                         VStack(alignment: .leading, spacing: 10) {
                             Text(
                                 String(
-                                    localized: "fight.join-now-copy",
+                                    appLocalized: "fight.join-now-copy",
                                     defaultValue: "This round started \(joinRoundStarted). Join now and your steps count from that date."
                                 )
                             )
                             .ffType(.caption)
                             .foregroundStyle(theme.textSecondary)
                             FFScreenCTA(
-                                title: joining ? String(localized: "Joining…") : String(localized: "Join this round"),
+                                title: joining ? String(appLocalized: "Joining…") : String(appLocalized: "Join this round"),
                                 busy: joining,
                                 action: onJoinNow
                             )
@@ -746,14 +799,14 @@ struct JoinFightPreview: View {
                         VStack(alignment: .leading, spacing: 10) {
                             Text(
                                 String(
-                                    localized: "fight.join-next-copy",
+                                    appLocalized: "fight.join-next-copy",
                                     defaultValue: "Or start next round, from \(joinRoundNext)."
                                 )
                             )
                             .ffType(.caption)
                             .foregroundStyle(theme.textSecondary)
                             FFButton(
-                                title: String(localized: "Start next round"),
+                                title: String(appLocalized: "Start next round"),
                                 kind: .secondary,
                                 enabled: !joining,
                                 fullWidth: true,
@@ -763,15 +816,15 @@ struct JoinFightPreview: View {
                     } else {
                         FFScreenCTA(
                             title: joining
-                                ? String(localized: "Joining…")
-                                : (fight.pendingJoin ? String(localized: "Join fight") : String(localized: "Accept challenge")),
+                                ? String(appLocalized: "Joining…")
+                                : (fight.pendingJoin ? String(appLocalized: "Join fight") : String(appLocalized: "Accept challenge")),
                             busy: joining,
                             action: onJoinNow
                         )
                     }
                 }
                 FFButton(
-                    title: fight.pendingJoin ? String(localized: "Not now") : String(localized: "Decline"),
+                    title: fight.pendingJoin ? String(appLocalized: "Not now") : String(appLocalized: "Decline"),
                     kind: .ghost,
                     enabled: !joining,
                     fullWidth: true,

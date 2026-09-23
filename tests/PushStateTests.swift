@@ -148,6 +148,19 @@ enum AuthEvent { case initialSession, tokenRefreshed, signedOut }
         ))
         precondition(AppModel.pendingRoute == route && notifications == 2, "A tap while already foregrounded must persist and consume its post route")
 
+        let coldPush = PushNotificationService()
+        for payload in [
+            ["fitfight_route": route],
+            ["fitfight": ["route": route]],
+        ] as [[String: Any]] {
+            AppModel.pendingRoute = nil
+            await coldPush.userNotificationCenter(.current(), didReceive: UNNotificationResponse(
+                notification: UNNotification(request: UNNotificationRequest(content: UNNotificationContent(userInfo: payload)))
+            ))
+            precondition(AppModel.pendingRoute == route,
+                         "Both payload formats must persist the complete destination before startup configures navigation")
+        }
+
         recorder.failRevoke = true
         await push.revokeLocalRegistration()
         session.authSession = nil

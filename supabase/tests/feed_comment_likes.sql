@@ -1,0 +1,10 @@
+begin;
+select plan(6);
+select has_table('private', 'fight_post_comment_likes', 'Comment likes stay private');
+select ok((select relrowsecurity and relforcerowsecurity from pg_class where oid = 'private.fight_post_comment_likes'::regclass), 'Comment likes force RLS');
+select is(has_table_privilege('anon', 'private.fight_post_comment_likes', 'SELECT,INSERT,UPDATE,DELETE'), false, 'Anonymous clients cannot access comment likes');
+select is(has_table_privilege('authenticated', 'private.fight_post_comment_likes', 'SELECT,INSERT,UPDATE,DELETE'), false, 'App clients cannot access comment likes directly');
+select ok(has_table_privilege('service_role', 'private.fight_post_comment_likes', 'SELECT,INSERT,DELETE'), 'Backend can read and change comment likes');
+select has_trigger('private', 'fight_post_comment_likes', 'fight_post_comment_likes_broadcast_feed', 'Comment likes invalidate the live feed');
+select * from finish();
+rollback;

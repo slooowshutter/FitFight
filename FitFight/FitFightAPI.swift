@@ -8,59 +8,47 @@ enum FitFightAPIError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .notConfigured:
-            return String(localized: "FitFight API is not configured. Set FFAPIBaseURL.")
+            return String(appLocalized: "FitFight API is not configured. Set FFAPIBaseURL.")
         case .http(let status, let code, let message):
             switch code {
             case "update_required":
-                return String(localized: "Update FitFight to continue")
+                return String(appLocalized: "Update FitFight to continue")
             case "release_unavailable":
-                return String(localized: "Couldn’t check for updates")
+                return String(appLocalized: "Couldn’t check for updates")
             case "handle_not_found":
-                return String(localized: "That username does not have a FitFight account yet.")
+                return String(appLocalized: "That username does not have a FitFight account yet.")
             case "already_member":
-                return String(localized: "That person is already in this fight.")
+                return String(appLocalized: "That person is already in this fight.")
             case "fight_not_joinable":
-                return String(localized: "This fight cannot be joined.")
+                return String(appLocalized: "This fight cannot be joined.")
             case "fight_full":
-                return String(localized: "This fight is full.")
+                return String(appLocalized: "This fight is full.")
             case "join_rate_limited":
-                return String(localized: "Too many join attempts. Try again later.")
+                return String(appLocalized: "Too many join attempts. Try again later.")
             case "unauthorized":
-                return String(localized: "Your session expired. Sign in again.")
+                return String(appLocalized: "Your session expired. Sign in again.")
             case "forbidden":
-                return message ?? String(localized: "This is only available to the FitFight admin.")
+                return message ?? String(appLocalized: "This is only available to the FitFight admin.")
             case "config":
-                return message ?? String(localized: "Cursor isn’t configured yet.")
+                return message ?? String(appLocalized: "Cursor isn’t configured yet.")
             case "fight_not_startable", "fight_not_cancellable", "conflict":
-                return String(localized: "This fight changed. Refresh and try again.")
+                return String(appLocalized: "This fight changed. Refresh and try again.")
             case "validation":
-                return message ?? String(localized: "Check the title and details, then try again.")
+                return message ?? String(appLocalized: "Check the title and details, then try again.")
             case "rate_limited":
-                return message ?? String(localized: "You’ve posted a few times recently. Try again later.")
+                return message ?? String(appLocalized: "You’ve posted a few times recently. Try again later.")
             case "not_found":
-                return message ?? String(localized: "That isn’t available anymore.")
-            case "db_error", "internal":
-                return message ?? String(
-                    localized: "api.request-failed",
-                    defaultValue: "Request failed (\(status))."
-                )
+                return message ?? String(appLocalized: "That isn’t available anymore.")
             default:
                 return message ?? String(
-                    localized: "api.request-failed",
+                    appLocalized: "api.request-failed",
                     defaultValue: "Request failed (\(status))."
                 )
             }
         case .decoding:
-            return String(localized: "Couldn’t read the server response.")
+            return String(appLocalized: "Couldn’t read the server response.")
         }
     }
-}
-
-struct FitFightDataSource: Codable, Equatable {
-    var id: UUID
-    var provider: String
-    var sourceLabel: String
-    var contributingSourceLabels: [String]?
 }
 
 struct FitFightHealthKitContext: Decodable, Equatable {
@@ -273,23 +261,6 @@ struct FitFightUpdateFight: Encodable, Equatable {
     var timeZone: String? = nil
     var inviteHandles: [String]?
     var removeUserIds: [UUID]?
-
-    enum CodingKeys: String, CodingKey {
-        case name, actionText, visibility, recurring, startsAt, endsAt, timeZone, inviteHandles, removeUserIds
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encodeIfPresent(name, forKey: .name)
-        try container.encodeIfPresent(actionText, forKey: .actionText)
-        try container.encodeIfPresent(visibility, forKey: .visibility)
-        try container.encodeIfPresent(recurring, forKey: .recurring)
-        try container.encodeIfPresent(startsAt, forKey: .startsAt)
-        try container.encodeIfPresent(endsAt, forKey: .endsAt)
-        try container.encodeIfPresent(timeZone, forKey: .timeZone)
-        try container.encodeIfPresent(inviteHandles, forKey: .inviteHandles)
-        try container.encodeIfPresent(removeUserIds, forKey: .removeUserIds)
-    }
 }
 
 struct FitFightJoinableFight: Decodable, Equatable, Identifiable {
@@ -328,11 +299,6 @@ struct FitFightSummary: Codable, Equatable {
     var state: String
 }
 
-struct FitFightInviteCreated: Codable, Equatable {
-    var token: String
-    var invitedUserId: UUID
-}
-
 struct FitFightAccountDeletion: Decodable, Equatable {
     var appleAuthorizationRevoked: Bool
     var deleted: Bool
@@ -366,6 +332,8 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
     var createdAt: Date
     var metadata: FitFightFeedbackMetadata
     var media: [FitFightMedia]
+    var archived: Bool
+    var archiveReason: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -381,6 +349,8 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
         case createdAt = "created_at"
         case metadata
         case media
+        case archived
+        case archiveReason = "archive_reason"
     }
 
     init(
@@ -396,7 +366,9 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
         mine: Bool,
         createdAt: Date,
         metadata: FitFightFeedbackMetadata = FitFightFeedbackMetadata(),
-        media: [FitFightMedia] = []
+        media: [FitFightMedia] = [],
+        archived: Bool = false,
+        archiveReason: String? = nil
     ) {
         self.id = id
         self.kind = kind
@@ -411,6 +383,8 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
         self.createdAt = createdAt
         self.metadata = metadata
         self.media = media
+        self.archived = archived
+        self.archiveReason = archiveReason
     }
 
     init(from decoder: Decoder) throws {
@@ -429,6 +403,8 @@ struct FitFightFeedbackPost: Codable, Identifiable, Equatable, Hashable {
         metadata = try container.decodeIfPresent(FitFightFeedbackMetadata.self, forKey: .metadata)
             ?? FitFightFeedbackMetadata()
         media = try container.decodeIfPresent([FitFightMedia].self, forKey: .media) ?? []
+        archived = try container.decodeIfPresent(Bool.self, forKey: .archived) ?? false
+        archiveReason = try container.decodeIfPresent(String.self, forKey: .archiveReason)
     }
 }
 
@@ -479,6 +455,23 @@ struct FitFightFeedbackComment: Codable, Identifiable, Equatable, Hashable {
 
 struct FitFightFeedbackList: Decodable, Equatable {
     var posts: [FitFightFeedbackPost]
+    var canArchive: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case posts
+        case canArchive = "can_archive"
+    }
+
+    init(posts: [FitFightFeedbackPost], canArchive: Bool = false) {
+        self.posts = posts
+        self.canArchive = canArchive
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        posts = try container.decode([FitFightFeedbackPost].self, forKey: .posts)
+        canArchive = try container.decodeIfPresent(Bool.self, forKey: .canArchive) ?? false
+    }
 }
 
 struct FitFightFeedbackDetail: Decodable, Equatable {
@@ -486,12 +479,14 @@ struct FitFightFeedbackDetail: Decodable, Equatable {
     var comments: [FitFightFeedbackComment]
     var canLaunchFix: Bool
     var canDelete: Bool
+    var canArchive = false
 
     enum CodingKeys: String, CodingKey {
         case post
         case comments
         case canLaunchFix = "can_launch_fix"
         case canDelete = "can_delete"
+        case canArchive = "can_archive"
     }
 
     init(from decoder: Decoder) throws {
@@ -500,6 +495,17 @@ struct FitFightFeedbackDetail: Decodable, Equatable {
         comments = try container.decode([FitFightFeedbackComment].self, forKey: .comments)
         canLaunchFix = try container.decodeIfPresent(Bool.self, forKey: .canLaunchFix) ?? false
         canDelete = try container.decodeIfPresent(Bool.self, forKey: .canDelete) ?? false
+        canArchive = try container.decodeIfPresent(Bool.self, forKey: .canArchive) ?? false
+    }
+}
+
+struct FitFightFeedbackArchive: Decodable, Equatable {
+    var archived: Bool
+    var archiveReason: String?
+
+    enum CodingKeys: String, CodingKey {
+        case archived
+        case archiveReason = "archive_reason"
     }
 }
 
@@ -586,25 +592,19 @@ struct FitFightAPI {
         if let url = APIConfig.baseURL { return url }
         let raw = ProcessInfo.processInfo.environment["FFAPIBaseURL"]?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        guard !raw.isEmpty else { return nil }
-        return URL(string: raw)
+        if !raw.isEmpty { return URL(string: raw) }
+        #if DEBUG
+        return URL(string: "https://staging.fitfight.app")
+        #else
+        return nil
+        #endif
     }
 
     func claimReferral(code: UUID, accessToken: String) async throws -> FitFightReferralClaim {
         try await post(
             path: "referrals",
             accessToken: accessToken,
-            body: FitFightReferralLink(code: code),
-            expected: [200]
-        )
-    }
-
-    func connectAppleHealth(accessToken: String) async throws -> FitFightDataSource {
-        try await post(
-            path: "provider-connections/apple-health",
-            accessToken: accessToken,
-            body: EmptyJSON(),
-            expected: [200]
+            body: FitFightReferralLink(code: code)
         )
     }
 
@@ -615,7 +615,6 @@ struct FitFightAPI {
         try await get(
             path: "provider-uploads/context?provider=apple_health&metric=steps",
             accessToken: accessToken,
-            expected: [200],
             trace: trace,
             traceStage: .context
         )
@@ -633,8 +632,6 @@ struct FitFightAPI {
             method: "POST",
             accessToken: accessToken,
             body: body,
-            idempotencyKey: nil,
-            expected: [200],
             trace: trace,
             traceStage: .upload
         )
@@ -647,8 +644,7 @@ struct FitFightAPI {
         try await post(
             path: "healthkit/diagnostics",
             accessToken: accessToken,
-            body: diagnostics,
-            expected: [200]
+            body: diagnostics
         )
     }
 
@@ -660,8 +656,6 @@ struct FitFightAPI {
             method: "POST",
             accessToken: accessToken,
             body: Self.encoder.encode(["time_zone": Calendar.current.timeZone.identifier]),
-            idempotencyKey: nil,
-            expected: [200],
             trace: trace,
             traceStage: .fightsRefresh
         )
@@ -670,8 +664,23 @@ struct FitFightAPI {
     func dailyStatusRecap(fightID: UUID, accessToken: String) async throws -> FitFightDailyStatusRecap {
         try await get(
             path: "fights/\(fightID.uuidString.lowercased())/daily-status",
-            accessToken: accessToken,
-            expected: [200]
+            accessToken: accessToken
+        )
+    }
+
+    func reconcileGoogleIdentity(
+        idToken: String,
+        accessToken: String,
+        nonce: String
+    ) async throws {
+        let _: DiscardBody = try await post(
+            path: "auth/google",
+            accessToken: "",
+            body: GoogleIdentityBody(
+                idToken: idToken,
+                accessToken: accessToken,
+                nonce: nonce
+            )
         )
     }
 
@@ -751,79 +760,78 @@ struct FitFightAPI {
         let _: DiscardBody = try await post(
             path: "auth/apple",
             accessToken: accessToken,
-            body: AppleAuthorizationBody(authorizationCode: authorizationCode),
-            expected: [200]
+            body: AppleAuthorizationBody(authorizationCode: authorizationCode)
         )
     }
 
     func sharedProfile(userID: UUID, preview: String? = nil, accessToken: String) async throws -> SharedProfile {
         let suffix = preview.map { "?preview=\($0)" } ?? ""
-        return try await get(path: "profiles/\(userID.uuidString.lowercased())\(suffix)", accessToken: accessToken, expected: [200])
+        return try await get(path: "profiles/\(userID.uuidString.lowercased())\(suffix)", accessToken: accessToken)
     }
 
     func ownRivalries(accessToken: String) async throws -> [ProfileRivalrySummary] {
-        try await get(path: "me/rivalries", accessToken: accessToken, expected: [200])
+        try await get(path: "me/rivalries", accessToken: accessToken)
     }
 
     func profileSettings(accessToken: String) async throws -> SharedProfileSettings {
-        try await get(path: "me/profile-settings", accessToken: accessToken, expected: [200])
+        try await get(path: "me/profile-settings", accessToken: accessToken)
     }
 
     func updateProfileSettings(_ settings: SharedProfileSettings, accessToken: String) async throws -> SharedProfileSettings {
         try await request(
             path: "me/profile-settings", method: "PATCH", accessToken: accessToken,
-            body: Self.encoder.encode(ProfileSettingsUpdate(settings: settings)), idempotencyKey: nil, expected: [200]
+            body: Self.encoder.encode(ProfileSettingsUpdate(settings: settings))
         )
     }
 
     func profileHistory(userID: UUID, shared: Bool, cursor: UUID? = nil, accessToken: String) async throws -> ProfileHistoryPage {
         let suffix = cursor.map { "&cursor=\($0.uuidString.lowercased())" } ?? ""
-        return try await get(path: "profiles/\(userID.uuidString.lowercased())/history?shared=\(shared)\(suffix)", accessToken: accessToken, expected: [200])
+        return try await get(path: "profiles/\(userID.uuidString.lowercased())/history?shared=\(shared)\(suffix)", accessToken: accessToken)
     }
 
     func profileFriends(kind: String, cursor: UUID? = nil, accessToken: String) async throws -> ProfileFriendsPage {
         let suffix = cursor.map { "&cursor=\($0.uuidString.lowercased())" } ?? ""
-        return try await get(path: "friends?kind=\(kind)\(suffix)", accessToken: accessToken, expected: [200])
+        return try await get(path: "friends?kind=\(kind)\(suffix)", accessToken: accessToken)
     }
 
     func lookupProfile(handle: String, accessToken: String) async throws -> SharedProfileIdentity {
         var query = URLComponents()
         query.queryItems = [URLQueryItem(name: "handle", value: handle)]
-        return try await get(path: "profiles/lookup?\(query.percentEncodedQuery ?? "")", accessToken: accessToken, expected: [200])
+        return try await get(path: "profiles/lookup?\(query.percentEncodedQuery ?? "")", accessToken: accessToken)
     }
 
     func changeFriendship(userID: UUID, action: String, accessToken: String) async throws -> ProfileFriendshipResponse {
         let path = "friends/\(userID.uuidString.lowercased())"
         if action == "remove" {
-            return try await delete(path: path, accessToken: accessToken, expected: [200])
+            return try await delete(path: path, accessToken: accessToken)
         }
         if action == "request" {
-            return try await post(path: path + "/request", accessToken: accessToken, body: EmptyJSON(), expected: [200])
+            return try await post(path: path + "/request", accessToken: accessToken, body: EmptyJSON())
         }
-        return try await post(path: path + "/respond", accessToken: accessToken, body: ["action": action], expected: [200])
+        return try await post(path: path + "/respond", accessToken: accessToken, body: ["action": action])
     }
 
     func blockProfile(userID: UUID, accessToken: String) async throws {
-        let _: DiscardBody = try await post(path: "profiles/\(userID.uuidString.lowercased())/block", accessToken: accessToken, body: EmptyJSON(), expected: [200])
+        let _: DiscardBody = try await post(path: "profiles/\(userID.uuidString.lowercased())/block", accessToken: accessToken, body: EmptyJSON())
     }
 
     func reportProfile(userID: UUID, reason: String, accessToken: String) async throws {
-        let _: DiscardBody = try await post(path: "profiles/\(userID.uuidString.lowercased())/report", accessToken: accessToken, body: ["reason": reason], expected: [200])
+        let _: DiscardBody = try await post(path: "profiles/\(userID.uuidString.lowercased())/report", accessToken: accessToken, body: ["reason": reason])
     }
 
     func recordProfileView(userID: UUID, eventID: UUID, source: String, accessToken: String) async throws {
         let _: DiscardBody = try await post(
             path: "profiles/\(userID.uuidString.lowercased())/views", accessToken: accessToken,
-            body: ["event_id": eventID.uuidString.lowercased(), "source": source], expected: [200]
+            body: ["event_id": eventID.uuidString.lowercased(), "source": source]
         )
     }
 
     func profile(accessToken: String) async throws -> FitFightProfile {
-        try await get(path: "me", accessToken: accessToken, expected: [200])
+        try await get(path: "me", accessToken: accessToken)
     }
 
     func companionPrompts(accessToken: String) async throws -> [String] {
-        try await get(path: "me/companions", accessToken: accessToken, expected: [200])
+        try await get(path: "me/companions", accessToken: accessToken)
     }
 
     func updateProfile(
@@ -848,9 +856,7 @@ struct FitFightAPI {
                 companionPrompt: companionPrompt,
                 companionImage: companionImage,
                 timeZone: timeZone
-            )),
-            idempotencyKey: nil,
-            expected: [200]
+            ))
         )
     }
 
@@ -888,8 +894,7 @@ struct FitFightAPI {
         try await post(
             path: "media/\(id.uuidString.lowercased())/commit",
             accessToken: accessToken,
-            body: EmptyJSON(),
-            expected: [200]
+            body: EmptyJSON()
         )
     }
 
@@ -910,7 +915,7 @@ struct FitFightAPI {
         if let cursor, let encoded = cursor.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
             path += "?cursor=\(encoded)"
         }
-        return try await get(path: path, accessToken: accessToken, expected: [200])
+        return try await get(path: path, accessToken: accessToken)
     }
 
     func feedPeople(
@@ -929,8 +934,7 @@ struct FitFightAPI {
         let path = parts.isEmpty ? "feed/people" : "feed/people?\(parts.joined(separator: "&"))"
         let response: FitFightFeedPeopleResponse = try await get(
             path: path,
-            accessToken: accessToken,
-            expected: [200]
+            accessToken: accessToken
         )
         return response.people
     }
@@ -957,7 +961,7 @@ struct FitFightAPI {
 
 
     func fightPost(postID: UUID, accessToken: String) async throws -> FitFightFightPostResponse {
-        try await get(path: "posts/\(postID.uuidString.lowercased())", accessToken: accessToken, expected: [200])
+        try await get(path: "posts/\(postID.uuidString.lowercased())", accessToken: accessToken)
     }
 
     func fightPostComments(
@@ -972,8 +976,7 @@ struct FitFightAPI {
         }
         return try await get(
             path: "posts/\(postID.uuidString.lowercased())/comments?\(parts.joined(separator: "&"))",
-            accessToken: accessToken,
-            expected: [200]
+            accessToken: accessToken
         )
     }
 
@@ -994,7 +997,17 @@ struct FitFightAPI {
     func deleteFightPostComment(postID: UUID, commentID: UUID, accessToken: String) async throws -> FitFightFightPostCommentDeletion {
         try await delete(
             path: "posts/\(postID.uuidString.lowercased())/comments/\(commentID.uuidString.lowercased())",
+            accessToken: accessToken
+        )
+    }
+
+    func setFightPostCommentLike(postID: UUID, commentID: UUID, liked: Bool, accessToken: String) async throws -> FitFightFightPostCommentLike {
+        try await request(
+            path: "posts/\(postID.uuidString.lowercased())/comments/\(commentID.uuidString.lowercased())/like",
+            method: "PUT",
             accessToken: accessToken,
+            body: Self.encoder.encode(FightPostCommentLikeBody(liked: liked)),
+            idempotencyKey: nil,
             expected: [200]
         )
     }
@@ -1003,8 +1016,7 @@ struct FitFightAPI {
         let _: DiscardBody = try await post(
             path: "posts/\(postID.uuidString.lowercased())/comments/\(commentID.uuidString.lowercased())/report",
             accessToken: accessToken,
-            body: FightPostReportBody(reason: "other"),
-            expected: [200]
+            body: FightPostReportBody(reason: "other")
         )
     }
 
@@ -1013,15 +1025,14 @@ struct FitFightAPI {
         if let cursor, let encoded = cursor.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
             path += "?cursor=\(encoded)"
         }
-        return try await get(path: path, accessToken: accessToken, expected: [200])
+        return try await get(path: path, accessToken: accessToken)
     }
 
     func reactToFightPost(postID: UUID, emoji: String, accessToken: String) async throws -> FitFightFightPostReactionList {
         try await post(
             path: "posts/\(postID.uuidString.lowercased())/reactions",
             accessToken: accessToken,
-            body: FightPostReactionBody(emoji: emoji),
-            expected: [200]
+            body: FightPostReactionBody(emoji: emoji)
         )
     }
 
@@ -1033,28 +1044,10 @@ struct FitFightAPI {
         return try await get(path: path, accessToken: accessToken, expected: [200])
     }
 
-    func createFightPost(
-        fightID: UUID,
-        body: String,
-        mediaIDs: [UUID],
-        accessToken: String
-    ) async throws -> FitFightFightPostResponse {
-        try await post(
-            path: "fights/\(fightID.uuidString.lowercased())/posts",
-            accessToken: accessToken,
-            body: FightPostBody(body: body, mediaIds: mediaIDs),
-            expected: [201]
-        )
-    }
-
-    func deleteFightPost(fightID: UUID? = nil, postID: UUID, accessToken: String) async throws {
-        let path = fightID == nil
-            ? "posts/\(postID.uuidString.lowercased())"
-            : "fights/\(fightID!.uuidString.lowercased())/posts/\(postID.uuidString.lowercased())"
+    func deleteFightPost(postID: UUID, accessToken: String) async throws {
         let _: DiscardBody = try await delete(
-            path: path,
-            accessToken: accessToken,
-            expected: [200]
+            path: "posts/\(postID.uuidString.lowercased())",
+            accessToken: accessToken
         )
     }
 
@@ -1063,21 +1056,15 @@ struct FitFightAPI {
             path: "posts/\(postID.uuidString.lowercased())",
             method: "PATCH",
             accessToken: accessToken,
-            body: Self.encoder.encode(FightPostUpdateBody(body: body)),
-            idempotencyKey: nil,
-            expected: [200]
+            body: Self.encoder.encode(FightPostUpdateBody(body: body))
         )
     }
 
-    func reportFightPost(fightID: UUID? = nil, postID: UUID, reason: String, accessToken: String) async throws {
-        let path = fightID == nil
-            ? "posts/\(postID.uuidString.lowercased())/report"
-            : "fights/\(fightID!.uuidString.lowercased())/posts/\(postID.uuidString.lowercased())/report"
+    func reportFightPost(postID: UUID, reason: String, accessToken: String) async throws {
         let _: DiscardBody = try await post(
-            path: path,
+            path: "posts/\(postID.uuidString.lowercased())/report",
             accessToken: accessToken,
-            body: FightPostReportBody(reason: reason),
-            expected: [200]
+            body: FightPostReportBody(reason: reason)
         )
     }
 
@@ -1085,25 +1072,39 @@ struct FitFightAPI {
         let _: DiscardBody = try await post(
             path: "feed/blocks",
             accessToken: accessToken,
-            body: FeedBlockBody(userId: userID),
-            expected: [200]
+            body: FeedBlockBody(userId: userID)
         )
     }
 
     func deleteAccount(accessToken: String) async throws -> FitFightAccountDeletion {
         try await delete(
             path: "me",
-            accessToken: accessToken,
-            expected: [200]
+            accessToken: accessToken
         )
     }
 
     func notificationDeliveryStatus() async throws -> FitFightNotificationDeliveryStatus {
-        try await get(path: "notifications/status", accessToken: "", expected: [200])
+        try await get(path: "notifications/status", accessToken: "")
     }
 
     func notificationPreferences(accessToken: String) async throws -> FitFightNotificationPreferences {
-        try await get(path: "notifications/preferences", accessToken: accessToken, expected: [200])
+        try await get(path: "notifications/preferences", accessToken: accessToken)
+    }
+
+    func accountPreferences(accessToken: String) async throws -> AccountPreferences {
+        try await get(path: "me/preferences", accessToken: accessToken)
+    }
+
+    func updateAccountPreferences(
+        _ preferences: AccountPreferencesUpdate,
+        accessToken: String
+    ) async throws -> AccountPreferences {
+        try await request(
+            path: "me/preferences",
+            method: "PATCH",
+            accessToken: accessToken,
+            body: Self.encoder.encode(preferences)
+        )
     }
 
     func updateNotificationPreferences(
@@ -1114,9 +1115,7 @@ struct FitFightAPI {
             path: "notifications/preferences",
             method: "PATCH",
             accessToken: accessToken,
-            body: Self.encoder.encode(prefs),
-            idempotencyKey: nil,
-            expected: [200]
+            body: Self.encoder.encode(prefs)
         )
     }
 
@@ -1127,7 +1126,7 @@ struct FitFightAPI {
         permissionStatus: String,
         accessToken: String
     ) async throws {
-        let _: FitFightDeviceInstallationRegistered = try await post(
+        let _: DiscardBody = try await post(
             path: "device-installations",
             accessToken: accessToken,
             body: FitFightDeviceInstallationBody(
@@ -1135,8 +1134,7 @@ struct FitFightAPI {
                 apnsEnvironment: apnsEnvironment,
                 locale: locale,
                 permissionStatus: permissionStatus
-            ),
-            expected: [200]
+            )
         )
     }
 
@@ -1145,9 +1143,7 @@ struct FitFightAPI {
             path: "device-installations",
             method: "DELETE",
             accessToken: accessToken,
-            body: Self.encoder.encode(["token": token]),
-            idempotencyKey: nil,
-            expected: [200]
+            body: Self.encoder.encode(["token": token])
         )
     }
 
@@ -1174,35 +1170,31 @@ struct FitFightAPI {
             path: "fights/\(fightID.uuidString.lowercased())",
             method: "PATCH",
             accessToken: accessToken,
-            body: Self.encoder.encode(payload),
-            idempotencyKey: nil,
-            expected: [200]
+            body: Self.encoder.encode(payload)
         )
     }
 
     func listJoinableFights(accessToken: String) async throws -> [FitFightJoinableFight] {
         let list: FitFightJoinableList = try await get(
             path: "fights/joinable",
-            accessToken: accessToken,
-            expected: [200]
+            accessToken: accessToken
         )
         return list.fights
     }
 
     func fightAdministrationCapabilities(accessToken: String) async throws -> FightAdministrationCapabilities {
-        try await get(path: "me/capabilities", accessToken: accessToken, expected: [200])
+        try await get(path: "me/capabilities", accessToken: accessToken)
     }
 
     func administerFight(fightID: UUID, input: AdministerFightRequest, accessToken: String) async throws -> FitFightSummary {
         try await request(path: "fights/\(fightID.uuidString.lowercased())/admin", method: "PATCH", accessToken: accessToken,
-                          body: Self.encoder.encode(input), idempotencyKey: nil, expected: [200])
+                          body: Self.encoder.encode(input))
     }
 
     func listSuggestedFights(accessToken: String) async throws -> [FitFightJoinableFight] {
         let list: FitFightJoinableList = try await get(
             path: "fights/suggested",
-            accessToken: accessToken,
-            expected: [200]
+            accessToken: accessToken
         )
         return list.fights
     }
@@ -1216,17 +1208,14 @@ struct FitFightAPI {
             path: "fights/\(fightID.uuidString.lowercased())/suggested",
             method: "PATCH",
             accessToken: accessToken,
-            body: Self.encoder.encode(FitFightSuggestBody(suggested: suggested)),
-            idempotencyKey: nil,
-            expected: [200]
+            body: Self.encoder.encode(FitFightSuggestBody(suggested: suggested))
         )
     }
 
     func joinableFight(code: String, accessToken: String) async throws -> FitFightJoinableFight {
         try await get(
             path: "fights/joinable/\(code)",
-            accessToken: accessToken,
-            expected: [200]
+            accessToken: accessToken
         )
     }
 
@@ -1239,8 +1228,7 @@ struct FitFightAPI {
         try await post(
             path: "fights/join",
             accessToken: accessToken,
-            body: JoinFightBody(code: code, fightId: fightID, start: start),
-            expected: [200]
+            body: JoinFightBody(code: code, fightId: fightID, start: start)
         )
     }
 
@@ -1248,35 +1236,7 @@ struct FitFightAPI {
         try await post(
             path: "fights/leave",
             accessToken: accessToken,
-            body: LeaveFightBody(fightId: fightID),
-            expected: [200]
-        )
-    }
-
-    func invite(
-        fightID: UUID,
-        handle: String,
-        accessToken: String
-    ) async throws -> FitFightInviteCreated {
-        try await post(
-            path: "fights/\(fightID.uuidString.lowercased())/invites",
-            accessToken: accessToken,
-            body: HandleBody(handle: handle),
-            expected: [200]
-        )
-    }
-
-    func accept(
-        token: String,
-        accessToken: String,
-        personalTarget: Double? = nil,
-        start: String = "now"
-    ) async throws -> FitFightSummary {
-        try await post(
-            path: "invites/\(token.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? token)/accept",
-            accessToken: accessToken,
-            body: AcceptBody(personalTarget: personalTarget, start: start),
-            expected: [200]
+            body: LeaveFightBody(fightId: fightID)
         )
     }
 
@@ -1289,8 +1249,7 @@ struct FitFightAPI {
         try await post(
             path: "fights/\(fightID.uuidString.lowercased())/accept",
             accessToken: accessToken,
-            body: AcceptBody(personalTarget: personalTarget, start: start),
-            expected: [200]
+            body: AcceptBody(personalTarget: personalTarget, start: start)
         )
     }
 
@@ -1298,21 +1257,7 @@ struct FitFightAPI {
         try await post(
             path: "fights/\(fightID.uuidString.lowercased())/decline",
             accessToken: accessToken,
-            body: EmptyJSON(),
-            expected: [200]
-        )
-    }
-
-    func start(
-        fightID: UUID,
-        accessToken: String,
-        when: String = "now"
-    ) async throws -> FitFightSummary {
-        try await post(
-            path: "fights/\(fightID.uuidString.lowercased())/start",
-            accessToken: accessToken,
-            body: StartBody(when: when),
-            expected: [200]
+            body: EmptyJSON()
         )
     }
 
@@ -1320,32 +1265,41 @@ struct FitFightAPI {
         let _: DiscardBody = try await post(
             path: "fights/\(fightID.uuidString.lowercased())/cancel",
             accessToken: accessToken,
-            body: EmptyJSON(),
-            expected: [200]
+            body: EmptyJSON()
         )
     }
 
-    func listFeedback(kind: String?, accessToken: String) async throws -> FitFightFeedbackList {
-        var path = "feedback"
-        if let kind {
-            path += "?kind=\(kind)"
+    func listFeedback(kind: String?, status: String = "open", sort: String = "votes", accessToken: String) async throws -> FitFightFeedbackList {
+        var query = URLComponents()
+        query.queryItems = [URLQueryItem(name: "status", value: status), URLQueryItem(name: "sort", value: sort)]
+        if let kind { query.queryItems?.append(URLQueryItem(name: "kind", value: kind)) }
+        return try await get(path: "feedback?\(query.percentEncodedQuery ?? "")", accessToken: accessToken)
+    }
+
+    func archiveFeedbackPost(postID: UUID, archived: Bool, reason: String?, accessToken: String) async throws -> FitFightFeedbackArchive {
+        struct ArchiveBody: Encodable {
+            let archived: Bool
+            let reason: String?
         }
-        return try await get(path: path, accessToken: accessToken, expected: [200])
+        return try await request(
+            path: "feedback/\(postID.uuidString.lowercased())",
+            method: "PATCH",
+            accessToken: accessToken,
+            body: Self.encoder.encode(ArchiveBody(archived: archived, reason: reason))
+        )
     }
 
     func feedbackDetail(postID: UUID, accessToken: String) async throws -> FitFightFeedbackDetail {
         try await get(
             path: "feedback/\(postID.uuidString.lowercased())",
-            accessToken: accessToken,
-            expected: [200]
+            accessToken: accessToken
         )
     }
 
     func deleteFeedbackPost(postID: UUID, accessToken: String) async throws {
         let _: DiscardBody = try await delete(
             path: "feedback/\(postID.uuidString.lowercased())",
-            accessToken: accessToken,
-            expected: [200]
+            accessToken: accessToken
         )
     }
 
@@ -1368,8 +1322,7 @@ struct FitFightAPI {
         try await post(
             path: "feedback/\(postID.uuidString.lowercased())/vote",
             accessToken: accessToken,
-            body: EmptyJSON(),
-            expected: [200]
+            body: EmptyJSON()
         )
     }
 
@@ -1404,8 +1357,7 @@ struct FitFightAPI {
         let _: DiscardBody = try await post(
             path: "feedback/\(postID.uuidString.lowercased())/report",
             accessToken: accessToken,
-            body: FightPostReportBody(reason: reason),
-            expected: [200]
+            body: FightPostReportBody(reason: reason)
         )
     }
 
@@ -1413,8 +1365,7 @@ struct FitFightAPI {
         let _: DiscardBody = try await post(
             path: "feedback/blocks",
             accessToken: accessToken,
-            body: FeedBlockBody(userId: userID),
-            expected: [200]
+            body: FeedBlockBody(userId: userID)
         )
     }
 
@@ -1423,7 +1374,7 @@ struct FitFightAPI {
         accessToken: String,
         body: Body,
         idempotencyKey: String? = nil,
-        expected: Set<Int>
+        expected: Set<Int> = [200]
     ) async throws -> Response {
         try await request(
             path: path,
@@ -1438,14 +1389,13 @@ struct FitFightAPI {
     private func delete<Response: Decodable>(
         path: String,
         accessToken: String,
-        expected: Set<Int>
+        expected: Set<Int> = [200]
     ) async throws -> Response {
         try await request(
             path: path,
             method: "DELETE",
             accessToken: accessToken,
             body: nil,
-            idempotencyKey: nil,
             expected: expected
         )
     }
@@ -1453,7 +1403,7 @@ struct FitFightAPI {
     private func get<Response: Decodable>(
         path: String,
         accessToken: String,
-        expected: Set<Int>,
+        expected: Set<Int> = [200],
         trace: HealthKitSyncTrace? = nil,
         traceStage: HealthKitSyncTrace.StageName? = nil
     ) async throws -> Response {
@@ -1462,7 +1412,6 @@ struct FitFightAPI {
             method: "GET",
             accessToken: accessToken,
             body: nil,
-            idempotencyKey: nil,
             expected: expected,
             trace: trace,
             traceStage: traceStage
@@ -1474,8 +1423,8 @@ struct FitFightAPI {
         method: String,
         accessToken: String,
         body: Data?,
-        idempotencyKey: String?,
-        expected: Set<Int>,
+        idempotencyKey: String? = nil,
+        expected: Set<Int> = [200],
         trace: HealthKitSyncTrace? = nil,
         traceStage: HealthKitSyncTrace.StageName? = nil
     ) async throws -> Response {
@@ -1501,7 +1450,9 @@ struct FitFightAPI {
 
             var request = URLRequest(url: requestURL)
             request.httpMethod = method
-            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+            if !accessToken.isEmpty {
+                request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+            }
             request.setValue("application/json", forHTTPHeaderField: "Accept")
             request.setValue(AppVersion.marketing, forHTTPHeaderField: "X-FitFight-Version")
             request.setValue(AppVersion.build, forHTTPHeaderField: "X-FitFight-Build")
@@ -1553,10 +1504,6 @@ struct FitFightAPI {
                 succeeded = true
                 return DiscardBody() as! Response
             }
-            if data.isEmpty, let empty = EmptyJSON() as? Response {
-                succeeded = true
-                return empty
-            }
             do {
                 let decoded = try Self.decoder.decode(Response.self, from: data)
                 succeeded = true
@@ -1587,14 +1534,13 @@ struct FitFightAPI {
 
     private static let decoder: JSONDecoder = {
         let decoder = JSONDecoder()
+        let fractional = ISO8601DateFormatter()
+        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let plain = ISO8601DateFormatter()
         decoder.dateDecodingStrategy = .custom { decoder in
             let container = try decoder.singleValueContainer()
             let raw = try container.decode(String.self)
-            let formatter = ISO8601DateFormatter()
-            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            if let date = formatter.date(from: raw) { return date }
-            formatter.formatOptions = [.withInternetDateTime]
-            if let date = formatter.date(from: raw) { return date }
+            if let date = fractional.date(from: raw) ?? plain.date(from: raw) { return date }
             throw DecodingError.dataCorruptedError(
                 in: container,
                 debugDescription: "Invalid ISO-8601 date \(raw)"
@@ -1604,7 +1550,7 @@ struct FitFightAPI {
     }()
 }
 
-private struct EmptyJSON: Codable {}
+private struct EmptyJSON: Encodable {}
 
 private struct ProfileUpdate: Encodable {
     let handle: String?
@@ -1657,19 +1603,6 @@ private struct MediaUploadBody: Encodable {
         case byteSize = "byte_size"
         case durationMs = "duration_ms"
     }
-
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(purpose, forKey: .purpose)
-        try container.encode(kind, forKey: .kind)
-        try container.encode(originalFilename, forKey: .originalFilename)
-        try container.encode(contentType, forKey: .contentType)
-        try container.encode(byteSize, forKey: .byteSize)
-        try container.encode(width, forKey: .width)
-        try container.encode(height, forKey: .height)
-        try container.encodeIfPresent(durationMs, forKey: .durationMs)
-        try container.encode(sha256, forKey: .sha256)
-    }
 }
 
 struct FeedPostDestination: Encodable, Hashable {
@@ -1686,22 +1619,6 @@ struct FeedPostDestination: Encodable, Hashable {
     enum CodingKeys: String, CodingKey {
         case type
         case fightId = "fight_id"
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(type, forKey: .type)
-        try container.encodeIfPresent(fightId, forKey: .fightId)
-    }
-}
-
-private struct FightPostBody: Encodable {
-    let body: String
-    let mediaIds: [UUID]
-
-    enum CodingKeys: String, CodingKey {
-        case body
-        case mediaIds = "media_ids"
     }
 }
 
@@ -1725,6 +1642,10 @@ private struct FeedPostsBody: Encodable {
         case destinations
         case taggedUserIds = "tagged_user_ids"
     }
+}
+
+private struct FightPostCommentLikeBody: Encodable {
+    let liked: Bool
 }
 
 private struct FightPostCommentBody: Encodable {
@@ -1768,17 +1689,9 @@ private struct LeaveFightBody: Encodable {
     var fightId: UUID
 }
 
-private struct HandleBody: Encodable {
-    var handle: String
-}
-
 private struct AcceptBody: Encodable {
     var personalTarget: Double?
     var start: String?
-}
-
-private struct StartBody: Encodable {
-    var when: String
 }
 
 private struct AppleAuthorizationBody: Encodable {
@@ -1786,6 +1699,18 @@ private struct AppleAuthorizationBody: Encodable {
 
     enum CodingKeys: String, CodingKey {
         case authorizationCode = "authorization_code"
+    }
+}
+
+private struct GoogleIdentityBody: Encodable {
+    var idToken: String
+    var accessToken: String
+    var nonce: String
+
+    enum CodingKeys: String, CodingKey {
+        case idToken = "id_token"
+        case accessToken = "access_token"
+        case nonce
     }
 }
 
@@ -1844,16 +1769,6 @@ struct FitFightNotificationPreferencesUpdate: Encodable {
         case challengeReminder = "challenge_reminder"
         case dailyStatus = "daily_status"
     }
-
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encodeIfPresent(feedPost, forKey: .feedPost)
-        try container.encodeIfPresent(postComment, forKey: .postComment)
-        try container.encodeIfPresent(commentReply, forKey: .commentReply)
-        try container.encodeIfPresent(postReaction, forKey: .postReaction)
-        try container.encodeIfPresent(challengeReminder, forKey: .challengeReminder)
-        try container.encodeIfPresent(dailyStatus, forKey: .dailyStatus)
-    }
 }
 
 private struct FitFightDeviceInstallationBody: Encodable {
@@ -1868,10 +1783,6 @@ private struct FitFightDeviceInstallationBody: Encodable {
         case locale
         case permissionStatus = "permission_status"
     }
-}
-
-private struct FitFightDeviceInstallationRegistered: Decodable {
-    var registered: Bool
 }
 
 private struct ProfileSettingsUpdate: Encodable {

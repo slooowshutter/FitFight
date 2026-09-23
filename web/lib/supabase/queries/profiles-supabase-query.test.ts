@@ -23,6 +23,8 @@ const legacyProfile = profileSchema.parse(
 );
 
 const profile = { ...legacyProfile, time_zone: "Europe/Paris" };
+const { user_id: id, ...profileFields } = profile;
+const databaseProfile = { ...profileFields, id, avatar_media_id: null };
 
 test("profile patches normalize handles and reject caller-owned IDs, timestamps, and empty updates", () => {
     assert.deepEqual(
@@ -48,6 +50,9 @@ test("profile patches normalize handles and reject caller-owned IDs, timestamps,
         { companion_id: "custom" },
         { companion_id: "custom", companion_prompt: "   " },
         { handle: "marc", user_id: profile.user_id },
+        { handle: "marc", id: profile.user_id },
+        { handle: "marc", created_at: "2026-09-19T00:00:00Z" },
+        { handle: "marc", updated_at: "2026-09-19T00:00:00Z" },
         { handle: "marc", handle_set_at: profile.handle_set_at },
         { display_name: "Marc", referral_code: profile.referral_code },
     ]) {
@@ -100,8 +105,7 @@ test("profile updates persist a stock companion without touching other fields", 
                     companion_image_url: null,
                 });
                 return Response.json({
-                    ...profile,
-                    avatar_media_id: null,
+                    ...databaseProfile,
                     companion_id: "fox",
                     companion_prompt: null,
                 });
@@ -132,8 +136,7 @@ test("profile updates persist a custom companion description", async () => {
                     companion_image_url: null,
                 });
                 return Response.json({
-                    ...profile,
-                    avatar_media_id: null,
+                    ...databaseProfile,
                     companion_id: "custom",
                     companion_prompt: "a cream frenchie with gold sunglasses",
                 });
@@ -164,16 +167,21 @@ test("profile reads filter by the authenticated owner and expose only the API fi
                 const url = new URL(request.url);
                 assert.equal(request.method, "GET");
                 assert.equal(
-                    url.searchParams.get("user_id"),
+                    url.searchParams.get("id"),
                     `eq.${profile.user_id}`,
                 );
                 assert.equal(url.searchParams.get("deleted_at"), "is.null");
+                assert.equal(
+                    url.searchParams.get("select"),
+                    "id,handle,display_name,handle_set_at,referral_code,avatar_media_id,companion_id,companion_prompt,companion_image_url,time_zone",
+                );
                 return Response.json([
                     {
-                        ...profile,
-                        avatar_media_id: null,
+                        ...databaseProfile,
                         deleted_at: null,
                         internal_column: "private",
+                        created_at: "2026-09-01T00:00:00Z",
+                        updated_at: "2026-09-19T00:00:00Z",
                     },
                 ]);
             },
@@ -187,7 +195,7 @@ test("legacy accounts without a saved zone use a fixed UTC calendar", async () =
         auth: { persistSession: false, autoRefreshToken: false },
         global: {
             fetch: async () => Response.json([{
-                ...legacyProfile, avatar_media_id: null, time_zone: null,
+                ...databaseProfile, time_zone: null,
             }]),
         },
     });
@@ -204,7 +212,7 @@ test("profile updates supply the handle timestamp and leave omitted fields untou
                 const url = new URL(request.url);
                 assert.equal(request.method, "PATCH");
                 assert.equal(
-                    url.searchParams.get("user_id"),
+                    url.searchParams.get("id"),
                     `eq.${profile.user_id}`,
                 );
                 assert.equal(url.searchParams.get("deleted_at"), "is.null");
@@ -212,7 +220,7 @@ test("profile updates supply the handle timestamp and leave omitted fields untou
                     .pick({ handle: true, handle_set_at: true })
                     .strict()
                     .parse(await request.json());
-                const updated = { ...profile, avatar_media_id: null, ...body };
+                const updated = { ...databaseProfile, ...body };
                 assert.ok(
                     updated.handle_set_at &&
                         Date.parse(updated.handle_set_at) >= before,
@@ -242,8 +250,7 @@ test("saving an Apple display name does not mark username onboarding as complete
                     display_name: "New Name",
                 });
                 return Response.json({
-                    ...profile,
-                    avatar_media_id: null,
+                    ...databaseProfile,
                     display_name: "New Name",
                     handle_set_at: null,
                 });
@@ -338,7 +345,7 @@ test("profile HTTP routes use the verified owner, validate patches, and reject d
         if (originalKey === undefined) delete process.env.SUPABASE_SECRET_KEY;
         else process.env.SUPABASE_SECRET_KEY = originalKey;
     });
-    let currentProfile = profileDatabaseRowSchema.parse({ ...profile, avatar_media_id: null });
+    let currentProfile = profileDatabaseRowSchema.parse(databaseProfile);
     let deleted = false;
     let writes = 0;
     t.mock.method(
@@ -362,7 +369,7 @@ test("profile HTTP routes use the verified owner, validate patches, and reject d
             }
             assert.equal(url.pathname, "/rest/v1/profiles");
             assert.equal(
-                url.searchParams.get("user_id"),
+                url.searchParams.get("id"),
                 `eq.${profile.user_id}`,
             );
             assert.equal(url.searchParams.get("deleted_at"), "is.null");
@@ -376,8 +383,8 @@ test("profile HTTP routes use the verified owner, validate patches, and reject d
                 return Response.json(currentProfile);
             }
             return Response.json(
-                url.searchParams.get("select") === "user_id"
-                    ? [{ user_id: profile.user_id }]
+                url.searchParams.get("select") === "id"
+                    ? [{ id: profile.user_id }]
                     : [currentProfile],
             );
         },

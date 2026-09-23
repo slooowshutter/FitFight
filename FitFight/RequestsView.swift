@@ -13,12 +13,18 @@ final class FeedbackStore: ObservableObject {
     @Published var isLaunchingFix = false
     @Published var canLaunchFix = false
     @Published var canDelete = false
+    @Published var canArchive = false
+    @Published var isArchiving = false
     @Published var isDeleting = false
     @Published var error: String?
 
     private let api = FitFightAPI()
     private var listLoad = 0
     private var detailLoad = 0
+    private var listStatus = "open"
+    private var listSort = "votes"
+    private var archiveClock = 0
+    private var archives: [UUID: (clock: Int, state: FitFightFeedbackArchive)] = [:]
     private var deletedPostIDs: Set<UUID> = []
     private var voting: Set<UUID> = []
     private var voteClock = 0
@@ -27,15 +33,19 @@ final class FeedbackStore: ObservableObject {
     private var postedComments: [UUID: [(clock: Int, comment: FitFightFeedbackComment)]] = [:]
     private var commentsFor: UUID?
 
-    func load(session: SessionStore, kind: String?) async {
+    func load(session: SessionStore, kind: String?, status: String = "open", sort: String = "votes") async {
+        listStatus = status
+        listSort = sort
         #if DEBUG && targetEnvironment(simulator)
         if CompanionPreview.isEnabled {
-            posts = Self.previewPosts.filter { kind == nil || $0.kind == kind }
+            posts = Self.previewPosts.filter { (kind == nil || $0.kind == kind) && $0.archived == (status == "archived") }
+            sortPosts()
             return
         }
         #endif
         listLoad += 1
         let load = listLoad
+        let archiveStartedAt = archiveClock
         let voteStartedAt = voteClock
         let commentStartedAt = commentClock
         isLoading = true
@@ -44,16 +54,18 @@ final class FeedbackStore: ObservableObject {
         }
         do {
             let token = try await session.freshAccessToken()
-            let posts = try await api.listFeedback(kind: kind, accessToken: token).posts
+            let result = try await api.listFeedback(kind: kind, status: status, sort: sort, accessToken: token)
             guard load == listLoad else { return }
-            self.posts = posts.filter { !deletedPostIDs.contains($0.id) }.map { fetched in
-                var post = keepingNewerVote(fetched, startedAt: voteStartedAt)
+            canArchive = result.canArchive
+            self.posts = result.posts.filter { !deletedPostIDs.contains($0.id) }.map { fetched in
+                var post = keepingNewerArchive(keepingNewerVote(fetched, startedAt: voteStartedAt), startedAt: archiveStartedAt)
                 if !postedAfter(postID: post.id, startedAt: commentStartedAt).isEmpty,
                    let local = self.posts.first(where: { $0.id == post.id }) {
                     post.commentCount = max(post.commentCount, local.commentCount)
                 }
                 return post
-            }
+            }.filter { $0.archived == (status == "archived") }
+            sortPosts()
             RemoteImageLoader.shared.prefetch(
                 self.posts.flatMap(\.media).compactMap { media in
                     RequestAttachment.showsPhoto(media) ? media.url : nil
@@ -80,6 +92,7 @@ final class FeedbackStore: ObservableObject {
         #endif
         detailLoad += 1
         let load = detailLoad
+        let archiveStartedAt = archiveClock
         let voteStartedAt = voteClock
         let commentStartedAt = commentClock
         if commentsFor != postID {
@@ -99,13 +112,14 @@ final class FeedbackStore: ObservableObject {
             for extra in extras where !comments.contains(where: { $0.id == extra.id }) {
                 comments.append(extra)
             }
-            var post = keepingNewerVote(result.post, startedAt: voteStartedAt)
+            var post = keepingNewerArchive(keepingNewerVote(result.post, startedAt: voteStartedAt), startedAt: archiveStartedAt)
             post.commentCount += comments.count - result.comments.count
             detail = post
             self.comments = comments
             commentsFor = post.id
             canLaunchFix = result.canLaunchFix
             canDelete = result.canDelete
+            canArchive = result.canArchive
             RemoteImageLoader.shared.prefetch(
                 post.media.compactMap { media in
                     RequestAttachment.showsPhoto(media) ? media.url : nil
@@ -114,6 +128,7 @@ final class FeedbackStore: ObservableObject {
             )
             if let index = posts.firstIndex(where: { $0.id == post.id }) {
                 posts[index] = post
+                posts.removeAll { $0.archived != (listStatus == "archived") }
             }
             error = nil
         } catch {
@@ -134,6 +149,7 @@ final class FeedbackStore: ObservableObject {
             if let index = posts.firstIndex(where: { $0.id == postID }) {
                 posts[index].voted = result.voted
                 posts[index].voteCount = result.voteCount
+                sortPosts()
             }
             if detail?.id == postID {
                 detail?.voted = result.voted
@@ -207,8 +223,9 @@ final class FeedbackStore: ObservableObject {
     }
 
     func delete(session: SessionStore, postID: UUID) async -> Bool {
-        guard !isDeleting else { return false }
+        guard !isDeleting && !isArchiving else { return false }
         isDeleting = true
+        let detailStartedAt = detailLoad
         defer { isDeleting = false }
         do {
             let token = try await session.freshAccessToken()
@@ -226,13 +243,41 @@ final class FeedbackStore: ObservableObject {
                 canLaunchFix = false
                 error = nil
             }
+            archives.removeValue(forKey: postID)
             votes.removeValue(forKey: postID)
             postedComments.removeValue(forKey: postID)
             return true
         } catch {
-            if commentsFor == postID {
+            if detailLoad == detailStartedAt || commentsFor == postID {
                 self.error = error.localizedDescription
             }
+            return false
+        }
+    }
+
+    func archive(session: SessionStore, postID: UUID, archived: Bool, reason: String?) async -> Bool {
+        guard !isArchiving && !isDeleting else { return false }
+        isArchiving = true
+        let detailStartedAt = detailLoad
+        defer { isArchiving = false }
+        do {
+            let token = try await session.freshAccessToken()
+            let state = try await api.archiveFeedbackPost(postID: postID, archived: archived, reason: reason, accessToken: token)
+            archiveClock += 1
+            archives[postID] = (archiveClock, state)
+            if let index = posts.firstIndex(where: { $0.id == postID }) {
+                posts[index].archived = state.archived
+                posts[index].archiveReason = state.archiveReason
+                posts.removeAll { $0.archived != (listStatus == "archived") }
+            }
+            if detail?.id == postID {
+                detail?.archived = state.archived
+                detail?.archiveReason = state.archiveReason
+            }
+            if detailLoad == detailStartedAt || commentsFor == postID { error = nil }
+            return true
+        } catch {
+            if detailLoad == detailStartedAt || commentsFor == postID { self.error = error.localizedDescription }
             return false
         }
     }
@@ -297,6 +342,24 @@ final class FeedbackStore: ObservableObject {
         post.voted = vote.voted
         post.voteCount = vote.voteCount
         return post
+    }
+
+    private func keepingNewerArchive(_ post: FitFightFeedbackPost, startedAt: Int) -> FitFightFeedbackPost {
+        guard let archive = archives[post.id], archive.clock > startedAt else { return post }
+        var post = post
+        post.archived = archive.state.archived
+        post.archiveReason = archive.state.archiveReason
+        return post
+    }
+
+    private func sortPosts() {
+        posts.sort { left, right in
+            if listSort == "votes", left.voteCount != right.voteCount { return left.voteCount > right.voteCount }
+            if left.createdAt != right.createdAt {
+                return listSort == "oldest" ? left.createdAt < right.createdAt : left.createdAt > right.createdAt
+            }
+            return left.id.uuidString < right.id.uuidString
+        }
     }
 
     private func postedAfter(postID: UUID, startedAt: Int) -> [FitFightFeedbackComment] {
@@ -388,7 +451,7 @@ final class FeedbackStore: ObservableObject {
 @MainActor
 enum RequestsScreenshot {
     static func board() -> RequestsView {
-        RequestsView(store: .previewBoard())
+        RequestsView(store: .previewBoard(), filter: .constant(RequestFilter()))
     }
 
     static func detail() -> some View {
@@ -398,56 +461,187 @@ enum RequestsScreenshot {
     static func compose() -> some View {
         ComposeRequestView(store: FeedbackStore())
     }
-}
 
-enum RequestFilter: Hashable, CaseIterable {
-    case top, features, bugs
-
-    var title: String {
-        switch self {
-        case .top: return String(localized: "Top")
-        case .features: return String(localized: "Features")
-        case .bugs: return String(localized: "Bugs")
-        }
-    }
-
-    var kind: String? {
-        switch self {
-        case .top: return nil
-        case .features: return "feature"
-        case .bugs: return "bug"
-        }
+    static func filters() -> some View {
+        RequestFiltersSheet(draft: RequestFilter(), onApply: { _ in })
+            .frame(height: 560)
     }
 }
 
-enum RequestsChrome {
-    case sheet
-    case tab
+struct RequestFilter: Hashable {
+    enum Kind: String, CaseIterable {
+        case all, feature, bug
+
+        var title: String {
+            switch self {
+            case .all: return String(appLocalized: "All")
+            case .feature: return String(appLocalized: "Features")
+            case .bug: return String(appLocalized: "Bugs")
+            }
+        }
+    }
+
+    enum Status: String, CaseIterable {
+        case open, archived
+
+        var title: String {
+            switch self {
+            case .open: return String(appLocalized: "feedback.open", defaultValue: "Open")
+            case .archived: return String(appLocalized: "Archived")
+            }
+        }
+    }
+
+    enum Sort: String, CaseIterable {
+        case votes, newest, oldest
+
+        var title: String {
+            switch self {
+            case .votes: return String(appLocalized: "Most upvoted")
+            case .newest: return String(appLocalized: "Newest first")
+            case .oldest: return String(appLocalized: "Oldest first")
+            }
+        }
+    }
+
+    var type: Kind = .all
+    var status: Status = .open
+    var sort: Sort = .votes
+    var kind: String? { type == .all ? nil : type.rawValue }
 }
 
+private struct RequestFiltersSheet: View {
+    @State var draft: RequestFilter
+    let onApply: (RequestFilter) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.ffTheme) private var theme
+    @Environment(\.ffStaticRender) private var staticRender
+
+    var body: some View {
+        VStack(spacing: 16) {
+            FFSheetHeader(title: String(appLocalized: "Sort & filter")) { dismiss() }
+            if staticRender {
+                Color.clear
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .overlay(alignment: .top) {
+                        choices.fixedSize(horizontal: false, vertical: true)
+                    }
+                    .clipped()
+            } else {
+                ScrollView { choices }
+            }
+            FFScreenCTA(title: String(appLocalized: "Show feedback")) {
+                onApply(draft)
+                dismiss()
+            }
+            Button(String(appLocalized: "Reset to defaults")) { draft = RequestFilter() }
+                .ffType(.label).foregroundStyle(theme.textSecondary)
+                .frame(minHeight: 44)
+        }
+        .foregroundStyle(theme.text)
+        .padding(.horizontal, theme.space.screenPadding)
+        .padding(.top, 16)
+        .padding(.bottom, 12)
+    }
+
+    private var choices: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            FFSection(title: String(appLocalized: "Status"), extraTop: false) {
+                FFSegmented(items: RequestFilter.Status.allCases, selection: $draft.status) { $0.title }
+            }
+            FFSection(title: String(appLocalized: "Type"), extraTop: false) {
+                FFSegmented(items: RequestFilter.Kind.allCases, selection: $draft.type) { $0.title }
+            }
+            FFSection(title: String(appLocalized: "Sort by"), extraTop: false) {
+                FFGroupedRows {
+                    ForEach(RequestFilter.Sort.allCases, id: \.self) { sort in
+                        if sort != .votes { FFDivider() }
+                        FFGroupedRow(title: sort.title, trailing: AnyView(
+                            Image(systemName: "checkmark")
+                                .foregroundStyle(theme.mossText)
+                                .opacity(draft.sort == sort ? 1 : 0)
+                        )) { draft.sort = sort }
+                        .accessibilityAddTraits(draft.sort == sort ? .isSelected : [])
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct RequestArchiveSheet: View {
+    let post: FitFightFeedbackPost
+    @ObservedObject var store: FeedbackStore
+    @EnvironmentObject private var session: SessionStore
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.ffTheme) private var theme
+    @State private var reason = ""
+
+    var body: some View {
+        VStack(spacing: 16) {
+            HStack {
+                Text(post.archived ? String(appLocalized: "Reopen feedback") : String(appLocalized: "Archive feedback"))
+                    .ffType(.title)
+                Spacer()
+                Button(String(appLocalized: "Cancel")) { dismiss() }
+                    .ffType(.label).foregroundStyle(theme.mossText)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .disabled(store.isArchiving)
+            }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text(post.title).ffType(.heading)
+                    Text(post.archived
+                         ? String(appLocalized: "Reopen this feedback with its existing votes and discussion. People can vote and comment again.")
+                         : String(appLocalized: "Keep this feedback, its votes, and its discussion in Archived. New votes and comments will close. You can reopen it later."))
+                        .ffType(.body).foregroundStyle(theme.textSecondary)
+                    if !post.archived {
+                        TextField(String(appLocalized: "Public reason (optional)"), text: $reason, axis: .vertical)
+                            .ffType(.body)
+                            .lineLimit(3...6)
+                            .padding(14)
+                            .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.field))
+                            .ffBorder(theme.line, radius: theme.radius.field)
+                            .disabled(store.isArchiving)
+                    }
+                    if let error = store.error {
+                        FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
+                    }
+                }
+            }
+            FFScreenCTA(
+                title: post.archived ? String(appLocalized: "Reopen feedback") : String(appLocalized: "Archive feedback"),
+                enabled: reason.trimmingCharacters(in: .whitespacesAndNewlines).count <= 280 && !store.isArchiving && !store.isDeleting,
+                busy: store.isArchiving
+            ) {
+                Task {
+                    if await store.archive(session: session, postID: post.id, archived: !post.archived,
+                                           reason: reason.trimmingCharacters(in: .whitespacesAndNewlines)) {
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .foregroundStyle(theme.text)
+        .padding(.horizontal, theme.space.screenPadding)
+        .padding(.top, 16)
+        .padding(.bottom, 12)
+        .interactiveDismissDisabled(store.isArchiving)
+    }
+}
+
+/// The Feedback tab's board. The tab owns the title and the compose sheet.
 struct RequestsView: View {
     @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
-    @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
     @ObservedObject var store: FeedbackStore
-    var chrome: RequestsChrome
-    var filterSource: Binding<RequestFilter>?
-    @State private var filter: RequestFilter
-    @State private var composing = false
+    @Binding var filter: RequestFilter
     @State private var openPostID: UUID?
-
-    init(
-        store: FeedbackStore,
-        chrome: RequestsChrome = .sheet,
-        filter: Binding<RequestFilter>? = nil
-    ) {
-        _store = ObservedObject(wrappedValue: store)
-        self.chrome = chrome
-        self.filterSource = filter
-        _filter = State(initialValue: filter?.wrappedValue ?? .top)
-    }
+    @State private var showingFilters = false
+    @State private var deletingPost: FitFightFeedbackPost?
+    @State private var archivingPost: FitFightFeedbackPost?
 
     var body: some View {
         Group {
@@ -468,53 +662,66 @@ struct RequestsView: View {
             }
         }
         .background(theme.bg.ignoresSafeArea())
-        .task(id: activeFilter) {
+        .task(id: filter) {
             guard !staticRender else { return }
-            await store.load(session: session, kind: activeFilter.kind)
+            await store.load(session: session, kind: filter.kind, status: filter.status.rawValue, sort: filter.sort.rawValue)
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active && !staticRender {
-                Task { await store.load(session: session, kind: activeFilter.kind) }
+                Task { await store.load(session: session, kind: filter.kind, status: filter.status.rawValue, sort: filter.sort.rawValue) }
             }
         }
-        .sheet(isPresented: $composing, onDismiss: {
-            guard !staticRender else { return }
-            Task { await store.load(session: session, kind: activeFilter.kind) }
-        }) {
-            ComposeRequestView(store: store)
-                .environmentObject(session)
+        .sheet(isPresented: $showingFilters) {
+            RequestFiltersSheet(draft: filter) { filter = $0 }
                 .fitFightTheme(theme)
-                .presentationBackground(theme.bg)
+                .presentationBackground(theme.overlay)
+                .presentationCornerRadius(theme.radius.shell)
+                .presentationDragIndicator(.visible)
+                .presentationDetents([.height(560), .large])
         }
-    }
-
-    private var activeFilter: RequestFilter {
-        filterSource?.wrappedValue ?? filter
-    }
-
-    private var filterSelection: Binding<RequestFilter> {
-        filterSource ?? $filter
+        .sheet(item: $archivingPost) { post in
+            RequestArchiveSheet(post: post, store: store)
+                .fitFightTheme(theme)
+                .presentationBackground(theme.overlay)
+                .presentationCornerRadius(theme.radius.shell)
+                .presentationDragIndicator(.visible)
+                .presentationDetents([.medium, .large])
+        }
+        .confirmationDialog(String(appLocalized: "Delete request?"), isPresented: Binding(
+            get: { deletingPost != nil },
+            set: { if !$0 { deletingPost = nil } }
+        ), titleVisibility: .visible, presenting: deletingPost) { post in
+            Button(String(appLocalized: "Delete"), role: .destructive) {
+                Task { _ = await store.delete(session: session, postID: post.id) }
+            }
+            Button(String(appLocalized: "Cancel"), role: .cancel) {}
+        } message: { _ in
+            Text("This removes the request, comments, and votes for everyone. This cannot be undone.")
+        }
     }
 
     private var list: some View {
         VStack(spacing: 0) {
-            if chrome == .sheet {
-                HStack {
-                    Text("Bugs & requests")
-                        .ffType(.title)
-                        .foregroundStyle(theme.text)
-                    Spacer()
-                    Button("Close") { dismiss() }
-                        .ffType(.label)
+            HStack {
+                Text(String(appLocalized: "feedback.post-count", defaultValue: "\(store.posts.count) posts"))
+                    .ffType(.label)
+                    .foregroundStyle(theme.textSecondary)
+                Spacer()
+                Button { showingFilters = true } label: {
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(theme.mossText)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
                 }
-                .padding(.horizontal, theme.space.screenPadding)
-                .padding(.vertical, 12)
+                .buttonStyle(FFHapticPlainStyle())
+                // Match the header action's column without shrinking the label's tap area.
+                .frame(width: 36)
+                .accessibilityLabel(String(appLocalized: "Filter feedback"))
+                .accessibilityValue("\(filter.status.title), \(filter.type.title), \(filter.sort.title)")
             }
-
-            FFSegmented(items: RequestFilter.allCases, selection: filterSelection) { $0.title }
-                .padding(.horizontal, theme.space.screenPadding)
-                .padding(.bottom, 12)
+            .padding(.horizontal, theme.space.screenPadding)
+            .padding(.bottom, 12)
 
             if let error = store.error {
                 FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
@@ -530,18 +737,9 @@ struct RequestsView: View {
                         postsStack
                     }
                     .refreshable {
-                        await store.load(session: session, kind: activeFilter.kind)
+                        await store.load(session: session, kind: filter.kind, status: filter.status.rawValue, sort: filter.sort.rawValue)
                     }
                 }
-            }
-
-            if chrome == .sheet {
-                FFScreenCTA(title: String(localized: "New request")) {
-                    store.error = nil
-                    composing = true
-                }
-                .padding(.horizontal, theme.space.screenPadding)
-                .padding(.bottom, 16)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -561,7 +759,9 @@ struct RequestsView: View {
                 },
                 onHide: {
                     Task { await store.hide(session: session, authorID: post.authorId) }
-                }
+                },
+                onDelete: post.mine || store.canArchive ? { deletingPost = post } : nil,
+                onArchive: store.canArchive ? { archivingPost = post } : nil
             )
         }
         let extras = Group {
@@ -573,8 +773,10 @@ struct RequestsView: View {
             if store.posts.isEmpty && !store.isLoading {
                 FFEmptyState(
                     systemImage: "bubble.left.and.bubble.right",
-                    title: String(localized: "No requests yet"),
-                    message: String(localized: "Post a bug or a feature request. Other people can upvote and comment with their username.")
+                    title: filter == RequestFilter() ? String(appLocalized: "No requests yet") : String(appLocalized: "No matching feedback"),
+                    message: filter == RequestFilter()
+                        ? String(appLocalized: "Post a bug or a feature request. Other people can upvote and comment with their username.")
+                        : String(appLocalized: "Try changing the filters to see other feedback.")
                 )
             }
         }
@@ -620,7 +822,7 @@ private struct RequestMediaStack: View {
                     compactRow
                 } else {
                     ForEach(media) { item in
-                        RequestMediaItem(media: item)
+                        MediaAttachment(media: item)
                     }
                 }
             }
@@ -656,21 +858,23 @@ private struct RequestMediaStack: View {
     }
 }
 
-private struct RequestMediaItem: View {
+/// A Feed or Feedback attachment: photo, inline video, or a file link.
+/// Photos open the viewer when `onOpenPhoto` is set.
+struct MediaAttachment: View {
     let media: FitFightMedia
+    var onOpenPhoto: ((URL) -> Void)? = nil
     @Environment(\.ffTheme) private var theme
     @State private var player: AVPlayer?
 
     var body: some View {
         if let url = media.url, RequestAttachment.showsPhoto(media) {
-            Color.clear
-                .aspectRatio(ratio, contentMode: .fit)
-                .frame(maxWidth: .infinity)
-                .fixedSize(horizontal: false, vertical: true)
-                .overlay {
-                    RemotePhoto(url: url, kind: .photo) { theme.control }
-                }
-                .clipShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
+            if let onOpenPhoto {
+                Button { onOpenPhoto(url) } label: { photo(url) }
+                    .buttonStyle(FFHapticPlainStyle())
+                    .accessibilityLabel(String(appLocalized: "View photo"))
+            } else {
+                photo(url)
+            }
         } else if let url = media.url, RequestAttachment.showsVideo(media) {
             VideoPlayer(player: player)
                 .frame(maxWidth: .infinity)
@@ -704,8 +908,16 @@ private struct RequestMediaItem: View {
         }
     }
 
-    private var ratio: CGFloat {
-        CGFloat(max(media.width, 1)) / CGFloat(max(media.height, 1))
+    private func photo(_ url: URL) -> some View {
+        Color.clear
+            .aspectRatio(CGFloat(max(media.width, 1)) / CGFloat(max(media.height, 1)), contentMode: .fit)
+            .frame(maxWidth: .infinity)
+            .fixedSize(horizontal: false, vertical: true)
+            .overlay {
+                RemotePhoto(url: url, kind: .photo) { theme.control }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
     }
 }
 
@@ -715,6 +927,8 @@ private struct RequestRow: View {
     let onVote: () -> Void
     let onReport: () -> Void
     let onHide: () -> Void
+    var onDelete: (() -> Void)? = nil
+    var onArchive: (() -> Void)? = nil
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
@@ -729,12 +943,16 @@ private struct RequestRow: View {
                 .frame(width: 44, height: 44).contentShape(Rectangle())
             }
             .buttonStyle(FFPressStyle(scale: 0.92))
-            .accessibilityLabel(String(localized: "Upvote"))
+            .accessibilityLabel(String(appLocalized: "Upvote"))
+            .disabled(post.archived)
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 8) {
-                    FFTag(post.kind == "bug" ? String(localized: "Bug") : String(localized: "Feature"), tone: post.kind == "bug" ? .ember : .moss)
+                    FFTag(post.kind == "bug" ? String(appLocalized: "Bug") : String(appLocalized: "Feature"), tone: post.kind == "bug" ? .ember : .moss)
                     Spacer(minLength: 0)
-                    if !post.mine { RequestPostMenu(onReport: onReport, onHide: onHide) }
+                    if !post.mine || onDelete != nil || onArchive != nil {
+                        RequestPostMenu(canReport: !post.mine, onReport: onReport, onHide: onHide,
+                                        onDelete: onDelete, onArchive: onArchive, archived: post.archived)
+                    }
                     Text(post.createdAt, format: .relative(presentation: .named)).ffType(.caption).foregroundStyle(theme.textFaint)
                 }
                 Button(action: onOpen) {
@@ -750,7 +968,9 @@ private struct RequestRow: View {
                     }
                     Text(verbatim: "·")
                     Button(action: onOpen) {
-                        Text(post.commentCount == 1 ? String(localized: "1 comment") : String(localized: "\(post.commentCount) comments"))
+                        Text(post.commentCount == 1
+                             ? String(appLocalized: "1 comment")
+                             : String(appLocalized: "feedback.comment-count", defaultValue: "\(post.commentCount) comments"))
                             .frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
                     }
                     .buttonStyle(FFHapticPlainStyle())
@@ -776,6 +996,7 @@ private struct RequestDetailView: View {
     @State private var comment = ""
     @State private var launchedAgentURL: URL?
     @State private var confirmingDeletion = false
+    @State private var showingArchive = false
     @FocusState private var commentFocused: Bool
 
     private var post: FitFightFeedbackPost? {
@@ -786,11 +1007,10 @@ private struct RequestDetailView: View {
         VStack(spacing: 0) {
             HStack(alignment: .top, spacing: 10) {
                 FFNavDetail(
-                    title: post?.title ?? String(localized: "Request"),
-                    subtitle: nil,
+                    title: post?.title ?? String(appLocalized: "Request"),
                     onBack: { dismiss() }
                 )
-                if let post, !post.mine || store.canDelete {
+                if let post, !post.mine || store.canDelete || store.canArchive {
                     RequestPostMenu(
                         canReport: !post.mine,
                         onReport: {
@@ -802,9 +1022,11 @@ private struct RequestDetailView: View {
                                 dismiss()
                             }
                         },
-                        onDelete: store.canDelete ? { confirmingDeletion = true } : nil
+                        onDelete: store.canDelete ? { confirmingDeletion = true } : nil,
+                        onArchive: store.canArchive ? { showingArchive = true } : nil,
+                        archived: post.archived
                     )
-                    .disabled(store.isDeleting || store.isSaving || store.isLaunchingFix)
+                    .disabled(store.isDeleting || store.isArchiving || store.isSaving || store.isLaunchingFix)
                     .padding(.top, 4)
                 }
             }
@@ -829,54 +1051,66 @@ private struct RequestDetailView: View {
                 }
             }
 
-            HStack(spacing: 10) {
-                if staticRender {
-                    Text("Add a comment")
-                        .ffType(.body)
-                        .foregroundStyle(theme.textFaint)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 12)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(
-                            theme.card,
-                            in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous)
-                        )
-                        .ffBorder(theme.line, radius: theme.radius.field)
-                } else {
-                    TextField(String(localized: "Add a comment"), text: $comment, axis: .vertical)
-                        .ffType(.body)
-                        .foregroundStyle(theme.text)
-                        .lineLimit(1...4)
-                        .focused($commentFocused)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 12)
-                        .background(
-                            theme.card,
-                            in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous)
-                        )
-                        .ffBorder(commentFocused ? theme.mossEdge : theme.line, radius: theme.radius.field)
-                }
-                FFButton(
-                    title: String(localized: "Post"),
-                    enabled: canComment,
-                    action: {
-                        Task { await sendComment() }
+            if post?.archived != true {
+                HStack(spacing: 10) {
+                    if staticRender {
+                        Text("Add a comment")
+                            .ffType(.body)
+                            .foregroundStyle(theme.textFaint)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(
+                                theme.card,
+                                in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous)
+                            )
+                            .ffBorder(theme.line, radius: theme.radius.field)
+                    } else {
+                        TextField(String(appLocalized: "Add a comment"), text: $comment, axis: .vertical)
+                            .ffType(.body)
+                            .foregroundStyle(theme.text)
+                            .lineLimit(1...4)
+                            .focused($commentFocused)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .background(
+                                theme.card,
+                                in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous)
+                            )
+                            .ffBorder(commentFocused ? theme.mossEdge : theme.line, radius: theme.radius.field)
                     }
-                )
+                    FFButton(
+                        title: String(appLocalized: "Post"),
+                        enabled: canComment,
+                        action: {
+                            Task { await sendComment() }
+                        }
+                    )
+                }
+                .padding(.horizontal, theme.space.screenPadding)
+                .padding(.vertical, 12)
             }
-            .padding(.horizontal, theme.space.screenPadding)
-            .padding(.vertical, 12)
         }
         .background(theme.bg.ignoresSafeArea())
-        .confirmationDialog(String(localized: "Delete request?"), isPresented: $confirmingDeletion, titleVisibility: .visible) {
-            Button(String(localized: "Delete"), role: .destructive) {
+        .sheet(isPresented: $showingArchive) {
+            if let post {
+                RequestArchiveSheet(post: post, store: store)
+                    .fitFightTheme(theme)
+                    .presentationBackground(theme.overlay)
+                    .presentationCornerRadius(theme.radius.shell)
+                    .presentationDragIndicator(.visible)
+                    .presentationDetents([.medium, .large])
+            }
+        }
+        .confirmationDialog(String(appLocalized: "Delete request?"), isPresented: $confirmingDeletion, titleVisibility: .visible) {
+            Button(String(appLocalized: "Delete"), role: .destructive) {
                 Task {
                     if await store.delete(session: session, postID: postID) {
                         dismiss()
                     }
                 }
             }
-            Button(String(localized: "Cancel"), role: .cancel) {}
+            Button(String(appLocalized: "Cancel"), role: .cancel) {}
         } message: {
             Text("This removes the request, comments, and votes for everyone. This cannot be undone.")
         }
@@ -896,7 +1130,7 @@ private struct RequestDetailView: View {
             if let post {
                 HStack(spacing: 8) {
                     FFTag(
-                        post.kind == "bug" ? String(localized: "Bug") : String(localized: "Feature"),
+                        post.kind == "bug" ? String(appLocalized: "Bug") : String(appLocalized: "Feature"),
                         tone: post.kind == "bug" ? .ember : .moss
                     )
                     Button(action: {
@@ -906,7 +1140,7 @@ private struct RequestDetailView: View {
                             Image(systemName: post.voted ? "arrow.up.circle.fill" : "arrow.up.circle")
                             Text(
                                 String(
-                                    localized: "feedback.votes",
+                                    appLocalized: "feedback.votes",
                                     defaultValue: "\(post.voteCount) upvotes"
                                 )
                             )
@@ -915,7 +1149,19 @@ private struct RequestDetailView: View {
                         .foregroundStyle(post.voted ? theme.mossText : theme.textSecondary)
                     }
                     .buttonStyle(FFHapticPlainStyle())
+                    .disabled(post.archived)
                     Spacer()
+                }
+
+                if post.archived {
+                    FFNotice(
+                        text: String(appLocalized: "This feedback is archived. Votes and comments are closed."),
+                        tone: .neutral,
+                        systemImage: "archivebox"
+                    )
+                    if let reason = post.archiveReason {
+                        Text(reason).ffType(.body).foregroundStyle(theme.textSecondary)
+                    }
                 }
 
                 ProfileIdentityLink(userID: post.authorId, source: "feedback") {
@@ -930,13 +1176,13 @@ private struct RequestDetailView: View {
 
                 RequestMediaStack(media: post.media)
 
-                if store.canLaunchFix {
+                if store.canLaunchFix && !post.archived {
                     if launchedAgentURL != nil {
                         FFNotice(
-                            text: String(localized: "Cursor is on it. A pull request will show up when it’s done."),
+                            text: String(appLocalized: "Cursor is on it. A pull request will show up when it’s done."),
                             tone: .moss,
                             systemImage: "sparkles",
-                            actionTitle: String(localized: "Open"),
+                            actionTitle: String(appLocalized: "Open"),
                             action: {
                                 if let launchedAgentURL {
                                     openURL(launchedAgentURL)
@@ -946,8 +1192,8 @@ private struct RequestDetailView: View {
                     }
                     FFButton(
                         title: store.isLaunchingFix
-                            ? String(localized: "Sending…")
-                            : String(localized: "Send to Cursor"),
+                            ? String(appLocalized: "Sending…")
+                            : String(appLocalized: "Send to Cursor"),
                         kind: .secondary,
                         enabled: !store.isLaunchingFix && !store.isSaving && !store.isDeleting,
                         fullWidth: true,
@@ -957,7 +1203,7 @@ private struct RequestDetailView: View {
                     )
                 }
 
-                FFSectionHeader(title: String(localized: "Comments"))
+                FFSectionHeader(title: String(appLocalized: "Comments"))
                     .padding(.top, 8)
 
                 if store.isLoading && store.comments.isEmpty {
@@ -1002,7 +1248,7 @@ private struct RequestDetailView: View {
 
     private var canComment: Bool {
         let trimmed = comment.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.count >= 2 && trimmed.count <= 500 && !store.isSaving && !store.isDeleting
+        return trimmed.count >= 2 && trimmed.count <= 500 && post?.archived != true && !store.isSaving && !store.isDeleting && !store.isArchiving
     }
 
     private func sendComment() async {
@@ -1024,20 +1270,26 @@ private struct RequestPostMenu: View {
     let onReport: () -> Void
     let onHide: () -> Void
     var onDelete: (() -> Void)? = nil
+    var onArchive: (() -> Void)? = nil
+    var archived = false
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
         Menu {
             if canReport {
-                Button(String(localized: "Report")) {
+                Button(String(appLocalized: "Report")) {
                     onReport()
                 }
-                Button(String(localized: "Hide this person"), role: .destructive) {
+                Button(String(appLocalized: "Hide this person"), role: .destructive) {
                     onHide()
                 }
             }
+            if let onArchive {
+                Button(archived ? String(appLocalized: "Reopen feedback") : String(appLocalized: "Archive feedback"),
+                       systemImage: archived ? "arrow.uturn.backward" : "archivebox", action: onArchive)
+            }
             if let onDelete {
-                Button(String(localized: "Delete request"), role: .destructive, action: onDelete)
+                Button(String(appLocalized: "Delete request"), role: .destructive, action: onDelete)
             }
         } label: {
             Image(systemName: "ellipsis")
@@ -1051,8 +1303,7 @@ private struct RequestPostMenu: View {
 
 struct ComposeRequestView: View {
     @ObservedObject var store: FeedbackStore
-    var heading: String = String(localized: "New request")
-    var onPosted: ((RequestFilter) -> Void)? = nil
+    var onPosted: (() -> Void)? = nil
     @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
@@ -1074,8 +1325,8 @@ struct ComposeRequestView: View {
 
         var title: String {
             switch self {
-            case .bug: return String(localized: "Bug")
-            case .feature: return String(localized: "Feature")
+            case .bug: return String(appLocalized: "Bug")
+            case .feature: return String(appLocalized: "Feature")
             }
         }
 
@@ -1089,17 +1340,9 @@ struct ComposeRequestView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text(heading)
-                    .ffType(.title)
-                    .foregroundStyle(theme.text)
-                Spacer()
-                Button("Close") { dismiss() }
-                    .ffType(.label)
-                    .foregroundStyle(theme.mossText)
-            }
-            .padding(.horizontal, theme.space.screenPadding)
-            .padding(.vertical, 12)
+            FFSheetHeader(title: String(appLocalized: "New request")) { dismiss() }
+                .padding(.horizontal, theme.space.screenPadding)
+                .padding(.vertical, 12)
 
             Group {
                 if staticRender {
@@ -1113,7 +1356,7 @@ struct ComposeRequestView: View {
             }
 
             FFScreenCTA(
-                title: store.isSaving ? String(localized: "Posting…") : String(localized: "Post"),
+                title: store.isSaving ? String(appLocalized: "Posting…") : String(appLocalized: "Post"),
                 enabled: canPost,
                 busy: store.isSaving
             ) {
@@ -1150,7 +1393,7 @@ struct ComposeRequestView: View {
             FFSegmented(items: ComposeKind.allCases, selection: $kind) { $0.title }
 
             FFField(
-                label: String(localized: "Title"),
+                label: String(appLocalized: "Title"),
                 state: titleFocused ? .focused : .normal,
                 counter: "\(title.count)/80"
             ) {
@@ -1158,7 +1401,7 @@ struct ComposeRequestView: View {
                     Text("Short and specific")
                         .foregroundStyle(theme.textFaint)
                 } else {
-                    TextField(String(localized: "Short and specific"), text: $title)
+                    TextField(String(appLocalized: "Short and specific"), text: $title)
                         .focused($titleFocused)
                         .onChange(of: title) { _, value in
                             if value.count > 80 { title = String(value.prefix(80)) }
@@ -1167,9 +1410,9 @@ struct ComposeRequestView: View {
             }
 
             FFField(
-                label: String(localized: "Details"),
+                label: String(appLocalized: "Details"),
                 state: detailsFocused ? .focused : .normal,
-                help: String(localized: "What happened, or what you want. Be specific."),
+                help: String(appLocalized: "What happened, or what you want. Be specific."),
                 counter: "\(details.count)/2000",
                 minHeight: 120
             ) {
@@ -1178,7 +1421,7 @@ struct ComposeRequestView: View {
                         .foregroundStyle(theme.textFaint)
                         .frame(maxWidth: .infinity, minHeight: 80, alignment: .topLeading)
                 } else {
-                    TextField(String(localized: "Describe it"), text: $details, axis: .vertical)
+                    TextField(String(appLocalized: "Describe it"), text: $details, axis: .vertical)
                         .focused($detailsFocused)
                         .lineLimit(6...12)
                         .onChange(of: details) { _, value in
@@ -1205,7 +1448,7 @@ struct ComposeRequestView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "video.fill")
                         .foregroundStyle(theme.mossText)
-                    Text(String(localized: "Video"))
+                    Text(String(appLocalized: "Video"))
                         .ffType(.caption)
                         .foregroundStyle(theme.textSecondary)
                 }
@@ -1233,7 +1476,7 @@ struct ComposeRequestView: View {
                     maxSelectionCount: max(1, remainingSlots),
                     matching: .any(of: [.images, .videos])
                 ) {
-                    Label(String(localized: "Media"), systemImage: "photo.on.rectangle.angled")
+                    Label(String(appLocalized: "Media"), systemImage: "photo.on.rectangle.angled")
                         .ffType(.label)
                         .foregroundStyle(theme.mossText)
                 }
@@ -1242,7 +1485,7 @@ struct ComposeRequestView: View {
                 Button {
                     showingFileImporter = true
                 } label: {
-                    Label(String(localized: "File"), systemImage: "paperclip")
+                    Label(String(appLocalized: "File"), systemImage: "paperclip")
                         .ffType(.label)
                         .foregroundStyle(theme.mossText)
                 }
@@ -1335,9 +1578,6 @@ struct ComposeRequestView: View {
         let dest = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: false)
             .appendingPathExtension(ext)
-        if FileManager.default.fileExists(atPath: dest.path) {
-            try FileManager.default.removeItem(at: dest)
-        }
         try FileManager.default.copyItem(at: url, to: dest)
         return dest
     }
@@ -1374,7 +1614,7 @@ struct ComposeRequestView: View {
             videos = []
             files = []
             if let onPosted {
-                onPosted(kind == .feature ? .features : .bugs)
+                onPosted()
             } else {
                 dismiss()
             }

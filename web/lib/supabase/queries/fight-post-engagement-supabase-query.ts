@@ -4,12 +4,14 @@ import { createDatabaseClient } from "@/lib/supabase/postgres";
 import { companionIdSchema } from "@/lib/types/companions/companion";
 import {
     fightPostCommentResponseSchema,
+    fightPostCommentLikeRowSchema,
+    type FightPostCommentLikeResponse,
+    type FightPostCommentLikeRow,
     fightPostReactionPersonSchema,
     type DeleteFightPostCommentResponse,
 } from "@/lib/types/feed/fight-post";
 import type {
     CreateFightPostCommentRequest,
-    FightPostAuthor,
     FightPostComment,
     FightPostCommentListResponse,
     FightPostCommentResponse,
@@ -20,11 +22,14 @@ import type {
     ReportFightPostCommentRequest,
     ReportFightPostCommentResponse,
 } from "@/lib/types/feed/fight-post";
+import type { AvatarMediaColumns } from "@/lib/types/media/media";
 import {
+    cursorStamp,
     loadVisiblePost,
     listPostReactions,
+    parseCursor,
 } from "./fight-posts-supabase-query";
-import { mapMedia, signMediaUrls, type MediaRow } from "./media-supabase-query";
+import { isoUtc, mapAvatar, signMediaUrls } from "./media-supabase-query";
 import {
     eligibleMentionUserIds,
     enqueueFightFeedCommentNotifications,
@@ -35,7 +40,7 @@ import {
 
 const COMMENT_LIMIT_PER_DAY = 40;
 
-type CommentRow = {
+type CommentRow = AvatarMediaColumns & {
     id: string;
     post_id: string;
     parent_id: string | null;
@@ -46,47 +51,7 @@ type CommentRow = {
     author_display_name: string;
     author_companion_id: string | null;
     author_companion_image_url: string | null;
-    avatar_id: string | null;
-    avatar_kind: MediaRow["kind"] | null;
-    avatar_purpose: MediaRow["purpose"] | null;
-    avatar_status: MediaRow["status"] | null;
-    avatar_object_path: string | null;
-    avatar_original_filename: string | null;
-    avatar_content_type: MediaRow["content_type"] | null;
-    avatar_byte_size: string | number | null;
-    avatar_width: number | null;
-    avatar_height: number | null;
-    avatar_duration_ms: number | null;
-    avatar_sha256: string | null;
-    avatar_created_at: Date | string | null;
 };
-
-function isoUtc(value: Date | string): string {
-    return new Date(value).toISOString().replace(/\.\d{3}Z$/, "Z");
-}
-
-function cursorStamp(value: Date | string): string {
-    return value instanceof Date ? value.toISOString() : value;
-}
-
-function parseCursor(
-    cursor: string | undefined,
-): { createdAt: string; id: string } | null {
-    if (!cursor) return null;
-    const separator = cursor.lastIndexOf("|");
-    if (separator <= 0) {
-        throw new ApiError(400, ERROR_CODES.validation, "cursor is invalid");
-    }
-    const createdAt = cursor.slice(0, separator);
-    const id = cursor.slice(separator + 1);
-    if (
-        !Number.isFinite(Date.parse(createdAt)) ||
-        !/^[0-9a-f-]{36}$/i.test(id)
-    ) {
-        throw new ApiError(400, ERROR_CODES.validation, "cursor is invalid");
-    }
-    return { createdAt, id };
-}
 
 function parseDiscussedCursor(
     cursor: string | undefined,
@@ -112,66 +77,12 @@ function parseDiscussedCursor(
     return { replyCount, createdAt, id };
 }
 
-function authorFromRow(row: CommentRow, url: string | null): FightPostAuthor {
-    if (
-        !row.avatar_id ||
-        !row.avatar_kind ||
-        !row.avatar_purpose ||
-        !row.avatar_status ||
-        !row.avatar_object_path ||
-        !row.avatar_original_filename ||
-        !row.avatar_content_type ||
-        row.avatar_byte_size === null ||
-        row.avatar_width === null ||
-        row.avatar_height === null ||
-        !row.avatar_sha256 ||
-        !row.avatar_created_at
-    ) {
-        return {
-            user_id: row.author_id,
-            handle: row.author_handle,
-            display_name: row.author_display_name,
-            avatar: null,
-            companion_id: companionIdSchema
-                .nullable()
-                .parse(row.author_companion_id),
-            ...(row.author_companion_id === "custom" && row.author_companion_image_url ? { companion_image_url: row.author_companion_image_url } : {}),
-        };
-    }
-    return {
-        user_id: row.author_id,
-        handle: row.author_handle,
-        display_name: row.author_display_name,
-        avatar: mapMedia(
-            {
-                id: row.avatar_id,
-                owner_id: row.author_id,
-                kind: row.avatar_kind,
-                purpose: row.avatar_purpose,
-                status: row.avatar_status,
-                object_path: row.avatar_object_path,
-                original_filename: row.avatar_original_filename,
-                content_type: row.avatar_content_type,
-                byte_size: row.avatar_byte_size,
-                width: row.avatar_width,
-                height: row.avatar_height,
-                duration_ms: row.avatar_duration_ms,
-                sha256: row.avatar_sha256,
-                created_at: row.avatar_created_at,
-            },
-            url,
-        ),
-        companion_id: companionIdSchema
-            .nullable()
-            .parse(row.author_companion_id),
-            ...(row.author_companion_id === "custom" && row.author_companion_image_url ? { companion_image_url: row.author_companion_image_url } : {}),
-    };
-}
-
 async function mapComments(
     userId: string,
     rows: CommentRow[],
+    database: Sql,
 ): Promise<FightPostComment[]> {
+    const likes = await readCommentLikes(userId, rows.map((row) => row.id), database);
     const urls = await signMediaUrls(
         rows.flatMap((row) =>
             row.avatar_object_path ? [row.avatar_object_path] : [],
@@ -184,12 +95,18 @@ async function mapComments(
         body: row.body,
         created_at: isoUtc(row.created_at),
         mine: row.author_id === userId,
-        author: authorFromRow(
-            row,
-            row.avatar_object_path
-                ? (urls.get(row.avatar_object_path) ?? null)
-                : null,
-        ),
+        like_count: likes.get(row.id)?.like_count ?? 0,
+        liked_by_me: likes.get(row.id)?.liked_by_me ?? false,
+        author: {
+            user_id: row.author_id,
+            handle: row.author_handle,
+            display_name: row.author_display_name,
+            avatar: mapAvatar(row, row.author_id, urls),
+            companion_id: companionIdSchema
+                .nullable()
+                .parse(row.author_companion_id),
+            ...(row.author_companion_id === "custom" && row.author_companion_image_url ? { companion_image_url: row.author_companion_image_url } : {}),
+        },
     }));
 }
 
@@ -258,7 +175,7 @@ export async function listFightPostComments(
                     avatar.sha256 as avatar_sha256, avatar.created_at as avatar_created_at
                 from public.fight_post_comments as comment
                 join public.profiles as profile
-                    on profile.user_id = comment.author_id and profile.deleted_at is null
+                    on profile.id = comment.author_id and profile.deleted_at is null
                 left join public.media_objects as avatar
                     on avatar.id = profile.avatar_media_id and avatar.status = 'ready'
                 where comment.post_id = ${postId}
@@ -288,7 +205,7 @@ export async function listFightPostComments(
                     avatar.sha256 as avatar_sha256, avatar.created_at as avatar_created_at
                 from public.fight_post_comments as comment
                 join public.profiles as profile
-                    on profile.user_id = comment.author_id and profile.deleted_at is null
+                    on profile.id = comment.author_id and profile.deleted_at is null
                 left join public.media_objects as avatar
                     on avatar.id = profile.avatar_media_id and avatar.status = 'ready'
                 where comment.post_id = ${postId}
@@ -302,7 +219,7 @@ export async function listFightPostComments(
     const page = rows.slice(0, query.limit);
     const last = page.at(-1);
     return {
-        comments: await mapComments(userId, page),
+        comments: await mapComments(userId, page, database),
         next_cursor:
             rows.length > query.limit && last
                 ? `${cursorStamp(last.created_at)}|${last.id}`
@@ -333,7 +250,7 @@ async function listRecentFightPostComments(
                     avatar.sha256 as avatar_sha256, avatar.created_at as avatar_created_at
                 from public.fight_post_comments as comment
                 join public.profiles as profile
-                    on profile.user_id = comment.author_id and profile.deleted_at is null
+                    on profile.id = comment.author_id and profile.deleted_at is null
                 left join public.media_objects as avatar
                     on avatar.id = profile.avatar_media_id and avatar.status = 'ready'
                 where comment.post_id = ${postId}
@@ -363,7 +280,7 @@ async function listRecentFightPostComments(
                     avatar.sha256 as avatar_sha256, avatar.created_at as avatar_created_at
                 from public.fight_post_comments as comment
                 join public.profiles as profile
-                    on profile.user_id = comment.author_id and profile.deleted_at is null
+                    on profile.id = comment.author_id and profile.deleted_at is null
                 left join public.media_objects as avatar
                     on avatar.id = profile.avatar_media_id and avatar.status = 'ready'
                 where comment.post_id = ${postId}
@@ -377,7 +294,7 @@ async function listRecentFightPostComments(
     const page = rows.slice(0, query.limit);
     const last = page.at(-1);
     return {
-        comments: await mapComments(userId, page),
+        comments: await mapComments(userId, page, database),
         next_cursor:
             rows.length > query.limit && last
                 ? `${cursorStamp(last.created_at)}|${last.id}`
@@ -406,7 +323,7 @@ async function listDiscussedFightPostComments(
             avatar.sha256 as avatar_sha256, avatar.created_at as avatar_created_at
         from public.fight_post_comments as comment
         join public.profiles as profile
-            on profile.user_id = comment.author_id and profile.deleted_at is null
+            on profile.id = comment.author_id and profile.deleted_at is null
         left join public.media_objects as avatar
             on avatar.id = profile.avatar_media_id and avatar.status = 'ready'
         where comment.post_id = ${postId}
@@ -475,7 +392,7 @@ async function listDiscussedFightPostComments(
     }
     const last = pageRoots.at(-1);
     return {
-        comments: await mapComments(userId, page),
+        comments: await mapComments(userId, page, database),
         next_cursor:
             offset + query.limit < roots.length && last
                 ? `${replyCount(last)}|${new Date(last.created_at).toISOString()}|${last.id}`
@@ -564,7 +481,7 @@ export async function createFightPostComment(
             avatar.sha256 as avatar_sha256, avatar.created_at as avatar_created_at
         from public.fight_post_comments as comment
         join public.profiles as profile
-            on profile.user_id = comment.author_id and profile.deleted_at is null
+            on profile.id = comment.author_id and profile.deleted_at is null
         left join public.media_objects as avatar
             on avatar.id = profile.avatar_media_id and avatar.status = 'ready'
         where comment.id = ${created.id}
@@ -576,7 +493,7 @@ export async function createFightPostComment(
             "Could not load that comment",
         );
     }
-    const [comment] = await mapComments(userId, [row]);
+    const [comment] = await mapComments(userId, [row], database);
     if (!comment) {
         throw new ApiError(
             500,
@@ -656,7 +573,7 @@ export async function listFightPostReactionPeople(
         select reaction.user_id, reaction.emoji, profile.handle, profile.display_name
         from public.fight_post_reactions as reaction
         join public.profiles as profile
-            on profile.user_id = reaction.user_id and profile.deleted_at is null
+            on profile.id = reaction.user_id and profile.deleted_at is null
         where reaction.post_id = ${postId}
             and (${query.cursor ?? null}::uuid is null or reaction.user_id > ${query.cursor ?? null}::uuid)
             and not exists (
@@ -707,4 +624,76 @@ export async function setFightPostReaction(
         });
     }
     return { reactions: await listPostReactions(userId, postId, database) };
+}
+
+async function readCommentLikes(
+    userId: string,
+    commentIds: string[],
+    database: Sql,
+): Promise<Map<string, FightPostCommentLikeRow>> {
+    if (commentIds.length === 0) return new Map();
+    const rows = await database`
+        select likes.comment_id, count(*)::int as like_count,
+            bool_or(likes.user_id = ${userId}) as liked_by_me
+        from private.fight_post_comment_likes as likes
+        join public.profiles as profile
+            on profile.id = likes.user_id and profile.deleted_at is null
+        where likes.comment_id = any(${commentIds}::uuid[])
+            and not exists (
+                select 1 from private.feed_blocks as blocked
+                where blocked.blocker_id = ${userId} and blocked.blocked_id = likes.user_id
+            )
+        group by likes.comment_id
+    `;
+    return new Map(rows.map((row) => {
+        const likes = fightPostCommentLikeRowSchema.parse(row);
+        return [likes.comment_id, likes];
+    }));
+}
+
+export async function setFightPostCommentLike(
+    userId: string,
+    postId: string,
+    commentId: string,
+    liked: boolean,
+    database: Sql = createDatabaseClient(),
+): Promise<FightPostCommentLikeResponse> {
+    return database.begin("read write", async (sql) => {
+        const post = await loadVisiblePost(userId, postId, sql);
+        const [comment] = await sql`
+            select comment.id
+            from public.fight_post_comments as comment
+            join public.profiles as profile
+                on profile.id = comment.author_id and profile.deleted_at is null
+            where comment.id = ${commentId} and comment.post_id = ${postId}
+                and not exists (
+                    select 1 from private.feed_blocks as blocked
+                    where (blocked.blocker_id = ${userId}
+                        and blocked.blocked_id in (comment.author_id, ${post.author_id}::uuid))
+                        or (blocked.blocked_id = ${userId}
+                            and blocked.blocker_id in (comment.author_id, ${post.author_id}::uuid))
+                )
+            for update of comment
+        `;
+        if (!comment) {
+            throw new ApiError(404, ERROR_CODES.not_found, "Comment not found");
+        }
+        if (liked) {
+            await sql`
+                insert into private.fight_post_comment_likes (comment_id, post_id, user_id)
+                values (${commentId}, ${postId}, ${userId})
+                on conflict (comment_id, user_id) do nothing
+            `;
+        } else {
+            await sql`
+                delete from private.fight_post_comment_likes
+                where comment_id = ${commentId} and user_id = ${userId}
+            `;
+        }
+        const likes = (await readCommentLikes(userId, [commentId], sql)).get(commentId);
+        return {
+            like_count: likes?.like_count ?? 0,
+            liked_by_me: likes?.liked_by_me ?? false,
+        };
+    });
 }

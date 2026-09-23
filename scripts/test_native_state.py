@@ -36,20 +36,23 @@ source += "    func refreshForTest() async { await feedRefresh.action() }\n}\n"
 api = (root / "FitFight/FitFightAPI.swift").read_text()
 source += "\nextension FeedRequestPaths {\n"
 source += api[api.index("    func feed(scope:"):api.index("    func feedActivity(")]
-source += api[api.index("    func fightPosts("):api.index("    func createFightPost(")]
+source += api[api.index("    func fightPosts("):api.index("    func deleteFightPost(")]
+source += "\n}\n"
+source += api[api.index("private struct FightPostCommentLikeBody:"):api.index("private struct FightPostCommentBody:")]
+source += "\nextension CommentLikeRequestPaths {\n"
+source += api[api.index("    func setFightPostCommentLike("):api.index("    func reportFightPostComment(")]
 source += "\n}\n"
 source += "\nextension FightPostThreadState {\n"
 source += thread[thread.index("    private var displayedComments:"):thread.index("    private func commentRow(")]
 source += thread[thread.index("    private func loadComments("):thread.index("    private func firstEmoji(")]
 source += "    func rowsForTest() -> [(UUID, Int)] { displayedComments.map { ($0.id, $0.depth) } }\n"
 source += "    func loadForTest(more: Bool = false) async { await loadComments(more: more) }\n"
+source += "    func likeForTest(_ comment: FitFightFightPostComment) async { await likeComment(comment) }\n"
 source += "    func sendForTest() async { await sendComment() }\n"
 source += "    func reportForTest(_ comment: FitFightFightPostComment) async { await reportComment(comment) }\n"
 source += "    func deleteForTest(_ comment: FitFightFightPostComment) async { await deleteComment(comment) }\n}\n"
 count_change = thread.split(".onChange(of: post.commentCount) { previous, count in\n", 1)[1].split("\n        }\n", 1)[0]
 source += "\nextension FightPostThreadState {\n    func countChangedForTest(previous: Int, count: Int) {\n" + count_change + "\n    }\n}\n"
-sort_change = thread.split(".onChange(of: commentSort) { _, _ in\n", 1)[1].split("\n        }\n", 1)[0]
-source += "\nextension FightPostThreadState {\n    func sortChangedForTest() {\n" + sort_change + "\n    }\n}\n"
 source += thread[thread.index("private struct DisplayedFightComment:"):]
 source += "\n" + feedback[feedback.index("@MainActor\nfinal class FeedbackStore:"):feedback.index("    func vote(")].replace(": ObservableObject", "").replace("@Published ", "")
 source += feedback[feedback.index("    func delete("):feedback.index("    func report(")]
@@ -64,8 +67,8 @@ with tempfile.TemporaryDirectory(prefix="fitfight-state-tests-") as directory:
     generated.write_text(source)
     executable = Path(directory) / "native-state-tests"
     subprocess.run([
-        "swiftc", "-swift-version", "5", "-parse-as-library",
-        "-target", f"{platform.machine()}-apple-macosx13.0",
+        "swiftc", "-swift-version", "5", "-parse-as-library", str(root / "FitFight/AppLocalization.swift"),
+        "-target", f"{platform.machine()}-apple-macosx14.0",
         str(root / "FitFight/Media.swift"), str(generated), "-o", str(executable),
     ], check=True)
     subprocess.run([str(executable)], check=True, timeout=15)

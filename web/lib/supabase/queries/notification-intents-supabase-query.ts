@@ -27,6 +27,61 @@ function routeForFight(fightId: string): string {
     return `/fights/${fightId}`;
 }
 
+async function insertNotificationIntents(
+    sql: Sql,
+    rows: Record<string, string>[],
+): Promise<void> {
+    if (rows.length === 0) return;
+    await sql`
+        insert into private.notification_intents (
+            idempotency_key, user_id, fight_id, kind, slot,
+            not_before, expires_at, route, copy_key
+        )
+        select row.idempotency_key, row.user_id, row.fight_id, row.kind, row.slot,
+            row.not_before::timestamptz, row.expires_at::timestamptz, row.route, row.copy_key
+        from jsonb_to_recordset(${sql.json(rows)}::jsonb) as row (
+            idempotency_key text,
+            user_id uuid,
+            fight_id uuid,
+            kind text,
+            slot text,
+            not_before text,
+            expires_at text,
+            route text,
+            copy_key text
+        )
+        on conflict (idempotency_key) do nothing
+    `;
+}
+
+export async function insertNotificationIntentsWithAlertBody(
+    sql: Sql | TransactionSql,
+    rows: Record<string, string>[],
+): Promise<void> {
+    if (rows.length === 0) return;
+    await sql`
+        insert into private.notification_intents (
+            idempotency_key, user_id, fight_id, kind, slot,
+            not_before, expires_at, route, copy_key, alert_body
+        )
+        select row.idempotency_key, row.user_id, row.fight_id, row.kind, row.slot,
+            row.not_before::timestamptz, row.expires_at::timestamptz, row.route, row.copy_key, row.alert_body
+        from jsonb_to_recordset(${sql.json(rows)}::jsonb) as row (
+            idempotency_key text,
+            user_id uuid,
+            fight_id uuid,
+            kind text,
+            slot text,
+            not_before text,
+            expires_at text,
+            route text,
+            copy_key text,
+            alert_body text
+        )
+        on conflict (idempotency_key) do nothing
+    `;
+}
+
 export async function enqueueAwaitingFinalSyncNotifications(
     sql: Sql,
     fightId: string,
@@ -105,27 +160,7 @@ export async function enqueueAwaitingFinalSyncNotifications(
             },
         ];
     });
-    if (rows.length === 0) return;
-    await sql`
-        insert into private.notification_intents (
-            idempotency_key, user_id, fight_id, kind, slot,
-            not_before, expires_at, route, copy_key
-        )
-        select row.idempotency_key, row.user_id, row.fight_id, row.kind, row.slot,
-            row.not_before::timestamptz, row.expires_at::timestamptz, row.route, row.copy_key
-        from jsonb_to_recordset(${sql.json(rows)}::jsonb) as row (
-            idempotency_key text,
-            user_id uuid,
-            fight_id uuid,
-            kind text,
-            slot text,
-            not_before text,
-            expires_at text,
-            route text,
-            copy_key text
-        )
-        on conflict (idempotency_key) do nothing
-    `;
+    await insertNotificationIntents(sql, rows);
 }
 
 export async function enqueueFightFinalizedNotifications(
@@ -152,27 +187,7 @@ export async function enqueueFightFinalizedNotifications(
         route: routeForFight(fightId),
         copy_key: "fight_finalized",
     }));
-    if (rows.length === 0) return;
-    await sql`
-        insert into private.notification_intents (
-            idempotency_key, user_id, fight_id, kind, slot,
-            not_before, expires_at, route, copy_key
-        )
-        select row.idempotency_key, row.user_id, row.fight_id, row.kind, row.slot,
-            row.not_before::timestamptz, row.expires_at::timestamptz, row.route, row.copy_key
-        from jsonb_to_recordset(${sql.json(rows)}::jsonb) as row (
-            idempotency_key text,
-            user_id uuid,
-            fight_id uuid,
-            kind text,
-            slot text,
-            not_before text,
-            expires_at text,
-            route text,
-            copy_key text
-        )
-        on conflict (idempotency_key) do nothing
-    `;
+    await insertNotificationIntents(sql, rows);
 }
 
 export async function supersedeGraceNotifications(
@@ -224,16 +239,16 @@ export async function enqueueFightInviteNotifications(
     const recipients = await sql<
         { user_id: string; locale: string | null }[]
     >`
-        select distinct on (profile.user_id)
-            profile.user_id,
+        select distinct on (profile.id)
+            profile.id as user_id,
             installation.locale
         from public.profiles as profile
         left join private.device_installations as installation
-            on installation.user_id = profile.user_id
+            on installation.user_id = profile.id
             and installation.revoked_at is null
-        where profile.user_id in ${sql(input.userIds)}
+        where profile.id in ${sql(input.userIds)}
             and profile.deleted_at is null
-        order by profile.user_id, installation.last_registered_at desc nulls last
+        order by profile.id, installation.last_registered_at desc nulls last
     `;
     const rows = recipients.map((recipient) => {
         const locale: NotificationLocale =
@@ -260,26 +275,5 @@ export async function enqueueFightInviteNotifications(
             ).body,
         };
     });
-    if (rows.length === 0) return;
-    await sql`
-        insert into private.notification_intents (
-            idempotency_key, user_id, fight_id, kind, slot,
-            not_before, expires_at, route, copy_key, alert_body
-        )
-        select row.idempotency_key, row.user_id, row.fight_id, row.kind, row.slot,
-            row.not_before::timestamptz, row.expires_at::timestamptz, row.route, row.copy_key, row.alert_body
-        from jsonb_to_recordset(${sql.json(rows)}::jsonb) as row (
-            idempotency_key text,
-            user_id uuid,
-            fight_id uuid,
-            kind text,
-            slot text,
-            not_before text,
-            expires_at text,
-            route text,
-            copy_key text,
-            alert_body text
-        )
-        on conflict (idempotency_key) do nothing
-    `;
+    await insertNotificationIntentsWithAlertBody(sql, rows);
 }

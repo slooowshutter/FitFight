@@ -172,8 +172,8 @@ async function inviteUserToOpenFight(
     if (sql) {
         const { data: owner, error: ownerError } = await admin
             .from("profiles")
-            .select("user_id, handle, display_name, time_zone")
-            .eq("user_id", series.owner_id)
+            .select("user_id:id, handle, display_name, time_zone")
+            .eq("id", series.owner_id)
             .is("deleted_at", null)
             .maybeSingle();
         if (ownerError) {
@@ -268,15 +268,15 @@ export async function inviteEveryoneToOpenFight(
     }
     const members = await sql<{ user_id: string }[]>`
         insert into public.fight_members (fight_id, user_id, state)
-        select ${fight.id}, profile.user_id, 'invited'
+        select ${fight.id}, profile.id, 'invited'
         from public.profiles as profile
         where profile.deleted_at is null
-            and profile.user_id <> ${series.owner_id}
+            and profile.id <> ${series.owner_id}
             and not exists (
                 select 1
                 from public.fight_members as member
                 where member.fight_id = ${fight.id}
-                    and member.user_id = profile.user_id
+                    and member.user_id = profile.id
             )
         on conflict (fight_id, user_id) do nothing
         returning user_id
@@ -287,20 +287,20 @@ export async function inviteEveryoneToOpenFight(
     const userIds = members.map((member) => member.user_id);
     await sql`
         insert into public.fight_series_members (series_id, user_id, state)
-        select ${series.id}, profile.user_id, 'invited'
+        select ${series.id}, profile.id, 'invited'
         from public.profiles as profile
-        where profile.user_id in ${sql(userIds)}
+        where profile.id in ${sql(userIds)}
         on conflict (series_id, user_id) do nothing
     `;
     await sql`
         insert into public.fight_invites (
             fight_id, invited_user_id, token_hash, expires_at
         )
-        select ${fight.id}, profile.user_id,
+        select ${fight.id}, profile.id,
             encode(sha256(gen_random_bytes(32)), 'hex'),
             ${fight.ends_at}::timestamptz
         from public.profiles as profile
-        where profile.user_id in ${sql(userIds)}
+        where profile.id in ${sql(userIds)}
     `;
     return userIds;
 }

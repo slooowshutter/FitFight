@@ -10,22 +10,17 @@ struct FeedbackTabView: View {
     var body: some View {
         VStack(spacing: 0) {
             hubBar
-            RequestsView(
-                store: requests,
-                chrome: .tab,
-                filter: $model.feedbackRequestFilter
-            )
+            RequestsView(store: requests, filter: $model.feedbackRequestFilter)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(theme.bg)
         .sheet(isPresented: $composingRequest, onDismiss: {
-            Task { await requests.load(session: session, kind: model.feedbackRequestFilter.kind) }
+            Task { await requests.load(session: session, kind: model.feedbackRequestFilter.kind, status: model.feedbackRequestFilter.status.rawValue, sort: model.feedbackRequestFilter.sort.rawValue) }
         }) {
-            ComposeRequestView(store: requests, onPosted: { filter in
-                model.feedbackRequestFilter = filter
+            ComposeRequestView(store: requests, onPosted: {
+                model.feedbackRequestFilter.status = .open
                 composingRequest = false
             })
-            .environmentObject(session)
             .fitFightTheme(theme)
             .presentationBackground(theme.bg)
         }
@@ -33,28 +28,14 @@ struct FeedbackTabView: View {
 
     private var hubBar: some View {
         HStack(alignment: .center, spacing: 12) {
-            Text(String(localized: "Feedback"))
+            Text(String(appLocalized: "Feedback"))
                 .ffType(.title)
                 .foregroundStyle(theme.text)
             Spacer(minLength: 0)
-            composeButton
+            FFComposeButton(label: String(appLocalized: "New request")) { composingRequest = true }
         }
         .padding(.horizontal, theme.space.screenPadding)
         .padding(.top, 8)
         .padding(.bottom, 8)
-    }
-
-    private var composeButton: some View {
-        Button {
-            composingRequest = true
-        } label: {
-            Image(systemName: "plus")
-                .font(.system(size: 16, weight: .bold))
-                .foregroundStyle(theme.mossOn)
-                .frame(width: 36, height: 36)
-                .background(theme.mossFill, in: Circle())
-        }
-        .buttonStyle(FFHapticPlainStyle())
-        .accessibilityLabel(String(localized: "New request"))
     }
 }

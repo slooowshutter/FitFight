@@ -18,8 +18,7 @@
     ],
     "git": {
         "deploymentEnabled": {
-            "profiles-friends-and-stats": false,
-            "blend-backend-client": false
+            "profiles-friends-and-stats": false
         }
     }
 }

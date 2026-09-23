@@ -59,9 +59,9 @@ export async function readFightSnapshot(
                 ) as history on member.state = 'accepted'
                 where member.fight_id in (select id from visible_fights)
             ), visible_profiles as (
-                select user_id, handle, display_name, avatar_media_id, companion_id, companion_image_url
+                select id as user_id, handle, display_name, avatar_media_id, companion_id, companion_image_url
                 from public.profiles
-                where user_id in (
+                where id in (
                     select user_id from visible_members union select owner_id from visible_fights
                 )
             ), visible_series as (

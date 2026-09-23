@@ -4,46 +4,22 @@ import SwiftUI
 struct HealthOnboardingView: View {
     var onFinished: (() -> Void)? = nil
 
+    @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var steps: HealthKitStepsStore
-    @Environment(\.ffTheme) private var theme
 
     @State private var isConnecting = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Spacer(minLength: 24)
-            Text("Connect Apple Health")
-                .ffType(.title)
-                .foregroundStyle(theme.text)
-            Text("FitFight reads your steps and other movement from Apple Health. Fights still use steps. We’ll ask iPhone for permission next. You can change this later in You.")
-                .ffType(.body)
-                .foregroundStyle(theme.textSecondary)
-                .lineSpacing(3)
-                .padding(.top, 10)
-            FFScreenCTA(
-                title: isConnecting ? String(localized: "Connecting…") : String(localized: "Continue"),
-                enabled: !isConnecting
-            ) {
-                Task { await connect() }
-            }
-            .padding(.top, 28)
-            Button {
-                finish()
-            } label: {
-                Text("Not now")
-                    .ffType(.label)
-                    .foregroundStyle(theme.textSecondary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 16)
-            }
-            .buttonStyle(FFHapticPlainStyle())
-            .disabled(isConnecting)
-            Spacer(minLength: 24)
+        OnboardingPage(
+            title: "Connect Apple Health",
+            message: "FitFight reads your steps and other movement from Apple Health. Fights still use steps. We’ll ask iPhone for permission next. You can change this later in You.",
+            actionTitle: isConnecting ? String(appLocalized: "Connecting…") : String(appLocalized: "Continue"),
+            working: isConnecting,
+            onSkip: finish
+        ) {
+            Task { await connect() }
         }
-        .padding(.horizontal, theme.space.screenPadding)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .background(theme.bg)
     }
 
     private func connect() async {
@@ -52,6 +28,8 @@ struct HealthOnboardingView: View {
         let trace = HealthKitSyncTrace(trigger: .manual)
         await steps.refresh(requestAccess: true, trace: trace)
         finish()
+        // Upload right away; returning from the permission sheet no longer triggers a refresh.
+        Task { await model.refreshFights(session: session, steps: steps, trigger: .manual) }
     }
 
     private func finish() {

@@ -23,6 +23,8 @@ const detail: FeedbackPostDetail = {
         created_at: "2026-09-04T12:00:00Z",
         metadata: { app_version: "1.0.0", os: "iOS", os_version: "26.0" },
         media: [],
+        archived: false,
+        archive_reason: null,
     },
     comments: [
         {

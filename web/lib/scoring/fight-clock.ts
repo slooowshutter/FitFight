@@ -71,12 +71,3 @@ export function fightNeedsCloserTick(input: FightDueInput): boolean {
     }
     return state === "awaiting_final_sync";
 }
-
-export function observationOverlapsWindow(
-    startsAt: string,
-    endsAt: string,
-    windowStartsAt: string,
-    windowEndsAt: string,
-): boolean {
-    return startsAt < windowEndsAt && endsAt > windowStartsAt;
-}

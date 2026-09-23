@@ -17,6 +17,4 @@ export const DELETE = apiRoute<{ postID: string; commentID: string }>(
     },
 );
 
-export function OPTIONS(request: Request) {
-    return corsPreflight(request);
-}
+export const OPTIONS = corsPreflight;

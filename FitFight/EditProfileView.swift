@@ -20,88 +20,85 @@ struct EditProfileView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text(String(localized: "Edit profile")).ffType(.heading)
-                Spacer()
-                Button(String(localized: "Close")) { dismiss() }.ffType(.label).frame(minHeight: 44)
-            }.padding(.horizontal, theme.space.screenPadding).padding(.top, 12)
+            FFSheetHeader(title: String(appLocalized: "Edit profile"), role: .heading) { dismiss() }
+                .padding(.horizontal, theme.space.screenPadding).padding(.top, 12)
             ScrollView {
                 VStack(alignment: .leading, spacing: theme.space.cardGap) {
                     if let error { FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle") }
                     if settings == nil {
                         if error == nil { ProgressView() }
-                        else { FFButton(title: String(localized: "Retry"), kind: .secondary) { Task { await load() } } }
+                        else { FFButton(title: String(appLocalized: "Retry"), kind: .secondary) { Task { await load() } } }
                     } else {
                         FFCard {
                             VStack(alignment: .leading, spacing: 16) {
-                                TextField(String(localized: "Display name"), text: $displayName).textContentType(.name)
-                                TextField(String(localized: "Username"), text: $handle)
+                                TextField(String(appLocalized: "Display name"), text: $displayName).textContentType(.name)
+                                TextField(String(appLocalized: "Username"), text: $handle)
                                     .textInputAutocapitalization(.never).autocorrectionDisabled().textContentType(.username)
                                 PhotosPicker(selection: $pickerItem, matching: .images) {
-                                    Text(String(localized: "Change profile photo"))
+                                    Text(String(appLocalized: "Change profile photo"))
                                 }.frame(minHeight: 44)
-                                Button(String(localized: "Choose your companion")) { showingCompanions = true }.frame(minHeight: 44)
+                                Button(String(appLocalized: "Choose your companion")) { showingCompanions = true }.frame(minHeight: 44)
                                 FFDivider()
                                 FitFightTimeZonePicker(selection: $timeZone)
-                                Text(String(localized: "Your daily Steps and new Fights use this time zone, even when you travel."))
+                                Text(String(appLocalized: "Your daily Steps and new Fights use this time zone, even when you travel."))
                                     .ffType(.caption).foregroundStyle(theme.textSecondary)
                             }.ffType(.body)
                         }
-                        FFSection(title: String(localized: "Profile visibility")) {
+                        FFSection(title: String(appLocalized: "Profile visibility")) {
                             FFCard {
                                 VStack(alignment: .leading, spacing: 16) {
-                                    Toggle(String(localized: "Competitive"), isOn: Binding(
+                                    Toggle(String(appLocalized: "Competitive"), isOn: Binding(
                                         get: { settings?.competitive == true },
                                         set: { settings?.competitive = $0 }
                                     ))
-                                    Text(String(localized: "Show your competitive record and rivalry scores. Turning this off never erases results."))
+                                    Text(String(appLocalized: "Show your competitive record and rivalry scores. Turning this off never erases results."))
                                         .ffType(.caption).foregroundStyle(theme.textSecondary)
-                                    Toggle(String(localized: "Public profile"), isOn: Binding(
+                                    Toggle(String(appLocalized: "Public profile"), isOn: Binding(
                                         get: { settings?.audience == "public" },
                                         set: {
                                             settings?.audience = $0 ? "public" : "private"
                                             if !$0 && settings?.activityAudience == "public" { settings?.activityAudience = "off" }
                                         }
                                     ))
-                                    Text(String(localized: "Public means all signed-in FitFight users. Private means friends and current opponents. Your name and companion remain identifiable."))
+                                    Text(String(appLocalized: "Public means all signed-in FitFight users. Private means friends and current opponents. Your name and companion remain identifiable."))
                                         .ffType(.caption).foregroundStyle(theme.textSecondary)
                                 }.ffType(.body).tint(theme.mossFill)
                             }
                         }
-                        FFSection(title: String(localized: "Share Steps history")) {
+                        FFSection(title: String(appLocalized: "Share Steps history")) {
                             FFCard {
                                 VStack(alignment: .leading, spacing: 12) {
-                                    Text(String(localized: "Optional. Choose who can see your stored daily Steps and for how long. Fight participation shares its own results separately."))
+                                    Text(String(appLocalized: "Optional. Choose who can see your stored daily Steps and for how long. Fight participation shares its own results separately."))
                                         .ffType(.caption).foregroundStyle(theme.textSecondary)
-                                    Text(String(localized: "This also shares step records, averages, activity levels and streaks for that period. Your full recorded history stays private."))
+                                    Text(String(appLocalized: "This also shares step records, averages, activity levels and streaks for that period. Your full recorded history stays private."))
                                         .ffType(.caption).foregroundStyle(theme.textSecondary)
-                                    Picker(String(localized: "Audience"), selection: Binding(
+                                    Picker(String(appLocalized: "Audience"), selection: Binding(
                                         get: { settings?.activityAudience ?? "off" }, set: { settings?.activityAudience = $0 }
                                     )) {
-                                        Text(String(localized: "Off")).tag("off")
-                                        Text(String(localized: "Friends")).tag("friends")
-                                        Text(String(localized: "Friends and current opponents")).tag("opponents")
-                                        if settings?.audience == "public" { Text(String(localized: "All signed-in users")).tag("public") }
+                                        Text(String(appLocalized: "Off")).tag("off")
+                                        Text(String(appLocalized: "Friends")).tag("friends")
+                                        Text(String(appLocalized: "Friends and current opponents")).tag("opponents")
+                                        if settings?.audience == "public" { Text(String(appLocalized: "All signed-in users")).tag("public") }
                                     }
-                                    Picker(String(localized: "Period"), selection: Binding(
+                                    Picker(String(appLocalized: "Period"), selection: Binding(
                                         get: { settings?.activityDays ?? 7 }, set: { settings?.activityDays = $0 }
                                     )) {
-                                        Text(String(localized: "7 days")).tag(7)
-                                        Text(String(localized: "30 days")).tag(30)
+                                        Text(String(appLocalized: "7 days")).tag(7)
+                                        Text(String(appLocalized: "30 days")).tag(30)
                                     }.pickerStyle(.segmented)
                                 }.ffType(.body)
                             }
                         }
-                        FFButton(title: String(localized: "Save"), busy: saving, fullWidth: true) { Task { await save(close: true) } }
+                        FFButton(title: String(appLocalized: "Save"), busy: saving, fullWidth: true) { Task { await save(close: true) } }
                         FFCard {
                             VStack(alignment: .leading, spacing: 12) {
-                                Picker(String(localized: "Preview audience"), selection: $previewAudience) {
-                                    Text(String(localized: "Friend")).tag("friend")
-                                    Text(String(localized: "Current opponent")).tag("opponent")
-                                    Text(String(localized: "Past opponent")).tag("past_opponent")
-                                    Text(String(localized: "Other signed-in user")).tag("stranger")
+                                Picker(String(appLocalized: "Preview audience"), selection: $previewAudience) {
+                                    Text(String(appLocalized: "Friend")).tag("friend")
+                                    Text(String(appLocalized: "Current opponent")).tag("opponent")
+                                    Text(String(appLocalized: "Past opponent")).tag("past_opponent")
+                                    Text(String(appLocalized: "Other signed-in user")).tag("stranger")
                                 }.ffType(.body)
-                                FFButton(title: String(localized: "Save and preview"), kind: .secondary, busy: saving) {
+                                FFButton(title: String(appLocalized: "Save and preview"), kind: .secondary, busy: saving) {
                                     Task { if await save(close: false) { showingPreview = true } }
                                 }
                             }
@@ -170,7 +167,7 @@ struct EditProfileView: View {
         defer { saving = false; pickerItem = nil }
         do {
             guard let data = try await item.loadTransferable(type: Data.self), let image = UIImage(data: data) else {
-                error = String(localized: "That photo could not be read.")
+                error = String(appLocalized: "That photo could not be read.")
                 return
             }
             let media = try await MediaUploader.upload(image, purpose: "profile", session: session)

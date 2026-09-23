@@ -125,10 +125,34 @@ struct FFEyebrow: View {
     }
 }
 
+/// A sheet's title with a trailing Close. Callers own the padding.
+struct FFSheetHeader: View {
+    let title: String
+    var role: TypeRole = .title
+    let onClose: () -> Void
+
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        HStack {
+            Text(title)
+                .ffType(role)
+                .foregroundStyle(theme.text)
+                .accessibilityAddTraits(.isHeader)
+            Spacer()
+            Button(String(appLocalized: "Close"), action: onClose)
+                .ffType(.label)
+                .foregroundStyle(theme.mossText)
+                .frame(minWidth: 44, minHeight: 44)
+                .buttonStyle(FFHapticPlainStyle())
+        }
+    }
+}
+
 // MARK: - Buttons
 
 enum FFButtonKind {
-    case primary, ember, secondary, outline, ghost
+    case primary, ember, secondary, ghost
 }
 
 enum FFButtonSize {
@@ -190,7 +214,6 @@ struct FFButton: View {
         case .primary: return theme.mossOn
         case .ember: return theme.emberOn
         case .secondary: return theme.text
-        case .outline: return theme.mossText
         case .ghost: return theme.textSecondary
         }
     }
@@ -201,7 +224,7 @@ struct FFButton: View {
         case .primary: return theme.mossFill
         case .ember: return theme.emberFill
         case .secondary: return theme.control
-        case .outline, .ghost: return .clear
+        case .ghost: return .clear
         }
     }
 
@@ -209,37 +232,34 @@ struct FFButton: View {
         guard enabled else { return theme.disabledLine }
         switch kind {
         case .secondary: return theme.line
-        case .outline: return theme.mossText.opacity(0.35)
         default: return nil
         }
     }
 }
 
-/// 44pt circle, control fill, hairline. The plain icon affordance.
-struct FFIconButton: View {
-    let systemName: String
-    var size: CGFloat = 44
+/// The 36pt moss plus that opens a composer from a screen header.
+struct FFComposeButton: View {
+    let label: String
     let action: () -> Void
 
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: size * 0.41, weight: .bold))
-                .foregroundStyle(theme.text)
-                .frame(width: size, height: size)
-                .background(theme.control, in: Circle())
-                .overlay { Circle().strokeBorder(theme.line, lineWidth: 1) }
+            Image(systemName: "plus")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(theme.mossOn)
+                .frame(width: 36, height: 36)
+                .background(theme.mossFill, in: Circle())
         }
-        .buttonStyle(FFPressStyle())
+        .buttonStyle(FFHapticPlainStyle())
+        .accessibilityLabel(label)
     }
 }
 
 /// The full-width tap action. Sliding confirmation uses `FFSlideToConfirm`.
 struct FFScreenCTA: View {
     let title: String
-    var kind: FFButtonKind = .primary
     var enabled: Bool = true
     var busy: Bool = false
     let action: () -> Void
@@ -247,7 +267,6 @@ struct FFScreenCTA: View {
     var body: some View {
         FFButton(
             title: title,
-            kind: kind,
             size: .large,
             enabled: enabled,
             busy: busy,
@@ -389,47 +408,6 @@ struct FFSlideToConfirm: View {
         withAnimation(.timingCurve(0.16, 1, 0.3, 1, duration: 0.22)) {
             drag = 0
         }
-    }
-}
-
-/// Dashed affordance — empty slots and "start something" rows.
-struct FFAddRow: View {
-    let title: String
-    var subtitle: String?
-    let action: () -> Void
-
-    @Environment(\.ffTheme) private var theme
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 13) {
-                Image(systemName: "plus")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(theme.mossText)
-                    .frame(width: 38, height: 38)
-                    .background(theme.mossFill.opacity(0.24), in: Circle())
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .ffType(.rowTitle)
-                        .foregroundStyle(theme.text)
-                    if let subtitle {
-                        Text(subtitle)
-                            .ffType(.caption)
-                            .foregroundStyle(theme.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 15)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background {
-                RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous)
-                    .strokeBorder(theme.dash, style: StrokeStyle(lineWidth: 2, dash: [6, 5]))
-            }
-        }
-        .buttonStyle(FFPressStyle())
     }
 }
 
@@ -578,8 +556,6 @@ struct FFAvatar: View {
     let monogram: String
     var size: CGFloat = 44
     var selected: Bool = false
-    /// Asset name, cut from the design mocks. Falls back to the monogram.
-    var photo: String?
     var photoURL: URL?
     var dimmed: Bool = false
 
@@ -606,11 +582,6 @@ struct FFAvatar: View {
             RemotePhoto(url: photoURL, kind: .avatar) {
                 monogramLabel
             }
-        } else if let photo, UIImage(named: photo) != nil {
-            Image(photo)
-                .resizable()
-                .interpolation(.high)
-                .scaledToFill()
         } else {
             monogramLabel
         }
@@ -634,56 +605,6 @@ struct FFAvatar: View {
     }
 }
 
-/// Overlapping faces with a ring in the background colour, then an overflow chip.
-struct FFAvatarStack: View {
-    let faces: [(monogram: String, photoURL: URL?)]
-    var visible: Int = 3
-    var size: CGFloat = 36
-    var ring: Color?
-
-    @Environment(\.ffTheme) private var theme
-
-    init(monograms: [String], visible: Int = 3, size: CGFloat = 36, ring: Color? = nil) {
-        self.init(
-            faces: monograms.map { (monogram: $0, photoURL: nil) },
-            visible: visible,
-            size: size,
-            ring: ring
-        )
-    }
-
-    init(faces: [(monogram: String, photoURL: URL?)], visible: Int = 3, size: CGFloat = 36, ring: Color? = nil) {
-        self.faces = faces
-        self.visible = visible
-        self.size = size
-        self.ring = ring
-    }
-
-    var body: some View {
-        let shown = Array(faces.prefix(visible))
-        let overflow = faces.count - shown.count
-        HStack(spacing: -12) {
-            ForEach(Array(shown.enumerated()), id: \.offset) { offset, face in
-                FFAvatar(monogram: face.monogram, size: size, photoURL: face.photoURL)
-                    .overlay { Circle().strokeBorder(ring ?? theme.bg, lineWidth: 2) }
-                    .zIndex(Double(shown.count - offset))
-            }
-            if overflow > 0 {
-                plate("+\(overflow)", fill: theme.chip, ink: theme.textTertiary, size: 11)
-            }
-        }
-    }
-
-    private func plate(_ text: String, fill: Color, ink: Color, size fontSize: CGFloat) -> some View {
-        Text(text)
-            .font(.ff(fontSize, 800))
-            .foregroundStyle(ink)
-            .frame(width: size, height: size)
-            .background(fill, in: Circle())
-            .overlay { Circle().strokeBorder(ring ?? theme.bg, lineWidth: 2) }
-    }
-}
-
 // MARK: - Cards
 
 /// Every card, row, panel, notice and tile: card fill, hairline, 22pt radius.
@@ -704,156 +625,16 @@ struct FFCard<Content: View>: View {
     }
 }
 
-/// Hero — moss fill, one per screen. The only card that is not ink.
-struct FFHeroCard: View {
-    let eyebrow: String
-    let tag: String
-    let title: String
-    let metric: String
-    let caption: String
-    var monogram: String?
-    var progress: Double?
-
-    @Environment(\.ffTheme) private var theme
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 10) {
-                Text(eyebrow)
-                    .font(.ff(12, 800))
-                    .tracking(12 * 0.1)
-                    .textCase(.uppercase)
-                    .foregroundStyle(theme.mossSoft)
-                Spacer(minLength: 0)
-                Text(tag)
-                    .ffType(.micro)
-                    .fontWeight(.heavy)
-                    .foregroundStyle(theme.mossOn)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(theme.heroTagFill, in: Capsule())
-            }
-            Text(title)
-                .font(.ff(21, 800))
-                .tracking(21 * -0.015)
-                .foregroundStyle(theme.mossOn)
-                .padding(.top, 9)
-            HStack(alignment: .bottom, spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(metric)
-                        .ffType(.metric)
-                        .foregroundStyle(theme.mossOn)
-                    Text(caption)
-                        .ffType(.caption)
-                        .foregroundStyle(theme.mossSoft)
-                }
-                Spacer(minLength: 0)
-                if let monogram {
-                    Text(monogram)
-                        .font(.ff(16, 800))
-                        .foregroundStyle(theme.mossOn)
-                        .frame(width: 52, height: 52)
-                        .background(theme.heroAvatarPlate, in: Circle())
-                        .overlay { Circle().strokeBorder(theme.heroAvatarLine, lineWidth: 3) }
-                }
-            }
-            .padding(.top, 14)
-            if let progress {
-                FFProgressBar(value: progress, height: 10, fill: theme.gold, track: theme.heroProgressTrack)
-                    .padding(.top, 14)
-            }
-        }
-        .padding(.horizontal, 19)
-        .padding(.top, 17)
-        .padding(.bottom, 18)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(theme.mossFill, in: RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
-    }
-}
-
-/// Stat tile — designed for a grid of two.
-struct FFStatTile: View {
-    let tag: String
-    var tone: FFTone = .moss
-    var note: String?
-    let title: String
-    let metric: String
-    let caption: String
-    var progress: Double?
-
-    @Environment(\.ffTheme) private var theme
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                FFTag(tag, tone: tone)
-                Spacer(minLength: 0)
-                if let note {
-                    Text(note)
-                        .ffType(.micro)
-                        .fontWeight(.heavy)
-                        .foregroundStyle(toneInk)
-                }
-            }
-            Text(title)
-                .ffType(.rowTitle)
-                .foregroundStyle(theme.text)
-                .padding(.top, 9)
-            Text(metric)
-                .font(.ff(26, 800))
-                .tracking(26 * -0.03)
-                .foregroundStyle(theme.text)
-                .padding(.top, 8)
-            Text(caption)
-                .ffType(.micro)
-                .foregroundStyle(theme.textSecondary)
-                .padding(.top, 3)
-            if let progress {
-                FFProgressBar(value: progress, height: 7, fill: toneFill, track: theme.track)
-                    .padding(.top, 10)
-            }
-        }
-        .padding(.horizontal, 15)
-        .padding(.top, 14)
-        .padding(.bottom, 15)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
-        .ffBorder(theme.hairline, radius: theme.radius.card)
-    }
-
-    private var toneInk: Color {
-        switch tone {
-        case .moss: return theme.mossText
-        case .ember: return theme.emberText
-        case .gold: return theme.gold
-        case .neutral: return theme.textSecondary
-        }
-    }
-
-    private var toneFill: Color {
-        switch tone {
-        case .moss: return theme.mossFill
-        case .ember: return theme.emberFill
-        case .gold: return theme.gold
-        case .neutral: return theme.textTertiary
-        }
-    }
-}
-
-/// List row — avatar, two lines, right-aligned metric and delta. Selected gets the
-/// moss wash and a moss edge.
+/// List row: avatar, two lines, right-aligned metric.
 struct FFListRow: View {
     let monogram: String
     let title: String
     let subtitle: String
     let metric: String
-    var delta: String?
     var ahead: Bool = true
     /// When the metric is itself the gap, it carries the moss or ember of `ahead`
     /// instead of the neutral ink the kit gives a plain total.
     var metricIsGap: Bool = false
-    var selected: Bool = false
-    var photoURL: URL? = nil
     var avatar: AnyView? = nil
     var action: (() -> Void)?
 
@@ -861,7 +642,7 @@ struct FFListRow: View {
 
     var body: some View {
         let row = HStack(spacing: 13) {
-            if let avatar { avatar } else { FFAvatar(monogram: monogram, size: 44, photoURL: photoURL) }
+            if let avatar { avatar } else { FFAvatar(monogram: monogram, size: 44) }
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .ffType(.heading)
@@ -877,14 +658,8 @@ struct FFListRow: View {
                     .tracking(18 * -0.02)
                     .foregroundStyle(metricIsGap ? (ahead ? theme.mossText : theme.emberText) : theme.text)
                 if metricIsGap {
-                    Text(ahead ? String(localized: "steps ahead") : String(localized: "steps behind"))
+                    Text(ahead ? String(appLocalized: "steps ahead") : String(appLocalized: "steps behind"))
                         .ffType(.micro)
-                        .foregroundStyle(ahead ? theme.mossText : theme.emberText)
-                }
-                if let delta {
-                    Text(delta)
-                        .ffType(.caption)
-                        .fontWeight(.heavy)
                         .foregroundStyle(ahead ? theme.mossText : theme.emberText)
                 }
             }
@@ -892,11 +667,8 @@ struct FFListRow: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            selected ? theme.mossWash : theme.card,
-            in: RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous)
-        )
-        .ffBorder(selected ? theme.mossEdge : theme.hairline, radius: theme.radius.card)
+        .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
+        .ffBorder(theme.hairline, radius: theme.radius.card)
 
         if let action {
             Button(action: action) { row }.buttonStyle(FFPressStyle())
@@ -906,7 +678,7 @@ struct FFListRow: View {
     }
 }
 
-/// Notice — a wash panel. Ember for urgency, moss for a win.
+/// Notice: a wash panel. Ember for urgency, moss for a win, neutral for plain information.
 struct FFNotice: View {
     let text: String
     var tone: FFTone = .ember
@@ -942,13 +714,36 @@ struct FFNotice: View {
         .ffBorder(edge, radius: theme.radius.card)
     }
 
-    private var wash: Color { tone == .moss ? theme.mossWash : theme.emberWash }
-    private var edge: Color {
-        (tone == .moss ? theme.mossText : theme.emberText).opacity(tone == .moss ? 0.18 : 0.22)
+    private var wash: Color {
+        switch tone {
+        case .moss: return theme.mossWash
+        case .neutral: return theme.card
+        case .ember, .gold: return theme.emberWash
+        }
     }
-    private var ink: Color { tone == .moss ? theme.mossText : theme.emberText }
+
+    private var edge: Color {
+        switch tone {
+        case .moss: return theme.mossText.opacity(0.18)
+        case .neutral: return theme.hairline
+        case .ember, .gold: return theme.emberText.opacity(0.22)
+        }
+    }
+
+    private var ink: Color {
+        switch tone {
+        case .moss: return theme.mossText
+        case .neutral: return theme.textSecondary
+        case .ember, .gold: return theme.emberText
+        }
+    }
+
     private var fillStrong: Color {
-        (tone == .moss ? theme.mossFill : theme.emberFill).opacity(0.30)
+        switch tone {
+        case .moss: return theme.mossFill.opacity(0.30)
+        case .neutral: return theme.chip
+        case .ember, .gold: return theme.emberFill.opacity(0.30)
+        }
     }
 }
 
@@ -1031,31 +826,19 @@ struct FFGroupedRow: View {
     }
 }
 
-extension View {
-    /// A selected row inside a grouped card gets a fill concentric with the card:
-    /// inner radius = outer radius - inset.
-    func ffRowSelection(
-        _ on: Bool,
-        outerRadius: CGFloat,
-        inset: CGFloat = 5,
-        fill: Color
-    ) -> some View {
-        background {
-            if on {
-                RoundedRectangle(
-                    cornerRadius: max(0, outerRadius - inset),
-                    style: .continuous
-                )
-                    .fill(fill)
-                    .padding(.horizontal, inset)
-            }
-        }
+/// The disclosure chevron for rows that open another screen.
+struct FFChevron: View {
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        Image(systemName: "chevron.right")
+            .font(.system(size: 12, weight: .bold))
+            .foregroundStyle(theme.textFaint)
     }
 }
 
 struct FFDivider: View {
     var inset: CGFloat = 16
-    var visible = true
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
@@ -1063,57 +846,5 @@ struct FFDivider: View {
             .fill(theme.hairline)
             .frame(height: 1)
             .padding(.horizontal, inset)
-            // Keep the one-point slot so selecting a row never shifts the form.
-            .opacity(visible ? 1 : 0)
-    }
-}
-
-/// Ring card — progress as a dial, when the number matters more than the trend.
-struct FFRingCard: View {
-    let progress: Double
-    let title: String
-    let subtitle: String
-    let metric: String
-    var delta: String?
-    var ahead: Bool = true
-
-    @Environment(\.ffTheme) private var theme
-
-    var body: some View {
-        HStack(spacing: 16) {
-            FFRing(value: progress, size: 76, lineWidth: 9) {
-                Text("\(Int(progress * 100))%")
-                    .font(.ff(15, 800))
-                    .tracking(15 * -0.02)
-                    .foregroundStyle(theme.text)
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.ff(17, 800))
-                    .tracking(17 * -0.015)
-                    .foregroundStyle(theme.text)
-                Text(subtitle)
-                    .ffType(.caption)
-                    .foregroundStyle(theme.textSecondary)
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(metric)
-                        .font(.ff(22, 800))
-                        .tracking(22 * -0.025)
-                        .foregroundStyle(theme.text)
-                    if let delta {
-                        Text(delta)
-                            .ffType(.caption)
-                            .fontWeight(.heavy)
-                            .foregroundStyle(ahead ? theme.mossText : theme.emberText)
-                    }
-                }
-                .padding(.top, 6)
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 16)
-        .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
-        .ffBorder(theme.hairline, radius: theme.radius.card)
     }
 }

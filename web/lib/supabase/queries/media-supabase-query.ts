@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import {
     mediaObjectSchema,
+    type AvatarMediaColumns,
     type CreateMediaUploadRequest,
     type MediaObject,
     type MediaUploadResponse,
@@ -55,7 +56,7 @@ export type MediaRow = {
     created_at: Date | string;
 };
 
-function isoUtc(value: Date | string): string {
+export function isoUtc(value: Date | string): string {
     return new Date(value).toISOString().replace(/\.\d{3}Z$/, "Z");
 }
 
@@ -75,6 +76,48 @@ export function mapMedia(row: MediaRow, url: string | null): MediaObject {
         url,
         created_at: isoUtc(row.created_at),
     });
+}
+
+export function mapAvatar(
+    row: AvatarMediaColumns,
+    ownerId: string,
+    urls: Map<string, string | null>,
+): MediaObject | null {
+    if (
+        !row.avatar_id ||
+        !row.avatar_kind ||
+        !row.avatar_purpose ||
+        !row.avatar_status ||
+        !row.avatar_object_path ||
+        !row.avatar_original_filename ||
+        !row.avatar_content_type ||
+        row.avatar_byte_size === null ||
+        row.avatar_width === null ||
+        row.avatar_height === null ||
+        !row.avatar_sha256 ||
+        !row.avatar_created_at
+    ) {
+        return null;
+    }
+    return mapMedia(
+        {
+            id: row.avatar_id,
+            owner_id: ownerId,
+            kind: row.avatar_kind,
+            purpose: row.avatar_purpose,
+            status: row.avatar_status,
+            object_path: row.avatar_object_path,
+            original_filename: row.avatar_original_filename,
+            content_type: row.avatar_content_type,
+            byte_size: row.avatar_byte_size,
+            width: row.avatar_width,
+            height: row.avatar_height,
+            duration_ms: row.avatar_duration_ms,
+            sha256: row.avatar_sha256,
+            created_at: row.avatar_created_at,
+        },
+        urls.get(row.avatar_object_path) ?? null,
+    );
 }
 
 export async function signMediaUrls(

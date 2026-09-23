@@ -13,21 +13,21 @@ struct SuggestedFightsOnboardingView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: theme.space.cardGap) {
-                Text(String(localized: "Suggested Fights")).ffType(.title)
-                Text(String(localized: "Join a public Fight if you like. Nothing is joined automatically, and your profile settings stay yours."))
+                Text(String(appLocalized: "Suggested Fights")).ffType(.title)
+                Text(String(appLocalized: "Join a public Fight if you like. Nothing is joined automatically, and your profile settings stay yours."))
                     .ffType(.body).foregroundStyle(theme.textSecondary)
                 if loading { ProgressView().frame(maxWidth: .infinity) }
                 if let error {
                     FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
-                    FFButton(title: String(localized: "Retry"), kind: .secondary) { Task { await load() } }
+                    FFButton(title: String(appLocalized: "Retry"), kind: .secondary) { Task { await load() } }
                 }
                 ForEach(fights) { fight in
                     SuggestedFightOffer(fight: fight, joining: joining == fight.id) { Task { await join(fight) } }
                         .disabled(joining != nil)
                 }
-                FFButton(title: String(localized: "Continue"), fullWidth: true) { finish() }
+                FFButton(title: String(appLocalized: "Continue"), fullWidth: true) { finish() }
                     .disabled(joining != nil)
-                FFButton(title: String(localized: "Skip"), kind: .ghost, fullWidth: true) { finish() }
+                FFButton(title: String(appLocalized: "Skip"), kind: .ghost, fullWidth: true) { finish() }
                     .disabled(joining != nil)
             }.padding(theme.space.screenPadding)
         }.foregroundStyle(theme.text).background(theme.bg.ignoresSafeArea())
@@ -88,22 +88,22 @@ struct SuggestedFightOffer: View {
         FFCard {
             VStack(alignment: .leading, spacing: 12) {
                 Text(verbatim: Fight.displayTitle(name: fight.name, actionText: fight.actionText)).ffType(.heading)
-                Text(String(format: String(localized: "suggested.participants"), fight.memberCount))
+                Text(String(format: String(appLocalized: "suggested.participants"), fight.memberCount))
                     .ffType(.caption).foregroundStyle(theme.textSecondary)
-                Text(String(localized: "Steps. Highest total wins." )).ffType(.body)
-                if let start = FightRow.parse(fight.startsAt), let end = FightRow.parse(fight.endsAt) {
+                Text(String(appLocalized: "Steps. Highest total wins." )).ffType(.body)
+                if let start = parseServerDate(fight.startsAt), let end = parseServerDate(fight.endsAt) {
                     (Text(start, format: .dateTime.day().month().hour().minute()) + Text(verbatim: " → ") + Text(end, format: .dateTime.day().month().hour().minute()))
                         .ffType(.caption).foregroundStyle(theme.textSecondary)
                 }
                 if fight.recurring {
-                    Text(String(localized: "Repeats until you leave. Each round has its own result."))
+                    Text(String(appLocalized: "Repeats until you leave. Each round has its own result."))
                         .ffType(.caption).foregroundStyle(theme.textSecondary)
                 }
                 if let action = fight.actionText, !action.isEmpty { Text(verbatim: action).ffType(.body) }
-                Text(String(localized: "Participants see your identity, Fight Steps, standings, and posts you share in this Fight. Joining does not enable profile or daily-history sharing."))
+                Text(String(appLocalized: "Participants see your identity, Fight Steps, standings, and posts you share in this Fight. Joining does not enable profile or daily-history sharing."))
                     .ffType(.caption).foregroundStyle(theme.textSecondary)
                 FFButton(
-                    title: fight.hasJoined ? String(localized: "Joined") : String(localized: "Join"),
+                    title: fight.hasJoined ? String(appLocalized: "Joined") : String(appLocalized: "Join"),
                     kind: fight.hasJoined ? .secondary : .primary,
                     enabled: !fight.hasJoined, busy: joining, fullWidth: true, action: onJoin
                 )

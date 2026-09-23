@@ -18,9 +18,9 @@ snapshot = (root / "FitFight/FightSnapshot.swift").read_text()
 checkpoint = snapshot[snapshot.index("struct FightStepCheckpoint:"):snapshot.index("struct FitFightSnapshot:")]
 models = charts[charts.index("private struct FightDayChartSeries:"):charts.index("private func fightDayTickIndices(")]
 day_cards = app[app.index("    private static func dayCards("):app.index("    private static func person(from profile:")]
-ordering = app[app.index("    private static func orderedStandings("):app.index("\n}\n\nenum LiveFightError")]
+ordering = app[app.index("    private static func orderedStandings("):app.index("\n}\n\nprivate func localizedDuration(")]
 read = health[health.index("    static func read("):health.index("    private static func dailyTotals(")]
-date_helpers = health[health.index("    private static func dayStamp("):health.rindex("\n}")]
+date_helpers = health[health.index("    static func dayStamp("):health.rindex("\n}")]
 api_models = api[api.index("struct FitFightHealthKitContext:"):api.index("struct FitFightHealthKitStepSyncResult:")]
 
 sources = {
@@ -43,5 +43,5 @@ else:
             generated = Path(directory) / f"{name}.swift"
             executable = Path(directory) / name
             generated.write_text(source)
-            subprocess.run(["swiftc", "-swift-version", "5", "-parse-as-library", str(generated), "-o", str(executable)], check=True)
+            subprocess.run(["swiftc", "-swift-version", "5", "-parse-as-library", str(root / "FitFight/AppLocalization.swift"), str(generated), "-o", str(executable)], check=True)
             subprocess.run([str(executable)], check=True, timeout=20)

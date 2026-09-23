@@ -8,6 +8,47 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Last documented TestFlight upload:** 19 Sep 2026 at 13:14 UTC. **1.1.2 (204)** from preview merge `c80e642`, including develop `f206592`. [Upload and Apple processing succeeded](https://github.com/slooowshutter/FitFight/actions/runs/35444706489): `VALID`, unexpired, available to Internal Tester. This upload did not submit or assign external groups. The published release registry then listed `latest` 1.1.1 (201) and `review`/`internal` 1.1.2 (204). At the 13:18 UTC recheck on 19 Sep, staging's live release endpoint still returned candidate 203 with enforcement off; its metadata propagation did not block internal build 204. Production remained 1.1.1 (202). See the 23 Sep live policy check below for current advertised builds.
 
+## Apple Health activity pipeline: prepared 23 Sep 2026
+
+**Code and affected contract:** The branch `explain-activity-sync-tables` adds
+`private.activity_raw` for received Apple-merged daily and exact Fight totals,
+workout summaries, and explicit workout deletions. A bounded TypeScript resolver
+publishes `private.activity_metrics`, Fight scores/charts, and the legacy Steps
+mirror. Personal history can be corrected; finalized Fight results stay frozen.
+The phone keeps individual HealthKit samples and local anchors, registers all
+supported types for background observation, imports accessible history in
+acknowledged pages, and reports partial activity failure after a successful
+Steps upload. The new `POST /api/v1/healthkit/activity` is additive. Existing
+`POST /api/v1/healthkit/steps` requests and decoded response fields remain valid;
+its optional `processing` response field is ignored by older Swift decoders.
+
+**Supported builds checked:** Read-only `/api/app-release` checks on 23 Sep UTC
+returned staging `latest` **1.1.1 (201)**, `review`/`internal` **1.1.2 (205)**,
+`enforced: false`; production `latest` **1.1.1 (202)**, no review/internal build,
+`enforced: true`. Legacy builds also remain relevant on staging while enforcement
+is off. Disposable database regressions exercise old Steps uploads and direct
+Steps readers as well as new activity requests. This is source-level evidence,
+not a released-binary or signed-in device check for build 205.
+
+**Cloud checks:** [Web API](https://github.com/slooowshutter/FitFight/actions/runs/35872572242)
+and [disposable Database](https://github.com/slooowshutter/FitFight/actions/runs/35872572227)
+passed after the backend fixes. [Web API after the English/French privacy edits](https://github.com/slooowshutter/FitFight/actions/runs/35873902894)
+passed. The [hosted simulator run](https://github.com/slooowshutter/FitFight/actions/runs/35874769562)
+is queued for native compilation and regressions. Background delivery, initial
+history duration, and corrections from a real HealthKit store remain device
+checks. No individual user data was used in CI.
+
+**Deployment order and live state:** Apply the additive migration and backfill,
+then deploy the compatible backend and English/French privacy pages before a new
+native build reaches staging TestFlight. Keep `/api/v1`, the old tables, and old
+client behavior during overlap. None of those steps has happened from this
+branch: no merge, hosted migration, backend/privacy deployment, TestFlight upload,
+production promotion, or PR. A later authorized rollout must check both
+staging and production separately. Local sample-change detection starts at
+bootstrap minus 40 days; earlier late changes and temporary HealthKit workout
+deletion history remain known limits. The daily worker resumes persisted rows
+until a more frequent hosted cron is activated.
+
 ## Fight creation transaction: reviewed 23 Sep 2026
 
 **Code and contract:** `POST /api/v1/fights` still accepts the existing create request, including omitted `start`, `visibility`, and `recurring` fields, and returns the existing `{ id, state }` response. The backend now resolves and deduplicates invitees before writing, then inserts the series, round, owner and invited memberships, invite records, and notification intents in one Postgres transaction. The route, request schema, response shape, tables, and client permissions are unchanged. This backend change needs no database migration or native API update; it does not authorize retiring older clients.

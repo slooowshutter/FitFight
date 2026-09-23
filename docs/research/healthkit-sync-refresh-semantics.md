@@ -42,8 +42,9 @@ sample deletions.
 The requested architecture has two shared activity stores:
 `private.activity_raw` for received provider records and changes, followed by
 `private.activity_metrics` for their normalized measurements. Workouts and Steps
-use this same path. The requirements below are agreed direction, not implemented
-behavior or authorization for a deployment or destructive migration.
+use this same path. The requirements below are the original design direction. The 23 Sep
+implementation decision above defines which records actually leave the phone.
+Neither document authorizes deployment or a destructive migration.
 
 - Register observation and background delivery for every supported HealthKit
   sample type FitFight reads, including workouts. Derived metrics such as weekly
@@ -97,8 +98,9 @@ the same resolver.
 | Data | Each foreground, manual, or background sync | Reason |
 | --- | --- | --- |
 | Merged totals: Fight Steps, chart checkpoints, daily totals | Statistics query from window start to the collection cutoff | A few values per window. Catches every change inside it, including source-priority changes that add or delete no record |
-| Records: workouts and quantity samples | Anchored query: additions and explicit deletions since the saved checkpoint | Saved samples are immutable, so rereading known records returns identical data |
-| First sync, reinstall, new device, lost checkpoint | Full anchored read of each type's authorized history, paged | Establishes the checkpoint |
+| Workouts | Anchored additions and explicit deletion UUIDs since the saved checkpoint | Workout summaries are records with stable IDs |
+| Quantity and category samples | Local anchored change query within the fixed recent predicate; send refreshed merged day totals only | Individual samples and sample deletion IDs stay on the phone |
+| First sync, reinstall, new device, lost checkpoint | Full accessible merged daily history and workout summaries, paged; local sample anchors use the fixed recent predicate | Establishes the checkpoint |
 
 - Totals: retain the exact start-to-cutoff merged Steps query for each active
   Fight. Store each reading as a labeled total with its window boundaries, time
@@ -212,9 +214,10 @@ history excluded by the query. [Anchored query][anchored], [initializer][initial
 
 Proposed refresh contract:
 
-1. Bootstrap each supported sample type across the explicitly retained and
-   authorized history. Page through the initial results and subsequent deltas
-   until caught up. A fixed result cap must not silently mean "complete."
+1. Bootstrap merged daily totals across accessible history and workouts through
+   an all-history anchor. Page through results until caught up. Quantity/category
+   change anchors use the fixed recent predicate; a fixed result cap must not
+   silently mean "complete."
 2. Keep a separate anchor for each account/environment, local HealthKit store
    generation, sample type, and query configuration. Treat anchors as opaque local
    cursors, not timestamps or a global server ordering. Rebootstrap when the

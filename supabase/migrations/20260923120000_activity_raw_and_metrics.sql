@@ -14,6 +14,7 @@ create table private.activity_raw (
     payload jsonb not null,
     payload_hash text not null,
     collected_at timestamptz not null,
+    received_at timestamptz not null default now(),
     processing_state text not null default 'pending',
     processing_version integer,
     processing_attempts integer not null default 0,
@@ -43,7 +44,7 @@ before update on private.activity_raw
 for each row execute function private.maintain_row_timestamps();
 
 create index activity_raw_unprocessed_idx
-    on private.activity_raw (user_id, created_at)
+    on private.activity_raw (user_id, received_at)
     where processing_state <> 'processed';
 create index activity_raw_user_idx on private.activity_raw (user_id);
 

@@ -44,5 +44,9 @@ struct NotificationOnboardingView: View {
             }
             .disabled(busy)
         }
+        .task {
+            await push.refreshAuthorizationStatus()
+            await push.registerIfAuthorized()
+        }
     }
 }

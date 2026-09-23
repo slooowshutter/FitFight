@@ -11,6 +11,4 @@ export const GET = apiRoute<{ code: string }>(async (request, { params }) => {
     return json(fight);
 });
 
-export function OPTIONS(request: Request) {
-    return corsPreflight(request);
-}
+export const OPTIONS = corsPreflight;

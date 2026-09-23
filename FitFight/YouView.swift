@@ -6,9 +6,7 @@ struct YouView: View {
     @EnvironmentObject private var themeStore: ThemeStore
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var steps: HealthKitStepsStore
-    @EnvironmentObject private var companions: CompanionStore
     @EnvironmentObject private var preferences: AccountPreferencesStore
-    @EnvironmentObject private var feed: FeedStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
     @Environment(\.scenePhase) private var scenePhase
@@ -134,9 +132,6 @@ struct YouView: View {
         }
         .sheet(isPresented: $showingOnboardingPreview) {
             OnboardingPreviewView()
-                .environmentObject(session)
-                .environmentObject(steps)
-                .environmentObject(themeStore)
                 .fitFightTheme(themeStore.theme)
                 .presentationBackground(themeStore.theme.bg)
         }
@@ -149,9 +144,6 @@ struct YouView: View {
             FeedComposeSheet(broadcastOnly: true) {
                 model.tab = .feed
             }
-            .environmentObject(model)
-            .environmentObject(session)
-            .environmentObject(feed)
             .fitFightTheme(themeStore.theme)
             .presentationBackground(themeStore.theme.bg)
         }
@@ -251,7 +243,7 @@ struct YouView: View {
         profileStore.clear()
         incomingFriends = 0
         guard !staticRender, let userID = session.authSession?.user.id else { return }
-        await profileStore.load(userID: userID, session: session)
+        await profileStore.load(userID: userID, session: session, includeHistory: false)
         do {
             let token = try await session.freshAccessToken()
             async let friendsRequest = FitFightAPI().profileFriends(kind: "incoming", accessToken: token)
@@ -407,11 +399,7 @@ struct YouView: View {
                 title: String(appLocalized: "Bugs & requests"),
                 subtitle: String(appLocalized: "Post a bug or a feature request. Other people can upvote and comment with their username."),
                 systemImage: "bubble.left.and.bubble.right",
-                trailing: AnyView(
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(theme.textFaint)
-                ),
+                trailing: AnyView(FFChevron()),
                 action: {
                     model.feedbackRequestFilter = RequestFilter()
                     model.tab = .feedback
@@ -457,11 +445,7 @@ struct YouView: View {
                 subtitle: String(appLocalized: "Health, challenge reminders, and Bugs & requests. Your account and fights stay."),
                 systemImage: "arrow.counterclockwise",
                 subtitleTone: .neutral,
-                trailing: AnyView(
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(theme.textFaint)
-                ),
+                trailing: AnyView(FFChevron()),
                 action: { showingOnboardingPreview = true }
             )
             FFDivider()
@@ -470,11 +454,7 @@ struct YouView: View {
                 subtitle: "Twenty Slide to start vibrations. This page is only on your account.",
                 systemImage: "iphone.radiowaves.left.and.right",
                 subtitleTone: .neutral,
-                trailing: AnyView(
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(theme.textFaint)
-                ),
+                trailing: AnyView(FFChevron()),
                 action: { showingSlideHapticsLab = true }
             )
             FFDivider()
@@ -483,11 +463,7 @@ struct YouView: View {
                 subtitle: String(appLocalized: "Write one post. Everyone signed in sees it on Feed."),
                 systemImage: "megaphone",
                 subtitleTone: .neutral,
-                trailing: AnyView(
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(theme.textFaint)
-                ),
+                trailing: AnyView(FFChevron()),
                 action: { showingBroadcastCompose = true }
             )
         }
@@ -529,9 +505,7 @@ struct YouView: View {
                 .ffType(.rowTitle)
                 .foregroundStyle(destructive ? theme.emberText : theme.text)
             Spacer()
-            Image(systemName: "chevron.right")
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(theme.textFaint)
+            FFChevron()
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)

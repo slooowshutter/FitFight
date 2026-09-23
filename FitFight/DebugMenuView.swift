@@ -40,9 +40,6 @@ struct DebugMenuView: View {
     private var menu: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                Text(AppVersion.label)
-                    .ffType(.caption)
-                    .foregroundStyle(theme.textSecondary)
                 FFSection(title: String(appLocalized: "Apple Health")) {
                     diagnostics
                 }
@@ -52,11 +49,7 @@ struct DebugMenuView: View {
                             title: String(appLocalized: "Design system"),
                             subtitle: String(appLocalized: "Internal kit. Not shown to other people."),
                             systemImage: "paintpalette",
-                            trailing: AnyView(
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundStyle(theme.textFaint)
-                            ),
+                            trailing: AnyView(FFChevron()),
                             action: { showDesign = true }
                         )
                     }

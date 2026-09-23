@@ -10,7 +10,6 @@ struct ContentView: View {
     @Environment(\.openURL) private var openURL
     @EnvironmentObject private var appUpdate: AppUpdateChecker
     @EnvironmentObject private var push: PushNotificationService
-    @EnvironmentObject private var steps: HealthKitStepsStore
     @EnvironmentObject private var companions: CompanionStore
     @Environment(\.colorScheme) private var colorScheme
 
@@ -27,8 +26,8 @@ struct ContentView: View {
         .onChange(of: colorScheme, initial: true) { _, scheme in
             themeStore.systemMode = scheme == .dark ? .night : .day
         }
-        .task(id: scenePhase) {
-            guard scenePhase == .active, !ScreenshotExport.isEnabled, !CompanionPreview.isEnabled else { return }
+        .task(id: scenePhase == .background) {
+            guard scenePhase != .background, !ScreenshotExport.isEnabled, !CompanionPreview.isEnabled else { return }
             await appUpdate.check()
             while !Task.isCancelled {
                 do { try await Task.sleep(for: .seconds(60)) } catch { return }
@@ -81,16 +80,12 @@ struct ContentView: View {
                 .presentationBackground(themeStore.theme.bg)
                 .interactiveDismissDisabled(session.needsCompanionSelection)
         }
-        .onChange(of: session.profile) { _, _ in
-            companions.apply(session.profile)
+        .onChange(of: session.profile, initial: true) { _, profile in
+            companions.apply(profile)
             Task { await companions.publishPending(session: session) }
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
-            companions.apply(session.profile)
-            Task { await companions.publishPending(session: session) }
-        }
-        .onAppear {
             companions.apply(session.profile)
             Task { await companions.publishPending(session: session) }
         }
@@ -114,8 +109,6 @@ struct ContentView: View {
         }
         .sheet(isPresented: $model.showingDebugMenu) {
             DebugMenuView()
-                .environmentObject(themeStore)
-                .environmentObject(steps)
                 .fitFightTheme(themeStore.theme)
                 .presentationBackground(themeStore.theme.bg)
         }
@@ -153,14 +146,14 @@ struct ContentView: View {
                         && !session.needsRequestsOnboarding
                         && !session.needsCompanionSelection
                 },
-                set: { if !$0 { push.declinePrePrompt() } }
+                set: { if !$0 { push.markPromptHandledThisSession() } }
             )
         ) {
             Button(String(appLocalized: "Allow notifications")) {
                 Task { await push.requestSystemPermission() }
             }
             Button(String(appLocalized: "Not now"), role: .cancel) {
-                push.declinePrePrompt()
+                push.markPromptHandledThisSession()
             }
         } message: {
             Text(String(appLocalized: "FitFight can remind you when a fight ends and when to sync your steps. Lock-screen alerts never show scores or fight titles."))

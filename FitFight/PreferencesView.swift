@@ -13,20 +13,9 @@ struct PreferencesView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text(String(appLocalized: "Preferences"))
-                    .ffType(.title)
-                    .foregroundStyle(theme.text)
-                    .accessibilityAddTraits(.isHeader)
-                Spacer()
-                Button(String(appLocalized: "Close")) { dismiss() }
-                    .ffType(.label)
-                    .foregroundStyle(theme.mossText)
-                    .frame(minWidth: 44, minHeight: 44)
-                    .buttonStyle(FFHapticPlainStyle())
-            }
-            .padding(.horizontal, theme.space.screenPadding)
-            .padding(.vertical, 12)
+            FFSheetHeader(title: String(appLocalized: "Preferences")) { dismiss() }
+                .padding(.horizontal, theme.space.screenPadding)
+                .padding(.vertical, 12)
 
             if staticRender {
                 Color.clear
@@ -145,20 +134,9 @@ struct PreferencesView: View {
 
     private var betaInfo: some View {
         VStack(spacing: 0) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(String(appLocalized: "Beta testing"))
-                    .ffType(.title)
-                    .foregroundStyle(theme.text)
-                    .accessibilityAddTraits(.isHeader)
-                Spacer()
-                Button(String(appLocalized: "Close")) { showingBeta = false }
-                    .ffType(.label)
-                    .foregroundStyle(theme.mossText)
-                    .frame(minWidth: 44, minHeight: 44)
-                    .buttonStyle(FFHapticPlainStyle())
-            }
-            .padding(.horizontal, theme.space.screenPadding)
-            .padding(.vertical, 12)
+            FFSheetHeader(title: String(appLocalized: "Beta testing")) { showingBeta = false }
+                .padding(.horizontal, theme.space.screenPadding)
+                .padding(.vertical, 12)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: theme.space.cardGap) {

@@ -156,7 +156,7 @@ struct SuggestedFightOffer: View {
                 Text(String(format: String(appLocalized: "suggested.participants"), fight.memberCount))
                     .ffType(.caption).foregroundStyle(theme.textSecondary)
                 Text(String(appLocalized: "Steps. Highest total wins.")).ffType(.body)
-                if let start = FightRow.parse(fight.startsAt), let end = FightRow.parse(fight.endsAt) {
+                if let start = parseServerDate(fight.startsAt), let end = parseServerDate(fight.endsAt) {
                     (Text(start, format: .dateTime.day().month().hour().minute()) + Text(verbatim: " → ") + Text(end, format: .dateTime.day().month().hour().minute()))
                         .ffType(.caption).foregroundStyle(theme.emberText)
                 }

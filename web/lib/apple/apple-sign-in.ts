@@ -1,10 +1,5 @@
-import {
-    createCipheriv,
-    createDecipheriv,
-    createPrivateKey,
-    randomBytes,
-    sign,
-} from "node:crypto";
+import { createPrivateKey, sign } from "node:crypto";
+import { openAes256Gcm, sealAes256Gcm } from "@/lib/crypto/aes-256-gcm";
 import { ApiError, ERROR_CODES } from "@/lib/http";
 import {
     appleIdentityTokenClaimsSchema,
@@ -39,20 +34,11 @@ export function encryptAppleRefreshToken(
     refreshToken: string,
 ): EncryptedAppleRefreshToken {
     const environment = appleSignInEnvironment();
-    const encryptionIv = randomBytes(12);
-    const cipher = createCipheriv(
-        "aes-256-gcm",
-        Buffer.from(environment.tokenEncryptionKey, "base64"),
-        encryptionIv,
-    );
-    const encrypted = Buffer.concat([
-        cipher.update(refreshToken, "utf8"),
-        cipher.final(),
-    ]);
+    const sealed = sealAes256Gcm(refreshToken, environment.tokenEncryptionKey);
     return {
-        encryptedRefreshToken: encrypted.toString("base64"),
-        encryptionIv: encryptionIv.toString("base64"),
-        encryptionTag: cipher.getAuthTag().toString("base64"),
+        encryptedRefreshToken: sealed.ciphertext,
+        encryptionIv: sealed.iv,
+        encryptionTag: sealed.tag,
     };
 }
 
@@ -61,16 +47,14 @@ export function decryptAppleRefreshToken(
 ): string {
     const environment = appleSignInEnvironment();
     try {
-        const decipher = createDecipheriv(
-            "aes-256-gcm",
-            Buffer.from(environment.tokenEncryptionKey, "base64"),
-            Buffer.from(token.encryptionIv, "base64"),
+        return openAes256Gcm(
+            {
+                ciphertext: token.encryptedRefreshToken,
+                iv: token.encryptionIv,
+                tag: token.encryptionTag,
+            },
+            environment.tokenEncryptionKey,
         );
-        decipher.setAuthTag(Buffer.from(token.encryptionTag, "base64"));
-        return Buffer.concat([
-            decipher.update(Buffer.from(token.encryptedRefreshToken, "base64")),
-            decipher.final(),
-        ]).toString("utf8");
     } catch {
         throw new ApiError(
             500,

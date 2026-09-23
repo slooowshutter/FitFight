@@ -128,7 +128,8 @@ final class SessionStore: ObservableObject {
               (authSession?.user.id ?? client.auth.currentUser?.id) == userID else {
             throw CancellationError()
         }
-        authSession = session
+        // Publishing an unchanged session would re-render every screen that observes it.
+        if authSession != session { authSession = session }
         return session.accessToken
     }
 
@@ -319,14 +320,7 @@ final class SessionStore: ObservableObject {
         await PushNotificationService.shared.revokeLocalRegistration()
         try? await client.auth.signOut()
         GIDSignIn.sharedInstance.signOut()
-        authSession = nil
-        profile = nil
-        profileUnavailable = false
-        CrashReporting.reset()
-        UserDefaults.standard.removeObject(forKey: Self.handleChosenKey)
-        UserDefaults.standard.removeObject(forKey: Self.needsHealthKey)
-        UserDefaults.standard.removeObject(forKey: Self.needsNotificationKey)
-        UserDefaults.standard.removeObject(forKey: Self.needsRequestsKey)
+        clearSignedInState()
     }
 
     static func signInFailureMessage(_ error: Error) -> String {
@@ -388,13 +382,11 @@ final class SessionStore: ObservableObject {
             guard authSession?.user.id == userId, client.auth.currentUser?.id == userId else {
                 throw CancellationError()
             }
+            UserDefaults.standard.set(true, forKey: Self.needsSuggestedPrefix + userId.uuidString)
             var progress = firstFightOnboarding ?? FirstFightOnboarding()
             progress.page = .companion
             saveFirstFightOnboarding(progress, userID: userId)
-            profile = updated
-            if let data = try? JSONEncoder().encode(updated) {
-                UserDefaults.standard.set(data, forKey: Self.profileCachePrefix + userId.uuidString)
-            }
+            cacheProfile(updated, for: userId)
         } catch is CancellationError {
             throw CancellationError()
         } catch {
@@ -416,10 +408,7 @@ final class SessionStore: ObservableObject {
         let updated = try await api.updateProfile(handle: handle, displayName: displayName, timeZone: timeZone.identifier, accessToken: token)
         try Task.checkCancellation()
         guard authSession?.user.id == userId else { throw CancellationError() }
-        profile = updated
-        if let data = try? JSONEncoder().encode(updated) {
-            UserDefaults.standard.set(data, forKey: Self.profileCachePrefix + userId.uuidString)
-        }
+        cacheProfile(updated, for: userId)
     }
 
     func setAvatar(_ media: FitFightMedia) async throws {
@@ -431,10 +420,7 @@ final class SessionStore: ObservableObject {
         let updated = try await api.updateProfile(avatarMediaId: media.id, accessToken: token)
         try Task.checkCancellation()
         guard authSession?.user.id == userId else { throw CancellationError() }
-        profile = updated
-        if let data = try? JSONEncoder().encode(updated) {
-            UserDefaults.standard.set(data, forKey: Self.profileCachePrefix + userId.uuidString)
-        }
+        cacheProfile(updated, for: userId)
     }
 
     func companionPrompts() async throws -> [String] {
@@ -455,10 +441,7 @@ final class SessionStore: ObservableObject {
         )
         try Task.checkCancellation()
         guard authSession?.user.id == userId else { throw CancellationError() }
-        profile = updated
-        if let data = try? JSONEncoder().encode(updated) {
-            UserDefaults.standard.set(data, forKey: Self.profileCachePrefix + userId.uuidString)
-        }
+        cacheProfile(updated, for: userId)
     }
 
     @discardableResult
@@ -482,14 +465,7 @@ final class SessionStore: ObservableObject {
                 GIDSignIn.sharedInstance.signOut()
             }
             try? await client.auth.signOut()
-            authSession = nil
-            profile = nil
-            profileUnavailable = false
-            CrashReporting.reset()
-            UserDefaults.standard.removeObject(forKey: Self.handleChosenKey)
-            UserDefaults.standard.removeObject(forKey: Self.needsHealthKey)
-            UserDefaults.standard.removeObject(forKey: Self.needsNotificationKey)
-            UserDefaults.standard.removeObject(forKey: Self.needsRequestsKey)
+            clearSignedInState()
             if let userID {
                 UserDefaults.standard.removeObject(forKey: Self.firstFightPrefix + userID.uuidString)
                 UserDefaults.standard.removeObject(forKey: Self.profileCachePrefix + userID.uuidString)
@@ -557,10 +533,7 @@ final class SessionStore: ObservableObject {
                 let row = try await api.profile(accessToken: token)
                 try Task.checkCancellation()
                 guard authSession?.user.id == userId, client.auth.currentUser?.id == userId else { return }
-                profile = row
-                if let data = try? JSONEncoder().encode(row) {
-                    UserDefaults.standard.set(data, forKey: Self.profileCachePrefix + userId.uuidString)
-                }
+                cacheProfile(row, for: userId)
                 return
             } catch {
                 guard !Task.isCancelled, !(error is CancellationError),
@@ -581,6 +554,23 @@ final class SessionStore: ObservableObject {
         }
     }
 
+    private func cacheProfile(_ updated: FitFightProfile, for userId: UUID) {
+        profile = updated
+        if let data = try? JSONEncoder().encode(updated) {
+            UserDefaults.standard.set(data, forKey: Self.profileCachePrefix + userId.uuidString)
+        }
+    }
+
+    private func clearSignedInState() {
+        authSession = nil
+        profile = nil
+        profileUnavailable = false
+        CrashReporting.reset()
+        for key in [Self.handleChosenKey, Self.needsHealthKey, Self.needsNotificationKey, Self.needsRequestsKey] {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
+    }
+
     private func markProfileMissing(for userId: UUID) {
         guard (authSession?.user.id ?? client.auth.currentUser?.id) == userId else { return }
         profile = nil
@@ -598,7 +588,7 @@ enum HandleError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .notSignedIn: return String(appLocalized: "Sign in first.")
-        case .invalid: return String(appLocalized: "Use 2–30 letters, numbers, or underscore.")
+        case .invalid: return String(appLocalized: "Use 2-30 letters, numbers, or underscore.")
         case .taken: return String(appLocalized: "That username is taken.")
         case .failed: return String(appLocalized: "Couldn’t save that username.")
         }

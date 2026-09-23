@@ -15,6 +15,7 @@
         A10000000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000012 /* ContentView.swift */; };
         A10000000000000000000003 /* AppVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000013 /* AppVersion.swift */; };
         A10000000000000000000004 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000014 /* Assets.xcassets */; };
+        C10000000000000000000101 /* PreviewAssets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000100 /* PreviewAssets.xcassets */; };
         A10000000000000000000005 /* Changelog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000015 /* Changelog.swift */; };
         A10000000000000000000006 /* VersionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000016 /* VersionsView.swift */; };
         A10000000000000000000431 /* NotificationSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000430 /* NotificationSettingsView.swift */; };
@@ -114,6 +115,7 @@
         A10000000000000000000012 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
         A10000000000000000000013 /* AppVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppVersion.swift; sourceTree = "<group>"; };
         A10000000000000000000014 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+        C10000000000000000000100 /* PreviewAssets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = PreviewAssets.xcassets; sourceTree = "<group>"; };
         A10000000000000000000015 /* Changelog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Changelog.swift; sourceTree = "<group>"; };
         A10000000000000000000016 /* VersionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VersionsView.swift; sourceTree = "<group>"; };
         A10000000000000000000430 /* NotificationSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationSettingsView.swift; sourceTree = "<group>"; };
@@ -294,6 +296,7 @@
                 A10000000000000000000033 /* DesignSystem */,
                 A100000000000000000000C0 /* Fonts */,
                 A10000000000000000000014 /* Assets.xcassets */,
+                C10000000000000000000100 /* PreviewAssets.xcassets */,
             );
             path = FitFight;
             sourceTree = "<group>";
@@ -413,6 +416,7 @@
             buildActionMask = 2147483647;
             files = (
                 A10000000000000000000004 /* Assets.xcassets in Resources */,
+                C10000000000000000000101 /* PreviewAssets.xcassets in Resources */,
                 A1000000000000000000000A /* tokens.json in Resources */,
                 A100000000000000000000B2 /* Nunito-Medium.ttf in Resources */,
                 B71900000000000000000301 /* GoogleSans-OFL.txt in Resources */,
@@ -656,7 +660,7 @@
                 INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
                 INFOPLIST_KEY_LSApplicationCategoryType = public.app-category.sports;
                 INFOPLIST_KEY_NSCameraUsageDescription = "FitFight uses the camera so you can take a photo and attach it to a fight post.";
-                INFOPLIST_KEY_NSHealthShareUsageDescription = "FitFight reads your Apple Health steps and other movement—energy, distance, exercise, stand, flights, and workouts. Steps fights share only your step totals with accepted participants. Other activity stays on your account until a future challenge type uses it.";
+                INFOPLIST_KEY_NSHealthShareUsageDescription = "FitFight reads your Apple Health steps and other movement: energy, distance, exercise, stand, flights, and workouts. Steps fights share only your step totals with accepted participants. Other activity stays on your account until a future challenge type uses it.";
                 INFOPLIST_KEY_NSHealthUpdateUsageDescription = "FitFight does not add to or change Apple Health. It only requests read-only access to the activity types in the read description.";
                 INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
                 INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -689,13 +693,14 @@
                 CURRENT_PROJECT_VERSION = 1;
                 DEVELOPMENT_TEAM = C92DPD8ME2;
                 ENABLE_PREVIEWS = YES;
+                EXCLUDED_SOURCE_FILE_NAMES = PreviewAssets.xcassets;
                 GENERATE_INFOPLIST_FILE = YES;
                 INFOPLIST_FILE = FitFight/Info.plist;
                 INFOPLIST_KEY_CFBundleDisplayName = FitFight;
                 INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
                 INFOPLIST_KEY_LSApplicationCategoryType = public.app-category.sports;
                 INFOPLIST_KEY_NSCameraUsageDescription = "FitFight uses the camera so you can take a photo and attach it to a fight post.";
-                INFOPLIST_KEY_NSHealthShareUsageDescription = "FitFight reads your Apple Health steps and other movement—energy, distance, exercise, stand, flights, and workouts. Steps fights share only your step totals with accepted participants. Other activity stays on your account until a future challenge type uses it.";
+                INFOPLIST_KEY_NSHealthShareUsageDescription = "FitFight reads your Apple Health steps and other movement: energy, distance, exercise, stand, flights, and workouts. Steps fights share only your step totals with accepted participants. Other activity stays on your account until a future challenge type uses it.";
                 INFOPLIST_KEY_NSHealthUpdateUsageDescription = "FitFight does not add to or change Apple Health. It only requests read-only access to the activity types in the read description.";
                 INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
                 INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

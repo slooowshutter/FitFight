@@ -66,14 +66,7 @@ enum AppVersion {
     /// Which hosted database this binary talks to. Staging TestFlight uses Supabase
     /// develop; an App Store candidate must show `prod`.
     static var backend: String {
-        let host = SupabaseConfig.projectURL.host ?? ""
-        if host.contains("pvqntpteehdvhqyctwum") {
-            return "prod"
-        }
-        if host.contains("zstzbfocunthczzubggz") {
-            return "staging"
-        }
-        return "staging"
+        SupabaseConfig.projectURL.host?.contains("pvqntpteehdvhqyctwum") == true ? "prod" : "staging"
     }
 
     static var marketing: String {

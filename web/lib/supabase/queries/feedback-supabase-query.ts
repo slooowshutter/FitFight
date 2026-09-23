@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import { readAdminViewer } from "@/lib/supabase/queries/auth-supabase-query";
 import {
+    isoUtc,
     loadReadyMedia,
     mapMedia,
     signMediaUrls,
@@ -37,10 +38,6 @@ import type { MediaObject } from "@/lib/types/media/media";
 
 const POST_LIMIT_PER_DAY = 8;
 const COMMENT_LIMIT_PER_DAY = 30;
-
-function isoUtc(value: Date | string): string {
-    return new Date(value).toISOString().replace(/\.\d{3}Z$/, "Z");
-}
 
 function mapMetadata(value: unknown): FeedbackMetadata {
     const parsed = feedbackMetadataSchema.safeParse(value ?? {});

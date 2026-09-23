@@ -12,7 +12,6 @@ struct FightComposerPerson: Identifiable, Equatable {
     let id: String
     let handle: String
     let name: String
-    let photoURL: URL?
     let isOwner: Bool
     let invited: Bool
     let deferred: Bool

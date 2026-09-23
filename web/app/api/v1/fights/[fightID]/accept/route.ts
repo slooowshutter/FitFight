@@ -5,7 +5,7 @@ import {
     readJson,
     requireUuid,
 } from "@/lib/http";
-import { acceptMembership } from "@/lib/supabase/queries/accept-membership-supabase-query";
+import { acceptFightParticipation } from "@/lib/supabase/queries/accept-fight-participation-supabase-query";
 import { verifyUser } from "@/lib/supabase/queries/auth-supabase-query";
 import { membershipAcceptRequestSchema } from "@/lib/types/fights/join-start";
 
@@ -22,16 +22,15 @@ export const POST = apiRoute<{ fightID: string }>(
         if (!parsed.success) {
             throw parsed.error;
         }
-        const fight = await acceptMembership(
+        const fight = await acceptFightParticipation(
             userId,
             fightId,
             parsed.data.personalTarget,
             parsed.data.start,
+            new Date(),
         );
         return json(fight);
     },
 );
 
-export function OPTIONS(request: Request) {
-    return corsPreflight(request);
-}
+export const OPTIONS = corsPreflight;

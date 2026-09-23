@@ -6,6 +6,8 @@ struct HealthOnboardingView: View {
     @Binding var busy: Bool
     let onResult: () -> Void
     let onFinished: () -> Void
+    @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var steps: HealthKitStepsStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -84,6 +86,8 @@ struct HealthOnboardingView: View {
                         await steps.refresh(requestAccess: true, trace: HealthKitSyncTrace(trigger: .manual))
                         guard !Task.isCancelled else { return }
                         onResult()
+                        // Upload right away; returning from the permission sheet no longer triggers a refresh.
+                        Task { await model.refreshFights(session: session, steps: steps, trigger: .manual) }
                     }
                 }
                 OnboardingSkip(title: String(appLocalized: "I'll do this later"), action: onResult)

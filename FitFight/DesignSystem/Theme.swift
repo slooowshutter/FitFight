@@ -31,12 +31,10 @@ struct Palette {
         resolvedColors[key] ?? Color(red: 1, green: 0, blue: 1)
     }
 
-    var canvas: Color { value(for: "canvas") }
     var bg: Color { value(for: "bg") }
     var overlay: Color { value(for: "overlay") }
     var card: Color { value(for: "card") }
     var control: Color { value(for: "control") }
-    var controlAlt: Color { value(for: "controlAlt") }
 
     var text: Color { value(for: "text") }
     var textDim: Color { value(for: "textDim") }
@@ -46,7 +44,6 @@ struct Palette {
 
     var hairline: Color { value(for: "hairline") }
     var line: Color { value(for: "line") }
-    var dash: Color { value(for: "dash") }
     var track: Color { value(for: "track") }
     var chip: Color { value(for: "chip") }
     var disabledBg: Color { value(for: "disabledBg") }
@@ -55,12 +52,10 @@ struct Palette {
     var googleFill: Color { value(for: "googleFill") }
     var googleInk: Color { value(for: "googleInk") }
     var googleBorder: Color { value(for: "googleBorder") }
-    var scrim: Color { value(for: "scrim") }
 
     var mossFill: Color { value(for: "mossFill") }
     var mossEdge: Color { value(for: "mossEdge") }
     var mossText: Color { value(for: "mossText") }
-    var mossSoft: Color { value(for: "mossSoft") }
     var mossOn: Color { value(for: "mossOn") }
     var mossWash: Color { value(for: "mossWash") }
 
@@ -82,23 +77,14 @@ struct Palette {
     // (bone) tinted them warm, so they are their own tokens.
     var overlayLine: Color { value(for: "overlayLine") }
     var switchOff: Color { value(for: "switchOff") }
-    var dotIdle: Color { value(for: "dotIdle") }
     var chipEdge: Color { value(for: "chipEdge") }
     var skeleton: Color { value(for: "skeleton") }
-    var skeletonHi: Color { value(for: "skeletonHi") }
-    var handle: Color { value(for: "handle") }
-    var heroTagFill: Color { value(for: "heroTagFill") }
-    var heroAvatarPlate: Color { value(for: "heroAvatarPlate") }
-    var heroAvatarLine: Color { value(for: "heroAvatarLine") }
-    var heroProgressTrack: Color { value(for: "heroProgressTrack") }
 
     // TabBarDark.dc.html / TabBar.dc.html carry their own values in both bases.
     var tabBarLine: Color { value(for: "tabBarLine") }
     var tabPillOn: Color { value(for: "tabPillOn") }
     var tabInkOn: Color { value(for: "tabInkOn") }
     var tabInkOff: Color { value(for: "tabInkOff") }
-    /// The kit alternates plate fills so overlapping avatars stay legible.
-    var plateAlt: Color { value(for: "plateAlt") }
 }
 
 // MARK: - Type
@@ -118,7 +104,6 @@ struct TypeSpec: Decodable {
 }
 
 struct TypeScale: Decodable {
-    var family: String
     var roles: [String: TypeSpec]
 
     func spec(_ role: TypeRole) -> TypeSpec {
@@ -135,9 +120,8 @@ struct RadiusScale: Decodable {
 }
 
 struct SpaceScale: Decodable {
-    var xs, sm, md, base, lg, xl: CGFloat
+    var sm, base, lg: CGFloat
     var screenPadding, cardPadding: CGFloat
-    var rowPaddingX, rowPaddingY: CGFloat
     var sectionGap, cardGap, tabBarClearance: CGFloat
 }
 
@@ -156,7 +140,7 @@ struct MotionSpec: Decodable {
 }
 
 struct MotionScale: Decodable {
-    var instant, quick, sheet, count, celebrate, shimmer: MotionSpec
+    var quick, sheet: MotionSpec
 }
 
 struct Swatch: Decodable {
@@ -228,8 +212,11 @@ struct TokenFile: Decodable {
 }
 
 enum ThemeCatalog {
-    static func theme(_ mode: Mode) -> Theme { file.theme(mode) }
+    static func theme(_ mode: Mode) -> Theme { mode == .night ? night : day }
     static var swatches: [SwatchGroup] { file.swatches }
+
+    private static let night = file.theme(.night)
+    private static let day = file.theme(.day)
 
     /// tokens.json ships in the Resources build phase. A missing or malformed file is a
     /// packaging error, not a runtime condition — fail on first launch rather than

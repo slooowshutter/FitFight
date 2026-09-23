@@ -58,6 +58,7 @@ final class HealthKitStepsStore: ObservableObject {
     private let api = FitFightAPI()
     private let uploader = HealthKitTUSUploader()
     private var inFlightSync: Task<Bool, Never>?
+    private var lastActivityUpload: (userId: UUID, at: Date)?
     private var observerQuery: HKObserverQuery?
     private weak var session: SessionStore?
     var onBackendSync: (@MainActor () async -> Void)?
@@ -90,20 +91,6 @@ final class HealthKitStepsStore: ObservableObject {
         case .noAccessibleSteps: return String(appLocalized: "No accessible Steps")
         case .syncFailed:
             return diagnostics.failureDetail ?? String(appLocalized: "Sync failed. Tap to retry.")
-        }
-    }
-
-    var metaText: String {
-        switch status {
-        case .steps(let count):
-            // NOTE: The catalog string uses %lld and pluralizes on the integer.
-            // `format: .number` passes a FormatStyle value, so %lld printed garbage.
-            return String(
-                appLocalized: "health.steps-today",
-                defaultValue: "\(count) steps today"
-            )
-        default:
-            return ""
         }
     }
 
@@ -323,11 +310,13 @@ final class HealthKitStepsStore: ObservableObject {
             _ = await inFlightSync.value
         }
         let work = Task { @MainActor in
-            defer { self.inFlightSync = nil }
-            return await self.performSyncToBackend(session: session, trigger: trigger, trace: trace)
+            await self.performSyncToBackend(session: session, trigger: trigger, trace: trace)
         }
         inFlightSync = work
-        return await work.value
+        let synced = await work.value
+        // Two uncoalesced callers can each start a sync; only the latest may clear the slot.
+        if inFlightSync == work { inFlightSync = nil }
+        return synced
     }
 
     private func performSyncToBackend(
@@ -372,16 +361,24 @@ final class HealthKitStepsStore: ObservableObject {
                 trace: trace,
                 timeZone: timeZone
             )
-            let activity = await trace.measure(.healthKitActivity) {
-                await HealthKitActivityAggregates.read(store: store, context: context, timeZone: timeZone)
+            // No screen shows the activity extras yet, so re-reading and re-uploading 29 days
+            // on every sync is wasted work. Steps always sync; extras at most every 15 minutes.
+            let includesActivity = lastActivityUpload.map {
+                $0.userId != userId || Date().timeIntervalSince($0.at) > 15 * 60
+            } ?? true
+            if includesActivity {
+                let activity = await trace.measure(.healthKitActivity) {
+                    await HealthKitActivityAggregates.read(store: store, context: context, timeZone: timeZone)
+                }
+                sync.activityDays = activity.days
+                sync.workouts = activity.workouts
             }
-            sync.activityDays = activity.days
-            sync.workouts = activity.workouts
             try Task.checkCancellation()
             let syncToken = try await trace.measure(.session) { try await session.freshAccessToken() }
             guard activeUserId == userId, session.authSession?.user.id == userId else { throw CancellationError() }
             do {
                 _ = try await api.syncHealthKitSteps(sync, accessToken: syncToken, trace: trace)
+                if includesActivity { lastActivityUpload = (userId, Date()) }
             } catch {
                 guard sync.activityDays != nil || sync.workouts != nil else { throw error }
                 Self.logger.error("healthkit_extras_dropped retrying_steps_only")

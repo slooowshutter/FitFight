@@ -66,11 +66,15 @@ struct FeedMentionField<Field: View>: View {
     @Binding var people: [FitFightFightPost.Author]
     var main: Bool
     var fightIDs: [UUID]
+    /// Comment boxes wait for the first "@": a Feed page would otherwise request the
+    /// directory once per open thread. The post composer loads eagerly because tags use it.
+    var loadsOnFirstMention = false
     @ViewBuilder var field: () -> Field
 
     @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
+    @State private var requestedKey: String?
 
     private var suggestions: [FitFightFightPost.Author] {
         guard let active = FeedMention.activeQuery(in: text) else { return [] }
@@ -122,8 +126,14 @@ struct FeedMentionField<Field: View>: View {
             }
             field()
         }
-        .task(id: directoryKey) {
+        .task(id: loadsOnFirstMention ? nil : directoryKey) {
+            guard !loadsOnFirstMention else { return }
             await loadPeople()
+        }
+        .onChange(of: FeedMention.activeQuery(in: text) != nil) { _, mentioning in
+            guard loadsOnFirstMention, mentioning, requestedKey != directoryKey else { return }
+            requestedKey = directoryKey
+            Task { await loadPeople() }
         }
     }
 

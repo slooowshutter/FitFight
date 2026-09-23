@@ -1,4 +1,3 @@
-import { after } from "next/server";
 import { z } from "zod";
 import {
     apiRoute,
@@ -10,7 +9,7 @@ import {
 import { verifyUser } from "@/lib/supabase/queries/auth-supabase-query";
 import { createInvite } from "@/lib/supabase/queries/create-invite-supabase-query";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
-import { processNotificationOutbox } from "@/lib/supabase/queries/process-notification-outbox-supabase-query";
+import { processNotificationOutboxAfterResponse } from "@/lib/notifications/process-notification-outbox-after-response";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,13 +31,9 @@ export const POST = apiRoute<{ fightID: string }>(
             undefined,
             sql,
         );
-        after(async () => {
-            await processNotificationOutbox(new Date(), createDatabaseClient());
-        });
+        processNotificationOutboxAfterResponse();
         return json(invite);
     },
 );
 
-export function OPTIONS(request: Request) {
-    return corsPreflight(request);
-}
+export const OPTIONS = corsPreflight;

@@ -9,13 +9,12 @@ import tempfile
 root = Path(__file__).resolve().parents[1]
 app = (root / "FitFight/AppModel.swift").read_text()
 scene = (root / "FitFight/FitFightApp.swift").read_text()
-models = app[app.index("enum MetricKind:"):app.index("extension FFAvatar {")]
-models += app[app.index("struct Standing:"):app.index("@MainActor\nfinal class AppModel:")]
+models = app[app.index("enum MetricKind:"):app.index("@MainActor\nfinal class AppModel:")]
 methods = app[app.index("    func removeCachedFights("):app.index("    /// Locks Start fight immediately")]
 methods += app[app.index("    func restoreCachedFights("):app.index("    func refreshFights(")]
 methods += app[app.index("    func formatScore("):app.index("    func formatLastSync(")]
 methods += app[app.index("    private static func dayCards("):app.index("    func openFight(")]
-methods += app[app.index("    private static func mapFight("):app.index("\n}\n\nenum LiveFightError")]
+methods += app[app.index("    private static func mapFight("):app.index("\n}\n\nprivate func localizedDuration(")]
 duration = app[app.index("private func localizedDuration("):app.index("private enum AppModelFixtures")]
 handler = scene.split(".onChange(of: preferences.value.language) { _, _ in\n", 1)[1].split("\n                }", 1)[0]
 handler = handler.replace("                    Task {", "                    changeTask = Task {")

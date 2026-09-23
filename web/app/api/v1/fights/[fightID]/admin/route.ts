@@ -11,4 +11,4 @@ export const PATCH = apiRoute<{ fightID: string }>(async (request, { params }) =
     const input = administerFightRequestSchema.parse(await readJson(request));
     return json(await administerFight(userId, fightId, input));
 });
-export function OPTIONS(request: Request) { return corsPreflight(request); }
+export const OPTIONS = corsPreflight;

@@ -13,6 +13,4 @@ export const GET = apiRoute<{ userID: string }>(async (request, { params }) => {
     return json(await readProfileHistory(userId, targetId, query));
 });
 
-export function OPTIONS(request: Request) {
-    return corsPreflight(request);
-}
+export const OPTIONS = corsPreflight;

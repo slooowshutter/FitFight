@@ -10,7 +10,6 @@ struct NewFightView: View {
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var steps: HealthKitStepsStore
-    @EnvironmentObject private var feed: FeedStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
 
@@ -109,26 +108,17 @@ struct NewFightView: View {
                 )
             }
         }
-        .onAppear { applyProfileChallenge() }
-        .onChange(of: model.profileChallenge) { _, _ in applyProfileChallenge() }
+        .onChange(of: model.profileChallenge, initial: true) { _, _ in applyProfileChallenge() }
         .task(id: opening) {
             guard opening != .create, !staticRender else { return }
             await model.loadFightDiscovery(session: session)
         }
         .sheet(isPresented: $composing) {
             FeedComposeSheet()
-                .environmentObject(model)
-                .environmentObject(session)
-                .environmentObject(feed)
                 .fitFightTheme(theme)
                 .presentationBackground(theme.bg)
         }
-        .task {
-            if model.pendingJoinable != nil, opening != .create {
-                opening = .join
-            }
-        }
-        .onChange(of: model.pendingJoinable?.id) { _, id in
+        .onChange(of: model.pendingJoinable?.id, initial: true) { _, id in
             if id != nil, opening != .create {
                 opening = .join
             }
@@ -333,7 +323,7 @@ struct NewFightView: View {
                     .foregroundStyle(theme.textSecondary)
             } else if !rows.isEmpty {
                 ForEach(rows) { item in
-                    SuggestedFightRow(fight: item) { Task { await model.openJoinable(item, session: session) } }
+                    JoinOfferRow(suggested: item) { Task { await model.openJoinable(item, session: session) } }
                 }
             }
         }
@@ -488,7 +478,6 @@ struct NewFightView: View {
                         id: handle,
                         handle: handle,
                         name: "@\(handle)",
-                        photoURL: nil,
                         isOwner: false,
                         invited: true,
                         deferred: false,
@@ -529,7 +518,7 @@ struct NewFightView: View {
         usernameError = nil
 
         guard SessionStore.isValidHandle(handle) else {
-            usernameError = String(appLocalized: "Use 2–30 letters, numbers, or underscores.")
+            usernameError = String(appLocalized: "Use 2-30 letters, numbers, or underscores.")
             return
         }
         if handle == session.profile?.handle {

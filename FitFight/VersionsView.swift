@@ -7,17 +7,9 @@ struct VersionsView: View {
     var body: some View {
         VStack(spacing: 0) {
             VersionBanner()
-            HStack {
-                Text("Versions")
-                    .ffType(.title)
-                    .foregroundStyle(theme.text)
-                Spacer()
-                Button("Close") { dismiss() }
-                    .ffType(.label)
-                    .foregroundStyle(theme.mossText)
-            }
-            .padding(.horizontal, theme.space.screenPadding)
-            .padding(.vertical, 12)
+            FFSheetHeader(title: String(appLocalized: "Versions")) { dismiss() }
+                .padding(.horizontal, theme.space.screenPadding)
+                .padding(.vertical, 12)
 
             Text(
                 String(

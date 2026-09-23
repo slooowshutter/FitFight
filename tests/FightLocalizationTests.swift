@@ -121,7 +121,7 @@ enum Stage { case session }
         precondition(model.fights.count == 4)
         precondition(model.fights[0].endedLabel!.hasPrefix("Ended "))
         precondition(model.fights[1].listSubtitle.hasPrefix("Pending"))
-        precondition(model.fights[2].kickerPrefix == "Leading by")
+        precondition(model.fights[2].listSubtitle.hasPrefix("Leading by "))
         let original = model.fights
         var joinPreview = model.fights[3]
         joinPreview.pendingJoin = true
@@ -135,7 +135,7 @@ enum Stage { case session }
                      "Ended must switch to French even when every Fight request fails")
         precondition(model.fights[1].listSubtitle.hasPrefix("En attente"),
                      "Pending must switch without a successful snapshot")
-        precondition(model.fights[2].kickerPrefix == "En tête de")
+        precondition(model.fights[2].listSubtitle.hasPrefix("En tête de "))
         precondition(model.fights[2].kickerEmphasis.contains("pas"))
         precondition(model.fights[3].invitePitch == "@leading_by vous a défié")
         precondition(model.pendingJoinable?.invitePitch == "@leading_by vous a défié")
@@ -160,7 +160,7 @@ enum Stage { case session }
         await harness.changeTask?.value
         precondition(model.fights[0].endedLabel!.hasPrefix("Ended "))
         precondition(model.fights[1].listSubtitle.hasPrefix("Pending"))
-        precondition(model.fights[2].kickerPrefix == "Leading by")
+        precondition(model.fights[2].listSubtitle.hasPrefix("Leading by "))
         for (before, after) in zip(original, model.fights) {
             precondition(after.name == before.name && after.listTitle == before.listTitle,
                          "Fight names that match translated UI words must remain exactly as entered")

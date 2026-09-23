@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import { recordApiFailure } from "@/lib/observability/server-error-log";
 import {
     requestTraceIdSchema,
@@ -266,6 +266,25 @@ export function apiRoute<
         }
         return applyCors(request, response);
     };
+}
+
+export function requireCronSecret(request: Request): void {
+    const secret = process.env.CRON_SECRET ?? process.env.FITFIGHT_CRON_SECRET;
+    if (!secret) {
+        throw new ApiError(503, ERROR_CODES.config, "Cron secret is not set");
+    }
+    const bearer = /^Bearer\s+(\S+)$/i.exec(
+        request.headers.get("authorization")?.trim() ?? "",
+    )?.[1];
+    if (
+        !bearer ||
+        !timingSafeEqual(
+            createHash("sha256").update(bearer).digest(),
+            createHash("sha256").update(secret).digest(),
+        )
+    ) {
+        throw new ApiError(401, ERROR_CODES.unauthorized, "Unauthorized");
+    }
 }
 
 export function requireUuid(value: string, name: string): string {

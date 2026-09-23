@@ -192,18 +192,20 @@ enum HealthKitStepAggregates {
         return count
     }
 
-    private static func dayStamp(_ date: Date, calendar: Calendar) -> String {
-        let formatter = DateFormatter()
-        formatter.calendar = calendar
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = calendar.timeZone
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: date)
+    /// Gregorian day key in the calendar's zone. A sync stamps hundreds of days and
+    /// samples, so no formatter is built per call.
+    static func dayStamp(_ date: Date, calendar: Calendar) -> String {
+        let day = calendar.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", day.year ?? 0, day.month ?? 0, day.day ?? 0)
     }
 
-    private static func iso8601(_ date: Date) -> String {
+    private static let isoFormatter: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return formatter.string(from: date)
+        return formatter
+    }()
+
+    static func iso8601(_ date: Date) -> String {
+        isoFormatter.string(from: date)
     }
 }

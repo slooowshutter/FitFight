@@ -32,6 +32,4 @@ export const GET = apiRoute(async () => {
     return json({ ok: true, backend, schema: "ready", profile_api: true });
 });
 
-export function OPTIONS(request: Request) {
-    return corsPreflight(request);
-}
+export const OPTIONS = corsPreflight;

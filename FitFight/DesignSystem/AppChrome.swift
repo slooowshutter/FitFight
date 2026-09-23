@@ -138,11 +138,6 @@ struct FFScreen<Content: View>: View {
                 }
             }
         }
-        .onChange(of: refresh?.isRefreshing ?? false) { _, refreshing in
-            if !refreshing, !holdOpen {
-                displayedMessage = ""
-            }
-        }
         .onChange(of: refresh?.message ?? "") { _, message in
             if !message.isEmpty {
                 displayedMessage = message

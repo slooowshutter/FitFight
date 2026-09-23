@@ -1,19 +1,11 @@
-export type FightState =
-    | "draft"
-    | "inviting"
-    | "scheduled"
-    | "live"
-    | "awaiting_final_sync"
-    | "final"
-    | "cancelled";
+import type {
+    fightMemberStateValues,
+    fightStateValues,
+} from "@/lib/types/fights/membership-decision";
 
-export type FightMemberState =
-    | "invited"
-    | "accepted"
-    | "deferred"
-    | "declined"
-    | "withdrawn"
-    | "disqualified";
+export type FightState = (typeof fightStateValues)[number];
+
+export type FightMemberState = (typeof fightMemberStateValues)[number];
 
 export type OutcomeRule = "highest_total" | "proportional" | "hit_your_goal";
 
@@ -77,30 +69,6 @@ export type DataSourceRow = {
     connection_route: string;
     status: string;
     complete_through: string | null;
-};
-
-export type ObservationRow = {
-    id: string;
-    user_id: string;
-    source_id: string;
-    external_record_id: string;
-    metric: string;
-    starts_at: string;
-    ends_at: string;
-    value: number | string;
-    unit: string;
-    revision: number;
-    retracted_at: string | null;
-};
-
-export type FightInviteRow = {
-    id: string;
-    fight_id: string;
-    invited_user_id: string | null;
-    token_hash: string;
-    expires_at: string;
-    revoked_at: string | null;
-    accepted_at: string | null;
 };
 
 export type ProfileRow = {

@@ -253,6 +253,20 @@ extension CompanionPreview {
         (String(appLocalized: "Swim"), "figure.pool.swim", (0..<31).map { [8, 22].contains($0) ? 30 : 0 }),
     ]
 
+    /// 18 finished fights, newest first: 12 won, 5 lost (one a group 2nd place) and 1 draw.
+    static let sampleHistory: [ProfileHistoryRow] = {
+        let names = ["Coffee run", "Weekend walkers", "Lunch laps", "No lift, no mercy", "The long way home", "The croissant run", "Park loops", "August challenge", "Sunrise club", "Heatwave", "Stair wars", "Bakery dash", "Commute clash", "Office stairs", "Beach week", "Rooftop run", "Hill repeats", "First blood"]
+        let results = ["win", "loss", "draw", "loss", "win", "win", "win", "win", "loss", "win", "win", "win", "loss", "win", "loss", "win", "win", "win"]
+        let rows = names.indices.map { i in
+            """
+            {"id": "\(UUID().uuidString)", "fight_id": null, "name": "\(names[i])", "starts_at": "2026-09-\(String(format: "%02d", max(1, 18 - i)))T00:00:00Z",
+             "ends_at": "2026-09-\(String(format: "%02d", max(1, 18 - i)))T00:00:00Z", "category": "private", "result": "\(results[i])",
+             "placement": \(results[i] == "win" ? "1" : results[i] == "draw" ? "1" : "2"), "field_size": 2, "counted": true, "complete": true}
+            """
+        }
+        return (try? JSONDecoder().decode([ProfileHistoryRow].self, from: Data("[\(rows.joined(separator: ","))]".utf8))) ?? []
+    }()
+
     /// A shared profile for any fixture person: statistics for everyone, a one-on-one record for friends.
     static func profile(userID: UUID) -> SharedProfile? {
         guard let index = people.firstIndex(where: { $0.id.lowercased() == userID.uuidString.lowercased() }) else { return nil }

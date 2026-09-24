@@ -14497,16 +14497,6 @@
                 }
             }
         },
-        "Fights won": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Combats gagnés"
-                    }
-                }
-            }
-        },
         "Dashboard": {
             "localizations": {
                 "fr": {
@@ -14661,6 +14651,56 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "%lld sur %lld jours"
+                    }
+                }
+            }
+        },
+        "this week": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "cette semaine"
+                    }
+                }
+            }
+        },
+        "won · lost · drew": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "gagnés · perdus · nuls"
+                    }
+                }
+            }
+        },
+        "fights won": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "combats gagnés"
+                    }
+                }
+            }
+        },
+        "daily average": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "moyenne par jour"
+                    }
+                }
+            }
+        },
+        "best day": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "meilleur jour"
                     }
                 }
             }

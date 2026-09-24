@@ -113,6 +113,10 @@ struct YouStatsCard: View {
     let todaySteps: Int?
     let statistics: ProfileStepStatistics?
     let record: ProfileRecord?
+    /// Won, lost and drew from your fight history; nil until it loads.
+    let results: (won: Int, lost: Int, drew: Int)?
+    /// Other sports you did today, from Apple Health.
+    let todayWorkouts: [YouActivityStore.Sport]
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
@@ -126,6 +130,16 @@ struct YouStatsCard: View {
                                 .font(.ff(50, 800)).monospacedDigit().foregroundStyle(theme.text)
                                 .minimumScaleFactor(0.6).lineLimit(1)
                             Text(String(appLocalized: "steps")).ffType(.caption).foregroundStyle(theme.textSecondary)
+                        }
+                        if !todayWorkouts.isEmpty {
+                            HStack(spacing: 12) {
+                                ForEach(todayWorkouts) { sport in
+                                    HStack(spacing: 5) {
+                                        Image(systemName: sport.systemImage).font(.system(size: 13, weight: .semibold)).foregroundStyle(theme.textSecondary)
+                                        Text("\(formatted(sport.values[30])) \(String(appLocalized: "min"))").font(.ff(15, 800)).foregroundStyle(theme.text)
+                                    }
+                                }
+                            }
                         }
                     }
                     Spacer(minLength: 8)
@@ -141,26 +155,34 @@ struct YouStatsCard: View {
                 Rectangle().fill(theme.hairline).frame(height: 1)
                 Grid(horizontalSpacing: 0, verticalSpacing: 0) {
                     GridRow {
-                        cell(statistics.map { formatted($0.week.totalSteps) }, String(appLocalized: "This week"))
-                        cell(record.map { "\($0.wins)/\($0.played)" }, String(appLocalized: "Fights won"))
+                        cell(Text(statistics.map { formatted($0.week.totalSteps) } ?? "-"), String(appLocalized: "this week"))
+                        Rectangle().fill(theme.hairline).frame(width: 1)
+                        if let results {
+                            cell(Text("\(results.won)").foregroundStyle(theme.mossText) + Text("-") + Text("\(results.lost)").foregroundStyle(theme.emberText)
+                                + Text("-") + Text("\(results.drew)").foregroundStyle(theme.textSecondary), String(appLocalized: "won · lost · drew"))
+                        } else {
+                            cell(Text(record.map { "\($0.wins)/\($0.played)" } ?? "-"), String(appLocalized: "fights won"))
+                        }
                     }
-                    Rectangle().fill(theme.hairline).frame(height: 1).gridCellColumns(2)
+                    Rectangle().fill(theme.hairline).frame(height: 1).gridCellColumns(3)
                     GridRow {
-                        cell(statistics?.averageSteps.map(formatted), String(appLocalized: "Daily average"))
-                        cell(statistics?.bestDay.map { formatted($0.steps) }, String(appLocalized: "Best day"))
+                        cell(Text(statistics?.averageSteps.map(formatted) ?? "-"), String(appLocalized: "daily average"))
+                        Rectangle().fill(theme.hairline).frame(width: 1)
+                        cell(Text(statistics?.bestDay.map { formatted($0.steps) } ?? "-"), String(appLocalized: "best day"))
                     }
                 }
             }
         }
     }
 
-    private func cell(_ value: String?, _ label: String) -> some View {
+    private func cell(_ value: Text, _ label: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(value ?? "-").font(.ff(22, 800)).monospacedDigit().foregroundStyle(theme.text)
+            value.font(.ff(22, 800)).monospacedDigit().foregroundStyle(theme.text)
             Text(label).ffType(.caption).foregroundStyle(theme.textSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(theme.space.cardPadding)
+        .padding(.horizontal, theme.space.cardPadding)
+        .padding(.vertical, 14)
         .accessibilityElement(children: .combine)
     }
 }

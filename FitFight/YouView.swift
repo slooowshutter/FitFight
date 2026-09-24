@@ -36,7 +36,10 @@ struct YouView: View {
                 FFNotice(text: authError, tone: .ember, systemImage: "exclamationmark.triangle")
             }
             if session.isSignedIn {
-                YouStatsCard(todaySteps: todaySteps, statistics: profileStore.profile?.stepStatistics, record: profileStore.profile?.record)
+                YouStatsCard(
+                    todaySteps: todaySteps, statistics: profileStore.profile?.stepStatistics, record: profileStore.profile?.record,
+                    results: results, todayWorkouts: activity.sports.dropFirst().filter { ($0.values.last ?? 0) > 0 }
+                )
                 if !activity.sports.isEmpty {
                     YouSportList(sports: activity.sports)
                     YouWeekCards(days: activity.days, steps: activity.sports[0].values)
@@ -152,6 +155,15 @@ struct YouView: View {
         }
     }
 
+    /// Won, lost and drew from the full fight history; group places below first count as lost.
+    private var results: (won: Int, lost: Int, drew: Int)? {
+        let rows = profileStore.history.filter(\.counted)
+        guard !rows.isEmpty, profileStore.nextCursor == nil else { return nil }
+        let won = rows.filter { $0.result == "win" }.count
+        let drew = rows.filter { $0.result == "draw" }.count
+        return (won, rows.count - won - drew, drew)
+    }
+
     private var todaySteps: Int? {
         if case .steps(let count) = steps.status { return count }
         return nil
@@ -177,34 +189,53 @@ struct YouView: View {
     private var profile: some View {
         if session.isSignedIn {
             HStack(alignment: .center, spacing: 12) {
-                Button { showingProfileHistory = true } label: {
+                Button { showingEditProfile = true } label: {
                     CompanionAvatar(
                         personID: session.profile?.userId.uuidString,
                         companionID: session.profile?.companionId, isYou: true,
-                        monogram: session.profile?.initials ?? "FF", photoURL: session.profile?.photoURL, size: 52
+                        monogram: session.profile?.initials ?? "FF", photoURL: session.profile?.photoURL, size: 48
                     )
+                    .overlay(alignment: .bottomTrailing) {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(theme.text)
+                            .frame(width: 18, height: 18)
+                            .background(theme.control, in: Circle())
+                    }
                 }
                 .buttonStyle(FFHapticPlainStyle())
-                .accessibilityLabel(String(appLocalized: "Open profile"))
+                .accessibilityLabel(String(appLocalized: "Edit profile"))
                 VStack(alignment: .leading, spacing: 2) {
                     Text(verbatim: session.profile?.displayName ?? String(appLocalized: "Signed in"))
-                        .ffType(.heading).foregroundStyle(theme.text)
+                        .ffType(.title).foregroundStyle(theme.text).lineLimit(1).minimumScaleFactor(0.7)
                     Text(verbatim: session.profile?.atHandle ?? String(appLocalized: "Profile isn’t ready yet"))
                         .ffType(.caption).foregroundStyle(theme.textSecondary)
                 }
                 Spacer(minLength: 4)
-                headerButton("chart.bar", label: String(appLocalized: "Dashboard")) { showingDashboard = true }
+                headerButton(nil, label: String(appLocalized: "Dashboard")) { showingDashboard = true }
                 headerButton("gearshape", label: String(appLocalized: "Settings")) { showingSettings = true }
             }
+            .padding(.top, 12)
         } else {
             SignInControls()
         }
     }
 
-    private func headerButton(_ systemImage: String, label: String, action: @escaping () -> Void) -> some View {
+    /// A nil image draws the kit's thin three-line chart glyph.
+    private func headerButton(_ systemImage: String?, label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.system(size: 17, weight: .semibold))
+            Group {
+                if let systemImage {
+                    Image(systemName: systemImage).font(.system(size: 17, weight: .regular))
+                } else {
+                    HStack(alignment: .bottom, spacing: 4) {
+                        ForEach([8.0, 16.0, 12.0], id: \.self) { height in
+                            Capsule().frame(width: 2, height: height)
+                        }
+                    }
+                    .frame(height: 16)
+                }
+            }
                 .foregroundStyle(theme.text)
                 .frame(width: 44, height: 44)
                 .background(theme.card, in: Circle())
@@ -264,7 +295,10 @@ struct YouView: View {
         profileStore.clear()
         incomingFriends = 0
         guard !staticRender, let userID = session.authSession?.user.id ?? CompanionPreview.youID else { return }
-        await profileStore.load(userID: userID, session: session, includeHistory: false)
+        await profileStore.load(userID: userID, session: session)
+        while profileStore.nextCursor != nil, !Task.isCancelled {
+            await profileStore.loadMore(userID: userID, session: session)
+        }
         await activity.load()
         guard !CompanionPreview.isEnabled else { return }
         do {

@@ -25,6 +25,7 @@ final class ProfileScreenStore: ObservableObject {
         #if DEBUG && targetEnvironment(simulator)
         if CompanionPreview.isEnabled {
             profile = CompanionPreview.profile(userID: userID)
+            history = includeHistory && userID == CompanionPreview.youID ? CompanionPreview.sampleHistory : []
             return
         }
         #endif

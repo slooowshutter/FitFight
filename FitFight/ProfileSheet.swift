@@ -81,7 +81,7 @@ struct ProfileSheet: View {
         .background(theme.bg.ignoresSafeArea())
         .task(id: userID) {
             await store.load(userID: userID, session: session, preview: preview)
-            if let ownID = session.authSession?.user.id, ownID != userID, preview == nil {
+            if let ownID = session.authSession?.user.id ?? CompanionPreview.youID, ownID != userID, preview == nil {
                 await ownStore.load(userID: ownID, session: session, includeHistory: false)
             }
         }

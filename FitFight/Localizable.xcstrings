@@ -14508,13 +14508,13 @@
                 "en": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "%@ vs your average"
+                        "value": "%@ vs avg"
                     }
                 },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "%@ vs ta moyenne"
+                        "value": "%@ vs moy."
                     }
                 }
             }

@@ -252,9 +252,10 @@ struct YouView: View {
         socialError = nil
         profileStore.clear()
         incomingFriends = 0
-        guard !staticRender, let userID = session.authSession?.user.id else { return }
+        guard !staticRender, let userID = session.authSession?.user.id ?? CompanionPreview.youID else { return }
         await profileStore.load(userID: userID, session: session, includeHistory: false)
         await activity.load()
+        guard !CompanionPreview.isEnabled else { return }
         do {
             let token = try await session.freshAccessToken()
             async let friendsRequest = FitFightAPI().profileFriends(kind: "incoming", accessToken: token)

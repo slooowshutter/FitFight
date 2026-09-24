@@ -18,9 +18,18 @@ final class YouActivityStore: ObservableObject {
     @Published private(set) var days: [Date] = []
 
     func load() async {
+        let calendar = Calendar.current
+        #if DEBUG && targetEnvironment(simulator)
+        if CompanionPreview.isEnabled {
+            let today = calendar.startOfDay(for: Date())
+            days = (0..<31).compactMap { calendar.date(byAdding: .day, value: $0 - 30, to: today) }
+            sports = [Sport(id: "steps", name: String(appLocalized: "Steps"), systemImage: "shoeprints.fill", isSteps: true, values: CompanionPreview.sampleSteps)]
+                + CompanionPreview.sampleWorkouts.map { Sport(id: $0.0, name: $0.0, systemImage: $0.1, isSteps: false, values: $0.2) }
+            return
+        }
+        #endif
         guard HKHealthStore.isHealthDataAvailable() else { return }
         let store = HKHealthStore()
-        let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         guard let start = calendar.date(byAdding: .day, value: -30, to: today),
               let end = calendar.date(byAdding: .day, value: 1, to: today) else { return }
@@ -130,15 +139,15 @@ struct YouStatStrip: View {
     private func card(_ title: String, _ value: String?, detail: String?, tone: Color? = nil) -> some View {
         FFCard {
             VStack(alignment: .leading, spacing: 6) {
-                Text(title).ffType(.eyebrow).foregroundStyle(theme.textSecondary)
+                Text(title).ffType(.eyebrow).foregroundStyle(theme.textSecondary).lineLimit(1).minimumScaleFactor(0.7)
                 Text(value ?? "-").font(.ff(30, 800)).monospacedDigit().foregroundStyle(tone ?? theme.text)
                     .minimumScaleFactor(0.6).lineLimit(1)
                 if let detail {
-                    Text(detail).ffType(.caption).foregroundStyle(theme.textSecondary).lineLimit(1)
+                    Text(detail).ffType(.caption).foregroundStyle(theme.textSecondary).lineLimit(1).minimumScaleFactor(0.8)
                 }
             }
         }
-        .frame(width: 150)
+        .frame(width: 164)
         .accessibilityElement(children: .combine)
     }
 }

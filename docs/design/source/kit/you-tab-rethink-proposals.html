@@ -1301,9 +1301,9 @@
             .hs-me-cell strong small { font-size: 13px; color: var(--textSecondary); }
             .hs-me-cell > small { font-size: 11px; color: var(--textSecondary); }
             .hs-me > .hs-tag { display: inline-block; margin-top: 12px; }
-            .hs-micro { align-items: end; height: 18px; }
-            .hs-micro i { border-radius: 2px; background: var(--goldMark); }
-            .hs-micro i.hs-out { background: var(--control); }
+            .hs-micro i { border-radius: 2px; }
+            .hs-micro i[class=""], .hs-micro i[class="hs-out"] { background: var(--control); }
+            .hs-micro i.hs-out { opacity: 0.3; }
             .hs-me-delta { display: flex; flex-direction: column; align-items: flex-end; margin-top: 22px; }
             .hs-me-delta strong { font-size: 22px; font-weight: 800; }
             .hs-me-delta small { font-size: 11px; color: var(--textSecondary); }
@@ -4371,9 +4371,8 @@ try {
                 const days = to - from + 1;
                 const rows = hsSports.map((sport) => {
                     const total = hsSum(sport, from, to);
-                    const max = hsMax(sport);
                     const sub = days === 1 ? "Today" : `${hsFmt(sport, total / days)} a day`;
-                    return `<button type="button" class="row hs-row" data-act="go" data-to="dashboard" data-arg="sports"><span class="hs-row-icon">${icon(sport.icon)}</span><span class="row-main"><strong>${sport.name}</strong><small>${sub}</small><span class="hs-micro" aria-hidden="true">${sport.values.map((value, i) => `<i class="${i < from || i > to ? "hs-out" : ""}" style="height: ${value ? Math.max(12, (value / max) * 100) : 6}%"></i>`).join("")}</span></span><span class="hs-row-num"><strong class="num">${sport.unit === "steps" ? n(total) : Math.round(total)}</strong><small>${sport.unit === "steps" ? "steps" : "min"}</small></span>${chev}</button>`;
+                    return `<button type="button" class="row hs-row" data-act="go" data-to="dashboard" data-arg="sports"><span class="hs-row-icon">${icon(sport.icon)}</span><span class="row-main"><strong>${sport.name}</strong><small>${sub}</small><span class="hs-micro" aria-hidden="true">${sport.values.map((_, i) => `<i class="${[hsShade(sport, i), i < from || i > to ? "hs-out" : ""].filter(Boolean).join(" ")}"></i>`).join("")}</span></span><span class="hs-row-num"><strong class="num">${sport.unit === "steps" ? n(total) : Math.round(total)}</strong><small>${sport.unit === "steps" ? "steps" : "min"}</small></span>${chev}</button>`;
                 }).join("");
                 return `${header()}${hsMe()}<div class="section-head hs-head"><h3>By sport</h3>${seg}</div><div class="card list">${rows}</div>${friendsRows()}${utilityRows()}`;
             }

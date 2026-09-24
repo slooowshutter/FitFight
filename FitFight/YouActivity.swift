@@ -198,14 +198,15 @@ struct YouSportList: View {
                 Text(sport.name).ffType(.rowTitle).foregroundStyle(theme.text)
                 Text(window.count == 1 ? String(appLocalized: "Today") : String(format: String(appLocalized: "you.per-day"), perDay))
                     .ffType(.caption).foregroundStyle(theme.textSecondary)
-                HStack(alignment: .bottom, spacing: 2) {
+                // A ruler of 31 equal ticks: brighter gold for bigger days, relative to your own best.
+                HStack(spacing: 2) {
                     ForEach(sport.values.indices, id: \.self) { i in
                         RoundedRectangle(cornerRadius: 1.5)
-                            .fill(window.contains(i) ? theme.gold : theme.control)
-                            .frame(width: 3, height: sport.values[i] > 0 ? max(3, 18 * sport.values[i] / peak) : 2)
+                            .fill(sport.values[i] > 0 ? theme.gold.opacity(0.35 + 0.65 * sport.values[i] / peak) : theme.control)
+                            .frame(width: 3, height: 8)
+                            .opacity(window.contains(i) ? 1 : 0.3)
                     }
                 }
-                .frame(height: 18, alignment: .bottom)
                 .accessibilityHidden(true)
             }
             Spacer(minLength: 8)

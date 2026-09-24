@@ -318,7 +318,7 @@ struct ProfileRecordCard: View {
     }
 }
 
-private struct ProfileHistoryContent: View {
+struct ProfileHistoryContent: View {
     let row: ProfileHistoryRow
     @Environment(\.ffTheme) private var theme
     private var result: String {

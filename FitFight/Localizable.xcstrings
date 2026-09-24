@@ -14487,34 +14487,180 @@
                 }
             }
         },
-        "you.of-fights": {
+        "vs your average": {
             "localizations": {
-                "en": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "of %lld fights"
-                    }
-                },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "sur %lld combats"
+                        "value": "vs ta moyenne"
                     }
                 }
             }
         },
-        "you.vs-average": {
+        "Fights won": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Combats gagnés"
+                    }
+                }
+            }
+        },
+        "Dashboard": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tableau de bord"
+                    }
+                }
+            }
+        },
+        "Sports": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Sports"
+                    }
+                }
+            }
+        },
+        "Drew": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nul"
+                    }
+                }
+            }
+        },
+        "Last 15 days vs the 15 before": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "15 derniers jours vs les 15 d’avant"
+                    }
+                }
+            }
+        },
+        "Drag across the bars. The dashed line is your average.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Glisse sur les barres. La ligne pointillée est ta moyenne."
+                    }
+                }
+            }
+        },
+        "Best days": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Meilleurs jours"
+                    }
+                }
+            }
+        },
+        "Connect Apple Health to see your Steps here.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Connecte Apple Santé pour voir tes Pas ici."
+                    }
+                }
+            }
+        },
+        "Average by weekday": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Moyenne par jour de la semaine"
+                    }
+                }
+            }
+        },
+        "Last 31 days": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "31 derniers jours"
+                    }
+                }
+            }
+        },
+        "Active days": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Jours actifs"
+                    }
+                }
+            }
+        },
+        "App": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "App"
+                    }
+                }
+            }
+        },
+        "dashboard.before-average": {
             "localizations": {
                 "en": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "%@ vs avg"
+                        "value": "a day, vs %@ before"
                     }
                 },
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "%@ vs moy."
+                        "value": "par jour, vs %@ avant"
+                    }
+                }
+            }
+        },
+        "dashboard.best-weekday": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%1$@ is your best day: %2$@ on average."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Le %1$@ est ton meilleur jour : %2$@ en moyenne."
+                    }
+                }
+            }
+        },
+        "dashboard.days-of": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld of %lld days"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld sur %lld jours"
                     }
                 }
             }

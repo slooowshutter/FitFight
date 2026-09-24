@@ -7,6 +7,7 @@ struct YouView: View {
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var steps: HealthKitStepsStore
     @EnvironmentObject private var preferences: AccountPreferencesStore
+    @EnvironmentObject private var companions: CompanionStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
     @Environment(\.scenePhase) private var scenePhase
@@ -20,7 +21,8 @@ struct YouView: View {
     @State private var profileLoadGeneration = 0
     @State private var socialError: String?
     @State private var confirmDelete = false
-    @State private var copied = false
+    @State private var showingSettings = false
+    @State private var showingDashboard = false
     @State private var showingOnboardingPreview = false
     @State private var showingSlideHapticsLab = false
     @State private var showingBroadcastCompose = false
@@ -30,19 +32,11 @@ struct YouView: View {
     var body: some View {
         FFScreen(top: AnyView(VersionBanner(onTap: versionBannerTap)), refresh: fightsRefresh) {
             profile
-            CompanionIntroduction(surface: .you)
-            #if DEBUG && targetEnvironment(simulator)
-            if CompanionPreview.isEnabled && !ScreenshotExport.isEnabled {
-                Text("Companion design preview · this session only")
-                    .ffType(.micro)
-                    .foregroundStyle(theme.textSecondary)
-            }
-            #endif
             if session.isSignedIn, let authError = session.authError {
                 FFNotice(text: authError, tone: .ember, systemImage: "exclamationmark.triangle")
             }
             if session.isSignedIn {
-                YouStatStrip(todaySteps: todaySteps, statistics: profileStore.profile?.stepStatistics, record: profileStore.profile?.record)
+                YouStatsCard(todaySteps: todaySteps, statistics: profileStore.profile?.stepStatistics, record: profileStore.profile?.record)
                 if !activity.sports.isEmpty {
                     YouSportList(sports: activity.sports)
                     YouWeekCards(days: activity.days, steps: activity.sports[0].values)
@@ -88,32 +82,10 @@ struct YouView: View {
                 }
             }
 
-            FFSection(title: String(appLocalized: "Bugs & requests")) {
-                requests
-            }
-
-            FFSection(title: String(appLocalized: "Settings")) {
-                settings
-            }
-
-            #if DEBUG && targetEnvironment(simulator)
-            if CompanionPreview.isEnabled && !ScreenshotExport.isEnabled {
-                FFButton(title: String(appLocalized: "Companion preview"), kind: .ghost, fullWidth: true) {
-                    showingCompanionPreviewControls = true
-                }
-                .sheet(isPresented: $showingCompanionPreviewControls) {
-                    CompanionPreviewControls()
-                        .fitFightTheme(themeStore.theme)
-                        .presentationBackground(themeStore.theme.bg)
-                }
-            }
-            #endif
-
-            if session.isFitFightAdmin || (CompanionPreview.isEnabled && !ScreenshotExport.isEnabled) {
-                FFSection(title: String(appLocalized: "Developer")) {
-                    developer
-                }
-            }
+        }
+        .navigationDestination(isPresented: $showingSettings) { settingsScreen }
+        .navigationDestination(isPresented: $showingDashboard) {
+            DashboardView(sports: activity.sports, days: activity.days, statistics: profileStore.profile?.stepStatistics)
         }
         .task(id: session.authSession?.user.id) { await refreshOwnProfile() }
         .onChange(of: scenePhase) { _, phase in
@@ -204,38 +176,77 @@ struct YouView: View {
     @ViewBuilder
     private var profile: some View {
         if session.isSignedIn {
-            HStack(alignment: .top, spacing: 14) {
+            HStack(alignment: .center, spacing: 12) {
                 Button { showingProfileHistory = true } label: {
                     CompanionAvatar(
                         personID: session.profile?.userId.uuidString,
                         companionID: session.profile?.companionId, isYou: true,
-                        monogram: session.profile?.initials ?? "FF", photoURL: session.profile?.photoURL, size: 68
+                        monogram: session.profile?.initials ?? "FF", photoURL: session.profile?.photoURL, size: 52
                     )
                 }
                 .buttonStyle(FFHapticPlainStyle())
                 .accessibilityLabel(String(appLocalized: "Open profile"))
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(verbatim: session.profile?.displayName ?? String(appLocalized: "Signed in"))
                         .ffType(.heading).foregroundStyle(theme.text)
                     Text(verbatim: session.profile?.atHandle ?? String(appLocalized: "Profile isn’t ready yet"))
                         .ffType(.caption).foregroundStyle(theme.textSecondary)
-                    if session.profile != nil {
-                        Button {
-                            UIPasteboard.general.string = session.profile?.atHandle ?? ""
-                            copied = true
-                        } label: {
-                            Text(copied ? String(appLocalized: "Copied") : String(appLocalized: "Copy username"))
-                                .ffType(.micro).foregroundStyle(theme.mossText)
-                        }.buttonStyle(FFHapticPlainStyle()).frame(minHeight: 44)
-                    }
                 }
                 Spacer(minLength: 4)
-                Button(String(appLocalized: "Edit profile")) { showingEditProfile = true }
-                    .ffType(.label).foregroundStyle(theme.mossText).frame(minHeight: 44)
+                headerButton("chart.bar", label: String(appLocalized: "Dashboard")) { showingDashboard = true }
+                headerButton("gearshape", label: String(appLocalized: "Settings")) { showingSettings = true }
             }
         } else {
             SignInControls()
         }
+    }
+
+    private func headerButton(_ systemImage: String, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(theme.text)
+                .frame(width: 44, height: 44)
+                .background(theme.card, in: Circle())
+                .overlay(Circle().stroke(theme.hairline))
+        }
+        .buttonStyle(FFHapticPlainStyle())
+        .accessibilityLabel(label)
+    }
+
+    /// Everything that used to sit at the bottom of You: profile, app settings and Marc-only tools.
+    private var settingsScreen: some View {
+        FFScreen {
+            FFSection(title: String(appLocalized: "Profile"), extraTop: false) {
+                FFGroupedRows {
+                    navRow(String(appLocalized: "Edit profile")) { showingEditProfile = true }
+                    FFDivider()
+                    navRow(String(appLocalized: "Your companion")) { companions.showingPicker = true }
+                }
+            }
+            FFSection(title: String(appLocalized: "App")) {
+                settings
+            }
+            #if DEBUG && targetEnvironment(simulator)
+            if CompanionPreview.isEnabled && !ScreenshotExport.isEnabled {
+                FFButton(title: String(appLocalized: "Companion preview"), kind: .ghost, fullWidth: true) {
+                    showingCompanionPreviewControls = true
+                }
+                .sheet(isPresented: $showingCompanionPreviewControls) {
+                    CompanionPreviewControls()
+                        .fitFightTheme(themeStore.theme)
+                        .presentationBackground(themeStore.theme.bg)
+                }
+            }
+            #endif
+
+            if session.isFitFightAdmin || (CompanionPreview.isEnabled && !ScreenshotExport.isEnabled) {
+                FFSection(title: String(appLocalized: "Developer")) {
+                    developer
+                }
+            }
+        }
+        .navigationTitle(String(appLocalized: "Settings"))
     }
 
     private func refreshOwnProfile(trigger: HealthKitStepsStore.SyncTrigger = .foreground, requestAccess: Bool = false) async {
@@ -408,22 +419,6 @@ struct YouView: View {
     private func diagnosticDate(_ date: Date?) -> String {
         guard let date else { return String(appLocalized: "Not yet") }
         return date.formatted(.relative(presentation: .named).locale(AppLocalization.locale))
-    }
-
-    private var requests: some View {
-        FFGroupedRows {
-            FFGroupedRow(
-                title: String(appLocalized: "Bugs & requests"),
-                subtitle: String(appLocalized: "Post a bug or a feature request. Other people can upvote and comment with their username."),
-                systemImage: "bubble.left.and.bubble.right",
-                trailing: AnyView(FFChevron()),
-                action: {
-                    model.feedbackRequestFilter = RequestFilter()
-                    model.tab = .feedback
-                }
-            )
-            .disabled(session.isBusy)
-        }
     }
 
     private var settings: some View {

@@ -36,6 +36,4 @@ export const POST = apiRoute(async (request, { timing }) => {
     );
 }, "fights_snapshot");
 
-export function OPTIONS(request: Request) {
-    return corsPreflight(request);
-}
+export const OPTIONS = corsPreflight;

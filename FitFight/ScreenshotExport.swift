@@ -6,15 +6,13 @@ import UIKit
 /// Only runs when the app is launched with FF_SHOOT=1.
 @MainActor
 enum ScreenshotExport {
-    static var isEnabled: Bool {
-        ProcessInfo.processInfo.environment["FF_SHOOT"] == "1"
-    }
+    static let isEnabled = ProcessInfo.processInfo.environment["FF_SHOOT"] == "1"
 
     static let canvas = CGSize(width: 393, height: 852)
     static let appStoreCanvas = CGSize(width: 440, height: 956)
     static let tallHeight: CGFloat = 1800
     static let designSystemSliceHeight: CGFloat = 2_600
-    static let designSystemSlices = 5
+    static let designSystemSlices = 4
 
     static func exportAll() {
         let themeStore = ThemeStore(transient: .night)
@@ -113,6 +111,11 @@ enum ScreenshotExport {
             )
         }
 
+        write(
+            sheet(NotificationSettingsView(), themeStore: light, model: model),
+            name: "light-notifications", height: tallHeight, to: folder
+        )
+
         // The design system page is one long scroll. ImageRenderer returns nil well
         // before the texture limit, so it is exported as a run of slices instead of
         // one tall canvas.
@@ -167,6 +170,7 @@ enum ScreenshotExport {
                     .environmentObject(steps)
                     .environmentObject(feed)
                     .environmentObject(companions)
+                    .environmentObject(SpecialPurchases())
                     .environmentObject(AccountPreferencesStore())
                     .environment(\.ffTheme, store.theme)
                     .environment(\.colorScheme, store.theme.colorScheme)
@@ -191,6 +195,7 @@ enum ScreenshotExport {
                 ("review", AnyView(NewFightView(opening: .create, initialStep: 4)), .newFight),
                 ("you", AnyView(YouView()), .you),
                 ("picker", AnyView(CompanionPicker(selection: .badger)), .you),
+                ("picker-limited", AnyView(CompanionPicker(selection: .limitedPangolin)), .you),
                 ("feed", AnyView(FeedView()), .feed),
                 ("compose", AnyView(FeedComposeSheet()), .feed),
             ]
@@ -209,11 +214,24 @@ enum ScreenshotExport {
                 })
                 write(wrap(view, .fights), name: "\(mode.rawValue)-chart-\(kind.rawValue)", height: canvas.height, to: folder, scale: 1)
             }
-            for (name, view, tab) in shots where ["fights", "group", "new", "you", "picker"].contains(name) {
+            for (name, view, tab) in shots where ["fights", "group", "new", "you", "picker", "picker-limited"].contains(name) {
                 write(
                     AnyView(wrap(view, tab).environment(\.dynamicTypeSize, .accessibility3)),
                     name: "\(mode.rawValue)-\(name)-large-text", height: canvas.height, to: folder, scale: 1
                 )
+            }
+            let longNameCompanions = CompanionStore()
+            longNameCompanions.selection = .limitedSecretaryBirdStride
+            for width in [CGFloat(375), 393] {
+                for size in [DynamicTypeSize.large, .accessibility3] {
+                    write(
+                        AnyView(wrap(AnyView(YouView().environmentObject(longNameCompanions)), .you)
+                            .environment(\.dynamicTypeSize, size)),
+                        name: "\(mode.rawValue)-you-special-\(Int(width))\(size == .large ? "" : "-large-text")",
+                        size: CGSize(width: width, height: size == .large ? canvas.height : tallHeight),
+                        scale: 1, to: folder
+                    )
+                }
             }
             for state in CompanionPreview.DisplayState.allCases where state != .populated && state != .offline {
                 model.showCompanionPreviewState(state)
@@ -270,6 +288,12 @@ enum ScreenshotExport {
             },
             Shot(name: "05-preferences") { store, model in
                 sheet(PreferencesView(), themeStore: store, model: model)
+            },
+            Shot(name: "05-notifications") { store, model in
+                sheet(NotificationSettingsView(), themeStore: store, model: model)
+            },
+            Shot(name: "05-notifications-large-text") { store, model in
+                sheet(NotificationSettingsView().environment(\.dynamicTypeSize, .accessibility2), themeStore: store, model: model)
             },
             Shot(name: "05-feed") { store, model in
                 frame(FeedView(), tab: .feed, themeStore: store, model: model)

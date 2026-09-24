@@ -31,6 +31,9 @@ final class HealthKitStepsStore: ObservableObject {
         var errorCode: SyncErrorCode?
         var failureReference: String?
         var failureDetail: String?
+        var activitySyncFailed: Bool?
+        var activityProcessingPending: Bool?
+        var deliveryRegistrationFailures: [String]?
 
         @MainActor static var current: Diagnostics {
             Diagnostics(
@@ -43,7 +46,10 @@ final class HealthKitStepsStore: ObservableObject {
                 lastTrigger: nil,
                 errorCode: nil,
                 failureReference: nil,
-                failureDetail: nil
+                failureDetail: nil,
+                activitySyncFailed: false,
+                activityProcessingPending: false,
+                deliveryRegistrationFailures: nil
             )
         }
     }
@@ -58,7 +64,9 @@ final class HealthKitStepsStore: ObservableObject {
     private let api = FitFightAPI()
     private let uploader = HealthKitTUSUploader()
     private var inFlightSync: Task<Bool, Never>?
-    private var observerQuery: HKObserverQuery?
+    private var rerunRequested = false
+    private var observerQueries: [HKObserverQuery] = []
+    private var deliveryRegistrationResults: [String: Bool] = [:]
     private weak var session: SessionStore?
     var onBackendSync: (@MainActor () async -> Void)?
     private var activeUserId: UUID?
@@ -84,26 +92,18 @@ final class HealthKitStepsStore: ObservableObject {
         case .notConnected: return String(appLocalized: "Not connected")
         case .syncing: return String(appLocalized: "Syncing Steps…")
         case .upToDate:
+            if diagnostics.activitySyncFailed == true {
+                return String(appLocalized: "Steps up to date · Other activity didn't sync. Tap to retry.")
+            }
+            if diagnostics.activityProcessingPending == true {
+                return String(appLocalized: "Steps up to date · Other activity is processing.")
+            }
             return diagnostics.deliveryRegistrationStatus == .unavailable
                 ? String(appLocalized: "Up to date · Background sync unavailable")
                 : String(appLocalized: "Up to date")
         case .noAccessibleSteps: return String(appLocalized: "No accessible Steps")
         case .syncFailed:
             return diagnostics.failureDetail ?? String(appLocalized: "Sync failed. Tap to retry.")
-        }
-    }
-
-    var metaText: String {
-        switch status {
-        case .steps(let count):
-            // NOTE: The catalog string uses %lld and pluralizes on the integer.
-            // `format: .number` passes a FormatStyle value, so %lld printed garbage.
-            return String(
-                appLocalized: "health.steps-today",
-                defaultValue: "\(count) steps today"
-            )
-        default:
-            return ""
         }
     }
 
@@ -118,7 +118,10 @@ final class HealthKitStepsStore: ObservableObject {
     }
 
     var backgroundDeliveryText: String {
-        diagnostics.deliveryRegistrationStatus == .enabled
+        if let failures = diagnostics.deliveryRegistrationFailures, !failures.isEmpty {
+            return "\(String(appLocalized: "Unavailable")): \(failures.joined(separator: ", "))"
+        }
+        return diagnostics.deliveryRegistrationStatus == .enabled
             ? String(appLocalized: "Enabled")
             : String(appLocalized: "Unavailable")
     }
@@ -132,72 +135,82 @@ final class HealthKitStepsStore: ObservableObject {
 
     func installObserverAtLaunch() {
         guard !CompanionPreview.isEnabled else { return }
-        guard HKHealthStore.isHealthDataAvailable(),
-              let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount)
-        else {
-            if !HKHealthStore.isHealthDataAvailable() {
-                updateDiagnostics { $0.errorCode = .healthKitUnavailable }
-            }
+        guard HKHealthStore.isHealthDataAvailable() else {
+            updateDiagnostics { $0.errorCode = .healthKitUnavailable }
             return
         }
-
-        if observerQuery == nil {
-            let query = HKObserverQuery(sampleType: stepsType, predicate: nil) { [weak self] _, completion, _ in
-                let gate = ObserverCompletion(completion)
-                Task { @MainActor [weak self] in
-                    guard let self else { gate.finish(); return }
-                    let trace = HealthKitSyncTrace(trigger: .observer)
-                    UserDefaults.standard.set(true, forKey: Self.pendingSyncKey)
-                    self.updateDiagnostics {
-                        $0.lastObserverWake = Date()
-                        $0.lastTrigger = .observer
-                    }
-                    guard UIApplication.shared.isProtectedDataAvailable else {
-                        self.updateDiagnostics { $0.errorCode = .protectedDataUnavailable }
-                        trace.fail(.protectedDataUnavailable)
-                        _ = trace.finish()
-                        gate.finish()
-                        return
-                    }
-                    guard self.hasAsked else { _ = trace.finish(); gate.finish(); return }
-                    guard let session = self.session,
-                          session.authSession != nil || session.client.auth.currentUser != nil else {
-                        self.updateDiagnostics { $0.errorCode = .authenticationUnavailable }
-                        trace.fail(.authenticationUnavailable)
-                        _ = trace.finish()
-                        gate.finish()
-                        return
-                    }
-                    let userID = self.activeUserId
-                    let operation = Task { @MainActor in
-                        _ = await self.syncToBackend(session: session, trigger: .observer, trace: trace)
-                        self.completeAttempt(trace, session: session, userID: userID)
-                        gate.finish()
-                    }
-                    Task { @MainActor in
-                        do { try await Task.sleep(for: .seconds(25)) } catch { return }
-                        guard !gate.isFinished else { return }
-                        operation.cancel()
-                        if self.activeUserId == userID {
-                            UserDefaults.standard.set(true, forKey: Self.pendingSyncKey)
-                            self.updateDiagnostics { $0.errorCode = .attemptExpired }
+        let sampleTypes = HealthKitActivityAggregates.readTypes.compactMap { $0 as? HKSampleType }
+        if observerQueries.isEmpty {
+            for sampleType in sampleTypes {
+                let query = HKObserverQuery(sampleType: sampleType, predicate: nil) { [weak self] _, completion, _ in
+                    let gate = ObserverCompletion(completion)
+                    Task { @MainActor [weak self] in
+                        guard let self else { gate.finish(); return }
+                        let trace = HealthKitSyncTrace(trigger: .observer)
+                        UserDefaults.standard.set(true, forKey: Self.pendingSyncKey)
+                        self.updateDiagnostics {
+                            $0.lastObserverWake = Date()
+                            $0.lastTrigger = .observer
                         }
-                        self.completeAttempt(trace, session: session, userID: userID, cancelled: true)
-                        gate.finish()
+                        guard UIApplication.shared.isProtectedDataAvailable else {
+                            self.updateDiagnostics { $0.errorCode = .protectedDataUnavailable }
+                            trace.fail(.protectedDataUnavailable)
+                            _ = trace.finish()
+                            gate.finish()
+                            return
+                        }
+                        guard self.hasAsked else { _ = trace.finish(); gate.finish(); return }
+                        guard let session = self.session,
+                              session.authSession != nil || session.client.auth.currentUser != nil else {
+                            self.updateDiagnostics { $0.errorCode = .authenticationUnavailable }
+                            trace.fail(.authenticationUnavailable)
+                            _ = trace.finish()
+                            gate.finish()
+                            return
+                        }
+                        let userID = self.activeUserId
+                        let operation = Task { @MainActor in
+                            _ = await self.syncToBackend(session: session, trigger: .observer, trace: trace)
+                            self.completeAttempt(trace, session: session, userID: userID)
+                            gate.finish()
+                        }
+                        Task { @MainActor in
+                            do { try await Task.sleep(for: .seconds(25)) } catch { return }
+                            guard !gate.isFinished else { return }
+                            operation.cancel()
+                            self.inFlightSync?.cancel()
+                            if self.activeUserId == userID {
+                                UserDefaults.standard.set(true, forKey: Self.pendingSyncKey)
+                                self.updateDiagnostics { $0.errorCode = .attemptExpired }
+                            }
+                            self.completeAttempt(trace, session: session, userID: userID, cancelled: true)
+                            gate.finish()
+                        }
                     }
                 }
+                observerQueries.append(query)
+                store.execute(query)
             }
-            observerQuery = query
-            store.execute(query)
         }
-        store.enableBackgroundDelivery(for: stepsType, frequency: .immediate) { [weak self] success, _ in
-            Task { @MainActor [weak self] in
-                self?.updateDiagnostics {
-                    $0.deliveryRegistrationStatus = success ? .enabled : .unavailable
-                    if success, $0.errorCode == .backgroundDeliveryUnavailable {
-                        $0.errorCode = nil
-                    } else if !success {
-                        $0.errorCode = .backgroundDeliveryUnavailable
+        deliveryRegistrationResults.removeAll()
+        for sampleType in sampleTypes {
+            let identifier = sampleType.identifier
+            let frequency: HKUpdateFrequency = sampleType is HKWorkoutType ? .immediate : .hourly
+            store.enableBackgroundDelivery(for: sampleType, frequency: frequency) { [weak self] success, _ in
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    self.deliveryRegistrationResults[identifier] = success
+                    let failures = self.deliveryRegistrationResults
+                        .filter { !$0.value }.map { $0.key }.sorted()
+                    self.updateDiagnostics {
+                        $0.deliveryRegistrationStatus = self.deliveryRegistrationResults.count == sampleTypes.count
+                            && failures.isEmpty ? .enabled : .unavailable
+                        $0.deliveryRegistrationFailures = failures
+                        if failures.isEmpty, $0.errorCode == .backgroundDeliveryUnavailable {
+                            $0.errorCode = nil
+                        } else if !failures.isEmpty {
+                            $0.errorCode = .backgroundDeliveryUnavailable
+                        }
                     }
                 }
             }
@@ -236,19 +249,20 @@ final class HealthKitStepsStore: ObservableObject {
         UserDefaults.standard.set(userId.uuidString, forKey: Self.pendingLocalDeletionKey)
         await uploader.discardLegacy(userId: userId)
         do { try HealthKitUploadState.discardLegacy(userId: userId) } catch { return false }
+        HealthKitActivitySync.clear(userId: userId)
         UserDefaults.standard.removeObject(forKey: Self.askedKey(userId: userId))
         UserDefaults.standard.removeObject(forKey: Self.diagnosticsKey(userId: userId))
         UserDefaults.standard.removeObject(forKey: Self.pendingSyncKey)
         UserDefaults.standard.removeObject(forKey: Self.pendingLocalDeletionKey)
         let cleanupActiveUserId = activeUserId
         if cleanupActiveUserId == userId || cleanupActiveUserId == nil {
-            if let observerQuery {
-                store.stop(observerQuery)
-                self.observerQuery = nil
+            for query in observerQueries {
+                store.stop(query)
             }
-            if let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount) {
+            observerQueries.removeAll()
+            for sampleType in HealthKitActivityAggregates.readTypes.compactMap({ $0 as? HKSampleType }) {
                 await withCheckedContinuation { continuation in
-                    store.disableBackgroundDelivery(for: stepsType) { _, _ in continuation.resume() }
+                    store.disableBackgroundDelivery(for: sampleType) { _, _ in continuation.resume() }
                 }
             }
             guard activeUserId == cleanupActiveUserId else { installObserverAtLaunch(); return true }
@@ -274,9 +288,12 @@ final class HealthKitStepsStore: ObservableObject {
             do {
                 try await trace.measure(.authorization) {
                     try await store.requestAuthorization(
-                    toShare: [],
-                    read: HealthKitActivityAggregates.readTypes
-                )
+                        toShare: [],
+                        read: HealthKitActivityAggregates.readTypes
+                    )
+                }
+                if let userID {
+                    HealthKitActivitySync.clear(userId: userID)
                 }
             } catch {
                 trace.fail(Self.errorCode(for: error))
@@ -318,16 +335,24 @@ final class HealthKitStepsStore: ObservableObject {
         guard !CompanionPreview.isEnabled else { return false }
         if let inFlightSync {
             if coalesceInFlight {
+                rerunRequested = true
                 return await inFlightSync.value
             }
             _ = await inFlightSync.value
         }
         let work = Task { @MainActor in
-            defer { self.inFlightSync = nil }
-            return await self.performSyncToBackend(session: session, trigger: trigger, trace: trace)
+            var synced = false
+            repeat {
+                self.rerunRequested = false
+                synced = await self.performSyncToBackend(session: session, trigger: trigger, trace: trace)
+            } while self.rerunRequested && !Task.isCancelled
+            return synced
         }
         inFlightSync = work
-        return await work.value
+        let synced = await work.value
+        // Two uncoalesced callers can each start a sync; only the latest may clear the slot.
+        if inFlightSync == work { inFlightSync = nil }
+        return synced
     }
 
     private func performSyncToBackend(
@@ -365,46 +390,55 @@ final class HealthKitStepsStore: ObservableObject {
             guard activeUserId == userId, session.authSession?.user.id == userId else { throw CancellationError() }
             let context = try await api.healthKitUploadContext(accessToken: contextToken, trace: trace)
             let timeZone = session.profile?.calendarTimeZone ?? .current
-            var sync = try await HealthKitStepAggregates.read(
+            let sync = try await HealthKitStepAggregates.read(
                 store: store,
                 type: stepsType,
                 context: context,
                 trace: trace,
                 timeZone: timeZone
             )
-            let activity = await trace.measure(.healthKitActivity) {
-                await HealthKitActivityAggregates.read(store: store, context: context, timeZone: timeZone)
-            }
-            sync.activityDays = activity.days
-            sync.workouts = activity.workouts
-            try Task.checkCancellation()
             let syncToken = try await trace.measure(.session) { try await session.freshAccessToken() }
             guard activeUserId == userId, session.authSession?.user.id == userId else { throw CancellationError() }
+            _ = try await api.syncHealthKitSteps(sync, accessToken: syncToken, trace: trace)
+
+            var activityFailure: Error?
+            var activityProcessingPending = false
             do {
-                _ = try await api.syncHealthKitSteps(sync, accessToken: syncToken, trace: trace)
+                let processed = try await trace.measure(.healthKitActivity) {
+                    try await HealthKitActivitySync.synchronize(
+                        store: store, api: api, session: session, userId: userId,
+                        context: context, timeZone: timeZone, trace: trace
+                    )
+                }
+                activityProcessingPending = !processed
             } catch {
-                guard sync.activityDays != nil || sync.workouts != nil else { throw error }
-                Self.logger.error("healthkit_extras_dropped retrying_steps_only")
-                var stepsOnly = sync
-                stepsOnly.activityDays = nil
-                stepsOnly.workouts = nil
-                _ = try await api.syncHealthKitSteps(stepsOnly, accessToken: syncToken, trace: trace)
+                activityFailure = error
+                trace.fail(Self.errorCode(for: error))
+                let reference = HealthKitSyncTrace.Failure(error).reference
+                Self.logger.error("healthkit_activity_sync_failed reference=\(reference, privacy: .public)")
             }
             try Task.checkCancellation()
             guard activeUserId == userId else { throw CancellationError() }
             connection = .upToDate
-            UserDefaults.standard.removeObject(forKey: Self.pendingSyncKey)
+            if activityFailure == nil && !activityProcessingPending {
+                UserDefaults.standard.removeObject(forKey: Self.pendingSyncKey)
+            } else {
+                UserDefaults.standard.set(true, forKey: Self.pendingSyncKey)
+            }
             updateDiagnostics {
                 if trigger == .observer { $0.lastAutomaticSync = Date() }
                 else { $0.lastManualSync = Date() }
-                $0.errorCode = nil
-                $0.failureReference = nil
-                $0.failureDetail = nil
+                $0.activitySyncFailed = activityFailure != nil
+                $0.activityProcessingPending = activityProcessingPending
+                $0.errorCode = activityFailure.map { Self.errorCode(for: $0) }
+                $0.failureReference = activityFailure.map { HealthKitSyncTrace.Failure($0).reference }
+                $0.failureDetail = activityFailure == nil
+                    ? nil : String(appLocalized: "Steps up to date · Other activity didn't sync. Tap to retry.")
             }
             if trigger == .observer {
                 await onBackendSync?()
             }
-            return true
+            return activityFailure == nil && !activityProcessingPending
         } catch {
             let code = Self.errorCode(for: error)
             let detail = Self.failureDetail(for: error)

@@ -6,9 +6,7 @@ struct YouView: View {
     @EnvironmentObject private var themeStore: ThemeStore
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var steps: HealthKitStepsStore
-    @EnvironmentObject private var companions: CompanionStore
     @EnvironmentObject private var preferences: AccountPreferencesStore
-    @EnvironmentObject private var feed: FeedStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
     @Environment(\.scenePhase) private var scenePhase
@@ -107,7 +105,7 @@ struct YouView: View {
             }
             #endif
 
-            if session.isFitFightAdmin {
+            if session.isFitFightAdmin || (CompanionPreview.isEnabled && !ScreenshotExport.isEnabled) {
                 FFSection(title: String(appLocalized: "Developer")) {
                     developer
                 }
@@ -134,9 +132,6 @@ struct YouView: View {
         }
         .sheet(isPresented: $showingOnboardingPreview) {
             OnboardingPreviewView()
-                .environmentObject(session)
-                .environmentObject(steps)
-                .environmentObject(themeStore)
                 .fitFightTheme(themeStore.theme)
                 .presentationBackground(themeStore.theme.bg)
         }
@@ -149,9 +144,6 @@ struct YouView: View {
             FeedComposeSheet(broadcastOnly: true) {
                 model.tab = .feed
             }
-            .environmentObject(model)
-            .environmentObject(session)
-            .environmentObject(feed)
             .fitFightTheme(themeStore.theme)
             .presentationBackground(themeStore.theme.bg)
         }
@@ -179,7 +171,8 @@ struct YouView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This permanently deletes your profile, photos, uploaded Steps, referrals, invitations, fights you created, and bugs or requests you posted; removes you from other fights; and signs you out. This can’t be undone.")
+            Text("This permanently deletes your profile, photos, uploaded Apple Health activity, referrals, invitations, fights you created, and bugs or requests you posted; removes you from other fights; and signs you out. This can’t be undone.")
+            Text("Deleting your account does not refund Apple purchases. Paid Specials are not resold. Contact support for purchase recovery.")
         }
     }
 
@@ -207,7 +200,7 @@ struct YouView: View {
                     CompanionAvatar(
                         personID: session.profile?.userId.uuidString,
                         companionID: session.profile?.companionId, isYou: true,
-                        monogram: session.profile?.initials ?? "FF", photoURL: session.profile?.avatar?.url, size: 68
+                        monogram: session.profile?.initials ?? "FF", photoURL: session.profile?.photoURL, size: 68
                     )
                 }
                 .buttonStyle(FFHapticPlainStyle())
@@ -251,7 +244,7 @@ struct YouView: View {
         profileStore.clear()
         incomingFriends = 0
         guard !staticRender, let userID = session.authSession?.user.id else { return }
-        await profileStore.load(userID: userID, session: session)
+        await profileStore.load(userID: userID, session: session, includeHistory: false)
         do {
             let token = try await session.freshAccessToken()
             async let friendsRequest = FitFightAPI().profileFriends(kind: "incoming", accessToken: token)
@@ -276,8 +269,8 @@ struct YouView: View {
                 }
             } label: {
                 FFGroupedRow(
-                    title: String(appLocalized: "Apple Health Steps"),
-                    subtitle: steps.connection == .upToDate ? String(appLocalized: "Up to date") : steps.detailText,
+                    title: String(appLocalized: "Apple Health activity"),
+                    subtitle: steps.detailText,
                     systemImage: "heart",
                     enabled: steps.status != .reading && !model.isRefreshingFights,
                     subtitleTone: healthSubtitleTone,
@@ -378,7 +371,7 @@ struct YouView: View {
     private var healthSubtitleTone: FFTone {
         switch steps.connection {
         case .syncFailed, .noAccessibleSteps: return .ember
-        case .upToDate: return .moss
+        case .upToDate: return steps.diagnostics.activitySyncFailed == true ? .ember : .moss
         case .syncing, .notConnected: return .neutral
         }
     }
@@ -389,7 +382,12 @@ struct YouView: View {
             return FFPill(String(appLocalized: "Retry"), style: .softEmber)
         case .syncing:
             return FFPill(String(appLocalized: "Syncing"), style: .neutral)
-        case .upToDate, .noAccessibleSteps:
+        case .upToDate:
+            if steps.diagnostics.activitySyncFailed == true {
+                return FFPill(String(appLocalized: "Retry"), style: .softEmber)
+            }
+            return FFPill(String(appLocalized: "Connected"), style: .softMoss)
+        case .noAccessibleSteps:
             return FFPill(String(appLocalized: "Connected"), style: .softMoss)
         case .notConnected:
             return FFPill(String(appLocalized: "Connect"), style: .solidMoss)
@@ -407,11 +405,7 @@ struct YouView: View {
                 title: String(appLocalized: "Bugs & requests"),
                 subtitle: String(appLocalized: "Post a bug or a feature request. Other people can upvote and comment with their username."),
                 systemImage: "bubble.left.and.bubble.right",
-                trailing: AnyView(
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(theme.textFaint)
-                ),
+                trailing: AnyView(FFChevron()),
                 action: {
                     model.feedbackRequestFilter = RequestFilter()
                     model.tab = .feedback
@@ -452,44 +446,43 @@ struct YouView: View {
 
     private var developer: some View {
         FFGroupedRows {
+            if !CompanionPreview.isEnabled {
+                FFGroupedRow(
+                    title: String(appLocalized: "Replay onboarding"),
+                    subtitle: String(appLocalized: "Health, challenge reminders, and Bugs & requests. Your account and fights stay."),
+                    systemImage: "arrow.counterclockwise",
+                    subtitleTone: .neutral,
+                    trailing: AnyView(FFChevron()),
+                    action: { showingOnboardingPreview = true }
+                )
+                FFDivider()
+                FFGroupedRow(
+                    title: "Slide haptics",
+                    subtitle: "Twenty Slide to start vibrations. This page is only on your account.",
+                    systemImage: "iphone.radiowaves.left.and.right",
+                    subtitleTone: .neutral,
+                    trailing: AnyView(FFChevron()),
+                    action: { showingSlideHapticsLab = true }
+                )
+                FFDivider()
+            }
             FFGroupedRow(
-                title: String(appLocalized: "Replay onboarding"),
-                subtitle: String(appLocalized: "Health, challenge reminders, and Bugs & requests. Your account and fights stay."),
-                systemImage: "arrow.counterclockwise",
-                subtitleTone: .neutral,
-                trailing: AnyView(
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(theme.textFaint)
-                ),
-                action: { showingOnboardingPreview = true }
+                title: String(appLocalized: "Preview update card"),
+                subtitle: String(appLocalized: "Large notice at the top."),
+                systemImage: "rectangle",
+                action: { model.showingUpdateToastPreview = true }
             )
-            FFDivider()
-            FFGroupedRow(
-                title: "Slide haptics",
-                subtitle: "Twenty Slide to start vibrations. This page is only on your account.",
-                systemImage: "iphone.radiowaves.left.and.right",
-                subtitleTone: .neutral,
-                trailing: AnyView(
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(theme.textFaint)
-                ),
-                action: { showingSlideHapticsLab = true }
-            )
-            FFDivider()
-            FFGroupedRow(
-                title: String(appLocalized: "Broadcast"),
-                subtitle: String(appLocalized: "Write one post. Everyone signed in sees it on Feed."),
-                systemImage: "megaphone",
-                subtitleTone: .neutral,
-                trailing: AnyView(
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(theme.textFaint)
-                ),
-                action: { showingBroadcastCompose = true }
-            )
+            if !CompanionPreview.isEnabled {
+                FFDivider()
+                FFGroupedRow(
+                    title: String(appLocalized: "Broadcast"),
+                    subtitle: String(appLocalized: "Write one post. Everyone signed in sees it on Feed."),
+                    systemImage: "megaphone",
+                    subtitleTone: .neutral,
+                    trailing: AnyView(FFChevron()),
+                    action: { showingBroadcastCompose = true }
+                )
+            }
         }
     }
 
@@ -529,9 +522,7 @@ struct YouView: View {
                 .ffType(.rowTitle)
                 .foregroundStyle(destructive ? theme.emberText : theme.text)
             Spacer()
-            Image(systemName: "chevron.right")
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(theme.textFaint)
+            FFChevron()
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)

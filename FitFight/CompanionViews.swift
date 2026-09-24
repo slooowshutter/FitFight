@@ -3,6 +3,50 @@ import SwiftUI
 enum StockCompanion: String, CaseIterable, Identifiable {
     case badger, raccoon, redPanda = "red-panda", otter, rabbit, fox, bear, boar, sloth, dog, goat, turtle
 
+    case limitedPangolin = "limited-pangolin"
+    case limitedPlatypus = "limited-platypus"
+    case limitedSpottedQuoll = "limited-spotted-quoll"
+    case limitedFennecFox = "limited-fennec-fox"
+    case limitedMuskOx = "limited-musk-ox"
+    case limitedKookaburra = "limited-kookaburra"
+    case limitedPorcupine = "limited-porcupine"
+    case limitedBharal = "limited-bharal"
+    case limitedGoldenSnubNosedMonkey = "limited-golden-snub-nosed-monkey"
+    case limitedProboscisMonkey = "limited-proboscis-monkey"
+    case limitedTreeKangaroo = "limited-tree-kangaroo"
+    case limitedGilaMonster = "limited-gila-monster"
+    case limitedTarsier = "limited-tarsier"
+    case limitedManedWolf = "limited-maned-wolf"
+    case limitedFireSalamander = "limited-fire-salamander"
+    case limitedServalStroll = "limited-serval-stroll"
+    case limitedPuffin = "limited-puffin"
+    case limitedNumbatSprint = "limited-numbat-sprint"
+    case limitedCoatiSnooze = "limited-coati-snooze"
+    case limitedGalago = "limited-galago"
+    case limitedFrilledLizard = "limited-frilled-lizard"
+    case limitedOkapi = "limited-okapi"
+    case limitedHoatzin = "limited-hoatzin"
+    case limitedQuokka = "limited-quokka"
+    case limitedNumbatStride = "limited-numbat-stride"
+    case limitedSifaka = "limited-sifaka"
+    case limitedSecretaryBirdStride = "limited-secretary-bird-stride"
+    case limitedRockHyrax = "limited-rock-hyrax"
+    case limitedServalSprint = "limited-serval-sprint"
+    case limitedBandedMongoose = "limited-banded-mongoose"
+    case limitedAxolotl = "limited-axolotl"
+    case limitedThornyDevilStroll = "limited-thorny-devil-stroll"
+    case limitedCoatiSprint = "limited-coati-sprint"
+    case limitedTamandua = "limited-tamandua"
+    case limitedPaca = "limited-paca"
+    case limitedJerboa = "limited-jerboa"
+    case limitedThornyDevilCoffee = "limited-thorny-devil-coffee"
+    case limitedKakapo = "limited-kakapo"
+    case limitedSecretaryBirdSnooze = "limited-secretary-bird-snooze"
+    case limitedMarkhor = "limited-markhor"
+
+    var isLimited: Bool { rawValue.hasPrefix("limited-") }
+    var productId: String { "com.fitfight.mvp.special.\(rawValue.replacingOccurrences(of: "limited-", with: "").replacingOccurrences(of: "-", with: "_"))" }
+
     var id: String { rawValue }
     var image: String { "Companion-\(rawValue)" }
 
@@ -20,6 +64,46 @@ enum StockCompanion: String, CaseIterable, Identifiable {
         case .dog: String(appLocalized: "Dog")
         case .goat: String(appLocalized: "Goat")
         case .turtle: String(appLocalized: "Turtle")
+        case .limitedPangolin: String(appLocalized: "Pangolin")
+        case .limitedPlatypus: String(appLocalized: "Platypus")
+        case .limitedSpottedQuoll: String(appLocalized: "Spotted Quoll")
+        case .limitedFennecFox: String(appLocalized: "Fennec Fox")
+        case .limitedMuskOx: String(appLocalized: "Musk Ox")
+        case .limitedKookaburra: String(appLocalized: "Kookaburra")
+        case .limitedPorcupine: String(appLocalized: "Porcupine")
+        case .limitedBharal: String(appLocalized: "Bharal")
+        case .limitedGoldenSnubNosedMonkey: String(appLocalized: "Golden Snub-Nosed Monkey")
+        case .limitedProboscisMonkey: String(appLocalized: "Proboscis Monkey")
+        case .limitedTreeKangaroo: String(appLocalized: "Tree Kangaroo")
+        case .limitedGilaMonster: String(appLocalized: "Gila Monster")
+        case .limitedTarsier: String(appLocalized: "Tarsier")
+        case .limitedManedWolf: String(appLocalized: "Maned Wolf")
+        case .limitedFireSalamander: String(appLocalized: "Fire Salamander")
+        case .limitedServalStroll: String(appLocalized: "Serval, Easy Pace")
+        case .limitedPuffin: String(appLocalized: "Puffin")
+        case .limitedNumbatSprint: String(appLocalized: "Numbat, Sprint Mode")
+        case .limitedCoatiSnooze: String(appLocalized: "Coati, Snooze Mode")
+        case .limitedGalago: String(appLocalized: "Galago")
+        case .limitedFrilledLizard: String(appLocalized: "Frilled Lizard")
+        case .limitedOkapi: String(appLocalized: "Okapi")
+        case .limitedHoatzin: String(appLocalized: "Hoatzin")
+        case .limitedQuokka: String(appLocalized: "Quokka")
+        case .limitedNumbatStride: String(appLocalized: "Numbat, Steady Stride")
+        case .limitedSifaka: String(appLocalized: "Sifaka")
+        case .limitedSecretaryBirdStride: String(appLocalized: "Secretary Bird, On Duty")
+        case .limitedRockHyrax: String(appLocalized: "Rock Hyrax")
+        case .limitedServalSprint: String(appLocalized: "Serval, Sprint Mode")
+        case .limitedBandedMongoose: String(appLocalized: "Banded Mongoose")
+        case .limitedAxolotl: String(appLocalized: "Axolotl")
+        case .limitedThornyDevilStroll: String(appLocalized: "Thorny Devil, Easy Pace")
+        case .limitedCoatiSprint: String(appLocalized: "Coati, Sprint Mode")
+        case .limitedTamandua: String(appLocalized: "Tamandua")
+        case .limitedPaca: String(appLocalized: "Paca")
+        case .limitedJerboa: String(appLocalized: "Jerboa")
+        case .limitedThornyDevilCoffee: String(appLocalized: "Thorny Devil, Coffee Break")
+        case .limitedKakapo: String(appLocalized: "Kakapo")
+        case .limitedSecretaryBirdSnooze: String(appLocalized: "Secretary Bird, Off Duty")
+        case .limitedMarkhor: String(appLocalized: "Markhor")
         }
     }
 
@@ -37,6 +121,46 @@ enum StockCompanion: String, CaseIterable, Identifiable {
         case .dog: String(appLocalized: "Always up for a walk.")
         case .goat: String(appLocalized: "Takes the uphill route.")
         case .turtle: String(appLocalized: "Never out of the race.")
+        case .limitedPangolin: String(appLocalized: "Packed a snack. Called it endurance.")
+        case .limitedPlatypus: String(appLocalized: "Built like a committee. Walks like a legend.")
+        case .limitedSpottedQuoll: String(appLocalized: "Spots the finish line. Ignores the warm-up.")
+        case .limitedFennecFox: String(appLocalized: "Heard you were skipping leg day.")
+        case .limitedMuskOx: String(appLocalized: "Built for winter. Dressed for PE.")
+        case .limitedKookaburra: String(appLocalized: "Laughs at your excuses. Then takes a break.")
+        case .limitedPorcupine: String(appLocalized: "Personal space is part of the training plan.")
+        case .limitedBharal: String(appLocalized: "Your hill is the warm-up.")
+        case .limitedGoldenSnubNosedMonkey: String(appLocalized: "Golden fur. Questionable pacing.")
+        case .limitedProboscisMonkey: String(appLocalized: "Wins every race by a nose.")
+        case .limitedTreeKangaroo: String(appLocalized: "Took the stairs. All the way up the tree.")
+        case .limitedGilaMonster: String(appLocalized: "A monster at taking it easy.")
+        case .limitedTarsier: String(appLocalized: "Wide awake. Deeply suspicious of cardio.")
+        case .limitedManedWolf: String(appLocalized: "All legs. No shortcuts.")
+        case .limitedFireSalamander: String(appLocalized: "Warming up is a personal brand.")
+        case .limitedServalStroll: String(appLocalized: "Long legs. Leisurely agenda.")
+        case .limitedPuffin: String(appLocalized: "Flight mode off. Step count on.")
+        case .limitedNumbatSprint: String(appLocalized: "Small stripes. Unreasonably big ambitions.")
+        case .limitedCoatiSnooze: String(appLocalized: "Yawn first. Personal best later.")
+        case .limitedGalago: String(appLocalized: "Night owl energy. Morning walk regrets.")
+        case .limitedFrilledLizard: String(appLocalized: "Dressed for drama. Stayed for the steps.")
+        case .limitedOkapi: String(appLocalized: "Half stripes. Full commitment to a nap.")
+        case .limitedHoatzin: String(appLocalized: "Pre-workout is coffee and a long sit.")
+        case .limitedQuokka: String(appLocalized: "Smiling through a very optional workout.")
+        case .limitedNumbatStride: String(appLocalized: "Counts ants on rest days. Steps on the others.")
+        case .limitedSifaka: String(appLocalized: "Sideways is still a direction.")
+        case .limitedSecretaryBirdStride: String(appLocalized: "Booked your defeat between two meetings.")
+        case .limitedRockHyrax: String(appLocalized: "Tiny legs. Elephant-sized confidence.")
+        case .limitedServalSprint: String(appLocalized: "Already at the finish. Pretending to stretch.")
+        case .limitedBandedMongoose: String(appLocalized: "Runs in a pack. Keeps a solo victory speech.")
+        case .limitedAxolotl: String(appLocalized: "Regrows limbs. Still skips leg day.")
+        case .limitedThornyDevilStroll: String(appLocalized: "Prickly about pace. Soft on rest days.")
+        case .limitedCoatiSprint: String(appLocalized: "Sniffed out a shortcut. Took the long way.")
+        case .limitedTamandua: String(appLocalized: "Long snout. Short list of excuses.")
+        case .limitedPaca: String(appLocalized: "Times every lap. Rounds down the snack breaks.")
+        case .limitedJerboa: String(appLocalized: "Tiny footprint. Dramatic entrance.")
+        case .limitedThornyDevilCoffee: String(appLocalized: "Sharp outfit. Extremely soft schedule.")
+        case .limitedKakapo: String(appLocalized: "Flight cancelled. Walking reluctantly.")
+        case .limitedSecretaryBirdSnooze: String(appLocalized: "This meeting could have been a nap.")
+        case .limitedMarkhor: String(appLocalized: "Spiralling horns. Perfectly level coffee.")
         }
     }
 
@@ -51,13 +175,14 @@ enum StockCompanion: String, CaseIterable, Identifiable {
 }
 
 enum CompanionCategory: String, CaseIterable, Identifiable {
-    case all, yours, custom, mountains, water, forest, jungle
+    case all, limited, yours, custom, mountains, water, forest, jungle
 
     var id: String { rawValue }
 
     var name: String {
         switch self {
         case .all: String(appLocalized: "All")
+        case .limited: String(appLocalized: "Specials")
         case .mountains: String(appLocalized: "Mountains")
         case .water: String(appLocalized: "Water")
         case .forest: String(appLocalized: "Forest")
@@ -70,6 +195,7 @@ enum CompanionCategory: String, CaseIterable, Identifiable {
     var animals: [StockCompanion] {
         switch self {
         case .all: StockCompanion.allCases
+        case .limited: StockCompanion.allCases.filter(\.isLimited)
         case .mountains: [.goat, .bear, .redPanda]
         case .water: [.otter, .turtle]
         case .forest: [.badger, .raccoon, .rabbit, .fox, .bear, .boar]
@@ -99,91 +225,24 @@ enum CompanionEffortStage: Int, CaseIterable, Identifiable {
         if case .steps(let count) = status { return matching(todaySteps: count) }
         return .rest
     }
-
-    func label(for sport: CompanionSport) -> String {
-        sport.stageLabel(self)
-    }
 }
 
-enum CompanionSport: String, CaseIterable, Identifiable, Codable {
+/// Only restored from older builds that offered a sport picker; the goat has hiking poses.
+enum CompanionSport: String {
     case hiking, running, football, ski, walking
-
-    var id: String { rawValue }
-
-    var name: String {
-        switch self {
-        case .hiking: String(appLocalized: "Hiking")
-        case .running: String(appLocalized: "Running")
-        case .football: String(appLocalized: "Football")
-        case .ski: String(appLocalized: "Ski")
-        case .walking: String(appLocalized: "Walking")
-        }
-    }
-
-    func stageLabel(_ stage: CompanionEffortStage) -> String {
-        switch (self, stage) {
-        case (.hiking, .rest): String(appLocalized: "Resting")
-        case (.hiking, .headingOut): String(appLocalized: "Heading out")
-        case (.hiking, .onTheMove): String(appLocalized: "On the trail")
-        case (.hiking, .pushing): String(appLocalized: "Climbing")
-        case (.hiking, .peak): String(appLocalized: "At the peak")
-        case (.running, .rest): String(appLocalized: "On the bench")
-        case (.running, .headingOut): String(appLocalized: "Warming up")
-        case (.running, .onTheMove): String(appLocalized: "Jogging")
-        case (.running, .pushing): String(appLocalized: "Racing")
-        case (.running, .peak): String(appLocalized: "Finish line")
-        case (.football, .rest): String(appLocalized: "On the sideline")
-        case (.football, .headingOut): String(appLocalized: "Warming up")
-        case (.football, .onTheMove): String(appLocalized: "On the pitch")
-        case (.football, .pushing): String(appLocalized: "In the match")
-        case (.football, .peak): String(appLocalized: "After the whistle")
-        case (.ski, .rest): String(appLocalized: "In the lodge")
-        case (.ski, .headingOut): String(appLocalized: "At the lift")
-        case (.ski, .onTheMove): String(appLocalized: "On the slope")
-        case (.ski, .pushing): String(appLocalized: "Carving")
-        case (.ski, .peak): String(appLocalized: "At the summit")
-        case (.walking, .rest): String(appLocalized: "At home")
-        case (.walking, .headingOut): String(appLocalized: "Stepping out")
-        case (.walking, .onTheMove): String(appLocalized: "On the path")
-        case (.walking, .pushing): String(appLocalized: "A long loop")
-        case (.walking, .peak): String(appLocalized: "Back with a view")
-        }
-    }
-}
-
-enum CompanionEmotion: String, CaseIterable, Identifiable, Codable {
-    case calm, determined, smug, playful, fierce
-
-    var id: String { rawValue }
-
-    var name: String {
-        switch self {
-        case .calm: String(appLocalized: "Calm")
-        case .determined: String(appLocalized: "Determined")
-        case .smug: String(appLocalized: "Smug")
-        case .playful: String(appLocalized: "Playful")
-        case .fierce: String(appLocalized: "Fierce")
-        }
-    }
 }
 
 private struct CompanionIdentityRecord: Codable {
     var animal: String
     var sport: String
-    var emotion: String
-    var breed: String
-    var accessories: String
     var isCustom: Bool?
 }
 
-/// Account-backed companion. Custom descriptions are stored on the profile for later generation.
+/// Account-backed companion selection and reusable custom descriptions.
 @MainActor
 final class CompanionStore: ObservableObject {
     @Published var selection: StockCompanion = .badger
     @Published var sport: CompanionSport = .hiking { didSet { persist() } }
-    @Published var emotion: CompanionEmotion = .calm { didSet { persist() } }
-    @Published var breed = "" { didSet { persist() } }
-    @Published var accessories = "" { didSet { persist() } }
     @Published var isCustom = false
     @Published var customPrompt = ""
     @Published private(set) var savedPrompts: [String] = []
@@ -209,6 +268,7 @@ final class CompanionStore: ObservableObject {
     }
 
     static func deleteLocalLibrary(for userId: UUID) {
+        UserDefaults.standard.removeObject(forKey: "ff.ai.pending." + userId.uuidString)
         UserDefaults.standard.removeObject(forKey: libraryPrefix + userId.uuidString)
         UserDefaults.standard.removeObject(forKey: pendingPrefix + userId.uuidString)
         UserDefaults.standard.removeObject(forKey: pendingPromptPrefix + userId.uuidString)
@@ -263,11 +323,25 @@ final class CompanionStore: ObservableObject {
     }
 
     func choose(id: String, prompt: String?, session: SessionStore) async throws {
+        #if DEBUG && targetEnvironment(simulator)
+        if CompanionPreview.isEnabled {
+            applyChoice(id: id, prompt: prompt)
+            return
+        }
+        #endif
+        if StockCompanion(rawValue: id)?.isLimited == true {
+            // A Special needs the server's ownership check, so it is never saved offline.
+            let userId = session.profile?.userId
+            try await session.setCompanion(id: id, prompt: nil)
+            try Task.checkCancellation()
+            guard session.profile?.userId == userId, ownerId == userId else { throw CancellationError() }
+            if let userId { clearPending(for: userId) }
+            applyChoice(id: id, prompt: prompt)
+            persist()
+            return
+        }
         applyChoice(id: id, prompt: prompt)
         persist()
-        #if DEBUG && targetEnvironment(simulator)
-        if CompanionPreview.isEnabled { return }
-        #endif
         if let userId = session.profile?.userId {
             UserDefaults.standard.set(id, forKey: Self.pendingPrefix + userId.uuidString)
             if id == Self.customId {
@@ -361,9 +435,6 @@ final class CompanionStore: ObservableObject {
         else { return }
         isRestoring = true
         sport = CompanionSport(rawValue: saved.sport) ?? .hiking
-        emotion = CompanionEmotion(rawValue: saved.emotion) ?? .calm
-        breed = saved.breed
-        accessories = saved.accessories
         if saved.isCustom != true, let animal = StockCompanion(rawValue: saved.animal) {
             applyChoice(id: animal.rawValue, prompt: nil)
         }
@@ -375,9 +446,6 @@ final class CompanionStore: ObservableObject {
         let record = CompanionIdentityRecord(
             animal: selection.rawValue,
             sport: sport.rawValue,
-            emotion: emotion.rawValue,
-            breed: breed,
-            accessories: accessories,
             isCustom: isCustom
         )
         UserDefaults.standard.set(try? JSONEncoder().encode(record), forKey: Self.storageKey)
@@ -507,6 +575,7 @@ struct CompanionIntroduction: View {
     enum Surface { case fights, newFight, you }
     let surface: Surface
     @EnvironmentObject private var companions: CompanionStore
+    @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var steps: HealthKitStepsStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -546,6 +615,18 @@ struct CompanionIntroduction: View {
                         .clipped()
                         .contentShape(Rectangle())
                 }
+            } else if surface == .you {
+                HStack(alignment: .top, spacing: 0) {
+                    copy
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    youCharacter
+                        .frame(maxWidth: .infinity)
+                        .frame(height: height - 24)
+                        .clipped()
+                        .contentShape(Rectangle())
+                        .padding(.top, 24)
+                }
+                .frame(minHeight: height, alignment: .topLeading)
             } else {
                 GeometryReader { proxy in
                     ZStack(alignment: .topLeading) {
@@ -631,7 +712,7 @@ struct CompanionIntroduction: View {
     @ViewBuilder
     private var youCharacter: some View {
         if companions.isCustom {
-            Color.clear
+            RemotePhoto(url: session.profile?.photoURL, contentMode: .fit) { Color.clear }
         } else {
             CompanionCharacter(animal: companions.selection, sport: companions.sport, effort: youEffort)
         }
@@ -789,6 +870,7 @@ struct CompanionFightSummary: View {
 
 struct CompanionPicker: View {
     @EnvironmentObject private var companions: CompanionStore
+    @EnvironmentObject private var purchases: SpecialPurchases
     @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.dismiss) private var dismiss
@@ -802,6 +884,9 @@ struct CompanionPicker: View {
     @State private var error = ""
     @State private var libraryError = ""
     @State private var loadingLibrary = false
+    @State private var loadingEditions = false
+    @State private var editionsError = ""
+    @State private var showingGeneration = false
     @FocusState private var promptFocused: Bool
 
     private let promptLimit = 1000
@@ -809,7 +894,7 @@ struct CompanionPicker: View {
 
     init(selection: StockCompanion, required: Bool = false, isCustom: Bool = false, prompt: String = "", startWithCustom: Bool = false) {
         self.startWithCustom = startWithCustom
-        _category = State(initialValue: startWithCustom ? .custom : .all)
+        _category = State(initialValue: startWithCustom ? .custom : selection.isLimited && !required ? .limited : .all)
         if isCustom || startWithCustom {
             _draft = State(initialValue: nil)
             _pickingCustom = State(initialValue: true)
@@ -833,13 +918,14 @@ struct CompanionPicker: View {
                         .ffType(.label)
                         .foregroundStyle(theme.mossText)
                         .frame(minHeight: 44)
+                        .disabled(isSaving)
                 }
             }
             Text("This is how other people see you in fights and Feed. You can change your animal anytime.")
                 .font(.custom("Nunito-Bold", size: 13, relativeTo: .body))
                 .foregroundStyle(theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
-            if !error.isEmpty && category != .custom {
+            if !error.isEmpty && category == .yours {
                 Text(error)
                     .ffType(.caption)
                     .foregroundStyle(theme.emberText)
@@ -847,7 +933,7 @@ struct CompanionPicker: View {
             }
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    ForEach(CompanionCategory.allCases) { item in
+                    ForEach(CompanionCategory.allCases.filter { $0 != .limited || CompanionCategory.limited.animals.contains(where: shows) }) { item in
                         Button {
                             promptFocused = false
                             category = item
@@ -868,6 +954,42 @@ struct CompanionPicker: View {
                 }
             }
             .disabled(isSaving)
+            if category == .limited || (category == .all && draft?.isLimited == true) {
+                Text("One of each. One Special per account. Buy once and keep it, even when you change companions.")
+                    .ffType(.caption)
+                    .foregroundStyle(theme.textSecondary)
+                FFButton(title: String(appLocalized: "Restore purchases"), kind: .secondary, enabled: !isSaving, busy: purchases.isBusy) {
+                    Task { await purchases.restore(session: session) }
+                }
+                if purchases.canCancelCheckout {
+                    FFButton(title: String(appLocalized: "Cancel checkout"), kind: .secondary, enabled: !isSaving, busy: purchases.isBusy) {
+                        Task { await purchases.cancelCheckout(session: session) }
+                    }
+                }
+                if !purchases.message.isEmpty {
+                    Text(purchases.message).ffType(.caption).foregroundStyle(theme.textSecondary)
+                }
+                if purchases.snapshot?.editions.contains(where: { $0.status == .reserved }) == true {
+                    Text("A purchase is in progress. Your Special is held for 30 minutes. Restore purchases to check it.")
+                        .ffType(.caption).foregroundStyle(theme.textSecondary)
+                }
+                ForEach(purchases.snapshot?.conflicts ?? [], id: \.transactionId) { claim in
+                    FFButton(title: String(appLocalized: "Request a refund from Apple"), kind: .secondary) {
+                        Task { await purchases.requestRefund(claim) }
+                    }
+                }
+            }
+            if category == .limited {
+                if loadingEditions {
+                    ProgressView(String(appLocalized: "Checking availability…"))
+                        .ffType(.caption)
+                } else if !editionsError.isEmpty {
+                    Text(editionsError).ffType(.caption).foregroundStyle(theme.emberText)
+                    FFButton(title: String(appLocalized: "Retry"), kind: .secondary) {
+                        Task { await loadLimitedEditions() }
+                    }
+                }
+            }
             if category == .yours {
                 Text("Reuse a saved description or write a new one in Make it yours.")
                     .ffType(.body)
@@ -914,9 +1036,12 @@ struct CompanionPicker: View {
             }
             if !category.animals.isEmpty {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 150 : 96), spacing: 10)], spacing: 10) {
-                    ForEach(category.animals) { animal in
+                    ForEach(category.animals.filter(shows)) { animal in
+                        let edition = status(animal)
                         Button {
-                            Task { await saveStock(animal) }
+                            draft = animal
+                            pickingCustom = false
+                            error = ""
                         } label: {
                             VStack(spacing: 3) {
                                 Image(animal.image)
@@ -929,6 +1054,15 @@ struct CompanionPicker: View {
                                     .font(.custom("Nunito-ExtraBold", size: 12, relativeTo: .caption))
                                     .foregroundStyle(draft == animal && !pickingCustom ? theme.mossText : theme.text)
                                     .fixedSize(horizontal: false, vertical: true)
+                                if animal.isLimited {
+                                    Text(edition == .yours ? String(appLocalized: "Your special")
+                                         : edition == .reserved ? String(appLocalized: "Reserved for you")
+                                         : edition == .available ? String(appLocalized: "Available")
+                                         : String(appLocalized: "Taken"))
+                                        .ffType(.caption)
+                                        .foregroundStyle(theme.textSecondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
                             }
                             .padding(8)
                             .frame(maxWidth: .infinity)
@@ -938,7 +1072,7 @@ struct CompanionPicker: View {
                             .contentShape(RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
                         }
                         .buttonStyle(FFHapticPlainStyle())
-                        .disabled(isSaving)
+                        .disabled(isSaving || purchases.isBusy || (animal.isLimited && ![.available, .reserved, .yours].contains(edition)))
                         .accessibilityAddTraits(draft == animal && !pickingCustom ? .isSelected : [])
                     }
                 }
@@ -997,11 +1131,15 @@ struct CompanionPicker: View {
                     fullWidth: true,
                     action: { Task { await saveCustom() } }
                 )
-            } else if let draft, category.animals.contains(draft) {
-                Text(isSaving ? String(appLocalized: "Saving…") : draft.caption)
-                    .ffType(.body)
-                    .foregroundStyle(theme.textSecondary)
-                    .frame(maxWidth: .infinity)
+                FFButton(
+                    title: String(localized: "Generate images"),
+                    kind: .secondary,
+                    enabled: !isSaving && !CompanionPreview.isEnabled,
+                    fullWidth: true
+                ) {
+                    promptFocused = false
+                    showingGeneration = true
+                }
             }
             #if DEBUG && targetEnvironment(simulator)
             if CompanionPreview.isEnabled {
@@ -1014,7 +1152,44 @@ struct CompanionPicker: View {
             }
             #endif
         }
-        .interactiveDismissDisabled(session.needsCompanionSelection)
+        .safeAreaInset(edge: .bottom) {
+            if let draft, !pickingCustom, category != .custom, category != .yours {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(draft.image)
+                            .resizable().scaledToFit().frame(width: 56, height: 72)
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(draft.name).ffType(.label).foregroundStyle(theme.text)
+                            Text(draft.caption).ffType(.body).foregroundStyle(theme.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                            if companions.isCustom || !companions.hasChosen || draft != companions.selection {
+                                Text("Not saved yet").ffType(.caption).foregroundStyle(theme.textSecondary)
+                            }
+                        }
+                    }
+                    if !error.isEmpty {
+                        Text(error).ffType(.caption).foregroundStyle(theme.emberText)
+                    }
+                    let paid = draft.isLimited && !CompanionPreview.isEnabled
+                    let owned = status(draft) == .yours
+                    let price = purchases.products[draft.productId]?.displayPrice
+                    let canBuy = purchases.canBuy(draft)
+                    FFButton(
+                        title: paid && !owned ? price.map { String(appLocalized: "special.buy", defaultValue: "Buy for \($0)") } ?? String(appLocalized: "Purchases unavailable") : String(appLocalized: "Save companion"),
+                        enabled: (!paid || owned || canBuy) && (!draft.isLimited || [.available, .reserved, .yours].contains(status(draft))),
+                        busy: isSaving || purchases.isBusy, fullWidth: true
+                    ) { Task { await saveStock(draft) } }
+                }
+                .padding(.horizontal, theme.space.screenPadding)
+                .padding(.vertical, 12)
+                .background(theme.bg)
+            }
+        }
+        .interactiveDismissDisabled(session.needsCompanionSelection || isSaving || purchases.isBusy)
+        .sheet(isPresented: $showingGeneration) {
+            AICompanionView(initialDescription: customPrompt)
+        }
         .onAppear {
             if customPrompt.isEmpty { customPrompt = companions.customPrompt }
             if companions.isCustom || startWithCustom {
@@ -1038,6 +1213,36 @@ struct CompanionPicker: View {
                 libraryError = String(appLocalized: "Couldn’t load your saved descriptions.")
             }
         }
+        .task(id: session.profile?.userId) { await loadLimitedEditions() }
+        .onChange(of: session.profile?.userId) { _, _ in dismiss() }
+    }
+
+    private func loadLimitedEditions() async {
+        guard !CompanionPreview.isEnabled else { return }
+        let userId = session.profile?.userId
+        loadingEditions = true
+        editionsError = ""
+        defer { loadingEditions = false }
+        do {
+            try await purchases.refresh(session: session)
+        } catch is CancellationError {
+            return
+        } catch {
+            guard session.profile?.userId == userId else { return }
+            editionsError = String(appLocalized: "Couldn’t load specials. Try again.")
+        }
+    }
+
+    private func status(_ animal: StockCompanion) -> SpecialStoreSnapshot.Edition.Status? {
+        #if DEBUG && targetEnvironment(simulator)
+        if CompanionPreview.isEnabled { return animal == CompanionCategory.limited.animals[1] ? .taken : .available }
+        #endif
+        return purchases.snapshot?.editions.first { $0.id == animal.rawValue }?.status
+    }
+
+    /// Specials stay hidden while sales are off, except one this account already owns.
+    private func shows(_ animal: StockCompanion) -> Bool {
+        !animal.isLimited || CompanionPreview.isEnabled || purchases.snapshot?.purchasesEnabled == true || status(animal) == .yours
     }
 
     private var canSaveCustom: Bool {
@@ -1051,13 +1256,22 @@ struct CompanionPicker: View {
         isSaving = true
         defer { isSaving = false }
         do {
+            if animal.isLimited && !CompanionPreview.isEnabled,
+               purchases.snapshot?.editions.first(where: { $0.id == animal.rawValue })?.status != .yours {
+                guard await purchases.buy(animal, session: session) else {
+                    self.error = purchases.message
+                    await loadLimitedEditions()
+                    return
+                }
+            }
             try await companions.choose(id: animal.rawValue, prompt: nil, session: session)
             companions.showingPicker = false
             dismiss()
         } catch is CancellationError {
             return
         } catch {
-            self.error = String(appLocalized: "Couldn’t save your companion. Try again.")
+            self.error = error.localizedDescription
+            if animal.isLimited { await loadLimitedEditions() }
         }
     }
 

@@ -99,7 +99,7 @@ struct FightDayChartsView: View {
                     Text("Only synced steps are shown. Missing daily data is marked with a dash.")
                         .ffType(.micro)
                         .foregroundStyle(theme.textFaint)
-                } else if showsLegend {
+                } else if kind != .bars {
                     legend(model)
                 }
             }
@@ -147,15 +147,6 @@ struct FightDayChartsView: View {
         }
     }
 
-    private var showsLegend: Bool {
-        switch kind {
-        case .bars:
-            return false
-        case .line, .histogram, .pace, .oval:
-            return true
-        }
-    }
-
     private func legend(_ model: FightDayChartModel) -> some View {
         FFFlow(spacing: 10) {
             ForEach(model.series) { series in
@@ -189,7 +180,6 @@ private struct FightDayChartModel {
     var peakDaily: Double
     var peakTotal: Double
 
-    var peakCumulative: Double { peakTotal }
     var dayCount: Int { labels.count }
 
     init(days: [FightDay], standings: [Standing], theme: Theme) {
@@ -267,7 +257,7 @@ private struct FightDayChartModel {
     }
 
     func peak(cumulative: Bool) -> Double {
-        cumulative ? peakCumulative : peakDaily
+        cumulative ? peakTotal : peakDaily
     }
 }
 
@@ -400,7 +390,7 @@ private struct FightDayHistogramChart: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(String(appLocalized: "chart.scale", defaultValue: "0–\(model.peakDaily.formatted(.number.notation(.compactName).precision(.fractionLength(0...1)))) steps"))
+            Text(String(appLocalized: "chart.scale", defaultValue: "0-\(model.peakDaily.formatted(.number.notation(.compactName).precision(.fractionLength(0...1)))) steps"))
                 .ffType(.micro)
                 .foregroundStyle(theme.textSecondary)
             GeometryReader { geo in

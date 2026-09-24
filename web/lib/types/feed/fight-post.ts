@@ -15,6 +15,7 @@ export const fightPostAuthorSchema = z
         display_name: z.string(),
         avatar: mediaObjectSchema.nullable(),
         companion_id: companionIdSchema.nullable().default(null),
+        companion_image_url: z.string().url().optional(),
     })
     .strict();
 
@@ -172,15 +173,7 @@ export const blockFeedAuthorResponseSchema = z
     })
     .strict();
 
-export const feedPersonSchema = z
-    .object({
-        user_id: z.string().uuid(),
-        handle: z.string(),
-        display_name: z.string(),
-        avatar: mediaObjectSchema.nullable(),
-        companion_id: companionIdSchema.nullable().default(null),
-    })
-    .strict();
+export const feedPersonSchema = fightPostAuthorSchema;
 
 export const feedPeopleResponseSchema = z
     .object({
@@ -255,17 +248,10 @@ export const listFightPostCommentsQuerySchema = z
     })
     .strict();
 
-export const reportFightPostCommentRequestSchema = z
-    .object({
-        reason: fightPostReportReasonSchema,
-    })
-    .strict();
+export const reportFightPostCommentRequestSchema = reportFightPostRequestSchema;
 
-export const reportFightPostCommentResponseSchema = z
-    .object({
-        reported: z.literal(true),
-    })
-    .strict();
+export const reportFightPostCommentResponseSchema =
+    reportFightPostResponseSchema;
 
 export const setFightPostReactionRequestSchema = z
     .object({

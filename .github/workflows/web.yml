@@ -7,7 +7,7 @@ on:
             - "contracts/**"
             - ".github/workflows/web.yml"
     push:
-        branches: [main, develop, preview, profiles-friends-and-stats]
+        branches: [main, develop, preview, profiles-friends-and-stats, exclusive-animal-avatars]
         paths:
             - "web/**"
             - "contracts/**"
@@ -33,6 +33,8 @@ jobs:
                   cache: npm
                   cache-dependency-path: web/package-lock.json
             - run: npm ci
+            - name: Generate Next.js route signatures
+              run: npx next typegen
             - run: npm run typecheck
             - run: npm test
             - name: Parse API contracts

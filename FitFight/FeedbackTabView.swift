@@ -10,11 +10,7 @@ struct FeedbackTabView: View {
     var body: some View {
         VStack(spacing: 0) {
             hubBar
-            RequestsView(
-                store: requests,
-                chrome: .tab,
-                filter: $model.feedbackRequestFilter
-            )
+            RequestsView(store: requests, filter: $model.feedbackRequestFilter)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(theme.bg)
@@ -25,7 +21,6 @@ struct FeedbackTabView: View {
                 model.feedbackRequestFilter.status = .open
                 composingRequest = false
             })
-            .environmentObject(session)
             .fitFightTheme(theme)
             .presentationBackground(theme.bg)
         }
@@ -37,24 +32,10 @@ struct FeedbackTabView: View {
                 .ffType(.title)
                 .foregroundStyle(theme.text)
             Spacer(minLength: 0)
-            composeButton
+            FFComposeButton(label: String(appLocalized: "New request")) { composingRequest = true }
         }
         .padding(.horizontal, theme.space.screenPadding)
         .padding(.top, 8)
         .padding(.bottom, 8)
-    }
-
-    private var composeButton: some View {
-        Button {
-            composingRequest = true
-        } label: {
-            Image(systemName: "plus")
-                .font(.system(size: 16, weight: .bold))
-                .foregroundStyle(theme.mossOn)
-                .frame(width: 36, height: 36)
-                .background(theme.mossFill, in: Circle())
-        }
-        .buttonStyle(FFHapticPlainStyle())
-        .accessibilityLabel(String(appLocalized: "New request"))
     }
 }

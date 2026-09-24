@@ -13,17 +13,9 @@ struct SlideHapticsLabView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text(verbatim: "Slide haptics")
-                    .ffType(.title)
-                    .foregroundStyle(theme.text)
-                Spacer()
-                Button(String(appLocalized: "Close")) { dismiss() }
-                    .ffType(.label)
-                    .foregroundStyle(theme.mossText)
-            }
-            .padding(.horizontal, theme.space.screenPadding)
-            .padding(.vertical, 12)
+            FFSheetHeader(title: "Slide haptics") { dismiss() }
+                .padding(.horizontal, theme.space.screenPadding)
+                .padding(.vertical, 12)
 
             Text(verbatim: "Try 20 presets or tune your own. Strength and crispness use 0-100. Custom settings save automatically on this phone, even when you use a preset.")
                 .ffType(.caption)

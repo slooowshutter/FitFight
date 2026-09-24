@@ -2,7 +2,6 @@ import type { Sql, TransactionSql } from "postgres";
 import { inviteNotificationAlert } from "@/lib/notifications/notification-copy";
 import type { NotificationLocale } from "@/lib/types/notifications/device-installation";
 import type {
-    NotificationCopyKey,
     NotificationKind,
     NotificationSlot,
 } from "@/lib/types/notifications/notification-intent";
@@ -27,84 +26,10 @@ function routeForFight(fightId: string): string {
     return `/fights/${fightId}`;
 }
 
-export async function enqueueAwaitingFinalSyncNotifications(
+async function insertNotificationIntents(
     sql: Sql,
-    fightId: string,
-    endsAt: string,
-    members: MemberCompletion[],
+    rows: Record<string, string>[],
 ): Promise<void> {
-    const endsAtMs = Date.parse(endsAt);
-    const rows = members.flatMap((member) => {
-        const t0Copy: NotificationCopyKey = member.final_steps_complete
-            ? "fight_ended_everyone"
-            : "fight_ended_sync";
-        return [
-            {
-                idempotency_key: idempotencyKey(
-                    fightId,
-                    member.user_id,
-                    "fight_ended",
-                    "t0",
-                ),
-                user_id: member.user_id,
-                fight_id: fightId,
-                kind: "fight_ended" as const,
-                slot: "t0" as const,
-                not_before: new Date(endsAtMs).toISOString(),
-                expires_at: new Date(endsAtMs + 2 * HOUR_MS).toISOString(),
-                route: routeForFight(fightId),
-                copy_key: t0Copy,
-            },
-            {
-                idempotency_key: idempotencyKey(
-                    fightId,
-                    member.user_id,
-                    "grace_reminder",
-                    "t12",
-                ),
-                user_id: member.user_id,
-                fight_id: fightId,
-                kind: "grace_reminder" as const,
-                slot: "t12" as const,
-                not_before: new Date(endsAtMs + 12 * HOUR_MS).toISOString(),
-                expires_at: new Date(endsAtMs + 14 * HOUR_MS).toISOString(),
-                route: routeForFight(fightId),
-                copy_key: "grace_12h" as const,
-            },
-            {
-                idempotency_key: idempotencyKey(
-                    fightId,
-                    member.user_id,
-                    "grace_reminder",
-                    "t18",
-                ),
-                user_id: member.user_id,
-                fight_id: fightId,
-                kind: "grace_reminder" as const,
-                slot: "t18" as const,
-                not_before: new Date(endsAtMs + 18 * HOUR_MS).toISOString(),
-                expires_at: new Date(endsAtMs + 20 * HOUR_MS).toISOString(),
-                route: routeForFight(fightId),
-                copy_key: "grace_6h" as const,
-            },
-            {
-                idempotency_key: idempotencyKey(
-                    fightId,
-                    member.user_id,
-                    "grace_reminder",
-                    "t23",
-                ),
-                user_id: member.user_id,
-                fight_id: fightId,
-                kind: "grace_reminder" as const,
-                slot: "t23" as const,
-                not_before: new Date(endsAtMs + 23 * HOUR_MS).toISOString(),
-                expires_at: new Date(endsAtMs + 24 * HOUR_MS).toISOString(),
-                route: routeForFight(fightId),
-                copy_key: "grace_1h" as const,
-            },
-        ];
-    });
     if (rows.length === 0) return;
     await sql`
         insert into private.notification_intents (
@@ -126,6 +51,68 @@ export async function enqueueAwaitingFinalSyncNotifications(
         )
         on conflict (idempotency_key) do nothing
     `;
+}
+
+export async function insertNotificationIntentsWithAlertBody(
+    sql: Sql | TransactionSql,
+    rows: Record<string, string>[],
+): Promise<void> {
+    if (rows.length === 0) return;
+    await sql`
+        insert into private.notification_intents (
+            idempotency_key, user_id, fight_id, kind, slot,
+            not_before, expires_at, route, copy_key, alert_body
+        )
+        select row.idempotency_key, row.user_id, row.fight_id, row.kind, row.slot,
+            row.not_before::timestamptz, row.expires_at::timestamptz, row.route, row.copy_key, row.alert_body
+        from jsonb_to_recordset(${sql.json(rows)}::jsonb) as row (
+            idempotency_key text,
+            user_id uuid,
+            fight_id uuid,
+            kind text,
+            slot text,
+            not_before text,
+            expires_at text,
+            route text,
+            copy_key text,
+            alert_body text
+        )
+        on conflict (idempotency_key) do nothing
+    `;
+}
+
+export async function enqueueAwaitingFinalSyncNotifications(
+    sql: Sql,
+    fightId: string,
+    endsAt: string,
+    members: MemberCompletion[],
+): Promise<void> {
+    const endsAtMs = Date.parse(endsAt);
+    const rows = members.flatMap((member) => [
+        {
+            idempotency_key: idempotencyKey(fightId, member.user_id, "fight_ended", "t0"),
+            user_id: member.user_id,
+            fight_id: fightId,
+            kind: "fight_ended",
+            slot: "t0",
+            not_before: new Date(endsAtMs).toISOString(),
+            expires_at: new Date(endsAtMs + 2 * HOUR_MS).toISOString(),
+            route: routeForFight(fightId),
+            copy_key: "fight_ended_everyone",
+        },
+        ...(!member.final_steps_complete ? [{
+            idempotency_key: idempotencyKey(fightId, member.user_id, "final_sync", "t0"),
+            user_id: member.user_id,
+            fight_id: fightId,
+            kind: "final_sync",
+            slot: "t0",
+            not_before: new Date(endsAtMs).toISOString(),
+            expires_at: new Date(endsAtMs + 24 * HOUR_MS).toISOString(),
+            route: routeForFight(fightId),
+            copy_key: "final_sync",
+        }] : []),
+    ]);
+    await insertNotificationIntents(sql, rows);
 }
 
 export async function enqueueFightFinalizedNotifications(
@@ -152,27 +139,7 @@ export async function enqueueFightFinalizedNotifications(
         route: routeForFight(fightId),
         copy_key: "fight_finalized",
     }));
-    if (rows.length === 0) return;
-    await sql`
-        insert into private.notification_intents (
-            idempotency_key, user_id, fight_id, kind, slot,
-            not_before, expires_at, route, copy_key
-        )
-        select row.idempotency_key, row.user_id, row.fight_id, row.kind, row.slot,
-            row.not_before::timestamptz, row.expires_at::timestamptz, row.route, row.copy_key
-        from jsonb_to_recordset(${sql.json(rows)}::jsonb) as row (
-            idempotency_key text,
-            user_id uuid,
-            fight_id uuid,
-            kind text,
-            slot text,
-            not_before text,
-            expires_at text,
-            route text,
-            copy_key text
-        )
-        on conflict (idempotency_key) do nothing
-    `;
+    await insertNotificationIntents(sql, rows);
 }
 
 export async function supersedeGraceNotifications(
@@ -186,7 +153,7 @@ export async function supersedeGraceNotifications(
             processed_at = now()
         where fight_id = ${fightId}
             and status = 'pending'
-            and slot in ('t12', 't18', 't23')
+            and (slot in ('t12', 't18', 't23') or kind = 'final_sync')
     `;
 }
 
@@ -203,7 +170,7 @@ export async function skipGraceNotificationsForMember(
         where fight_id = ${fightId}
             and user_id = ${userId}
             and status = 'pending'
-            and slot in ('t12', 't18', 't23')
+            and (slot in ('t12', 't18', 't23') or kind = 'final_sync')
     `;
 }
 
@@ -233,6 +200,10 @@ export async function enqueueFightInviteNotifications(
             and installation.revoked_at is null
         where profile.id in ${sql(input.userIds)}
             and profile.deleted_at is null
+            and not exists (
+                select 1 from private.notification_preferences prefs
+                where prefs.user_id = profile.id and (not prefs.enabled or not prefs.fight_invite)
+            )
         order by profile.id, installation.last_registered_at desc nulls last
     `;
     const rows = recipients.map((recipient) => {
@@ -260,26 +231,5 @@ export async function enqueueFightInviteNotifications(
             ).body,
         };
     });
-    if (rows.length === 0) return;
-    await sql`
-        insert into private.notification_intents (
-            idempotency_key, user_id, fight_id, kind, slot,
-            not_before, expires_at, route, copy_key, alert_body
-        )
-        select row.idempotency_key, row.user_id, row.fight_id, row.kind, row.slot,
-            row.not_before::timestamptz, row.expires_at::timestamptz, row.route, row.copy_key, row.alert_body
-        from jsonb_to_recordset(${sql.json(rows)}::jsonb) as row (
-            idempotency_key text,
-            user_id uuid,
-            fight_id uuid,
-            kind text,
-            slot text,
-            not_before text,
-            expires_at text,
-            route text,
-            copy_key text,
-            alert_body text
-        )
-        on conflict (idempotency_key) do nothing
-    `;
+    await insertNotificationIntentsWithAlertBody(sql, rows);
 }

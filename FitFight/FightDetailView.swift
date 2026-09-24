@@ -129,9 +129,6 @@ struct FightDetailView: View {
         }
         .sheet(isPresented: $showingEdit) {
             EditFightView(fight: fight)
-                .environmentObject(model)
-                .environmentObject(session)
-                .environmentObject(steps)
                 .fitFightTheme(theme)
                 .presentationBackground(theme.bg)
         }
@@ -226,7 +223,7 @@ struct FightDetailView: View {
                         .ffType(.caption)
                         .foregroundStyle(theme.textSecondary)
                 }
-                standingsBands(for: fight, contextFight: fight)
+                standingsBands(for: fight)
                 ForEach(fight.standings.filter { $0.invited || $0.deferred }) { row in
                     standingRow(index: 0, row: row, contextFight: fight)
                 }
@@ -242,7 +239,7 @@ struct FightDetailView: View {
     }
 
     @ViewBuilder
-    private func standingsBands(for fight: Fight, contextFight: Fight) -> some View {
+    private func standingsBands(for fight: Fight) -> some View {
         let racing = fight.standings.filter { !$0.invited && !$0.deferred }
         let winners = winnerStandings(in: racing, fight: fight)
         let losers = racing.filter { row in !winners.contains(where: { $0.id == row.id }) }
@@ -250,7 +247,7 @@ struct FightDetailView: View {
         VStack(alignment: .leading, spacing: theme.space.cardGap) {
             VStack(alignment: .leading, spacing: theme.space.cardGap) {
                 ForEach(Array(winners.enumerated()), id: \.element.id) { index, row in
-                    standingRow(index: index, row: row, contextFight: contextFight, inWinnerBand: true)
+                    standingRow(index: index, row: row, contextFight: fight, inWinnerBand: true)
                 }
             }
             .padding(.horizontal, 4)
@@ -261,7 +258,7 @@ struct FightDetailView: View {
             if !losers.isEmpty {
                 standingsSeparator(for: fight)
                 ForEach(Array(losers.enumerated()), id: \.element.id) { index, row in
-                    standingRow(index: index + winners.count, row: row, contextFight: contextFight, inWinnerBand: false)
+                    standingRow(index: index + winners.count, row: row, contextFight: fight, inWinnerBand: false)
                 }
             }
         }
@@ -304,7 +301,7 @@ struct FightDetailView: View {
                     HStack(alignment: .top, spacing: 12) {
                         FFResultGlyph(model.fightResult(for: window))
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(historyWindowSubtitle(window))
+                            Text(window.deadlineLabel)
                                 .ffType(.caption)
                                 .foregroundStyle(theme.textSecondary)
                             Text(historyWindowResult(window))
@@ -313,7 +310,7 @@ struct FightDetailView: View {
                         }
                         Spacer(minLength: 0)
                     }
-                    standingsBands(for: window, contextFight: window)
+                    standingsBands(for: window)
                 }
             }
         }
@@ -322,12 +319,8 @@ struct FightDetailView: View {
     private func historyWindowTitle(_ window: Fight) -> String {
         String(
             appLocalized: "fight.history-window",
-            defaultValue: "\(Fight.deadlineStamp(window.windowStart)) – \(Fight.deadlineStamp(window.windowEnd))"
+            defaultValue: "\(Fight.deadlineStamp(window.windowStart)) - \(Fight.deadlineStamp(window.windowEnd))"
         )
-    }
-
-    private func historyWindowSubtitle(_ window: Fight) -> String {
-        window.endedLabel ?? window.deadlineLabel
     }
 
     private func historyWindowResult(_ window: Fight) -> String {
@@ -452,7 +445,7 @@ struct FightDetailView: View {
                 Text(fight.kickerEmphasis)
                     .ffType(.title)
                     .foregroundStyle(settlementTitleColor)
-                Text(fight.endedLabel ?? fight.deadlineLabel)
+                Text(fight.deadlineLabel)
                     .ffType(.caption)
                     .foregroundStyle(theme.textSecondary)
                 if let grace = fight.graceEndsAt {
@@ -586,8 +579,6 @@ struct FightDetailView: View {
                         .accessibilityLabel(String(appLocalized: "Copy code"))
                         .accessibilityValue(code)
                     }
-                }
-                if let code = fight.joinCode {
                     let url = APIConfig.joinShareURL(code: code, referralCode: session.profile?.referralCode)
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
@@ -659,9 +650,7 @@ struct FightDetailView: View {
                     monogram: row.person.initials,
                     name: row.person.name,
                     value: model.formatScore(row.score, metric: contextFight.metric),
-                    move: .same,
                     isYou: row.person.isYou,
-                    photoURL: row.person.photoURL,
                     avatar: AnyView(CompanionAvatar(row.person, size: 38)),
                     captionUrgent: !inWinnerBand && row.person.isYou && contextFight.status == .live,
                     captionAt: { now in
@@ -718,18 +707,8 @@ struct FightDetailView: View {
 
     private func daysCard(initialKind: FightDayChartKind? = nil) -> some View {
         FFCard {
-            VStack(alignment: .leading, spacing: 0) {
-                FightDayChartsView(days: fight.days, standings: fight.standings, initialKind: initialKind) { value in
-                    model.formatScore(value, metric: fight.metric)
-                }
-                if let note = fight.paceNote {
-                    FFDivider(inset: 0)
-                        .padding(.vertical, 18)
-                    Text(note)
-                        .ffType(.caption)
-                        .foregroundStyle(theme.textSecondary)
-                        .lineSpacing(3)
-                }
+            FightDayChartsView(days: fight.days, standings: fight.standings, initialKind: initialKind) { value in
+                model.formatScore(value, metric: fight.metric)
             }
         }
     }

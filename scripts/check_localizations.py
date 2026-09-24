@@ -44,14 +44,10 @@ for key in (
     "duration.minutes",
     "duration.months",
     "duration.weeks",
-    "fight.days-left",
-    "fight.ends-in-days",
-    "fight.hours-left",
     "fight.participant-count",
     "health.days-ago",
     "health.hours-ago",
     "health.minutes-ago",
-    "health.steps-today",
 ):
     entry = localizable["strings"].get(key)
     if not entry:

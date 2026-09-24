@@ -16,16 +16,9 @@ const DEFAULT_LABEL = "Apple Health";
 
 export async function ensureAppleHealthSource(
     userId: string,
-    options: {
-        sourceLabel?: string;
-        contributingSourceLabels?: string[];
-        completeThrough?: string | null;
-        admin?: SupabaseClient;
-    } = {},
+    options: { admin?: SupabaseClient } = {},
 ): Promise<AppleHealthSource> {
     const admin = options.admin ?? createAdminClient();
-    const sourceLabel = options.sourceLabel?.trim() || DEFAULT_LABEL;
-    const contributing = options.contributingSourceLabels ?? [];
 
     const { data: existingData, error: existingError } = await admin
         .from("data_sources")
@@ -48,24 +41,16 @@ export async function ensureAppleHealthSource(
     const nowIso = new Date().toISOString();
 
     if (existing) {
-        const completeThrough =
-            options.completeThrough &&
-            (!existing.complete_through ||
-                options.completeThrough > existing.complete_through)
-                ? options.completeThrough
-                : existing.complete_through;
         const { data: updated, error: updateError } = await admin
             .from("data_sources")
             .update({
-                source_label: sourceLabel,
-                contributing_source_labels: contributing.length
-                    ? contributing
-                    : existing.contributing_source_labels,
+                source_label: DEFAULT_LABEL,
+                contributing_source_labels: existing.contributing_source_labels,
                 status: "healthy",
                 revoked_at: null,
                 last_success_at: nowIso,
                 last_error_code: null,
-                complete_through: completeThrough,
+                complete_through: existing.complete_through,
             })
             .eq("id", existing.id)
             .select("id, source_label, contributing_source_labels")
@@ -91,15 +76,15 @@ export async function ensureAppleHealthSource(
         .insert({
             user_id: userId,
             provider: PROVIDER,
-            source_label: sourceLabel,
-            contributing_source_labels: contributing,
+            source_label: DEFAULT_LABEL,
+            contributing_source_labels: [],
             connection_route: CONNECTION_ROUTE,
             capabilities: ["steps"],
             status: "healthy",
             consent_version: 1,
             connected_at: nowIso,
             last_success_at: nowIso,
-            complete_through: options.completeThrough ?? null,
+            complete_through: null,
         })
         .select("id, source_label, contributing_source_labels")
         .single();
@@ -116,14 +101,5 @@ export async function ensureAppleHealthSource(
         sourceLabel: inserted.source_label as string,
         contributingSourceLabels:
             (inserted.contributing_source_labels as string[]) ?? [],
-    };
-}
-
-export function toDataSourceResponse(source: AppleHealthSource) {
-    return {
-        id: source.id,
-        provider: source.provider,
-        sourceLabel: source.sourceLabel,
-        contributingSourceLabels: source.contributingSourceLabels,
     };
 }

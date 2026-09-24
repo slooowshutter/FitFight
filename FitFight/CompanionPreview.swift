@@ -2,14 +2,14 @@ import Foundation
 import SwiftUI
 
 enum CompanionPreview {
-    static var isEnabled: Bool {
+    static let isEnabled: Bool = {
         #if DEBUG && targetEnvironment(simulator)
         ProcessInfo.processInfo.arguments.contains("--companion-preview")
             || ProcessInfo.processInfo.environment["FF_COMPANION_PREVIEW"] == "1"
         #else
         false
         #endif
-    }
+    }()
 
     static var writeUnavailable: String {
         String(appLocalized: "Preview only. No fight, post, account or Health data is changed.")
@@ -68,7 +68,6 @@ extension CompanionPreview {
             var fight = template
             fight.id = "F0000000-0000-4000-8000-\(String(format: "%012d", index))"
             fight.name = name
-            fight.code = code
             fight.joinCode = code
             fight.lengthDays = length
             fight.windowEnd = now.addingTimeInterval(Double(hoursLeft) * 3_600)
@@ -82,9 +81,7 @@ extension CompanionPreview {
             }.sorted { $0.score > $1.score }
             fight.rank = fight.standings.first { $0.person.isYou }?.rank ?? 0
             let gap = (totals.first ?? 0) - (totals.dropFirst().max() ?? 0)
-            fight.kickerPrefix = ""
             fight.kickerEmphasis = "\(gap >= 0 ? "+" : "−")\(abs(gap).formatted(.number.precision(.fractionLength(0))))"
-            fight.kickerRest = ""
             fight.listSubtitle = fight.timeLeftLabel
             fight.actionText = french ? "Apporte des croissants pour tout le monde" : "Brings croissants for everyone"
             let dayCount = min(length, max(1, length - hoursLeft / 24))
@@ -119,7 +116,6 @@ extension CompanionPreview {
         invite.inviter = people[3]
         invite.invitePitch = String(appLocalized: "companion.invitation", defaultValue: "\(people[3].name) invited you")
         invite.standings[0].invited = true
-        invite.pending = 1
         invite.recurring = true
         invite.offersJoinNext = true
         invite.listSubtitle = String(appLocalized: "3-day Steps fight")

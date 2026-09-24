@@ -17,6 +17,4 @@ export const POST = apiRoute<{ mediaID: string }>(
     },
 );
 
-export function OPTIONS(request: Request) {
-    return corsPreflight(request);
-}
+export const OPTIONS = corsPreflight;

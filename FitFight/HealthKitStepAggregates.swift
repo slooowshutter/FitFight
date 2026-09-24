@@ -26,48 +26,11 @@ enum HealthKitStepAggregates {
     ) async throws -> FitFightHealthKitStepSync {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = timeZone
-        let earliestDay = context.fightWindows
-            .map { calendar.startOfDay(for: $0.startsAt) }
-            .min()
-        let totalsByDay: [String: Int]
-        if let earliestDay {
-            try Task.checkCancellation()
-            totalsByDay = try await trace.measure(.healthKitDaily) {
-                try await dailyTotals(
-                    store: store,
-                    type: type,
-                    start: earliestDay,
-                    end: context.serverNow,
-                    calendar: calendar
-                )
-            }
-        } else {
-            totalsByDay = [:]
-        }
-
-        var mergedDays: [FitFightHealthKitStepSync.MergedDay] = []
-        if var cursor = earliestDay {
-            while cursor < context.serverNow {
-                guard let nextDay = calendar.date(byAdding: .day, value: 1, to: cursor) else { break }
-                let day = dayStamp(cursor, calendar: calendar)
-                let endsAt = min(nextDay, context.serverNow)
-                if context.fightWindows.contains(where: {
-                    cursor < $0.cutoffAt && endsAt > $0.startsAt
-                }), let steps = totalsByDay[day] {
-                    mergedDays.append(FitFightHealthKitStepSync.MergedDay(
-                        day: day,
-                        startsAt: iso8601(cursor),
-                        endsAt: iso8601(endsAt),
-                        steps: steps
-                    ))
-                }
-                cursor = nextDay
-            }
-        }
+        let mergedDays: [FitFightHealthKitStepSync.MergedDay] = []
 
         var fightAggregates: [FitFightHealthKitStepSync.FightAggregate] = []
         fightAggregates.reserveCapacity(context.fightWindows.count)
-        var sawAccessibleSteps = !totalsByDay.isEmpty
+        var sawAccessibleSteps = false
         for window in context.fightWindows {
             try Task.checkCancellation()
             var checkpoints: [FightStepCheckpoint]? = nil
@@ -131,42 +94,6 @@ enum HealthKitStepAggregates {
         )
     }
 
-    private static func dailyTotals(
-        store: HKHealthStore,
-        type: HKQuantityType,
-        start: Date,
-        end: Date,
-        calendar: Calendar
-    ) async throws -> [String: Int] {
-        try await withCheckedThrowingContinuation { continuation in
-            let predicate = HKQuery.predicateForSamples(
-                withStart: start,
-                end: end,
-                options: .strictStartDate
-            )
-            let query = HKStatisticsCollectionQuery(
-                quantityType: type,
-                quantitySamplePredicate: predicate,
-                options: [.cumulativeSum],
-                anchorDate: calendar.startOfDay(for: start),
-                intervalComponents: DateComponents(day: 1)
-            )
-            query.initialResultsHandler = { _, collection, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-                var totals: [String: Int] = [:]
-                collection?.enumerateStatistics(from: start, to: end) { statistics, _ in
-                    guard let count = integerCount(from: statistics.sumQuantity()) else { return }
-                    totals[dayStamp(statistics.startDate, calendar: calendar)] = count
-                }
-                continuation.resume(returning: totals)
-            }
-            store.execute(query)
-        }
-    }
-
     private static func total(
         store: HKHealthStore,
         type: HKQuantityType,
@@ -192,18 +119,20 @@ enum HealthKitStepAggregates {
         return count
     }
 
-    private static func dayStamp(_ date: Date, calendar: Calendar) -> String {
-        let formatter = DateFormatter()
-        formatter.calendar = calendar
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = calendar.timeZone
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: date)
+    /// Gregorian day key in the calendar's zone. A sync stamps hundreds of days and
+    /// samples, so no formatter is built per call.
+    static func dayStamp(_ date: Date, calendar: Calendar) -> String {
+        let day = calendar.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", day.year ?? 0, day.month ?? 0, day.day ?? 0)
     }
 
-    private static func iso8601(_ date: Date) -> String {
+    private static let isoFormatter: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return formatter.string(from: date)
+        return formatter
+    }()
+
+    static func iso8601(_ date: Date) -> String {
+        isoFormatter.string(from: date)
     }
 }

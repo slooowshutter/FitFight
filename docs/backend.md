@@ -1,11 +1,83 @@
 # Backend
 
-Production Metric is **Steps**. Phone vs server status: [`status.md`](status.md). Fights, memberships, scores, and data sources are writable only by the backend. Native Accept and Decline use authenticated commands; database grants deny direct client mutations. For Apple Health, it asks HealthKit for Apple's merged cumulative total over each exact Fight window and sends those totals to one authenticated Next.js endpoint. It may also send Apple's merged daily buckets for the active Fight days needed by charts; those buckets never determine the Fight score. The same request may include private activity totals and workout summaries that are not used for scoring. The backend validates the User, Fight membership, server-issued windows and cutoffs, then stores the exact-window snapshots and updates standings in a TypeScript-owned Postgres transaction. There are no app-facing database RPCs.
+Production scoring Metric is **Steps**. The native app sends Apple's merged
+Fight-window totals and checkpoints through the existing `/api/v1/healthkit/steps`
+contract. The prepared activity pipeline also accepts merged daily totals,
+workout summaries, and explicit workout deletion IDs through
+`/api/v1/healthkit/activity`. Individual HealthKit samples enter the private raw store.
+The backend saves incoming records, resolves current measurements, and publishes
+Fight standings and compatible older-client mirrors. There are no app-facing
+Postgres RPCs.
 
 [`system-design.md`](system-design.md) is the golden guide. This folder is the first slice of it, not the whole thing. Do not add Active Minutes, Workout Count, WHOOP, Strava, payments, or a website until the backlog says so. Fight posts and photo uploads go through the API below.
 
 Hosted production (no secrets): https://pvqntpteehdvhqyctwum.supabase.co  
 Hosted staging / git `develop` (no secrets): https://zstzbfocunthczzubggz.supabase.co
+
+## Activity pipeline (prepared 23 Sep 2026)
+
+This branch adds `private.activity_raw` for durable received totals, individual
+quantity/category samples, workout summaries, and deletion events, then
+`private.activity_metrics` for current
+measurements with scope, value, unit, interval, source, input IDs, and resolver
+version. Neither table is exposed to mobile database clients. Exact retries reuse
+one raw row; new readings replace current metrics. A workout or sample tombstone wins over
+a stale replay. Each workout has separate duration, active-minutes, distance,
+and active-energy measurements when those values exist. Effort remains in the
+received record and duration details until its HealthKit unit is identified.
+Workout counts, duration, and walk/run workout distance are derived from effective
+workout records and never added to Apple-merged daily Steps, energy, or distance.
+
+The existing Steps endpoint keeps its request and decoded response shape for
+installed clients. It now validates and stores Fight readings, merged days, and
+any older-client activity extras as raw rows. The new activity endpoint accepts
+at most 1,000 daily totals, 200 workout summaries, 100 individual samples,
+and 500 deletion UUIDs of each kind per page. Its `received` count acknowledges
+durable intake; `processing` reports
+`processed` or `pending`. A deleted sample's previously stored interval is
+returned for merged-day refresh. Each request attempts bounded resolution. The
+close-fights worker resumes pending, failed, or expired-lease rows. Profile
+statistics read correctable `activity_metrics` day rows. Fight charts and
+standings use the published Fight revision; finalized outcomes remain frozen.
+`metric_days` and `step_days` remain as legacy mirrors. Account deletion removes
+both new stores.
+
+Rollout order after authorization: apply the additive migration and backfill,
+deploy the compatible backend, then distribute the native build. Old backend
+instances may keep writing legacy daily rows during rollout. The Profile reader
+selects the newest row from both stores during this overlap; a later activity
+measurement becomes authoritative without waiting for another user sync.
+Keep `/api/v1`, old tables, and client permissions through the supported-build
+overlap. This branch has no live deploy.
+
+After the migration is deployed, this read-only query follows recent raw
+records for handle `marc` to their current measurements. Replace the handle to
+inspect another account. Raw rows without a linked measurement are still shown,
+including superseded readings and deletions.
+
+```sql
+select
+    raw.id as raw_id,
+    raw.record_kind,
+    raw.record_type,
+    raw.record_key,
+    raw.starts_at,
+    raw.ends_at,
+    raw.payload,
+    metric.scope,
+    metric.metric,
+    metric.value,
+    metric.unit,
+    metric.input_ids
+from private.activity_raw as raw
+left join private.activity_metrics as metric
+    on raw.id = any(metric.input_ids)
+where raw.user_id = (
+    select user_id from public.profiles where handle = 'marc'
+)
+order by raw.collected_at desc, raw.id, metric.metric
+limit 100;
+```
 
 ## Application database boundary
 
@@ -33,12 +105,15 @@ delete, and report for any post use `/api/v1/posts/{id}/...`.
 Listing a fight includes posts from other windows in the same recurring series.
 Roster members (`accepted` or `deferred`) can read and post. Invited-only
 members cannot. Delete own posts; report or hide another author.
-`GET/PATCH /api/v1/notifications/preferences` reads and updates per-type
-toggles (fight posts, comments, replies, reactions, challenge reminders, daily
-status). Missing rows default on. Creating a fight post notifies other members
-of that fight; a comment notifies the post author; a reply notifies the parent
-commenter, not sibling commenters; a reaction notifies the post author. The closer
-still drains APNs. Lock-screen copy names the person and does not include Steps.
+`GET/PATCH /api/v1/notifications/preferences` reads and partially updates a master
+switch and individual invitation, ending reminder, final-sync, result, daily,
+post, comment, reply, reaction, and mention switches. New-account feed posts,
+daily status, fight-ended alerts, and the optional one-week reminder default off.
+Saved choices are preserved. Reactions and opted-in feed posts collect into one
+evening summary; comments notify the post author, and replies notify the parent
+commenter. The closer queues reminders and summaries and drains APNs. Lock-screen
+copy uses @usernames, Fight names, deadlines, and post/comment excerpts; a
+single-post alert may include its photo. See [notification behavior and rollout](notifications.md).
 The verified session owns the operation. TypeScript normalizes and validates handles,
 sets their timestamp, and translates uniqueness conflicts to `409 handle_taken`.
 Missing/deleted profiles return `401 profile_missing`; account deletion remains `DELETE`.
@@ -486,3 +561,38 @@ the new TestFlight build. Older builds that directly accept or decline through
 Supabase will receive a permission error after the migration. Feature-branch pushes
 alone do not apply the hosted migration. No existing finalized scores or hosted
 previously-deleted accounts are rewritten by this change.
+
+## Specials: paid limited companions (updated 23 Sep 2026)
+
+The 40 supplied animal photos have stable `limited-*` companion IDs and sell as
+non-consumable StoreKit products at EUR 0.99. Each photo, including alternate
+poses of one species, is a single edition. `private.special_editions` holds one
+row per edition per Apple environment (`Sandbox`, `Production`), so each
+deployment's inventory and App Review's Sandbox purchases stay separate.
+`private.special_accounts` binds a FitFight user to one environment and supplies
+the StoreKit `appAccountToken`. `private.special_transactions` records every
+verified charge, including refunds and conflicts.
+
+An account may hold or own one Special. Ownership is permanent and separate
+from the equipped profile companion; switching animals never releases it. A
+refund retires the edition and clears it from the profile; a reversal restores
+ownership. `private.require_special_ownership` rejects equipping an unowned
+Special from any writer, including older backends and direct clients, and
+`PATCH /api/v1/me` maps it to `403 special_purchase_required`.
+
+`POST /api/v1/me/specials/checkout` reserves an edition before the Apple sheet or
+cancels the matching attempt. Unpaid holds lapse 30 minutes after they are made:
+`readSpecialStore` releases them before reading, and a reserved row's
+`updated_at` is its reservation time; resuming the same checkout restarts it.
+Account deletion frees a hold at once. A charge that arrives later is owned if
+the edition is still free and the account has no other Special; otherwise it is
+recorded as a conflict and the app offers Apple's refund request. A refund only
+retires an edition its purchase held or owned. On production, accounts listed in
+`APPLE_IAP_REVIEW_USER_IDS` use the Sandbox shelf for App Review once they have
+no hold or purchase; nobody else can reach it.
+
+Deploy `20260920222056_paid_specials.sql`, then the backend, then distribute the
+app. Let older backend instances drain first, because their schemas list only
+the previous companion IDs. Existing API contracts are unchanged; the Specials
+endpoints are additive. Older apps show their photo or initials fallback for
+`limited-*` IDs they do not bundle. No app-facing RPC is introduced.

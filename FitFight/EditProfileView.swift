@@ -17,14 +17,13 @@ struct EditProfileView: View {
     @State private var showingCompanions = false
     @State private var previewAudience = "stranger"
     @State private var showingPreview = false
+    @FocusState private var displayNameFocused: Bool
+    @FocusState private var handleFocused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text(String(appLocalized: "Edit profile")).ffType(.heading)
-                Spacer()
-                Button(String(appLocalized: "Close")) { dismiss() }.ffType(.label).frame(minHeight: 44)
-            }.padding(.horizontal, theme.space.screenPadding).padding(.top, 12)
+            FFSheetHeader(title: String(appLocalized: "Edit profile"), role: .heading) { dismiss() }
+                .padding(.horizontal, theme.space.screenPadding).padding(.top, 12)
             ScrollView {
                 VStack(alignment: .leading, spacing: theme.space.cardGap) {
                     if let error { FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle") }
@@ -34,9 +33,12 @@ struct EditProfileView: View {
                     } else {
                         FFCard {
                             VStack(alignment: .leading, spacing: 16) {
-                                TextField(String(appLocalized: "Display name"), text: $displayName).textContentType(.name)
+                                TextField(String(appLocalized: "Display name"), text: $displayName)
+                                    .textContentType(.name)
+                                    .focused($displayNameFocused)
                                 TextField(String(appLocalized: "Username"), text: $handle)
                                     .textInputAutocapitalization(.never).autocorrectionDisabled().textContentType(.username)
+                                    .focused($handleFocused)
                                 PhotosPicker(selection: $pickerItem, matching: .images) {
                                     Text(String(appLocalized: "Change profile photo"))
                                 }.frame(minHeight: 44)
@@ -107,10 +109,16 @@ struct EditProfileView: View {
                             }
                         }
                     }
-                }.padding(theme.space.screenPadding).disabled(saving)
+                }
+                .padding(theme.space.screenPadding)
+                .ffKeyboardDismissOnBackgroundTap()
+                .disabled(saving)
             }
+            .scrollDismissesKeyboard(.interactively)
         }
-        .foregroundStyle(theme.text).background(theme.bg.ignoresSafeArea())
+        .foregroundStyle(theme.text)
+        .ffKeyboardDismissOnBackgroundTap()
+        .background(theme.bg.ignoresSafeArea())
         .task { await load() }
         .onChange(of: session.authSession?.user.id) { _, _ in settings = nil; dismiss() }
         .onChange(of: pickerItem) { _, item in Task { await uploadPhoto(item) } }

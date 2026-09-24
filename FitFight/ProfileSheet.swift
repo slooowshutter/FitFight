@@ -130,7 +130,7 @@ struct ProfileSheet: View {
         }
         if profile.access == "private" {
             FFNotice(text: String(appLocalized: "Private profile. Friends and current opponents can see what this person shares."), tone: .neutral, systemImage: "lock")
-        } else if !profile.competitive && profile.access != "owner" {
+        } else if !profile.competitive && profile.access != "owner" && (profile.friendship == "self" || preview != nil) {
             Text(String(appLocalized: "Casual profile. Competitive statistics are hidden."))
                 .ffType(.caption).foregroundStyle(theme.textSecondary)
         }

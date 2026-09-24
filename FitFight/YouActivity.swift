@@ -99,59 +99,46 @@ private func formatted(_ value: Double) -> String {
     value.formatted(.number.precision(.fractionLength(0)).locale(AppLocalization.locale))
 }
 
-/// Today in big numbers, then four numbers from your profile statistics.
-struct YouStatsCard: View {
+/// A sideways strip of stat cards: today, this week, your average and best day, then fights.
+struct YouStatStrip: View {
     let todaySteps: Int?
     let statistics: ProfileStepStatistics?
     let record: ProfileRecord?
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
-        FFCard(padding: 0) {
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(String(appLocalized: "Today")).ffType(.eyebrow).foregroundStyle(theme.textSecondary)
-                        HStack(alignment: .firstTextBaseline, spacing: 6) {
-                            Text(todaySteps.map { formatted(Double($0)) } ?? "-")
-                                .font(.ff(50, 800)).monospacedDigit().foregroundStyle(theme.text)
-                                .minimumScaleFactor(0.6).lineLimit(1)
-                            Text(String(appLocalized: "steps")).ffType(.caption).foregroundStyle(theme.textSecondary)
-                        }
-                    }
-                    Spacer(minLength: 8)
-                    if let todaySteps, let average = statistics?.averageSteps {
-                        let gap = Double(todaySteps) - average
-                        VStack(alignment: .trailing, spacing: 2) {
-                            Text((gap >= 0 ? "+" : "-") + formatted(abs(gap))).font(.ff(22, 800)).monospacedDigit().foregroundStyle(theme.text)
-                            Text(String(appLocalized: "vs your average")).ffType(.micro).foregroundStyle(theme.textSecondary)
-                        }.padding(.top, 22)
-                    }
-                }
-                .padding(theme.space.cardPadding)
-                Rectangle().fill(theme.hairline).frame(height: 1)
-                Grid(horizontalSpacing: 0, verticalSpacing: 0) {
-                    GridRow {
-                        cell(statistics.map { formatted($0.week.totalSteps) }, String(appLocalized: "This week"))
-                        cell(record.map { "\($0.wins)/\($0.played)" }, String(appLocalized: "Fights won"))
-                    }
-                    Rectangle().fill(theme.hairline).frame(height: 1).gridCellColumns(2)
-                    GridRow {
-                        cell(statistics?.averageSteps.map(formatted), String(appLocalized: "Daily average"))
-                        cell(statistics?.bestDay.map { formatted($0.steps) }, String(appLocalized: "Best day"))
-                    }
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                card(String(appLocalized: "Today"), todaySteps.map { formatted(Double($0)) }, detail: todayDetail)
+                card(String(appLocalized: "This week"), statistics.map { formatted($0.week.totalSteps) }, detail: String(appLocalized: "steps"))
+                card(String(appLocalized: "Daily average"), statistics?.averageSteps.map(formatted), detail: String(appLocalized: "steps"))
+                card(String(appLocalized: "Best day"), statistics?.bestDay.map { formatted($0.steps) }, detail: String(appLocalized: "steps"))
+                card(String(appLocalized: "Wins"), record.map { "\($0.wins)" }, detail: record.map { String(format: String(appLocalized: "you.of-fights"), $0.played) }, tone: theme.mossText)
+                card(String(appLocalized: "Win rate"), record?.winRate.map { $0.formatted(.percent.precision(.fractionLength(0)).locale(AppLocalization.locale)) }, detail: nil)
+            }
+            .padding(.horizontal, theme.space.screenPadding)
+        }
+        .padding(.horizontal, -theme.space.screenPadding)
+    }
+
+    private var todayDetail: String {
+        guard let todaySteps, let average = statistics?.averageSteps else { return String(appLocalized: "steps") }
+        let gap = Double(todaySteps) - average
+        return String(format: String(appLocalized: "you.vs-average"), (gap >= 0 ? "+" : "-") + formatted(abs(gap)))
+    }
+
+    private func card(_ title: String, _ value: String?, detail: String?, tone: Color? = nil) -> some View {
+        FFCard {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(title).ffType(.eyebrow).foregroundStyle(theme.textSecondary)
+                Text(value ?? "-").font(.ff(30, 800)).monospacedDigit().foregroundStyle(tone ?? theme.text)
+                    .minimumScaleFactor(0.6).lineLimit(1)
+                if let detail {
+                    Text(detail).ffType(.caption).foregroundStyle(theme.textSecondary).lineLimit(1)
                 }
             }
         }
-    }
-
-    private func cell(_ value: String?, _ label: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(value ?? "-").font(.ff(22, 800)).monospacedDigit().foregroundStyle(theme.text)
-            Text(label).ffType(.caption).foregroundStyle(theme.textSecondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(theme.space.cardPadding)
+        .frame(width: 150)
         .accessibilityElement(children: .combine)
     }
 }

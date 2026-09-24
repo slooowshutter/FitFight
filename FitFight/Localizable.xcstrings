@@ -14301,16 +14301,6 @@
                 }
             }
         },
-        "Fights won": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Combats gagnés"
-                    }
-                }
-            }
-        },
         "Hike": {
             "localizations": {
                 "fr": {
@@ -14471,16 +14461,6 @@
                 }
             }
         },
-        "vs your average": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "vs ta moyenne"
-                    }
-                }
-            }
-        },
         "You shows today’s Steps against your average, your weekly numbers, each Apple Health sport by day, week or month, and small week cards. Friend profiles show both companions with the one-on-one score above them and a side-by-side comparison.": {
             "localizations": {
                 "fr": {
@@ -14503,6 +14483,38 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "%@ par jour"
+                    }
+                }
+            }
+        },
+        "you.of-fights": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "of %lld fights"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "sur %lld combats"
+                    }
+                }
+            }
+        },
+        "you.vs-average": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%@ vs your average"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%@ vs ta moyenne"
                     }
                 }
             }

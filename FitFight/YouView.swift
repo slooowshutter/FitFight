@@ -42,7 +42,7 @@ struct YouView: View {
                 FFNotice(text: authError, tone: .ember, systemImage: "exclamationmark.triangle")
             }
             if session.isSignedIn {
-                YouStatsCard(todaySteps: todaySteps, statistics: profileStore.profile?.stepStatistics, record: profileStore.profile?.record)
+                YouStatStrip(todaySteps: todaySteps, statistics: profileStore.profile?.stepStatistics, record: profileStore.profile?.record)
                 if !activity.sports.isEmpty {
                     YouSportList(sports: activity.sports)
                     YouWeekCards(days: activity.days, steps: activity.sports[0].values)

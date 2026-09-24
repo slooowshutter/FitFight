@@ -11,6 +11,7 @@ struct YouView: View {
     @Environment(\.ffStaticRender) private var staticRender
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var profileStore = ProfileScreenStore()
+    @StateObject private var activity = YouActivityStore()
     @State private var showingEditProfile = false
     @State private var showingFriends = false
     @State private var showingProfileHistory = false
@@ -40,12 +41,15 @@ struct YouView: View {
             if session.isSignedIn, let authError = session.authError {
                 FFNotice(text: authError, tone: .ember, systemImage: "exclamationmark.triangle")
             }
-            if let record = profileStore.profile?.record {
-                ProfileRecordCard(record: record)
-                FFButton(title: String(appLocalized: "Fight history"), kind: .ghost) { showingProfileHistory = true }
+            if session.isSignedIn {
+                YouStatsCard(todaySteps: todaySteps, statistics: profileStore.profile?.stepStatistics, record: profileStore.profile?.record)
+                if !activity.sports.isEmpty {
+                    YouSportList(sports: activity.sports)
+                    YouWeekCards(days: activity.days, steps: activity.sports[0].values)
+                }
             }
-            if let statistics = profileStore.profile?.stepStatistics {
-                ProfileStepStatisticsView(statistics: statistics)
+            if profileStore.profile?.record != nil {
+                FFButton(title: String(appLocalized: "Fight history"), kind: .ghost) { showingProfileHistory = true }
             }
             ForEach(rivals) { rival in
                 ProfileIdentityLink(userID: rival.id, source: "friends", onClosed: { Task { await loadOwnProfile() } }) {
@@ -176,6 +180,11 @@ struct YouView: View {
         }
     }
 
+    private var todaySteps: Int? {
+        if case .steps(let count) = steps.status { return count }
+        return nil
+    }
+
     private var versionBannerTap: (() -> Void)? {
         guard !CompanionPreview.isEnabled else { return nil }
         guard session.isFitFightAdmin else { return nil }
@@ -245,6 +254,7 @@ struct YouView: View {
         incomingFriends = 0
         guard !staticRender, let userID = session.authSession?.user.id else { return }
         await profileStore.load(userID: userID, session: session, includeHistory: false)
+        await activity.load()
         do {
             let token = try await session.freshAccessToken()
             async let friendsRequest = FitFightAPI().profileFriends(kind: "incoming", accessToken: token)

@@ -14250,6 +14250,262 @@
                     }
                 }
             }
+        },
+        "Best day": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Meilleur jour"
+                    }
+                }
+            }
+        },
+        "Bike": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Vélo"
+                    }
+                }
+            }
+        },
+        "By sport": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Par sport"
+                    }
+                }
+            }
+        },
+        "Daily average": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Moyenne par jour"
+                    }
+                }
+            }
+        },
+        "Draws": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nuls"
+                    }
+                }
+            }
+        },
+        "Fights won": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Combats gagnés"
+                    }
+                }
+            }
+        },
+        "Hike": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Randonnée"
+                    }
+                }
+            }
+        },
+        "Keeps the score private": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Garde le score privé"
+                    }
+                }
+            }
+        },
+        "Last week": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Semaine dernière"
+                    }
+                }
+            }
+        },
+        "Month": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Mois"
+                    }
+                }
+            }
+        },
+        "No one-on-one yet": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Pas encore de un contre un"
+                    }
+                }
+            }
+        },
+        "Run": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Course"
+                    }
+                }
+            }
+        },
+        "Strength": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Musculation"
+                    }
+                }
+            }
+        },
+        "Swim": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Natation"
+                    }
+                }
+            }
+        },
+        "Today": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Aujourd’hui"
+                    }
+                }
+            }
+        },
+        "Walk": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Marche"
+                    }
+                }
+            }
+        },
+        "Week": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Semaine"
+                    }
+                }
+            }
+        },
+        "Weeks": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Semaines"
+                    }
+                }
+            }
+        },
+        "Workout": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Entraînement"
+                    }
+                }
+            }
+        },
+        "Yoga": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Yoga"
+                    }
+                }
+            }
+        },
+        "min": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "min"
+                    }
+                }
+            }
+        },
+        "steps": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "pas"
+                    }
+                }
+            }
+        },
+        "vs your average": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "vs ta moyenne"
+                    }
+                }
+            }
+        },
+        "You shows today’s Steps against your average, your weekly numbers, each Apple Health sport by day, week or month, and small week cards. Friend profiles show both companions with the one-on-one score above them and a side-by-side comparison.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "L’onglet Vous affiche tes Pas du jour face à ta moyenne, tes chiffres de la semaine, chaque sport Apple Santé par jour, semaine ou mois, et de petites cartes par semaine. Les profils d’amis montrent les deux compagnons avec le score en un contre un au-dessus d’eux et une comparaison côte à côte."
+                    }
+                }
+            }
+        },
+        "you.per-day": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%@ a day"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%@ par jour"
+                    }
+                }
+            }
         }
     },
     "version": "1.0"

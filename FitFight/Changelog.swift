@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.1.2",
             year: 2026,
             month: 9,
+            day: 24,
+            notes: "You shows today’s Steps against your average, your weekly numbers, each Apple Health sport by day, week or month, and small week cards. Friend profiles show both companions with the one-on-one score above them and a side-by-side comparison."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
             day: 23,
             notes: "Apple Health syncs detailed activity and workout history, including late changes and deletions. Fight Steps still use Apple’s merged total."
         ),

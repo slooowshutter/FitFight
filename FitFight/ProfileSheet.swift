@@ -37,6 +37,8 @@ struct ProfileSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var store = ProfileScreenStore()
+    /// Your own statistics fill the You column of a friend's tale of the tape.
+    @StateObject private var ownStore = ProfileScreenStore()
     @State private var eventID = UUID()
     @State private var busy = false
     @State private var actionError: String?
@@ -77,7 +79,12 @@ struct ProfileSheet: View {
         }
         .foregroundStyle(theme.text)
         .background(theme.bg.ignoresSafeArea())
-        .task(id: userID) { await store.load(userID: userID, session: session, preview: preview) }
+        .task(id: userID) {
+            await store.load(userID: userID, session: session, preview: preview)
+            if let ownID = session.authSession?.user.id, ownID != userID, preview == nil {
+                await ownStore.load(userID: ownID, session: session, includeHistory: false)
+            }
+        }
         .onChange(of: scenePhase) { _, phase in
             store.clear()
             if phase == .active { Task { await store.load(userID: userID, session: session, preview: preview) } }
@@ -127,27 +134,40 @@ struct ProfileSheet: View {
             Text(String(appLocalized: "Casual profile. Competitive statistics are hidden."))
                 .ffType(.caption).foregroundStyle(theme.textSecondary)
         }
-        if let record = profile.record { ProfileRecordCard(record: record) }
-        if let rivalry = profile.rivalry {
-            FFSection(title: String(appLocalized: "Your rivalry")) {
-                FFCard {
-                    VStack(alignment: .leading, spacing: 12) {
-                        if rivalry.wins + rivalry.losses + rivalry.draws == 0 {
-                            Text(String(appLocalized: "No head-to-head results yet")).ffType(.body)
-                        } else {
-                            Text(String(format: String(appLocalized: "profile.rivalry-score"), rivalry.wins, rivalry.losses, rivalry.draws))
-                                .ffType(.heading)
-                            Text(String(appLocalized: "Decided 1v1 Fights only. Group results appear in history."))
-                                .ffType(.caption).foregroundStyle(theme.textSecondary)
+        if profile.friendship != "self" && preview == nil {
+            let duels = profile.rivalry.map { $0.wins + $0.losses + $0.draws } ?? 0
+            ProfileFoldedTape(
+                theirName: profile.identity.displayName,
+                theirCompanion: profile.identity.companionId,
+                yourCompanion: session.profile?.companionId,
+                rivalry: duels > 0 ? profile.rivalry : nil,
+                note: duels > 0 ? nil : profile.competitive ? String(appLocalized: "No one-on-one yet") : String(appLocalized: "Keeps the score private"),
+                yours: ownStore.profile?.stepStatistics,
+                theirs: profile.stepStatistics
+            )
+        } else {
+            if let record = profile.record { ProfileRecordCard(record: record) }
+            if let rivalry = profile.rivalry {
+                FFSection(title: String(appLocalized: "Your rivalry")) {
+                    FFCard {
+                        VStack(alignment: .leading, spacing: 12) {
+                            if rivalry.wins + rivalry.losses + rivalry.draws == 0 {
+                                Text(String(appLocalized: "No head-to-head results yet")).ffType(.body)
+                            } else {
+                                Text(String(format: String(appLocalized: "profile.rivalry-score"), rivalry.wins, rivalry.losses, rivalry.draws))
+                                    .ffType(.heading)
+                                Text(String(appLocalized: "Decided 1v1 Fights only. Group results appear in history."))
+                                    .ffType(.caption).foregroundStyle(theme.textSecondary)
+                            }
                         }
                     }
                 }
             }
+            if let statistics = profile.stepStatistics {
+                ProfileStepStatisticsView(statistics: statistics)
+            }
         }
-        if let statistics = profile.stepStatistics {
-            ProfileStepStatisticsView(statistics: statistics)
-        }
-        if let activity = profile.activity {
+        if profile.friendship == "self" || preview != nil, let activity = profile.activity {
             FFSection(title: String(format: String(appLocalized: "profile.steps-period"), activity.days)) {
                 FFCard {
                     VStack(alignment: .leading, spacing: 12) {

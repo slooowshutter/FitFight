@@ -28,8 +28,22 @@ enum Changelog {
             version: "1.1.2",
             year: 2026,
             month: 9,
+            day: 25,
+            notes: "You shows today’s Steps against your daily average, this week, your record and best day, each Apple Health sport by day, week or month, and your friends. New Dashboard and Settings screens. Friend profiles show both companions with the one-on-one score above them."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 25,
+            notes: "You can comment on open Feedback requests from their detail page. Sort your fights by start, end, or how far ahead you are."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
             day: 24,
-            notes: "You shows today’s Steps against your average, your weekly numbers, each Apple Health sport by day, week or month, and small week cards. Friend profiles show both companions with the one-on-one score above them and a side-by-side comparison."
+            notes: "Create your own animal with one Apple purchase. Its five fitness images change with your daily Steps."
         ),
         ReleaseNote(
             version: "1.1.2",

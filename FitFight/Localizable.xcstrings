@@ -1,6 +1,192 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Apple sync could not complete, but FitFight checked your account purchases.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "La synchronisation Apple a échoué, mais FitFight a vérifié les achats de votre compte."
+                    }
+                }
+            }
+        },
+        "Apple is processing your character purchase. We will resume when it completes.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Apple traite votre achat de personnage. Nous reprendrons dès qu’il sera confirmé."
+                    }
+                }
+            }
+        },
+        "Apple is still processing your character purchase.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Apple traite encore votre achat de personnage."
+                    }
+                }
+            }
+        },
+        "Create character": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Créer le personnage"
+                    }
+                }
+            }
+        },
+        "Creating five fitness images…": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Création des cinq images de forme…"
+                    }
+                }
+            }
+        },
+        "Creating your portrait…": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Création de votre portrait…"
+                    }
+                }
+            }
+        },
+        "No character purchases were found for this FitFight account.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Aucun achat de personnage n’a été trouvé pour ce compte FitFight."
+                    }
+                }
+            }
+        },
+        "One purchase creates one character and five fitness images that change with your daily Steps.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Un achat crée un personnage et cinq images qui changent selon vos pas du jour."
+                    }
+                }
+            }
+        },
+        "Purchase status is unknown. Check purchases before buying again.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Le statut de l’achat est inconnu. Vérifiez vos achats avant de réessayer."
+                    }
+                }
+            }
+        },
+        "Purchase pending": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Achat en attente"
+                    }
+                }
+            }
+        },
+        "The images could not be completed. Retry this character without another purchase.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les images n’ont pas pu être terminées. Réessayez sans faire un nouvel achat."
+                    }
+                }
+            }
+        },
+        "We could not confirm whether this generation started. Contact support before retrying.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nous ne pouvons pas confirmer le lancement. Contactez l’assistance avant de réessayer."
+                    }
+                }
+            }
+        },
+        "You can close this screen. Your character keeps generating.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Vous pouvez fermer cet écran. La création de votre personnage continue."
+                    }
+                }
+            }
+        },
+        "Your character": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Votre personnage"
+                    }
+                }
+            }
+        },
+        "Your character purchases are linked to this FitFight account.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Vos personnages achetés sont liés à ce compte FitFight."
+                    }
+                }
+            }
+        },
+        "Your characters": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Vos personnages"
+                    }
+                }
+            }
+        },
+        "character.buy": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Create for %@"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Créer pour %@"
+                    }
+                }
+            }
+        },
+        "Create your own animal with one Apple purchase. Its five fitness images change with your daily Steps.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Créez votre propre animal avec un achat Apple. Ses cinq images changent selon vos pas du jour."
+                    }
+                }
+            }
+        },
         "40 Specials: one-of-a-kind animal companions, each with its own funny line. Buy one through Apple and keep it, even when you switch animals.": {
             "localizations": {
                 "fr": {
@@ -12897,17 +13083,6 @@
                 }
             }
         },
-        "Ending latest": {
-            "extractionState": "manual",
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Fin la plus lointaine"
-                    }
-                }
-            }
-        },
         "Recently started": {
             "extractionState": "manual",
             "localizations": {
@@ -12919,6 +13094,28 @@
                 }
             }
         },
+        "Winning least": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Plus petite avance"
+                    }
+                }
+            }
+        },
+        "Winning most": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Plus grande avance"
+                    }
+                }
+            }
+        },
         "Tap outside an entry to close the keyboard. Sort Current Fights by end or start time and see each exact deadline.": {
             "extractionState": "manual",
             "localizations": {
@@ -12926,6 +13123,17 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Touchez un espace vide pour fermer le clavier. Triez les défis en cours par date de fin ou de début et voyez l'heure exacte de chaque fin."
+                    }
+                }
+            }
+        },
+        "You can comment on open Feedback requests from their detail page. Sort your fights by start, end, or how far ahead you are.": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Vous pouvez commenter les demandes ouvertes depuis leur page de détail dans Feedback. Triez vos défis par début, fin ou avance."
                     }
                 }
             }
@@ -14461,16 +14669,6 @@
                 }
             }
         },
-        "You shows today’s Steps against your average, your weekly numbers, each Apple Health sport by day, week or month, and small week cards. Friend profiles show both companions with the one-on-one score above them and a side-by-side comparison.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "L’onglet Vous affiche tes Pas du jour face à ta moyenne, tes chiffres de la semaine, chaque sport Apple Santé par jour, semaine ou mois, et de petites cartes par semaine. Les profils d’amis montrent les deux compagnons avec le score en un contre un au-dessus d’eux et une comparaison côte à côte."
-                    }
-                }
-            }
-        },
         "you.per-day": {
             "localizations": {
                 "en": {
@@ -14761,6 +14959,16 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Demandes"
+                    }
+                }
+            }
+        },
+        "You shows today’s Steps against your daily average, this week, your record and best day, each Apple Health sport by day, week or month, and your friends. New Dashboard and Settings screens. Friend profiles show both companions with the one-on-one score above them.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "L’onglet Vous affiche tes Pas du jour face à ta moyenne, la semaine, ton bilan et ton meilleur jour, chaque sport Apple Santé par jour, semaine ou mois, et tes amis. Nouveaux écrans Tableau de bord et Réglages. Les profils d’amis montrent les deux compagnons avec le score en un contre un au-dessus d’eux."
                     }
                 }
             }

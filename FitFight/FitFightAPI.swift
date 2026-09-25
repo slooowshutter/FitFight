@@ -955,6 +955,20 @@ struct FitFightAPI {
             body: ["companion_id": companionId, "signed_transaction": signedTransaction], expected: [200])
     }
 
+    func customCharacters(accessToken: String) async throws -> CustomCharacterStoreSnapshot {
+        try await get(path: "me/custom-characters", accessToken: accessToken, expected: [200])
+    }
+
+    func claimCustomCharacter(signedTransaction: String, accessToken: String) async throws -> CustomCharacterClaim {
+        try await post(path: "me/custom-characters/purchases", accessToken: accessToken,
+                       body: ["signed_transaction": signedTransaction], expected: [200])
+    }
+
+    func advanceCustomCharacter(id: UUID, description: String?, retry: Bool, accessToken: String) async throws -> CustomCharacterProgress {
+        try await post(path: "me/custom-characters/\(id.uuidString.lowercased())/advance", accessToken: accessToken,
+                       body: CustomCharacterAdvanceBody(description: description, retry: retry ? true : nil), expected: [200, 202])
+    }
+
     func updateProfile(
         handle: String? = nil,
         displayName: String? = nil,

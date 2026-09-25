@@ -73,10 +73,11 @@ export async function startAiRun(
     input: CreateAiRunRequest,
     idempotencyKey: string,
     deps: AiRequestDependencies = dependencies,
+    paidCharacterId: string | null = null,
 ): Promise<AiRunResponse> {
     let config = null;
     try {
-        config = blendWorkflowConfiguration(input.workflow);
+        config = blendWorkflowConfiguration(input.workflow, paidCharacterId !== null);
     } catch (error) {
         if (!(error instanceof ApiError) || error.code !== "ai_unavailable")
             throw error;
@@ -98,7 +99,7 @@ export async function startAiRun(
                     : input.workflow === "fitness"
                       ? input.parameters.identity_details
                       : input.parameters.scene,
-            resourceId: null,
+            resourceId: paidCharacterId,
             idempotencyKey,
             requestHash: createHash("sha256")
                 .update(JSON.stringify(input))

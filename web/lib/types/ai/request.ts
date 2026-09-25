@@ -29,7 +29,7 @@ export const aiRequestReservationSchema = z.object({
     idempotencyKey: z.string().uuid(),
     requestHash: z.string().regex(/^[a-f0-9]{64}$/),
     version: blendWorkflowVersionSchema.nullable(),
-    creditPrice: z.number().int().positive().nullable(),
+    creditPrice: z.number().int().nonnegative().nullable(),
     sourceRequestIds: z.array(z.string().uuid()).max(5),
     description: z.string().min(1).max(1000),
 });

@@ -49,6 +49,9 @@ export async function deleteAccount(
                 update private.special_editions set state = 'available', account_id = null, attempt_id = null
                 where state = 'reserved' and account_id = (select id from private.special_accounts where user_id = ${userId})
             `;
+            await sql`update private.custom_character_purchases
+                set description = null, avatar_action_key = null, fitness_action_key = null
+                where account_id = (select id from private.special_accounts where user_id = ${userId})`;
             await sql`delete from public.feedback_votes where user_id = ${userId}`;
             await sql`delete from public.feedback_comments where author_id = ${userId}`;
             await sql`delete from public.feedback_posts where author_id = ${userId}`;

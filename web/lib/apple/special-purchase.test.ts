@@ -19,10 +19,12 @@ import {
     appleSpecialProductIds,
     type AppleSpecialPurchaseContext,
 } from "@/lib/types/apple/special-purchase";
+import { appleCustomCharacterTransactionSchema, customCharacterProductId } from "@/lib/types/apple/custom-character-purchase";
 import appleRootCertificates from "./apple-root-certificates.json";
 import {
     verifySpecialPurchase,
     verifySpecialNotification,
+    verifyCustomCharacterPurchase,
 } from "./special-purchase";
 
 const { privateKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
@@ -365,4 +367,61 @@ test("a valid notification envelope cannot bypass transaction signature verifica
     await assert.rejects(
         verifySpecialNotification("signed-envelope", "Sandbox"),
     );
+});
+
+test("one consumable character charge is verified against Apple's current record", async (context) => {
+    const character = {
+        ...receipt,
+        productId: customCharacterProductId,
+        type: "Consumable" as const,
+        transactionId: "200000100002",
+        originalTransactionId: "200000100002",
+    };
+    const { lookup } = mockApple(context, character);
+    const current = await verifyCustomCharacterPurchase("submitted-receipt", {
+        environment: "Production",
+        appAccountToken: expected.appAccountToken,
+    });
+    assert.equal(current.productId, customCharacterProductId);
+    assert.equal(current.transactionId, character.transactionId);
+    assert.equal(lookup.mock.callCount(), 1);
+});
+
+test("custom character evidence rejects Specials, wrong accounts and changed Apple records", async (context) => {
+    const character = {
+        ...receipt,
+        productId: customCharacterProductId,
+        type: "Consumable" as const,
+    };
+    const { lookup } = mockApple(context, character, { ...character, transactionId: "200000100003" });
+    await assert.rejects(verifyCustomCharacterPurchase("submitted-receipt", {
+        environment: "Production", appAccountToken: randomUUID(),
+    }), { status: 403 });
+    assert.equal(lookup.mock.callCount(), 0);
+    await assert.rejects(verifyCustomCharacterPurchase("submitted-receipt", {
+        environment: "Production", appAccountToken: expected.appAccountToken,
+    }), { status: 409 });
+    assert.equal(lookup.mock.callCount(), 1);
+    assert.equal(appleCustomCharacterTransactionSchema.safeParse(receipt).success, false);
+});
+
+test("Apple character refund notifications route a verified consumable for revocation", async (context) => {
+    const character = {
+        ...receipt,
+        productId: customCharacterProductId,
+        type: "Consumable" as const,
+    };
+    mockApple(context, character, {
+        ...character,
+        signedDate: character.signedDate! + 1_000,
+        revocationDate: character.signedDate! + 500,
+    });
+    context.mock.method(SignedDataVerifier.prototype, "verifyAndDecodeNotification", async () => ({
+        notificationUUID: randomUUID(),
+        notificationType: "REFUND",
+        data: { signedTransactionInfo: "submitted-receipt" },
+    }));
+    const result = await verifySpecialNotification("signed-envelope", "Production");
+    assert.equal(result.transaction?.type, "Consumable");
+    assert.equal(result.transaction?.revocationDate, character.signedDate! + 500);
 });

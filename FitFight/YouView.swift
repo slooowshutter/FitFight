@@ -14,9 +14,7 @@ struct YouView: View {
     @StateObject private var profileStore = ProfileScreenStore()
     @StateObject private var activity = YouActivityStore()
     @State private var showingEditProfile = false
-    @State private var showingFriends = false
     @State private var showingProfileHistory = false
-    @State private var incomingFriends = 0
     @State private var rivals: [ProfileRivalrySummary] = []
     @State private var profileLoadGeneration = 0
     @State private var socialError: String?
@@ -42,7 +40,6 @@ struct YouView: View {
                 )
                 if !activity.sports.isEmpty {
                     YouSportList(sports: activity.sports)
-                    YouWeekCards(days: activity.days, steps: activity.sports[0].values)
                 }
             }
             if profileStore.profile?.record != nil {
@@ -65,26 +62,9 @@ struct YouView: View {
                 FFButton(title: String(appLocalized: "Retry"), kind: .secondary) { Task { await loadOwnProfile() } }
             }
             if session.isSignedIn {
-                FFGroupedRows {
-                    FFGroupedRow(
-                        title: String(appLocalized: "Friends"),
-                        subtitle: incomingFriends > 0 ? String(format: String(appLocalized: "profile.requests-count"), incomingFriends) : nil,
-                        systemImage: "person.2",
-                        action: { showingFriends = true }
-                    )
-                }
+                Text(String(appLocalized: "Friends")).ffType(.heading).foregroundStyle(theme.text).padding(.top, 8)
+                FriendsView(embedded: true)
             }
-
-            FFSection(title: String(appLocalized: "Apple Health")) {
-                health
-            }
-
-            FFSection(title: String(appLocalized: "Activity")) {
-                FFGroupedRows {
-                    navRow(String(appLocalized: "Notifications & activity")) { model.showingActivity = true }
-                }
-            }
-
         }
         .navigationDestination(isPresented: $showingSettings) { settingsScreen }
         .navigationDestination(isPresented: $showingDashboard) {
@@ -95,14 +75,10 @@ struct YouView: View {
             profileLoadGeneration += 1
             profileStore.clear()
             rivals = []
-            incomingFriends = 0
             if phase == .active { Task { await refreshOwnProfile() } }
         }
         .sheet(isPresented: $showingEditProfile, onDismiss: { Task { await loadOwnProfile() } }) {
             EditProfileView().fitFightTheme(theme).presentationBackground(theme.bg)
-        }
-        .sheet(isPresented: $showingFriends, onDismiss: { Task { await loadOwnProfile() } }) {
-            FriendsView().fitFightTheme(theme).presentationBackground(theme.bg)
         }
         .sheet(isPresented: $showingProfileHistory) {
             if let userID = session.authSession?.user.id {
@@ -255,6 +231,14 @@ struct YouView: View {
                     navRow(String(appLocalized: "Your companion")) { companions.showingPicker = true }
                 }
             }
+            FFSection(title: String(appLocalized: "Apple Health")) {
+                health
+            }
+            FFSection(title: String(appLocalized: "Activity")) {
+                FFGroupedRows {
+                    navRow(String(appLocalized: "Notifications & activity")) { model.showingActivity = true }
+                }
+            }
             FFSection(title: String(appLocalized: "App")) {
                 settings
             }
@@ -293,7 +277,6 @@ struct YouView: View {
         rivals = []
         socialError = nil
         profileStore.clear()
-        incomingFriends = 0
         guard !staticRender, let userID = session.authSession?.user.id ?? CompanionPreview.youID else { return }
         await profileStore.load(userID: userID, session: session)
         while profileStore.nextCursor != nil, !Task.isCancelled {
@@ -303,12 +286,9 @@ struct YouView: View {
         guard !CompanionPreview.isEnabled else { return }
         do {
             let token = try await session.freshAccessToken()
-            async let friendsRequest = FitFightAPI().profileFriends(kind: "incoming", accessToken: token)
-            async let rivalsRequest = FitFightAPI().ownRivalries(accessToken: token)
-            let (friends, loadedRivals) = try await (friendsRequest, rivalsRequest)
+            let loadedRivals = try await FitFightAPI().ownRivalries(accessToken: token)
             try Task.checkCancellation()
             guard requestGeneration == profileLoadGeneration, session.authSession?.user.id == userID else { return }
-            incomingFriends = friends.incomingCount
             rivals = loadedRivals
         } catch is CancellationError {
         } catch {

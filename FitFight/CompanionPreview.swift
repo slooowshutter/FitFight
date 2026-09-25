@@ -253,6 +253,12 @@ extension CompanionPreview {
         (String(appLocalized: "Swim"), "figure.pool.swim", (0..<31).map { [8, 22].contains($0) ? 30 : 0 }),
     ]
 
+    /// Everyone but you, as friends.
+    static let friendIdentities: [SharedProfileIdentity] = people.dropFirst().compactMap { person in
+        let json = #"{"user_id": "\#(person.id)", "handle": "\#(person.handle.dropFirst())", "display_name": "\#(person.name)", "companion_id": "\#(animals[person.id.lowercased()]?.rawValue ?? "goat")", "avatar_url": null}"#
+        return try? JSONDecoder().decode(SharedProfileIdentity.self, from: Data(json.utf8))
+    }
+
     /// 18 finished fights, newest first: 12 won, 5 lost (one a group 2nd place) and 1 draw.
     static let sampleHistory: [ProfileHistoryRow] = {
         let names = ["Coffee run", "Weekend walkers", "Lunch laps", "No lift, no mercy", "The long way home", "The croissant run", "Park loops", "August challenge", "Sunrise club", "Heatwave", "Stair wars", "Bakery dash", "Commute clash", "Office stairs", "Beach week", "Rooftop run", "Hill repeats", "First blood"]

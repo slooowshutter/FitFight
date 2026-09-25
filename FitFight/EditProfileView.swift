@@ -136,6 +136,14 @@ struct EditProfileView: View {
 
     private func load() async {
         let accountID = session.authSession?.user.id
+        #if DEBUG && targetEnvironment(simulator)
+        if CompanionPreview.isEnabled {
+            settings = try? JSONDecoder().decode(SharedProfileSettings.self, from: Data(#"{"competitive": true, "audience": "private", "activity_audience": "friends", "activity_days": 30, "artwork_allowed": true, "revision": 1}"#.utf8))
+            displayName = session.profile?.displayName ?? ""
+            handle = session.profile?.handle ?? ""
+            return
+        }
+        #endif
         do {
             let token = try await session.freshAccessToken()
             let loaded = try await FitFightAPI().profileSettings(accessToken: token)

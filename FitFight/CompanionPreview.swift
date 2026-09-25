@@ -124,17 +124,21 @@ extension CompanionPreview {
         finished.status = .finished
         finished.serverState = "final"
         finished.standings = finished.standings.map { var row = $0; row.finalStepsComplete = true; return row }
-        var history = group
-        history.id = "F0000000-0000-4000-8000-000000000006"
-        history.windowEnd = group.windowStart
-        history.windowStart = group.windowStart.addingTimeInterval(-7 * 86_400)
-        history.status = .finished
-        history.serverState = "final"
-        history.standings = history.standings.map { var row = $0; row.finalStepsComplete = true; return row }
+        // Five finished rounds won by Marc, so the live round shows a trophy ×5.
+        let history = (1...5).map { round in
+            var history = group
+            history.id = "F0000000-0000-4000-8000-\(String(format: "%012d", 5 + round))"
+            history.windowEnd = group.windowStart.addingTimeInterval(-Double(round - 1) * 7 * 86_400)
+            history.windowStart = history.windowEnd.addingTimeInterval(-7 * 86_400)
+            history.status = .finished
+            history.serverState = "final"
+            history.standings = history.standings.map { var row = $0; row.finalStepsComplete = true; return row }
+            return history
+        }
 
         switch state {
         case .populated, .offline:
-            model.fights = [group, duel, weekend, invite, finished, history]
+            model.fights = [group, duel, weekend, invite, finished] + history
         case .empty, .loading:
             model.fights = []
         case .tied:
@@ -149,7 +153,7 @@ extension CompanionPreview {
             model.fights = [duel]
         case .deferred:
             group.standings = group.standings.map { var row = $0; row.deferred = row.person.isYou; return row }
-            model.fights = [group, history]
+            model.fights = [group] + history
         case .pending:
             duel.status = .pending
             duel.serverState = "awaiting_final_sync"

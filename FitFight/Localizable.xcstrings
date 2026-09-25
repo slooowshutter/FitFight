@@ -1,6 +1,33 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Repeating fights show a trophy next to the previous round’s winner, with ×N for rounds won in a row.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les défis récurrents affichent un trophée à côté du gagnant de la manche précédente, avec ×N pour les manches gagnées d’affilée."
+                    }
+                }
+            }
+        },
+        "fight.trophies": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Won the last %lld rounds"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "A gagné les %lld dernières manches"
+                    }
+                }
+            }
+        },
         "40 Specials: one-of-a-kind animal companions, each with its own funny line. Buy one through Apple and keep it, even when you switch animals.": {
             "localizations": {
                 "fr": {

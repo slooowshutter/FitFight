@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.1.2",
             year: 2026,
             month: 9,
+            day: 25,
+            notes: "Repeating fights show a trophy next to the previous round’s winner, with ×N for rounds won in a row."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
             day: 23,
             notes: "Apple Health syncs detailed activity and workout history, including late changes and deletions. Fight Steps still use Apple’s merged total."
         ),

@@ -311,6 +311,7 @@ struct ContentView: View {
                 }
                 model.openFightID = nil
             })
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { model.tabBarHeight = $0 }
         }
     }
 

@@ -29,6 +29,8 @@ struct FFSegmented<Item: Hashable>: View {
     let items: [Item]
     @Binding var selection: Item
     var count: ((Item) -> Int?)? = nil
+    /// Stretch the segments to the full width.
+    var fill = false
     let title: (Item) -> String
 
     @Environment(\.ffTheme) private var theme
@@ -58,6 +60,7 @@ struct FFSegmented<Item: Hashable>: View {
                     .foregroundStyle(on ? theme.mossOn : theme.textSecondary)
                     .padding(.horizontal, 15)
                     .padding(.vertical, 6)
+                    .frame(maxWidth: fill ? .infinity : nil)
                     .background(on ? theme.mossFill : .clear, in: Capsule())
                 }
                 .buttonStyle(FFHapticPlainStyle())

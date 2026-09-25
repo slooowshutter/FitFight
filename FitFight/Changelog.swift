@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.1.2",
             year: 2026,
             month: 9,
+            day: 25,
+            notes: "You can comment on open Feedback requests from their detail page. Sort your fights by start, end, or how far ahead you are."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
             day: 24,
             notes: "Create your own animal with one Apple purchase. Its five fitness images change with your daily Steps."
         ),

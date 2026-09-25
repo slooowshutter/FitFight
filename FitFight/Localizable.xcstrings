@@ -12961,17 +12961,6 @@
                 }
             }
         },
-        "Ending latest": {
-            "extractionState": "manual",
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Fin la plus lointaine"
-                    }
-                }
-            }
-        },
         "Recently started": {
             "extractionState": "manual",
             "localizations": {
@@ -12983,6 +12972,28 @@
                 }
             }
         },
+        "Winning least": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Plus petite avance"
+                    }
+                }
+            }
+        },
+        "Winning most": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Plus grande avance"
+                    }
+                }
+            }
+        },
         "Tap outside an entry to close the keyboard. Sort Current Fights by end or start time and see each exact deadline.": {
             "extractionState": "manual",
             "localizations": {
@@ -12990,6 +13001,17 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Touchez un espace vide pour fermer le clavier. Triez les défis en cours par date de fin ou de début et voyez l'heure exacte de chaque fin."
+                    }
+                }
+            }
+        },
+        "You can comment on open Feedback requests from their detail page. Sort your fights by start, end, or how far ahead you are.": {
+            "extractionState": "manual",
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Vous pouvez commenter les demandes ouvertes depuis leur page de détail dans Feedback. Triez vos défis par début, fin ou avance."
                     }
                 }
             }

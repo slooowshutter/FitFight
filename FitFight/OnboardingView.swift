@@ -12,7 +12,6 @@ struct OnboardingView: View {
     @State private var ownerID: UUID?
     @State private var handle = ""
     @State private var selected: StockCompanion = .goat
-    @State private var showAll = false
     @State private var busy = false
     @State private var error: String?
     @State private var backwards = false
@@ -96,41 +95,12 @@ struct OnboardingView: View {
     private var companion: some View {
         OnboardingPage {
             OnboardingHeading(title: String(appLocalized: "onboarding.companion.title", defaultValue: "Find your kind\nof competitive."))
-            OnboardingAnimal(animal: selected, duration: 0.65, selectionReaction: true)
-                .id(selected)
-                .frame(height: 165)
-                .frame(maxWidth: .infinity)
-            VStack(spacing: 3) {
-                Text(selected.name).font(.ff(18, 800)).foregroundStyle(theme.text)
-                Text(selected.caption).font(.ff(14, 700)).foregroundStyle(theme.textSecondary)
-            }
-            .frame(maxWidth: .infinity, minHeight: 52)
-            .accessibilityElement(children: .combine)
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
-                ForEach(Array(animals.prefix(showAll ? 12 : 6))) { animal in
-                    Button {
-                        guard selected != animal else { return }
-                        selected = animal
-                    } label: {
-                        VStack(spacing: 3) {
-                            Image(animal.image).resizable().scaledToFit().frame(height: 52)
-                                .accessibilityHidden(true)
-                            Text(animal.name).font(.ff(14, 800))
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .foregroundStyle(selected == animal ? theme.mossText : theme.text)
-                        .frame(maxWidth: .infinity, minHeight: 89)
-                        .background(selected == animal ? theme.control : theme.card, in: RoundedRectangle(cornerRadius: 22))
-                        .overlay { RoundedRectangle(cornerRadius: 22).strokeBorder(selected == animal ? theme.mossEdge : theme.line, lineWidth: 1) }
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(busy)
-                    .accessibilityAddTraits(selected == animal ? .isSelected : [])
-                    .modifier(OnboardingEntrance(order: 5))
-                }
-            }
-            OnboardingSkip(title: showAll ? String(appLocalized: "Show fewer companions") : String(appLocalized: "Meet all 12 companions")) { showAll.toggle() }
-                .disabled(busy)
+            CompanionStage(
+                animals: animals,
+                selection: Binding(get: { selected }, set: { if let animal = $0 { selected = animal } }),
+                disabled: busy
+            )
+            .modifier(OnboardingEntrance(order: 2))
             if let error { FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle") }
         } actions: {
             FFScreenCTA(title: String(appLocalized: "onboarding.go-with", defaultValue: "Go with \(selected.name)"), enabled: !busy, busy: busy) {

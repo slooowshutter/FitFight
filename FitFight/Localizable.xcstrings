@@ -1,6 +1,46 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Choosing a companion is now a big swipeable stage, with a grid button to see them all. Tabs are All, Specials and Yours, and onboarding uses the same stage.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Choisir un compagnon se fait maintenant sur une grande scène à faire défiler, avec un bouton grille pour tous les voir. Les onglets sont Tous, Spéciaux et Les tiens, et l’onboarding utilise la même scène."
+                    }
+                }
+            }
+        },
+        "Reuse a saved description or write a new one.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Réutilise une description enregistrée ou écris-en une nouvelle."
+                    }
+                }
+            }
+        },
+        "Show all": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tout afficher"
+                    }
+                }
+            }
+        },
+        "Show one at a time": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Afficher un par un"
+                    }
+                }
+            }
+        },
         "Repeating fights show a trophy next to the previous round’s winner, with ×N for rounds won in a row.": {
             "localizations": {
                 "fr": {
@@ -430,16 +470,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Les descriptions de compagnons restent enregistrées quand tu changes d’animal. Explore les habitats et réutilise tes descriptions dans Les tiens."
-                    }
-                }
-            }
-        },
-        "Reuse a saved description or write a new one in Make it yours.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Réutilise une description enregistrée ou écris-en une nouvelle dans À ton image."
                     }
                 }
             }
@@ -13984,26 +14014,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Un nom pour le classement."
-                    }
-                }
-            }
-        },
-        "Meet all 12 companions": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Découvrir les 12 compagnons"
-                    }
-                }
-            }
-        },
-        "Show fewer companions": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Voir moins de compagnons"
                     }
                 }
             }

@@ -30,7 +30,7 @@ source = source.replace("    // APP_METHODS", "\n".join([
     app[sync_start:app.index("    private func joinPendingFight(")],
     app[app.index("    func fight(id:"):app.index("    func seriesHistory(")],
     app[app.index("    func openFight("):app.index("    func presentDailyStatusRecap(")],
-    app[app.index("    private static func fightStatusPriority("):app.index("    private static func ordinal(")],
+    app[app.index("    private static func fightStatusPriority("):app.index("    static func ordinal(")],
 ]))
 source = source.replace("    // TAB_STATE", app[
     app.index("    @Published var tab:"):app.index("    @Published var dailyStatusRecap:")

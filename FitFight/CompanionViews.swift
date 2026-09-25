@@ -196,116 +196,6 @@ enum CompanionCategory: String, CaseIterable, Identifiable {
     }
 }
 
-/// One big animal at a time: swipe between them with the neighbours peeking in, or tap a thumbnail below.
-struct CompanionStage: View {
-    let animals: [StockCompanion]
-    @Binding var selection: StockCompanion?
-    var label: (StockCompanion) -> String? = { _ in nil }
-    var disabled = false
-    @Environment(\.ffTheme) private var theme
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.ffStaticRender) private var staticRender
-
-    /// Artwork sits in the middle of a wide transparent canvas, so pages overlap for the neighbours to show.
-    private let overlap: CGFloat = -50
-
-    var body: some View {
-        VStack(spacing: 14) {
-            GeometryReader { proxy in
-                let width = proxy.size.width * 0.62
-                if staticRender {
-                    // ImageRenderer can't draw scroll views, so screenshots lay the pages out directly.
-                    let index = CGFloat(animals.firstIndex { $0 == selection } ?? 0)
-                    HStack(spacing: overlap) { ForEach(animals) { page($0, width: width) } }
-                        .fixedSize()
-                        .offset(x: (proxy.size.width - width) / 2 - index * (width + overlap))
-                        .frame(width: proxy.size.width, alignment: .leading)
-                } else {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        LazyHStack(spacing: overlap) { ForEach(animals) { page($0, width: width) } }
-                            .scrollTargetLayout()
-                    }
-                    .contentMargins(.horizontal, (proxy.size.width - width) / 2, for: .scrollContent)
-                    .scrollTargetBehavior(.viewAligned)
-                    .scrollPosition(id: $selection, anchor: .center)
-                    .animation(reduceMotion ? nil : .snappy, value: selection)
-                    .disabled(disabled)
-                }
-            }
-            .frame(height: 320)
-            .clipped()
-            ScrollViewReader { reader in
-                ScrollView(.horizontal, showsIndicators: false) {
-                    thumbnails
-                }
-                .onChange(of: selection, initial: true) { _, animal in
-                    guard let animal else { return }
-                    withAnimation(reduceMotion ? nil : .snappy) { reader.scrollTo(animal, anchor: .center) }
-                }
-            }
-            .opacity(staticRender ? 0 : 1)
-            .overlay(alignment: .leading) {
-                if staticRender { thumbnails.fixedSize() }
-            }
-        }
-        .padding(.horizontal, -20)
-    }
-
-    private var thumbnails: some View {
-        HStack(spacing: 8) {
-            ForEach(animals) { animal in
-                Button {
-                    withAnimation(reduceMotion ? nil : .snappy) { selection = animal }
-                } label: {
-                    Image(animal.image)
-                        .resizable()
-                        .scaledToFit()
-                        .padding(5)
-                        .frame(width: 64, height: 76)
-                        .background(selection == animal ? theme.mossWash : theme.card,
-                                    in: RoundedRectangle(cornerRadius: 16))
-                        .ffBorder(selection == animal ? theme.mossEdge : theme.hairline, radius: 16)
-                }
-                .buttonStyle(FFHapticPlainStyle())
-                .disabled(disabled)
-                .accessibilityLabel(animal.name)
-                .accessibilityAddTraits(selection == animal ? .isSelected : [])
-                .id(animal)
-            }
-        }
-        .padding(.horizontal, 20)
-    }
-
-    private func page(_ animal: StockCompanion, width: CGFloat) -> some View {
-        VStack(spacing: 4) {
-            Image(animal.image)
-                .resizable()
-                .scaledToFit()
-                .frame(height: 220)
-                .opacity(selection == animal ? 1 : 0.55)
-                .accessibilityHidden(true)
-            Group {
-                Text(animal.name)
-                    .font(.ff(24, 800))
-                    .foregroundStyle(theme.text)
-                Text(animal.caption)
-                    .ffType(.body)
-                    .foregroundStyle(theme.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                if let text = label(animal) {
-                    Text(text).ffType(.caption).foregroundStyle(theme.mossText)
-                }
-            }
-            .opacity(selection == animal ? 1 : 0)
-        }
-        .frame(width: width)
-        .scaleEffect(selection == animal ? 1 : 0.9)
-        .accessibilityElement(children: .combine)
-        .id(animal)
-    }
-}
-
 enum CompanionEffortStage: Int, CaseIterable, Identifiable {
     case rest = 1, headingOut, onTheMove, pushing, peak
 
@@ -996,6 +886,116 @@ struct CompanionFightSummary: View {
             .padding(.bottom, 8)
             FFDivider(inset: 0)
         }
+    }
+}
+
+/// One big animal at a time: swipe between them with the neighbours peeking in, or tap a thumbnail below.
+struct CompanionStage: View {
+    let animals: [StockCompanion]
+    @Binding var selection: StockCompanion?
+    var label: (StockCompanion) -> String? = { _ in nil }
+    var disabled = false
+    @Environment(\.ffTheme) private var theme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.ffStaticRender) private var staticRender
+
+    /// Artwork sits in the middle of a wide transparent canvas, so pages overlap for the neighbours to show.
+    private let overlap: CGFloat = -50
+
+    var body: some View {
+        VStack(spacing: 14) {
+            GeometryReader { proxy in
+                let width = proxy.size.width * 0.62
+                if staticRender {
+                    // ImageRenderer can't draw scroll views, so screenshots lay the pages out directly.
+                    let index = CGFloat(animals.firstIndex { $0 == selection } ?? 0)
+                    HStack(spacing: overlap) { ForEach(animals) { page($0, width: width) } }
+                        .fixedSize()
+                        .offset(x: (proxy.size.width - width) / 2 - index * (width + overlap))
+                        .frame(width: proxy.size.width, alignment: .leading)
+                } else {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        LazyHStack(spacing: overlap) { ForEach(animals) { page($0, width: width) } }
+                            .scrollTargetLayout()
+                    }
+                    .contentMargins(.horizontal, (proxy.size.width - width) / 2, for: .scrollContent)
+                    .scrollTargetBehavior(.viewAligned)
+                    .scrollPosition(id: $selection, anchor: .center)
+                    .animation(reduceMotion ? nil : .snappy, value: selection)
+                    .disabled(disabled)
+                }
+            }
+            .frame(height: 320)
+            .clipped()
+            ScrollViewReader { reader in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    thumbnails
+                }
+                .onChange(of: selection, initial: true) { _, animal in
+                    guard let animal else { return }
+                    withAnimation(reduceMotion ? nil : .snappy) { reader.scrollTo(animal, anchor: .center) }
+                }
+            }
+            .opacity(staticRender ? 0 : 1)
+            .overlay(alignment: .leading) {
+                if staticRender { thumbnails.fixedSize() }
+            }
+        }
+        .padding(.horizontal, -20)
+    }
+
+    private var thumbnails: some View {
+        HStack(spacing: 8) {
+            ForEach(animals) { animal in
+                Button {
+                    withAnimation(reduceMotion ? nil : .snappy) { selection = animal }
+                } label: {
+                    Image(animal.image)
+                        .resizable()
+                        .scaledToFit()
+                        .padding(5)
+                        .frame(width: 64, height: 76)
+                        .background(selection == animal ? theme.mossWash : theme.card,
+                                    in: RoundedRectangle(cornerRadius: 16))
+                        .ffBorder(selection == animal ? theme.mossEdge : theme.hairline, radius: 16)
+                }
+                .buttonStyle(FFHapticPlainStyle())
+                .disabled(disabled)
+                .accessibilityLabel(animal.name)
+                .accessibilityAddTraits(selection == animal ? .isSelected : [])
+                .id(animal)
+            }
+        }
+        .padding(.horizontal, 20)
+    }
+
+    private func page(_ animal: StockCompanion, width: CGFloat) -> some View {
+        VStack(spacing: 4) {
+            Image(animal.image)
+                .resizable()
+                .scaledToFit()
+                .frame(height: 220)
+                .opacity(selection == animal ? 1 : 0.55)
+                .accessibilityHidden(true)
+            Group {
+                Text(animal.name)
+                    .font(.ff(24, 800))
+                    .foregroundStyle(theme.text)
+                Text(animal.caption)
+                    .ffType(.body)
+                    .foregroundStyle(theme.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let text = label(animal) {
+                    Text(text).ffType(.caption).foregroundStyle(theme.mossText)
+                }
+            }
+            .opacity(selection == animal ? 1 : 0)
+        }
+        .frame(width: width)
+        .scaleEffect(selection == animal ? 1 : 0.9)
+        .accessibilityElement(children: .combine)
+        .id(animal)
     }
 }
 

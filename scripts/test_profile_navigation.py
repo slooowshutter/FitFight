@@ -22,7 +22,7 @@ activity = (root / "FitFight/FeedActivity.swift").read_text()
 
 state = app[app.index("    @Published var tab:"):app.index("    @Published var dailyStatusRecap:")].replace("@Published ", "")
 selection = app[app.index("    func fight(id:"):app.index("    func seriesHistory(for fight:")]
-priority = app[app.index("    private static func fightStatusPriority("):app.index("    private static func ordinal(")]
+priority = app[app.index("    private static func fightStatusPriority("):app.index("    static func ordinal(")]
 opening = app[app.index("    func openFight"):app.index("    func presentDailyStatusRecap(")]
 history = profile[profile.index("                ForEach(store.history)"):]
 history_action = history[history.index("                        Button {") + len("                        Button {"):history.index("                        } label:")]

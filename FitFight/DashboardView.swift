@@ -158,6 +158,7 @@ struct DashboardView: View {
                 count(rows.count - won - drew, String(appLocalized: "Lost"), theme.emberText)
             }
         }
+        Text(String(appLocalized: "Fight history")).ffType(.heading).foregroundStyle(theme.text).padding(.top, 8)
         FFSegmented(items: Filter.allCases, selection: $filter) { item in
             switch item {
             case .all: String(appLocalized: "All")

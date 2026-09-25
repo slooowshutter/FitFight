@@ -16,6 +16,8 @@ final class YouActivityStore: ObservableObject {
 
     @Published private(set) var sports: [Sport] = []
     @Published private(set) var days: [Date] = []
+    /// Daily Steps for the past 8 weeks (56 days, today last), for the daily average and best day.
+    @Published private(set) var eightWeekSteps: [Double] = []
 
     func load() async {
         let calendar = Calendar.current
@@ -25,6 +27,7 @@ final class YouActivityStore: ObservableObject {
             days = (0..<31).compactMap { calendar.date(byAdding: .day, value: $0 - 30, to: today) }
             sports = [Sport(id: "steps", name: String(appLocalized: "Steps"), systemImage: "shoeprints.fill", isSteps: true, values: CompanionPreview.sampleSteps)]
                 + CompanionPreview.sampleWorkouts.map { Sport(id: $0.0, name: $0.0, systemImage: $0.1, isSteps: false, values: $0.2) }
+            eightWeekSteps = Array(CompanionPreview.sampleSteps.prefix(25).reversed()) + CompanionPreview.sampleSteps
             return
         }
         #endif
@@ -32,17 +35,19 @@ final class YouActivityStore: ObservableObject {
         let store = HKHealthStore()
         let today = calendar.startOfDay(for: Date())
         guard let start = calendar.date(byAdding: .day, value: -30, to: today),
+              let eightWeeksAgo = calendar.date(byAdding: .day, value: -55, to: today),
               let end = calendar.date(byAdding: .day, value: 1, to: today) else { return }
         let dayList = (0..<31).compactMap { calendar.date(byAdding: .day, value: $0, to: start) }
         let index = { (date: Date) in calendar.dateComponents([.day], from: start, to: calendar.startOfDay(for: date)).day ?? -1 }
 
-        var steps = Array(repeating: 0.0, count: 31)
-        if let collection = try? await Self.dailySteps(store: store, start: start, end: end) {
-            collection.enumerateStatistics(from: start, to: end) { statistics, _ in
-                let i = index(statistics.startDate)
-                if steps.indices.contains(i) { steps[i] = statistics.sumQuantity()?.doubleValue(for: .count()) ?? 0 }
+        var longSteps = Array(repeating: 0.0, count: 56)
+        if let collection = try? await Self.dailySteps(store: store, start: eightWeeksAgo, end: end) {
+            collection.enumerateStatistics(from: eightWeeksAgo, to: end) { statistics, _ in
+                let i = (calendar.dateComponents([.day], from: eightWeeksAgo, to: statistics.startDate).day ?? -1)
+                if longSteps.indices.contains(i) { longSteps[i] = statistics.sumQuantity()?.doubleValue(for: .count()) ?? 0 }
             }
         }
+        let steps = Array(longSteps.suffix(31))
         var minutes: [HKWorkoutActivityType: [Double]] = [:]
         for workout in (try? await Self.workouts(store: store, start: start, end: end)) ?? [] {
             let i = index(workout.startDate)
@@ -57,6 +62,7 @@ final class YouActivityStore: ObservableObject {
                 return Sport(id: "workout-\(type.rawValue)", name: name, systemImage: image, isSteps: false, values: values)
             }
         days = dayList
+        eightWeekSteps = longSteps
         sports = [Sport(id: "steps", name: String(appLocalized: "Steps"), systemImage: "shoeprints.fill", isSteps: true, values: steps)] + workoutSports
     }
 
@@ -117,7 +123,14 @@ struct YouStatsCard: View {
     let results: (won: Int, lost: Int, drew: Int)?
     /// Other sports you did today, from Apple Health.
     let todayWorkouts: [YouActivityStore.Sport]
+    /// Past 8 weeks of daily Steps from Apple Health; days without Steps are left out of the average.
+    let eightWeekSteps: [Double]
     @Environment(\.ffTheme) private var theme
+
+    // Today is still in progress, so the average and best day use the 55 finished days before it.
+    private var recordedDays: [Double] { eightWeekSteps.dropLast().filter { $0 > 0 } }
+    private var average: Double? { recordedDays.isEmpty ? statistics?.averageSteps : recordedDays.reduce(0, +) / Double(recordedDays.count) }
+    private var best: Double? { recordedDays.max() ?? statistics?.bestDay?.steps }
 
     var body: some View {
         FFCard(padding: 0) {
@@ -143,11 +156,12 @@ struct YouStatsCard: View {
                         }
                     }
                     Spacer(minLength: 8)
-                    if let todaySteps, let average = statistics?.averageSteps {
+                    if let todaySteps, let average {
                         let gap = Double(todaySteps) - average
                         VStack(alignment: .trailing, spacing: 2) {
-                            Text((gap >= 0 ? "+" : "-") + formatted(abs(gap))).font(.ff(22, 800)).monospacedDigit().foregroundStyle(theme.text)
-                            Text(String(appLocalized: "vs your average")).ffType(.micro).foregroundStyle(theme.textSecondary)
+                            Text((gap >= 0 ? "+" : "-") + formatted(abs(gap))).font(.ff(22, 800)).monospacedDigit()
+                                .foregroundStyle(gap >= 0 ? theme.mossText : theme.emberText)
+                            Text(String(appLocalized: "vs daily average")).ffType(.micro).foregroundStyle(theme.textSecondary)
                         }.padding(.top, 22)
                     }
                 }
@@ -166,19 +180,22 @@ struct YouStatsCard: View {
                     }
                     Rectangle().fill(theme.hairline).frame(height: 1).gridCellColumns(3)
                     GridRow {
-                        cell(Text(statistics?.averageSteps.map(formatted) ?? "-"), String(appLocalized: "daily average"))
+                        cell(Text(average.map(formatted) ?? "-"), String(appLocalized: "daily average"), note: String(appLocalized: "past 8 weeks"))
                         Rectangle().fill(theme.hairline).frame(width: 1)
-                        cell(Text(statistics?.bestDay.map { formatted($0.steps) } ?? "-"), String(appLocalized: "best day"))
+                        cell(Text(best.map(formatted) ?? "-"), String(appLocalized: "best day"), note: String(appLocalized: "past 8 weeks"))
                     }
                 }
             }
         }
     }
 
-    private func cell(_ value: Text, _ label: String) -> some View {
+    private func cell(_ value: Text, _ label: String, note: String? = nil) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             value.font(.ff(22, 800)).monospacedDigit().foregroundStyle(theme.text)
             Text(label).ffType(.caption).foregroundStyle(theme.textSecondary)
+            if let note {
+                Text("(\(note))").ffType(.micro).foregroundStyle(theme.textFaint)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, theme.space.cardPadding)

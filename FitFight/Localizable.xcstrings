@@ -14487,16 +14487,6 @@
                 }
             }
         },
-        "vs your average": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "vs ta moyenne"
-                    }
-                }
-            }
-        },
         "Dashboard": {
             "localizations": {
                 "fr": {
@@ -14731,6 +14721,46 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Nom"
+                    }
+                }
+            }
+        },
+        "vs daily average": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "vs moyenne par jour"
+                    }
+                }
+            }
+        },
+        "past 8 weeks": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "8 dernières semaines"
+                    }
+                }
+            }
+        },
+        "Add a friend by username": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ajoute un ami par son nom d’utilisateur"
+                    }
+                }
+            }
+        },
+        "Requests": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Demandes"
                     }
                 }
             }

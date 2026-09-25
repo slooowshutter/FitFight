@@ -14,7 +14,6 @@ struct YouView: View {
     @StateObject private var profileStore = ProfileScreenStore()
     @StateObject private var activity = YouActivityStore()
     @State private var showingEditProfile = false
-    @State private var showingProfileHistory = false
     @State private var rivals: [ProfileRivalrySummary] = []
     @State private var profileLoadGeneration = 0
     @State private var socialError: String?
@@ -36,14 +35,14 @@ struct YouView: View {
             if session.isSignedIn {
                 YouStatsCard(
                     todaySteps: todaySteps, statistics: profileStore.profile?.stepStatistics, record: profileStore.profile?.record,
-                    results: results, todayWorkouts: activity.sports.dropFirst().filter { ($0.values.last ?? 0) > 0 }
+                    results: results, todayWorkouts: activity.sports.dropFirst().filter { ($0.values.last ?? 0) > 0 },
+                    eightWeekSteps: activity.eightWeekSteps
                 )
+                .padding(.top, 8)
                 if !activity.sports.isEmpty {
                     YouSportList(sports: activity.sports)
+                        .padding(.top, 12)
                 }
-            }
-            if profileStore.profile?.record != nil {
-                FFButton(title: String(appLocalized: "Fight history"), kind: .ghost) { showingProfileHistory = true }
             }
             ForEach(rivals) { rival in
                 ProfileIdentityLink(userID: rival.id, source: "friends", onClosed: { Task { await loadOwnProfile() } }) {
@@ -79,11 +78,6 @@ struct YouView: View {
         }
         .sheet(isPresented: $showingEditProfile, onDismiss: { Task { await loadOwnProfile() } }) {
             EditProfileView().fitFightTheme(theme).presentationBackground(theme.bg)
-        }
-        .sheet(isPresented: $showingProfileHistory) {
-            if let userID = session.authSession?.user.id {
-                ProfileSheet(userID: userID, source: "friends").fitFightTheme(theme).presentationBackground(theme.bg)
-            }
         }
         .sheet(isPresented: $showingOnboardingPreview) {
             OnboardingPreviewView()

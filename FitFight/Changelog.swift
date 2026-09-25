@@ -28,8 +28,15 @@ enum Changelog {
             version: "1.1.2",
             year: 2026,
             month: 9,
-            day: 25,
+            day: 26,
             notes: "Choosing a companion is now a big swipeable stage, with a grid button to see them all. Tabs are All, Specials and Yours, and onboarding uses the same stage."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 25,
+            notes: "Animal cards in the picker are all the same size now, whatever the name length."
         ),
         ReleaseNote(
             version: "1.1.2",

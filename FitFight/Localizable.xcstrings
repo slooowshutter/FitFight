@@ -128,6 +128,16 @@
                 }
             }
         },
+        "Animal cards in the picker are all the same size now, whatever the name length.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les cartes d’animaux du sélecteur ont toutes la même taille, quelle que soit la longueur du nom."
+                    }
+                }
+            }
+        },
         "Current fights show as cards: your lead or gap, everyone’s avatars, your place, and a gold bar with the day and time left.": {
             "localizations": {
                 "fr": {

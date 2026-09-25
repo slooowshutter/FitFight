@@ -1142,16 +1142,18 @@ struct CompanionPicker: View {
                                 Text(animal.name)
                                     .font(.custom("Nunito-ExtraBold", size: 12, relativeTo: .caption))
                                     .foregroundStyle(draft == animal && !pickingCustom ? theme.mossText : theme.text)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                if let label = specialLabel(animal) {
-                                    Text(label)
-                                        .ffType(.caption)
-                                        .foregroundStyle(theme.textSecondary)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                }
+                                    .lineLimit(2, reservesSpace: true)
+                                    .minimumScaleFactor(0.8)
+                                // Every tile reserves the status line so limited and regular animals stay the same size.
+                                Text(specialLabel(animal) ?? " ")
+                                    .ffType(.caption)
+                                    .foregroundStyle(theme.textSecondary)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.7)
+                                    .accessibilityHidden(!animal.isLimited)
                             }
                             .padding(8)
-                            .frame(maxWidth: .infinity)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                             .background(draft == animal && !pickingCustom ? theme.mossWash : theme.card,
                                         in: RoundedRectangle(cornerRadius: theme.radius.card))
                             .ffBorder(draft == animal && !pickingCustom ? theme.mossEdge : theme.hairline, radius: theme.radius.card)

@@ -5,6 +5,7 @@ import {
     aiWorkflowEnvironmentPrefixes,
     type AiWorkflow,
 } from "@/lib/types/ai/workflow";
+import { blendWorkflowVersionSchema } from "@/lib/types/blend/workflow";
 
 /** Polling needs transport limits, but must not depend on the current publication or new-start price. */
 export function blendProviderConfiguration() {
@@ -27,14 +28,18 @@ export function blendProviderConfiguration() {
 }
 
 /** Each workflow has an explicit immutable publication and a server-selected price. */
-export function blendWorkflowConfiguration(workflow: AiWorkflow) {
+export function blendWorkflowConfiguration(workflow: AiWorkflow, paidCharacter = false) {
     const provider = blendProviderConfiguration();
     const prefix = aiWorkflowEnvironmentPrefixes[workflow];
+    const version = blendWorkflowVersionSchema.safeParse({
+        workflowId: process.env[`${prefix}_WORKFLOW_ID`],
+        versionId: process.env[`${prefix}_VERSION_ID`],
+    });
+    if (!version.success)
+        throw new ApiError(503, "ai_unavailable", "This feature is temporarily unavailable on our side.");
+    if (paidCharacter) return { ...provider, version: version.data, creditPrice: 0 };
     const parsed = aiWorkflowConfigurationSchema.safeParse({
-        version: {
-            workflowId: process.env[`${prefix}_WORKFLOW_ID`],
-            versionId: process.env[`${prefix}_VERSION_ID`],
-        },
+        version: version.data,
         creditPrice:
             workflow === "avatar" ? 1 : process.env[`${prefix}_CREDIT_PRICE`],
     });

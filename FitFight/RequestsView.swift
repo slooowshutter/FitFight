@@ -17,6 +17,8 @@ final class FeedbackStore: ObservableObject {
     @Published var isArchiving = false
     @Published var isDeleting = false
     @Published var error: String?
+    @Published var openDetailID: UUID?
+    @Published var menuAction: RequestMenuAction?
 
     private let api = FitFightAPI()
     private var listLoad = 0
@@ -993,6 +995,7 @@ private struct RequestDetailView: View {
     let postID: UUID
     @ObservedObject var store: FeedbackStore
     @EnvironmentObject private var session: SessionStore
+    @EnvironmentObject private var model: AppModel
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
     @Environment(\.dismiss) private var dismiss
@@ -1010,31 +1013,10 @@ private struct RequestDetailView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(alignment: .top, spacing: 10) {
-                FFNavDetail(
-                    title: post?.title ?? String(appLocalized: "Request"),
-                    onBack: { dismiss() }
-                )
-                if let post, !post.mine || store.canDelete || store.canArchive {
-                    RequestPostMenu(
-                        canReport: !post.mine,
-                        onReport: {
-                            Task { await store.report(session: session, post: post) }
-                        },
-                        onHide: {
-                            Task {
-                                await store.hide(session: session, authorID: post.authorId)
-                                dismiss()
-                            }
-                        },
-                        onDelete: store.canDelete ? { confirmingDeletion = true } : nil,
-                        onArchive: store.canArchive ? { showingArchive = true } : nil,
-                        archived: post.archived
-                    )
-                    .disabled(store.isDeleting || store.isArchiving || store.isSaving || store.isLaunchingFix)
-                    .padding(.top, 4)
-                }
-            }
+            FFNavDetail(
+                title: post?.title ?? String(appLocalized: "Request"),
+                onBack: { dismiss() }
+            )
             .padding(.horizontal, theme.space.screenPadding)
             .padding(.top, 12)
 
@@ -1055,7 +1037,10 @@ private struct RequestDetailView: View {
                     .refreshable { await store.loadDetail(session: session, postID: postID) }
                 }
             }
-
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .ffKeyboardDismissOnBackgroundTap()
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             if post?.archived != true {
                 HStack(spacing: 10) {
                     if staticRender {
@@ -1094,9 +1079,11 @@ private struct RequestDetailView: View {
                 }
                 .padding(.horizontal, theme.space.screenPadding)
                 .padding(.vertical, 12)
+                .background(theme.bg)
+                // NOTE: pushed NavigationStack screens do not inherit the root tab bar's safe-area inset.
+                .padding(.bottom, model.tabBarHeight)
             }
         }
-        .ffKeyboardDismissOnBackgroundTap()
         .background(theme.bg.ignoresSafeArea())
         .sheet(isPresented: $showingArchive) {
             if let post {
@@ -1123,6 +1110,24 @@ private struct RequestDetailView: View {
         .task {
             guard !staticRender else { return }
             await store.loadDetail(session: session, postID: postID)
+        }
+        .onAppear { store.openDetailID = postID }
+        .onDisappear {
+            if store.openDetailID == postID { store.openDetailID = nil }
+        }
+        // The post menu lives in the Feedback hub bar; it asks this screen to act.
+        .onChange(of: store.menuAction) { _, action in
+            guard let action, let post else { return }
+            store.menuAction = nil
+            switch action {
+            case .hide:
+                Task {
+                    await store.hide(session: session, authorID: post.authorId)
+                    dismiss()
+                }
+            case .delete: confirmingDeletion = true
+            case .archive: showingArchive = true
+            }
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active && !staticRender {
@@ -1272,7 +1277,11 @@ private struct RequestDetailView: View {
     }
 }
 
-private struct RequestPostMenu: View {
+enum RequestMenuAction {
+    case hide, delete, archive
+}
+
+struct RequestPostMenu: View {
     var canReport = true
     let onReport: () -> Void
     let onHide: () -> Void

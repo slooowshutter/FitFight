@@ -189,6 +189,8 @@ struct Fight: Codable, Identifiable, Hashable {
 
 @MainActor
 final class AppModel: ObservableObject {
+    @Published var tabBarHeight: CGFloat = 0
+
     @Published var tab: FFTab = .fights {
         didSet {
             if oldValue != tab {

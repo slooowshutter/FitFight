@@ -68,6 +68,7 @@ export async function readSpecialStore(
             where user_id = ${userId} and environment <> ${environment}
                 and not exists (select 1 from private.special_editions where account_id = account.id)
                 and not exists (select 1 from private.special_transactions where account_id = account.id)
+                and not exists (select 1 from private.custom_character_purchases where account_id = account.id)
         `;
         const [row] =
             await sql`select id, user_id, environment from private.special_accounts where user_id = ${userId}`;

@@ -15,6 +15,9 @@ enum CompanionPreview {
         String(appLocalized: "Preview only. No fight, post, account or Health data is changed.")
     }
 
+    /// Marc's fixture account, so You and profiles load sample data in the preview.
+    static var youID: UUID? { isEnabled ? UUID(uuidString: "C0000000-0000-4000-8000-000000000001") : nil }
+
     struct WriteUnavailable: LocalizedError {
         var errorDescription: String? { CompanionPreview.writeUnavailable }
     }
@@ -240,6 +243,64 @@ struct CompanionPreviewControls: View {
             }
             FFButton(title: String(appLocalized: "Close"), kind: .ghost, fullWidth: true) { dismiss() }
         }
+    }
+}
+#endif
+
+#if DEBUG && targetEnvironment(simulator)
+extension CompanionPreview {
+    /// 31 days of sample Steps and workout minutes, oldest first.
+    static let sampleSteps: [Double] = [6_210, 9_480, 4_120, 8_760, 12_300, 7_050, 5_430, 10_900, 8_120, 3_980, 7_760, 11_450, 9_020, 6_640, 18_420, 8_310, 5_870, 9_940, 7_220, 13_150, 6_980, 8_450, 10_260, 4_760, 9_310, 12_880, 8_050, 7_430, 11_020, 9_870, 8_432]
+    static let sampleWorkouts: [(String, String, [Double])] = [
+        (String(appLocalized: "Run"), "figure.run", (0..<31).map { [3, 10, 17, 24, 29].contains($0) ? 32 + Double($0 % 4) * 6 : 0 }),
+        (String(appLocalized: "Bike"), "bicycle", (0..<31).map { [5, 12, 19, 26].contains($0) ? 55 + Double($0 % 3) * 10 : 0 }),
+        (String(appLocalized: "Swim"), "figure.pool.swim", (0..<31).map { [8, 22].contains($0) ? 30 : 0 }),
+    ]
+
+    /// Everyone but you, as friends.
+    static let friendIdentities: [SharedProfileIdentity] = people.dropFirst().compactMap { person in
+        let json = #"{"user_id": "\#(person.id)", "handle": "\#(person.handle.dropFirst())", "display_name": "\#(person.name)", "companion_id": "\#(animals[person.id.lowercased()]?.rawValue ?? "goat")", "avatar_url": null}"#
+        return try? JSONDecoder().decode(SharedProfileIdentity.self, from: Data(json.utf8))
+    }
+
+    /// 18 finished fights, newest first: 12 won, 5 lost (one a group 2nd place) and 1 draw.
+    static let sampleHistory: [ProfileHistoryRow] = {
+        let names = ["Coffee run", "Weekend walkers", "Lunch laps", "No lift, no mercy", "The long way home", "The croissant run", "Park loops", "August challenge", "Sunrise club", "Heatwave", "Stair wars", "Bakery dash", "Commute clash", "Office stairs", "Beach week", "Rooftop run", "Hill repeats", "First blood"]
+        let results = ["win", "loss", "draw", "loss", "win", "win", "win", "win", "loss", "win", "win", "win", "loss", "win", "loss", "win", "win", "win"]
+        let rows = names.indices.map { i in
+            """
+            {"id": "\(UUID().uuidString)", "fight_id": null, "name": "\(names[i])", "starts_at": "2026-09-\(String(format: "%02d", max(1, 18 - i)))T00:00:00Z",
+             "ends_at": "2026-09-\(String(format: "%02d", max(1, 18 - i)))T00:00:00Z", "category": "private", "result": "\(results[i])",
+             "placement": \(results[i] == "win" ? "1" : results[i] == "draw" ? "1" : "2"), "field_size": 2, "counted": true, "complete": true}
+            """
+        }
+        return (try? JSONDecoder().decode([ProfileHistoryRow].self, from: Data("[\(rows.joined(separator: ","))]".utf8))) ?? []
+    }()
+
+    /// A shared profile for any fixture person: statistics for everyone, a one-on-one record for friends.
+    static func profile(userID: UUID) -> SharedProfile? {
+        guard let index = people.firstIndex(where: { $0.id.lowercased() == userID.uuidString.lowercased() }) else { return nil }
+        let person = people[index]
+        let isYou = index == 0
+        let records = [(5, 1, 1), (2, 3, 0), (1, 0, 0), (3, 2, 1)]
+        let (wins, losses, draws) = records[(index + 3) % records.count]
+        let steps = isYou ? sampleSteps : sampleSteps.map { $0 * (0.8 + Double(index) * 0.07) }
+        let average = steps.reduce(0, +) / Double(steps.count)
+        let json = """
+        {
+            "identity": {"user_id": "\(userID.uuidString)", "handle": "\(person.handle.dropFirst())", "display_name": "\(person.name)", "companion_id": "\(animals[person.id.lowercased()]?.rawValue ?? "goat")", "avatar_url": null},
+            "access": "\(isYou ? "owner" : "friend")", "competitive": true, "friendship": "\(isYou ? "self" : "friends")",
+            "record": {"played": 18, "wins": 12, "win_rate": 0.67, "categories": {}, "excluded": 0},
+            "rivalry": \(isYou ? "null" : "{\"wins\": \(wins), \"losses\": \(losses), \"draws\": \(draws), \"rematch\": null}"),
+            "activity": null,
+            "step_statistics": {"scope_days": null, "from": null, "through": "2026-09-24", "time_zone": "Europe/Paris", "recorded_days": 31, "unknown_days": 0,
+                "total_steps": \(steps.reduce(0, +)), "average_steps": \(average), "best_day": {"day": "2026-09-08", "steps": \(steps.max() ?? 0)},
+                "week": {"starts_on": "2026-09-21", "elapsed_days": 4, "recorded_days": 4, "total_steps": \(steps.suffix(4).reduce(0, +)), "average_steps": \(steps.suffix(4).reduce(0, +) / 4)},
+                "levels": []},
+            "view_measurement_enabled": false
+        }
+        """
+        return try? JSONDecoder().decode(SharedProfile.self, from: Data(json.utf8))
     }
 }
 #endif

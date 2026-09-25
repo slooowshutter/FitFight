@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct FriendsView: View {
+    /// Embedded on You: no sheet header and no inner scroll, the page scrolls instead.
+    var embedded = false
     @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.dismiss) private var dismiss
@@ -18,46 +20,25 @@ struct FriendsView: View {
     @FocusState private var handleFocused: Bool
 
     var body: some View {
-        VStack(spacing: 0) {
-            FFSheetHeader(title: String(appLocalized: "Friends"), role: .heading) { dismiss() }
-                .padding(.horizontal, theme.space.screenPadding).padding(.top, 12)
-            ScrollView {
-                VStack(alignment: .leading, spacing: theme.space.cardGap) {
-                    HStack {
-                        TextField(String(appLocalized: "Exact username"), text: $handle)
-                            .focused($handleFocused)
-                            .textInputAutocapitalization(.never).autocorrectionDisabled().ffType(.body)
-                            .onSubmit { Task { await lookup() } }
-                        FFButton(title: String(appLocalized: "Find"), kind: .secondary, busy: loading) { Task { await lookup() } }
+        Group {
+            if embedded {
+                list
+            } else {
+                VStack(spacing: 0) {
+                    FFSheetHeader(title: String(appLocalized: "Friends"), role: .heading) { dismiss() }
+                        .padding(.horizontal, theme.space.screenPadding).padding(.top, 12)
+                    ScrollView {
+                        list
+                            .padding(theme.space.screenPadding)
+                            .ffKeyboardDismissOnBackgroundTap()
                     }
-                    if let found { personRow(found, source: "lookup") }
-                    Picker(String(appLocalized: "Friends"), selection: $kind) {
-                        Text(String(appLocalized: "Friends")).tag("accepted")
-                        Text(String(format: String(appLocalized: "profile.requests-count"), incomingCount)).tag("incoming")
-                        Text(String(appLocalized: "Sent")).tag("outgoing")
-                    }.pickerStyle(.segmented)
-                    if let error {
-                        FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
-                        FFButton(title: String(appLocalized: "Retry"), kind: .secondary) { Task { await load() } }
-                    }
-                    if loading { ProgressView().frame(maxWidth: .infinity) }
-                    if !loading && people.isEmpty && error == nil {
-                        Text(String(appLocalized: "No friends or requests here yet. Search an exact username to connect."))
-                            .ffType(.body).foregroundStyle(theme.textSecondary)
-                    }
-                    ForEach(people) { personRow($0, source: "friends") }
-                    if nextCursor != nil {
-                        FFButton(title: String(appLocalized: "Load more"), kind: .ghost, busy: loading) { Task { await load(more: true) } }
-                    }
+                    .scrollDismissesKeyboard(.interactively)
                 }
-                .padding(theme.space.screenPadding)
+                .foregroundStyle(theme.text)
                 .ffKeyboardDismissOnBackgroundTap()
+                .background(theme.bg.ignoresSafeArea())
             }
-            .scrollDismissesKeyboard(.interactively)
         }
-        .foregroundStyle(theme.text)
-        .ffKeyboardDismissOnBackgroundTap()
-        .background(theme.bg.ignoresSafeArea())
         .task(id: kind) { await load() }
         .onChange(of: scenePhase) { _, phase in
             generation += 1; lookupGeneration += 1; people = []; found = nil; nextCursor = nil
@@ -65,6 +46,57 @@ struct FriendsView: View {
         }
         .onChange(of: session.authSession?.user.id) { _, _ in generation += 1; lookupGeneration += 1; people = []; found = nil; dismiss() }
         .onDisappear { generation += 1; lookupGeneration += 1; people = []; found = nil; nextCursor = nil }
+    }
+
+    private var list: some View {
+        VStack(alignment: .leading, spacing: theme.space.cardGap) {
+            // Title on the left and the tabs on the right, like By sport.
+            HStack {
+                if embedded {
+                    Text(String(appLocalized: "Friends")).ffType(.heading).foregroundStyle(theme.text)
+                }
+                Spacer(minLength: 8)
+                FFSegmented(items: ["accepted", "incoming", "outgoing"], selection: $kind, count: { $0 == "incoming" ? incomingCount : nil }) { item in
+                    switch item {
+                    case "incoming": String(appLocalized: "Requests")
+                    case "outgoing": String(appLocalized: "Sent")
+                    default: String(appLocalized: "Friends")
+                    }
+                }
+            }
+            // Search sits in one filled field; the Find action appears once there is something to look up.
+            HStack(spacing: 10) {
+                Image(systemName: "magnifyingglass").foregroundStyle(theme.textSecondary)
+                TextField(String(appLocalized: "Add a friend by username"), text: $handle)
+                    .focused($handleFocused)
+                    .textInputAutocapitalization(.never).autocorrectionDisabled().ffType(.body)
+                    .submitLabel(.search)
+                    .onSubmit { Task { await lookup() } }
+                if !handle.isEmpty {
+                    Button(String(appLocalized: "Find")) { Task { await lookup() } }
+                        .ffType(.label).foregroundStyle(theme.mossText)
+                        .frame(minHeight: 44)
+                        .buttonStyle(FFHapticPlainStyle())
+                }
+            }
+            .padding(.horizontal, 14)
+            .frame(minHeight: 50)
+            .background(theme.control, in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
+            if let found { personRow(found, source: "lookup") }
+            if let error {
+                FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
+                FFButton(title: String(appLocalized: "Retry"), kind: .secondary) { Task { await load() } }
+            }
+            if loading { ProgressView().frame(maxWidth: .infinity) }
+            if !loading && people.isEmpty && error == nil {
+                Text(String(appLocalized: "No friends or requests here yet. Search an exact username to connect."))
+                    .ffType(.body).foregroundStyle(theme.textSecondary)
+            }
+            ForEach(people) { personRow($0, source: "friends") }
+            if nextCursor != nil {
+                FFButton(title: String(appLocalized: "Load more"), kind: .ghost, busy: loading) { Task { await load(more: true) } }
+            }
+        }
     }
 
     private func personRow(_ person: SharedProfileIdentity, source: String) -> some View {
@@ -89,6 +121,13 @@ struct FriendsView: View {
         let accountID = session.authSession?.user.id
         let cursor = more ? nextCursor : nil
         if !more { people = []; nextCursor = nil }
+        #if DEBUG && targetEnvironment(simulator)
+        if CompanionPreview.isEnabled {
+            people = kind == "accepted" ? CompanionPreview.friendIdentities : []
+            incomingCount = 0
+            return
+        }
+        #endif
         loading = true
         defer { if generation == requestGeneration { loading = false } }
         do {

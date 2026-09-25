@@ -52,7 +52,10 @@ An already-admitted action remains recoverable after source request cleanup.
 
 This source policy excludes arbitrary profile media IDs and cross-user group
 assembly. Group sizes above five and the 20-30-character grid remain outside the
-verified scope. Unsaved requests retain their seven-day window. Saved library entries retain their original Blend URLs and survive request pruning until account deletion. Derivative workflows use those same URLs.
+verified scope. Unlinked terminal requests retain their seven-day window. Paid
+character requests stay linked to the purchase until account deletion. Saved
+library entries retain their original Blend URLs and survive request pruning until
+account deletion. Derivative workflows use those same URLs.
 
 `pending` and `running` include the minimum polling delay. `completed` carries
 `data.image_url` for Avatar and Group Photo, or five named URLs in `data.resting`,
@@ -72,12 +75,17 @@ is outside this scope.
 
 ## Native generation and durable images
 
-You -> Make it yours -> Generate images opens the three workflows and the account
-library. Each start displays its server price and requires enough available credits.
-Fitness selects one saved avatar. Group Photo selects two to five in explicit cast
-order and takes a scene description. These controls do not use HealthKit data.
+You -> Make it yours -> Create character opens the paid portrait plus fitness
+journey and the account's completed character library. One verified EUR 4.99
+Apple consumable funds one character, not unlimited starts. The backend saves a
+portrait action key and, after that image is validated, a fitness action key.
+Closing the app does not interrupt settlement or the background start of the
+second workflow. Failed stages can be retried on the same purchase; an
+unconfirmed provider start is held for operator evidence. The old credit routes
+remain compatible for existing clients, and Group Photo is not part of the
+paid character purchase. These controls do not send HealthKit data to Blend.
 
-The native app persists the exact action inputs and UUID key before submission,
+For existing credit clients, the native app persists the exact action inputs and UUID key before submission,
 then persists the request ID under the account's local key. Closing the screen stops local polling; reopening resumes the same
 action. Unknown/network outcomes retain the action. Definite pre-admission
 rejections or terminal results let the user start a new deliberate action. A
@@ -102,11 +110,14 @@ Older profile edits preserve the selection when omitted. Choosing a stock/text
 companion or uploading another profile photo clears the generated selection.
 
 Avatar and individual Fitness images can be chosen as the custom companion with
-one existing profile update. The chosen image appears on You and existing avatar
-surfaces. Fitness images are selectable poses; automatic switching by Steps is
-not added. Group photos stay in the private library; fight assignment and
+one existing profile update. The chosen image appears on existing avatar surfaces.
+When a Fitness image is selected, the app finds its saved five-image set and shows
+resting, soft, average, fit or strong on Fights, New and You at today's Step bands
+below 2,000, 2,000-3,999, 4,000-5,999, 6,000-7,999 and 8,000 or more. It falls
+back to the selected static image while the library is unavailable. Group photos
+stay in the private library; fight assignment and
 cross-user casts need their own product contract. Stock selection and saved text
-descriptions remain available. A 1.1.1 release note and English/French copy were added.
+descriptions remain available. A 1.1.2 release note and English/French copy were added.
 
 ## Credits and balance events
 
@@ -116,9 +127,12 @@ require explicit positive `BLEND_FITNESS_CREDIT_PRICE` and
 invented default. The selected workflow price is stored once at admission and is
 consumed only for a complete validated result. This is per-workflow settlement,
 not a partial charge for each image. New accounts have zero
-credits until an explicit grant. There is no starter grant, replenishment, expiry,
-purchase, subscription or payment integration. Attempt limits remain independent
-of credits. Returning a user credit does not reverse a provider charge.
+credits until an explicit grant. There is no starter grant, replenishment or
+subscription for this separate credit allowance. Paid characters use an Apple
+transaction and zero credit price on each linked run, so the user cannot spend
+the character purchase on Group Photo or another AI request. Attempt limits
+remain independent of credits. Returning a user credit does not reverse a
+provider charge.
 
 | Transition | Available change | Reserved change | When it happens |
 | --- | --- | --- | --- |
@@ -282,6 +296,8 @@ Apply the Blend migrations through the authorized pipeline:
 3. `20260918154236_ai_companion_library.sql`
 4. `20260923141441_standardize_ai_row_columns.sql`, after the existing
    `20260919131732_standard_row_columns.sql` migration
+5. `20260924004156_paid_custom_characters.sql` for one purchased character per
+   verified Apple consumable
 
 Then deploy compatible backend code with starts disabled, configure and verify the
 scheduler, perform the required cloud checks, authorize explicit grants and verify
@@ -298,7 +314,9 @@ cannot settle the new credit constraint. Distribute the native UI only after the
 | `BLEND_AVATAR_VERSION_ID` | Pinned immutable Avatar version |
 | `BLEND_FITNESS_WORKFLOW_ID`, `BLEND_FITNESS_VERSION_ID` | Published Fitness ID and pinned version |
 | `BLEND_GROUP_PHOTO_WORKFLOW_ID`, `BLEND_GROUP_PHOTO_VERSION_ID` | Published Group Photo ID and pinned version |
-| `BLEND_FITNESS_CREDIT_PRICE`, `BLEND_GROUP_PHOTO_CREDIT_PRICE` | Required explicit positive prices for these new workflows |
+| `BLEND_FITNESS_CREDIT_PRICE`, `BLEND_GROUP_PHOTO_CREDIT_PRICE` | Required explicit positive prices for separate credit-funded starts; paid characters do not use them |
+| `APPLE_CUSTOM_CHARACTERS_ENABLED` | Defaults to `false`; native StoreKit checkout stays closed until Apple lookup and Sandbox verification |
+| `APPLE_IAP_ENVIRONMENT` | `Sandbox` on staging, `Production` on production; App Review accounts retain their configured Sandbox shelf |
 | `BLEND_GLOBAL_DAILY_STARTS` | Required positive shared daily cap |
 | `BLEND_GLOBAL_CONCURRENT_RUNS` | Required positive unresolved-capacity cap |
 | `BLEND_REQUESTS_PER_MINUTE` | Required positive shared start/read HTTP cap |
@@ -310,14 +328,21 @@ key's limits and allowed spending. A start cap is not a guaranteed monetary budg
 without a verified maximum workflow cost or provider-enforced spending cap. Initial
 grants and provider spending policy still require an explicit decision before use.
 
-Read-only publication inspection on 18 Sep confirmed zero validation errors and
+Read-only publication inspection on 24 Sep confirmed zero validation errors and
 these current versions. The safe identifiers are included in `.env.example`;
-`BLEND_ENABLED` remains false and both new prices remain unset.
+`BLEND_ENABLED` and `APPLE_CUSTOM_CHARACTERS_ENABLED` remain false and both
+credit prices remain unset. On an authorized `develop` merge, the hosted
+`custom-character-iap.yml` job prepares the one consumable at EUR 4.99 in the
+French base territory. The Paid Apps Agreement, banking and W-9 remain pending;
+product creation is not proof of a usable TestFlight checkout. Keep both flags
+off until the database, backend, Apple product and Sandbox purchase path are
+verified. Existing completed consumables restore from the FitFight account;
+StoreKit's unfinished transaction stream recovers undelivered purchases.
 
 | Workflow | Published ID | Pinned version | Provider input labels | Output labels |
 | --- | --- | --- | --- | --- |
-| Avatar | `4f885bfb-d387-4f3c-be50-1950bb0e44c3` | `738baa52-36f3-419b-a920-58627e01f045` | `describe_your_animal` | `avatar` |
-| Five Fitness Levels | `fa770c5b-25ba-46cc-a758-a08aeebc1c92` | `8f2c594c-01b5-432b-a047-af75181ffde7` | `character_portrait`, `identity_details` | `resting`, `soft`, `average`, `fit`, `strong` |
+| Avatar | `c405d12d-fa25-4e67-8d4d-8336e741cbbc` | `ff4f26b1-48f3-4352-bd7d-913e3a481aa4` | `describe_your_animal` | `avatar` |
+| Five Fitness Levels | `fa770c5b-25ba-46cc-a758-a08aeebc1c92` | `cf9177c3-9ba5-4a53-87df-e8e304490f43` | `character_portrait`, `identity_details` | `resting`, `soft`, `average`, `fit`, `strong` |
 | Group Photo | `f740d71e-06fe-41d4-a92d-a85c90abd3f9` | `2d6e0596-14c5-4ba2-948f-642bae407815` | `character_portraits`, `scene`, `cast_roster` | `group_photo` |
 
 The older Avatar version `bbf425cb-1c8a-4dfa-9f0d-637f22e8f4e1` retains its original

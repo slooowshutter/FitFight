@@ -1,6 +1,7 @@
 import { apiRoute, ApiError, json, readJson } from "@/lib/http";
 import { verifySpecialNotification } from "@/lib/apple/special-purchase";
 import { recordSpecialTransaction } from "@/lib/supabase/queries/specials-supabase-query";
+import { recordCustomCharacterTransaction } from "@/lib/supabase/queries/custom-characters-supabase-query";
 import { specialNotificationRequestSchema } from "@/lib/types/companions/specials";
 
 export const runtime = "nodejs";
@@ -19,7 +20,8 @@ export const POST = apiRoute<{ environment: string }>(
             input.signedPayload,
             environment,
         );
-        if (transaction) await recordSpecialTransaction(transaction);
+        if (transaction?.type === "Consumable") await recordCustomCharacterTransaction(transaction);
+        else if (transaction) await recordSpecialTransaction(transaction);
         return json({ received: true });
     },
 );

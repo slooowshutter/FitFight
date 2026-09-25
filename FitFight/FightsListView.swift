@@ -115,17 +115,12 @@ struct FightsListView: View {
             if filter == .current {
                 ForEach(sorted(model.live)) { fight in
                     let standing = difference(in: fight)
-                    let opponent = opponent(in: fight)
-                    FFListRow(
-                        monogram: opponent?.initials ?? "?",
-                        title: fight.listTitle,
-                        subtitle: fight.timeAndDeadlineLabel,
+                    LiveFightCard(
+                        fight: fight,
                         metric: fight.isUpcoming ? String(appLocalized: "Scheduled") : standing.text,
-                        ahead: standing.ahead,
-                        metricIsGap: !fight.isUpcoming && standing.isGap,
-                        avatar: AnyView(CompanionAvatar(opponent)),
-                        action: { model.openFightID = fight.id }
-                    )
+                        metricColor: fight.isUpcoming || !standing.isGap ? theme.text
+                            : standing.ahead ? theme.mossText : theme.emberText
+                    ) { model.openFightID = fight.id }
                 }
             }
 
@@ -220,11 +215,69 @@ struct FightsListView: View {
     private func stepCount(_ value: Double) -> String {
         value.formatted(.number.precision(.fractionLength(0)))
     }
+}
 
-    /// The other side of a head-to-head, so the avatar is who you are up against.
-    private func opponent(in fight: Fight) -> Person? {
-        fight.standings.first { !$0.person.isYou && !$0.invited && !$0.deferred }?.person
-            ?? fight.standings.first?.person
+/// A current fight: title and gap, avatars and place, a gold bar for how far through it is, then the day and time left.
+struct LiveFightCard: View {
+    let fight: Fight
+    let metric: String
+    let metricColor: Color
+    let onOpen: () -> Void
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        let total = max(fight.windowEnd.timeIntervalSince(fight.windowStart), 1)
+        let elapsed = min(max(Date().timeIntervalSince(fight.windowStart), 0), total)
+        let day = min(Int(elapsed / 86_400) + 1, max(fight.lengthDays, 1))
+        Button(action: onOpen) {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(verbatim: fight.listTitle)
+                        .ffType(.heading)
+                        .foregroundStyle(theme.text)
+                        .lineLimit(1)
+                    Spacer(minLength: 8)
+                    Text(metric)
+                        .font(.ff(22, 800))
+                        .tracking(22 * -0.02)
+                        .foregroundStyle(metricColor)
+                }
+                HStack(spacing: 8) {
+                    CompanionAvatarStack(
+                        people: fight.standings.filter { !$0.invited }.map(\.person),
+                        visible: 4,
+                        size: 22,
+                        ring: theme.card
+                    )
+                    if !fight.isUpcoming {
+                        Text(String(appLocalized: "fight.rank-of", defaultValue: "\(AppModel.ordinal(fight.rank)) of \(fight.of)"))
+                    }
+                }
+                .ffType(.caption)
+                .foregroundStyle(theme.textSecondary)
+                FFProgressBar(value: fight.isUpcoming ? 0 : elapsed / total, height: 5, fill: theme.gold)
+                    .padding(.top, 2)
+                HStack {
+                    Text(fight.isUpcoming ? fight.durationLabel
+                         : String(appLocalized: "fight.day-of", defaultValue: "Day \(day) of \(fight.lengthDays)"))
+                    Spacer(minLength: 8)
+                    Text(fight.timeLeftLabel)
+                        .lineLimit(1)
+                        .foregroundStyle(!fight.isUpcoming && fight.windowEnd.timeIntervalSinceNow < 2 * 86_400
+                                         ? theme.emberText : theme.textSecondary)
+                }
+                .ffType(.caption)
+                .foregroundStyle(theme.textSecondary)
+            }
+            .padding(.horizontal, 16)
+            // The big gap number's line height pushes the title down; a shorter top keeps its visible inset at 16.
+            .padding(.top, 6)
+            .padding(.bottom, 14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
+            .ffBorder(theme.hairline, radius: theme.radius.card)
+        }
+        .buttonStyle(FFPressStyle())
     }
 }
 

@@ -88,6 +88,16 @@
                 }
             }
         },
+        "Current fights show as cards: your lead or gap, everyone’s avatars, your place, and a gold bar with the day and time left.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les défis en cours s’affichent en cartes : ton avance ou ton retard, les avatars de tout le monde, ta place, et une barre dorée avec le jour et le temps restant."
+                    }
+                }
+            }
+        },
         "No character purchases were found for this FitFight account.": {
             "localizations": {
                 "fr": {
@@ -8438,6 +8448,23 @@
                 }
             }
         },
+        "fight.day-of": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Day %1$lld of %2$lld"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Jour %1$lld sur %2$lld"
+                    }
+                }
+            }
+        },
         "fight.finished-position": {
             "extractionState": "manual",
             "localizations": {
@@ -8760,6 +8787,23 @@
                                 }
                             }
                         }
+                    }
+                }
+            }
+        },
+        "fight.rank-of": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%1$@ of %2$lld"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%1$@ sur %2$lld"
                     }
                 }
             }

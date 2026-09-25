@@ -28,6 +28,55 @@ enum Changelog {
             version: "1.1.2",
             year: 2026,
             month: 9,
+            day: 26,
+            notes: "Choosing a companion is now a big swipeable stage, with a grid button to see them all. Tabs are All, Specials and Yours, and onboarding uses the same stage."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 25,
+            notes: "Animal cards in the picker are all the same size now, whatever the name length."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 25,
+            notes: "Current fights show as cards: your lead or gap, everyone’s avatars, your place, and a gold bar with the day and time left."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 25,
+            notes: "Repeating fights show a trophy next to the previous round’s winner, with ×N for rounds won in a row."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 25,
+            notes: "You shows today’s Steps against your daily average, this week, your record and best day, each Apple Health sport by day, week or month, and your friends. New Dashboard and Settings screens. Friend profiles show both companions with the one-on-one score above them."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 25,
+            notes: "You can comment on open Feedback requests from their detail page. Sort your fights by start, end, or how far ahead you are."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 24,
+            notes: "Create your own animal with one Apple purchase. Its five fitness images change with your daily Steps."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
             day: 23,
             notes: "Apple Health syncs detailed activity and workout history, including late changes and deletions. Fight Steps still use Apple’s merged total."
         ),

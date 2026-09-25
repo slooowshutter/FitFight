@@ -12,14 +12,15 @@ enum FightsListFilter: CaseIterable {
     }
 }
 
-enum CurrentFightsSort: CaseIterable, Hashable {
-    case endingSoonest, endingLatest, recentlyStarted
+enum FightsSort: CaseIterable, Hashable {
+    case recentlyStarted, endingSoonest, winningMost, winningLeast
 
     var title: String {
         switch self {
-        case .endingSoonest: String(appLocalized: "Ending soonest")
-        case .endingLatest: String(appLocalized: "Ending latest")
         case .recentlyStarted: String(appLocalized: "Recently started")
+        case .endingSoonest: String(appLocalized: "Ending soonest")
+        case .winningMost: String(appLocalized: "Winning most")
+        case .winningLeast: String(appLocalized: "Winning least")
         }
     }
 }
@@ -29,9 +30,9 @@ struct FightsListView: View {
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var steps: HealthKitStepsStore
     @Environment(\.ffTheme) private var theme
-    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var filter: FightsListFilter
-    @State private var currentSort: CurrentFightsSort = .endingSoonest
+    @State private var sort: FightsSort = .endingSoonest
+    @State private var showingSort = false
 
     init(filter: FightsListFilter = .current) {
         _filter = State(initialValue: filter)
@@ -41,20 +42,30 @@ struct FightsListView: View {
         FFScreen(refresh: fightsRefresh) {
             CompanionIntroduction(surface: .fights)
 
-            let layout = typeSize.isAccessibilitySize
-                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
-                : AnyLayout(HStackLayout(alignment: .center, spacing: 4))
-            layout {
-                Text("Challenges")
-                    .font(.custom("Nunito-ExtraBold", size: 14, relativeTo: .headline))
-                    .foregroundStyle(theme.text)
-                if !typeSize.isAccessibilitySize { Spacer(minLength: 0) }
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("Challenges")
+                        .font(.custom("Nunito-ExtraBold", size: 14, relativeTo: .headline))
+                        .foregroundStyle(theme.text)
+                    Spacer(minLength: 8)
+                    Button { showingSort = true } label: {
+                        Label(sort.title, systemImage: "arrow.up.arrow.down")
+                            .ffType(.label)
+                            .foregroundStyle(theme.mossText)
+                            .frame(minHeight: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(FFHapticPlainStyle())
+                    .accessibilityLabel(String(appLocalized: "Sort by"))
+                    .accessibilityValue(sort.title)
+                }
                 FFSegmented(
                     items: FightsListFilter.allCases,
                     selection: $filter,
                     count: { item in
                         item == .invited ? model.invitations.count : nil
-                    }
+                    },
+                    fill: true
                 ) { item in
                     item.title
                 }
@@ -89,7 +100,7 @@ struct FightsListView: View {
             }
 
             if filter == .invited {
-                ForEach(model.invitations) { fight in
+                ForEach(sorted(model.invitations)) { fight in
                     JoinOfferRow(
                         title: fight.listTitle,
                         subtitle: fight.listSubtitle,
@@ -102,52 +113,33 @@ struct FightsListView: View {
             }
 
             if filter == .current {
-                if !model.live.isEmpty {
-                    HStack {
-                        Text(String(appLocalized: "Sort by"))
-                            .ffType(.caption)
-                            .foregroundStyle(theme.textSecondary)
-                        Spacer(minLength: 8)
-                        Menu {
-                            Picker(String(appLocalized: "Sort by"), selection: $currentSort) {
-                                ForEach(CurrentFightsSort.allCases, id: \.self) { option in
-                                    Text(option.title).tag(option)
-                                }
-                            }
-                        } label: {
-                            Label(currentSort.title, systemImage: "arrow.up.arrow.down")
-                                .ffType(.label)
-                                .foregroundStyle(theme.mossText)
-                                .frame(minHeight: 44)
-                        }
-                        .accessibilityLabel(String(appLocalized: "Sort by"))
-                        .accessibilityValue(currentSort.title)
-                    }
-                }
-                ForEach(sortedCurrentFights) { fight in
+                ForEach(sorted(model.live)) { fight in
                     let standing = difference(in: fight)
-                    let opponent = opponent(in: fight)
-                    FFListRow(
-                        monogram: opponent?.initials ?? "?",
-                        title: fight.listTitle,
-                        subtitle: fight.timeAndDeadlineLabel,
+                    LiveFightCard(
+                        fight: fight,
                         metric: fight.isUpcoming ? String(appLocalized: "Scheduled") : standing.text,
-                        ahead: standing.ahead,
-                        metricIsGap: !fight.isUpcoming && standing.isGap,
-                        avatar: AnyView(CompanionAvatar(opponent)),
-                        action: { model.openFightID = fight.id }
-                    )
+                        metricColor: fight.isUpcoming || !standing.isGap ? theme.text
+                            : standing.ahead ? theme.mossText : theme.emberText
+                    ) { model.openFightID = fight.id }
                 }
             }
 
             if filter == .past {
-                ForEach(model.finished) { fight in
+                ForEach(sorted(model.finished)) { fight in
                     FinishedRow(fight: fight)
                 }
             }
         }
         .task(id: filter) {
             if filter == .invited { await model.loadFightDiscovery(session: session) }
+        }
+        .sheet(isPresented: $showingSort) {
+            FightsSortSheet(sort: $sort)
+                .fitFightTheme(theme)
+                .presentationBackground(theme.overlay)
+                .presentationCornerRadius(theme.radius.shell)
+                .presentationDragIndicator(.visible)
+                .presentationDetents([.medium])
         }
     }
 
@@ -173,15 +165,29 @@ struct FightsListView: View {
         }
     }
 
-    private var sortedCurrentFights: [Fight] {
-        model.live.sorted { lhs, rhs in
-            switch currentSort {
-            case .endingSoonest:
-                if lhs.windowEnd != rhs.windowEnd { return lhs.windowEnd < rhs.windowEnd }
-            case .endingLatest:
-                if lhs.windowEnd != rhs.windowEnd { return lhs.windowEnd > rhs.windowEnd }
+    // ponytail: Fight has no created_at on the client, so "Recently started" uses windowStart.
+    private func sorted(_ fights: [Fight]) -> [Fight] {
+        let now = Date()
+        // Your steps minus the best rival's. Fights without a score yet sink to the bottom.
+        func lead(_ fight: Fight) -> Double {
+            guard !fight.isUpcoming,
+                  let me = model.youStanding(in: fight), !me.deferred,
+                  let best = fight.standings.filter({ !$0.person.isYou && !$0.invited && !$0.deferred }).map(\.score).max()
+            else { return .nan }
+            return me.score - best
+        }
+        return fights.sorted { lhs, rhs in
+            switch sort {
             case .recentlyStarted:
                 if lhs.windowStart != rhs.windowStart { return lhs.windowStart > rhs.windowStart }
+            case .endingSoonest:
+                // Closest end to now: the next deadline for live fights, the latest finish for past ones.
+                let l = abs(lhs.windowEnd.timeIntervalSince(now)), r = abs(rhs.windowEnd.timeIntervalSince(now))
+                if l != r { return l < r }
+            case .winningMost, .winningLeast:
+                let l = lead(lhs), r = lead(rhs)
+                if l.isNaN != r.isNaN { return r.isNaN }
+                if !l.isNaN, l != r { return sort == .winningMost ? l > r : l < r }
             }
             return lhs.id < rhs.id
         }
@@ -209,11 +215,69 @@ struct FightsListView: View {
     private func stepCount(_ value: Double) -> String {
         value.formatted(.number.precision(.fractionLength(0)))
     }
+}
 
-    /// The other side of a head-to-head, so the avatar is who you are up against.
-    private func opponent(in fight: Fight) -> Person? {
-        fight.standings.first { !$0.person.isYou && !$0.invited && !$0.deferred }?.person
-            ?? fight.standings.first?.person
+/// A current fight: title and gap, avatars and place, a gold bar for how far through it is, then the day and time left.
+struct LiveFightCard: View {
+    let fight: Fight
+    let metric: String
+    let metricColor: Color
+    let onOpen: () -> Void
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        let total = max(fight.windowEnd.timeIntervalSince(fight.windowStart), 1)
+        let elapsed = min(max(Date().timeIntervalSince(fight.windowStart), 0), total)
+        let day = min(Int(elapsed / 86_400) + 1, max(fight.lengthDays, 1))
+        Button(action: onOpen) {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(verbatim: fight.listTitle)
+                        .ffType(.heading)
+                        .foregroundStyle(theme.text)
+                        .lineLimit(1)
+                    Spacer(minLength: 8)
+                    Text(metric)
+                        .font(.ff(22, 800))
+                        .tracking(22 * -0.02)
+                        .foregroundStyle(metricColor)
+                }
+                HStack(spacing: 8) {
+                    CompanionAvatarStack(
+                        people: fight.standings.filter { !$0.invited }.map(\.person),
+                        visible: 4,
+                        size: 22,
+                        ring: theme.card
+                    )
+                    if !fight.isUpcoming {
+                        Text(String(appLocalized: "fight.rank-of", defaultValue: "\(AppModel.ordinal(fight.rank)) of \(fight.of)"))
+                    }
+                }
+                .ffType(.caption)
+                .foregroundStyle(theme.textSecondary)
+                FFProgressBar(value: fight.isUpcoming ? 0 : elapsed / total, height: 5, fill: theme.gold)
+                    .padding(.top, 2)
+                HStack {
+                    Text(fight.isUpcoming ? fight.durationLabel
+                         : String(appLocalized: "fight.day-of", defaultValue: "Day \(day) of \(fight.lengthDays)"))
+                    Spacer(minLength: 8)
+                    Text(fight.timeLeftLabel)
+                        .lineLimit(1)
+                        .foregroundStyle(!fight.isUpcoming && fight.windowEnd.timeIntervalSinceNow < 2 * 86_400
+                                         ? theme.emberText : theme.textSecondary)
+                }
+                .ffType(.caption)
+                .foregroundStyle(theme.textSecondary)
+            }
+            .padding(.horizontal, 16)
+            // The big gap number's line height pushes the title down; a shorter top keeps its visible inset at 16.
+            .padding(.top, 6)
+            .padding(.bottom, 14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
+            .ffBorder(theme.hairline, radius: theme.radius.card)
+        }
+        .buttonStyle(FFPressStyle())
     }
 }
 
@@ -303,5 +367,35 @@ struct FinishedRow: View {
 
     private var result: FFResult {
         model.fightResult(for: fight)
+    }
+}
+
+private struct FightsSortSheet: View {
+    @Binding var sort: FightsSort
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            FFSheetHeader(title: String(appLocalized: "Sort by")) { dismiss() }
+            FFGroupedRows {
+                ForEach(FightsSort.allCases, id: \.self) { option in
+                    if option != FightsSort.allCases.first { FFDivider() }
+                    FFGroupedRow(title: option.title, trailing: AnyView(
+                        Image(systemName: "checkmark")
+                            .foregroundStyle(theme.mossText)
+                            .opacity(sort == option ? 1 : 0)
+                    )) {
+                        sort = option
+                        dismiss()
+                    }
+                    .accessibilityAddTraits(sort == option ? .isSelected : [])
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .foregroundStyle(theme.text)
+        .padding(.horizontal, theme.space.screenPadding)
+        .padding(.top, 16)
     }
 }

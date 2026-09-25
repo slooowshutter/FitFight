@@ -141,7 +141,7 @@ export async function reserveAiRequest(
 
             await sql`
             delete from private.ai_requests
-            where status in ('completed', 'failed', 'cancelled')
+            where resource_id is null and status in ('completed', 'failed', 'cancelled')
                 and updated_at < clock_timestamp() - interval '7 days'
         `;
             await sql`
@@ -188,6 +188,28 @@ export async function reserveAiRequest(
                     "ai_unavailable",
                     "This feature is temporarily unavailable on our side.",
                 );
+            }
+            if (input.resourceId !== null) {
+                const [paid] = await sql`select purchase.id, purchase.description,
+                    purchase.avatar_action_key, purchase.fitness_action_key
+                    from private.custom_character_purchases purchase
+                    join private.special_accounts account on account.id = purchase.account_id
+                    where purchase.id = ${input.resourceId} and account.user_id = ${userId}
+                        and purchase.revoked_at is null for share of purchase`;
+                if (!paid || input.creditPrice !== 0 || !["avatar", "fitness"].includes(input.workflow))
+                    return new ApiError(403, "character_purchase_required", "Purchase a character before generating");
+                const key = input.workflow === "avatar" ? paid.avatar_action_key : paid.fitness_action_key;
+                if (key !== input.idempotencyKey || paid.description !== input.description)
+                    return new ApiError(409, "ai_request_conflict", "Character action does not match this purchase");
+                if (input.workflow === "fitness") {
+                    const [source] = await sql`select id from private.ai_requests
+                        where id = ${input.sourceRequestIds[0] ?? null} and resource_id = ${input.resourceId}
+                            and user_id = ${userId} and workflow = 'avatar' and status = 'completed'`;
+                    if (!source || input.sourceRequestIds.length !== 1)
+                        return new ApiError(404, "not_found", "The paid portrait is not ready");
+                } else if (input.sourceRequestIds.length !== 0) {
+                    return new ApiError(409, "ai_request_conflict", "Portrait cannot use another source");
+                }
             }
 
             const [rawCounts] = await sql`
@@ -281,17 +303,19 @@ export async function reserveAiRequest(
                 }
                 portraits.push(...sources.map((source) => source.image_url));
             }
-            await sql`insert into private.ai_credit_balances (user_id) values (${userId}) on conflict do nothing`;
-            const [rawBalance] =
-                await sql`select * from private.ai_credit_balances where user_id = ${userId} for update`;
-            const balance = aiCreditBalanceSchema.parse(rawBalance);
             const price = input.creditPrice;
-            if (balance.available < price) {
-                return new ApiError(
-                    409,
-                    "ai_insufficient_credits",
-                    "You do not have enough available credits.",
-                );
+            if (price > 0) {
+                await sql`insert into private.ai_credit_balances (user_id) values (${userId}) on conflict do nothing`;
+                const [rawBalance] =
+                    await sql`select * from private.ai_credit_balances where user_id = ${userId} for update`;
+                const balance = aiCreditBalanceSchema.parse(rawBalance);
+                if (balance.available < price) {
+                    return new ApiError(
+                        409,
+                        "ai_insufficient_credits",
+                        "You do not have enough available credits.",
+                    );
+                }
             }
             const providerError = await reserveProviderRequest(
                 sql,
@@ -306,23 +330,24 @@ export async function reserveAiRequest(
             ) values (
                 ${userId}, ${input.workflow}, ${input.resourceId}, ${input.idempotencyKey},
                 ${input.requestHash}, ${sql.json(input.version)}, ${randomUUID()}, clock_timestamp() + interval '30 seconds',
-                ${price}, 'reserved', clock_timestamp(), ${sql.array(input.sourceRequestIds)}::uuid[], ${input.description}
+                ${price}, ${price > 0 ? "reserved" : "none"}, clock_timestamp(), ${sql.array(input.sourceRequestIds)}::uuid[], ${input.description}
             ) returning *
         `;
             const request = databaseRow(aiRequestRecordSchema, row);
-            await appendAiBalanceEvent(sql, {
-                user_id: userId,
-                kind: "reserve",
-                reason: `${input.workflow}_admitted`,
-                actor: "server:admission",
-                operation_key: `reserve:${request.id}`,
-                request_id: request.id,
-                action_key: input.idempotencyKey,
-                compensates_event_id: null,
-                quantity: price,
-                available_change: -price,
-                reserved_change: price,
-            });
+            if (price > 0)
+                await appendAiBalanceEvent(sql, {
+                    user_id: userId,
+                    kind: "reserve",
+                    reason: `${input.workflow}_admitted`,
+                    actor: "server:admission",
+                    operation_key: `reserve:${request.id}`,
+                    request_id: request.id,
+                    action_key: input.idempotencyKey,
+                    compensates_event_id: null,
+                    quantity: price,
+                    available_change: -price,
+                    reserved_change: price,
+                });
             return { request, shouldStart: true, portraits };
         },
     );

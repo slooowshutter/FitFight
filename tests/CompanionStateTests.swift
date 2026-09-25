@@ -119,12 +119,16 @@ enum CompanionStateTests {
         precondition(UserDefaults.standard.stringArray(forKey: "ff.companion.library." + userId.uuidString) == nil)
 
         precondition(Set(CompanionCategory.all.animals) == Set(StockCompanion.allCases))
-        precondition(CompanionCategory.mountains.animals.contains(.goat))
-        precondition(CompanionCategory.water.animals.contains(.otter))
-        precondition(CompanionCategory.forest.animals.contains(.fox))
-        precondition(CompanionCategory.jungle.animals.contains(.sloth))
+        precondition(CompanionCategory.allCases == [.all, .limited, .yours])
+        precondition(CompanionCategory.yours.animals.isEmpty)
         precondition(CompanionCategory.limited.animals.count == 40)
         precondition(CompanionCategory.limited.animals.allSatisfy { $0.isLimited && !$0.caption.isEmpty })
-        print("Companion retention, reuse, relaunch, account isolation, and habitat filters passed")
+        let stages = [(0, "resting"), (1_999, "resting"), (2_000, "soft"), (3_999, "soft"),
+                      (4_000, "average"), (5_999, "average"), (6_000, "fit"), (7_999, "fit"),
+                      (8_000, "strong")]
+        for (steps, stage) in stages {
+            precondition(CompanionEffortStage.matching(todaySteps: steps).fitnessImageStage == stage)
+        }
+        print("Companion retention, reuse, relaunch, account isolation, and category filters passed")
     }
 }

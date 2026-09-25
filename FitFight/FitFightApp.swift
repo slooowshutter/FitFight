@@ -54,6 +54,7 @@ struct FitFightApp: App {
     @StateObject private var model: AppModel
     @StateObject private var companions = CompanionStore()
     @StateObject private var specialPurchases = SpecialPurchases()
+    @StateObject private var customCharacterPurchases = CustomCharacterPurchases()
     @StateObject private var preferences = AccountPreferencesStore()
     @StateObject private var appUpdate = AppUpdateChecker.shared
     @StateObject private var session: SessionStore
@@ -118,6 +119,7 @@ struct FitFightApp: App {
                 .environmentObject(model)
                 .environmentObject(companions)
                 .environmentObject(specialPurchases)
+                .environmentObject(customCharacterPurchases)
                 .environmentObject(preferences)
                 .environment(\.locale, AppLocalization.locale)
                 .environmentObject(session)
@@ -129,6 +131,10 @@ struct FitFightApp: App {
                 .task(id: session.profile?.userId) {
                     guard !CompanionPreview.isEnabled, !ScreenshotExport.isEnabled else { return }
                     await specialPurchases.observe(session: session)
+                }
+                .task(id: session.profile?.userId) {
+                    guard !CompanionPreview.isEnabled, !ScreenshotExport.isEnabled else { return }
+                    await customCharacterPurchases.observe(session: session)
                 }
                 .onChange(of: session.authSession?.user.id, initial: true) { _, userID in
                     guard !CompanionPreview.isEnabled, !ScreenshotExport.isEnabled else { return }

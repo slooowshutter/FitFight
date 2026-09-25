@@ -7,19 +7,19 @@ struct YouView: View {
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var steps: HealthKitStepsStore
     @EnvironmentObject private var preferences: AccountPreferencesStore
+    @EnvironmentObject private var companions: CompanionStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var profileStore = ProfileScreenStore()
+    @StateObject private var activity = YouActivityStore()
     @State private var showingEditProfile = false
-    @State private var showingFriends = false
-    @State private var showingProfileHistory = false
-    @State private var incomingFriends = 0
     @State private var rivals: [ProfileRivalrySummary] = []
     @State private var profileLoadGeneration = 0
     @State private var socialError: String?
     @State private var confirmDelete = false
-    @State private var copied = false
+    @State private var showingSettings = false
+    @State private var showingDashboard = false
     @State private var showingOnboardingPreview = false
     @State private var showingSlideHapticsLab = false
     @State private var showingBroadcastCompose = false
@@ -29,23 +29,20 @@ struct YouView: View {
     var body: some View {
         FFScreen(top: AnyView(VersionBanner(onTap: versionBannerTap)), refresh: fightsRefresh) {
             profile
-            CompanionIntroduction(surface: .you)
-            #if DEBUG && targetEnvironment(simulator)
-            if CompanionPreview.isEnabled && !ScreenshotExport.isEnabled {
-                Text("Companion design preview · this session only")
-                    .ffType(.micro)
-                    .foregroundStyle(theme.textSecondary)
-            }
-            #endif
             if session.isSignedIn, let authError = session.authError {
                 FFNotice(text: authError, tone: .ember, systemImage: "exclamationmark.triangle")
             }
-            if let record = profileStore.profile?.record {
-                ProfileRecordCard(record: record)
-                FFButton(title: String(appLocalized: "Fight history"), kind: .ghost) { showingProfileHistory = true }
-            }
-            if let statistics = profileStore.profile?.stepStatistics {
-                ProfileStepStatisticsView(statistics: statistics)
+            if session.isSignedIn {
+                YouStatsCard(
+                    todaySteps: todaySteps, statistics: profileStore.profile?.stepStatistics, record: profileStore.profile?.record,
+                    results: results, todayWorkouts: activity.sports.dropFirst().filter { ($0.values.last ?? 0) > 0 },
+                    eightWeekSteps: activity.eightWeekSteps
+                )
+                .padding(.top, 8)
+                if !activity.sports.isEmpty {
+                    YouSportList(sports: activity.sports)
+                        .padding(.top, 12)
+                }
             }
             ForEach(rivals) { rival in
                 ProfileIdentityLink(userID: rival.id, source: "friends", onClosed: { Task { await loadOwnProfile() } }) {
@@ -64,71 +61,23 @@ struct YouView: View {
                 FFButton(title: String(appLocalized: "Retry"), kind: .secondary) { Task { await loadOwnProfile() } }
             }
             if session.isSignedIn {
-                FFGroupedRows {
-                    FFGroupedRow(
-                        title: String(appLocalized: "Friends"),
-                        subtitle: incomingFriends > 0 ? String(format: String(appLocalized: "profile.requests-count"), incomingFriends) : nil,
-                        systemImage: "person.2",
-                        action: { showingFriends = true }
-                    )
-                }
+                FriendsView(embedded: true)
+                    .padding(.top, 12)
             }
-
-            FFSection(title: String(appLocalized: "Apple Health")) {
-                health
-            }
-
-            FFSection(title: String(appLocalized: "Activity")) {
-                FFGroupedRows {
-                    navRow(String(appLocalized: "Notifications & activity")) { model.showingActivity = true }
-                }
-            }
-
-            FFSection(title: String(appLocalized: "Bugs & requests")) {
-                requests
-            }
-
-            FFSection(title: String(appLocalized: "Settings")) {
-                settings
-            }
-
-            #if DEBUG && targetEnvironment(simulator)
-            if CompanionPreview.isEnabled && !ScreenshotExport.isEnabled {
-                FFButton(title: String(appLocalized: "Companion preview"), kind: .ghost, fullWidth: true) {
-                    showingCompanionPreviewControls = true
-                }
-                .sheet(isPresented: $showingCompanionPreviewControls) {
-                    CompanionPreviewControls()
-                        .fitFightTheme(themeStore.theme)
-                        .presentationBackground(themeStore.theme.bg)
-                }
-            }
-            #endif
-
-            if session.isFitFightAdmin || (CompanionPreview.isEnabled && !ScreenshotExport.isEnabled) {
-                FFSection(title: String(appLocalized: "Developer")) {
-                    developer
-                }
-            }
+        }
+        .navigationDestination(isPresented: $showingSettings) { settingsScreen }
+        .navigationDestination(isPresented: $showingDashboard) {
+            DashboardView(sports: activity.sports, days: activity.days, statistics: profileStore.profile?.stepStatistics)
         }
         .task(id: session.authSession?.user.id) { await refreshOwnProfile() }
         .onChange(of: scenePhase) { _, phase in
             profileLoadGeneration += 1
             profileStore.clear()
             rivals = []
-            incomingFriends = 0
             if phase == .active { Task { await refreshOwnProfile() } }
         }
         .sheet(isPresented: $showingEditProfile, onDismiss: { Task { await loadOwnProfile() } }) {
             EditProfileView().fitFightTheme(theme).presentationBackground(theme.bg)
-        }
-        .sheet(isPresented: $showingFriends, onDismiss: { Task { await loadOwnProfile() } }) {
-            FriendsView().fitFightTheme(theme).presentationBackground(theme.bg)
-        }
-        .sheet(isPresented: $showingProfileHistory) {
-            if let userID = session.authSession?.user.id {
-                ProfileSheet(userID: userID, source: "friends").fitFightTheme(theme).presentationBackground(theme.bg)
-            }
         }
         .sheet(isPresented: $showingOnboardingPreview) {
             OnboardingPreviewView()
@@ -176,6 +125,20 @@ struct YouView: View {
         }
     }
 
+    /// Won, lost and drew from the full fight history; group places below first count as lost.
+    private var results: (won: Int, lost: Int, drew: Int)? {
+        let rows = profileStore.history.filter(\.counted)
+        guard !rows.isEmpty, profileStore.nextCursor == nil else { return nil }
+        let won = rows.filter { $0.result == "win" }.count
+        let drew = rows.filter { $0.result == "draw" }.count
+        return (won, rows.count - won - drew, drew)
+    }
+
+    private var todaySteps: Int? {
+        if case .steps(let count) = steps.status { return count }
+        return nil
+    }
+
     private var versionBannerTap: (() -> Void)? {
         guard !CompanionPreview.isEnabled else { return nil }
         guard session.isFitFightAdmin else { return nil }
@@ -195,38 +158,104 @@ struct YouView: View {
     @ViewBuilder
     private var profile: some View {
         if session.isSignedIn {
-            HStack(alignment: .top, spacing: 14) {
-                Button { showingProfileHistory = true } label: {
+            HStack(alignment: .center, spacing: 12) {
+                Button { showingEditProfile = true } label: {
                     CompanionAvatar(
                         personID: session.profile?.userId.uuidString,
                         companionID: session.profile?.companionId, isYou: true,
-                        monogram: session.profile?.initials ?? "FF", photoURL: session.profile?.photoURL, size: 68
+                        monogram: session.profile?.initials ?? "FF", photoURL: session.profile?.photoURL, size: 48
                     )
-                }
-                .buttonStyle(FFHapticPlainStyle())
-                .accessibilityLabel(String(appLocalized: "Open profile"))
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(verbatim: session.profile?.displayName ?? String(appLocalized: "Signed in"))
-                        .ffType(.heading).foregroundStyle(theme.text)
-                    Text(verbatim: session.profile?.atHandle ?? String(appLocalized: "Profile isn’t ready yet"))
-                        .ffType(.caption).foregroundStyle(theme.textSecondary)
-                    if session.profile != nil {
-                        Button {
-                            UIPasteboard.general.string = session.profile?.atHandle ?? ""
-                            copied = true
-                        } label: {
-                            Text(copied ? String(appLocalized: "Copied") : String(appLocalized: "Copy username"))
-                                .ffType(.micro).foregroundStyle(theme.mossText)
-                        }.buttonStyle(FFHapticPlainStyle()).frame(minHeight: 44)
+                    .overlay(alignment: .bottomTrailing) {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(theme.text)
+                            .frame(width: 18, height: 18)
+                            .background(theme.control, in: Circle())
                     }
                 }
+                .buttonStyle(FFHapticPlainStyle())
+                .accessibilityLabel(String(appLocalized: "Edit profile"))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: session.profile?.displayName ?? String(appLocalized: "Signed in"))
+                        .ffType(.title).foregroundStyle(theme.text).lineLimit(1).minimumScaleFactor(0.7)
+                    Text(verbatim: session.profile?.atHandle ?? String(appLocalized: "Profile isn’t ready yet"))
+                        .ffType(.caption).foregroundStyle(theme.textSecondary)
+                }
                 Spacer(minLength: 4)
-                Button(String(appLocalized: "Edit profile")) { showingEditProfile = true }
-                    .ffType(.label).foregroundStyle(theme.mossText).frame(minHeight: 44)
+                headerButton(nil, label: String(appLocalized: "Dashboard")) { showingDashboard = true }
+                headerButton("gearshape", label: String(appLocalized: "Settings")) { showingSettings = true }
             }
+            .padding(.top, 12)
         } else {
             SignInControls()
         }
+    }
+
+    /// A nil image draws the kit's thin three-line chart glyph.
+    private func headerButton(_ systemImage: String?, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Group {
+                if let systemImage {
+                    Image(systemName: systemImage).font(.system(size: 17, weight: .regular))
+                } else {
+                    HStack(alignment: .bottom, spacing: 4) {
+                        ForEach([8.0, 16.0, 12.0], id: \.self) { height in
+                            Capsule().frame(width: 2, height: height)
+                        }
+                    }
+                    .frame(height: 16)
+                }
+            }
+                .foregroundStyle(theme.text)
+                .frame(width: 44, height: 44)
+                .background(theme.card, in: Circle())
+                .overlay(Circle().stroke(theme.hairline))
+        }
+        .buttonStyle(FFHapticPlainStyle())
+        .accessibilityLabel(label)
+    }
+
+    /// Everything that used to sit at the bottom of You: profile, app settings and Marc-only tools.
+    private var settingsScreen: some View {
+        FFScreen {
+            FFSection(title: String(appLocalized: "Profile"), extraTop: false) {
+                FFGroupedRows {
+                    navRow(String(appLocalized: "Edit profile")) { showingEditProfile = true }
+                    FFDivider()
+                    navRow(String(appLocalized: "Your companion")) { companions.showingPicker = true }
+                }
+            }
+            FFSection(title: String(appLocalized: "Apple Health")) {
+                health
+            }
+            FFSection(title: String(appLocalized: "Activity")) {
+                FFGroupedRows {
+                    navRow(String(appLocalized: "Notifications & activity")) { model.showingActivity = true }
+                }
+            }
+            FFSection(title: String(appLocalized: "App")) {
+                settings
+            }
+            #if DEBUG && targetEnvironment(simulator)
+            if CompanionPreview.isEnabled && !ScreenshotExport.isEnabled {
+                FFButton(title: String(appLocalized: "Companion preview"), kind: .ghost, fullWidth: true) {
+                    showingCompanionPreviewControls = true
+                }
+                .sheet(isPresented: $showingCompanionPreviewControls) {
+                    CompanionPreviewControls()
+                        .fitFightTheme(themeStore.theme)
+                        .presentationBackground(themeStore.theme.bg)
+                }
+            }
+            #endif
+
+            if session.isFitFightAdmin || (CompanionPreview.isEnabled && !ScreenshotExport.isEnabled) {
+                FFSection(title: String(appLocalized: "Developer")) {
+                    developer
+                }
+            }
+        }
+        .navigationTitle(String(appLocalized: "Settings"))
     }
 
     private func refreshOwnProfile(trigger: HealthKitStepsStore.SyncTrigger = .foreground, requestAccess: Bool = false) async {
@@ -242,17 +271,18 @@ struct YouView: View {
         rivals = []
         socialError = nil
         profileStore.clear()
-        incomingFriends = 0
-        guard !staticRender, let userID = session.authSession?.user.id else { return }
-        await profileStore.load(userID: userID, session: session, includeHistory: false)
+        guard !staticRender, let userID = session.authSession?.user.id ?? CompanionPreview.youID else { return }
+        await profileStore.load(userID: userID, session: session)
+        while profileStore.nextCursor != nil, !Task.isCancelled {
+            await profileStore.loadMore(userID: userID, session: session)
+        }
+        await activity.load()
+        guard !CompanionPreview.isEnabled else { return }
         do {
             let token = try await session.freshAccessToken()
-            async let friendsRequest = FitFightAPI().profileFriends(kind: "incoming", accessToken: token)
-            async let rivalsRequest = FitFightAPI().ownRivalries(accessToken: token)
-            let (friends, loadedRivals) = try await (friendsRequest, rivalsRequest)
+            let loadedRivals = try await FitFightAPI().ownRivalries(accessToken: token)
             try Task.checkCancellation()
             guard requestGeneration == profileLoadGeneration, session.authSession?.user.id == userID else { return }
-            incomingFriends = friends.incomingCount
             rivals = loadedRivals
         } catch is CancellationError {
         } catch {
@@ -397,22 +427,6 @@ struct YouView: View {
     private func diagnosticDate(_ date: Date?) -> String {
         guard let date else { return String(appLocalized: "Not yet") }
         return date.formatted(.relative(presentation: .named).locale(AppLocalization.locale))
-    }
-
-    private var requests: some View {
-        FFGroupedRows {
-            FFGroupedRow(
-                title: String(appLocalized: "Bugs & requests"),
-                subtitle: String(appLocalized: "Post a bug or a feature request. Other people can upvote and comment with their username."),
-                systemImage: "bubble.left.and.bubble.right",
-                trailing: AnyView(FFChevron()),
-                action: {
-                    model.feedbackRequestFilter = RequestFilter()
-                    model.tab = .feedback
-                }
-            )
-            .disabled(session.isBusy)
-        }
     }
 
     private var settings: some View {

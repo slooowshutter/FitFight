@@ -189,6 +189,8 @@ struct Fight: Codable, Identifiable, Hashable {
 
 @MainActor
 final class AppModel: ObservableObject {
+    @Published var tabBarHeight: CGFloat = 0
+
     @Published var tab: FFTab = .fights {
         didSet {
             if oldValue != tab {
@@ -341,6 +343,22 @@ final class AppModel: ObservableObject {
         return fights
             .filter { $0.seriesId == seriesId && $0.id != fight.id }
             .sorted { $0.windowStart > $1.windowStart }
+    }
+
+    /// Winner of the previous round and how many rounds in a row they have won.
+    /// ponytail: only rounds this user was in are in the snapshot; a skipped round ends the streak early.
+    func trophyStreak(for fight: Fight) -> (userId: String, count: Int)? {
+        var holder: String?
+        var count = 0
+        for round in seriesHistory(for: fight) where round.windowStart < fight.windowStart {
+            if round.serverState == "cancelled" { continue }
+            guard round.serverState == "final" else { break }
+            let leaders = round.standings.filter { !$0.invited && !$0.deferred && $0.rank == 1 }
+            guard leaders.count == 1, holder == nil || leaders[0].person.id == holder else { break }
+            holder = leaders[0].person.id
+            count += 1
+        }
+        return holder.map { ($0, count) }
     }
 
     func fightResult(for fight: Fight) -> FFResult {
@@ -1708,7 +1726,7 @@ final class AppModel: ObservableObject {
         return a
     }
 
-    private static func ordinal(_ value: Int) -> String {
+    static func ordinal(_ value: Int) -> String {
         let formatter = NumberFormatter()
         formatter.locale = AppLocalization.locale
         formatter.numberStyle = .ordinal

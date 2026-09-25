@@ -32,6 +32,21 @@ struct FeedbackTabView: View {
                 .ffType(.title)
                 .foregroundStyle(theme.text)
             Spacer(minLength: 0)
+            if let postID = requests.openDetailID,
+               let post = requests.detail?.id == postID ? requests.detail : requests.posts.first(where: { $0.id == postID }),
+               !post.mine || requests.canDelete || requests.canArchive {
+                RequestPostMenu(
+                    canReport: !post.mine,
+                    onReport: {
+                        Task { await requests.report(session: session, post: post) }
+                    },
+                    onHide: { requests.menuAction = .hide },
+                    onDelete: requests.canDelete ? { requests.menuAction = .delete } : nil,
+                    onArchive: requests.canArchive ? { requests.menuAction = .archive } : nil,
+                    archived: post.archived
+                )
+                .disabled(requests.isDeleting || requests.isArchiving || requests.isSaving || requests.isLaunchingFix)
+            }
             FFComposeButton(label: String(appLocalized: "New request")) { composingRequest = true }
         }
         .padding(.horizontal, theme.space.screenPadding)

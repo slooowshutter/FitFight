@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 25,
+            notes: "Repeating fights show a trophy next to the previous round’s winner, with ×N for rounds won in a row."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 25,
             notes: "You shows today’s Steps against your daily average, this week, your record and best day, each Apple Health sport by day, week or month, and your friends. New Dashboard and Settings screens. Friend profiles show both companions with the one-on-one score above them."
         ),
         ReleaseNote(

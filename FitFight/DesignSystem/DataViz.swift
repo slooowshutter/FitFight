@@ -38,6 +38,8 @@ struct FFLeaderboardRow: View {
     let name: String
     let value: String
     var isYou: Bool = false
+    /// Consecutive previous-round wins: one trophy, with ×N when N > 1.
+    var trophies: Int = 0
     var avatar: AnyView? = nil
     var captionUrgent: Bool = false
     var captionAt: ((Date) -> String)? = nil
@@ -56,10 +58,30 @@ struct FFLeaderboardRow: View {
                 .frame(width: 22)
             if let avatar { avatar } else { FFAvatar(monogram: monogram, size: 38) }
             VStack(alignment: .leading, spacing: 2) {
-                Text(name)
-                    .ffType(.rowTitle)
-                    .foregroundStyle(theme.text)
-                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    Text(name)
+                        .ffType(.rowTitle)
+                        .foregroundStyle(theme.text)
+                        .lineLimit(1)
+                    if trophies > 0 {
+                        HStack(spacing: 2) {
+                            Image(systemName: "trophy.fill")
+                                .font(.system(size: 12, weight: .bold))
+                            if trophies > 1 {
+                                Text("×\(trophies)")
+                                    .ffType(.micro)
+                                    .fontWeight(.heavy)
+                            }
+                        }
+                        .foregroundStyle(theme.mossText)
+                        .fixedSize()
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(String(
+                            appLocalized: "fight.trophies",
+                            defaultValue: "Won the last \(trophies) rounds"
+                        ))
+                    }
+                }
                 if let captionAt {
                     // NOTE: Only the freshness line belongs in TimelineView. Wrapping
                     // scores in a 30s schedule leaves standings stale after a sync.

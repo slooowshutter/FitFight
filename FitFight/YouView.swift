@@ -61,8 +61,8 @@ struct YouView: View {
                 FFButton(title: String(appLocalized: "Retry"), kind: .secondary) { Task { await loadOwnProfile() } }
             }
             if session.isSignedIn {
-                Text(String(appLocalized: "Friends")).ffType(.heading).foregroundStyle(theme.text).padding(.top, 8)
                 FriendsView(embedded: true)
+                    .padding(.top, 12)
             }
         }
         .navigationDestination(isPresented: $showingSettings) { settingsScreen }

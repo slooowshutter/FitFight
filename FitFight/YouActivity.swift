@@ -135,34 +135,33 @@ struct YouStatsCard: View {
     var body: some View {
         FFCard(padding: 0) {
             VStack(alignment: .leading, spacing: 0) {
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(String(appLocalized: "Today")).ffType(.eyebrow).foregroundStyle(theme.textSecondary)
-                        HStack(alignment: .firstTextBaseline, spacing: 6) {
-                            Text(todaySteps.map { formatted(Double($0)) } ?? "-")
-                                .font(.ff(50, 800)).monospacedDigit().foregroundStyle(theme.text)
-                                .minimumScaleFactor(0.6).lineLimit(1)
-                            Text(String(appLocalized: "steps")).ffType(.caption).foregroundStyle(theme.textSecondary)
-                        }
-                        if !todayWorkouts.isEmpty {
-                            HStack(spacing: 12) {
-                                ForEach(todayWorkouts) { sport in
-                                    HStack(spacing: 5) {
-                                        Image(systemName: sport.systemImage).font(.system(size: 13, weight: .semibold)).foregroundStyle(theme.textSecondary)
-                                        Text("\(formatted(sport.values[30])) \(String(appLocalized: "min"))").font(.ff(15, 800)).foregroundStyle(theme.text)
-                                    }
-                                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(String(appLocalized: "Today")).ffType(.eyebrow).foregroundStyle(theme.textSecondary)
+                    // The gap shares the big number's baseline, so both read as one line.
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text(todaySteps.map { formatted(Double($0)) } ?? "-")
+                            .font(.ff(50, 800)).monospacedDigit().foregroundStyle(theme.text)
+                            .minimumScaleFactor(0.6).lineLimit(1)
+                        Text(String(appLocalized: "steps")).ffType(.caption).foregroundStyle(theme.textSecondary)
+                        Spacer(minLength: 8)
+                        if let todaySteps, let average {
+                            let gap = Double(todaySteps) - average
+                            VStack(alignment: .trailing, spacing: 2) {
+                                Text((gap >= 0 ? "+" : "-") + formatted(abs(gap))).font(.ff(22, 800)).monospacedDigit()
+                                    .foregroundStyle(gap >= 0 ? theme.mossText : theme.emberText)
+                                Text(String(appLocalized: "vs daily average")).ffType(.micro).foregroundStyle(theme.textSecondary)
                             }
                         }
                     }
-                    Spacer(minLength: 8)
-                    if let todaySteps, let average {
-                        let gap = Double(todaySteps) - average
-                        VStack(alignment: .trailing, spacing: 2) {
-                            Text((gap >= 0 ? "+" : "-") + formatted(abs(gap))).font(.ff(22, 800)).monospacedDigit()
-                                .foregroundStyle(gap >= 0 ? theme.mossText : theme.emberText)
-                            Text(String(appLocalized: "vs daily average")).ffType(.micro).foregroundStyle(theme.textSecondary)
-                        }.padding(.top, 22)
+                    if !todayWorkouts.isEmpty {
+                        HStack(spacing: 12) {
+                            ForEach(todayWorkouts) { sport in
+                                HStack(spacing: 5) {
+                                    Image(systemName: sport.systemImage).font(.system(size: 13, weight: .semibold)).foregroundStyle(theme.textSecondary)
+                                    Text("\(formatted(sport.values[30])) \(String(appLocalized: "min"))").font(.ff(15, 800)).foregroundStyle(theme.text)
+                                }
+                            }
+                        }
                     }
                 }
                 .padding(theme.space.cardPadding)
@@ -192,10 +191,13 @@ struct YouStatsCard: View {
     private func cell(_ value: Text, _ label: String, note: String? = nil) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             value.font(.ff(22, 800)).monospacedDigit().foregroundStyle(theme.text)
-            Text(label).ffType(.caption).foregroundStyle(theme.textSecondary)
-            if let note {
-                Text("(\(note))").ffType(.micro).foregroundStyle(theme.textFaint)
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text(label).ffType(.caption).foregroundStyle(theme.textSecondary)
+                if let note {
+                    Text("(\(note))").ffType(.micro).foregroundStyle(theme.textFaint)
+                }
             }
+            .lineLimit(1).minimumScaleFactor(0.8)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, theme.space.cardPadding)

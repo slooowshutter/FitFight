@@ -33,6 +33,7 @@ struct ProfileSheet: View {
     var preview: String? = nil
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var companions: CompanionStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
@@ -138,8 +139,9 @@ struct ProfileSheet: View {
             let duels = profile.rivalry.map { $0.wins + $0.losses + $0.draws } ?? 0
             ProfileFoldedTape(
                 theirName: profile.identity.displayName,
-                theirCompanion: profile.identity.companionId,
-                yourCompanion: session.profile?.companionId,
+                // Same lookup as the avatars, so your own companion shows even when the profile field is empty.
+                theirAnimal: companions.animal(for: userID.uuidString, companionID: profile.identity.companionId, isYou: false),
+                yourAnimal: companions.animal(for: session.profile?.userId.uuidString, companionID: session.profile?.companionId, isYou: true),
                 rivalry: duels > 0 ? profile.rivalry : nil,
                 note: duels > 0 ? nil : profile.competitive ? String(appLocalized: "No one-on-one yet") : String(appLocalized: "Keeps the score private"),
                 yours: ownStore.profile?.stepStatistics,

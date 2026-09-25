@@ -4,8 +4,8 @@ import SwiftUI
 /// then a tale-of-the-tape table. Draws only appear once there is one.
 struct ProfileFoldedTape: View {
     let theirName: String
-    let theirCompanion: String?
-    let yourCompanion: String?
+    let theirAnimal: StockCompanion?
+    let yourAnimal: StockCompanion?
     /// Nil when the score is private or there is no one-on-one yet; `note` explains which.
     let rivalry: ProfileRivalry?
     let note: String?
@@ -30,8 +30,8 @@ struct ProfileFoldedTape: View {
                     }
                 }
                 HStack(spacing: 8) {
-                    art(yourCompanion)
-                    art(theirCompanion)
+                    art(yourAnimal)
+                    art(theirAnimal)
                 }
                 if let note {
                     Text(note).ffType(.caption).foregroundStyle(theme.textSecondary)
@@ -63,10 +63,10 @@ struct ProfileFoldedTape: View {
         .accessibilityElement(children: .combine)
     }
 
-    private func art(_ companion: String?) -> some View {
+    private func art(_ animal: StockCompanion?) -> some View {
         Group {
-            if let companion, let stock = StockCompanion(rawValue: companion) {
-                Image(stock.image).resizable().scaledToFit()
+            if let animal {
+                Image(animal.image).resizable().scaledToFit()
             } else {
                 Image(systemName: "figure.walk").font(.system(size: 64)).foregroundStyle(theme.textSecondary)
             }

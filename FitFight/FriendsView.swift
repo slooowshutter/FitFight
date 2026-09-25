@@ -50,6 +50,20 @@ struct FriendsView: View {
 
     private var list: some View {
         VStack(alignment: .leading, spacing: theme.space.cardGap) {
+            // Title on the left and the tabs on the right, like By sport.
+            HStack {
+                if embedded {
+                    Text(String(appLocalized: "Friends")).ffType(.heading).foregroundStyle(theme.text)
+                }
+                Spacer(minLength: 8)
+                FFSegmented(items: ["accepted", "incoming", "outgoing"], selection: $kind, count: { $0 == "incoming" ? incomingCount : nil }) { item in
+                    switch item {
+                    case "incoming": String(appLocalized: "Requests")
+                    case "outgoing": String(appLocalized: "Sent")
+                    default: String(appLocalized: "Friends")
+                    }
+                }
+            }
             // Search sits in one filled field; the Find action appears once there is something to look up.
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass").foregroundStyle(theme.textSecondary)
@@ -69,13 +83,6 @@ struct FriendsView: View {
             .frame(minHeight: 50)
             .background(theme.control, in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
             if let found { personRow(found, source: "lookup") }
-            FFSegmented(items: ["accepted", "incoming", "outgoing"], selection: $kind, count: { $0 == "incoming" ? incomingCount : nil }) { item in
-                switch item {
-                case "incoming": String(appLocalized: "Requests")
-                case "outgoing": String(appLocalized: "Sent")
-                default: String(appLocalized: "Friends")
-                }
-            }
             if let error {
                 FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
                 FFButton(title: String(appLocalized: "Retry"), kind: .secondary) { Task { await load() } }

@@ -154,33 +154,26 @@ struct OnboardingAnimal: View {
     let animal: StockCompanion
     var duration = 0.7
     var delay = 0.0
-    var selectionReaction = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.ffStaticRender) private var staticRender
     @State private var greeted = false
 
     private struct Pose {
         var height: CGFloat = 0
-        var scale: CGFloat = 1
     }
 
     var body: some View {
         Image(animal.image)
             .resizable()
             .scaledToFit()
-            .keyframeAnimator(initialValue: Pose(scale: selectionReaction ? 0.98 : 1), trigger: greeted) { image, pose in
+            .keyframeAnimator(initialValue: Pose(), trigger: greeted) { image, pose in
                 image.offset(y: reduceMotion || staticRender ? 0 : pose.height)
-                    .scaleEffect(reduceMotion || staticRender ? 1 : pose.scale)
             } keyframes: { _ in
                 KeyframeTrack(\.height) {
-                    CubicKeyframe(selectionReaction ? -3 : -12, duration: duration * 0.3)
+                    CubicKeyframe(-12, duration: duration * 0.3)
                     CubicKeyframe(0, duration: duration * 0.28)
-                    CubicKeyframe(selectionReaction ? 0 : -4, duration: duration * 0.2)
+                    CubicKeyframe(-4, duration: duration * 0.2)
                     CubicKeyframe(0, duration: duration * 0.22)
-                }
-                KeyframeTrack(\.scale) {
-                    CubicKeyframe(selectionReaction ? 1.025 : 1, duration: duration * 0.55)
-                    CubicKeyframe(1, duration: duration * 0.45)
                 }
             }
             .task {

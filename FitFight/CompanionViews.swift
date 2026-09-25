@@ -175,7 +175,7 @@ enum StockCompanion: String, CaseIterable, Identifiable {
 }
 
 enum CompanionCategory: String, CaseIterable, Identifiable {
-    case all, limited, yours, custom, mountains, water, forest, jungle
+    case all, limited, yours
 
     var id: String { rawValue }
 
@@ -183,12 +183,7 @@ enum CompanionCategory: String, CaseIterable, Identifiable {
         switch self {
         case .all: String(appLocalized: "All")
         case .limited: String(appLocalized: "Specials")
-        case .mountains: String(appLocalized: "Mountains")
-        case .water: String(appLocalized: "Water")
-        case .forest: String(appLocalized: "Forest")
-        case .jungle: String(appLocalized: "Jungle")
         case .yours: String(appLocalized: "Yours")
-        case .custom: String(appLocalized: "Make it yours")
         }
     }
 
@@ -196,11 +191,7 @@ enum CompanionCategory: String, CaseIterable, Identifiable {
         switch self {
         case .all: StockCompanion.allCases
         case .limited: StockCompanion.allCases.filter(\.isLimited)
-        case .mountains: [.goat, .bear, .redPanda]
-        case .water: [.otter, .turtle]
-        case .forest: [.badger, .raccoon, .rabbit, .fox, .bear, .boar]
-        case .jungle: [.sloth]
-        case .yours, .custom: []
+        case .yours: []
         }
     }
 }
@@ -898,6 +889,116 @@ struct CompanionFightSummary: View {
     }
 }
 
+/// One big animal at a time: swipe between them with the neighbours peeking in, or tap a thumbnail below.
+struct CompanionStage: View {
+    let animals: [StockCompanion]
+    @Binding var selection: StockCompanion?
+    var label: (StockCompanion) -> String? = { _ in nil }
+    var disabled = false
+    @Environment(\.ffTheme) private var theme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.ffStaticRender) private var staticRender
+
+    /// Artwork sits in the middle of a wide transparent canvas, so pages overlap for the neighbours to show.
+    private let overlap: CGFloat = -50
+
+    var body: some View {
+        VStack(spacing: 14) {
+            GeometryReader { proxy in
+                let width = proxy.size.width * 0.62
+                if staticRender {
+                    // ImageRenderer can't draw scroll views, so screenshots lay the pages out directly.
+                    let index = CGFloat(animals.firstIndex { $0 == selection } ?? 0)
+                    HStack(spacing: overlap) { ForEach(animals) { page($0, width: width) } }
+                        .fixedSize()
+                        .offset(x: (proxy.size.width - width) / 2 - index * (width + overlap))
+                        .frame(width: proxy.size.width, alignment: .leading)
+                } else {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        LazyHStack(spacing: overlap) { ForEach(animals) { page($0, width: width) } }
+                            .scrollTargetLayout()
+                    }
+                    .contentMargins(.horizontal, (proxy.size.width - width) / 2, for: .scrollContent)
+                    .scrollTargetBehavior(.viewAligned)
+                    .scrollPosition(id: $selection, anchor: .center)
+                    .animation(reduceMotion ? nil : .snappy, value: selection)
+                    .disabled(disabled)
+                }
+            }
+            .frame(height: 320)
+            .clipped()
+            ScrollViewReader { reader in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    thumbnails
+                }
+                .onChange(of: selection, initial: true) { _, animal in
+                    guard let animal else { return }
+                    withAnimation(reduceMotion ? nil : .snappy) { reader.scrollTo(animal, anchor: .center) }
+                }
+            }
+            .opacity(staticRender ? 0 : 1)
+            .overlay(alignment: .leading) {
+                if staticRender { thumbnails.fixedSize() }
+            }
+        }
+        .padding(.horizontal, -20)
+    }
+
+    private var thumbnails: some View {
+        HStack(spacing: 8) {
+            ForEach(animals) { animal in
+                Button {
+                    withAnimation(reduceMotion ? nil : .snappy) { selection = animal }
+                } label: {
+                    Image(animal.image)
+                        .resizable()
+                        .scaledToFit()
+                        .padding(5)
+                        .frame(width: 64, height: 76)
+                        .background(selection == animal ? theme.mossWash : theme.card,
+                                    in: RoundedRectangle(cornerRadius: 16))
+                        .ffBorder(selection == animal ? theme.mossEdge : theme.hairline, radius: 16)
+                }
+                .buttonStyle(FFHapticPlainStyle())
+                .disabled(disabled)
+                .accessibilityLabel(animal.name)
+                .accessibilityAddTraits(selection == animal ? .isSelected : [])
+                .id(animal)
+            }
+        }
+        .padding(.horizontal, 20)
+    }
+
+    private func page(_ animal: StockCompanion, width: CGFloat) -> some View {
+        VStack(spacing: 4) {
+            Image(animal.image)
+                .resizable()
+                .scaledToFit()
+                .frame(height: 220)
+                .opacity(selection == animal ? 1 : 0.55)
+                .accessibilityHidden(true)
+            Group {
+                Text(animal.name)
+                    .font(.ff(24, 800))
+                    .foregroundStyle(theme.text)
+                Text(animal.caption)
+                    .ffType(.body)
+                    .foregroundStyle(theme.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let text = label(animal) {
+                    Text(text).ffType(.caption).foregroundStyle(theme.mossText)
+                }
+            }
+            .opacity(selection == animal ? 1 : 0)
+        }
+        .frame(width: width)
+        .scaleEffect(selection == animal ? 1 : 0.9)
+        .accessibilityElement(children: .combine)
+        .id(animal)
+    }
+}
+
 struct CompanionPicker: View {
     @EnvironmentObject private var companions: CompanionStore
     @EnvironmentObject private var purchases: SpecialPurchases
@@ -917,6 +1018,7 @@ struct CompanionPicker: View {
     @State private var loadingEditions = false
     @State private var editionsError = ""
     @State private var showingGeneration = false
+    @State private var showingGrid = false
     @FocusState private var promptFocused: Bool
 
     private let promptLimit = 1000
@@ -924,7 +1026,7 @@ struct CompanionPicker: View {
 
     init(selection: StockCompanion, required: Bool = false, isCustom: Bool = false, prompt: String = "", startWithCustom: Bool = false) {
         self.startWithCustom = startWithCustom
-        _category = State(initialValue: startWithCustom ? .custom : selection.isLimited && !required ? .limited : .all)
+        _category = State(initialValue: startWithCustom ? .yours : selection.isLimited && !required ? .limited : .all)
         if isCustom || startWithCustom {
             _draft = State(initialValue: nil)
             _pickingCustom = State(initialValue: true)
@@ -943,6 +1045,18 @@ struct CompanionPicker: View {
                     .font(.custom("Nunito-ExtraBold", size: 26, relativeTo: .title))
                     .foregroundStyle(theme.text)
                 Spacer()
+                if !animals(in: category).isEmpty {
+                    Button {
+                        showingGrid.toggle()
+                    } label: {
+                        Image(systemName: showingGrid ? "rectangle.portrait" : "square.grid.2x2")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(theme.mossText)
+                            .frame(width: 44, height: 44)
+                    }
+                    .buttonStyle(FFHapticPlainStyle())
+                    .accessibilityLabel(showingGrid ? String(appLocalized: "Show one at a time") : String(appLocalized: "Show all"))
+                }
                 if !session.needsCompanionSelection {
                     Button(String(appLocalized: "Close")) { dismiss() }
                         .ffType(.label)
@@ -955,34 +1069,8 @@ struct CompanionPicker: View {
                 .font(.custom("Nunito-Bold", size: 13, relativeTo: .body))
                 .foregroundStyle(theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
-            if !error.isEmpty && category == .yours {
-                Text(error)
-                    .ffType(.caption)
-                    .foregroundStyle(theme.emberText)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(CompanionCategory.allCases.filter { $0 != .limited || CompanionCategory.limited.animals.contains(where: shows) }) { item in
-                        Button {
-                            promptFocused = false
-                            category = item
-                            error = ""
-                        } label: {
-                            Text(item.name)
-                                .ffType(.label)
-                                .foregroundStyle(category == item ? theme.mossText : theme.textSecondary)
-                                .padding(.horizontal, 16)
-                                .frame(minHeight: 44)
-                                .background(category == item ? theme.mossWash : theme.card,
-                                            in: Capsule())
-                                .overlay(Capsule().strokeBorder(category == item ? theme.mossEdge : theme.hairline, lineWidth: 1))
-                        }
-                        .buttonStyle(FFHapticPlainStyle())
-                        .accessibilityAddTraits(category == item ? .isSelected : [])
-                    }
-                }
-            }
+            FFSegmented(items: CompanionCategory.allCases.filter { $0 != .limited || CompanionCategory.limited.animals.contains(where: shows) },
+                        selection: $category, fill: true) { $0.name }
             .disabled(isSaving)
             if category == .limited || (category == .all && draft?.isLimited == true) {
                 Text("One of each. One Special per account. Buy once and keep it, even when you change companions.")
@@ -1020,8 +1108,65 @@ struct CompanionPicker: View {
                     }
                 }
             }
+            let visible = animals(in: category)
+            if !visible.isEmpty && !showingGrid {
+                CompanionStage(
+                    animals: visible,
+                    selection: Binding(get: { pickingCustom ? nil : draft }, set: { animal in
+                        guard let animal else { return }
+                        promptFocused = false
+                        draft = animal
+                        pickingCustom = false
+                        error = ""
+                    }),
+                    label: specialLabel,
+                    disabled: isSaving || purchases.isBusy
+                )
+            }
+            if !visible.isEmpty && showingGrid {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 150 : 96), spacing: 10)], spacing: 10) {
+                    ForEach(visible) { animal in
+                        let edition = status(animal)
+                        Button {
+                            draft = animal
+                            pickingCustom = false
+                            error = ""
+                        } label: {
+                            VStack(spacing: 3) {
+                                Image(animal.image)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 104)
+                                    .clipped()
+                                Text(animal.name)
+                                    .font(.custom("Nunito-ExtraBold", size: 12, relativeTo: .caption))
+                                    .foregroundStyle(draft == animal && !pickingCustom ? theme.mossText : theme.text)
+                                    .lineLimit(2, reservesSpace: true)
+                                    .minimumScaleFactor(0.8)
+                                // Every tile reserves the status line so limited and regular animals stay the same size.
+                                Text(specialLabel(animal) ?? " ")
+                                    .ffType(.caption)
+                                    .foregroundStyle(theme.textSecondary)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.7)
+                                    .accessibilityHidden(!animal.isLimited)
+                            }
+                            .padding(8)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                            .background(draft == animal && !pickingCustom ? theme.mossWash : theme.card,
+                                        in: RoundedRectangle(cornerRadius: theme.radius.card))
+                            .ffBorder(draft == animal && !pickingCustom ? theme.mossEdge : theme.hairline, radius: theme.radius.card)
+                            .contentShape(RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
+                        }
+                        .buttonStyle(FFHapticPlainStyle())
+                        .disabled(isSaving || purchases.isBusy || (animal.isLimited && ![.available, .reserved, .yours].contains(edition)))
+                        .accessibilityAddTraits(draft == animal && !pickingCustom ? .isSelected : [])
+                    }
+                }
+            }
             if category == .yours {
-                Text("Reuse a saved description or write a new one in Make it yours.")
+                Text("Reuse a saved description or write a new one.")
                     .ffType(.body)
                     .foregroundStyle(theme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1064,66 +1209,7 @@ struct CompanionPicker: View {
                     .accessibilityAddTraits(companions.isCustom && companions.customPrompt == prompt ? .isSelected : [])
                 }
             }
-            if !category.animals.isEmpty {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 150 : 96), spacing: 10)], spacing: 10) {
-                    ForEach(category.animals.filter(shows)) { animal in
-                        let edition = status(animal)
-                        Button {
-                            draft = animal
-                            pickingCustom = false
-                            error = ""
-                        } label: {
-                            VStack(spacing: 3) {
-                                Image(animal.image)
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 104)
-                                    .clipped()
-                                Text(animal.name)
-                                    .font(.custom("Nunito-ExtraBold", size: 12, relativeTo: .caption))
-                                    .foregroundStyle(draft == animal && !pickingCustom ? theme.mossText : theme.text)
-                                    .lineLimit(2, reservesSpace: true)
-                                    .minimumScaleFactor(0.8)
-                                // Every tile reserves the status line so limited and regular animals stay the same size.
-                                Text(edition == .yours ? String(appLocalized: "Your special")
-                                     : edition == .reserved ? String(appLocalized: "Reserved for you")
-                                     : edition == .available ? String(appLocalized: "Available")
-                                     : String(appLocalized: "Taken"))
-                                    .ffType(.caption)
-                                    .foregroundStyle(theme.textSecondary)
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.7)
-                                    .opacity(animal.isLimited ? 1 : 0)
-                                    .accessibilityHidden(!animal.isLimited)
-                            }
-                            .padding(8)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                            .background(draft == animal && !pickingCustom ? theme.mossWash : theme.card,
-                                        in: RoundedRectangle(cornerRadius: theme.radius.card))
-                            .ffBorder(draft == animal && !pickingCustom ? theme.mossEdge : theme.hairline, radius: theme.radius.card)
-                            .contentShape(RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
-                        }
-                        .buttonStyle(FFHapticPlainStyle())
-                        .disabled(isSaving || purchases.isBusy || (animal.isLimited && ![.available, .reserved, .yours].contains(edition)))
-                        .accessibilityAddTraits(draft == animal && !pickingCustom ? .isSelected : [])
-                    }
-                }
-            }
-            if category == .custom {
-                Text("You can change your animal anytime. Choose another from the grid or describe any animal below.")
-                    .ffType(.body)
-                    .foregroundStyle(theme.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                Button(String(appLocalized: "Change animal")) {
-                    promptFocused = false
-                    category = .all
-                }
-                .ffType(.buttonSmall)
-                .foregroundStyle(theme.mossText)
-                .frame(minHeight: 44)
-                .buttonStyle(FFHapticPlainStyle())
-                .disabled(isSaving)
+            if category == .yours {
                 FFField(
                     label: String(appLocalized: "Your animal"),
                     state: promptFocused ? .focused : .normal,
@@ -1186,18 +1272,20 @@ struct CompanionPicker: View {
             #endif
         }
         .safeAreaInset(edge: .bottom) {
-            if let draft, !pickingCustom, category != .custom, category != .yours {
+            if let draft, !pickingCustom, animals(in: category).contains(draft) {
                 VStack(alignment: .leading, spacing: 8) {
-                    HStack(alignment: .top, spacing: 12) {
-                        Image(draft.image)
-                            .resizable().scaledToFit().frame(width: 56, height: 72)
-                            .accessibilityHidden(true)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(draft.name).ffType(.label).foregroundStyle(theme.text)
-                            Text(draft.caption).ffType(.body).foregroundStyle(theme.textSecondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                            if companions.isCustom || !companions.hasChosen || draft != companions.selection {
-                                Text("Not saved yet").ffType(.caption).foregroundStyle(theme.textSecondary)
+                    if showingGrid {
+                        HStack(alignment: .top, spacing: 12) {
+                            Image(draft.image)
+                                .resizable().scaledToFit().frame(width: 56, height: 72)
+                                .accessibilityHidden(true)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(draft.name).ffType(.label).foregroundStyle(theme.text)
+                                Text(draft.caption).ffType(.body).foregroundStyle(theme.textSecondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                if companions.isCustom || !companions.hasChosen || draft != companions.selection {
+                                    Text("Not saved yet").ffType(.caption).foregroundStyle(theme.textSecondary)
+                                }
                             }
                         }
                     }
@@ -1247,6 +1335,16 @@ struct CompanionPicker: View {
             }
         }
         .task(id: session.profile?.userId) { await loadLimitedEditions() }
+        .onChange(of: category, initial: true) { _, category in
+            promptFocused = false
+            error = ""
+            // The stage always shows an animal, so keep the draft on one from this tab.
+            let visible = animals(in: category)
+            if category != .yours, !pickingCustom, let first = visible.first, draft.map(visible.contains) != true {
+                draft = first
+                pickingCustom = false
+            }
+        }
         .onChange(of: session.profile?.userId) { _, _ in dismiss() }
     }
 
@@ -1271,6 +1369,24 @@ struct CompanionPicker: View {
         if CompanionPreview.isEnabled { return animal == CompanionCategory.limited.animals[1] ? .taken : .available }
         #endif
         return purchases.snapshot?.editions.first { $0.id == animal.rawValue }?.status
+    }
+
+    /// Yours lists the Special this account owns and the current stock companion.
+    private func animals(in category: CompanionCategory) -> [StockCompanion] {
+        guard category == .yours else { return category.animals.filter(shows) }
+        let owned = CompanionCategory.limited.animals.filter { status($0) == .yours }
+        let current = companions.hasChosen && !companions.isCustom && !owned.contains(companions.selection) ? [companions.selection] : []
+        return current + owned
+    }
+
+    private func specialLabel(_ animal: StockCompanion) -> String? {
+        guard animal.isLimited else { return nil }
+        return switch status(animal) {
+        case .yours: String(appLocalized: "Your special")
+        case .reserved: String(appLocalized: "Reserved for you")
+        case .available: String(appLocalized: "Available")
+        default: String(appLocalized: "Taken")
+        }
     }
 
     /// Specials stay hidden while sales are off, except one this account already owns.

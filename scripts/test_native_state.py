@@ -58,6 +58,7 @@ source += "\n" + feedback[feedback.index("@MainActor\nfinal class FeedbackStore:
 source += feedback[feedback.index("    func delete("):feedback.index("    func report(")]
 source += feedback[feedback.index("    private func keepingNewerVote("):feedback.index("    static func previewBoard(")] + "\n}\n"
 source += feedback[feedback.index("private enum RequestAttachment {"):feedback.index("private struct RequestMediaStack:")]
+source += feedback[feedback.index("enum RequestMenuAction {"):feedback.index("struct RequestPostMenu:")]
 source += api[api.index("struct FitFightFeedbackPost:"):api.index("struct FitFightFeedbackFixAgent:")]
 source += metadata[metadata.index("struct FitFightFeedbackMetadata:"):metadata.index("    @MainActor")] + "\n}\n"
 source += metadata[metadata.index("extension FitFightFeedbackMetadata: Codable {"):]

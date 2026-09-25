@@ -1,12 +1,69 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **23 Sep 2026**. Production release: **1.1.1 (202)**.
+Read this before building. Last updated **24 Sep 2026**. Production release: **1.1.1 (202)**.
 
-Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments other than the approved Specials purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
+Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
 ---
 
-**Last documented TestFlight upload:** 19 Sep 2026 at 13:14 UTC. **1.1.2 (204)** from preview merge `c80e642`, including develop `f206592`. [Upload and Apple processing succeeded](https://github.com/slooowshutter/FitFight/actions/runs/35444706489): `VALID`, unexpired, available to Internal Tester. This upload did not submit or assign external groups. The published release registry then listed `latest` 1.1.1 (201) and `review`/`internal` 1.1.2 (204). At the 13:18 UTC recheck on 19 Sep, staging's live release endpoint still returned candidate 203 with enforcement off; its metadata propagation did not block internal build 204. Production remained 1.1.1 (202). See the 23 Sep live policy check below for current advertised builds.
+## Custom companion workflows and daily image: prepared 24 Sep 2026
+
+**Code:** The example Blend configuration now pins Marc's published portrait
+workflow `c405d12d-fa25-4e67-8d4d-8336e741cbbc` at version
+`ff4f26b1-48f3-4352-bd7d-913e3a481aa4` and five-image workflow
+`fa770c5b-25ba-46cc-a758-a08aeebc1c92` at version
+`cf9177c3-9ba5-4a53-87df-e8e304490f43`. Read-only publication inspection
+found both valid and confirmed the portrait and five named image outputs. The
+app now uses a selected fitness set on Fights, New and You according to today's
+existing 2,000, 4,000, 6,000 and 8,000 Step thresholds. If the saved set is
+unavailable, it displays the selected image. Marc specified **EUR 4.99 per complete
+character**, so a repeatable Apple consumable funds exactly one portrait and one
+five-image set. The new native screen buys, resumes and restores account-linked
+characters. The backend verifies Apple's current signed record, binds the charge
+to one FitFight account, saves stage keys before Blend starts, and advances the
+second workflow through background reconciliation. A confirmed failure can be
+retried without paying again; an unconfirmed start waits for operator evidence.
+Refunded images are hidden and unequipped. Group photos are unchanged.
+
+**Contract and checks:** New `/api/v1/me/custom-characters`, `/purchases`, and
+`/{purchase_id}/advance` endpoints are additive. Existing `/api/v1/ai/runs`,
+`/library`, `/api/v1/me` and Specials response shapes are unchanged. Older
+clients keep their static image and saved requests keep pinned workflow versions.
+The migration adds a private transaction ledger and links paid runs through the
+previously unused `ai_requests.resource_id`; existing null rows remain valid.
+Strict TypeScript and all 430 backend tests passed. Localization, native API
+boundary, Ruby and Xcode project syntax, destructive-SQL guard, and whitespace
+checks passed. Restore checks the account ledger if Apple sync fails, and a
+product lookup error no longer prevents unfinished transaction recovery. A new
+disposable database regression covers
+replay, account isolation, both workflow stages, refunds and reversals, but it
+still needs hosted execution. Next.js compiled and typechecked; static page
+rendering requires the disposable `DATABASE_URL` absent from this workspace.
+The native code still needs a GitHub-hosted
+simulator build and a real Sandbox purchase and restore. Read-only live
+release checks on 24 Sep returned staging latest 1.1.1 (201), review 1.1.2
+(205), internal 1.1.2 (206), enforcement off; production latest 1.1.1 (202),
+no candidates, enforcement on. No merge, hosted configuration change, new
+generation, deployment or TestFlight upload was performed here. Starts remain
+disabled until the payment and Blend rollout are ready.
+
+**Rollout:** On an authorized `develop` merge, hosted CI prepares the Apple
+`com.fitfight.mvp.custom_character` consumable with EUR 4.99 as the French base
+price. Apply `20260924004156_paid_custom_characters.sql` before deploying the
+compatible backend. Pin both published Blend versions, enable Blend and the
+server purchase flag only after Apple product lookup and Specials Sandbox
+checkout work. Then distribute a `preview` TestFlight build and verify a paid
+character, interrupted generation, another FitFight account, restart and Restore
+purchases. TestFlight purchases use Sandbox and do not charge real money.
+Production remains separately gated. No PR or merge was opened from this branch.
+
+**Payment gate:** Marc reported the disabled "Purchases unavailable" button in
+TestFlight on 24 Sep. He confirmed the Paid Apps Agreement, bank account and W-9
+are still pending. Build 206 contains the Specials checkout, but no completed
+Sandbox purchase or restore has been verified. Apple's product lookup remains a
+live blocker; Restore purchases cannot make a missing product available.
+
+**Last documented TestFlight upload:** 23 Sep 2026 at 23:03 UTC. **1.1.2 (206)** from preview merge `318e6fb4`, including the Specials and Blend code. [Upload and Apple processing succeeded](https://github.com/slooowshutter/FitFight/actions/runs/35930657617): `VALID`, unexpired, and registered as a staging candidate. External groups were left untouched. The 24 Sep staging release endpoint lists internal 206, review 205 and latest 201; production remains 1.1.1 (202). Upload and processing do not verify a completed Sandbox purchase or installed-device behavior.
 
 ## Apple Health activity pipeline: prepared 23 Sep 2026
 
@@ -466,8 +523,9 @@ the agent has not entered or submitted them. No live payment or purchase
 entitlement has been created.
 
 **TestFlight testing:** Apple confirms TestFlight purchases always use Sandbox
-and do not charge real money. The currently installed build still lacks checkout.
-Once an authorized preview build with this implementation is available, update through
+and do not charge real money. The build installed at this preparation step lacked
+checkout; build 206 with checkout uploaded on 23 Sep, as noted above. Once Apple
+returns the products, update through
 TestFlight, open You's companion picker, select Specials, and confirm the purchase
 with Apple's sheet. Normal beta purchases use the tester's usual Apple Account.
 A dedicated Sandbox Apple Account is needed only to use controls such as clearing

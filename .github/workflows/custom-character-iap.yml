@@ -1,0 +1,27 @@
+name: Custom character IAP setup
+
+on:
+    push:
+        branches: [develop]
+        paths:
+            - "scripts/app-store-custom-character-setup.rb"
+            - ".github/workflows/custom-character-iap.yml"
+
+jobs:
+    prepare:
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        permissions:
+            contents: read
+        steps:
+            - uses: actions/checkout@v4
+            - uses: ruby/setup-ruby@v1
+              with:
+                  ruby-version: "3.3"
+                  bundler-cache: true
+            - name: Prepare and verify EUR 4.99 consumable
+              env:
+                  APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+                  APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+                  APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+              run: bundle exec ruby scripts/app-store-custom-character-setup.rb prepare

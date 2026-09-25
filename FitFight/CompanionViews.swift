@@ -210,6 +210,16 @@ enum CompanionEffortStage: Int, CaseIterable, Identifiable {
 
     var id: Int { rawValue }
 
+    var fitnessImageStage: String {
+        switch self {
+        case .rest: "resting"
+        case .headingOut: "soft"
+        case .onTheMove: "average"
+        case .pushing: "fit"
+        case .peak: "strong"
+        }
+    }
+
     static func matching(todaySteps: Int?) -> CompanionEffortStage {
         guard let todaySteps else { return .rest }
         switch todaySteps {
@@ -580,6 +590,7 @@ struct CompanionIntroduction: View {
     @Environment(\.ffTheme) private var theme
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.ffStaticRender) private var staticRender
+    @State private var fitnessImages: [String: URL] = [:]
 
     var body: some View {
         Group {
@@ -647,6 +658,25 @@ struct CompanionIntroduction: View {
             }
         }
         .accessibilityElement(children: .contain)
+        .task(id: [session.profile?.userId.uuidString, session.profile?.companionImageURL?.absoluteString]) {
+            fitnessImages = [:]
+            guard let profile = session.profile,
+                  profile.companionId == CompanionStore.customId,
+                  let selectedURL = profile.companionImageURL else { return }
+            do {
+                let entries = try await FitFightAPI().aiLibrary(accessToken: try await session.freshAccessToken())
+                guard !Task.isCancelled,
+                      session.profile?.userId == profile.userId,
+                      session.profile?.companionImageURL == selectedURL else { return }
+                if let entry = entries.first(where: {
+                    $0.workflow == .fitness && $0.images.contains(where: { $0.url == selectedURL })
+                }), entry.images.count == 5 {
+                    fitnessImages = Dictionary(uniqueKeysWithValues: entry.images.map { ($0.stage, $0.url) })
+                }
+            } catch {
+                return
+            }
+        }
     }
 
     private var height: CGFloat {
@@ -712,7 +742,7 @@ struct CompanionIntroduction: View {
     @ViewBuilder
     private var youCharacter: some View {
         if companions.isCustom {
-            RemotePhoto(url: session.profile?.photoURL, contentMode: .fit) { Color.clear }
+            RemotePhoto(url: fitnessImages[youEffort.fitnessImageStage] ?? session.profile?.photoURL, contentMode: .fit) { Color.clear }
         } else {
             CompanionCharacter(animal: companions.selection, sport: companions.sport, effort: youEffort)
         }
@@ -1132,7 +1162,7 @@ struct CompanionPicker: View {
                     action: { Task { await saveCustom() } }
                 )
                 FFButton(
-                    title: String(localized: "Generate images"),
+                    title: String(localized: "Create character"),
                     kind: .secondary,
                     enabled: !isSaving && !CompanionPreview.isEnabled,
                     fullWidth: true
@@ -1188,7 +1218,7 @@ struct CompanionPicker: View {
         }
         .interactiveDismissDisabled(session.needsCompanionSelection || isSaving || purchases.isBusy)
         .sheet(isPresented: $showingGeneration) {
-            AICompanionView(initialDescription: customPrompt)
+            PaidCharacterView(initialDescription: customPrompt)
         }
         .onAppear {
             if customPrompt.isEmpty { customPrompt = companions.customPrompt }

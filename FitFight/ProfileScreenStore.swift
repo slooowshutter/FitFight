@@ -22,6 +22,13 @@ final class ProfileScreenStore: ObservableObject {
     /// You shows only the record and statistics, so it skips the history request.
     func load(userID: UUID, session: SessionStore, preview: String? = nil, includeHistory: Bool = true) async {
         clear()
+        #if DEBUG && targetEnvironment(simulator)
+        if CompanionPreview.isEnabled {
+            profile = CompanionPreview.profile(userID: userID)
+            history = includeHistory && userID == CompanionPreview.youID ? CompanionPreview.sampleHistory : []
+            return
+        }
+        #endif
         let requestGeneration = generation
         let accountID = session.authSession?.user.id
         loading = true

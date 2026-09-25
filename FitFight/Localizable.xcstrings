@@ -2,57 +2,179 @@
     "sourceLanguage": "en",
     "strings": {
         "Apple sync could not complete, but FitFight checked your account purchases.": {
-            "localizations": { "fr": { "stringUnit": { "state": "translated", "value": "La synchronisation Apple a échoué, mais FitFight a vérifié les achats de votre compte." } } }
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "La synchronisation Apple a échoué, mais FitFight a vérifié les achats de votre compte."
+                    }
+                }
+            }
         },
         "Apple is processing your character purchase. We will resume when it completes.": {
-            "localizations": { "fr": { "stringUnit": { "state": "translated", "value": "Apple traite votre achat de personnage. Nous reprendrons dès qu’il sera confirmé." } } }
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Apple traite votre achat de personnage. Nous reprendrons dès qu’il sera confirmé."
+                    }
+                }
+            }
         },
         "Apple is still processing your character purchase.": {
-            "localizations": { "fr": { "stringUnit": { "state": "translated", "value": "Apple traite encore votre achat de personnage." } } }
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Apple traite encore votre achat de personnage."
+                    }
+                }
+            }
         },
         "Create character": {
-            "localizations": { "fr": { "stringUnit": { "state": "translated", "value": "Créer le personnage" } } }
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Créer le personnage"
+                    }
+                }
+            }
         },
         "Creating five fitness images…": {
-            "localizations": { "fr": { "stringUnit": { "state": "translated", "value": "Création des cinq images de forme…" } } }
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Création des cinq images de forme…"
+                    }
+                }
+            }
         },
         "Creating your portrait…": {
-            "localizations": { "fr": { "stringUnit": { "state": "translated", "value": "Création de votre portrait…" } } }
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Création de votre portrait…"
+                    }
+                }
+            }
         },
         "No character purchases were found for this FitFight account.": {
-            "localizations": { "fr": { "stringUnit": { "state": "translated", "value": "Aucun achat de personnage n’a été trouvé pour ce compte FitFight." } } }
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Aucun achat de personnage n’a été trouvé pour ce compte FitFight."
+                    }
+                }
+            }
         },
         "One purchase creates one character and five fitness images that change with your daily Steps.": {
-            "localizations": { "fr": { "stringUnit": { "state": "translated", "value": "Un achat crée un personnage et cinq images qui changent selon vos pas du jour." } } }
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Un achat crée un personnage et cinq images qui changent selon vos pas du jour."
+                    }
+                }
+            }
         },
         "Purchase status is unknown. Check purchases before buying again.": {
-            "localizations": { "fr": { "stringUnit": { "state": "translated", "value": "Le statut de l’achat est inconnu. Vérifiez vos achats avant de réessayer." } } }
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Le statut de l’achat est inconnu. Vérifiez vos achats avant de réessayer."
+                    }
+                }
+            }
         },
         "Purchase pending": {
-            "localizations": { "fr": { "stringUnit": { "state": "translated", "value": "Achat en attente" } } }
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Achat en attente"
+                    }
+                }
+            }
         },
         "The images could not be completed. Retry this character without another purchase.": {
-            "localizations": { "fr": { "stringUnit": { "state": "translated", "value": "Les images n’ont pas pu être terminées. Réessayez sans faire un nouvel achat." } } }
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les images n’ont pas pu être terminées. Réessayez sans faire un nouvel achat."
+                    }
+                }
+            }
         },
         "We could not confirm whether this generation started. Contact support before retrying.": {
-            "localizations": { "fr": { "stringUnit": { "state": "translated", "value": "Nous ne pouvons pas confirmer le lancement. Contactez l’assistance avant de réessayer." } } }
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nous ne pouvons pas confirmer le lancement. Contactez l’assistance avant de réessayer."
+                    }
+                }
+            }
         },
         "You can close this screen. Your character keeps generating.": {
-            "localizations": { "fr": { "stringUnit": { "state": "translated", "value": "Vous pouvez fermer cet écran. La création de votre personnage continue." } } }
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Vous pouvez fermer cet écran. La création de votre personnage continue."
+                    }
+                }
+            }
         },
         "Your character": {
-            "localizations": { "fr": { "stringUnit": { "state": "translated", "value": "Votre personnage" } } }
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Votre personnage"
+                    }
+                }
+            }
         },
         "Your character purchases are linked to this FitFight account.": {
-            "localizations": { "fr": { "stringUnit": { "state": "translated", "value": "Vos personnages achetés sont liés à ce compte FitFight." } } }
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Vos personnages achetés sont liés à ce compte FitFight."
+                    }
+                }
+            }
         },
         "Your characters": {
-            "localizations": { "fr": { "stringUnit": { "state": "translated", "value": "Vos personnages" } } }
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Vos personnages"
+                    }
+                }
+            }
         },
         "character.buy": {
             "localizations": {
-                "en": { "stringUnit": { "state": "translated", "value": "Create for %@" } },
-                "fr": { "stringUnit": { "state": "translated", "value": "Créer pour %@" } }
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Create for %@"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Créer pour %@"
+                    }
+                }
             }
         },
         "Create your own animal with one Apple purchase. Its five fitness images change with your daily Steps.": {
@@ -14333,6 +14455,520 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Envoie les activités Santé d’Apple que vous autorisez, y compris les échantillons individuels et les entraînements. Stockées en privé."
+                    }
+                }
+            }
+        },
+        "Best day": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Meilleur jour"
+                    }
+                }
+            }
+        },
+        "Bike": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Vélo"
+                    }
+                }
+            }
+        },
+        "By sport": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Par sport"
+                    }
+                }
+            }
+        },
+        "Daily average": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Moyenne par jour"
+                    }
+                }
+            }
+        },
+        "Draws": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nuls"
+                    }
+                }
+            }
+        },
+        "Hike": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Randonnée"
+                    }
+                }
+            }
+        },
+        "Keeps the score private": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Garde le score privé"
+                    }
+                }
+            }
+        },
+        "Last week": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Semaine dernière"
+                    }
+                }
+            }
+        },
+        "Month": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Mois"
+                    }
+                }
+            }
+        },
+        "No one-on-one yet": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Pas encore de un contre un"
+                    }
+                }
+            }
+        },
+        "Run": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Course"
+                    }
+                }
+            }
+        },
+        "Strength": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Musculation"
+                    }
+                }
+            }
+        },
+        "Swim": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Natation"
+                    }
+                }
+            }
+        },
+        "Today": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Aujourd’hui"
+                    }
+                }
+            }
+        },
+        "Walk": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Marche"
+                    }
+                }
+            }
+        },
+        "Week": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Semaine"
+                    }
+                }
+            }
+        },
+        "Weeks": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Semaines"
+                    }
+                }
+            }
+        },
+        "Workout": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Entraînement"
+                    }
+                }
+            }
+        },
+        "Yoga": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Yoga"
+                    }
+                }
+            }
+        },
+        "min": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "min"
+                    }
+                }
+            }
+        },
+        "steps": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "pas"
+                    }
+                }
+            }
+        },
+        "you.per-day": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%@ a day"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%@ par jour"
+                    }
+                }
+            }
+        },
+        "Dashboard": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tableau de bord"
+                    }
+                }
+            }
+        },
+        "Sports": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Sports"
+                    }
+                }
+            }
+        },
+        "Drew": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nul"
+                    }
+                }
+            }
+        },
+        "Last 15 days vs the 15 before": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "15 derniers jours vs les 15 d’avant"
+                    }
+                }
+            }
+        },
+        "Drag across the bars. The dashed line is your average.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Glisse sur les barres. La ligne pointillée est ta moyenne."
+                    }
+                }
+            }
+        },
+        "Best days": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Meilleurs jours"
+                    }
+                }
+            }
+        },
+        "Connect Apple Health to see your Steps here.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Connecte Apple Santé pour voir tes Pas ici."
+                    }
+                }
+            }
+        },
+        "Average by weekday": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Moyenne par jour de la semaine"
+                    }
+                }
+            }
+        },
+        "Last 31 days": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "31 derniers jours"
+                    }
+                }
+            }
+        },
+        "Active days": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Jours actifs"
+                    }
+                }
+            }
+        },
+        "App": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "App"
+                    }
+                }
+            }
+        },
+        "dashboard.before-average": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "a day, vs %@ before"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "par jour, vs %@ avant"
+                    }
+                }
+            }
+        },
+        "dashboard.best-weekday": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%1$@ is your best day: %2$@ on average."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Le %1$@ est ton meilleur jour : %2$@ en moyenne."
+                    }
+                }
+            }
+        },
+        "dashboard.days-of": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld of %lld days"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld sur %lld jours"
+                    }
+                }
+            }
+        },
+        "this week": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "cette semaine"
+                    }
+                }
+            }
+        },
+        "won · lost · drew": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "gagnés · perdus · nuls"
+                    }
+                }
+            }
+        },
+        "fights won": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "combats gagnés"
+                    }
+                }
+            }
+        },
+        "daily average": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "moyenne par jour"
+                    }
+                }
+            }
+        },
+        "best day": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "meilleur jour"
+                    }
+                }
+            }
+        },
+        "Use a photo": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Utiliser une photo"
+                    }
+                }
+            }
+        },
+        "Change picture": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Changer l’image"
+                    }
+                }
+            }
+        },
+        "Name": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nom"
+                    }
+                }
+            }
+        },
+        "vs daily average": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "vs moyenne par jour"
+                    }
+                }
+            }
+        },
+        "past 8 weeks": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "8 dernières semaines"
+                    }
+                }
+            }
+        },
+        "Add a friend by username": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ajoute un ami par son nom d’utilisateur"
+                    }
+                }
+            }
+        },
+        "Requests": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Demandes"
+                    }
+                }
+            }
+        },
+        "You shows today’s Steps against your daily average, this week, your record and best day, each Apple Health sport by day, week or month, and your friends. New Dashboard and Settings screens. Friend profiles show both companions with the one-on-one score above them.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "L’onglet Vous affiche tes Pas du jour face à ta moyenne, la semaine, ton bilan et ton meilleur jour, chaque sport Apple Santé par jour, semaine ou mois, et tes amis. Nouveaux écrans Tableau de bord et Réglages. Les profils d’amis montrent les deux compagnons avec le score en un contre un au-dessus d’eux."
                     }
                 }
             }

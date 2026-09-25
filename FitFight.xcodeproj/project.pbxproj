@@ -10,6 +10,8 @@
         A23000000000000000000004 /* OnboardingComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A23000000000000000000003 /* OnboardingComponents.swift */; };
         A23000000000000000000002 /* FirstFightOnboarding.swift in Sources */ = {isa = PBXBuildFile; fileRef = A23000000000000000000001 /* FirstFightOnboarding.swift */; };
         C12109202600000000000001 /* SpecialPurchases.swift in Sources */ = {isa = PBXBuildFile; fileRef = C12109202600000000000002 /* SpecialPurchases.swift */; };
+        C12409202600000000000001 /* CustomCharacterPurchases.swift in Sources */ = {isa = PBXBuildFile; fileRef = C12409202600000000000002 /* CustomCharacterPurchases.swift */; };
+        C12409202600000000000003 /* PaidCharacterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C12409202600000000000004 /* PaidCharacterView.swift */; };
         FB2026091621080000000001 /* FeedActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB2026091621080000000002 /* FeedActivity.swift */; };
         FB2026091702150000000001 /* FeedMention.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB2026091702150000000002 /* FeedMention.swift */; };
         A10000000000000000000001 /* FitFightApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000011 /* FitFightApp.swift */; };
@@ -121,6 +123,8 @@
         A23000000000000000000003 /* OnboardingComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingComponents.swift; sourceTree = "<group>"; };
         A23000000000000000000001 /* FirstFightOnboarding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstFightOnboarding.swift; sourceTree = "<group>"; };
         C12109202600000000000002 /* SpecialPurchases.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpecialPurchases.swift; sourceTree = "<group>"; };
+        C12409202600000000000002 /* CustomCharacterPurchases.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomCharacterPurchases.swift; sourceTree = "<group>"; };
+        C12409202600000000000004 /* PaidCharacterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaidCharacterView.swift; sourceTree = "<group>"; };
         FB2026091621080000000002 /* FeedActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedActivity.swift; sourceTree = "<group>"; };
         FB2026091702150000000002 /* FeedMention.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedMention.swift; sourceTree = "<group>"; };
         A10000000000000000000010 /* FitFight.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FitFight.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -239,6 +243,8 @@
             isa = PBXGroup;
             children = (
                 C12109202600000000000002 /* SpecialPurchases.swift */,
+                C12409202600000000000002 /* CustomCharacterPurchases.swift */,
+                C12409202600000000000004 /* PaidCharacterView.swift */,
                 A10000000000000000000011 /* FitFightApp.swift */,
                 A10000000000000000000012 /* ContentView.swift */,
                 A10000000000000000000019 /* AppModel.swift */,
@@ -470,6 +476,8 @@
             buildActionMask = 2147483647;
             files = (
                 C12109202600000000000001 /* SpecialPurchases.swift in Sources */,
+                C12409202600000000000001 /* CustomCharacterPurchases.swift in Sources */,
+                C12409202600000000000003 /* PaidCharacterView.swift in Sources */,
                 A10000000000000000000001 /* FitFightApp.swift in Sources */,
                 A10000000000000000000002 /* ContentView.swift in Sources */,
                 A10000000000000000000003 /* AppVersion.swift in Sources */,

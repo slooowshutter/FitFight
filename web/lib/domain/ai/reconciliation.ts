@@ -2,6 +2,8 @@ import { ApiError } from "@/lib/http";
 import { readAiRun } from "@/lib/domain/ai/workflow-requests";
 import { dueAiRequests } from "@/lib/supabase/queries/ai-requests-supabase-query";
 import { insertAiHttpLogs } from "@/lib/supabase/queries/ai-http-logs-supabase-query";
+import { dueCustomCharacterPurchases } from "@/lib/supabase/queries/custom-characters-supabase-query";
+import { advancePaidCharacter } from "@/lib/domain/ai/paid-character";
 import {
     correlateAiRequest,
     observeAiCall,
@@ -14,6 +16,8 @@ export async function reconcileAiRuns(
         due: dueAiRequests,
         read: readAiRun,
         pruneLogs: insertAiHttpLogs,
+        paidDue: dueCustomCharacterPurchases,
+        paidAdvance: advancePaidCharacter,
     },
 ) {
     await deps.pruneLogs([]);
@@ -70,6 +74,18 @@ export async function reconcileAiRuns(
                 ].includes(error.code)
             )
                 throw error;
+        }
+    }
+    if (deps.paidDue && deps.paidAdvance && performance.now() < deadline) {
+        for (const purchase of await deps.paidDue()) {
+            if (performance.now() >= deadline) break;
+            try {
+                await deps.paidAdvance(purchase.userId, purchase.id, {});
+            } catch (error) {
+                if (!(error instanceof ApiError)) throw error;
+                if (!["ai_busy", "ai_unavailable", "ai_rate_limited", "ai_daily_limit", "ai_in_progress"].includes(error.code))
+                    throw error;
+            }
         }
     }
     correlateAiRequest({

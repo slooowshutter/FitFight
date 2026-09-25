@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 25,
+            notes: "Animal cards in the picker are all the same size now, whatever the name length."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 25,
             notes: "Current fights show as cards: your lead or gap, everyone’s avatars, your place, and a gold bar with the day and time left."
         ),
         ReleaseNote(

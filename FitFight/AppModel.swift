@@ -1726,7 +1726,7 @@ final class AppModel: ObservableObject {
         return a
     }
 
-    private static func ordinal(_ value: Int) -> String {
+    static func ordinal(_ value: Int) -> String {
         let formatter = NumberFormatter()
         formatter.locale = AppLocalization.locale
         formatter.numberStyle = .ordinal

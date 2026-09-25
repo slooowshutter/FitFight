@@ -14704,6 +14704,36 @@
                     }
                 }
             }
+        },
+        "Use a photo": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Utiliser une photo"
+                    }
+                }
+            }
+        },
+        "Change picture": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Changer l’image"
+                    }
+                }
+            }
+        },
+        "Name": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nom"
+                    }
+                }
+            }
         }
     },
     "version": "1.0"

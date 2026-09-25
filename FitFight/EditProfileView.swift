@@ -15,6 +15,7 @@ struct EditProfileView: View {
     @State private var saving = false
     @State private var pickerItem: PhotosPickerItem?
     @State private var showingCompanions = false
+    @State private var showingPhotos = false
     @State private var previewAudience = "stranger"
     @State private var showingPreview = false
     @FocusState private var displayNameFocused: Bool
@@ -31,18 +32,35 @@ struct EditProfileView: View {
                         if error == nil { ProgressView() }
                         else { FFButton(title: String(appLocalized: "Retry"), kind: .secondary) { Task { await load() } } }
                     } else {
+                        // Your companion is your profile picture; a photo is the alternative behind the same button.
+                        VStack(spacing: 10) {
+                            CompanionAvatar(
+                                personID: session.profile?.userId.uuidString, companionID: session.profile?.companionId, isYou: true,
+                                monogram: session.profile?.initials ?? "FF", photoURL: session.profile?.photoURL, size: 104
+                            )
+                            Menu {
+                                Button(String(appLocalized: "Choose your companion")) { showingCompanions = true }
+                                Button(String(appLocalized: "Use a photo")) { showingPhotos = true }
+                            } label: {
+                                Text(String(appLocalized: "Change picture")).ffType(.label).foregroundStyle(theme.mossText).frame(minHeight: 44)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
                         FFCard {
                             VStack(alignment: .leading, spacing: 16) {
-                                TextField(String(appLocalized: "Display name"), text: $displayName)
-                                    .textContentType(.name)
-                                    .focused($displayNameFocused)
-                                TextField(String(appLocalized: "Username"), text: $handle)
-                                    .textInputAutocapitalization(.never).autocorrectionDisabled().textContentType(.username)
-                                    .focused($handleFocused)
-                                PhotosPicker(selection: $pickerItem, matching: .images) {
-                                    Text(String(appLocalized: "Change profile photo"))
-                                }.frame(minHeight: 44)
-                                Button(String(appLocalized: "Choose your companion")) { showingCompanions = true }.frame(minHeight: 44)
+                                field(String(appLocalized: "Name")) {
+                                    TextField(String(appLocalized: "Display name"), text: $displayName)
+                                        .textContentType(.name)
+                                        .focused($displayNameFocused)
+                                }
+                                field(String(appLocalized: "Username")) {
+                                    HStack(spacing: 2) {
+                                        Text(verbatim: "@").foregroundStyle(theme.textSecondary)
+                                        TextField(String(appLocalized: "Username"), text: $handle)
+                                            .textInputAutocapitalization(.never).autocorrectionDisabled().textContentType(.username)
+                                            .focused($handleFocused)
+                                    }
+                                }
                                 FFDivider()
                                 FitFightTimeZonePicker(selection: $timeZone)
                                 Text(String(appLocalized: "Your daily Steps and new Fights use this time zone, even when you travel."))
@@ -122,6 +140,7 @@ struct EditProfileView: View {
         .task { await load() }
         .onChange(of: session.authSession?.user.id) { _, _ in settings = nil; dismiss() }
         .onChange(of: pickerItem) { _, item in Task { await uploadPhoto(item) } }
+        .photosPicker(isPresented: $showingPhotos, selection: $pickerItem, matching: .images)
         .sheet(isPresented: $showingCompanions) {
             CompanionPicker(selection: companions.selection, required: false, isCustom: companions.isCustom, prompt: companions.customPrompt)
                 .fitFightTheme(theme).presentationBackground(theme.bg)
@@ -131,6 +150,16 @@ struct EditProfileView: View {
                 ProfileSheet(userID: userID, source: "friends", preview: previewAudience)
                     .fitFightTheme(theme).presentationBackground(theme.bg)
             }
+        }
+    }
+
+    private func field<Content: View>(_ label: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label).ffType(.eyebrow).foregroundStyle(theme.textSecondary)
+            content()
+                .padding(.horizontal, 14)
+                .frame(minHeight: 48)
+                .background(theme.control, in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
         }
     }
 

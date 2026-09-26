@@ -169,4 +169,50 @@ test("each verified consumable funds exactly one recoverable portrait and five-i
     assert.equal(secondRetry.kind, "avatar");
     if (secondRetry.kind !== "avatar") assert.fail("Expected a portrait retry");
     assert.notEqual(secondRetry.key, secondStart.key);
+
+    const otherTransactionId = BigInt(`0x${randomUUID().replaceAll("-", "")}`).toString();
+    const otherPurchase = await recordCustomCharacterTransaction(appleCustomCharacterTransactionSchema.parse({
+        ...receipt, transactionId: otherTransactionId, originalTransactionId: otherTransactionId, appAccountToken: otherAccount,
+    }), database);
+    const otherStart = await prepareCustomCharacterStage(other, otherPurchase.purchase_id, { description: "A gray owl" }, database);
+    if (otherStart.kind !== "avatar") assert.fail("Expected a portrait stage");
+    assert.ok((await dueCustomCharacterPurchases(database)).some((item) => item.id === otherPurchase.purchase_id));
+    const blocker = await reserveAiRequest(other, {
+        ...avatarInput, resourceId: null, idempotencyKey: randomUUID(), requestHash: "d".repeat(64), description: "An unpaid owl",
+    }, limits, database);
+    assert.equal(blocker.shouldStart, true);
+    const otherInput = {
+        ...avatarInput, resourceId: otherPurchase.purchase_id, idempotencyKey: otherStart.key,
+        requestHash: "e".repeat(64), description: otherStart.description,
+    };
+    await assert.rejects(reserveAiRequest(other, otherInput, limits, database), { code: "ai_in_progress" });
+    assert.equal((await dueCustomCharacterPurchases(database)).some((item) => item.id === otherPurchase.purchase_id), false);
+    assert.ok(blocker.request.lease_token);
+    await finishAiRequestAttempt(other, blocker.request.id, blocker.request.lease_token, {
+        status: "failed", runHandle: null, result: null, errorCode: "ai_failed",
+    }, {}, database);
+    assert.ok((await dueCustomCharacterPurchases(database)).some((item) => item.id === otherPurchase.purchase_id));
+
+    const otherRun = await reserveAiRequest(other, otherInput, limits, database);
+    assert.equal(otherRun.shouldStart, true);
+    await assert.rejects(prepareCustomCharacterStage(other, otherPurchase.purchase_id, { description: "A white owl" }, database), {
+        code: "ai_request_conflict",
+    });
+    assert.ok(otherRun.request.lease_token);
+    await finishAiRequestAttempt(other, otherRun.request.id, otherRun.request.lease_token, {
+        status: "failed", runHandle: null, result: null, errorCode: "ai_failed",
+    }, {}, database);
+    const renamed = await prepareCustomCharacterStage(other, otherPurchase.purchase_id, { description: "A white owl" }, database);
+    if (renamed.kind !== "avatar") assert.fail("Expected a portrait for the new description");
+    assert.equal(renamed.description, "A white owl");
+    assert.notEqual(renamed.key, otherStart.key);
+    assert.equal((await readCustomCharacterStore(other, database)).characters[0].description, "A white owl");
+    await assert.rejects(reserveAiRequest(other, { ...otherInput, idempotencyKey: renamed.key }, limits, database), {
+        code: "ai_request_conflict",
+    });
+    const renamedRun = await reserveAiRequest(other, {
+        ...otherInput, idempotencyKey: renamed.key, requestHash: "f".repeat(64), description: renamed.description,
+    }, limits, database);
+    assert.equal(renamedRun.shouldStart, true);
+    assert.equal(renamedRun.request.description, "A white owl");
 });

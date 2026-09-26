@@ -5,7 +5,10 @@ import SwiftUI
 struct ProfileFoldedTape: View {
     let theirName: String
     let theirAnimal: StockCompanion?
+    /// A custom character has no stock animal; its artwork is the profile picture.
+    let theirPicture: URL?
     let yourAnimal: StockCompanion?
+    let yourPicture: URL?
     /// Nil when the score is private or there is no one-on-one yet; `note` explains which.
     let rivalry: ProfileRivalry?
     let note: String?
@@ -30,8 +33,8 @@ struct ProfileFoldedTape: View {
                     }
                 }
                 HStack(spacing: 8) {
-                    art(yourAnimal)
-                    art(theirAnimal)
+                    art(yourAnimal, picture: yourPicture)
+                    art(theirAnimal, picture: theirPicture)
                 }
                 if let note {
                     Text(note).ffType(.caption).foregroundStyle(theme.textSecondary)
@@ -45,8 +48,11 @@ struct ProfileFoldedTape: View {
                     .ffType(.eyebrow).foregroundStyle(theme.textSecondary)
                     .padding(.bottom, 6)
                     row(String(appLocalized: "This week"), yours?.week.totalSteps, theirs?.week.totalSteps)
-                    row(String(appLocalized: "Daily average"), yours?.averageSteps, theirs?.averageSteps)
-                    row(String(appLocalized: "Best day"), yours?.bestDay?.steps, theirs?.bestDay?.steps)
+                    // Your own statistics cover all your history; a friend shares only 7 or 30 days.
+                    if yours?.scopeDays == theirs?.scopeDays || theirs == nil {
+                        row(String(appLocalized: "Daily average"), yours?.averageSteps, theirs?.averageSteps)
+                        row(String(appLocalized: "Best day"), yours?.bestDay?.steps, theirs?.bestDay?.steps)
+                    }
                 }
             }
         }
@@ -63,10 +69,12 @@ struct ProfileFoldedTape: View {
         .accessibilityElement(children: .combine)
     }
 
-    private func art(_ animal: StockCompanion?) -> some View {
+    private func art(_ animal: StockCompanion?, picture: URL?) -> some View {
         Group {
             if let animal {
                 Image(animal.image).resizable().scaledToFit()
+            } else if let picture {
+                RemotePhoto(url: picture, contentMode: .fit) { Color.clear }
             } else {
                 Image(systemName: "figure.walk").font(.system(size: 64)).foregroundStyle(theme.textSecondary)
             }

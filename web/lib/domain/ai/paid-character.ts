@@ -6,7 +6,7 @@ import {
 } from "@/lib/supabase/queries/custom-characters-supabase-query";
 import type { CustomCharacterAdvanceRequest } from "@/lib/types/ai/custom-character";
 
-/** A purchase fixes one description; the same durable action key resumes each paid Blend stage. */
+/** A purchase keeps one description unless its portrait failed; the same durable action key resumes each paid Blend stage. */
 export async function advancePaidCharacter(
     userId: string,
     purchaseId: string,

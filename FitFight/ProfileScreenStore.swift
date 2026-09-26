@@ -65,10 +65,13 @@ final class ProfileScreenStore: ObservableObject {
             guard requestGeneration == generation, accountID == session.authSession?.user.id else { return }
             history.append(contentsOf: page.results)
             nextCursor = page.nextCursor
+            error = nil
         } catch is CancellationError {
         } catch {
-            guard requestGeneration == generation else { return }
-            clear()
+            guard requestGeneration == generation, accountID == session.authSession?.user.id else { return }
+            // A network failure keeps the rows and cursor for Load more; a server refusal
+            // (blocked, deleted, invalid cursor) hides the Profile as before.
+            if !(error is URLError) { clear() }
             self.error = error.localizedDescription
         }
     }

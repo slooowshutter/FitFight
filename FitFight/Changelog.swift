@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 26,
+            notes: "Steps and fights update right after you open the app instead of waiting for your full Apple Health history to upload, and Fights shows Syncing… until today’s steps arrive. You opens instantly with your last numbers, and Dashboard shows your Steps straight away. Edit profile has Profile visibility and Share Steps history again, so friends you share with see your stats and fighter."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 26,
             notes: "Choosing a companion is now a big swipeable stage, with a grid button to see them all. Tabs are All, Specials and Yours, and onboarding uses the same stage."
         ),
         ReleaseNote(

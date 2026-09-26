@@ -141,12 +141,18 @@ struct ProfileSheet: View {
                 theirName: profile.identity.displayName,
                 // Same lookup as the avatars, so your own companion shows even when the profile field is empty.
                 theirAnimal: companions.animal(for: userID.uuidString, companionID: profile.identity.companionId, isYou: false),
+                theirPicture: profile.identity.avatarUrl,
                 yourAnimal: companions.animal(for: session.profile?.userId.uuidString, companionID: session.profile?.companionId, isYou: true),
+                yourPicture: session.profile?.photoURL,
                 rivalry: duels > 0 ? profile.rivalry : nil,
                 note: duels > 0 ? nil : profile.competitive ? String(appLocalized: "No one-on-one yet") : String(appLocalized: "Keeps the score private"),
                 yours: ownStore.profile?.stepStatistics,
                 theirs: profile.stepStatistics
             )
+            // What they share, labelled with its own 7 or 30 day period.
+            if let statistics = profile.stepStatistics {
+                ProfileStepStatisticsView(statistics: statistics)
+            }
         } else {
             if let record = profile.record { ProfileRecordCard(record: record) }
             if let rivalry = profile.rivalry {

@@ -14,6 +14,8 @@ struct YouView: View {
     @StateObject private var profileStore = ProfileScreenStore()
     @StateObject private var activity = YouActivityStore()
     @State private var showingEditProfile = false
+    /// The last own profile this phone loaded, shown until a fresh one lands.
+    @State private var cachedProfile: SharedProfile?
     @State private var rivals: [ProfileRivalrySummary] = []
     @State private var profileLoadGeneration = 0
     @State private var socialError: String?
@@ -25,6 +27,7 @@ struct YouView: View {
     @State private var showingBroadcastCompose = false
     @State private var showingHealthDetails = false
     @State private var showingCompanionPreviewControls = false
+    private static let profileCachePrefix = "fitfight.you."
 
     var body: some View {
         FFScreen(top: AnyView(VersionBanner(onTap: versionBannerTap)), refresh: fightsRefresh) {
@@ -34,7 +37,7 @@ struct YouView: View {
             }
             if session.isSignedIn {
                 YouStatsCard(
-                    todaySteps: todaySteps, statistics: profileStore.profile?.stepStatistics, record: profileStore.profile?.record,
+                    todaySteps: todaySteps, statistics: ownProfile?.stepStatistics, record: ownProfile?.record,
                     results: results, todayWorkouts: activity.sports.dropFirst().filter { ($0.values.last ?? 0) > 0 },
                     eightWeekSteps: activity.eightWeekSteps
                 )
@@ -67,14 +70,16 @@ struct YouView: View {
         }
         .navigationDestination(isPresented: $showingSettings) { settingsScreen }
         .navigationDestination(isPresented: $showingDashboard) {
-            DashboardView(sports: activity.sports, days: activity.days, statistics: profileStore.profile?.stepStatistics)
+            DashboardView(sports: activity.sports, days: activity.days, statistics: ownProfile?.stepStatistics, results: results)
         }
-        .task(id: session.authSession?.user.id) { await refreshOwnProfile() }
+        .onChange(of: session.authSession?.user.id, initial: true) { _, userID in
+            cachedProfile = userID
+                .flatMap { UserDefaults.standard.data(forKey: Self.profileCachePrefix + $0.uuidString) }
+                .flatMap { try? JSONDecoder().decode(SharedProfile.self, from: $0) }
+        }
+        .task(id: session.authSession?.user.id) { await loadOwnProfileAfterRefresh() }
         .onChange(of: scenePhase) { _, phase in
-            profileLoadGeneration += 1
-            profileStore.clear()
-            rivals = []
-            if phase == .active { Task { await refreshOwnProfile() } }
+            if phase == .active { Task { await loadOwnProfileAfterRefresh() } }
         }
         .sheet(isPresented: $showingEditProfile, onDismiss: { Task { await loadOwnProfile() } }) {
             EditProfileView().fitFightTheme(theme).presentationBackground(theme.bg)
@@ -107,6 +112,7 @@ struct YouView: View {
                     if await session.deleteAccount(), let userId {
                         preferences.removeCache(for: userId)
                         model.removeCachedFights(for: userId)
+                        UserDefaults.standard.removeObject(forKey: Self.profileCachePrefix + userId.uuidString)
                         if !(await steps.deleteLocalData(userId: userId)) {
                             let cleanupMessage = String(appLocalized: "Your account was deleted. FitFight will retry removing its local Health cache when you reopen the app.")
                             if let authError = session.authError {
@@ -125,13 +131,13 @@ struct YouView: View {
         }
     }
 
-    /// Won, lost and drew from the full fight history; group places below first count as lost.
+    private var ownProfile: SharedProfile? { profileStore.profile ?? cachedProfile }
+
+    /// Won, lost and drew from your record; group places below first count as lost.
+    /// Nil when the backend predates draws and losses, so the card shows wins over played.
     private var results: (won: Int, lost: Int, drew: Int)? {
-        let rows = profileStore.history.filter(\.counted)
-        guard !rows.isEmpty, profileStore.nextCursor == nil else { return nil }
-        let won = rows.filter { $0.result == "win" }.count
-        let drew = rows.filter { $0.result == "draw" }.count
-        return (won, rows.count - won - drew, drew)
+        guard let record = ownProfile?.record, let drew = record.draws, let lost = record.losses else { return nil }
+        return (record.wins, lost, drew)
     }
 
     private var todaySteps: Int? {
@@ -258,9 +264,21 @@ struct YouView: View {
         .navigationTitle(String(appLocalized: "Settings"))
     }
 
-    private func refreshOwnProfile(trigger: HealthKitStepsStore.SyncTrigger = .foreground, requestAccess: Bool = false) async {
+    private func refreshOwnProfile(trigger: HealthKitStepsStore.SyncTrigger, requestAccess: Bool = false) async {
         guard !staticRender else { return }
+        // Local Apple Health first: Dashboard and the sport list must not wait for the server.
+        await activity.load()
         await model.refreshFights(session: session, steps: steps, trigger: trigger, requestAccess: requestAccess)
+        guard !Task.isCancelled else { return }
+        if requestAccess { await activity.load() }
+        await loadOwnProfile()
+    }
+
+    /// FitFightApp uploads Steps at launch and on return from background; appearing only waits for that upload.
+    private func loadOwnProfileAfterRefresh() async {
+        guard !staticRender else { return }
+        await activity.load()
+        await model.waitForRefresh()
         guard !Task.isCancelled else { return }
         await loadOwnProfile()
     }
@@ -272,15 +290,15 @@ struct YouView: View {
         socialError = nil
         profileStore.clear()
         guard !staticRender, let userID = session.authSession?.user.id ?? CompanionPreview.youID else { return }
-        await profileStore.load(userID: userID, session: session)
-        while profileStore.nextCursor != nil, !Task.isCancelled {
-            await profileStore.loadMore(userID: userID, session: session)
+        async let rivalsRequest = CompanionPreview.isEnabled ? [] : FitFightAPI().ownRivalries(accessToken: session.freshAccessToken())
+        await profileStore.load(userID: userID, session: session, includeHistory: false)
+        if requestGeneration == profileLoadGeneration, session.authSession?.user.id == userID,
+           let loaded = profileStore.profile, let data = try? JSONEncoder().encode(loaded) {
+            UserDefaults.standard.set(data, forKey: Self.profileCachePrefix + userID.uuidString)
+            cachedProfile = loaded
         }
-        await activity.load()
-        guard !CompanionPreview.isEnabled else { return }
         do {
-            let token = try await session.freshAccessToken()
-            let loadedRivals = try await FitFightAPI().ownRivalries(accessToken: token)
+            let loadedRivals = try await rivalsRequest
             try Task.checkCancellation()
             guard requestGeneration == profileLoadGeneration, session.authSession?.user.id == userID else { return }
             rivals = loadedRivals

@@ -211,6 +211,8 @@ struct FitFightApp: App {
                     steps.activate(userId: appUpdate.allowsUse ? session.authSession?.user.id : nil)
                     guard appUpdate.allowsUse else { return }
                     model.restoreCachedFights(session: session)
+                    // Before sign-in is restored this run skips Apple Health, and the real run would only join it.
+                    guard session.authSession != nil else { return }
                     await model.refreshFights(session: session, steps: steps)
                     if session.firstFightOnboarding == nil,
                        !session.needsOnboarding,

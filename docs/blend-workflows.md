@@ -80,10 +80,11 @@ journey and the account's completed character library. One verified EUR 4.99
 Apple consumable funds one character, not unlimited starts. The backend saves a
 portrait action key and, after that image is validated, a fitness action key.
 Closing the app does not interrupt settlement or the background start of the
-second workflow. Failed stages can be retried on the same purchase; an
-unconfirmed provider start is held for operator evidence. The old credit routes
-remain compatible for existing clients, and Group Photo is not part of the
-paid character purchase. These controls do not send HealthKit data to Blend.
+second workflow. Failed stages can be retried on the same purchase, and a failed
+or cancelled portrait can take a new description; an unconfirmed provider start
+is held for operator evidence. The old credit routes remain compatible for
+existing clients, and Group Photo is not part of the paid character purchase.
+These controls do not send HealthKit data to Blend.
 
 For existing credit clients, the native app persists the exact action inputs and UUID key before submission,
 then persists the request ID under the account's local key. Closing the screen stops local polling; reopening resumes the same
@@ -226,9 +227,11 @@ authenticated with `CRON_SECRET` (or the existing `FITFIGHT_CRON_SECRET` alias).
 It selects at most four due known runs and uses the same status decoder, shared
 provider limits, leases and atomic settlement as phone polling. It bypasses only
 the user's caller counter. Work stops at the bounded invocation deadline or shared
-cooldown. Runs are selected by oldest due time. Concurrent cron/phone invocations
-cannot settle twice. Configure and verify a frequent hosted scheduler for each
-environment, including staging, before enabling starts. The repository documents
+cooldown. Runs are selected by oldest due time. It then resumes up to four paid
+character stages whose inputs were saved, skipping owners who already have an
+unresolved request. Concurrent cron/phone invocations cannot settle twice.
+Configure and verify a frequent hosted scheduler for each environment,
+including staging, before enabling starts. The repository documents
 Supabase Cron for staging scheduled work. Its secret/configuration is not available
 to this workspace. [Vercel Hobby permits daily cron jobs](https://vercel.com/docs/cron-jobs/usage-and-pricing),
 and [Vercel cron targets production deployments](https://vercel.com/docs/cron-jobs),

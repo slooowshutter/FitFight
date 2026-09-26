@@ -13,6 +13,8 @@
         "played": 10,
         "wins": 3,
         "win_rate": 0.3,
+        "draws": 1,
+        "losses": 6,
         "categories": {
             "public": {
                 "played": 0,

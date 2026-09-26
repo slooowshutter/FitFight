@@ -9,6 +9,7 @@ import tempfile
 
 root = Path(__file__).resolve().parents[1]
 you = (root / "FitFight/YouView.swift").read_text()
+app = (root / "FitFight/AppModel.swift").read_text()
 
 
 def body_after(text, marker):
@@ -24,18 +25,21 @@ def body_after(text, marker):
 initial_task = re.search(r"\.task(?:\(id: session\.authSession\?\.user\.id\))? \{", you).group()
 manual = body_after(you, "private var fightsRefresh:")
 health = body_after(you, "private var health:")
-helper = ""
-if "    private func refreshOwnProfile(" in you:
-    start = you.index("    private func refreshOwnProfile(")
+foreground = body_after(you, ".onChange(of: scenePhase)")
+helpers = ""
+for signature in ["    private func refreshOwnProfile(", "    private func loadOwnProfileAfterRefresh("]:
+    start = you.index(signature)
     opening = you.index("{", start)
-    helper = you[start:opening + 1] + body_after(you, "private func refreshOwnProfile(") + "}\n"
+    helpers += you[start:opening + 1] + body_after(you, signature) + "}\n"
 
 source = (root / "tests/ProfileRefreshTests.swift").read_text()
 for marker, implementation in {
     "// INITIAL_REFRESH": body_after(you, initial_task),
     "// MANUAL_REFRESH": body_after(manual, "action:"),
     "// HEALTH_REFRESH": body_after(health, "Task"),
-    "// REFRESH_HELPER": helper,
+    "// FOREGROUND_REFRESH": body_after(foreground, "Task"),
+    "// REFRESH_HELPER": helpers,
+    "// WAIT_FOR_REFRESH": body_after(app, "    func waitForRefresh()"),
 }.items():
     source = source.replace(marker, implementation)
 

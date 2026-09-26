@@ -5,6 +5,7 @@ import { profileStepStatisticsSchema } from "./profile-step-statistics";
 
 export const profileCountRowSchema = z.object({ n: z.number().int().nonnegative() });
 export const profileIdentifierRowSchema = z.object({ id: z.string().uuid() });
+export const profileSharedFightRowSchema = z.object({ user_id: z.string().uuid(), id: z.string().uuid() });
 
 export const profileUserIDSchema = z.string().uuid().transform((value) => value.toLowerCase());
 
@@ -161,3 +162,4 @@ export type ProfileRivalrySummary = z.infer<typeof profileRivalrySummarySchema>;
 
 export type ProfileCountRow = z.infer<typeof profileCountRowSchema>;
 export type ProfileIdentifierRow = z.infer<typeof profileIdentifierRowSchema>;
+export type ProfileSharedFightRow = z.infer<typeof profileSharedFightRowSchema>;

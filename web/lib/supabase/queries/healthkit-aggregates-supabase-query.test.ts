@@ -881,6 +881,41 @@ test("Apple Health aggregate sync receives every reading before resolving it", a
     }
 });
 
+test("Apple Health aggregate sync claims and reports only the readings it received", async () => {
+    const intakeIds = [
+        "6f1c1a52-0f55-4c1c-9b61-2f0f5e0f9a01",
+        "6f1c1a52-0f55-4c1c-9b61-2f0f5e0f9a02",
+    ];
+    const { database, queries } = createDatabaseStub((query) => {
+        if (query.includes("returning id, complete_through")) {
+            return [sourceRow];
+        }
+        if (query.includes("from public.fights as fight")) {
+            return [liveFightRow];
+        }
+        if (query.includes("insert into private.activity_raw")) {
+            return intakeIds.map((id) => ({ id }));
+        }
+        return [];
+    });
+
+    const result = await syncHealthKitAggregates(
+        "5b2216f4-762d-4890-a516-63046a01df31",
+        healthKitAggregateSyncSchema.parse(validAggregate),
+        database,
+    );
+
+    assert.equal(result.processing, "processed");
+    for (const statement of ["set processing_state = 'processing'", "as count"]) {
+        const found = queries.find(({ query }) => query.includes(statement));
+        assert.deepEqual(
+            found?.values.filter((value) => Array.isArray(value)),
+            [intakeIds, intakeIds],
+            "A Steps upload never claims or waits on the activity import's rows",
+        );
+    }
+});
+
 test("Apple Health aggregate sync ignores client workout day sums and never infers deletions", async () => {
     const { database, queries } = createDatabaseStub((query) => {
         if (query.includes("returning id, complete_through")) {

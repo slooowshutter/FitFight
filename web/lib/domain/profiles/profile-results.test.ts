@@ -88,3 +88,22 @@ test("removal does not turn a group into a duel", () => {
 test("historical rivalry scores cannot expose rematch details after either person leaves", () => {
     assert.deepEqual(rivalryRecord([fight], first, second, new Set()), { wins: 1, losses: 0, draws: 0, rematch: null });
 });
+
+test("a rivalry scores the same from either person's recorded Fights", () => {
+    const third = "00000000-0000-4000-8000-000000000006";
+    const [recent, older, firstOnly, secondOnly] = [10, 11, 12, 13].map((n) => `00000000-0000-4000-8000-0000000000${n}`);
+    const record = (id: string, historyId: number, members: typeof fight.members) => ({
+        ...fight, id, history_id: `00000000-0000-4000-8000-0000000000${historyId}`, members,
+    });
+    const loss = fight.members.map((member) => ({ ...member, rank: member.rank === 1 ? 2 : 1 }));
+    const withThird = (index: number) => [fight.members[index], { ...fight.members[1 - index], user_id: third }];
+    // Each person's history IDs differ, and each also has a duel the other never joined.
+    const firstFacts = [record(recent, 20, fight.members), record(firstOnly, 21, withThird(0)), record(older, 22, loss)];
+    const secondFacts = [record(recent, 30, fight.members), record(older, 31, loss), record(secondOnly, 32, withThird(1))];
+    for (const shared of [new Set<string>(), new Set([older]), new Set([recent, older])]) {
+        assert.deepEqual(rivalryRecord(firstFacts, first, second, shared), rivalryRecord(secondFacts, first, second, shared));
+    }
+    assert.deepEqual(rivalryRecord(firstFacts, first, second, new Set([recent, older])), {
+        wins: 1, losses: 1, draws: 0, rematch: { duration_seconds: 3 * 86400, duration_days: 3, action_text: "Make coffee" },
+    });
+});

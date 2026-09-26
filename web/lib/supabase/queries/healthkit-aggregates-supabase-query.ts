@@ -22,7 +22,7 @@ export async function syncHealthKitAggregates(
     input: HealthKitAggregateSync,
     database: Sql = createDatabaseClient(),
 ): Promise<HealthKitAggregateSyncResponse> {
-    await database.begin("read write", async (sql) => {
+    const intake = await database.begin("read write", async (sql) => {
         const [sourceRow] = await sql`
             insert into public.data_sources (
                 user_id, provider, source_label, connection_route, capabilities,
@@ -178,7 +178,7 @@ export async function syncHealthKitAggregates(
         }
 
         const derivedMetrics: readonly string[] = workoutDayMetricValues;
-        await insertActivityRaw(sql, userId, source.id, input.complete_through, [
+        return insertActivityRaw(sql, userId, source.id, input.complete_through, [
             ...input.fight_aggregates.map((aggregate) => {
                 const zone =
                     fightsById.get(aggregate.fight_id)?.time_zone ??
@@ -248,6 +248,7 @@ export async function syncHealthKitAggregates(
         complete_through: input.complete_through,
         synced_days: input.merged_days.length,
         synced_fights: input.fight_aggregates.length,
-        processing: await processActivity({ userId }, database),
+        // The activity import resolves its own backlog; a Steps upload waits only for its readings.
+        processing: await processActivity({ userId, rawIds: intake.ids }, database),
     };
 }

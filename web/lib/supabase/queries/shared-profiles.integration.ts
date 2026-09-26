@@ -5,9 +5,9 @@ import postgres from "postgres";
 import { randomJoinCode } from "@/lib/domain/fights/join-code";
 import { ApiError } from "@/lib/http";
 import { databaseTestEnvironmentSchema } from "@/lib/types/testing/database";
-import { defaultProfileSettings, profilePageQuerySchema } from "@/lib/types/profiles/shared-profile";
+import { defaultProfileSettings, profilePageQuerySchema, type ProfileRivalrySummary } from "@/lib/types/profiles/shared-profile";
 import { friendsQuerySchema } from "@/lib/types/friends/friendship";
-import { readSharedProfile, readProfileHistory, readProfileSettings, updateProfileSettings } from "./shared-profiles-supabase-query";
+import { readOwnRivalries, readSharedProfile, readProfileHistory, readProfileSettings, updateProfileSettings } from "./shared-profiles-supabase-query";
 import { blockProfile, changeFriendship, listProfileFriends } from "./profile-friends-supabase-query";
 import { pruneProfileEvents, recordProfileView } from "./profile-events-supabase-query";
 import { deleteAccount } from "./delete-account-supabase-query";
@@ -427,6 +427,107 @@ test("shared Profile history contains only Fights both people still belong to", 
     const second = await readProfileHistory(viewer, target, profilePageQuerySchema.parse({ shared: "true", limit: 2, cursor: first.next_cursor }), database);
     assert.deepEqual([...first.results, ...second.results].map((fight) => fight.fight_id).sort(), expected);
     assert.equal(second.next_cursor, null);
+});
+
+test("history pages follow end time, then Fight ID, and reject cursors outside the requested list", async (t) => {
+    const users = [randomUUID(), randomUUID()];
+    const [owner, opponent] = users;
+    const fightIds = Array.from({ length: 5 }, () => randomUUID());
+    t.after(async () => {
+        await database`delete from public.fights where id in ${database(fightIds)}`;
+        await database`delete from auth.users where id in ${database(users)}`;
+    });
+    for (const id of users) await database`insert into auth.users(id) values (${id})`;
+    await updateProfileSettings(owner, { competitive: true, audience: "public" }, database);
+    const [clock] = await database`select now()::text as now`;
+    for (const [index, fightId] of fightIds.entries()) {
+        // Pairs share an end time, so only the Fight ID orders them.
+        await database`insert into public.fights(id, owner_id, name, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy)
+            values (${fightId}, ${owner}, 'Paged Fight', 'live', ${clock.now}::timestamptz - interval '1 hour',
+                ${clock.now}::timestamptz + ${Math.floor(index / 2) + 1} * interval '1 hour', 'UTC', 'highest_total', 'shared')`;
+        for (const userId of users) {
+            await database`insert into public.fight_members(fight_id, user_id, state, accepted_at)
+                values (${fightId}, ${userId}, 'accepted', now())`;
+        }
+    }
+    await database`update public.fight_members set state = 'withdrawn' where fight_id = ${fightIds[1]} and user_id = ${opponent}`;
+    const ordered = (await database`select id from public.fights where id in ${database(fightIds)} order by ends_at desc, id desc`)
+        .map((row) => row.id);
+    const full = await readProfileHistory(owner, owner, profilePageQuerySchema.parse({ limit: 50 }), database);
+    assert.deepEqual(full.results.map((fight) => fight.fight_id), ordered);
+    assert.equal(full.next_cursor, null);
+    for (const [viewer, shared] of [[owner, "false"], [opponent, "false"], [opponent, "true"]] as const) {
+        const expected = await readProfileHistory(viewer, owner, profilePageQuerySchema.parse({ shared, limit: 50 }), database);
+        assert.equal(expected.results.length, shared === "true" ? 4 : 5);
+        // Every cursor, including the last row, continues exactly where the complete list does.
+        for (const limit of [1, 2, 3]) {
+            for (const [start, cursor] of [undefined, ...expected.results.map((fight) => fight.id)].entries()) {
+                const results = expected.results.slice(start, start + limit);
+                assert.deepEqual(await readProfileHistory(viewer, owner, profilePageQuerySchema.parse({ shared, limit, cursor }), database), {
+                    results, next_cursor: start + limit < expected.results.length ? results[results.length - 1].id : null,
+                });
+            }
+        }
+    }
+    const withdrawn = full.results.find((fight) => fight.fight_id === fightIds[1])!.id;
+    await assert.rejects(readProfileHistory(opponent, owner, profilePageQuerySchema.parse({ shared: "true", cursor: withdrawn }), database),
+        (error: unknown) => error instanceof ApiError && error.status === 400);
+});
+
+test("rivalries match each opponent's Profile, newest first, under current sharing and blocks", async (t) => {
+    const viewer = randomUUID();
+    const opponents = Array.from({ length: 11 }, () => randomUUID());
+    const users = [viewer, ...opponents];
+    const fightIds = opponents.map(() => randomUUID());
+    const olderId = randomUUID();
+    t.after(async () => {
+        await database`delete from public.fights where id = any(${database.array([...fightIds, olderId])}::uuid[])`;
+        await database`delete from auth.users where id in ${database(users)}`;
+    });
+    for (const id of users) await database`insert into auth.users(id) values (${id})`;
+    const duels = [
+        ...fightIds.map((id, index) => ({ id, opponent: opponents[index], hours: opponents.length - index, action: "Make coffee", viewerWins: true })),
+        { id: olderId, opponent: opponents[0], hours: 0.5, action: "Older dare", viewerWins: false },
+    ];
+    for (const duel of duels) {
+        await database`insert into public.fights(id, owner_id, name, action_text, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy)
+            values (${duel.id}, ${viewer}, 'Duel', ${duel.action}, 'live', now() - interval '1 hour',
+                now() + ${duel.hours} * interval '1 hour', 'UTC', 'highest_total', 'shared')`;
+        for (const userId of [viewer, duel.opponent]) {
+            await database`insert into public.fight_members(fight_id, user_id, state, accepted_at) values (${duel.id}, ${userId}, 'accepted', now())`;
+        }
+        const winner = duel.viewerWins ? viewer : duel.opponent;
+        await database`update public.fight_members set current_value = case when user_id = ${winner} then 1000 else 500 end,
+            rank = case when user_id = ${winner} then 1 else 2 end, final_steps_complete = true where fight_id = ${duel.id}`;
+        await database`update public.fights set state = 'final' where id = ${duel.id}`;
+    }
+    for (const [index, opponent] of opponents.entries()) {
+        await updateProfileSettings(opponent, { competitive: index !== 2, audience: index === 1 || index === 3 ? "private" : "public" }, database);
+    }
+    await changeFriendship(viewer, opponents[3], "request", database);
+    await changeFriendship(opponents[3], viewer, "accept", database);
+    await blockProfile(viewer, opponents[4], database);
+    await database`update public.profiles set deleted_at = now() where id = ${opponents[5]}`;
+    await database`update public.fight_members set state = 'withdrawn' where fight_id = ${fightIds[6]} and user_id = ${opponents[6]}`;
+
+    const expected: ProfileRivalrySummary[] = [];
+    for (const opponent of opponents) {
+        try {
+            const profile = await readSharedProfile(viewer, opponent, undefined, database);
+            if (profile.rivalry) expected.push({ identity: profile.identity, rivalry: profile.rivalry });
+        } catch (error) {
+            if (!(error instanceof ApiError) || error.status !== 404) throw error;
+        }
+    }
+    const rivalries = await readOwnRivalries(viewer, database);
+    assert.deepEqual(rivalries, expected.slice(0, 6));
+    assert.deepEqual(rivalries.map((rival) => rival.identity.user_id), [0, 3, 6, 7, 8, 9].map((index) => opponents[index]));
+    assert.deepEqual(rivalries[0].rivalry, {
+        wins: 1, losses: 1, draws: 0,
+        rematch: { duration_seconds: 12 * 3600, duration_days: null, action_text: "Make coffee" },
+    });
+    assert.equal(rivalries[2].rivalry.rematch, null, "A departed opponent keeps the score without rematch details");
+    await assert.rejects(readOwnRivalries(opponents[5], database), (error: unknown) => error instanceof ApiError && error.status === 404);
 });
 
 test("leaving a series hides its past rounds and rematch details from both Profiles", async (t) => {

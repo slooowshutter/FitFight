@@ -66,6 +66,8 @@ export const selectedActivityRawSchema = z.object({
     collected_at: timestampSchema,
 });
 
+export const activityRawIdSchema = z.object({ id: z.string().uuid() });
+
 export const claimedActivityRawSchema = z.object({
     id: z.string().uuid(),
     user_id: z.string().uuid(),
@@ -97,6 +99,7 @@ export type FightTotalPayload = z.infer<typeof fightTotalPayloadSchema>;
 export type WorkoutPayload = z.infer<typeof workoutPayloadSchema>;
 export type SamplePayload = z.infer<typeof samplePayloadSchema>;
 export type SelectedActivityRaw = z.infer<typeof selectedActivityRawSchema>;
+export type ActivityRawId = z.infer<typeof activityRawIdSchema>;
 export type ClaimedActivityRaw = z.infer<typeof claimedActivityRawSchema>;
 export type ActivityMeasurement = z.infer<typeof activityMeasurementSchema>;
 /** One record for durable intake; `payload` keys are built in a fixed order so equal content hashes equally. */

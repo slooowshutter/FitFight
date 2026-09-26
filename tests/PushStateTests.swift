@@ -115,9 +115,12 @@ enum AuthEvent { case initialSession, tokenRefreshed, signedOut }
         await push.handleDeviceToken(Data([0xab]))
 
         let recorder = APIRecorder.shared
+        await push.handleDeviceToken(Data([0xab]))
+        precondition(recorder.events == ["register-start:A", "register-end:A"], "The same user and token must register once per launch: \(recorder.events)")
         recorder.hold = true
-        let registration = Task { await push.handleDeviceToken(Data([0xab])) }
-        while recorder.continuation == nil { await Task.yield() }
+        let registration = Task { await push.handleDeviceToken(Data([0xcd])) }
+        for _ in 0..<1_000 where recorder.continuation == nil { await Task.yield() }
+        precondition(recorder.continuation != nil, "A changed APNs token must register again")
         await push.revokeLocalRegistration()
         precondition(UIApplication.shared.unregisters == 1, "Signout must stop APNs before waiting for the backend")
         precondition(UNUserNotificationCenter.shared.cleared == 1)
@@ -168,6 +171,14 @@ enum AuthEvent { case initialSession, tokenRefreshed, signedOut }
         precondition(UIApplication.shared.unregisters == 2)
         precondition(UNUserNotificationCenter.shared.cleared == 2)
         precondition(recorder.events.last == "revoke:B", "Offline signout must still attempt server revocation")
+        session.authSession = Session(user: userB, accessToken: "B2")
+        await push.registerIfAuthorized()
+        await push.handleDeviceToken(Data([0xab]))
+        AppLocalization.apply(AppLocalization.languageCode == "fr" ? .en : .fr)
+        await push.handleDeviceToken(Data([0xab]))
+        AppLocalization.apply(.system)
+        precondition(recorder.events.suffix(5) == ["revoke:B", "register-start:B2", "register-end:B2", "register-start:B2", "register-end:B2"],
+                     "Signing the same account back in and changing language must register again: \(recorder.events)")
         let bootstrap = SessionBootstrap()
         precondition(bootstrap.isRestoringSession && bootstrap.authSession == nil)
         for _ in 0..<10 { await Task.yield() }
@@ -199,5 +210,6 @@ enum AuthEvent { case initialSession, tokenRefreshed, signedOut }
         precondition(!SessionBootstrap(listenForSession: false).isRestoringSession, "Fixtures do not wait for Auth")
         print("PASS: auth restore, refreshed-token startup with suspended profile loading, signed-out startup, fixtures")
         print("PASS: immediate local unregistration, cleared notifications, serial in-flight revoke, account switch, offline signout")
+        print("PASS: one registration per user, token, and language; re-registration after token change, language change, and sign-in")
     }
 }

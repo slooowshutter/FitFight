@@ -123,9 +123,9 @@ enum CompanionStateTests {
         precondition(CompanionCategory.yours.animals.isEmpty)
         precondition(CompanionCategory.limited.animals.count == 40)
         precondition(CompanionCategory.limited.animals.allSatisfy { $0.isLimited && !$0.caption.isEmpty })
-        let stages = [(0, "resting"), (1_999, "resting"), (2_000, "soft"), (3_999, "soft"),
-                      (4_000, "average"), (5_999, "average"), (6_000, "fit"), (7_999, "fit"),
-                      (8_000, "strong")]
+        let stages = [(0, "resting"), (2_999, "resting"), (3_000, "soft"), (5_999, "soft"),
+                      (6_000, "average"), (9_999, "average"), (10_000, "fit"), (14_999, "fit"),
+                      (15_000, "strong")]
         for (steps, stage) in stages {
             precondition(CompanionEffortStage.matching(todaySteps: steps).fitnessImageStage == stage)
         }

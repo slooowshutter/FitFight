@@ -1,0 +1,80 @@
+{
+    "choices": {
+        "charts": {
+            "trail": {
+                "Marc": "keep"
+            }
+        },
+        "feed": {
+            "by-fight": {
+                "Marc": "hide"
+            },
+            "comic": {
+                "Marc": "hide"
+            },
+            "compact": {
+                "Marc": "hide"
+            },
+            "companion-notes": {
+                "Marc": "hide"
+            },
+            "filters": {
+                "Marc": "hide"
+            },
+            "front-page": {
+                "Marc": "hide"
+            },
+            "high-fives": {
+                "Marc": "hide"
+            },
+            "journal": {
+                "Marc": "hide"
+            },
+            "photo-first": {
+                "Marc": "hide"
+            },
+            "proof-wall": {
+                "Marc": "hide"
+            },
+            "scrapbook": {
+                "Marc": "hide"
+            },
+            "steps-stamp": {
+                "Marc": "hide"
+            },
+            "threads": {
+                "Marc": "hide"
+            },
+            "tidy": {
+                "Marc": "hide"
+            }
+        },
+        "profile-sheet": {
+            "card": {
+                "Marc": "hide"
+            },
+            "peek": {
+                "Marc": "hide"
+            },
+            "rivalry": {
+                "Marc": "hide"
+            },
+            "scoreline": {
+                "Marc": "hide"
+            },
+            "scout": {
+                "Marc": "hide"
+            },
+            "story": {
+                "Marc": "hide"
+            },
+            "tug": {
+                "Marc": "hide"
+            },
+            "week": {
+                "Marc": "hide"
+            }
+        }
+    },
+    "comments": {}
+}

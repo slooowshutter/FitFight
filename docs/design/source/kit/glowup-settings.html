@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="en" data-theme="night">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <title>FitFight glow-up: Settings</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800&display=swap" rel="stylesheet" />
+        <style>
+:root, [data-theme="night"] {
+    --google-fill: #FFFFFF;
+    --google-ink: #1F1F1F;
+    --google-border: #747775;
+    --canvas: #0C0D08;
+    --bg: #171912;
+    --overlay: #1E211A;
+    --card: #24271E;
+    --control: #2E3227;
+    --control-alt: #383D2F;
+    --text: #F0EDE1;
+    --text-dim: #D9D5C6;
+    --text-secondary: #9E9C8E;
+    --text-tertiary: #8C8A7D;
+    --text-faint: #6F6D62;
+    --hairline: rgba(255,255,255,0.07);
+    --line: rgba(255,255,255,0.10);
+    --dash: rgba(255,255,255,0.13);
+    --track: rgba(255,255,255,0.09);
+    --chip: rgba(255,255,255,0.05);
+    --disabled-bg: rgba(255,255,255,0.03);
+    --disabled-line: rgba(255,255,255,0.06);
+    --disabled-text: #5E5C53;
+    --scrim: rgba(6,7,4,0.68);
+    --moss-fill: #35804F;
+    --moss-edge: #4B9A65;
+    --moss-text: #8FD6A6;
+    --moss-soft: #DCF0E2;
+    --moss-on: #FFFFFF;
+    --moss-wash: rgba(53,128,79,0.18);
+    --ember-fill: #C2551D;
+    --ember-text: #EF9457;
+    --ember-on: #FFFFFF;
+    --ember-wash: rgba(194,85,29,0.16);
+    --gold: #F6C450;
+    --gold-ink: #42320A;
+    --tab-bar: rgba(20,22,16,0.94);
+    --chip-ink: #B7B4A6;
+    --chip-edge-on: #3F9159;
+    --monogram: #E3DFD0;
+    --overlay-line: rgba(255,255,255,0.12);
+    --switch-off: rgba(255,255,255,0.14);
+    --dot-idle: rgba(255,255,255,0.18);
+    --chip-edge: rgba(255,255,255,0.08);
+    --skeleton: rgba(255,255,255,0.05);
+    --skeleton-hi: rgba(255,255,255,0.11);
+    --handle: rgba(255,255,255,0.22);
+    --hero-tag-fill: rgba(255,255,255,0.16);
+    --hero-avatar-plate: rgba(0,0,0,0.28);
+    --hero-avatar-line: rgba(255,255,255,0.25);
+    --hero-progress-track: rgba(0,0,0,0.32);
+    --tab-bar-line: rgba(255,255,255,0.07);
+    --tab-pill-on: rgba(53,128,79,0.24);
+    --tab-ink-on: #8FD6A6;
+    --tab-ink-off: #8C8A7D;
+    --plate-alt: #333829;
+}
+[data-theme="day"] {
+    --google-fill: #FFFFFF;
+    --google-ink: #1F1F1F;
+    --google-border: #747775;
+    --canvas: #FDFAF4;
+    --bg: #F6F3EB;
+    --overlay: #FDFAF4;
+    --card: #FDFAF4;
+    --control: #F2EDE3;
+    --control-alt: #DFD8C6;
+    --text: #33302B;
+    --text-dim: #33302B;
+    --text-secondary: #6B665C;
+    --text-tertiary: rgba(51,48,43,0.55);
+    --text-faint: rgba(51,48,43,0.42);
+    --hairline: rgba(51,48,43,0.08);
+    --line: rgba(51,48,43,0.12);
+    --dash: #DFD8C6;
+    --track: #F3EDE3;
+    --chip: rgba(51,48,43,0.05);
+    --disabled-bg: rgba(51,48,43,0.04);
+    --disabled-line: rgba(51,48,43,0.08);
+    --disabled-text: rgba(51,48,43,0.32);
+    --scrim: rgba(51,48,43,0.35);
+    --moss-fill: #2F6B44;
+    --moss-edge: #4B9A65;
+    --moss-text: #2F6B44;
+    --moss-soft: #DCF0E2;
+    --moss-on: #FFFFFF;
+    --moss-wash: #EDF3EA;
+    --ember-fill: #C2551D;
+    --ember-text: #8F5A30;
+    --ember-on: #FFFFFF;
+    --ember-wash: #FAEDE2;
+    --gold: #F6C450;
+    --gold-ink: #42320A;
+    --tab-bar: rgba(253,250,244,0.92);
+    --chip-ink: #6B665C;
+    --chip-edge-on: #2F6B44;
+    --monogram: #33302B;
+    --overlay-line: rgba(51,48,43,0.14);
+    --switch-off: rgba(51,48,43,0.16);
+    --dot-idle: rgba(51,48,43,0.20);
+    --chip-edge: rgba(51,48,43,0.10);
+    --skeleton: rgba(51,48,43,0.05);
+    --skeleton-hi: rgba(51,48,43,0.10);
+    --handle: rgba(51,48,43,0.22);
+    --hero-tag-fill: rgba(255,255,255,0.16);
+    --hero-avatar-plate: rgba(0,0,0,0.28);
+    --hero-avatar-line: rgba(255,255,255,0.25);
+    --hero-progress-track: rgba(0,0,0,0.32);
+    --tab-bar-line: #F0E9DB;
+    --tab-pill-on: #E4F3E9;
+    --tab-ink-on: #2F6B44;
+    --tab-ink-off: #6B6F66;
+    --plate-alt: #EAE4D8;
+}
+:root {
+    --r-pill: 999px;
+    --r-card: 22px;
+    --r-field: 14px;
+    --r-glyph: 9px;
+    --r-shell: 28px;
+    --s-xs: 4px;
+    --s-sm: 8px;
+    --s-md: 12px;
+    --s-base: 16px;
+    --s-lg: 20px;
+    --s-xl: 26px;
+    --s-screen-padding: 20px;
+    --s-card-padding: 22px;
+    --s-row-padding-x: 16px;
+    --s-row-padding-y: 14px;
+    --s-section-gap: 34px;
+    --s-card-gap: 12px;
+    --s-tab-bar-clearance: 112px;
+}
+.t-metric { font-size: 34px; font-weight: 800; letter-spacing: -0.03em; }
+.t-title { font-size: 26px; font-weight: 800; letter-spacing: -0.025em; }
+.t-heading { font-size: 16px; font-weight: 800; letter-spacing: -0.01em; }
+.t-row-title { font-size: 15px; font-weight: 800; letter-spacing: -0.01em; }
+.t-button { font-size: 14px; font-weight: 800; }
+.t-button-large { font-size: 16px; font-weight: 800; letter-spacing: 0.01em; }
+.t-button-small { font-size: 12px; font-weight: 800; }
+.t-label { font-size: 13px; font-weight: 800; }
+.t-body { font-size: 13px; font-weight: 700; }
+.t-caption { font-size: 12px; font-weight: 700; }
+.t-micro { font-size: 11px; font-weight: 700; }
+.t-eyebrow { font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.t-section-eyebrow { font-size: 12px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; }
+.t-tag { font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { font-family: "Nunito", -apple-system, system-ui, sans-serif; background: var(--canvas); color: var(--text); -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; }
+main { max-width: 720px; margin: 0 auto; padding: 18px 18px 60px; }
+.top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.kicker { font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--moss-text); text-decoration: none; }
+h1 { margin: 2px 0 0; font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
+.nav { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+.pill { border: 1px solid var(--line); background: var(--chip); color: var(--text); border-radius: 999px; padding: 8px 14px; font-size: 12px; font-weight: 800; cursor: pointer; text-decoration: none; }
+.pill.primary { background: var(--moss-fill); border-color: var(--moss-fill); color: var(--moss-on); }
+section { margin-top: 22px; padding: 18px 20px; border-radius: 22px; background: var(--card); border: 1px solid var(--hairline); }
+h2 { margin: 0 0 4px; font-size: 16px; font-weight: 800; }
+p, li { color: var(--text-secondary); font-size: 13px; font-weight: 700; line-height: 1.5; }
+p { margin: 6px 0 12px; }
+ul { margin: 6px 0 12px; padding-left: 18px; }
+code { font: 700 12px ui-monospace, monospace; background: var(--chip); padding: 2px 6px; border-radius: 6px; color: var(--text); word-break: break-all; }
+.namebox { display: flex; gap: 8px; flex-wrap: wrap; }
+input { height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font: 700 14px "Nunito", sans-serif; min-width: 0; flex: 1; }
+input:focus { outline: 2px solid var(--moss-edge); }
+.people { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.people button { border: 1px solid var(--line); background: var(--chip); border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 800; cursor: pointer; }
+.people button[aria-pressed="true"] { background: var(--moss-wash); border-color: var(--moss-edge); color: var(--moss-text); }
+.krow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--hairline); font-size: 14px; font-weight: 700; }
+.krow:last-child { border-bottom: 0; }
+.key { min-width: 64px; height: 34px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); font-size: 13px; font-weight: 800; cursor: pointer; }
+.key.listening { border-color: var(--moss-edge); color: var(--moss-text); outline: 2px solid var(--moss-edge); }
+.stats { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 12px; }
+.stat { flex: 1; min-width: 90px; padding: 10px 12px; border-radius: 14px; background: var(--chip); }
+.stat b { display: block; font-size: 22px; font-weight: 800; }
+.stat span { font-size: 11px; font-weight: 700; color: var(--text-secondary); }
+.sync { padding: 10px 12px; border-radius: 14px; font-size: 13px; font-weight: 800; }
+.sync.on { background: var(--moss-wash); color: var(--moss-text); }
+.sync.off { background: var(--ember-wash); color: var(--ember-text); }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.note { font-size: 12px; color: var(--text-faint); }
+        </style>
+    </head>
+    <body>
+        <main>
+            <div class="top">
+                <div>
+                    <a class="kicker" id="home" href="#">FitFight glow-up</a>
+                    <h1>Settings</h1>
+                </div>
+                <div class="nav">
+                    <a class="pill" id="to-home" href="#">All pages</a>
+                    <a class="pill" id="to-fav" href="#">Favorites</a>
+                </div>
+            </div>
+
+            <section>
+                <h2>Who is looking</h2>
+                <p>Likes, dislikes and comments are signed with this name. Each person sets it once on their own phone or computer. On a shared computer, tap a name below to switch.</p>
+                <form class="namebox" id="nameform"><input id="name" maxlength="24" aria-label="Your name" /><button type="submit" class="pill primary">Save</button></form>
+                <div class="people" id="people"></div>
+            </section>
+
+            <section>
+                <h2>Shortcuts</h2>
+                <p>Click a key, then press the new one. If another action already uses it, the two swap. Esc cancels. Saved on this device.</p>
+                <div id="keys"></div>
+                <div class="row" style="margin-top: 12px"><button type="button" class="pill" id="reset">Reset to defaults</button></div>
+            </section>
+
+            <section>
+                <h2>Where your data lives</h2>
+                <div class="sync" id="sync"></div>
+                <div class="stats" id="stats"></div>
+                <ul>
+                    <li><b>Shared file:</b> <code>docs/design/source/kit/glowup-state.json</code> in the FitFight repo on the Mac that runs the server. It holds everyone's likes, dislikes and comments. Agents read it when you say "read my choices". Commit it to keep a history.</li>
+                    <li><b>This browser:</b> a copy in <code>localStorage</code> under <code>glowup.state</code>, plus <code>glowup.pending</code> (changes made while the server was off, sent automatically next time), <code>glowup.who</code> (your name), <code>glowup.keys</code> (your shortcuts) and <code>glowup.theme</code>.</li>
+                    <li><b>Server:</b> <code>python3 docs/design/source/kit/glowup-serve.py</code> from the repo, then open <code>http://localhost:8765</code>. It prints a Wi-Fi address for phones on the same network.</li>
+                </ul>
+                <div class="row"><button type="button" class="pill" id="download">Download a copy (.json)</button><a class="pill" id="raw" href="glowup-state.json" target="_blank" rel="noopener">Open the raw file</a></div>
+                <p class="note">Nothing is sent anywhere else. Pushing the repo to GitHub publishes the file with it.</p>
+            </section>
+        </main>
+        <script>
+const GX_PAGES = [{"group": "Every day", "id": "fights-home", "title": "Fights home"}, {"group": "Every day", "id": "fight-row", "title": "Fight row"}, {"group": "Every day", "id": "today", "title": "Today"}, {"group": "Every day", "id": "tab-bar", "title": "Tab bar and chrome"}, {"group": "Inside a fight", "id": "fight-detail", "title": "Fight detail"}, {"group": "Inside a fight", "id": "race", "title": "Race hero"}, {"group": "Inside a fight", "id": "race-track", "title": "Oval and race track"}, {"group": "Inside a fight", "id": "standings", "title": "Standings"}, {"group": "Inside a fight", "id": "charts", "title": "Charts"}, {"group": "Inside a fight", "id": "overtake", "title": "Overtake moment"}, {"group": "Inside a fight", "id": "result", "title": "Fight result"}, {"group": "Inside a fight", "id": "fight-recap", "title": "Past fight recap"}, {"group": "Inside a fight", "id": "share-card", "title": "Share card"}, {"group": "Inside a fight", "id": "profile-sheet", "title": "Profile sheet"}, {"group": "Start and join", "id": "new-fight", "title": "New fight"}, {"group": "Start and join", "id": "join-invite", "title": "Join and invites"}, {"group": "Start and join", "id": "states", "title": "Empty and loading"}, {"group": "Social", "id": "feed", "title": "Feed"}, {"group": "Social", "id": "post-thread", "title": "Post thread"}, {"group": "Social", "id": "activity", "title": "Notifications inbox"}, {"group": "Social", "id": "feedback", "title": "Feedback board"}, {"group": "You", "id": "you", "title": "You"}, {"group": "You", "id": "settings", "title": "Settings and preferences"}, {"group": "You", "id": "companion", "title": "Companion and Specials"}, {"group": "System and beyond", "id": "controls", "title": "Controls"}, {"group": "System and beyond", "id": "app-icon", "title": "App icon"}, {"group": "System and beyond", "id": "beyond", "title": "Beyond the app"}];
+// Shared by every glow-up page: who is looking, likes / dislikes / comments, shortcuts, file sync.
+// Truth: kit/glowup-state.json when glowup-serve.py runs (agents read it). Otherwise this browser's localStorage,
+// with unsent changes queued and replayed the next time the server is reachable.
+const GX = (() => {
+    const preview = location.host === "htmlpreview.github.io";
+    const ENDPOINT = preview ? null : location.protocol === "file:" ? "http://localhost:8765/glowup-state" : "/glowup-state";
+    const get = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } };
+    const set = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+    const ACTIONS = [
+        ["prev", "Previous option", "ArrowLeft"],
+        ["next", "Next option", "ArrowRight"],
+        ["prevPage", "Previous page", "ArrowUp"],
+        ["nextPage", "Next page", "ArrowDown"],
+        ["like", "Like", "l"],
+        ["dislike", "Dislike (hides it for you)", "d"],
+        ["comment", "Write a comment", "c"],
+        ["open", "Open the selected favorite", "Enter"],
+        ["theme", "Switch Night and Day", "t"],
+        ["replay", "Replay the animation", "r"],
+        ["favorites", "Go to Favorites", "f"],
+        ["home", "Go to all pages", "h"],
+        ["settings", "Go to Settings", "s"],
+        ["help", "Show shortcuts", "?"],
+    ];
+    const keys = () => ({ ...Object.fromEntries(ACTIONS.map(([id, , k]) => [id, k])), ...get("glowup.keys", {}) });
+    const keyLabel = (k) => ({ ArrowLeft: "←", ArrowRight: "→", ArrowUp: "↑", ArrowDown: "↓", Enter: "Enter", " ": "Space", Escape: "Esc" })[k] || (k || "").toUpperCase();
+    const actionFor = (e) => {
+        if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.("input, textarea, select, [contenteditable]")) return null;
+        const pressed = e.key.toLowerCase();
+        const map = keys();
+        return Object.keys(map).find((a) => (map[a] || "").toLowerCase() === pressed) || null;
+    };
+
+    const who = () => get("glowup.who", "") || "Marc";
+    const hasName = () => !!get("glowup.who", "");
+    const setWho = (name) => {
+        const clean = String(name).replace(/[\u0000-\u001f]/g, "").trim().slice(0, 24);
+        if (clean) set("glowup.who", clean);
+        return clean;
+    };
+
+    let state = { choices: {}, comments: {} };
+    let synced = false;
+    let status = () => {};
+    // Version 1 files were { page: { option: "keep" | "hide" } } with no names.
+    const normalize = (raw) => {
+        if (raw && (raw.choices || raw.comments)) return { choices: raw.choices || {}, comments: raw.comments || {} };
+        const choices = {};
+        for (const [page, map] of Object.entries(raw || {})) for (const [id, v] of Object.entries(map || {})) ((choices[page] ||= {})[id] ||= {}).Marc = v;
+        return { choices, comments: {} };
+    };
+    // Same rules as apply() in glowup-serve.py.
+    const apply = (s, op) => {
+        if (op.op === "choice") {
+            const byWho = ((s.choices[op.page] ||= {})[op.id] ||= {});
+            if (op.value) byWho[op.who] = op.value;
+            else delete byWho[op.who];
+            if (!Object.keys(byWho).length) delete s.choices[op.page][op.id];
+            if (!Object.keys(s.choices[op.page]).length) delete s.choices[op.page];
+        } else if (op.op === "comment") {
+            ((s.comments[op.page] ||= {})[op.id] ||= []).push({ who: op.who, text: op.text, at: op.at });
+        } else if (op.op === "uncomment") {
+            const left = ((s.comments[op.page] || {})[op.id] || []).filter((c) => !(c.at === op.at && c.who === op.who));
+            if (left.length) s.comments[op.page][op.id] = left;
+            else if (s.comments[op.page]) {
+                delete s.comments[op.page][op.id];
+                if (!Object.keys(s.comments[op.page]).length) delete s.comments[op.page];
+            }
+        }
+        return s;
+    };
+    const statusText = () => synced ? "Saved to glowup-state.json, shared with everyone using the server."
+        : ENDPOINT ? "Saved in this browser only. Start glowup-serve.py to share and sync." : "Saved in this browser only.";
+    const queue = (op) => set("glowup.pending", [...get("glowup.pending", []), op]);
+    const post = (op) => fetch(ENDPOINT, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify(op) })
+        .then((r) => { if (!r.ok) throw new Error("refused"); return r.json(); });
+    const send = async (op) => {
+        apply(state, op);
+        set("glowup.state", state);
+        if (!synced) { queue(op); return status(statusText()); }
+        try {
+            await post(op);
+            status(statusText());
+        } catch {
+            synced = false;
+            queue(op);
+            status("Server not reachable. Saved in this browser; it syncs next time.");
+        }
+    };
+    const load = async ({ remote = true } = {}) => {
+        state = normalize(get("glowup.state", null));
+        if (!get("glowup.migrated", false)) {
+            // Keep / Hide from the first version lived in per-page keys.
+            for (const p of typeof GX_PAGES === "undefined" ? [] : GX_PAGES) {
+                const old = get(`glowup-${p.id}.status`, null) || Object.fromEntries(get(`glowup-${p.id}.picks`, []).map((id) => [id, "keep"]));
+                for (const [id, value] of Object.entries(old)) {
+                    const op = { op: "choice", page: p.id, id, who: who(), value };
+                    apply(state, op);
+                    queue(op);
+                }
+                try { localStorage.removeItem(`glowup-${p.id}.status`); localStorage.removeItem(`glowup-${p.id}.picks`); } catch {}
+            }
+            set("glowup.migrated", true);
+        }
+        if (remote) {
+            try {
+                if (ENDPOINT) {
+                    const r = await fetch(ENDPOINT, { cache: "no-store" });
+                    if (r.ok) {
+                        state = normalize(await r.json());
+                        synced = true;
+                        const pending = get("glowup.pending", []);
+                        set("glowup.pending", []);
+                        for (const op of pending) await send(op);
+                    }
+                } else if (preview && !Object.keys(state.choices).length && !Object.keys(state.comments).length) {
+                    const r = await fetch(location.search.slice(1).replace(/[^/]+\.html.*$/, "glowup-state.json"), { cache: "no-store" });
+                    if (r.ok) state = normalize(await r.json());
+                }
+            } catch {}
+        }
+        set("glowup.state", state);
+        status(statusText());
+        return state;
+    };
+
+    const choice = (page, id, w = who()) => state.choices[page]?.[id]?.[w] || null;
+    const reactions = (page, id) => state.choices[page]?.[id] || {};
+    const comments = (page, id) => state.comments[page]?.[id] || [];
+    const people = () => [...new Set([
+        who(),
+        ...Object.values(state.choices).flatMap((o) => Object.values(o).flatMap((r) => Object.keys(r))),
+        ...Object.values(state.comments).flatMap((o) => Object.values(o).flatMap((l) => l.map((c) => c.who))),
+    ])];
+    const toggle = (page, id, value) => send({ op: "choice", page, id, who: who(), value: choice(page, id) === value ? null : value });
+    const comment = (page, id, text) => send({ op: "comment", page, id, who: who(), text: String(text).trim().slice(0, 2000), at: new Date().toISOString() });
+    const uncomment = (page, id, at) => send({ op: "uncomment", page, id, who: who(), at });
+    const fileHref = (file) => preview && location.search.length > 1 ? "?" + location.search.slice(1).replace(/[^/]+\.html.*$/, file) : file;
+    const open = (file) => { location.href = fileHref(file); };
+    const ago = (iso) => {
+        const s = (Date.now() - Date.parse(iso)) / 1000;
+        return s < 60 ? "now" : s < 3600 ? `${Math.floor(s / 60)} min` : s < 86400 ? `${Math.floor(s / 3600)} h` : `${Math.floor(s / 86400)} d`;
+    };
+    const escHtml = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+    // Reaction chips for everyone except `except`: "Chloé likes", "Marc disliked".
+    const reactionChips = (page, id, except) => Object.entries(reactions(page, id)).filter(([w]) => w !== except)
+        .map(([w, v]) => `<span class="gx-chip ${v}">${escHtml(w)} ${v === "keep" ? "likes it" : "disliked it"}</span>`).join("");
+
+    return {
+        ACTIONS, keys, keyLabel, actionFor, who, hasName, setWho, load, send, choice, reactions, comments, people,
+        toggle, comment, uncomment, fileHref, open, ago, reactionChips, statusText, get, set,
+        onStatus: (fn) => { status = fn; },
+        get state() { return state; },
+        get synced() { return synced; },
+        endpoint: ENDPOINT,
+    };
+})();
+
+(() => {
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+    document.documentElement.setAttribute("data-theme", GX.get("glowup.theme", "night"));
+    const link = (id, file) => $(id).addEventListener("click", (e) => { e.preventDefault(); GX.open(file); });
+    link("home", "glowup-index.html");
+    link("to-home", "glowup-index.html");
+    link("to-fav", "glowup-favorites.html");
+
+    const renderPeople = () => {
+        $("name").value = GX.hasName() ? GX.who() : "";
+        $("name").placeholder = GX.hasName() ? "" : "Your name (Marc until you set one)";
+        $("people").innerHTML = GX.people().map((p) => `<button type="button" data-who="${esc(p)}" aria-pressed="${p === GX.who()}">${esc(p)}</button>`).join("");
+    };
+    $("nameform").addEventListener("submit", (e) => { e.preventDefault(); if (GX.setWho($("name").value)) renderPeople(); });
+    $("people").addEventListener("click", (e) => { const b = e.target.closest("[data-who]"); if (b) { GX.setWho(b.dataset.who); renderPeople(); } });
+
+    let listening = null;
+    const renderKeys = () => {
+        const k = GX.keys();
+        $("keys").innerHTML = GX.ACTIONS.map(([a, label]) => `<div class="krow"><span>${esc(label)}</span><button type="button" class="key ${listening === a ? "listening" : ""}" data-action="${a}">${listening === a ? "Press a key" : esc(GX.keyLabel(k[a]))}</button></div>`).join("");
+    };
+    $("keys").addEventListener("click", (e) => { const b = e.target.closest("[data-action]"); if (!b) return; listening = listening === b.dataset.action ? null : b.dataset.action; renderKeys(); });
+    document.addEventListener("keydown", (e) => {
+        if (!listening) return;
+        e.preventDefault();
+        if (e.key === "Escape") { listening = null; return renderKeys(); }
+        if (["Shift", "Meta", "Control", "Alt", "Tab"].includes(e.key)) return;
+        const k = GX.keys();
+        const next = { ...GX.get("glowup.keys", {}) };
+        const clash = Object.keys(k).find((a) => a !== listening && (k[a] || "").toLowerCase() === e.key.toLowerCase());
+        if (clash) next[clash] = k[listening];
+        next[listening] = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+        GX.set("glowup.keys", next);
+        listening = null;
+        renderKeys();
+    });
+    $("reset").addEventListener("click", () => { GX.set("glowup.keys", {}); renderKeys(); });
+
+    const renderData = () => {
+        const s = GX.state;
+        const all = Object.values(s.choices).flatMap((o) => Object.values(o).flatMap((r) => Object.values(r)));
+        const comments = Object.values(s.comments).flatMap((o) => Object.values(o)).flat().length;
+        $("stats").innerHTML = [[all.filter((v) => v === "keep").length, "likes"], [all.filter((v) => v === "hide").length, "dislikes"], [comments, "comments"], [GX.people().length, "people"]].map(([n, l]) => `<div class="stat"><b>${n}</b><span>${l}</span></div>`).join("");
+        $("sync").className = "sync " + (GX.synced ? "on" : "off");
+        $("sync").textContent = GX.statusText();
+        $("raw").hidden = !GX.synced;
+    };
+    $("download").addEventListener("click", () => {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(new Blob([JSON.stringify(GX.state, null, 4)], { type: "application/json" }));
+        a.download = "glowup-state.json";
+        a.click();
+        URL.revokeObjectURL(a.href);
+    });
+    renderPeople();
+    renderKeys();
+    GX.load().then(() => { renderPeople(); renderData(); });
+})();
+        </script>
+    </body>
+</html>

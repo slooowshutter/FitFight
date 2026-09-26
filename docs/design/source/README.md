@@ -12,6 +12,7 @@ This folder contains the current approved design and the archived design dump it
 | [`kit/companion-app-proposal.html`](./kit/companion-app-proposal.html)           | Selected Companion screen direction, retained as the tappable reference. Existing native behavior remains authoritative. |
 | [`companion/`](./companion/README.md)                                            | Preserved artwork, asset manifest, reproducible crops, and native review captures.                                       |
 | [`kit/onboarding-prototype.html`](./kit/onboarding-prototype.html)                | Full of life, Marc's selected onboarding. One tappable reference with simulated services; native screens use real services. |
+| [`kit/glowup-index.html`](./kit/glowup-index.html)                                 | Glow-up proposals, not the approved spec: one `*-glowup.html` page per surface, plus Favorites and Settings. `python3 kit/glowup-serve.py` serves them and saves everyone's likes, dislikes and comments to `kit/glowup-state.json`, which agents read to know what Marc picked. |
 
 The approved system has two bases, Night and Day, and fixed semantic colour families:
 

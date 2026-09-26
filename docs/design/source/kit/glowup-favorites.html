@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="en" data-theme="night">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <title>FitFight glow-up: Favorites</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800&display=swap" rel="stylesheet" />
+        <style>
+:root, [data-theme="night"] {
+    --google-fill: #FFFFFF;
+    --google-ink: #1F1F1F;
+    --google-border: #747775;
+    --canvas: #0C0D08;
+    --bg: #171912;
+    --overlay: #1E211A;
+    --card: #24271E;
+    --control: #2E3227;
+    --control-alt: #383D2F;
+    --text: #F0EDE1;
+    --text-dim: #D9D5C6;
+    --text-secondary: #9E9C8E;
+    --text-tertiary: #8C8A7D;
+    --text-faint: #6F6D62;
+    --hairline: rgba(255,255,255,0.07);
+    --line: rgba(255,255,255,0.10);
+    --dash: rgba(255,255,255,0.13);
+    --track: rgba(255,255,255,0.09);
+    --chip: rgba(255,255,255,0.05);
+    --disabled-bg: rgba(255,255,255,0.03);
+    --disabled-line: rgba(255,255,255,0.06);
+    --disabled-text: #5E5C53;
+    --scrim: rgba(6,7,4,0.68);
+    --moss-fill: #35804F;
+    --moss-edge: #4B9A65;
+    --moss-text: #8FD6A6;
+    --moss-soft: #DCF0E2;
+    --moss-on: #FFFFFF;
+    --moss-wash: rgba(53,128,79,0.18);
+    --ember-fill: #C2551D;
+    --ember-text: #EF9457;
+    --ember-on: #FFFFFF;
+    --ember-wash: rgba(194,85,29,0.16);
+    --gold: #F6C450;
+    --gold-ink: #42320A;
+    --tab-bar: rgba(20,22,16,0.94);
+    --chip-ink: #B7B4A6;
+    --chip-edge-on: #3F9159;
+    --monogram: #E3DFD0;
+    --overlay-line: rgba(255,255,255,0.12);
+    --switch-off: rgba(255,255,255,0.14);
+    --dot-idle: rgba(255,255,255,0.18);
+    --chip-edge: rgba(255,255,255,0.08);
+    --skeleton: rgba(255,255,255,0.05);
+    --skeleton-hi: rgba(255,255,255,0.11);
+    --handle: rgba(255,255,255,0.22);
+    --hero-tag-fill: rgba(255,255,255,0.16);
+    --hero-avatar-plate: rgba(0,0,0,0.28);
+    --hero-avatar-line: rgba(255,255,255,0.25);
+    --hero-progress-track: rgba(0,0,0,0.32);
+    --tab-bar-line: rgba(255,255,255,0.07);
+    --tab-pill-on: rgba(53,128,79,0.24);
+    --tab-ink-on: #8FD6A6;
+    --tab-ink-off: #8C8A7D;
+    --plate-alt: #333829;
+}
+[data-theme="day"] {
+    --google-fill: #FFFFFF;
+    --google-ink: #1F1F1F;
+    --google-border: #747775;
+    --canvas: #FDFAF4;
+    --bg: #F6F3EB;
+    --overlay: #FDFAF4;
+    --card: #FDFAF4;
+    --control: #F2EDE3;
+    --control-alt: #DFD8C6;
+    --text: #33302B;
+    --text-dim: #33302B;
+    --text-secondary: #6B665C;
+    --text-tertiary: rgba(51,48,43,0.55);
+    --text-faint: rgba(51,48,43,0.42);
+    --hairline: rgba(51,48,43,0.08);
+    --line: rgba(51,48,43,0.12);
+    --dash: #DFD8C6;
+    --track: #F3EDE3;
+    --chip: rgba(51,48,43,0.05);
+    --disabled-bg: rgba(51,48,43,0.04);
+    --disabled-line: rgba(51,48,43,0.08);
+    --disabled-text: rgba(51,48,43,0.32);
+    --scrim: rgba(51,48,43,0.35);
+    --moss-fill: #2F6B44;
+    --moss-edge: #4B9A65;
+    --moss-text: #2F6B44;
+    --moss-soft: #DCF0E2;
+    --moss-on: #FFFFFF;
+    --moss-wash: #EDF3EA;
+    --ember-fill: #C2551D;
+    --ember-text: #8F5A30;
+    --ember-on: #FFFFFF;
+    --ember-wash: #FAEDE2;
+    --gold: #F6C450;
+    --gold-ink: #42320A;
+    --tab-bar: rgba(253,250,244,0.92);
+    --chip-ink: #6B665C;
+    --chip-edge-on: #2F6B44;
+    --monogram: #33302B;
+    --overlay-line: rgba(51,48,43,0.14);
+    --switch-off: rgba(51,48,43,0.16);
+    --dot-idle: rgba(51,48,43,0.20);
+    --chip-edge: rgba(51,48,43,0.10);
+    --skeleton: rgba(51,48,43,0.05);
+    --skeleton-hi: rgba(51,48,43,0.10);
+    --handle: rgba(51,48,43,0.22);
+    --hero-tag-fill: rgba(255,255,255,0.16);
+    --hero-avatar-plate: rgba(0,0,0,0.28);
+    --hero-avatar-line: rgba(255,255,255,0.25);
+    --hero-progress-track: rgba(0,0,0,0.32);
+    --tab-bar-line: #F0E9DB;
+    --tab-pill-on: #E4F3E9;
+    --tab-ink-on: #2F6B44;
+    --tab-ink-off: #6B6F66;
+    --plate-alt: #EAE4D8;
+}
+:root {
+    --r-pill: 999px;
+    --r-card: 22px;
+    --r-field: 14px;
+    --r-glyph: 9px;
+    --r-shell: 28px;
+    --s-xs: 4px;
+    --s-sm: 8px;
+    --s-md: 12px;
+    --s-base: 16px;
+    --s-lg: 20px;
+    --s-xl: 26px;
+    --s-screen-padding: 20px;
+    --s-card-padding: 22px;
+    --s-row-padding-x: 16px;
+    --s-row-padding-y: 14px;
+    --s-section-gap: 34px;
+    --s-card-gap: 12px;
+    --s-tab-bar-clearance: 112px;
+}
+.t-metric { font-size: 34px; font-weight: 800; letter-spacing: -0.03em; }
+.t-title { font-size: 26px; font-weight: 800; letter-spacing: -0.025em; }
+.t-heading { font-size: 16px; font-weight: 800; letter-spacing: -0.01em; }
+.t-row-title { font-size: 15px; font-weight: 800; letter-spacing: -0.01em; }
+.t-button { font-size: 14px; font-weight: 800; }
+.t-button-large { font-size: 16px; font-weight: 800; letter-spacing: 0.01em; }
+.t-button-small { font-size: 12px; font-weight: 800; }
+.t-label { font-size: 13px; font-weight: 800; }
+.t-body { font-size: 13px; font-weight: 700; }
+.t-caption { font-size: 12px; font-weight: 700; }
+.t-micro { font-size: 11px; font-weight: 700; }
+.t-eyebrow { font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.t-section-eyebrow { font-size: 12px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; }
+.t-tag { font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { font-family: "Nunito", -apple-system, system-ui, sans-serif; background: var(--canvas); color: var(--text); -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
+button { font: inherit; color: inherit; }
+main { max-width: 1480px; margin: 0 auto; padding: 18px 20px 40px; }
+.top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.kicker { font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--moss-text); text-decoration: none; }
+h1 { margin: 2px 0 0; font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
+.nav { margin-left: auto; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.pill { border: 1px solid var(--line); background: var(--chip); color: var(--text); border-radius: 999px; padding: 8px 14px; font-size: 12px; font-weight: 800; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+.seg { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--chip); border: 1px solid var(--hairline); }
+.seg button { border: 0; background: transparent; padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 800; color: var(--text-secondary); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--moss-fill); color: var(--moss-on); }
+.lede { margin: 8px 0 14px; color: var(--text-secondary); font-size: 13px; font-weight: 700; line-height: 1.5; }
+.filters { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.frow { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.frow .lab { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); width: 58px; }
+.chip { border: 1px solid var(--hairline); background: var(--chip); color: var(--text-secondary); border-radius: 999px; padding: 7px 12px; font-size: 12px; font-weight: 800; cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--moss-fill); border-color: var(--moss-fill); color: var(--moss-on); }
+.chip .n { opacity: 0.7; margin-left: 4px; }
+select { height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--text); font: 800 12px "Nunito", sans-serif; }
+.stage { display: grid; grid-template-columns: 44px 1fr 44px; gap: 10px; align-items: start; }
+.arrow { position: sticky; top: 40vh; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line); background: var(--overlay); color: var(--text); display: grid; place-items: center; cursor: pointer; }
+.arrow:disabled { opacity: 0.3; cursor: default; }
+.strip { display: flex; gap: 16px; justify-content: center; min-width: 0; }
+.card { flex: none; display: flex; flex-direction: column; gap: 10px; padding: 10px; border-radius: 26px; background: var(--card); border: 1px solid var(--hairline); cursor: pointer; }
+.card.sel { border-color: var(--moss-edge); outline: 2px solid var(--moss-edge); outline-offset: 0; }
+.frame { position: relative; overflow: hidden; border-radius: 20px; background: var(--bg); }
+.frame iframe { position: absolute; left: 0; top: 0; width: 393px; height: 852px; border: 0; transform-origin: 0 0; pointer-events: none; }
+.meta { display: flex; flex-direction: column; gap: 8px; cursor: default; }
+.where { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); }
+.meta h3 { margin: 0; font-size: 16px; font-weight: 800; letter-spacing: -0.01em; }
+.reacts { display: flex; flex-wrap: wrap; gap: 5px; }
+.gx-chip { display: inline-flex; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 800; background: var(--chip); color: var(--text-secondary); }
+.gx-chip.keep { background: var(--moss-wash); color: var(--moss-text); }
+.gx-chip.hide { background: var(--ember-wash); color: var(--ember-text); }
+.acts { display: flex; gap: 6px; flex-wrap: wrap; }
+.act { border: 1px solid var(--line); background: var(--chip); color: var(--text); border-radius: 999px; padding: 6px 11px; font-size: 12px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+.act[aria-pressed="true"].like { background: var(--moss-wash); border-color: var(--moss-edge); color: var(--moss-text); }
+.act[aria-pressed="true"].dislike { background: var(--ember-wash); border-color: var(--ember-fill); color: var(--ember-text); }
+.comments { display: flex; flex-direction: column; gap: 6px; max-height: 160px; overflow-y: auto; }
+.comment { padding: 7px 10px; border-radius: 12px; background: var(--chip); font-size: 12px; font-weight: 700; line-height: 1.4; }
+.comment b { font-weight: 800; }
+.comment .ago { color: var(--text-faint); font-size: 10px; margin-left: 5px; }
+.comment button { float: right; border: 0; background: none; color: var(--text-faint); font-size: 10px; font-weight: 800; cursor: pointer; }
+form { display: flex; gap: 6px; }
+form input { flex: 1; min-width: 0; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font: 700 12px "Nunito", sans-serif; }
+form input:focus { outline: 2px solid var(--moss-edge); }
+.count { text-align: center; margin-top: 14px; font-size: 12px; font-weight: 800; color: var(--text-tertiary); }
+.empty { max-width: 520px; margin: 40px auto; padding: 26px; border-radius: 22px; background: var(--card); border: 1px solid var(--hairline); text-align: center; color: var(--text-secondary); font-size: 14px; font-weight: 700; line-height: 1.5; }
+.empty b { color: var(--text); display: block; font-size: 18px; margin-bottom: 6px; }
+.foot { margin-top: 18px; font-size: 11px; font-weight: 700; color: var(--text-faint); text-align: center; }
+kbd { font: 800 10px "Nunito", sans-serif; padding: 1px 5px; border-radius: 5px; border: 1px solid var(--line); color: var(--text-tertiary); }
+@media (max-width: 640px) {
+    main { padding: 12px 10px 30px; }
+    .stage { grid-template-columns: 1fr; }
+    .arrow { display: none; }
+    .frow .lab { width: 100%; }
+}
+        </style>
+    </head>
+    <body>
+        <main>
+            <div class="top">
+                <div>
+                    <a class="kicker" id="home" href="#">FitFight glow-up</a>
+                    <h1>Favorites</h1>
+                </div>
+                <div class="nav">
+                    <a class="pill" id="to-home" href="#">All pages</a>
+                    <a class="pill" id="to-settings" href="#">Settings</a>
+                    <div class="seg" role="group" aria-label="Appearance">
+                        <button type="button" data-theme-set="night">Night</button>
+                        <button type="button" data-theme-set="day">Day</button>
+                    </div>
+                </div>
+            </div>
+            <p class="lede" id="lede"></p>
+            <div class="filters">
+                <div class="frow" id="whose" role="group" aria-label="Whose"></div>
+                <div class="frow" id="where" role="group" aria-label="Where"></div>
+            </div>
+            <div class="stage">
+                <button type="button" class="arrow" id="prev" aria-label="Previous"></button>
+                <div class="strip" id="strip"></div>
+                <button type="button" class="arrow" id="next" aria-label="Next"></button>
+            </div>
+            <div class="count" id="count"></div>
+            <p class="foot" id="sync"></p>
+        </main>
+        <script>
+const GX_PAGES = [{"group": "Every day", "id": "fights-home", "title": "Fights home"}, {"group": "Every day", "id": "fight-row", "title": "Fight row"}, {"group": "Every day", "id": "today", "title": "Today"}, {"group": "Every day", "id": "tab-bar", "title": "Tab bar and chrome"}, {"group": "Inside a fight", "id": "fight-detail", "title": "Fight detail"}, {"group": "Inside a fight", "id": "race", "title": "Race hero"}, {"group": "Inside a fight", "id": "race-track", "title": "Oval and race track"}, {"group": "Inside a fight", "id": "standings", "title": "Standings"}, {"group": "Inside a fight", "id": "charts", "title": "Charts"}, {"group": "Inside a fight", "id": "overtake", "title": "Overtake moment"}, {"group": "Inside a fight", "id": "result", "title": "Fight result"}, {"group": "Inside a fight", "id": "fight-recap", "title": "Past fight recap"}, {"group": "Inside a fight", "id": "share-card", "title": "Share card"}, {"group": "Inside a fight", "id": "profile-sheet", "title": "Profile sheet"}, {"group": "Start and join", "id": "new-fight", "title": "New fight"}, {"group": "Start and join", "id": "join-invite", "title": "Join and invites"}, {"group": "Start and join", "id": "states", "title": "Empty and loading"}, {"group": "Social", "id": "feed", "title": "Feed"}, {"group": "Social", "id": "post-thread", "title": "Post thread"}, {"group": "Social", "id": "activity", "title": "Notifications inbox"}, {"group": "Social", "id": "feedback", "title": "Feedback board"}, {"group": "You", "id": "you", "title": "You"}, {"group": "You", "id": "settings", "title": "Settings and preferences"}, {"group": "You", "id": "companion", "title": "Companion and Specials"}, {"group": "System and beyond", "id": "controls", "title": "Controls"}, {"group": "System and beyond", "id": "app-icon", "title": "App icon"}, {"group": "System and beyond", "id": "beyond", "title": "Beyond the app"}];
+const CATALOG = {"fights-home": [["today", "1. Today's app"], ["sharper-rows", "2. Sharper rows"], ["status-line", "3. Status line"], ["hero-fight", "4. Hero fight"], ["scoreboard", "5. Scoreboard"], ["race-lanes", "6. Race lanes"], ["timeline", "7. Timeline"], ["podium", "8. Podium carousel"], ["day-ribbon", "9. Day ribbon"], ["editorial", "10. Editorial"], ["stakes", "11. Stakes first"], ["bento", "12. Bento"], ["tug-of-war", "13. Tug of war"], ["wallet", "14. Wallet stack"], ["briefing", "15. Daily briefing"], ["momentum", "16. Momentum"], ["fight-night", "17. Fight night"]], "fight-row": [["today", "1. Today's app"], ["polished", "2. Polished"], ["tug", "3. Tug of war"], ["pack", "4. Pack stack"], ["ring", "5. Countdown ring"], ["dense", "6. Dense list"], ["tiles", "7. Big tiles"], ["timeline", "8. Timeline"], ["ticket", "9. Ticket stub"], ["lead", "10. Lead line"], ["stakes", "11. Stakes first"], ["track", "12. Race track"], ["days", "13. Day strip"], ["scoreline", "14. Scoreline"], ["peek", "15. Peek rows"], ["podium", "16. Podium"], ["wallet", "17. Wallet passes"], ["swing", "18. Today's swing"], ["flip", "19. Flip board"]], "today": [["today", "1. Today's app"], ["plain", "2. Say what it means"], ["tiles", "3. Today tiles"], ["hourly", "4. Hourly pulse"], ["week", "5. Week strip"], ["passed", "6. Passed today"], ["catch", "7. Catch Hugo"], ["clock", "8. Day clock"], ["climb", "9. The climb"], ["headline", "10. The headline"], ["sheet", "11. Today sheet"], ["footpath", "12. Footpath"], ["story", "13. Today story"], ["receipt", "14. Today's receipt"], ["tonight", "15. Plan tonight"]], "tab-bar": [["today", "1. Today's app"], ["clearer", "2. Clearer bar"], ["floating", "3. Floating pill"], ["sliding", "4. Sliding label"], ["raised-new", "5. Raised New"], ["quiet", "6. Quiet and compact"], ["needs-you", "7. Needs you"], ["shrinking", "8. Shrinking hero"], ["badger-dock", "9. Badger on the dock"], ["situation", "10. Situation header"], ["stage", "11. Stage and sheet"], ["words", "12. Word dock"], ["accessory", "13. Live accessory"], ["new-unfolds", "14. New unfolds"], ["climb", "15. Today's climb"]], "fight-detail": [["today", "1. Today's app"], ["tidy", "2. Tidy pass"], ["pinned", "3. Pinned glance"], ["stakes", "4. Stakes first"], ["lanes", "5. Race lanes"], ["scoreboard", "6. Scoreboard"], ["days", "7. Day by day"], ["h2h", "8. Head to head"], ["podium", "9. Podium"], ["what-it-takes", "10. What it takes"], ["story", "11. Story so far"], ["gap-ladder", "12. Mind the gap"], ["week-dial", "13. Week dial"], ["replay", "14. Replay"], ["card-stack", "15. Card stack"]], "race": [["today", "1. Today's app"], ["answer-first", "2. Answer first"], ["tagged-scene", "3. Tagged scene"], ["gap-line", "4. Gap line"], ["race-lanes", "5. Race lanes"], ["gap-chain", "6. Gap chain"], ["podium", "7. Live podium"], ["tale-of-the-tape", "8. Tale of the tape"], ["lead-swings", "9. Lead swings"], ["tug-of-war", "10. Tug of war"], ["staircase", "11. Staircase"], ["chase-cam", "12. Chase cam"], ["stadium", "13. Stadium replay"], ["step-towers", "14. Step towers"], ["race-story", "15. Race story"], ["what-it-takes", "16. What it takes"], ["flap-board", "17. Flap board"]], "standings": [["today", "1. Today's app"], ["one-card", "2. One card"], ["table", "3. Compact table"], ["sparks", "4. Day columns"], ["bars", "5. Leader bars"], ["ladder", "6. Gap ladder"], ["fresh", "7. Sync strip"], ["scoreboard", "8. Scoreboard"], ["headline", "9. Headline first"], ["rail", "10. Avatar rail"], ["versus", "11. You vs each"], ["podium", "12. Podium"], ["lanes", "13. Race lanes"], ["story", "14. Lead story"], ["whatif", "15. What if"], ["forecast", "16. Finish forecast"], ["faceoff", "17. Face-off"]], "charts": [["today", "1. Today's app"], ["clean", "2. Clean lines"], ["days", "3. Day winners"], ["gap", "4. The gap"], ["trace", "5. Race trace"], ["box", "6. Box score"], ["strips", "7. Step strips"], ["bump", "8. Bump chart"], ["forecast", "9. Finish forecast"], ["three", "10. Three questions"], ["caption", "11. Caption first"], ["overtakes", "12. Overtakes"], ["barrace", "13. Bar race"], ["towers", "14. Step towers"], ["tug", "15. Tug of war"], ["stories", "16. Stories"], ["dial", "17. Week dial"], ["trail", "18. Trail map"], ["magnifier", "19. Magnifier"]], "overtake": [["today", "1. Today's app"], ["row-glide", "2. Row glide"], ["row-unfold", "3. Row unfold"], ["island-drop", "4. Island drop"], ["tide-turn", "5. Tide turn"], ["flip-board", "6. Flip board"], ["crossing-lines", "7. Crossing lines"], ["lead-change", "8. Lead change"], ["companion-pass", "9. Companion pass"], ["podium-hop", "10. Podium hop"], ["takeover", "11. Takeover"], ["lap-pass", "12. Lap pass"], ["relive-it", "13. Relive it"]], "result": [["today", "1. Today's app"], ["result-card", "2. Result card"], ["final-score", "3. Final score"], ["podium", "4. Podium"], ["companion", "5. Companions talk"], ["replay", "6. Replay"], ["receipt", "7. Receipt"], ["paper", "8. Front page"], ["hold-open", "9. Hold to open"], ["share-card", "10. Share card"], ["rematch", "11. Rematch"], ["story", "12. Recap story"], ["settle", "13. Settle up"]], "share-card": [["today", "1. Today's app"], ["standings", "2. Standings card"], ["names-off", "3. Only my side"], ["race", "4. Race scene"], ["giant", "5. Giant number"], ["storyline", "6. Storyline"], ["ticket", "7. Ticket"], ["trading", "8. Trading cards"], ["receipt", "9. Bakery receipt"], ["poster", "10. Fight poster"], ["magazine", "11. Magazine cover"], ["story-set", "12. Story set"], ["sticker", "13. Story sticker"], ["replay", "14. Race replay"], ["live-bubble", "15. Live bubble"]], "profile-sheet": [["today", "1. Today's app"], ["tidy", "2. Tidy sheet"], ["peek", "3. Quick peek"], ["rivalry", "4. Rivalry first"], ["week", "5. Side by side"], ["tape", "6. Tale of the tape"], ["scoreline", "7. Scoreline"], ["card", "8. Rival card"], ["scout", "9. Scouting report"], ["tug", "10. Tug of war"], ["story", "11. Rivalry story"]], "new-fight": [["today", "1. Today's app"], ["one-page", "2. One page"], ["glance", "3. At a glance"], ["preview", "4. Live preview"], ["ruler", "5. Time ruler"], ["one-question", "6. One question"], ["two-doors", "7. Two doors"], ["mad-lib", "8. Mad-lib"], ["ticket", "9. Fight ticket"], ["starting-line", "10. Starting line"], ["face-off", "11. Face-off"], ["just-type-it", "12. Just type it"], ["flick", "13. Flick to send"], ["hourglass", "14. Hourglass"]], "join-invite": [["today", "1. Today's app"], ["tidy", "2. Tidy card"], ["sign", "3. Léa's sign"], ["spot", "4. Your spot"], ["envelope", "5. Envelope"], ["ticket", "6. Admit one"], ["stakes", "7. Stakes first"], ["code-first", "8. Code first"], ["sheet", "9. Invite sheet"], ["pact", "10. The pact"], ["deck", "11. Deck"]], "states": [["today", "1. Today's app"], ["clear", "2. Clear and calm"], ["quiet", "3. Quiet list"], ["ghost", "4. Ghost rows"], ["checklist", "5. Checklist"], ["speaks", "6. Badger speaks"], ["nap", "7. Nap time"], ["track", "8. Photo finish"], ["bigtype", "9. Big type"], ["board", "10. Scoreboard"], ["sealed", "11. Sealed result"], ["spotlight", "12. Spotlight"], ["comic", "13. Comic strip"], ["blanks", "14. Fill the blanks"], ["tug", "15. Tug of war"]], "feed": [["today", "1. Today's app"], ["tidy", "2. Tidy cards"], ["filters", "3. Fight filters"], ["by-fight", "4. By fight"], ["photo-first", "5. Photo first"], ["journal", "6. Journal"], ["compact", "7. Compact"], ["proof-wall", "8. Proof wall"], ["companion-notes", "9. Companion notes"], ["threads", "10. Threads"], ["steps-stamp", "11. Steps stamp"], ["scrapbook", "12. Scrapbook"], ["high-fives", "13. High fives"], ["front-page", "14. Front page"], ["comic", "15. Comic strip"]], "post-thread": [["today", "1. Today's app"], ["clean-sheet", "2. Clean sheet"], ["photo-first", "3. Photo first"], ["thread-rail", "4. Thread rail"], ["bubbles", "5. Bubbles"], ["thumb-dock", "6. Thumb dock"], ["fight-context", "7. Fight context"], ["immersive", "8. Immersive"], ["reply-spotlight", "9. Reply spotlight"], ["cheer-squad", "10. Cheer squad"], ["comic-strip", "11. Comic strip"]], "activity": [["today", "1. Today's app"], ["clean-inbox", "2. Clean inbox"], ["needs-you", "3. Needs you first"], ["by-fight", "4. By fight"], ["filters", "5. Filter tabs"], ["digest", "6. Daily digest"], ["porch", "7. Front porch"], ["timeline", "8. Timeline"], ["postcards", "9. Postcards"], ["reel", "10. Catch-up reel"], ["briefing", "11. Companion briefing"]], "feedback": [["today", "1. Today's app"], ["polish", "2. Polish pass"], ["vote-column", "3. Vote column"], ["podium", "4. Podium"], ["poll-bars", "5. Poll bars"], ["vote-map", "6. Vote map"], ["spotlight", "7. Spotlight"], ["host", "8. Companion host"], ["deck", "9. Vote deck"], ["scoreboard", "10. Scoreboard"], ["roadmap", "11. Roadmap"], ["climb", "12. The climb"], ["fight-night", "13. Fight night"]], "you": [["today", "1. Today's app"], ["tidy", "2. Tidy up"], ["quiet", "3. Quiet type"], ["panes", "4. Three tabs"], ["health", "5. Health check"], ["pass", "6. Username pass"], ["calendar", "7. Step calendar"], ["card", "8. Trading card"], ["stage", "9. Companion stage"], ["tape", "10. Tale of the tape"], ["versus", "11. Head to head"], ["story", "12. Story mode"], ["field", "13. Field guide"], ["awards", "14. Trophy case"], ["ridge", "15. Ridgeline"]], "settings": [["today", "1. Today's app"], ["inset", "2. Clean inset"], ["previews", "3. Live previews"], ["timeline", "4. Fight timeline"], ["modes", "5. Quiet modes"], ["onepage", "6. One page"], ["tiles", "7. Control tiles"], ["companion", "8. Badger's desk"], ["words", "9. Plain words"], ["lockscreen", "10. Lock Screen"], ["wallet", "11. Wallet"]], "companion": [["today", "1. Today's app"], ["clean-grid", "2. Clean grid"], ["roll-call", "3. Roll call"], ["character-select", "4. Character select"], ["carousel", "5. Snap carousel"], ["motto", "6. Pick a motto"], ["three-doors", "7. Three doors"], ["limited-drop", "8. Limited drop"], ["see-it-live", "9. See it live"], ["sticker-book", "10. Sticker book"], ["figurine-shelf", "11. Figurine shelf"], ["face-off", "12. Face-off"], ["trail", "13. The trail"]], "controls": [["today", "1. Today's app"], ["tuned", "2. Tuned"], ["moss-go", "3. Moss means go"], ["keycaps", "4. Keycaps"], ["line-work", "5. Line work"], ["system", "6. System"], ["squish", "7. Squish"], ["companion", "8. Companion"], ["tiles", "9. Tiles"], ["knob-track", "10. Knob & track"], ["big-values", "11. Big values"], ["scoreboard", "12. Scoreboard"], ["marker", "13. Marker"]], "app-icon": [["today", "1. Today's app"], ["refined", "2. Refined FF"], ["arches", "3. One mark"], ["scoreboard", "4. Scoreboard"], ["ligature", "5. Shared bar"], ["wordmark", "6. Fit over Fight"], ["track", "7. The track"], ["podium", "8. Podium"], ["tracks", "9. Side by side"], ["flat-badger", "10. Flat badger"], ["peek", "11. Peekaboo"], ["companion", "12. Your companion"], ["face-off", "13. Face-off"], ["sweatband", "14. Sweatband"], ["glass", "15. Liquid glass"]], "beyond": [["today", "1. Today's app"], ["score-push", "2. Say the score"], ["standings-widget", "3. Standings widget"], ["lock-glance", "4. Lock Screen glance"], ["long-press", "5. Long-press card"], ["live-activity", "6. Countdown Live Activity"], ["island", "7. Dynamic Island"], ["finish-lines", "8. Finish lines"], ["companions", "9. Companion widgets"], ["race-stack", "10. Race stack"], ["lead-change", "11. Lead change"], ["final-whistle", "12. Final whistle"], ["companion-wallpaper", "13. Companion wallpaper"], ["on-the-hook", "14. On the hook"], ["chase", "15. Chase mode"]]};
+// Shared by every glow-up page: who is looking, likes / dislikes / comments, shortcuts, file sync.
+// Truth: kit/glowup-state.json when glowup-serve.py runs (agents read it). Otherwise this browser's localStorage,
+// with unsent changes queued and replayed the next time the server is reachable.
+const GX = (() => {
+    const preview = location.host === "htmlpreview.github.io";
+    const ENDPOINT = preview ? null : location.protocol === "file:" ? "http://localhost:8765/glowup-state" : "/glowup-state";
+    const get = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } };
+    const set = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+    const ACTIONS = [
+        ["prev", "Previous option", "ArrowLeft"],
+        ["next", "Next option", "ArrowRight"],
+        ["prevPage", "Previous page", "ArrowUp"],
+        ["nextPage", "Next page", "ArrowDown"],
+        ["like", "Like", "l"],
+        ["dislike", "Dislike (hides it for you)", "d"],
+        ["comment", "Write a comment", "c"],
+        ["open", "Open the selected favorite", "Enter"],
+        ["theme", "Switch Night and Day", "t"],
+        ["replay", "Replay the animation", "r"],
+        ["favorites", "Go to Favorites", "f"],
+        ["home", "Go to all pages", "h"],
+        ["settings", "Go to Settings", "s"],
+        ["help", "Show shortcuts", "?"],
+    ];
+    const keys = () => ({ ...Object.fromEntries(ACTIONS.map(([id, , k]) => [id, k])), ...get("glowup.keys", {}) });
+    const keyLabel = (k) => ({ ArrowLeft: "←", ArrowRight: "→", ArrowUp: "↑", ArrowDown: "↓", Enter: "Enter", " ": "Space", Escape: "Esc" })[k] || (k || "").toUpperCase();
+    const actionFor = (e) => {
+        if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.("input, textarea, select, [contenteditable]")) return null;
+        const pressed = e.key.toLowerCase();
+        const map = keys();
+        return Object.keys(map).find((a) => (map[a] || "").toLowerCase() === pressed) || null;
+    };
+
+    const who = () => get("glowup.who", "") || "Marc";
+    const hasName = () => !!get("glowup.who", "");
+    const setWho = (name) => {
+        const clean = String(name).replace(/[\u0000-\u001f]/g, "").trim().slice(0, 24);
+        if (clean) set("glowup.who", clean);
+        return clean;
+    };
+
+    let state = { choices: {}, comments: {} };
+    let synced = false;
+    let status = () => {};
+    // Version 1 files were { page: { option: "keep" | "hide" } } with no names.
+    const normalize = (raw) => {
+        if (raw && (raw.choices || raw.comments)) return { choices: raw.choices || {}, comments: raw.comments || {} };
+        const choices = {};
+        for (const [page, map] of Object.entries(raw || {})) for (const [id, v] of Object.entries(map || {})) ((choices[page] ||= {})[id] ||= {}).Marc = v;
+        return { choices, comments: {} };
+    };
+    // Same rules as apply() in glowup-serve.py.
+    const apply = (s, op) => {
+        if (op.op === "choice") {
+            const byWho = ((s.choices[op.page] ||= {})[op.id] ||= {});
+            if (op.value) byWho[op.who] = op.value;
+            else delete byWho[op.who];
+            if (!Object.keys(byWho).length) delete s.choices[op.page][op.id];
+            if (!Object.keys(s.choices[op.page]).length) delete s.choices[op.page];
+        } else if (op.op === "comment") {
+            ((s.comments[op.page] ||= {})[op.id] ||= []).push({ who: op.who, text: op.text, at: op.at });
+        } else if (op.op === "uncomment") {
+            const left = ((s.comments[op.page] || {})[op.id] || []).filter((c) => !(c.at === op.at && c.who === op.who));
+            if (left.length) s.comments[op.page][op.id] = left;
+            else if (s.comments[op.page]) {
+                delete s.comments[op.page][op.id];
+                if (!Object.keys(s.comments[op.page]).length) delete s.comments[op.page];
+            }
+        }
+        return s;
+    };
+    const statusText = () => synced ? "Saved to glowup-state.json, shared with everyone using the server."
+        : ENDPOINT ? "Saved in this browser only. Start glowup-serve.py to share and sync." : "Saved in this browser only.";
+    const queue = (op) => set("glowup.pending", [...get("glowup.pending", []), op]);
+    const post = (op) => fetch(ENDPOINT, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify(op) })
+        .then((r) => { if (!r.ok) throw new Error("refused"); return r.json(); });
+    const send = async (op) => {
+        apply(state, op);
+        set("glowup.state", state);
+        if (!synced) { queue(op); return status(statusText()); }
+        try {
+            await post(op);
+            status(statusText());
+        } catch {
+            synced = false;
+            queue(op);
+            status("Server not reachable. Saved in this browser; it syncs next time.");
+        }
+    };
+    const load = async ({ remote = true } = {}) => {
+        state = normalize(get("glowup.state", null));
+        if (!get("glowup.migrated", false)) {
+            // Keep / Hide from the first version lived in per-page keys.
+            for (const p of typeof GX_PAGES === "undefined" ? [] : GX_PAGES) {
+                const old = get(`glowup-${p.id}.status`, null) || Object.fromEntries(get(`glowup-${p.id}.picks`, []).map((id) => [id, "keep"]));
+                for (const [id, value] of Object.entries(old)) {
+                    const op = { op: "choice", page: p.id, id, who: who(), value };
+                    apply(state, op);
+                    queue(op);
+                }
+                try { localStorage.removeItem(`glowup-${p.id}.status`); localStorage.removeItem(`glowup-${p.id}.picks`); } catch {}
+            }
+            set("glowup.migrated", true);
+        }
+        if (remote) {
+            try {
+                if (ENDPOINT) {
+                    const r = await fetch(ENDPOINT, { cache: "no-store" });
+                    if (r.ok) {
+                        state = normalize(await r.json());
+                        synced = true;
+                        const pending = get("glowup.pending", []);
+                        set("glowup.pending", []);
+                        for (const op of pending) await send(op);
+                    }
+                } else if (preview && !Object.keys(state.choices).length && !Object.keys(state.comments).length) {
+                    const r = await fetch(location.search.slice(1).replace(/[^/]+\.html.*$/, "glowup-state.json"), { cache: "no-store" });
+                    if (r.ok) state = normalize(await r.json());
+                }
+            } catch {}
+        }
+        set("glowup.state", state);
+        status(statusText());
+        return state;
+    };
+
+    const choice = (page, id, w = who()) => state.choices[page]?.[id]?.[w] || null;
+    const reactions = (page, id) => state.choices[page]?.[id] || {};
+    const comments = (page, id) => state.comments[page]?.[id] || [];
+    const people = () => [...new Set([
+        who(),
+        ...Object.values(state.choices).flatMap((o) => Object.values(o).flatMap((r) => Object.keys(r))),
+        ...Object.values(state.comments).flatMap((o) => Object.values(o).flatMap((l) => l.map((c) => c.who))),
+    ])];
+    const toggle = (page, id, value) => send({ op: "choice", page, id, who: who(), value: choice(page, id) === value ? null : value });
+    const comment = (page, id, text) => send({ op: "comment", page, id, who: who(), text: String(text).trim().slice(0, 2000), at: new Date().toISOString() });
+    const uncomment = (page, id, at) => send({ op: "uncomment", page, id, who: who(), at });
+    const fileHref = (file) => preview && location.search.length > 1 ? "?" + location.search.slice(1).replace(/[^/]+\.html.*$/, file) : file;
+    const open = (file) => { location.href = fileHref(file); };
+    const ago = (iso) => {
+        const s = (Date.now() - Date.parse(iso)) / 1000;
+        return s < 60 ? "now" : s < 3600 ? `${Math.floor(s / 60)} min` : s < 86400 ? `${Math.floor(s / 3600)} h` : `${Math.floor(s / 86400)} d`;
+    };
+    const escHtml = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+    // Reaction chips for everyone except `except`: "Chloé likes", "Marc disliked".
+    const reactionChips = (page, id, except) => Object.entries(reactions(page, id)).filter(([w]) => w !== except)
+        .map(([w, v]) => `<span class="gx-chip ${v}">${escHtml(w)} ${v === "keep" ? "likes it" : "disliked it"}</span>`).join("");
+
+    return {
+        ACTIONS, keys, keyLabel, actionFor, who, hasName, setWho, load, send, choice, reactions, comments, people,
+        toggle, comment, uncomment, fileHref, open, ago, reactionChips, statusText, get, set,
+        onStatus: (fn) => { status = fn; },
+        get state() { return state; },
+        get synced() { return synced; },
+        endpoint: ENDPOINT,
+    };
+})();
+
+(() => {
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+    const svg = (d, s = 18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+    $("prev").innerHTML = svg('<path d="m15 18-6-6 6-6"/>');
+    $("next").innerHTML = svg('<path d="m9 18 6-6-6-6"/>');
+    const link = (id, file) => $(id).addEventListener("click", (e) => { e.preventDefault(); GX.open(file); });
+    link("home", "glowup-index.html");
+    link("to-home", "glowup-index.html");
+    link("to-settings", "glowup-settings.html");
+
+    // Every option of every page, in hub order.
+    const ALL = GX_PAGES.flatMap((p) => (CATALOG[p.id] || []).map(([id, name]) => ({ page: p.id, pageTitle: p.title, group: p.group, id, name })));
+    let theme = GX.get("glowup.theme", "night");
+    let whose = GX.get("glowup.fav.whose", "mine");
+    let where = GX.get("glowup.fav.where", "all");
+    let sel = 0, start = 0;
+
+    const k = GX.keys();
+    $("lede").innerHTML = `Everything liked, side by side. <kbd>${GX.keyLabel(k.prev)}</kbd> <kbd>${GX.keyLabel(k.next)}</kbd> move · <kbd>${GX.keyLabel(k.prevPage)}</kbd> <kbd>${GX.keyLabel(k.nextPage)}</kbd> change area · <kbd>${GX.keyLabel(k.like)}</kbd> like · <kbd>${GX.keyLabel(k.dislike)}</kbd> dislike · <kbd>${GX.keyLabel(k.comment)}</kbd> comment · <kbd>${GX.keyLabel(k.open)}</kbd> open full size. Click a phone to open it.`;
+
+    const test = (it, w) => {
+        const r = GX.reactions(it.page, it.id), vals = Object.values(r);
+        if (w === "mine") return r[GX.who()] === "keep";
+        if (w === "everyone") return vals.includes("keep");
+        if (w === "agree") return vals.filter((v) => v === "keep").length >= 2 && !vals.includes("hide");
+        if (w === "disagree") return vals.includes("keep") && vals.includes("hide");
+        if (w === "commented") return GX.comments(it.page, it.id).length > 0;
+        if (w === "mydislikes") return r[GX.who()] === "hide";
+        return r[w.slice(7)] === "keep"; // "person:<name>"
+    };
+    const inArea = (it, a) => a === "all" || it.group === a || it.page === a;
+    const items = () => ALL.filter((it) => test(it, whose) && inArea(it, where));
+
+    const renderFilters = () => {
+        const me = GX.who(), others = GX.people().filter((p) => p !== me);
+        const opts = [["mine", `My likes`], ...others.map((p) => [`person:${p}`, `${p}'s likes`]), ["everyone", "Everyone"], ...(others.length ? [["agree", "We agree"], ["disagree", "We disagree"]] : []), ["commented", "Commented"], ["mydislikes", "My dislikes"]];
+        if (!opts.some(([v]) => v === whose)) whose = "mine";
+        const n = (w) => ALL.filter((it) => test(it, w) && inArea(it, where)).length;
+        $("whose").innerHTML = `<span class="lab">Whose</span>` + opts.map(([v, label]) => `<button type="button" class="chip" data-whose="${esc(v)}" aria-pressed="${v === whose}">${esc(label)}<span class="n">${n(v)}</span></button>`).join("");
+        const groups = [...new Set(GX_PAGES.map((p) => p.group))];
+        const m = (a) => ALL.filter((it) => test(it, whose) && inArea(it, a)).length;
+        $("where").innerHTML = `<span class="lab">Where</span>` + [["all", "All areas"], ...groups.map((g) => [g, g])].map(([v, label]) => `<button type="button" class="chip" data-where="${esc(v)}" aria-pressed="${v === where}">${esc(label)}<span class="n">${m(v)}</span></button>`).join("")
+            + `<select id="page-pick" aria-label="One page"><option value="">One page...</option>${GX_PAGES.map((p) => `<option value="${p.id}" ${where === p.id ? "selected" : ""}>${esc(p.title)} (${m(p.id)})</option>`).join("")}</select>`;
+        $("page-pick").addEventListener("change", (e) => setWhere(e.target.value || "all"));
+    };
+    const areas = () => ["all", ...new Set(GX_PAGES.map((p) => p.group))];
+    const setWhose = (w) => { whose = w; GX.set("glowup.fav.whose", w); sel = 0; start = 0; renderAll(); };
+    const setWhere = (a) => { where = a; GX.set("glowup.fav.where", a); sel = 0; start = 0; renderAll(); };
+    $("whose").addEventListener("click", (e) => { const b = e.target.closest("[data-whose]"); if (b) setWhose(b.dataset.whose); });
+    $("where").addEventListener("click", (e) => { const b = e.target.closest("[data-where]"); if (b) setWhere(b.dataset.where); });
+
+    // How many phones fit side by side, and how big.
+    const layout = () => {
+        const narrow = window.innerWidth <= 640;
+        const stripW = $("strip").clientWidth || window.innerWidth - 120;
+        let s = Math.max(0.42, Math.min(0.72, (window.innerHeight - 330) / 852));
+        if (narrow) s = Math.min(1, (stripW - 22) / 393);
+        const cardW = 393 * s + 22;
+        const n = narrow ? 1 : Math.max(1, Math.floor((stripW + 16) / (cardW + 16)));
+        return { s, n };
+    };
+    const metaHtml = (it) => {
+        const me = GX.who(), c = GX.choice(it.page, it.id);
+        const mineChip = c ? `<span class="gx-chip ${c}">You ${c === "keep" ? "like it" : "disliked it"}</span>` : "";
+        return `<div class="where">${esc(it.group)} · ${esc(it.pageTitle)}</div><h3>${esc(it.name)}</h3>
+<div class="reacts">${mineChip}${GX.reactionChips(it.page, it.id, me)}</div>
+<div class="acts"><button type="button" class="act like" data-act="keep" aria-pressed="${c === "keep"}">${c === "keep" ? "Liked" : "Like"}</button><button type="button" class="act dislike" data-act="hide" aria-pressed="${c === "hide"}">${c === "hide" ? "Undo dislike" : "Dislike"}</button><button type="button" class="act" data-act="open">Open full size</button></div>
+<div class="comments">${GX.comments(it.page, it.id).map((x) => `<div class="comment"><b>${esc(x.who)}</b><span class="ago">${GX.ago(x.at)}</span>${x.who === me ? `<button type="button" data-at="${esc(x.at)}">Delete</button>` : ""}<div>${esc(x.text)}</div></div>`).join("")}</div>
+<form><input maxlength="2000" placeholder="Comment as ${esc(me)}" aria-label="Comment" /></form>`;
+    };
+    let shown = [];
+    const renderStrip = () => {
+        const list = items(), { s, n } = layout();
+        sel = Math.min(sel, Math.max(0, list.length - 1));
+        if (sel < start) start = sel;
+        if (sel >= start + n) start = sel - n + 1;
+        start = Math.max(0, Math.min(start, Math.max(0, list.length - n)));
+        shown = list.slice(start, start + n);
+        if (!list.length) {
+            const hint = whose === "mine" ? `Open any page and press ${GX.keyLabel(k.like)} (or tap Like) on the options you like. They collect here.` : "Nothing matches these filters yet.";
+            $("strip").innerHTML = `<div class="empty"><b>No favorites here yet</b>${esc(hint)}</div>`;
+            $("count").textContent = "";
+            $("prev").disabled = $("next").disabled = true;
+            return;
+        }
+        $("strip").innerHTML = shown.map((it, i) => `<div class="card ${start + i === sel ? "sel" : ""}" data-i="${start + i}" style="width:${393 * s + 22}px"><div class="frame" style="width:${393 * s}px;height:${852 * s}px" data-open="1"><iframe title="${esc(it.pageTitle)}: ${esc(it.name)}" loading="lazy" src="${GX.fileHref(`${it.page}-glowup.html`)}#v=${encodeURIComponent(it.id)}&embed=1&theme=${theme}" style="transform:scale(${s})"></iframe></div><div class="meta">${metaHtml(it)}</div></div>`).join("");
+        $("count").textContent = `${sel + 1} of ${list.length}` + (n > 1 ? ` · showing ${start + 1} to ${start + shown.length}` : "");
+        $("prev").disabled = sel === 0;
+        $("next").disabled = sel === list.length - 1;
+    };
+    const renderMetas = () => document.querySelectorAll(".card").forEach((card) => {
+        const it = items()[+card.dataset.i];
+        if (it) card.querySelector(".meta").innerHTML = metaHtml(it);
+    });
+    const renderAll = () => {
+        document.documentElement.setAttribute("data-theme", theme);
+        document.querySelectorAll("[data-theme-set]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.themeSet === theme)));
+        renderFilters();
+        renderStrip();
+    };
+    const move = (d) => {
+        const list = items();
+        if (!list.length) return;
+        const next = Math.max(0, Math.min(list.length - 1, sel + d));
+        if (next === sel) return;
+        sel = next;
+        const { n } = layout();
+        if (sel < start || sel >= start + n) return renderStrip();
+        document.querySelectorAll(".card").forEach((c) => c.classList.toggle("sel", +c.dataset.i === sel));
+        $("count").textContent = `${sel + 1} of ${list.length}` + (n > 1 ? ` · showing ${start + 1} to ${start + shown.length}` : "");
+        $("prev").disabled = sel === 0;
+        $("next").disabled = sel === list.length - 1;
+    };
+    const current = () => items()[sel];
+    const openItem = (it) => it && GX.open(`${it.page}-glowup.html#v=${encodeURIComponent(it.id)}`);
+    // Liking or disliking can move an option out of the current filter, so the strip is rebuilt.
+    const act = (it, value) => { GX.toggle(it.page, it.id, value); renderAll(); };
+
+    $("prev").addEventListener("click", () => move(-1));
+    $("next").addEventListener("click", () => move(1));
+    $("strip").addEventListener("click", (e) => {
+        const card = e.target.closest(".card");
+        if (!card) return;
+        const it = items()[+card.dataset.i];
+        const a = e.target.closest("[data-act]");
+        if (e.target.closest("[data-open]") || (a && a.dataset.act === "open")) return openItem(it);
+        if (a) return act(it, a.dataset.act);
+        const del = e.target.closest("[data-at]");
+        if (del) { GX.uncomment(it.page, it.id, del.dataset.at); return renderMetas(); }
+        if (+card.dataset.i !== sel && !e.target.closest("input")) move(+card.dataset.i - sel);
+    });
+    $("strip").addEventListener("submit", (e) => {
+        e.preventDefault();
+        const card = e.target.closest(".card"), input = e.target.querySelector("input");
+        const it = items()[+card.dataset.i];
+        if (!input.value.trim()) return;
+        GX.comment(it.page, it.id, input.value);
+        renderMetas();
+        renderFilters();
+    });
+    document.querySelectorAll("[data-theme-set]").forEach((b) => b.addEventListener("click", () => { theme = b.dataset.themeSet; GX.set("glowup.theme", theme); renderAll(); }));
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && document.activeElement.matches("input")) return document.activeElement.blur();
+        const a = GX.actionFor(e);
+        const it = current();
+        const run = {
+            prev: () => move(-1), next: () => move(1),
+            prevPage: () => setWhere(areas()[(areas().indexOf(where) - 1 + areas().length) % areas().length]),
+            nextPage: () => setWhere(areas()[(areas().indexOf(where) + 1) % areas().length]),
+            like: () => it && act(it, "keep"), dislike: () => it && act(it, "hide"),
+            comment: () => document.querySelector(".card.sel input")?.focus(),
+            open: () => openItem(it),
+            theme: () => { theme = theme === "night" ? "day" : "night"; GX.set("glowup.theme", theme); renderAll(); },
+            home: () => GX.open("glowup-index.html"), settings: () => GX.open("glowup-settings.html"),
+            help: () => GX.open("glowup-settings.html"),
+        }[a];
+        if (!run) return;
+        e.preventDefault();
+        run();
+    });
+    let resizeT;
+    window.addEventListener("resize", () => { clearTimeout(resizeT); resizeT = setTimeout(renderStrip, 150); });
+    window.addEventListener("focus", () => GX.load().then(() => { renderFilters(); renderMetas(); }));
+    GX.onStatus((t) => { $("sync").textContent = t; });
+    GX.load().then(renderAll);
+})();
+        </script>
+    </body>
+</html>

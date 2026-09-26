@@ -63,6 +63,7 @@ final class CustomCharacterPurchases: ObservableObject {
 
     private func draftKey(_ userID: UUID) -> String { "ff.character.draft.\(userID.uuidString)" }
     private func pendingKey(_ userID: UUID) -> String { "ff.character.pending.\(userID.uuidString)" }
+    private func pendingSinceKey(_ userID: UUID) -> String { "ff.character.pending.since.\(userID.uuidString)" }
 
     func observe(session: SessionStore) async {
         ownerID = session.profile?.userId
@@ -124,6 +125,7 @@ final class CustomCharacterPurchases: ObservableObject {
         defer { isBusy = false }
         UserDefaults.standard.set(prompt, forKey: draftKey(userID))
         UserDefaults.standard.set(true, forKey: pendingKey(userID))
+        UserDefaults.standard.set(Date(), forKey: pendingSinceKey(userID))
         pendingPurchase = true
         do {
             let result = try await product.purchase(options: [.appAccountToken(snapshot.appAccountToken)])
@@ -178,6 +180,13 @@ final class CustomCharacterPurchases: ObservableObject {
             catch is CancellationError { return }
             catch { appleSyncFailed = true }
             try await reconcile(session: session)
+            // A pending Ask to Buy has no transaction yet, so an empty reconcile proves nothing until
+            // Apple's 24 hour approval window has passed. After that, Restore is the way out.
+            if !appleSyncFailed, processing.isEmpty, let userID = ownerID,
+               Date().timeIntervalSince(UserDefaults.standard.object(forKey: pendingSinceKey(userID)) as? Date ?? .distantPast) > 86_400 {
+                UserDefaults.standard.removeObject(forKey: pendingKey(userID))
+                pendingPurchase = false
+            }
             try await refresh(session: session)
             if message.isEmpty {
                 message = appleSyncFailed

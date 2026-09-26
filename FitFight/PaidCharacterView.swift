@@ -131,10 +131,13 @@ struct PaidCharacterView: View {
                 do {
                     let progress = try await purchases.advance(id, session: session)
                     if progress.status != .generating {
-                        await loadLibrary()
-                        if progress.status == .complete,
-                           let entry = library.first(where: { $0.requestID == progress.requestID && $0.workflow == .fitness }) {
-                            await select(entry)
+                        // The finished snapshot clears pollingID, which cancels this task; finish outside it.
+                        Task {
+                            await loadLibrary()
+                            if progress.status == .complete,
+                               let entry = library.first(where: { $0.requestID == progress.requestID && $0.workflow == .fitness }) {
+                                await select(entry)
+                            }
                         }
                         return
                     }

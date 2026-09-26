@@ -314,6 +314,8 @@ enum HealthKitActivitySync {
     }
 
     private static func save(_ progress: Progress, key: String) throws {
+        // A cancelled import must not restore progress that was just cleared.
+        try Task.checkCancellation()
         UserDefaults.standard.set(try JSONEncoder().encode(progress), forKey: key)
     }
 }

@@ -6577,6 +6577,26 @@
                 }
             }
         },
+        "Steps and fights update right after you open the app instead of waiting for your full Apple Health history to upload, and Fights shows Syncing… until today’s steps arrive. Dashboard shows your Steps straight away. Edit profile has Profile visibility and Share Steps history again, so friends you share with see your stats and fighter.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les pas et les défis se mettent à jour dès l’ouverture de l’app, sans attendre l’envoi de tout ton historique Santé d’Apple, et Défis affiche Synchronisation… jusqu’à l’arrivée des pas du jour. Le tableau de bord affiche tes pas tout de suite. Modifier le profil retrouve Visibilité du profil et Partager l’historique des pas, pour que les amis avec qui tu partages voient tes stats et ton combattant."
+                    }
+                }
+            }
+        },
+        "Syncing…": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Synchronisation…"
+                    }
+                }
+            }
+        },
         "Syncing your step activity…": {
             "localizations": {
                 "fr": {

@@ -5,6 +5,9 @@ import Foundation
     enum SyncTrigger { case foreground, manual }
     let hasAsked = true
 }
+@MainActor final class YouActivityStore {
+    func load() async {}
+}
 @MainActor final class AppModel {
     var upload: CheckedContinuation<Void, Never>?
     var confirmedSteps = 100
@@ -19,6 +22,7 @@ import Foundation
     let model = AppModel()
     let session = SessionStore()
     let steps = HealthKitStepsStore()
+    let activity = YouActivityStore()
     let staticRender = false
     var visibleSteps = 100
     var profileLoads = 0

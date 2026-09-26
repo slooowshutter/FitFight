@@ -575,6 +575,7 @@ struct CompanionAvatarStack: View {
 struct CompanionIntroduction: View {
     enum Surface { case fights, newFight, you }
     let surface: Surface
+    @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var companions: CompanionStore
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var steps: HealthKitStepsStore
@@ -750,13 +751,13 @@ struct CompanionIntroduction: View {
                 Text("steps today")
                     .ffType(.caption)
                     .foregroundStyle(theme.textSecondary)
-            case .reading:
+            case .reading, .idle where model.isRefreshingFights, .empty where model.isRefreshingFights:
                 if staticRender {
                     Image(systemName: "arrow.clockwise").foregroundStyle(theme.gold)
                 } else {
                     ProgressView().tint(theme.gold)
                 }
-                Text("Reading today’s steps…")
+                Text(steps.status == .reading ? String(appLocalized: "Reading today’s steps…") : String(appLocalized: "Syncing…"))
                     .ffType(.caption)
                     .foregroundStyle(theme.textSecondary)
             case .idle, .empty:
@@ -1343,6 +1344,13 @@ struct CompanionPicker: View {
             if category != .yours, !pickingCustom, let first = visible.first, draft.map(visible.contains) != true {
                 draft = first
                 pickingCustom = false
+            }
+        }
+        // Writing a description means picking custom, so the pinned stock save bar steps aside.
+        .onChange(of: promptFocused) { _, focused in
+            if focused {
+                pickingCustom = true
+                draft = nil
             }
         }
         .onChange(of: session.profile?.userId) { _, _ in dismiss() }

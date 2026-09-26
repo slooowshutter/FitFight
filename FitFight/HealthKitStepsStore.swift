@@ -64,6 +64,10 @@ final class HealthKitStepsStore: ObservableObject {
     private let api = FitFightAPI()
     private let uploader = HealthKitTUSUploader()
     private var inFlightSync: Task<Bool, Never>?
+    private var activitySync: Task<Void, Never>?
+    private var pendingActivity: (
+        session: SessionStore, userId: UUID, context: FitFightHealthKitContext, timeZone: TimeZone, trigger: SyncTrigger
+    )?
     private var rerunRequested = false
     private var observerQueries: [HKObserverQuery] = []
     private var deliveryRegistrationResults: [String: Bool] = [:]
@@ -171,6 +175,8 @@ final class HealthKitStepsStore: ObservableObject {
                         let userID = self.activeUserId
                         let operation = Task { @MainActor in
                             _ = await self.syncToBackend(session: session, trigger: .observer, trace: trace)
+                            // Keep the background wake open for the activity upload too; the watchdog still caps it.
+                            await self.activitySync?.value
                             self.completeAttempt(trace, session: session, userID: userID)
                             gate.finish()
                         }
@@ -232,6 +238,7 @@ final class HealthKitStepsStore: ObservableObject {
     func activate(userId: UUID?) {
         guard !CompanionPreview.isEnabled else { return }
         guard activeUserId != userId else { refreshBackgroundStatus(); return }
+        cancelActivitySync()
         activeUserId = userId
         status = .idle
         connection = .notConnected
@@ -247,6 +254,7 @@ final class HealthKitStepsStore: ObservableObject {
 
     func deleteLocalData(userId: UUID) async -> Bool {
         UserDefaults.standard.set(userId.uuidString, forKey: Self.pendingLocalDeletionKey)
+        if activeUserId == userId || activeUserId == nil { cancelActivitySync() }
         await uploader.discardLegacy(userId: userId)
         do { try HealthKitUploadState.discardLegacy(userId: userId) } catch { return false }
         HealthKitActivitySync.clear(userId: userId)
@@ -293,6 +301,8 @@ final class HealthKitStepsStore: ObservableObject {
                     )
                 }
                 if let userID {
+                    // A running import would write its old progress back over the reset.
+                    if activeUserId == userID { cancelActivitySync() }
                     HealthKitActivitySync.clear(userId: userID)
                 }
             } catch {
@@ -400,45 +410,21 @@ final class HealthKitStepsStore: ObservableObject {
             let syncToken = try await trace.measure(.session) { try await session.freshAccessToken() }
             guard activeUserId == userId, session.authSession?.user.id == userId else { throw CancellationError() }
             _ = try await api.syncHealthKitSteps(sync, accessToken: syncToken, trace: trace)
-
-            var activityFailure: Error?
-            var activityProcessingPending = false
-            do {
-                let processed = try await trace.measure(.healthKitActivity) {
-                    try await HealthKitActivitySync.synchronize(
-                        store: store, api: api, session: session, userId: userId,
-                        context: context, timeZone: timeZone, trace: trace
-                    )
-                }
-                activityProcessingPending = !processed
-            } catch {
-                activityFailure = error
-                trace.fail(Self.errorCode(for: error))
-                let reference = HealthKitSyncTrace.Failure(error).reference
-                Self.logger.error("healthkit_activity_sync_failed reference=\(reference, privacy: .public)")
-            }
             try Task.checkCancellation()
             guard activeUserId == userId else { throw CancellationError() }
             connection = .upToDate
-            if activityFailure == nil && !activityProcessingPending {
-                UserDefaults.standard.removeObject(forKey: Self.pendingSyncKey)
-            } else {
-                UserDefaults.standard.set(true, forKey: Self.pendingSyncKey)
-            }
             updateDiagnostics {
                 if trigger == .observer { $0.lastAutomaticSync = Date() }
                 else { $0.lastManualSync = Date() }
-                $0.activitySyncFailed = activityFailure != nil
-                $0.activityProcessingPending = activityProcessingPending
-                $0.errorCode = activityFailure.map { Self.errorCode(for: $0) }
-                $0.failureReference = activityFailure.map { HealthKitSyncTrace.Failure($0).reference }
-                $0.failureDetail = activityFailure == nil
-                    ? nil : String(appLocalized: "Steps up to date · Other activity didn't sync. Tap to retry.")
+                $0.errorCode = nil
+                $0.failureReference = nil
+                $0.failureDetail = nil
             }
+            startActivitySync(session: session, userId: userId, context: context, timeZone: timeZone, trigger: trigger)
             if trigger == .observer {
                 await onBackendSync?()
             }
-            return activityFailure == nil && !activityProcessingPending
+            return true
         } catch {
             let code = Self.errorCode(for: error)
             let detail = Self.failureDetail(for: error)
@@ -457,6 +443,67 @@ final class HealthKitStepsStore: ObservableObject {
             Self.logger.error("healthkit_sync_failed code=\(code.rawValue, privacy: .public) detail=\(detail, privacy: .public)")
             return false
         }
+    }
+
+    /// Other activity, including the first full history import, can take thousands of requests.
+    /// It runs on its own so Steps and fights never wait for it; progress is saved page by page.
+    private func startActivitySync(
+        session: SessionStore,
+        userId: UUID,
+        context: FitFightHealthKitContext,
+        timeZone: TimeZone,
+        trigger: SyncTrigger
+    ) {
+        // The newest request wins, so the recent totals are re-read after a long import.
+        pendingActivity = (session, userId, context, timeZone, trigger)
+        guard activitySync == nil else { return }
+        activitySync = Task { @MainActor in
+            // A cancelled import was already detached; it must not clear a newer one.
+            defer { if !Task.isCancelled { self.activitySync = nil } }
+            while let next = self.pendingActivity, !Task.isCancelled {
+                self.pendingActivity = nil
+                let trace = HealthKitSyncTrace(trigger: next.trigger)
+                var failure: Error?
+                var processingPending = false
+                do {
+                    let processed = try await trace.measure(.healthKitActivity) {
+                        try await HealthKitActivitySync.synchronize(
+                            store: self.store, api: self.api, session: next.session, userId: next.userId,
+                            context: next.context, timeZone: next.timeZone, trace: trace
+                        )
+                    }
+                    processingPending = !processed
+                } catch {
+                    failure = error
+                    trace.fail(Self.errorCode(for: error))
+                    let reference = HealthKitSyncTrace.Failure(error).reference
+                    Self.logger.error("healthkit_activity_sync_failed reference=\(reference, privacy: .public)")
+                }
+                guard activeUserId == next.userId, !Task.isCancelled else { continue }
+                if failure == nil && !processingPending {
+                    UserDefaults.standard.removeObject(forKey: Self.pendingSyncKey)
+                } else {
+                    UserDefaults.standard.set(true, forKey: Self.pendingSyncKey)
+                }
+                updateDiagnostics {
+                    $0.activitySyncFailed = failure != nil
+                    $0.activityProcessingPending = processingPending
+                    // A newer Steps failure owns the error fields.
+                    guard connection != .syncFailed else { return }
+                    $0.errorCode = failure.map { Self.errorCode(for: $0) }
+                    $0.failureReference = failure.map { HealthKitSyncTrace.Failure($0).reference }
+                    $0.failureDetail = failure == nil
+                        ? nil : String(appLocalized: "Steps up to date · Other activity didn't sync. Tap to retry.")
+                }
+                completeAttempt(trace, session: next.session, userID: next.userId)
+            }
+        }
+    }
+
+    private func cancelActivitySync() {
+        activitySync?.cancel()
+        activitySync = nil
+        pendingActivity = nil
     }
 
     private func refreshBackgroundStatus() {

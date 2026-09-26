@@ -249,7 +249,8 @@ struct LiveFightCard: View {
                         size: 22,
                         ring: theme.card
                     )
-                    if !fight.isUpcoming {
+                    // Joined for the next round: no place this round.
+                    if !fight.isUpcoming, fight.standings.contains(where: { $0.person.isYou && !$0.deferred }) {
                         Text(String(appLocalized: "fight.rank-of", defaultValue: "\(AppModel.ordinal(fight.rank)) of \(fight.of)"))
                     }
                 }

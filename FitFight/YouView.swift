@@ -67,7 +67,7 @@ struct YouView: View {
         }
         .navigationDestination(isPresented: $showingSettings) { settingsScreen }
         .navigationDestination(isPresented: $showingDashboard) {
-            DashboardView(sports: activity.sports, days: activity.days, statistics: profileStore.profile?.stepStatistics)
+            DashboardView(sports: activity.sports, days: activity.days, statistics: profileStore.profile?.stepStatistics, results: results)
         }
         .task(id: session.authSession?.user.id) { await refreshOwnProfile() }
         .onChange(of: scenePhase) { _, phase in
@@ -260,8 +260,11 @@ struct YouView: View {
 
     private func refreshOwnProfile(trigger: HealthKitStepsStore.SyncTrigger = .foreground, requestAccess: Bool = false) async {
         guard !staticRender else { return }
+        // Local Apple Health first: Dashboard and the sport list must not wait for the server.
+        await activity.load()
         await model.refreshFights(session: session, steps: steps, trigger: trigger, requestAccess: requestAccess)
         guard !Task.isCancelled else { return }
+        if requestAccess { await activity.load() }
         await loadOwnProfile()
     }
 
@@ -273,10 +276,10 @@ struct YouView: View {
         profileStore.clear()
         guard !staticRender, let userID = session.authSession?.user.id ?? CompanionPreview.youID else { return }
         await profileStore.load(userID: userID, session: session)
-        while profileStore.nextCursor != nil, !Task.isCancelled {
+        // A newer load owns the store; its in-flight page would make loadMore return without yielding.
+        while requestGeneration == profileLoadGeneration, profileStore.nextCursor != nil, !Task.isCancelled {
             await profileStore.loadMore(userID: userID, session: session)
         }
-        await activity.load()
         guard !CompanionPreview.isEnabled else { return }
         do {
             let token = try await session.freshAccessToken()

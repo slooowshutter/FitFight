@@ -40,6 +40,17 @@ struct TestSession { let user: TestUser }
         precondition(withStatistics.stepStatistics?.week.averageSteps == 8_500)
         precondition(withStatistics.stepStatistics?.levels.last?.currentStreak == 2)
         precondition(shared.record?.played == 10 && shared.record?.winRate == 0.3)
+        precondition(shared.record?.draws == 1 && shared.record?.losses == 6)
+        var older = try JSONSerialization.jsonObject(with: Data(contentsOf: fixtures.appendingPathComponent("shared-profile.json"))) as! [String: Any]
+        var olderRecord = older["record"] as! [String: Any]
+        olderRecord["draws"] = nil
+        olderRecord["losses"] = nil
+        older["record"] = olderRecord
+        let olderRecordProfile = try decoder.decode(SharedProfile.self, from: JSONSerialization.data(withJSONObject: older))
+        precondition(olderRecordProfile.record?.wins == 3 && olderRecordProfile.record?.draws == nil && olderRecordProfile.record?.losses == nil,
+                     "Backends deployed before draws and losses remain decodable")
+        let cached = try decoder.decode(SharedProfile.self, from: JSONEncoder().encode(withStatistics))
+        precondition(cached == withStatistics, "The cached own Profile reads back unchanged")
         precondition(privateProfile.record == nil && privateProfile.activity == nil)
         precondition(history.results[0].fightId == nil && history.results[0].name == nil)
         let session = SessionStore()
@@ -69,7 +80,20 @@ struct TestSession { let user: TestUser }
         precondition(FitFightAPI.sharedHistoryRequests.last == true, "Pagination keeps the shared Fight filter")
         FitFightAPI.histories.removeFirst().resume(throwing: URLError(.userAuthenticationRequired))
         await more.value
-        precondition(store.profile == nil && store.history.isEmpty && store.error != nil)
+        precondition(store.profile == withStatistics && store.history.count == 1 && store.nextCursor != nil && store.error != nil,
+                     "A failed page keeps the loaded Profile and cursor so Load more can retry")
+        let retry = Task { await store.loadMore(userID: shared.identity.userId, session: session) }
+        await until { FitFightAPI.histories.count == 1 }
+        FitFightAPI.histories.removeFirst().resume(returning: history)
+        await retry.value
+        precondition(store.history.count == 2 && store.error == nil, "Retrying Load more appends the page and clears the error")
+        struct Refused: Error {}
+        let refused = Task { await store.loadMore(userID: shared.identity.userId, session: session) }
+        await until { FitFightAPI.histories.count == 1 }
+        FitFightAPI.histories.removeFirst().resume(throwing: Refused())
+        await refused.value
+        precondition(store.profile == nil && store.history.isEmpty && store.error != nil,
+                     "A refused page (blocked, deleted, invalid cursor) hides the Profile")
 
         let own = Task { await store.load(userID: session.authSession!.user.id, session: session) }
         await until { FitFightAPI.profiles.count == 1 }
@@ -86,6 +110,6 @@ struct TestSession { let user: TestUser }
         FitFightAPI.profiles.removeFirst().resume(returning: shared)
         await accountSwitch.value
         precondition(store.profile == nil && !store.loading)
-        print("Profile state: DTOs, redaction, reversed responses, revocation, account switch passed")
+        print("Profile state: DTOs, redaction, reversed responses, Load more retry, account switch passed")
     }
 }

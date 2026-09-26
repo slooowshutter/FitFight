@@ -1,8 +1,11 @@
+// Next's server installs AsyncLocalStorage before any route module loads.
+import "next/dist/server/node-environment-baseline";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { after, test } from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 import { createClient, type RealtimeChannel } from "@supabase/supabase-js";
+import { workAsyncStorage } from "next/dist/server/app-render/work-async-storage.external";
 import postgres from "postgres";
 import { databaseTestEnvironmentSchema } from "@/lib/types/testing/database";
 import { readFightSnapshot } from "./fight-snapshot-supabase-query";
@@ -320,21 +323,37 @@ test(
             { version: "1.0.0", build: "190" },
             { version: "1.1.0", build: "200" },
         ]) {
-            const response = await refresh(
-                new Request("http://localhost/api/v1/fights/refresh", {
-                    method: "POST",
-                    body: JSON.stringify({ time_zone: "UTC" }),
-                    headers: {
-                        Authorization: `Bearer ${session.session.access_token}`,
-                        "X-FitFight-Version": client.version,
-                        "X-FitFight-Build": client.build,
+            const deferred: Array<() => Promise<unknown>> = [];
+            const response: Response = await workAsyncStorage.run(
+                {
+                    afterContext: {
+                        after: (task: () => Promise<unknown>) =>
+                            deferred.push(task),
                     },
-                }),
-                { params: Promise.resolve({}) },
+                } as never,
+                () =>
+                    refresh(
+                        new Request("http://localhost/api/v1/fights/refresh", {
+                            method: "POST",
+                            body: JSON.stringify({ time_zone: "UTC" }),
+                            headers: {
+                                Authorization: `Bearer ${session.session.access_token}`,
+                                "X-FitFight-Version": client.version,
+                                "X-FitFight-Build": client.build,
+                            },
+                        }),
+                        { params: Promise.resolve({}) },
+                    ),
             );
             assert.equal(response.status, 200);
             const contract = fightSnapshotSchema.parse(await response.json());
             assert.deepEqual(contract.members, snapshots[0].members);
+            assert.equal(
+                deferred.length,
+                1,
+                "Notification delivery runs after the refresh response",
+            );
+            await deferred[0]();
         }
         const liveResponse = await snapshot(
             new Request("http://localhost/api/v1/fights/snapshot", {

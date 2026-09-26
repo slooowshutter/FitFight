@@ -16,6 +16,8 @@ struct EditProfileView: View {
     @State private var pickerItem: PhotosPickerItem?
     @State private var showingCompanions = false
     @State private var showingPhotos = false
+    @State private var previewAudience = "stranger"
+    @State private var showingPreview = false
     @FocusState private var displayNameFocused: Bool
     @FocusState private var handleFocused: Bool
 
@@ -65,7 +67,65 @@ struct EditProfileView: View {
                                     .ffType(.caption).foregroundStyle(theme.textSecondary)
                             }.ffType(.body)
                         }
+                        FFSection(title: String(appLocalized: "Profile visibility")) {
+                            FFCard {
+                                VStack(alignment: .leading, spacing: 16) {
+                                    Toggle(String(appLocalized: "Competitive"), isOn: Binding(
+                                        get: { settings?.competitive == true },
+                                        set: { settings?.competitive = $0 }
+                                    ))
+                                    Text(String(appLocalized: "Show your competitive record and rivalry scores. Turning this off never erases results."))
+                                        .ffType(.caption).foregroundStyle(theme.textSecondary)
+                                    Toggle(String(appLocalized: "Public profile"), isOn: Binding(
+                                        get: { settings?.audience == "public" },
+                                        set: {
+                                            settings?.audience = $0 ? "public" : "private"
+                                            if !$0 && settings?.activityAudience == "public" { settings?.activityAudience = "off" }
+                                        }
+                                    ))
+                                    Text(String(appLocalized: "Public means all signed-in FitFight users. Private means friends and current opponents. Your name and companion remain identifiable."))
+                                        .ffType(.caption).foregroundStyle(theme.textSecondary)
+                                }.ffType(.body).tint(theme.mossFill)
+                            }
+                        }
+                        FFSection(title: String(appLocalized: "Share Steps history")) {
+                            FFCard {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Text(String(appLocalized: "Optional. Choose who can see your stored daily Steps and for how long. Fight participation shares its own results separately."))
+                                        .ffType(.caption).foregroundStyle(theme.textSecondary)
+                                    Text(String(appLocalized: "This also shares step records, averages, activity levels and streaks for that period. Your full recorded history stays private."))
+                                        .ffType(.caption).foregroundStyle(theme.textSecondary)
+                                    Picker(String(appLocalized: "Audience"), selection: Binding(
+                                        get: { settings?.activityAudience ?? "off" }, set: { settings?.activityAudience = $0 }
+                                    )) {
+                                        Text(String(appLocalized: "Off")).tag("off")
+                                        Text(String(appLocalized: "Friends")).tag("friends")
+                                        Text(String(appLocalized: "Friends and current opponents")).tag("opponents")
+                                        if settings?.audience == "public" { Text(String(appLocalized: "All signed-in users")).tag("public") }
+                                    }
+                                    Picker(String(appLocalized: "Period"), selection: Binding(
+                                        get: { settings?.activityDays ?? 7 }, set: { settings?.activityDays = $0 }
+                                    )) {
+                                        Text(String(appLocalized: "7 days")).tag(7)
+                                        Text(String(appLocalized: "30 days")).tag(30)
+                                    }.pickerStyle(.segmented)
+                                }.ffType(.body)
+                            }
+                        }
                         FFButton(title: String(appLocalized: "Save"), busy: saving, fullWidth: true) { Task { await save(close: true) } }
+                        FFCard {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Picker(String(appLocalized: "Preview audience"), selection: $previewAudience) {
+                                    Text(String(appLocalized: "Friend")).tag("friend")
+                                    Text(String(appLocalized: "Current opponent")).tag("opponent")
+                                    Text(String(appLocalized: "Past opponent")).tag("past_opponent")
+                                    Text(String(appLocalized: "Other signed-in user")).tag("stranger")
+                                }.ffType(.body)
+                                FFButton(title: String(appLocalized: "Save and preview"), kind: .secondary, busy: saving) {
+                                    Task { if await save(close: false) { showingPreview = true } }
+                                }
+                            }
+                        }
                     }
                 }
                 .padding(theme.space.screenPadding)
@@ -84,6 +144,12 @@ struct EditProfileView: View {
         .sheet(isPresented: $showingCompanions) {
             CompanionPicker(selection: companions.selection, required: false, isCustom: companions.isCustom, prompt: companions.customPrompt)
                 .fitFightTheme(theme).presentationBackground(theme.bg)
+        }
+        .sheet(isPresented: $showingPreview) {
+            if let userID = session.authSession?.user.id {
+                ProfileSheet(userID: userID, source: "friends", preview: previewAudience)
+                    .fitFightTheme(theme).presentationBackground(theme.bg)
+            }
         }
     }
 

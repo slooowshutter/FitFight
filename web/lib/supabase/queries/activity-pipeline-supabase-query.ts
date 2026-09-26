@@ -11,6 +11,7 @@ import { scoreFight } from "@/lib/scoring/score-fight";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import {
     activityMeasurementSchema,
+    activityRawIdSchema,
     claimedActivityRawSchema,
     fightTotalPayloadSchema,
     selectedActivityRawSchema,
@@ -39,6 +40,7 @@ const MAX_PROCESSING_ATTEMPTS = 5;
 /**
  * Durable intake. Identical content from a retry or a second device is one row. A newer re-read of
  * that content returns it to pending, so a total that goes A, B, then A again selects A.
+ * Returns the row for every record, including content that was already stored.
  */
 export async function insertActivityRaw(
     sql: Sql | TransactionSql,
@@ -46,9 +48,9 @@ export async function insertActivityRaw(
     sourceId: string,
     collectedAt: string,
     records: ActivityRawRecord[],
-): Promise<number> {
+): Promise<{ received: number; ids: string[] }> {
     if (records.length === 0) {
-        return 0;
+        return { received: 0, ids: [] };
     }
     const rows = records.map((record) => ({
         ...record,
@@ -56,27 +58,40 @@ export async function insertActivityRaw(
             .update(JSON.stringify(record.payload))
             .digest("hex"),
     }));
-    await sql`
-        insert into private.activity_raw (
-            user_id, source_id, record_kind, record_type, record_key, starts_at, ends_at,
-            time_zone, payload, payload_hash, collected_at
+    // NOTE: Every part of one statement shares a snapshot, so stored rows come from the
+    // join and new or refreshed rows come from returning.
+    const stored = activityRawIdSchema.array().parse(await sql`
+        with incoming as (
+            select * from jsonb_to_recordset(${sql.json(rows)}::jsonb) as record (
+                record_kind text, record_type text, record_key text, starts_at timestamptz,
+                ends_at timestamptz, time_zone text, payload jsonb, payload_hash text
+            )
+        ), written as (
+            insert into private.activity_raw (
+                user_id, source_id, record_kind, record_type, record_key, starts_at, ends_at,
+                time_zone, payload, payload_hash, collected_at
+            )
+            select ${userId}, ${sourceId}, record.record_kind, record.record_type, record.record_key,
+                record.starts_at, record.ends_at, record.time_zone, record.payload, record.payload_hash,
+                ${collectedAt}
+            from incoming as record
+            on conflict (source_id, record_kind, record_type, record_key, payload_hash) do update
+            set collected_at = excluded.collected_at,
+                processing_state = 'pending',
+                processing_attempts = 0,
+                processing_error = null,
+                lease_expires_at = null
+            where private.activity_raw.collected_at < excluded.collected_at
+            returning id
         )
-        select ${userId}, ${sourceId}, record.record_kind, record.record_type, record.record_key,
-            record.starts_at, record.ends_at, record.time_zone, record.payload, record.payload_hash,
-            ${collectedAt}
-        from jsonb_to_recordset(${sql.json(rows)}::jsonb) as record (
-            record_kind text, record_type text, record_key text, starts_at timestamptz,
-            ends_at timestamptz, time_zone text, payload jsonb, payload_hash text
-        )
-        on conflict (source_id, record_kind, record_type, record_key, payload_hash) do update
-        set collected_at = excluded.collected_at,
-            processing_state = 'pending',
-            processing_attempts = 0,
-            processing_error = null,
-            lease_expires_at = null
-        where private.activity_raw.collected_at < excluded.collected_at
-    `;
-    return records.length;
+        select id from written
+        union
+        select raw.id from private.activity_raw as raw
+        join incoming as record on raw.source_id = ${sourceId} and raw.record_type = record.record_type
+            and raw.record_key = record.record_key and raw.record_kind = record.record_kind
+            and raw.payload_hash = record.payload_hash
+    `);
+    return { received: records.length, ids: stored.map((row) => row.id) };
 }
 
 export async function receiveHealthKitActivity(
@@ -125,7 +140,7 @@ export async function receiveHealthKitActivity(
                 where raw.source_id = ${source.id} and raw.record_kind = 'sample'
                 order by raw.record_type, raw.record_key, raw.collected_at desc
             `);
-        const received = await insertActivityRaw(sql, userId, source.id, input.collected_at, [
+        const { received } = await insertActivityRaw(sql, userId, source.id, input.collected_at, [
             ...input.totals.map((total) => ({
                 record_kind: "total" as const,
                 record_type: total.metric,
@@ -227,15 +242,17 @@ export function workoutPayload(
 /**
  * Resolve received activity in bounded batches. Claimed rows carry a lease, so work interrupted by a
  * crash or timeout is claimed again later. Fight totals resolve in their own transaction first, so
- * a failure in other activity never blocks standings.
+ * a failure in other activity never blocks standings. Raw IDs limit the claim, and the status, to
+ * one upload's rows.
  */
 export async function processActivity(
-    options: { userId?: string; limit?: number; budgetMs?: number } = {},
+    options: { userId?: string; rawIds?: string[]; limit?: number; budgetMs?: number } = {},
     database: Sql = createDatabaseClient(),
 ): Promise<ActivityProcessing> {
     const limit = options.limit ?? 5_000;
     const startedAt = Date.now();
     const userId = options.userId ?? null;
+    const rawIds = options.rawIds ? database.array(options.rawIds) : null;
     let failed = false;
     for (;;) {
         const claimed = claimedActivityRawSchema.array().parse(
@@ -253,6 +270,7 @@ export async function processActivity(
                         and (candidate.processing_state <> 'failed'
                             or candidate.processing_attempts < ${MAX_PROCESSING_ATTEMPTS})
                         and (${userId}::uuid is null or candidate.user_id = ${userId}::uuid)
+                        and (${rawIds}::uuid[] is null or candidate.id = any(${rawIds}::uuid[]))
                     order by candidate.received_at, candidate.id
                     limit ${limit}
                     for update skip locked
@@ -310,11 +328,15 @@ export async function processActivity(
     if (failed || userId === null) {
         return failed ? "pending" : "processed";
     }
+    // Rows that exhausted their retries are never claimed again, so they cannot keep the status pending.
     const [remaining] = await database<{ count: number }[]>`
         select count(*)::integer as count
         from private.activity_raw
         where user_id = ${userId}
+            and (${rawIds}::uuid[] is null or id = any(${rawIds}::uuid[]))
             and processing_state <> 'processed'
+            and (processing_state <> 'failed'
+                or processing_attempts < ${MAX_PROCESSING_ATTEMPTS})
     `;
     return remaining.count === 0 ? "processed" : "pending";
 }
@@ -427,7 +449,7 @@ async function resolveActivity(
         const derived = workoutDayMeasurements(dayWorkouts, new Date());
         await sql`
             delete from private.activity_metrics
-            where source_id = ${sourceId} and scope = 'day'
+            where user_id = ${userId} and source_id = ${sourceId} and scope = 'day'
                 and metric = any(${sql.array([...workoutDayMetricValues])}::text[])
                 and day = any(${sql.array(workoutDays)}::date[])
                 and not ((metric, scope_key) in (

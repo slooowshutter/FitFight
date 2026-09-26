@@ -87,13 +87,22 @@ export async function closeDueFights(
     };
 }
 
+/** Reminders, digests, and pushes for every account. No Fight snapshot reads them. */
+export async function processDueNotifications(
+    now: Date,
+    database: Sql,
+): Promise<CloseDueResult["notifications"]> {
+    await enqueueScheduledNotifications(database, now);
+    return processNotificationOutbox(now, database);
+}
+
 /** Opening the app: close this user's due fights even if cron has not run. */
 export async function closeDueFightsForUser(
     userId: string,
     admin: SupabaseClient = createAdminClient(),
     now: Date = new Date(),
     database: Sql = createDatabaseClient(),
-): Promise<CloseDueResult> {
+): Promise<Omit<CloseDueResult, "notifications">> {
     const [row] = await database`
         select coalesce((
             select jsonb_agg(jsonb_build_object(
@@ -127,12 +136,9 @@ export async function closeDueFightsForUser(
     for (const previousFightId of recurring.slice(0, BATCH)) {
         await mintNextRecurringFight(previousFightId, now, database);
     }
-    await enqueueScheduledNotifications(database, now);
-    const notifications = await processNotificationOutbox(now, database);
     return {
         checked: candidates.length,
         closed: fightIds.length,
         fightIds,
-        notifications,
     };
 }

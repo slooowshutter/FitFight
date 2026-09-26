@@ -1,10 +1,57 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **24 Sep 2026**. Production release: **1.1.1 (202)**.
+Read this before building. Last updated **26 Sep 2026**. Production release: **1.1.1 (202)**.
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
 ---
+
+## Preview sync fixes and faster You: prepared 26 Sep 2026
+
+**Symptoms on the 1.1.2 preview build:** You stayed on "Updating the database"
+and never loaded, the app did not sync Health until You was opened, Fights
+showed "-" before steps arrived, Dashboard asked to connect Apple Health, and
+nobody could share Steps with friends because #311 removed the controls.
+
+**Code:**
+- The Apple Health activity import no longer blocks the Steps upload or the
+  fights refresh. It runs as one background task, reruns with the newest
+  context, and is cancelled on account switch, deletion or a permission reset.
+- New builds stop uploading raw Health samples. Nothing read them, and a Watch
+  user needed about 10,000 requests per year of history. Daily totals, the
+  40-day window and workouts still upload. Observers and background delivery
+  cover only the types the sync reads.
+- The launch refresh waits for the restored Supabase session, so Health is read
+  at app open.
+- You shows a cached profile at once, no longer re-uploads Steps on every visit,
+  no longer pages the whole fight history, and loads rivals in parallel.
+- Edit profile has Profile visibility, Share Steps history and the audience
+  preview again. Friend profiles show the shared statistics and custom fighters.
+- Backend: `fights/refresh` sends global notification work after the response;
+  the snapshot query uses indexed owner/member lookups and per-fight shared day
+  windows; rivalries are computed without one profile read per opponent;
+  profile history pages in SQL; the Steps upload processes only its own rows;
+  exhausted activity rows no longer keep `processing` pending.
+- Paid characters: a failed or cancelled portrait can take a new description,
+  and the reconciler skips owners with an unresolved request.
+
+**Contracts:** `/api/v1` only. `GET /profiles/{id}` gains required
+`record.draws` and `record.losses`; installed builds ignore unknown keys
+(checked by decoding the new fixtures with the 811579c0 model). New builds treat
+both as optional against an older backend. `POST /healthkit/activity` requests
+from new builds omit `samples` and `deleted_samples`, which the schema already
+defaults to empty; older builds keep sending them and the server keeps accepting
+them. `/fights/refresh`, `/fights/snapshot`, `/fights/sync-due`,
+`/me/rivalries`, `/profiles/{id}/history` and the Steps POST keep their shapes,
+ordering and cursor contracts. The snapshot, rivalries and history SQL were
+compared old against new on a scratch Postgres with seeded data: 0 mismatches.
+Behavior changes: the Steps POST `processing` now describes only that upload,
+and activity `processing` reports processed when only exhausted rows remain.
+
+**Deploy order:** no migration. Deploy the backend, then ship the app; either
+order is safe. Not yet verified: the CI database suite on the PR, staging
+refresh latency, and a device run of the preview build (Health sync at launch,
+You loading, friend sharing).
 
 ## Custom companion workflows and daily image: prepared 24 Sep 2026
 
@@ -79,12 +126,23 @@ sample/workout deletions. A bounded TypeScript resolver publishes
 active-minutes, distance, and energy rows, plus Fight scores/charts and the legacy
 Steps mirror. Profile Steps reads the newest legacy or new row during rollout.
 Personal history can be corrected; finalized Fight results stay frozen. The phone
-keeps per-type anchors locally, registers all supported types for background
-observation, imports accessible sample and merged-total history in acknowledged
+keeps a workout anchor and per-type history cursors locally, registers only the
+merged-total and workout types it reads for background observation, imports
+accessible merged-total history in acknowledged
 pages, and distinguishes durable receipt awaiting processing from partial
 activity failure after a successful Steps upload. The new `POST /api/v1/healthkit/activity` is additive. Existing
 `POST /api/v1/healthkit/steps` requests and decoded response fields remain valid;
 its optional `processing` response field is ignored by older Swift decoders.
+
+**Raw samples, 26 Sep 2026:** New builds no longer upload individual Apple Health
+samples or sample deletions. That import cost tens of thousands of requests per
+Watch user and nothing read the stored `scope = 'sample'` rows. New builds omit
+`samples` and `deleted_samples`; the server still defaults both to empty and keeps
+accepting them from older builds that already upload them. After the one-time
+history import, new builds refresh only the latest 40 days of merged totals, so a
+Health edit to an older day is not re-sent. The three effort types stay in the read
+permissions for workout effort, and new builds disable their old background
+delivery at launch. No backend or database change was needed.
 
 **Supported builds checked:** Read-only `/api/app-release` checks on 23 Sep UTC
 returned staging `latest` **1.1.1 (201)**, `review`/`internal` **1.1.2 (205)**,
@@ -111,7 +169,7 @@ native build reaches staging TestFlight. Keep `/api/v1`, the old tables, and old
 client behavior during overlap. None of those steps has happened from this
 branch: no merge, hosted migration, backend/privacy deployment, TestFlight upload,
 production promotion, or PR. A later authorized rollout must check both
-staging and production separately. Sample anchors have no date predicate;
+staging and production separately. Older builds' sample anchors have no date predicate;
 temporary HealthKit deletion history and empty reads after permission revocation
 remain known limits. The daily worker resumes persisted rows
 until a more frequent hosted cron is activated.
@@ -2799,7 +2857,7 @@ The native Fight path uses the API to create and join; Apple Health synchronizat
 - Apple may revise its merged total after a Watch sync, edit, or deletion. Live snapshots can change until the exact Fight-end value is finalized; chart buckets never overwrite that exact-window score.
 - Same Apple ID on production vs staging is **two** accounts.
 - `web/` owns Apple Health aggregate ingestion and account deletion. There are no app-facing Postgres RPCs.
-- Companion sport scenes are not generated. Custom descriptions are stored on the account for a later job. Hiking goat still has five distinct images on You and fights for a stock goat.
+- Companion sport scenes are not generated. Custom descriptions are stored on the account for a later job. The 12 regular stock animals have five effort forms each on You and fights, chosen by today's steps (3k / 6k / 10k / 15k).
 
 ---
 

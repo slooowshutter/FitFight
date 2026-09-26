@@ -6,6 +6,8 @@ struct DashboardView: View {
     let sports: [YouActivityStore.Sport]
     let days: [Date]
     let statistics: ProfileStepStatistics?
+    /// Won, lost and drew over every page of history, from You; this screen's list only loads one page.
+    let results: (won: Int, lost: Int, drew: Int)?
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var model: AppModel
     @Environment(\.ffTheme) private var theme
@@ -148,14 +150,19 @@ struct DashboardView: View {
 
     @ViewBuilder
     private var fightsTab: some View {
-        let rows = history.history.filter(\.counted)
-        let won = rows.filter { $0.result == "win" }.count
-        let drew = rows.filter { $0.result == "draw" }.count
+        // Without You's totals, count this screen's own history once every page is here.
+        let totals = results ?? {
+            guard history.profile != nil, history.nextCursor == nil else { return nil }
+            let rows = history.history.filter(\.counted)
+            let won = rows.filter { $0.result == "win" }.count
+            let drew = rows.filter { $0.result == "draw" }.count
+            return (won: won, lost: rows.count - won - drew, drew: drew)
+        }()
         FFCard {
             HStack {
-                count(won, String(appLocalized: "Won"), theme.mossText)
-                count(drew, String(appLocalized: "Drew"), theme.textSecondary)
-                count(rows.count - won - drew, String(appLocalized: "Lost"), theme.emberText)
+                count(totals?.won, String(appLocalized: "Won"), theme.mossText)
+                count(totals?.drew, String(appLocalized: "Drew"), theme.textSecondary)
+                count(totals?.lost, String(appLocalized: "Lost"), theme.emberText)
             }
         }
         Text(String(appLocalized: "Fight history")).ffType(.heading).foregroundStyle(theme.text).padding(.top, 8)
@@ -194,9 +201,9 @@ struct DashboardView: View {
         }
     }
 
-    private func count(_ value: Int, _ label: String, _ color: Color) -> some View {
+    private func count(_ value: Int?, _ label: String, _ color: Color) -> some View {
         VStack(spacing: 2) {
-            Text("\(value)").font(.ff(44, 800)).monospacedDigit().foregroundStyle(color)
+            Text(value.map { "\($0)" } ?? "-").font(.ff(44, 800)).monospacedDigit().foregroundStyle(color)
             Text(label).ffType(.caption).foregroundStyle(theme.textSecondary)
         }
         .frame(maxWidth: .infinity)

@@ -1,6 +1,6 @@
 import Foundation
 
-struct SharedProfileIdentity: Decodable, Equatable, Identifiable {
+struct SharedProfileIdentity: Codable, Equatable, Identifiable {
     let userId: UUID
     let handle: String
     let displayName: String
@@ -29,30 +29,33 @@ struct SharedProfileSettings: Codable, Equatable {
     }
 }
 
-struct ProfileCounts: Decodable, Equatable {
+struct ProfileCounts: Codable, Equatable {
     let played: Int
     let wins: Int
     let winRate: Double?
     enum CodingKeys: String, CodingKey { case played, wins, winRate = "win_rate" }
 }
 
-struct ProfileRecord: Decodable, Equatable {
+struct ProfileRecord: Codable, Equatable {
     let played: Int
     let wins: Int
+    /// Nil from a backend deployed before draws and losses were added.
+    let draws: Int?
+    let losses: Int?
     let winRate: Double?
     let categories: [String: ProfileCounts]
     let excluded: Int
-    enum CodingKeys: String, CodingKey { case played, wins, categories, excluded, winRate = "win_rate" }
+    enum CodingKeys: String, CodingKey { case played, wins, draws, losses, categories, excluded, winRate = "win_rate" }
 }
 
-struct ProfileRivalry: Decodable, Equatable {
+struct ProfileRivalry: Codable, Equatable {
     let wins: Int
     let losses: Int
     let draws: Int
     let rematch: ProfileRematch?
 }
 
-struct ProfileRematch: Decodable, Equatable {
+struct ProfileRematch: Codable, Equatable {
     let durationSeconds: Int
     let durationDays: Int?
     let actionText: String?
@@ -61,13 +64,13 @@ struct ProfileRematch: Decodable, Equatable {
     }
 }
 
-struct ProfileActivity: Decodable, Equatable {
+struct ProfileActivity: Codable, Equatable {
     let metric: String
     let days: Int
     let values: [ProfileActivityDay]
 }
 
-struct ProfileActivityDay: Decodable, Equatable, Identifiable {
+struct ProfileActivityDay: Codable, Equatable, Identifiable {
     let day: String
     let steps: Double
     let timeZone: String?
@@ -77,7 +80,7 @@ struct ProfileActivityDay: Decodable, Equatable, Identifiable {
     enum CodingKeys: String, CodingKey { case day, steps, finalized, timeZone = "time_zone", updatedAt = "updated_at" }
 }
 
-struct ProfileStepStatistics: Decodable, Equatable {
+struct ProfileStepStatistics: Codable, Equatable {
     let scopeDays: Int?
     let from: String?
     let through: String
@@ -97,12 +100,12 @@ struct ProfileStepStatistics: Decodable, Equatable {
     }
 }
 
-struct ProfileBestStepDay: Decodable, Equatable {
+struct ProfileBestStepDay: Codable, Equatable {
     let day: String
     let steps: Double
 }
 
-struct ProfileStepWeek: Decodable, Equatable {
+struct ProfileStepWeek: Codable, Equatable {
     let startsOn: String
     let elapsedDays: Int
     let recordedDays: Int
@@ -115,7 +118,7 @@ struct ProfileStepWeek: Decodable, Equatable {
     }
 }
 
-struct ProfileActivityLevel: Decodable, Equatable, Identifiable {
+struct ProfileActivityLevel: Codable, Equatable, Identifiable {
     let level: String
     let minimumSteps: Int
     let days: Int
@@ -130,7 +133,8 @@ struct ProfileActivityLevel: Decodable, Equatable, Identifiable {
     }
 }
 
-struct SharedProfile: Decodable, Equatable {
+/// Codable so You can show the last loaded own profile while a fresh one loads.
+struct SharedProfile: Codable, Equatable {
     let identity: SharedProfileIdentity
     let access: String
     let competitive: Bool

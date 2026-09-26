@@ -33,6 +33,7 @@ on:
             - "scripts/test_feedback_compatibility.py"
             - "scripts/test_slide_haptics.py"
             - "scripts/test_feed_activity.py"
+            - "scripts/test_trophy_streak.py"
             - "docs/design/source/tokens.json"
             - "scripts/check_localizations.py"
             - "fastlane/**"
@@ -69,6 +70,7 @@ on:
             - "scripts/test_feedback_compatibility.py"
             - "scripts/test_slide_haptics.py"
             - "scripts/test_feed_activity.py"
+            - "scripts/test_trophy_streak.py"
             - "docs/design/source/tokens.json"
             - "scripts/check_localizations.py"
             - "fastlane/**"
@@ -183,6 +185,9 @@ jobs:
 
             - name: Verify Profile joins and round navigation
               run: python3 scripts/test_profile_interactions.py
+
+            - name: Verify series trophy streaks
+              run: python3 scripts/test_trophy_streak.py
 
             - name: Verify native API contracts
               run: |

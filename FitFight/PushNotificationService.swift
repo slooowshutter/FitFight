@@ -14,6 +14,7 @@ final class PushNotificationService: NSObject, ObservableObject {
     private var session: SessionStore?
     private var askedThisSession = false
     private var deviceToken: String?
+    private var registeredInstallation: String?
     private var installationTask: Task<Void, Never>?
     private var isSignedOut = false
     private var onNotification: @MainActor () -> Void = {}
@@ -97,10 +98,13 @@ final class PushNotificationService: NSObject, ObservableObject {
         #else
         let environment = "production"
         #endif
+        // Launch and sign-in both ask APNs for the token; send each user, token, and locale once.
+        let installation = "\(userID)|\(token)|\(locale)"
         let previous = installationTask
         let work = Task { @MainActor in
             await previous?.value
-            guard !self.isSignedOut, session.authSession?.user.id == userID else { return }
+            guard !self.isSignedOut, session.authSession?.user.id == userID,
+                  self.registeredInstallation != installation else { return }
             do {
                 let access = try await session.freshAccessToken()
                 guard !self.isSignedOut, session.authSession?.user.id == userID else { return }
@@ -111,6 +115,7 @@ final class PushNotificationService: NSObject, ObservableObject {
                     permissionStatus: "authorized",
                     accessToken: access
                 )
+                self.registeredInstallation = installation
             } catch {
                 // Push registration is best-effort; fights still work without it.
             }
@@ -136,6 +141,7 @@ final class PushNotificationService: NSObject, ObservableObject {
         installationTask = Task { @MainActor in
             // A registration already sent to the server must finish before revocation.
             await previous?.value
+            self.registeredInstallation = nil
             do {
                 try await self.api.revokeDeviceInstallation(token: deviceToken, accessToken: access)
             } catch {

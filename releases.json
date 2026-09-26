@@ -19,15 +19,11 @@
   },
   "prod": {
     "latest": {
-      "version": "1.1.1",
-      "build": 202,
-      "update_url": "https://apps.apple.com/app/id6804230516"
-    },
-    "review": {
       "version": "1.1.2",
       "build": 210,
       "update_url": "https://apps.apple.com/app/id6804230516"
     },
+    "review": null,
     "internal": null,
     "enforced": true
   }

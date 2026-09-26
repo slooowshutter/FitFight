@@ -29,6 +29,8 @@ struct FightDayChartsView: View {
     @AppStorage("fight.dayChart.kind.v2") private var kindRaw = FightDayChartKind.oval.rawValue
     @State private var pickedKind: FightDayChartKind?
     @State private var selectedDay: Int?
+    /// People flipped away from the default (top four plus you) by tapping the legend.
+    @State private var toggledPeople: Set<String> = []
     @Environment(\.ffTheme) private var theme
 
     private var kind: FightDayChartKind {
@@ -36,31 +38,37 @@ struct FightDayChartsView: View {
     }
 
     var body: some View {
-        let model = FightDayChartModel(days: days, standings: standings, theme: theme)
-        VStack(alignment: .leading, spacing: 16) {
+        let full = FightDayChartModel(days: days, standings: standings, theme: theme)
+        let shown = Set(full.series.prefix(4).map(\.id) + full.series.filter(\.person.isYou).map(\.id))
+            .symmetricDifference(toggledPeople)
+        var model = full
+        if kind != .oval {
+            model.series = full.series.filter { shown.contains($0.id) }
+        }
+        return VStack(alignment: .leading, spacing: 16) {
             FFFlow(spacing: 8) {
                 ForEach(FightDayChartKind.allCases) { item in
                     badge(item)
                 }
             }
-            if !model.series.isEmpty {
+            if !full.series.isEmpty {
                 if kind == .oval {
                     Text("Confirmed Fight totals")
                         .ffType(.micro)
                         .foregroundStyle(theme.textSecondary)
                 }
-                if kind == .oval || model.dayCount > 0 {
+                if kind == .oval || full.dayCount > 0 {
                     chart(model)
                 } else {
                     Text("Daily history isn't available yet. Confirmed totals are shown in Oval and standings.")
                         .ffType(.caption)
                         .foregroundStyle(theme.textSecondary)
                 }
-                if [.line, .histogram, .pace].contains(kind), model.dayCount > 0 {
-                    let day = min(selectedDay ?? model.dayCount - 1, model.dayCount - 1)
+                if [.line, .histogram, .pace].contains(kind), full.dayCount > 0 {
+                    let day = min(selectedDay ?? full.dayCount - 1, full.dayCount - 1)
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
-                            Text(model.labels[day])
+                            Text(full.labels[day])
                                 .ffType(.label)
                                 .foregroundStyle(theme.text)
                             Spacer()
@@ -68,39 +76,31 @@ struct FightDayChartsView: View {
                                 .ffType(.micro)
                                 .foregroundStyle(theme.textSecondary)
                         }
-                        FFFlow(spacing: 12) {
-                            ForEach(model.series) { series in
-                                HStack(spacing: 6) {
-                                    Circle().fill(series.color).frame(width: 7, height: 7)
-                                    Text(series.person.isYou ? String(appLocalized: "You") : series.person.name)
-                                    Text((kind == .pace ? series.cumulative[day] : series.daily[day])?
-                                        .formatted(.number.precision(.fractionLength(0))) ?? "-")
-                                        .fontWeight(.heavy)
-                                        .monospacedDigit()
-                                }
-                                .ffType(.caption)
-                                .foregroundStyle(theme.text)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityAdjustableAction { direction in
+                            switch direction {
+                            case .increment: selectedDay = min(day + 1, full.dayCount - 1)
+                            case .decrement: selectedDay = max(day - 1, 0)
+                            @unknown default: break
                             }
                         }
-                    }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityAdjustableAction { direction in
-                        switch direction {
-                        case .increment: selectedDay = min(day + 1, model.dayCount - 1)
-                        case .decrement: selectedDay = max(day - 1, 0)
-                        @unknown default: break
-                        }
+                        legend(full, shown: shown, day: day)
                     }
                     Text(kind == .line || kind == .pace
-                         ? String(appLocalized: "Touch or slide to inspect a day.")
-                         : String(appLocalized: "Tap a day to see its steps."))
+                         ? String(appLocalized: "Touch or slide to inspect a day. Tap a name to show or hide it.")
+                         : String(appLocalized: "Tap a day to see its steps. Tap a name to show or hide it."))
                         .ffType(.micro)
                         .foregroundStyle(theme.textFaint)
                     Text("Only synced steps are shown. Missing daily data is marked with a dash.")
                         .ffType(.micro)
                         .foregroundStyle(theme.textFaint)
-                } else if kind != .bars {
-                    legend(model)
+                } else if kind == .bars {
+                    legend(full, shown: shown, day: nil)
+                    Text(String(appLocalized: "Tap a name to show or hide it."))
+                        .ffType(.micro)
+                        .foregroundStyle(theme.textFaint)
+                } else {
+                    legend(full, shown: nil, day: nil)
                 }
             }
         }
@@ -147,17 +147,39 @@ struct FightDayChartsView: View {
         }
     }
 
-    private func legend(_ model: FightDayChartModel) -> some View {
-        FFFlow(spacing: 10) {
+    /// Oval passes `shown: nil` and lists everyone. The other charts make each name a toggle.
+    private func legend(_ model: FightDayChartModel, shown: Set<String>?, day: Int?) -> some View {
+        FFFlow(spacing: day == nil ? 10 : 12) {
             ForEach(model.series) { series in
-                HStack(spacing: 6) {
+                let on = shown?.contains(series.id) ?? true
+                let name = series.person.isYou ? String(appLocalized: "You") : series.person.name
+                let chip = HStack(spacing: 6) {
                     Circle()
-                        .fill(series.color)
+                        .fill(on ? series.color : .clear)
+                        .overlay { Circle().strokeBorder(series.color, lineWidth: 1.5) }
                         .frame(width: 8, height: 8)
-                    Text(series.person.isYou ? String(appLocalized: "You") : series.person.name)
-                        .ffType(.micro)
-                        .foregroundStyle(theme.textSecondary)
+                    Text(name)
                         .lineLimit(1)
+                    if let day {
+                        Text((kind == .pace ? series.cumulative[day] : series.daily[day])?
+                            .formatted(.number.precision(.fractionLength(0))) ?? "-")
+                            .fontWeight(.heavy)
+                            .monospacedDigit()
+                    }
+                }
+                .ffType(day == nil ? .micro : .caption)
+                .foregroundStyle(day == nil ? theme.textSecondary : theme.text)
+                .opacity(on ? 1 : 0.45)
+                if shown == nil {
+                    chip
+                } else {
+                    Button {
+                        toggledPeople.formSymmetricDifference([series.id])
+                    } label: {
+                        chip.contentShape(Rectangle())
+                    }
+                    .buttonStyle(FFHapticPlainStyle())
+                    .accessibilityAddTraits(on ? .isSelected : [])
                 }
             }
         }
@@ -177,10 +199,11 @@ private struct FightDayChartSeries: Identifiable {
 private struct FightDayChartModel {
     var labels: [String]
     var series: [FightDayChartSeries]
-    var peakDaily: Double
-    var peakTotal: Double
 
     var dayCount: Int { labels.count }
+    // Computed so the scale follows whoever is shown after legend toggles.
+    var peakDaily: Double { max(series.flatMap(\.daily).compactMap { $0 }.max() ?? 0, 0) }
+    var peakTotal: Double { max(series.map(\.total).max() ?? 0, 0) }
 
     init(days: [FightDay], standings: [Standing], theme: Theme) {
         labels = days.map(\.label)
@@ -238,8 +261,6 @@ private struct FightDayChartModel {
                 series[index].cumulative = [series[index].total]
             }
         }
-        peakDaily = max(series.flatMap(\.daily).compactMap { $0 }.max() ?? 0, 0)
-        peakTotal = max(series.map(\.total).max() ?? 0, 0)
     }
 
     private static func otherColor(_ index: Int, theme: Theme) -> Color {

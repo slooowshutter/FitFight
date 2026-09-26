@@ -290,7 +290,7 @@ extension CompanionPreview {
         {
             "identity": {"user_id": "\(userID.uuidString)", "handle": "\(person.handle.dropFirst())", "display_name": "\(person.name)", "companion_id": "\(animals[person.id.lowercased()]?.rawValue ?? "goat")", "avatar_url": null},
             "access": "\(isYou ? "owner" : "friend")", "competitive": true, "friendship": "\(isYou ? "self" : "friends")",
-            "record": {"played": 18, "wins": 12, "win_rate": 0.67, "categories": {}, "excluded": 0},
+            "record": {"played": 18, "wins": 12, "draws": 1, "losses": 5, "win_rate": 0.67, "categories": {}, "excluded": 0},
             "rivalry": \(isYou ? "null" : "{\"wins\": \(wins), \"losses\": \(losses), \"draws\": \(draws), \"rematch\": null}"),
             "activity": null,
             "step_statistics": {"scope_days": null, "from": null, "through": "2026-09-24", "time_zone": "Europe/Paris", "recorded_days": 31, "unknown_days": 0,

@@ -49,6 +49,9 @@ export const profileCountsSchema = z.object({
 });
 
 export const profileRecordSchema = profileCountsSchema.extend({
+    draws: z.number().int().nonnegative(),
+    /** Every counted Fight that was not a win or draw, including withdrawals and incomplete finishes. */
+    losses: z.number().int().nonnegative(),
     categories: z.object({
         public: profileCountsSchema,
         private: profileCountsSchema,

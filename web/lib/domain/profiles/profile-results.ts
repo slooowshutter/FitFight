@@ -42,7 +42,7 @@ export function classifyFightResult(fight: FightRecordFact, userId: string): Cla
 
 export function profileRecord(fights: FightRecordFact[], userId: string): ProfileRecord {
     const record: ProfileRecord = {
-        played: 0, wins: 0, win_rate: null, excluded: 0,
+        played: 0, wins: 0, draws: 0, losses: 0, win_rate: null, excluded: 0,
         categories: {
             public: { played: 0, wins: 0, win_rate: null },
             private: { played: 0, wins: 0, win_rate: null },
@@ -60,8 +60,11 @@ export function profileRecord(fights: FightRecordFact[], userId: string): Profil
         if (result.result === "win") {
             record.wins++;
             record.categories[fight.category].wins++;
+        } else if (result.result === "draw") {
+            record.draws++;
         }
     }
+    record.losses = record.played - record.wins - record.draws;
     for (const counts of [record, ...Object.values(record.categories)]) {
         counts.win_rate = counts.played > 0 ? counts.wins / counts.played : null;
     }

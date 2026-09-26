@@ -26,6 +26,8 @@ test("10 played and 3 wins is 30 percent; categories do not change the denominat
     assert.equal(profileRecord(results, first).played, 10);
     assert.equal(profileRecord(results, first).wins, 3);
     assert.equal(profileRecord(results, first).win_rate, 0.3);
+    assert.equal(profileRecord(results, first).draws, 0);
+    assert.equal(profileRecord(results, first).losses, 7);
     assert.equal(profileRecord(results, first).categories.unknown.played, 10);
     assert.equal(profileRecord([], first).win_rate, null);
 });
@@ -35,6 +37,8 @@ test("shared first and no complete final data award no wins", () => {
         const tied = { ...fight, members: fight.members.map((member) => ({ ...member, rank: 1, complete })) };
         assert.equal(classifyFightResult(tied, first).result, "draw");
         assert.equal(profileRecord([tied], first).wins, 0);
+        assert.equal(profileRecord([tied], first).draws, 1);
+        assert.equal(profileRecord([tied], first).losses, 0);
         assert.equal(rivalryRecord([tied], first, second, new Set([fight.id])).draws, 1);
     }
 });
@@ -43,6 +47,7 @@ test("a missing final sync preserves the actual forfeit without calling it quitt
     const partial = { ...fight, members: [fight.members[0], { ...fight.members[1], complete: false }] };
     assert.equal(classifyFightResult(partial, first).result, "win");
     assert.equal(classifyFightResult(partial, second).result, "incomplete");
+    assert.equal(profileRecord([partial], second).losses, 1);
     assert.equal(rivalryRecord([partial], second, first, new Set([fight.id])).losses, 1);
 });
 
@@ -52,6 +57,7 @@ test("withdrawals after starting remain in the denominator; pre-start withdrawal
         assert.equal(classifyFightResult(left, first).counted, departure === "voluntary");
         if (departure === "voluntary") {
             assert.equal(classifyFightResult(left, first).result, "withdrawn");
+            assert.equal(profileRecord([left], first).losses, 1);
             assert.equal(classifyFightResult({ ...left, members: [{ ...left.members[0], departed_at: "2026-09-09T23:00:00Z" }, fight.members[1]] }, first).counted, false);
         }
     }
@@ -66,6 +72,7 @@ test("cancelled, ongoing, solo, unclassifiable and unentered history cannot awar
     ]) {
         assert.equal(classifyFightResult(excluded, first).counted, false);
         assert.equal(profileRecord([excluded], first).wins, 0);
+        assert.equal(profileRecord([excluded], first).losses, 0);
     }
 });
 

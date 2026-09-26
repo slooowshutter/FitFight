@@ -289,6 +289,8 @@ test("withdrawal is recorded atomically and later visibility edits never reclass
     const own = await readSharedProfile(opponent, opponent, undefined, database);
     assert.equal(own.record?.played, 1);
     assert.equal(own.record?.wins, 0);
+    assert.equal(own.record?.draws, 0);
+    assert.equal(own.record?.losses, 1);
     const publicView = await readSharedProfile(stranger, owner, undefined, database);
     assert.equal(publicView.record?.categories.private.wins, 1);
     await database`update public.fight_series set visibility = 'joinable' where id = ${seriesId}`;

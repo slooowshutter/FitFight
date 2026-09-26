@@ -998,6 +998,7 @@ struct CompanionStage: View {
 struct CompanionPicker: View {
     @EnvironmentObject private var companions: CompanionStore
     @EnvironmentObject private var purchases: SpecialPurchases
+    @EnvironmentObject private var characterPurchases: CustomCharacterPurchases
     @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.dismiss) private var dismiss
@@ -1246,14 +1247,17 @@ struct CompanionPicker: View {
                     fullWidth: true,
                     action: { Task { await saveCustom() } }
                 )
-                FFButton(
-                    title: String(localized: "Create character"),
-                    kind: .secondary,
-                    enabled: !isSaving && !CompanionPreview.isEnabled,
-                    fullWidth: true
-                ) {
-                    promptFocused = false
-                    showingGeneration = true
+                // Paid characters stay hidden while sales are off, except for an account that already bought one.
+                if let store = characterPurchases.snapshot, store.purchasesEnabled || !store.characters.isEmpty {
+                    FFButton(
+                        title: String(localized: "Create character"),
+                        kind: .secondary,
+                        enabled: !isSaving && !CompanionPreview.isEnabled,
+                        fullWidth: true
+                    ) {
+                        promptFocused = false
+                        showingGeneration = true
+                    }
                 }
             }
             #if DEBUG && targetEnvironment(simulator)

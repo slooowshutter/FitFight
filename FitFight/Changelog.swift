@@ -29,7 +29,7 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 26,
-            notes: "Steps and fights update right after you open the app instead of waiting for your full Apple Health history to upload, and Fights shows Syncing… until today’s steps arrive. Dashboard shows your Steps straight away. Edit profile has Profile visibility and Share Steps history again, so friends you share with see your stats and fighter."
+            notes: "Steps and fights update right after you open the app instead of waiting for your full Apple Health history to upload, and Fights shows Syncing… until today’s steps arrive. You opens instantly with your last numbers, and Dashboard shows your Steps straight away. Edit profile has Profile visibility and Share Steps history again, so friends you share with see your stats and fighter."
         ),
         ReleaseNote(
             version: "1.1.2",

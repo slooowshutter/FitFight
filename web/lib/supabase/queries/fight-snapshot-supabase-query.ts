@@ -40,8 +40,11 @@ export async function readFightSnapshot(
                 select id, owner_id, name, state, starts_at, ends_at, time_zone, action_text, series_id,
                     (ends_at + (final_sync_grace_seconds * interval '1 second')) as grace_ends_at
                 from public.fights
-                where owner_id = ${userId}
-                    or id in (select fight_id from public.fight_members where user_id = ${userId})
+                where id in (
+                    select id from public.fights where owner_id = ${userId}
+                    union
+                    select fight_id from public.fight_members where user_id = ${userId}
+                )
             ), visible_members as materialized (
                 select member.fight_id, member.user_id, member.state, member.current_value,
                     member.rank, member.final_value, member.last_synced_at, member.final_steps_complete,
@@ -75,11 +78,30 @@ export async function readFightSnapshot(
                         (starts_at at time zone ${timeZone})::date + 40
                     )) as last_day
                 from visible_fights
+            ), shared_windows as materialized (
+                -- NOTE: materialized keeps these bounds plain dates. Inlined, the non-leakproof
+                -- "at time zone" would run after step_days RLS instead of as an index condition.
+                select racer.user_id,
+                    (fight.starts_at at time zone fight.time_zone)::date as starts_on,
+                    ((fight.ends_at - interval '1 microsecond') at time zone fight.time_zone)::date as ends_on
+                from visible_members as viewer
+                join visible_members as racer on racer.fight_id = viewer.fight_id and racer.state = 'accepted'
+                join visible_fights as fight on fight.id = viewer.fight_id
+                where viewer.user_id = ${userId} and viewer.state in ('accepted', 'deferred')
             ), visible_days as (
+                -- Same rows step_days_select_self_or_fight admits in the chart window: the caller's
+                -- own days, plus accepted racers' days inside a Fight the caller races or sits out.
                 select user_id, day, steps
                 from public.step_days
-                where user_id in (select user_id from visible_members)
+                where user_id = ${userId}
+                    and user_id in (select user_id from visible_members)
                     and day between (select first_day from chart_bounds) and (select last_day from chart_bounds)
+                union
+                select step.user_id, step.day, step.steps
+                from shared_windows
+                join public.step_days as step on step.user_id = shared_windows.user_id
+                    and step.day between shared_windows.starts_on and shared_windows.ends_on
+                where step.day between (select first_day from chart_bounds) and (select last_day from chart_bounds)
             )
             select jsonb_build_object(
                 'fights', coalesce((select jsonb_agg(to_jsonb(f) order by starts_at, id) from visible_fights f), '[]'::jsonb),

@@ -2781,12 +2781,12 @@
                 }
             }
         },
-        "Touch or slide to inspect a day.": {
+        "Touch or slide to inspect a day. Tap a name to show or hide it.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Touche ou fais glisser pour explorer un jour."
+                        "value": "Touche ou fais glisser pour explorer un jour. Touche un nom pour l'afficher ou le masquer."
                     }
                 }
             }
@@ -3091,12 +3091,22 @@
                 }
             }
         },
-        "Tap a day to see its steps.": {
+        "Tap a day to see its steps. Tap a name to show or hide it.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Touche un jour pour voir ses pas."
+                        "value": "Touche un jour pour voir ses pas. Touche un nom pour l'afficher ou le masquer."
+                    }
+                }
+            }
+        },
+        "Tap a name to show or hide it.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Touche un nom pour l'afficher ou le masquer."
                     }
                 }
             }
@@ -15090,6 +15100,16 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "L’onglet Vous affiche tes Pas du jour face à ta moyenne, la semaine, ton bilan et ton meilleur jour, chaque sport Apple Santé par jour, semaine ou mois, et tes amis. Nouveaux écrans Tableau de bord et Réglages. Les profils d’amis montrent les deux compagnons avec le score en un contre un au-dessus d’eux."
+                    }
+                }
+            }
+        },
+        "Fight charts now show the top four plus you. Tap a name under Line, Bars, Histogram or Pace to add or hide that person. Oval still shows everyone.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les graphiques de fight montrent le top quatre et toi. Touche un nom sous Courbe, Barres, Histogramme ou Cumul pour ajouter ou masquer cette personne. Ovale montre toujours tout le monde."
                     }
                 }
             }

@@ -1,36 +1,21 @@
 import SwiftUI
 
-/// Marc-only replay of Health + notification + Bugs & requests onboarding. Does not change the account.
+/// Replays Health, Fight offers and reminders without changing completed onboarding progress.
 struct OnboardingPreviewView: View {
     @Environment(\.ffTheme) private var theme
     @Environment(\.dismiss) private var dismiss
-    @State private var showingNotifications = false
-    @State private var showingRequests = false
 
     var body: some View {
         VStack(spacing: 0) {
             HStack {
                 Spacer()
-                Button(String(localized: "Close")) { dismiss() }
+                Button(String(appLocalized: "Close")) { dismiss() }
                     .ffType(.label)
                     .foregroundStyle(theme.mossText)
             }
             .padding(.horizontal, theme.space.screenPadding)
             .padding(.vertical, 12)
-
-            if showingRequests {
-                RequestsOnboardingView {
-                    dismiss()
-                }
-            } else if showingNotifications {
-                NotificationOnboardingView(skipsIfAlreadyDetermined: false) {
-                    showingRequests = true
-                }
-            } else {
-                HealthOnboardingView {
-                    showingNotifications = true
-                }
-            }
+            OnboardingView(isReplay: true) { dismiss() }
         }
         .background(theme.bg.ignoresSafeArea())
     }

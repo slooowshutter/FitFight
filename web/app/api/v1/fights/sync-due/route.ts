@@ -1,6 +1,10 @@
 import { apiRoute, corsPreflight, json } from "@/lib/http";
 import { verifyUser } from "@/lib/supabase/queries/auth-supabase-query";
-import { closeDueFightsForUser } from "@/lib/supabase/queries/close-due-fights-supabase-query";
+import {
+    closeDueFightsForUser,
+    processDueNotifications,
+} from "@/lib/supabase/queries/close-due-fights-supabase-query";
+import { createDatabaseClient } from "@/lib/supabase/postgres";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -8,9 +12,11 @@ export const dynamic = "force-dynamic";
 export const POST = apiRoute(async (request) => {
     const { userId } = await verifyUser(request);
     const result = await closeDueFightsForUser(userId);
-    return json(result);
+    const notifications = await processDueNotifications(
+        new Date(),
+        createDatabaseClient(),
+    );
+    return json({ ...result, notifications });
 });
 
-export function OPTIONS(request: Request) {
-    return corsPreflight(request);
-}
+export const OPTIONS = corsPreflight;

@@ -10,7 +10,16 @@ This folder contains the current approved design and the archived design dump it
 | [`kit/support.js`](./kit/support.js)                                             | Runtime used by the HTML source. Documentation only; it is not bundled in the iOS app.                                   |
 | [`tokens.json`](./tokens.json)                                                   | Machine-readable SwiftUI tokens. This must remain byte-for-byte identical to `FitFight/DesignSystem/tokens.json`.        |
 | [`kit/companion-app-proposal.html`](./kit/companion-app-proposal.html)           | Selected Companion screen direction, retained as the tappable reference. Existing native behavior remains authoritative. |
+| [`kit/you-tab-proposals.html`](./kit/you-tab-proposals.html) | Twenty Companion-based You tab proposals: ten close refinements and ten creative explorations, plus original #5 for comparison. Shared stats, Night/Day, and editing through Settings. |
+| [`kit/you-tab-rethink-proposals.html`](./kit/you-tab-rethink-proposals.html) | Fifteen You tab designs on one draggable picker. Round 1 answers what the page is for: Summit (companion poses as your form, recommended), Scorecard, This week, Fighter card and Quiet. Round 2 adds Ridge, Logbook, Next fight, Journal, Poster, Bento, Stories, Profile grid, Walk and fight, and Coach. Round 3 adds Rings, Heatmap, and two multi-sport layouts (Sport lanes, and Sport list with a stats card and Day, Week, Month breakdown; Bike and Swim are sample), Live first, Trophy shelf, Stat strip and One number. Ten Friends designs list people by total shared fights. Dashboard has Steps, Streaks, Fights and Sports tabs, Month vs month, Badges, Records and a Your own metric idea. The picker's Drawer set holds Marc's shortlist: Current, Duel stage, Tale of the tape and five mixes of them. The You picker holds his shortlist: Sport list, Sport lanes, Stat strip and Heatmap. Chart kit catalogues 25 dashboard chart types, dashboard rules and a proposed extended palette. Same sample data, Night/Day. Proposals only. |
 | [`companion/`](./companion/README.md)                                            | Preserved artwork, asset manifest, reproducible crops, and native review captures.                                       |
+| [`kit/onboarding-prototype.html`](./kit/onboarding-prototype.html)                | Full of life, Marc's selected onboarding. One tappable reference with simulated services; native screens use real services. |
+
+The [private You tab preview](https://fitfight-five-designs.marc719509.chatgpt.site/you-tab-proposals.html)
+compares twenty new layouts based on Marc's selected fifth design, Companion.
+Close and Creative each contain ten options; Original #5 keeps the selected
+reference one tap away. Every option uses the same sample data. These are proposals,
+not an approved spec or a native app update. Edits stay in the preview session.
 
 The approved system has two bases, Night and Day, and fixed semantic colour families:
 

@@ -1,9 +1,15 @@
 import { z } from "zod";
 
-export const requestTimingPhaseValues = ["auth", "db", "maintenance"] as const;
+export const requestTimingPhaseValues = [
+    "auth",
+    "db",
+    "maintenance",
+    "app_wide_invite",
+] as const;
 export const requestOperationValues = [
     "healthkit_context",
     "healthkit_upload",
+    "healthkit_activity",
     "fights_refresh",
     "fights_snapshot",
 ] as const;

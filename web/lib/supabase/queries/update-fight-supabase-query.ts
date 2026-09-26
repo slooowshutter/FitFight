@@ -1,11 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Sql } from "postgres";
 import { ApiError, ERROR_CODES } from "@/lib/http";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type {
-    FightMemberRow,
-    FightMemberState,
-    FightState,
-} from "@/lib/types/database";
+import type { FightState } from "@/lib/types/database";
+import { departFightMemberships } from "./membership-departure-supabase-query";
 import type { UpdateFightRequest } from "@/lib/types/fights/update-fight";
 import { storedFightIdentity } from "./create-fight-supabase-query";
 import { createInvite } from "./create-invite-supabase-query";
@@ -13,7 +11,6 @@ import {
     fightSummary,
     loadFight,
     loadOwnedFight,
-    loadSeries,
 } from "./fight-access-supabase-query";
 import { recalculateFight } from "./recalculate-fight-supabase-query";
 
@@ -23,18 +20,13 @@ const OPEN_STATES: FightState[] = [
     "inviting",
     "awaiting_final_sync",
 ];
-const ACTIVE_MEMBER_STATES: FightMemberState[] = [
-    "invited",
-    "accepted",
-    "deferred",
-];
-
 export async function updateFight(
     userId: string,
     fightId: string,
     input: UpdateFightRequest,
     admin: SupabaseClient = createAdminClient(),
     now: Date = new Date(),
+    sql?: Sql,
 ) {
     const fight = await loadOwnedFight(fightId, userId, admin);
     switch (fight.state) {
@@ -83,6 +75,13 @@ export async function updateFight(
     const nextEnds = input.endsAt
         ? new Date(input.endsAt)
         : new Date(fight.ends_at);
+    if (input.timeZone !== undefined && (fight.state !== "scheduled" || Date.parse(fight.starts_at) <= now.getTime())) {
+        throw new ApiError(
+            400,
+            ERROR_CODES.validation,
+            "Time zone can only change before the fight begins",
+        );
+    }
     if (input.startsAt !== undefined && fight.state !== "scheduled") {
         throw new ApiError(
             400,
@@ -137,6 +136,9 @@ export async function updateFight(
     if (input.endsAt !== undefined) {
         fightPatch.ends_at = nextEnds.toISOString();
     }
+    if (input.timeZone !== undefined) {
+        fightPatch.time_zone = input.timeZone;
+    }
     if (Object.keys(fightPatch).length > 0) {
         const { error } = await admin
             .from("fights")
@@ -163,6 +165,9 @@ export async function updateFight(
         if (input.recurring !== undefined) {
             seriesPatch.recurring = input.recurring;
         }
+        if (input.timeZone !== undefined) {
+            seriesPatch.time_zone = input.timeZone;
+        }
         if (windowChanged) {
             seriesPatch.duration_seconds = Math.round(
                 (nextEnds.getTime() - nextStarts.getTime()) / 1000,
@@ -183,101 +188,18 @@ export async function updateFight(
         }
     }
 
-    const kickedAccepted = new Set<string>();
+    const changedMemberships = new Set<string>();
     for (const removeId of removeIds) {
-        const { data: memberData, error: memberError } = await admin
-            .from("fight_members")
-            .select("fight_id, user_id, state")
-            .eq("fight_id", fightId)
-            .eq("user_id", removeId)
-            .maybeSingle();
-        if (memberError) {
-            throw new ApiError(
-                500,
-                ERROR_CODES.db_error,
-                "Could not load membership",
-            );
-        }
-        const member = memberData as Pick<
-            FightMemberRow,
-            "user_id" | "state"
-        > | null;
-        if (!member || member.state === "withdrawn") {
-            continue;
-        }
-        if (!ACTIVE_MEMBER_STATES.includes(member.state)) {
-            continue;
-        }
-        if (member.state === "accepted") {
-            kickedAccepted.add(removeId);
-        }
-        const { error: withdrawError } = await admin
-            .from("fight_members")
-            .update({ state: "withdrawn" })
-            .eq("fight_id", fightId)
-            .eq("user_id", removeId);
-        if (withdrawError) {
-            throw new ApiError(
-                500,
-                ERROR_CODES.db_error,
-                "Could not remove that person",
-            );
-        }
-        const { error: revokeError } = await admin
-            .from("fight_invites")
-            .update({ revoked_at: now.toISOString() })
-            .eq("fight_id", fightId)
-            .eq("invited_user_id", removeId)
-            .is("revoked_at", null);
-        if (revokeError) {
-            throw new ApiError(
-                500,
-                ERROR_CODES.db_error,
-                "Could not revoke that invite",
-            );
-        }
-        if (fight.series_id) {
-            const { error: seriesMemberError } = await admin
-                .from("fight_series_members")
-                .update({ state: "withdrawn" })
-                .eq("series_id", fight.series_id)
-                .eq("user_id", removeId);
-            if (seriesMemberError) {
-                throw new ApiError(
-                    500,
-                    ERROR_CODES.db_error,
-                    "Could not remove that person",
-                );
-            }
-            const series = await loadSeries(fight.series_id, admin);
-            const currentId = series.current_fight_id;
-            if (currentId && currentId !== fightId) {
-                const { error: currentError } = await admin
-                    .from("fight_members")
-                    .update({ state: "withdrawn" })
-                    .eq("fight_id", currentId)
-                    .eq("user_id", removeId)
-                    .in("state", ACTIVE_MEMBER_STATES);
-                if (currentError) {
-                    throw new ApiError(
-                        500,
-                        ERROR_CODES.db_error,
-                        "Could not remove that person",
-                    );
-                }
-                const current = await loadFight(currentId, admin);
-                if (OPEN_STATES.includes(current.state)) {
-                    await recalculateFight(currentId, now);
-                }
-            }
-        }
+        const result = await departFightMemberships(userId, fightId, removeId);
+        for (const changedId of result.changed) changedMemberships.add(changedId);
     }
+    for (const changedId of changedMemberships) await recalculateFight(changedId, now);
 
     for (const handle of inviteHandles) {
-        await createInvite(userId, fightId, handle, admin);
+        await createInvite(userId, fightId, handle, admin, sql);
     }
 
-    if (kickedAccepted.size > 0 || windowChanged) {
+    if (windowChanged) {
         const latest = await loadFight(fightId, admin);
         if (OPEN_STATES.includes(latest.state)) {
             await recalculateFight(fightId, now);

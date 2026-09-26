@@ -1,8 +1,31 @@
 import { z } from "zod";
+import {
+    blockFeedAuthorRequestSchema,
+    blockFeedAuthorResponseSchema,
+    reportFightPostRequestSchema,
+    reportFightPostResponseSchema,
+} from "@/lib/types/feed/fight-post";
 import { mediaObjectSchema } from "@/lib/types/media/media";
 
 export const feedbackKindValues = ["bug", "feature"] as const;
 export const feedbackKindSchema = z.enum(feedbackKindValues);
+
+export const feedbackStatusValues = ["open", "archived"] as const;
+export const feedbackStatusSchema = z.enum(feedbackStatusValues);
+export const feedbackSortValues = ["votes", "newest", "oldest"] as const;
+export const feedbackSortSchema = z.enum(feedbackSortValues);
+
+export const feedbackArchiveRequestSchema = z.object({
+    archived: z.boolean(),
+    reason: z.string().trim().max(280).optional(),
+}).strict();
+
+export const feedbackArchiveResponseSchema = z.object({
+    archived: z.boolean(),
+    archive_reason: z.string().nullable(),
+}).strict();
+
+export const feedbackOwnerRowSchema = z.object({ author_id: z.string().uuid() });
 
 const feedbackMetadataTextSchema = z.string().trim().min(1).max(120);
 
@@ -68,41 +91,18 @@ export const createFeedbackCommentRequestSchema = z
 export const listFeedbackQuerySchema = z
     .object({
         kind: feedbackKindSchema.optional(),
+        status: feedbackStatusSchema.optional(),
+        sort: feedbackSortSchema.optional(),
     })
     .strict();
 
-export const feedbackPostReportReasonValues = [
-    "spam",
-    "abuse",
-    "other",
-] as const;
-export const feedbackPostReportReasonSchema = z.enum(
-    feedbackPostReportReasonValues,
-);
+export const reportFeedbackPostRequestSchema = reportFightPostRequestSchema;
 
-export const reportFeedbackPostRequestSchema = z
-    .object({
-        reason: feedbackPostReportReasonSchema,
-    })
-    .strict();
+export const reportFeedbackPostResponseSchema = reportFightPostResponseSchema;
 
-export const reportFeedbackPostResponseSchema = z
-    .object({
-        reported: z.literal(true),
-    })
-    .strict();
+export const blockFeedbackAuthorRequestSchema = blockFeedAuthorRequestSchema;
 
-export const blockFeedbackAuthorRequestSchema = z
-    .object({
-        user_id: z.string().uuid(),
-    })
-    .strict();
-
-export const blockFeedbackAuthorResponseSchema = z
-    .object({
-        blocked: z.literal(true),
-    })
-    .strict();
+export const blockFeedbackAuthorResponseSchema = blockFeedAuthorResponseSchema;
 
 export const feedbackPostSummarySchema = z
     .object({
@@ -119,12 +119,15 @@ export const feedbackPostSummarySchema = z
         created_at: z.string().datetime(),
         metadata: feedbackMetadataSchema,
         media: z.array(mediaObjectSchema).default([]),
+        archived: z.boolean().default(false),
+        archive_reason: z.string().nullable().default(null),
     })
     .strict();
 
 export const feedbackCommentSchema = z
     .object({
         id: z.string().uuid(),
+        author_id: z.string().uuid().optional(),
         body: z.string(),
         author_handle: z.string(),
         created_at: z.string().datetime(),
@@ -132,9 +135,20 @@ export const feedbackCommentSchema = z
     })
     .strict();
 
+export const feedbackPostRowSchema = feedbackPostSummarySchema.omit({ media: true }).extend({
+    created_at: z.union([z.date(), z.string().datetime()]),
+    metadata: z.unknown(),
+});
+
+export const feedbackCommentRowSchema = feedbackCommentSchema.extend({
+    created_at: z.union([z.date(), z.string().datetime()]),
+    metadata: z.unknown(),
+});
+
 export const feedbackListResponseSchema = z
     .object({
         posts: z.array(feedbackPostSummarySchema),
+        can_archive: z.boolean().optional(),
     })
     .strict();
 
@@ -154,6 +168,8 @@ export const feedbackPostDetailSchema = z
 export const feedbackDetailResponseSchema = feedbackPostDetailSchema
     .extend({
         can_launch_fix: z.boolean(),
+        can_delete: z.boolean().default(false),
+        can_archive: z.boolean().default(false),
     })
     .strict();
 
@@ -184,6 +200,13 @@ export const feedbackCommentResponseSchema = z
     .strict();
 
 export type FeedbackKind = z.infer<typeof feedbackKindSchema>;
+export type FeedbackStatus = z.infer<typeof feedbackStatusSchema>;
+export type FeedbackSort = z.infer<typeof feedbackSortSchema>;
+export type FeedbackArchiveRequest = z.infer<typeof feedbackArchiveRequestSchema>;
+export type FeedbackArchiveResponse = z.infer<typeof feedbackArchiveResponseSchema>;
+export type FeedbackOwnerRow = z.infer<typeof feedbackOwnerRowSchema>;
+export type FeedbackPostRow = z.infer<typeof feedbackPostRowSchema>;
+export type FeedbackCommentRow = z.infer<typeof feedbackCommentRowSchema>;
 export type FeedbackMetadata = z.infer<typeof feedbackMetadataSchema>;
 export type ReportFeedbackPostRequest = z.infer<
     typeof reportFeedbackPostRequestSchema

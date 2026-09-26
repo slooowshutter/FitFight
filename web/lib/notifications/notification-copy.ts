@@ -5,6 +5,22 @@ const copy: Record<
     ReturnType<typeof notificationCopyKeySchema.parse>,
     Record<NotificationLocale, { title: string; body: string }>
 > = {
+    ending_24h: {
+        en: { title: "One day left", body: "Your fight ends tomorrow." },
+        fr: { title: "Encore un jour", body: "Ton défi se termine demain." },
+    },
+    ending_week: {
+        en: { title: "One week left", body: "Your month-long fight ends in one week." },
+        fr: { title: "Encore une semaine", body: "Ton défi d’un mois se termine dans une semaine." },
+    },
+    final_sync: {
+        en: { title: "Submit your final steps", body: "Your fight has ended. Open FitFight to submit your final steps." },
+        fr: { title: "Envoie tes derniers pas", body: "Ton défi est terminé. Ouvre FitFight pour envoyer tes derniers pas." },
+    },
+    social_digest: {
+        en: { title: "Your evening summary", body: "There is new activity in your fights." },
+        fr: { title: "Ton résumé du soir", body: "Il y a du nouveau dans tes défis." },
+    },
     fight_ended_everyone: {
         en: { title: "FitFight", body: "A fight ended. Open FitFight." },
         fr: {
@@ -88,6 +104,30 @@ const copy: Record<
         en: { title: "FitFight", body: "Someone reacted to your post." },
         fr: { title: "FitFight", body: "Quelqu’un a réagi à ta publication." },
     },
+    fight_invite: {
+        en: {
+            title: "FitFight",
+            body: "You were invited to a fight. Open FitFight.",
+        },
+        fr: {
+            title: "FitFight",
+            body: "Tu as été invité à un défi. Ouvre FitFight.",
+        },
+    },
+    mention_post: {
+        en: { title: "FitFight", body: "Someone tagged you in a post." },
+        fr: {
+            title: "FitFight",
+            body: "Quelqu’un t’a mentionné dans une publication.",
+        },
+    },
+    mention_comment: {
+        en: { title: "FitFight", body: "Someone tagged you in a comment." },
+        fr: {
+            title: "FitFight",
+            body: "Quelqu’un t’a mentionné dans un commentaire.",
+        },
+    },
 };
 
 const socialKinds = [
@@ -99,7 +139,7 @@ const socialKinds = [
 
 function actorLabel(name: string, locale: NotificationLocale): string {
     const cleaned = name.replace(/\s+/g, " ").trim().slice(0, 40);
-    if (cleaned.length > 0) return cleaned;
+    if (cleaned.length > 0) return `@${cleaned.replace(/^@/, "")}`;
     return locale === "fr" ? "Quelqu’un" : "Someone";
 }
 
@@ -132,6 +172,58 @@ export function socialNotificationAlert(
         },
     };
     return { title: "FitFight", body: bodies[kind][language] };
+}
+
+const mentionSurfaces = ["post", "comment"] as const;
+
+export function mentionNotificationAlert(
+    surface: (typeof mentionSurfaces)[number],
+    actorName: string,
+    locale: NotificationLocale | null | undefined,
+): { title: string; body: string } {
+    const language: NotificationLocale = locale === "fr" ? "fr" : "en";
+    const name = actorLabel(actorName, language);
+    switch (surface) {
+        case "post":
+            return {
+                title: "FitFight",
+                body:
+                    language === "fr"
+                        ? `${name} t’a mentionné dans une publication.`
+                        : `${name} tagged you in a post.`,
+            };
+        case "comment":
+            return {
+                title: "FitFight",
+                body:
+                    language === "fr"
+                        ? `${name} t’a mentionné dans un commentaire.`
+                        : `${name} tagged you in a comment.`,
+            };
+        default: {
+            const _exhaustive: never = surface;
+            return _exhaustive;
+        }
+    }
+}
+
+export function inviteNotificationAlert(
+    actorName: string,
+    fightName: string,
+    locale: NotificationLocale | null | undefined,
+): { title: string; body: string } {
+    const language: NotificationLocale = locale === "fr" ? "fr" : "en";
+    const name = actorLabel(actorName, language);
+    const fight = fightName.replace(/\s+/g, " ").trim().slice(0, 40);
+    const labeled =
+        fight.length > 0 ? fight : language === "fr" ? "un défi" : "a fight";
+    return {
+        title: "FitFight",
+        body:
+            language === "fr"
+                ? `${name} t'a invité à ${labeled}.`
+                : `${name} invited you to ${labeled}.`,
+    };
 }
 
 export function notificationAlert(

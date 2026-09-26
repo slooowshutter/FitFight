@@ -1,0 +1,12 @@
+{
+    "request_id": "22222222-2222-4222-8222-222222222222",
+    "workflow": "fitness",
+    "status": "completed",
+    "data": {
+        "resting": "https://cdn.tryblend.ai/fitness/resting.png",
+        "soft": "https://cdn.tryblend.ai/fitness/soft.png",
+        "average": "https://cdn.tryblend.ai/fitness/average.png",
+        "fit": "https://cdn.tryblend.ai/fitness/fit.png",
+        "strong": "https://cdn.tryblend.ai/fitness/strong.png"
+    }
+}

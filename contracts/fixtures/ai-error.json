@@ -1,0 +1,6 @@
+{
+    "code": "ai_busy",
+    "error": "AI is busy. Try again later.",
+    "request_id": "22222222-2222-4222-8222-222222222222",
+    "retry_after_seconds": 30
+}

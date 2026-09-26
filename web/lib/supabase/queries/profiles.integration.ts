@@ -7,6 +7,7 @@ import { ApiError } from "@/lib/http";
 import { updateProfileRequestSchema } from "@/lib/types/profiles/profile";
 import { databaseTestEnvironmentSchema } from "@/lib/types/testing/database";
 import { deleteAccount } from "./delete-account-supabase-query";
+import { readCompanionPrompts } from "./companions-supabase-query";
 import { readProfile, updateProfile } from "./profiles-supabase-query";
 
 const env = databaseTestEnvironmentSchema.parse(process.env);
@@ -56,6 +57,7 @@ test("Auth, profile commands, and deletion work before and after direct client a
     assert.equal(verified.data.user?.id, userId);
 
     const initial = await readProfile(userId, admin);
+    assert.deepEqual(await readCompanionPrompts(userId, database), []);
     assert.equal(initial.handle_set_at, null);
     const named = await updateProfile(
         userId,
@@ -105,6 +107,81 @@ test("Auth, profile commands, and deletion work before and after direct client a
     );
     assert.equal(backToStock.companion_id, "fox");
     assert.equal(backToStock.companion_prompt, null);
+    assert.deepEqual(await readCompanionPrompts(userId, database), [
+        custom.companion_prompt,
+    ]);
+    const secondPrompt = "An otter with a blue scarf";
+    await updateProfile(
+        userId,
+        { companion_id: "custom", companion_prompt: secondPrompt },
+        admin,
+    );
+    await updateProfile(
+        userId,
+        {
+            companion_id: "custom",
+            companion_prompt: custom.companion_prompt,
+        },
+        admin,
+    );
+    assert.deepEqual(await readCompanionPrompts(userId, database), [
+        custom.companion_prompt,
+        secondPrompt,
+    ]);
+    // Older native builds explicitly send null when choosing a stock animal.
+    await updateProfile(
+        userId,
+        { companion_id: "goat", companion_prompt: null },
+        admin,
+    );
+    assert.deepEqual(await readCompanionPrompts(userId, database), [
+        custom.companion_prompt,
+        secondPrompt,
+    ]);
+    assert.deepEqual(await readCompanionPrompts(peerId, database), []);
+    await assert.rejects(
+        updateProfile(
+            userId,
+            {
+                companion_id: "custom",
+                companion_prompt: null,
+            },
+            admin,
+        ),
+    );
+    assert.deepEqual(await readCompanionPrompts(userId, database), [
+        custom.companion_prompt,
+        secondPrompt,
+    ]);
+    await Promise.all([
+        updateProfile(
+            userId,
+            { companion_id: "custom", companion_prompt: "A mountain goat" },
+            admin,
+        ),
+        updateProfile(
+            userId,
+            { companion_id: "custom", companion_prompt: "A forest fox" },
+            admin,
+        ),
+    ]);
+    assert.deepEqual(
+        new Set(await readCompanionPrompts(userId, database)),
+        new Set([
+            custom.companion_prompt,
+            secondPrompt,
+            "A mountain goat",
+            "A forest fox",
+        ]),
+    );
+    const forbiddenLibrary = await client
+        .schema("private")
+        .from("companion_libraries")
+        .select("*");
+    assert.ok(
+        forbiddenLibrary.error,
+        "Saved descriptions must not be exposed through the Data API",
+    );
     assert.ok(
         updated.handle_set_at && Date.parse(updated.handle_set_at) >= before,
     );
@@ -151,6 +228,7 @@ test("Auth, profile commands, and deletion work before and after direct client a
     );
 
     await database`update public.profiles set deleted_at = now() where user_id = ${peerId}`;
+    assert.deepEqual(await readCompanionPrompts(peerId, database), []);
     await assert.rejects(
         readProfile(peerId, admin),
         (error: unknown) =>
@@ -170,4 +248,12 @@ test("Auth, profile commands, and deletion work before and after direct client a
     const [remaining] =
         await database`select count(*)::integer as count from auth.users where id = ${userId}`;
     assert.equal(remaining.count, 0);
+    const [library] = await database`
+        select count(*)::integer as count from private.companion_libraries where user_id = ${userId}
+    `;
+    assert.equal(
+        library.count,
+        0,
+        "Account deletion must also delete saved descriptions",
+    );
 });

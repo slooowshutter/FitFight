@@ -1,6 +1,9 @@
 import Combine
+import CryptoKit
 import Foundation
+import GoogleSignIn
 import Supabase
+import UIKit
 
 @MainActor
 final class SessionStore: ObservableObject {
@@ -25,6 +28,8 @@ final class SessionStore: ObservableObject {
     private static let needsHealthKey = "ff.onboarding.needsHealth"
     private static let needsNotificationKey = "ff.onboarding.needsNotifications"
     private static let needsRequestsKey = "ff.onboarding.needsRequests"
+    private static let needsSuggestedPrefix = "ff.onboarding.needsSuggested."
+    private static let firstFightPrefix = "ff.onboarding.firstFight."
     private static let profileCachePrefix = "fitfight.profile."
     private static let adminHandle = "marc"
 
@@ -32,9 +37,44 @@ final class SessionStore: ObservableObject {
 
     var needsOnboarding: Bool {
         guard isSignedIn, let profile else { return false }
-        if UserDefaults.standard.bool(forKey: Self.handleChosenKey) { return false }
         if let setAt = profile.handleSetAt, !setAt.isEmpty { return false }
         return profile.looksGenerated
+    }
+
+    var firstFightOnboarding: FirstFightOnboarding? {
+        guard !screenshotSignedIn, isSignedIn, let profile,
+              authSession?.user.id == profile.userId else { return nil }
+        if let data = UserDefaults.standard.data(forKey: Self.firstFightPrefix + profile.userId.uuidString),
+           let progress = try? JSONDecoder().decode(FirstFightOnboarding.self, from: data) {
+            return progress
+        }
+        if needsOnboarding { return FirstFightOnboarding() }
+        // Resume incomplete setup from older builds without enrolling completed accounts again.
+        if UserDefaults.standard.bool(forKey: Self.needsHealthKey) {
+            return FirstFightOnboarding(page: profile.companionId == nil ? .companion : .health)
+        }
+        if UserDefaults.standard.bool(forKey: Self.needsNotificationKey)
+            || UserDefaults.standard.bool(forKey: Self.needsRequestsKey)
+            || UserDefaults.standard.bool(forKey: Self.needsSuggestedPrefix + profile.userId.uuidString) {
+            return FirstFightOnboarding(page: .firstFight)
+        }
+        return nil
+    }
+
+    func saveFirstFightOnboarding(_ progress: FirstFightOnboarding, userID: UUID) {
+        guard authSession?.user.id == userID,
+              let data = try? JSONEncoder().encode(progress) else { return }
+        UserDefaults.standard.set(data, forKey: Self.firstFightPrefix + userID.uuidString)
+        objectWillChange.send()
+    }
+
+    func finishFirstFightOnboarding(userID: UUID) {
+        guard authSession?.user.id == userID else { return }
+        for key in [Self.needsHealthKey, Self.needsNotificationKey, Self.needsRequestsKey,
+                    Self.needsSuggestedPrefix + userID.uuidString, Self.firstFightPrefix + userID.uuidString] {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
+        objectWillChange.send()
     }
 
     var needsHealthOnboarding: Bool {
@@ -51,10 +91,23 @@ final class SessionStore: ObservableObject {
             && UserDefaults.standard.bool(forKey: Self.needsRequestsKey)
     }
 
+    var needsSuggestedOnboarding: Bool {
+        guard !screenshotSignedIn, let userID = authSession?.user.id else { return false }
+        return !needsOnboarding && !needsHealthOnboarding && !needsNotificationOnboarding && !needsRequestsOnboarding
+            && UserDefaults.standard.bool(forKey: Self.needsSuggestedPrefix + userID.uuidString)
+    }
+
+    func finishSuggestedOnboarding() {
+        guard let userID = authSession?.user.id else { return }
+        UserDefaults.standard.removeObject(forKey: Self.needsSuggestedPrefix + userID.uuidString)
+        objectWillChange.send()
+    }
+
     var needsCompanionSelection: Bool {
         guard isSignedIn, profile != nil else { return false }
         if screenshotSignedIn || CompanionPreview.isEnabled || ScreenshotExport.isEnabled { return false }
-        guard !needsOnboarding, !needsHealthOnboarding, !needsNotificationOnboarding, !needsRequestsOnboarding else {
+        guard firstFightOnboarding == nil else { return false }
+        guard !needsOnboarding, !needsHealthOnboarding, !needsNotificationOnboarding, !needsRequestsOnboarding, !needsSuggestedOnboarding else {
             return false
         }
         return profile?.companionId == nil && !CompanionStore.hasPendingChoice(for: profile?.userId)
@@ -66,21 +119,6 @@ final class SessionStore: ObservableObject {
         return handle.caseInsensitiveCompare(Self.adminHandle) == .orderedSame
     }
 
-    func finishHealthOnboarding() {
-        UserDefaults.standard.set(false, forKey: Self.needsHealthKey)
-        objectWillChange.send()
-    }
-
-    func finishNotificationOnboarding() {
-        UserDefaults.standard.set(false, forKey: Self.needsNotificationKey)
-        objectWillChange.send()
-    }
-
-    func finishRequestsOnboarding() {
-        UserDefaults.standard.set(false, forKey: Self.needsRequestsKey)
-        objectWillChange.send()
-    }
-
     func freshAccessToken() async throws -> String {
         guard !screenshotSignedIn else { throw CompanionPreview.WriteUnavailable() }
         let userID = authSession?.user.id ?? client.auth.currentUser?.id
@@ -90,7 +128,8 @@ final class SessionStore: ObservableObject {
               (authSession?.user.id ?? client.auth.currentUser?.id) == userID else {
             throw CancellationError()
         }
-        authSession = session
+        // Publishing an unchanged session would re-render every screen that observes it.
+        if authSession != session { authSession = session }
         return session.accessToken
     }
 
@@ -136,13 +175,15 @@ final class SessionStore: ObservableObject {
         idToken: String,
         authorizationCode: String,
         nonce: String,
-        fullName: String?
+        fullName: String?,
+        email: String? = nil
     ) async {
         guard !CompanionPreview.isEnabled else { authError = CompanionPreview.writeUnavailable; return }
+        guard !isBusy else { return }
         authError = nil
-        guard await AppUpdateChecker.shared.permitsRequests() else { return }
         isBusy = true
         defer { isBusy = false }
+        guard await AppUpdateChecker.shared.permitsRequests() else { return }
         do {
             let signedIn = try await client.auth.signInWithIdToken(
                 credentials: .init(
@@ -161,12 +202,88 @@ final class SessionStore: ObservableObject {
                     _ = try? await api.updateProfile(displayName: fullName, accessToken: signedIn.accessToken)
                 }
             }
+            if let email, !email.isEmpty, signedIn.user.email == nil {
+                try? await client.auth.update(user: UserAttributes(email: email))
+            }
             try? await api.storeAppleAuthorizationCode(
                 authorizationCode,
                 accessToken: signedIn.accessToken
             )
             await loadProfile()
         } catch {
+            authError = Self.signInFailureMessage(error)
+        }
+    }
+
+    func linkGoogleIdentity(idToken: String, accessToken: String, nonce: String) async throws {
+        guard api.isConfigured else { return }
+        do {
+            try await api.reconcileGoogleIdentity(
+                idToken: idToken,
+                accessToken: accessToken,
+                nonce: nonce
+            )
+        } catch FitFightAPIError.notConfigured {
+            return
+        } catch FitFightAPIError.http(let status, _, _) where status == 404 {
+            return
+        }
+    }
+
+    func signInWithGoogle(presenting viewController: UIViewController) async {
+        guard !CompanionPreview.isEnabled else { authError = CompanionPreview.writeUnavailable; return }
+        guard !isBusy else { return }
+        authError = nil
+        isBusy = true
+        defer { isBusy = false }
+        guard await AppUpdateChecker.shared.permitsRequests() else { return }
+        guard let configuration = GoogleSignInConfig.configuration(for: SupabaseConfig.projectURL) else {
+            authError = String(appLocalized: "Google sign-in is not configured for this build.")
+            return
+        }
+
+        let characters = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-._")
+        var generator = SystemRandomNumberGenerator()
+        let nonce = String((0..<32).map { _ in
+            characters[Int.random(in: characters.indices, using: &generator)]
+        })
+        // Supabase checks the raw nonce against the SHA-256 nonce in Google's ID token.
+        let hashedNonce = SHA256.hash(data: Data(nonce.utf8))
+            .map { String(format: "%02x", $0) }.joined()
+        GIDSignIn.sharedInstance.configuration = configuration
+        do {
+            let result = try await GIDSignIn.sharedInstance.signIn(
+                withPresenting: viewController,
+                hint: nil,
+                additionalScopes: nil,
+                nonce: hashedNonce
+            )
+            guard let idToken = result.user.idToken?.tokenString, !idToken.isEmpty else {
+                GIDSignIn.sharedInstance.signOut()
+                authError = String(appLocalized: "Couldn’t sign in. Try again.")
+                return
+            }
+            try await linkGoogleIdentity(
+                idToken: idToken,
+                accessToken: result.user.accessToken.tokenString,
+                nonce: nonce
+            )
+            _ = try await client.auth.signInWithIdToken(
+                credentials: .init(
+                    provider: .google,
+                    idToken: idToken,
+                    accessToken: result.user.accessToken.tokenString,
+                    nonce: nonce
+                )
+            )
+            await loadProfile()
+        } catch {
+            GIDSignIn.sharedInstance.signOut()
+            let googleError = error as NSError
+            if googleError.domain == kGIDSignInErrorDomain,
+               googleError.code == GIDSignInError.Code.canceled.rawValue {
+                return
+            }
             authError = Self.signInFailureMessage(error)
         }
     }
@@ -188,7 +305,7 @@ final class SessionStore: ObservableObject {
             await loadProfile()
         } catch {
             authError = String(
-                localized: "session.dev-rejected",
+                appLocalized: "session.dev-rejected",
                 defaultValue: "Dev session rejected: \(error.localizedDescription)"
             )
         }
@@ -202,34 +319,28 @@ final class SessionStore: ObservableObject {
         authError = nil
         await PushNotificationService.shared.revokeLocalRegistration()
         try? await client.auth.signOut()
-        authSession = nil
-        profile = nil
-        profileUnavailable = false
-        CrashReporting.reset()
-        UserDefaults.standard.removeObject(forKey: Self.handleChosenKey)
-        UserDefaults.standard.removeObject(forKey: Self.needsHealthKey)
-        UserDefaults.standard.removeObject(forKey: Self.needsNotificationKey)
-        UserDefaults.standard.removeObject(forKey: Self.needsRequestsKey)
+        GIDSignIn.sharedInstance.signOut()
+        clearSignedInState()
     }
 
     static func signInFailureMessage(_ error: Error) -> String {
         let text = error.localizedDescription.lowercased()
         if text.contains("invalid api key") || text.contains("another supabase project") {
-            return String(localized: "This build’s key doesn’t match the staging database.")
+            return String(appLocalized: "This build’s key doesn’t match the staging database.")
         }
         if text.contains("provider is not enabled")
             || text.contains("unsupported provider")
             || text.contains("provider not enabled") {
-            return String(localized: "Apple Sign In is off on this database.")
+            return String(appLocalized: "This sign-in provider is off on this database.")
         }
         if text.contains("nscurlerror")
             || text.contains("nsurlerrordomain")
             || text.contains("could not connect")
             || text.contains("hostname could not be found")
             || text.contains("not known") {
-            return String(localized: "Can’t reach the staging database.")
+            return String(appLocalized: "Can’t reach the staging database.")
         }
-        return String(localized: "Couldn’t sign in. Try again.")
+        return String(appLocalized: "Couldn’t sign in. Try again.")
     }
 
     static func isValidHandle(_ raw: String) -> Bool {
@@ -264,20 +375,18 @@ final class SessionStore: ObservableObject {
             let updated = try await api.updateProfile(
                 handle: handle,
                 avatarMediaId: avatarMediaId,
+                timeZone: TimeZone.current.identifier,
                 accessToken: token
             )
-            UserDefaults.standard.set(true, forKey: Self.handleChosenKey)
-            UserDefaults.standard.set(true, forKey: Self.needsHealthKey)
-            UserDefaults.standard.set(true, forKey: Self.needsNotificationKey)
-            UserDefaults.standard.set(true, forKey: Self.needsRequestsKey)
             try Task.checkCancellation()
             guard authSession?.user.id == userId, client.auth.currentUser?.id == userId else {
                 throw CancellationError()
             }
-            profile = updated
-            if let data = try? JSONEncoder().encode(updated) {
-                UserDefaults.standard.set(data, forKey: Self.profileCachePrefix + userId.uuidString)
-            }
+            UserDefaults.standard.set(true, forKey: Self.needsSuggestedPrefix + userId.uuidString)
+            var progress = firstFightOnboarding ?? FirstFightOnboarding()
+            progress.page = .companion
+            saveFirstFightOnboarding(progress, userID: userId)
+            cacheProfile(updated, for: userId)
         } catch is CancellationError {
             throw CancellationError()
         } catch {
@@ -293,22 +402,36 @@ final class SessionStore: ObservableObject {
         }
     }
 
+    func updateIdentity(displayName: String, handle: String, timeZone: TimeZone) async throws {
+        guard let userId = authSession?.user.id else { throw HandleError.notSignedIn }
+        let token = try await freshAccessToken()
+        let updated = try await api.updateProfile(handle: handle, displayName: displayName, timeZone: timeZone.identifier, accessToken: token)
+        try Task.checkCancellation()
+        guard authSession?.user.id == userId else { throw CancellationError() }
+        cacheProfile(updated, for: userId)
+    }
+
     func setAvatar(_ media: FitFightMedia) async throws {
         guard !screenshotSignedIn else { throw CompanionPreview.WriteUnavailable() }
         guard let userId = authSession?.user.id ?? client.auth.currentUser?.id else {
             throw HandleError.notSignedIn
         }
         let token = try await freshAccessToken()
-        let updated = try await api.updateProfile(avatarMediaId: media.id, accessToken: token)
+        let updated = try await api.updateProfile(
+            avatarMediaId: media.id,
+            accessToken: token
+        )
         try Task.checkCancellation()
         guard authSession?.user.id == userId else { throw CancellationError() }
-        profile = updated
-        if let data = try? JSONEncoder().encode(updated) {
-            UserDefaults.standard.set(data, forKey: Self.profileCachePrefix + userId.uuidString)
-        }
+        cacheProfile(updated, for: userId)
     }
 
-    func setCompanion(id: String, prompt: String?) async throws {
+    func companionPrompts() async throws -> [String] {
+        let token = try await freshAccessToken()
+        return try await api.companionPrompts(accessToken: token)
+    }
+
+    func setCompanion(id: String? = nil, prompt: String? = nil, image: FitFightAICompanionSelection? = nil) async throws {
         guard !screenshotSignedIn else { throw CompanionPreview.WriteUnavailable() }
         guard let userId = authSession?.user.id ?? client.auth.currentUser?.id else {
             throw HandleError.notSignedIn
@@ -317,14 +440,12 @@ final class SessionStore: ObservableObject {
         let updated = try await api.updateProfile(
             companionId: id,
             companionPrompt: prompt,
+            companionImage: image,
             accessToken: token
         )
         try Task.checkCancellation()
         guard authSession?.user.id == userId else { throw CancellationError() }
-        profile = updated
-        if let data = try? JSONEncoder().encode(updated) {
-            UserDefaults.standard.set(data, forKey: Self.profileCachePrefix + userId.uuidString)
-        }
+        cacheProfile(updated, for: userId)
     }
 
     @discardableResult
@@ -343,24 +464,24 @@ final class SessionStore: ObservableObject {
             }
             authSession = renewedSession
             let deletion = try await api.deleteAccount(accessToken: renewedSession.accessToken)
-            try? await client.auth.signOut()
-            authSession = nil
-            profile = nil
-            profileUnavailable = false
-            CrashReporting.reset()
-            UserDefaults.standard.removeObject(forKey: Self.handleChosenKey)
-            UserDefaults.standard.removeObject(forKey: Self.needsHealthKey)
-            UserDefaults.standard.removeObject(forKey: Self.needsNotificationKey)
-            UserDefaults.standard.removeObject(forKey: Self.needsRequestsKey)
-            if let userID {
-                UserDefaults.standard.removeObject(forKey: Self.profileCachePrefix + userID.uuidString)
+            if GIDSignIn.sharedInstance.currentUser != nil {
+                try? await GIDSignIn.sharedInstance.disconnect()
+                GIDSignIn.sharedInstance.signOut()
             }
-            if !deletion.appleAuthorizationRevoked {
-                authError = String(localized: "Account deleted. To disconnect Apple too, open iPhone Settings, tap your name, then Sign in with Apple → FitFight → Stop Using Apple ID.")
+            try? await client.auth.signOut()
+            clearSignedInState()
+            if let userID {
+                UserDefaults.standard.removeObject(forKey: Self.firstFightPrefix + userID.uuidString)
+                UserDefaults.standard.removeObject(forKey: Self.profileCachePrefix + userID.uuidString)
+                CompanionStore.deleteLocalLibrary(for: userID)
+            }
+            if !deletion.appleAuthorizationRevoked,
+               renewedSession.user.identities?.contains(where: { $0.provider == "apple" }) == true {
+                authError = String(appLocalized: "Account deleted. To disconnect Apple too, open iPhone Settings, tap your name, then Sign in with Apple → FitFight → Stop Using Apple ID.")
             }
             return true
         } catch {
-            authError = String(localized: "Couldn’t delete account. Try again.")
+            authError = String(appLocalized: "Couldn’t delete account. Try again.")
             return false
         }
     }
@@ -416,10 +537,7 @@ final class SessionStore: ObservableObject {
                 let row = try await api.profile(accessToken: token)
                 try Task.checkCancellation()
                 guard authSession?.user.id == userId, client.auth.currentUser?.id == userId else { return }
-                profile = row
-                if let data = try? JSONEncoder().encode(row) {
-                    UserDefaults.standard.set(data, forKey: Self.profileCachePrefix + userId.uuidString)
-                }
+                cacheProfile(row, for: userId)
                 return
             } catch {
                 guard !Task.isCancelled, !(error is CancellationError),
@@ -440,6 +558,23 @@ final class SessionStore: ObservableObject {
         }
     }
 
+    private func cacheProfile(_ updated: FitFightProfile, for userId: UUID) {
+        profile = updated
+        if let data = try? JSONEncoder().encode(updated) {
+            UserDefaults.standard.set(data, forKey: Self.profileCachePrefix + userId.uuidString)
+        }
+    }
+
+    private func clearSignedInState() {
+        authSession = nil
+        profile = nil
+        profileUnavailable = false
+        CrashReporting.reset()
+        for key in [Self.handleChosenKey, Self.needsHealthKey, Self.needsNotificationKey, Self.needsRequestsKey] {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
+    }
+
     private func markProfileMissing(for userId: UUID) {
         guard (authSession?.user.id ?? client.auth.currentUser?.id) == userId else { return }
         profile = nil
@@ -456,10 +591,10 @@ enum HandleError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .notSignedIn: return String(localized: "Sign in first.")
-        case .invalid: return String(localized: "Use 2–30 letters, numbers, or underscore.")
-        case .taken: return String(localized: "That username is taken.")
-        case .failed: return String(localized: "Couldn’t save that username.")
+        case .notSignedIn: return String(appLocalized: "Sign in first.")
+        case .invalid: return String(appLocalized: "Use 2-30 letters, numbers, or underscore.")
+        case .taken: return String(appLocalized: "That username is taken.")
+        case .failed: return String(appLocalized: "Couldn’t save that username.")
         }
     }
 }

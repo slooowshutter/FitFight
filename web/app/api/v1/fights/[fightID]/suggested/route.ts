@@ -6,6 +6,7 @@ import {
     requireUuid,
 } from "@/lib/http";
 import { verifyUser } from "@/lib/supabase/queries/auth-supabase-query";
+import { processNotificationOutboxAfterResponse } from "@/lib/notifications/process-notification-outbox-after-response";
 import { setFightSuggested } from "@/lib/supabase/queries/suggest-fight-supabase-query";
 import { suggestFightRequestSchema } from "@/lib/types/fights/suggest-fight";
 
@@ -22,12 +23,14 @@ export const PATCH = apiRoute<{ fightID: string }>(
         if (!parsed.success) {
             throw parsed.error;
         }
-        return json(
-            await setFightSuggested(userId, fightId, parsed.data.suggested),
+        const result = await setFightSuggested(
+            userId,
+            fightId,
+            parsed.data.suggested,
         );
+        processNotificationOutboxAfterResponse();
+        return json(result);
     },
 );
 
-export function OPTIONS(request: Request) {
-    return corsPreflight(request);
-}
+export const OPTIONS = corsPreflight;

@@ -16,6 +16,9 @@ root = Path(__file__).resolve().parents[1]
 app = (root / "FitFight/AppModel.swift").read_text()
 feed = (root / "FitFight/FeedView.swift").read_text()
 thread = (root / "FitFight/FightPostThread.swift").read_text()
+feedback = (root / "FitFight/RequestsView.swift").read_text()
+api = (root / "FitFight/FitFightAPI.swift").read_text()
+metadata = (root / "FitFight/FeedbackClientMetadata.swift").read_text()
 app_methods = (
     app[app.index("    func refreshFights("):app.index("    private func performRefreshFights(")]
     + app[app.index("    private func holdRefreshPhase("):app.index("    func removeCachedFights(")]
@@ -25,23 +28,48 @@ feed_methods = feed[feed.index("    func activate("):feed.index("\n}\n\nprivate 
 source = (root / "tests/NativeStateTests.swift").read_text()
 source += "\nextension AppModel {\n" + app_methods + "\n}\n"
 source += "\nextension FeedStore {\n" + feed_methods + "\n}\n"
+chrome = (root / "FitFight/DesignSystem/AppChrome.swift").read_text()
+source += "\n" + chrome[chrome.index("struct FFRefreshConfig {"):chrome.index("/// Centered gold spinner")]
+source += "\nextension FeedRefreshHarness {\n"
+source += feed[feed.index("    private var feedRefresh:"):feed.index("    private var composeButton:")].replace("action: {", "action: { [self] in")
+source += "    func refreshForTest() async { await feedRefresh.action() }\n}\n"
+api = (root / "FitFight/FitFightAPI.swift").read_text()
+source += "\nextension FeedRequestPaths {\n"
+source += api[api.index("    func feed(scope:"):api.index("    func feedActivity(")]
+source += api[api.index("    func fightPosts("):api.index("    func deleteFightPost(")]
+source += "\n}\n"
+source += api[api.index("private struct FightPostCommentLikeBody:"):api.index("private struct FightPostCommentBody:")]
+source += "\nextension CommentLikeRequestPaths {\n"
+source += api[api.index("    func setFightPostCommentLike("):api.index("    func reportFightPostComment(")]
+source += "\n}\n"
 source += "\nextension FightPostThreadState {\n"
 source += thread[thread.index("    private var displayedComments:"):thread.index("    private func commentRow(")]
 source += thread[thread.index("    private func loadComments("):thread.index("    private func firstEmoji(")]
 source += "    func rowsForTest() -> [(UUID, Int)] { displayedComments.map { ($0.id, $0.depth) } }\n"
-source += "    func loadForTest() async { await loadComments() }\n"
+source += "    func loadForTest(more: Bool = false) async { await loadComments(more: more) }\n"
+source += "    func likeForTest(_ comment: FitFightFightPostComment) async { await likeComment(comment) }\n"
 source += "    func sendForTest() async { await sendComment() }\n"
 source += "    func reportForTest(_ comment: FitFightFightPostComment) async { await reportComment(comment) }\n"
 source += "    func deleteForTest(_ comment: FitFightFightPostComment) async { await deleteComment(comment) }\n}\n"
+count_change = thread.split(".onChange(of: post.commentCount) { previous, count in\n", 1)[1].split("\n        }\n", 1)[0]
+source += "\nextension FightPostThreadState {\n    func countChangedForTest(previous: Int, count: Int) {\n" + count_change + "\n    }\n}\n"
 source += thread[thread.index("private struct DisplayedFightComment:"):]
+source += "\n" + feedback[feedback.index("@MainActor\nfinal class FeedbackStore:"):feedback.index("    func vote(")].replace(": ObservableObject", "").replace("@Published ", "")
+source += feedback[feedback.index("    func delete("):feedback.index("    func report(")]
+source += feedback[feedback.index("    private func keepingNewerVote("):feedback.index("    static func previewBoard(")] + "\n}\n"
+source += feedback[feedback.index("private enum RequestAttachment {"):feedback.index("private struct RequestMediaStack:")]
+source += feedback[feedback.index("enum RequestMenuAction {"):feedback.index("struct RequestPostMenu:")]
+source += api[api.index("struct FitFightFeedbackPost:"):api.index("struct FitFightFeedbackFixAgent:")]
+source += metadata[metadata.index("struct FitFightFeedbackMetadata:"):metadata.index("    @MainActor")] + "\n}\n"
+source += metadata[metadata.index("extension FitFightFeedbackMetadata: Codable {"):]
 
 with tempfile.TemporaryDirectory(prefix="fitfight-state-tests-") as directory:
     generated = Path(directory) / "NativeStateTests.swift"
     generated.write_text(source)
     executable = Path(directory) / "native-state-tests"
     subprocess.run([
-        "swiftc", "-swift-version", "5", "-parse-as-library",
-        "-target", f"{platform.machine()}-apple-macosx13.0",
+        "swiftc", "-swift-version", "5", "-parse-as-library", str(root / "FitFight/AppLocalization.swift"),
+        "-target", f"{platform.machine()}-apple-macosx14.0",
         str(root / "FitFight/Media.swift"), str(generated), "-o", str(executable),
     ], check=True)
     subprocess.run([str(executable)], check=True, timeout=15)

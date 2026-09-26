@@ -1,0 +1,8 @@
+{
+    "request_id": "22222222-2222-4222-8222-222222222222",
+    "workflow": "avatar",
+    "status": "completed",
+    "data": {
+        "image_url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/avatar-example.png"
+    }
+}

@@ -15,6 +15,7 @@ export const fightPostAuthorSchema = z
         display_name: z.string(),
         avatar: mediaObjectSchema.nullable(),
         companion_id: companionIdSchema.nullable().default(null),
+        companion_image_url: z.string().url().optional(),
     })
     .strict();
 
@@ -97,6 +98,7 @@ export const updateFightPostRequestSchema = z
 
 export const feedDestinationSchema = z.discriminatedUnion("type", [
     z.object({ type: z.literal("main") }).strict(),
+    z.object({ type: z.literal("broadcast") }).strict(),
     z
         .object({
             type: z.literal("fight"),
@@ -115,7 +117,19 @@ export const createFeedPostsRequestSchema = z
     .strict()
     .refine((input) => input.body.length > 0 || input.media_ids.length > 0, {
         message: "Add a photo, a video, or a short note",
-    });
+    })
+    .refine(
+        (input) => {
+            const broadcasts = input.destinations.filter(
+                (destination) => destination.type === "broadcast",
+            );
+            return (
+                broadcasts.length === 0 ||
+                (broadcasts.length === 1 && input.destinations.length === 1)
+            );
+        },
+        { message: "Broadcast is its own post" },
+    );
 
 export const listFightPostsQuerySchema = z
     .object({
@@ -159,15 +173,7 @@ export const blockFeedAuthorResponseSchema = z
     })
     .strict();
 
-export const feedPersonSchema = z
-    .object({
-        user_id: z.string().uuid(),
-        handle: z.string(),
-        display_name: z.string(),
-        avatar: mediaObjectSchema.nullable(),
-        companion_id: companionIdSchema.nullable().default(null),
-    })
-    .strict();
+export const feedPersonSchema = fightPostAuthorSchema;
 
 export const feedPeopleResponseSchema = z
     .object({
@@ -184,8 +190,24 @@ export const fightPostCommentSchema = z
         created_at: z.string().datetime({ offset: true }),
         author: fightPostAuthorSchema,
         mine: z.boolean(),
+        like_count: z.number().int().nonnegative().optional(),
+        liked_by_me: z.boolean().optional(),
     })
     .strict();
+
+export const setFightPostCommentLikeRequestSchema = z
+    .object({ liked: z.boolean() })
+    .strict();
+
+export const fightPostCommentLikeResponseSchema = z
+    .object({
+        like_count: z.number().int().nonnegative(),
+        liked_by_me: z.boolean(),
+    })
+    .strict();
+
+export const fightPostCommentLikeRowSchema = fightPostCommentLikeResponseSchema
+    .extend({ comment_id: z.string().uuid() });
 
 export const fightPostCommentListResponseSchema = z
     .object({
@@ -215,24 +237,21 @@ export const createFightPostCommentRequestSchema = z
     })
     .strict();
 
+export const fightPostCommentSortValues = ["recent", "comments"] as const;
+export const fightPostCommentSortSchema = z.enum(fightPostCommentSortValues);
+
 export const listFightPostCommentsQuerySchema = z
     .object({
         cursor: z.string().min(1).max(120).optional(),
         limit: z.coerce.number().int().min(1).max(80).default(40),
+        sort: fightPostCommentSortSchema.optional(),
     })
     .strict();
 
-export const reportFightPostCommentRequestSchema = z
-    .object({
-        reason: fightPostReportReasonSchema,
-    })
-    .strict();
+export const reportFightPostCommentRequestSchema = reportFightPostRequestSchema;
 
-export const reportFightPostCommentResponseSchema = z
-    .object({
-        reported: z.literal(true),
-    })
-    .strict();
+export const reportFightPostCommentResponseSchema =
+    reportFightPostResponseSchema;
 
 export const setFightPostReactionRequestSchema = z
     .object({
@@ -331,6 +350,7 @@ export type DeleteFightPostCommentResponse = z.infer<
 export type CreateFightPostCommentRequest = z.infer<
     typeof createFightPostCommentRequestSchema
 >;
+export type FightPostCommentSort = z.infer<typeof fightPostCommentSortSchema>;
 export type ListFightPostCommentsQuery = z.infer<
     typeof listFightPostCommentsQuerySchema
 >;
@@ -354,4 +374,14 @@ export type FightPostReactionPeopleResponse = z.infer<
 >;
 export type ListFightPostReactionPeopleQuery = z.infer<
     typeof listFightPostReactionPeopleQuerySchema
+>;
+
+export type SetFightPostCommentLikeRequest = z.infer<
+    typeof setFightPostCommentLikeRequestSchema
+>;
+export type FightPostCommentLikeResponse = z.infer<
+    typeof fightPostCommentLikeResponseSchema
+>;
+export type FightPostCommentLikeRow = z.infer<
+    typeof fightPostCommentLikeRowSchema
 >;

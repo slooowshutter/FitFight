@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { runInNewContext } from "node:vm";
+import { ModuleKind, transpileModule } from "typescript";
+import { z } from "zod";
 import { readFightSnapshot } from "./fight-snapshot-supabase-query";
 import { closeDueFightsForUser } from "./close-due-fights-supabase-query";
 import {
@@ -128,6 +132,7 @@ test("snapshot establishes transaction-local caller permissions before its singl
     assert.match(calls[2].query, /as grace_ends_at/);
     assert.match(calls[2].query, /avatar_media_id/);
     assert.match(calls[2].query, /companion_id/);
+    assert.match(calls[2].query, /select snapshot.value, snapshot.step_checkpoints/);
     assert.doesNotMatch(calls[2].query, /as final_sync_grace_seconds/);
 });
 
@@ -206,9 +211,6 @@ test("ordinary maintenance uses one database query and never scans unrelated ser
                 },
             ];
         }
-        if (query.includes("notification_intents")) {
-            return [];
-        }
         return [];
     };
     const admin = {
@@ -227,17 +229,9 @@ test("ordinary maintenance uses one database query and never scans unrelated ser
             checked: 1,
             closed: 0,
             fightIds: [],
-            notifications: {
-                checked: 0,
-                sent: 0,
-                skipped: 0,
-                failed: 0,
-                expired: 0,
-                pending: 0,
-            },
         },
     );
-    assert.ok(statements >= 2);
+    assert.equal(statements, 1);
 });
 
 test("refresh endpoint rejects unauthenticated requests before maintenance and emits timing", async () => {
@@ -257,6 +251,101 @@ test("refresh endpoint rejects unauthenticated requests before maintenance and e
         /auth;dur=[\d.]+, total;dur=[\d.]+/,
     );
     assert.equal((await response.json()).code, "unauthorized");
+});
+
+test("refresh answers after the caller's maintenance and delivers notifications after the response", async () => {
+    const userId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const snapshot = {
+        fights: [],
+        members: [],
+        profiles: [],
+        series: [],
+        step_days: [],
+    };
+    const database = {};
+    const steps: string[] = [];
+    const deferred: Array<() => Promise<unknown>> = [];
+    const exports: Record<string, unknown> = {};
+    const require = createRequire(import.meta.url);
+    // Run the production handler with only its data and delivery boundaries replaced.
+    const { outputText } = transpileModule(
+        readFileSync(
+            new URL(
+                "../../../app/api/v1/fights/refresh/route.ts",
+                import.meta.url,
+            ),
+            "utf8",
+        ),
+        { compilerOptions: { module: ModuleKind.CommonJS } },
+    );
+    runInNewContext(outputText, {
+        exports,
+        require(specifier: string) {
+            if (specifier === "next/server") {
+                return {
+                    after: (task: () => Promise<unknown>) =>
+                        deferred.push(task),
+                };
+            }
+            if (specifier.endsWith("/auth-supabase-query")) {
+                return { verifyUser: async () => ({ userId }) };
+            }
+            if (specifier.endsWith("/supabase/postgres")) {
+                return { createDatabaseClient: () => database };
+            }
+            if (specifier.endsWith("/app-wide-fight-invite-supabase-query")) {
+                return {
+                    ensureAppWideFightInvite: async () => {
+                        steps.push("invite");
+                    },
+                };
+            }
+            if (specifier.endsWith("/close-due-fights-supabase-query")) {
+                return {
+                    closeDueFightsForUser: async () => {
+                        steps.push("close");
+                    },
+                    processDueNotifications: async (
+                        _now: Date,
+                        sql: unknown,
+                    ) => {
+                        assert.equal(sql, database);
+                        steps.push("notifications");
+                        throw new Error("APNs transport unavailable");
+                    },
+                };
+            }
+            if (specifier.endsWith("/fight-snapshot-supabase-query")) {
+                return {
+                    readFightSnapshot: async () => {
+                        steps.push("snapshot");
+                        return snapshot;
+                    },
+                };
+            }
+            return require(specifier);
+        },
+    });
+    const handler = z.function().parse(exports.POST);
+    const response = z.instanceof(Response).parse(
+        await handler(
+            new Request("https://fitfight.app/api/v1/fights/refresh", {
+                method: "POST",
+                body: JSON.stringify({ time_zone: "UTC" }),
+            }),
+            { params: Promise.resolve({}) },
+        ),
+    );
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), snapshot);
+    assert.deepEqual(
+        steps,
+        ["invite", "close", "snapshot"],
+        "The response must not wait for every account's notifications",
+    );
+    assert.equal(deferred.length, 1);
+    await assert.rejects(deferred[0](), /APNs transport unavailable/);
+    assert.deepEqual(steps, ["invite", "close", "snapshot", "notifications"]);
 });
 
 test("live snapshot endpoint authenticates before reading and never caches responses", async () => {

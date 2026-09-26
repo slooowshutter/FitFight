@@ -21,7 +21,6 @@ final class RemoteImageLoader {
     private let memory = NSCache<NSString, UIImage>()
     private var inflight: [String: Task<Data?, Never>] = [:]
     private let session: URLSession
-    private let folder: URL
 
     private init() {
         let configuration = URLSessionConfiguration.default
@@ -33,9 +32,7 @@ final class RemoteImageLoader {
         session = URLSession(configuration: configuration)
         memory.countLimit = 200
         memory.totalCostLimit = 40 * 1_048_576
-        folder = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("RemotePhotos", isDirectory: true)
-        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try? FileManager.default.createDirectory(at: Self.diskFolder, withIntermediateDirectories: true)
     }
 
     func cached(url: URL, kind: RemoteImageKind) -> UIImage? {
@@ -75,9 +72,8 @@ final class RemoteImageLoader {
         let data = await task.value
         inflight[objectKey] = nil
         guard let data else { return nil }
-        let folder = folder
         Task.detached(priority: .utility) {
-            Self.writeDisk(objectKey, data: data, folder: folder)
+            Self.writeDisk(objectKey, data: data)
         }
         return await displayImage(data, kind: kind, storedKey: storedKey)
     }
@@ -135,27 +131,26 @@ final class RemoteImageLoader {
         return UIImage(cgImage: cgImage)
     }
 
-    nonisolated private static var diskFolder: URL {
-        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("RemotePhotos", isDirectory: true)
-    }
+    nonisolated private static let diskFolder = FileManager.default
+        .urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent("RemotePhotos", isDirectory: true)
 
     nonisolated private static func readDisk(_ objectKey: String) -> Data? {
         let url = diskFolder.appendingPathComponent(RemoteImageCache.fileName(for: objectKey))
         return try? Data(contentsOf: url)
     }
 
-    nonisolated private static func writeDisk(_ objectKey: String, data: Data, folder: URL) {
-        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        let url = folder.appendingPathComponent(RemoteImageCache.fileName(for: objectKey))
+    nonisolated private static func writeDisk(_ objectKey: String, data: Data) {
+        try? FileManager.default.createDirectory(at: diskFolder, withIntermediateDirectories: true)
+        let url = diskFolder.appendingPathComponent(RemoteImageCache.fileName(for: objectKey))
         try? data.write(to: url, options: .atomic)
-        evictIfNeeded(folder: folder)
+        evictIfNeeded()
     }
 
-    nonisolated private static func evictIfNeeded(folder: URL) {
+    nonisolated private static func evictIfNeeded() {
         let keys: Set<URLResourceKey> = [.contentModificationDateKey, .fileSizeKey]
         guard let files = try? FileManager.default.contentsOfDirectory(
-            at: folder,
+            at: diskFolder,
             includingPropertiesForKeys: Array(keys)
         ) else { return }
         let limit = 200 * 1_048_576

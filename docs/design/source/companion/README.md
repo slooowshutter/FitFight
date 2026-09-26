@@ -2,7 +2,7 @@
 
 The selected [Companion HTML](../kit/companion-app-proposal.html) supplies the visual direction. The [native design kit](../kit/FitFight%20Design%20System.dc.html) and [tokens](../tokens.json) remain the foundation. The running native/backend behavior wins over simplified prototype interactions.
 
-`originals/` preserves the five images embedded in the selected HTML, byte-for-byte, plus Marc’s hiking-goat effort strip (`originals/goat-hiking-effort.png`). `manifest.json` records stable animal IDs, image dimensions, crop bounds, real transparency, and intended surfaces. No temporary image-generation paths are required. The five hiking poses are opaque cream canvases, not transparent cutouts.
+`originals/` preserves the five images embedded in the selected HTML, byte-for-byte, plus Marc’s hiking-goat effort strip (`originals/goat-hiking-effort.png`). `manifest.json` records stable animal IDs, image dimensions, crop bounds, real transparency, and intended surfaces. No temporary image-generation paths are required.
 
 The solo atlas has an alpha channel. Race and tennis are **opaque** images with separate Night/Day backgrounds; they are never described as transparent cutouts. Both compositions use aspect fit and retain the complete cast and ground. Race is shown only for the four-person Simulator demo cast. Tennis is available as an artwork study below the picker, never as a fabricated Feed post.
 
@@ -10,7 +10,7 @@ Native full-body assets are padded 352 × 400 PNGs. Avatars use 150 × 150 face 
 
 ```sh
 python3 docs/design/source/companion/prepare-assets.py
-python3 docs/design/source/companion/slice-goat-hiking.py
+python3 docs/design/source/companion/import-effort-forms.py
 ```
 
 Native artwork is bundled in named `Companion-*.imageset` assets. The app contains no HTML, base64 images, or web view. A chosen stock animal is stored on the account and shown as that person’s avatar to everyone in fights, standings, Feed, and comments. Custom generation and saved group artwork belong to later plan stages.
@@ -33,7 +33,7 @@ Before implementation: select the workflow/provider and server credentials, appr
 
 ### 2. Five activity forms of the same companion
 
-The native picker no longer shows effort poses. Hiking goat still has real rest-to-peak artwork on You and fights when that stock animal is selected. Other animals reuse that same animal’s stock body until generation exists. Today’s step count still picks the live pose for those surfaces (under 2k resting, 8k+ peak). A later generation operation should take the saved identity and reference artwork and create five consistent sport scenes. Activity changes must select an already saved form; they do not generate another image every time the screen opens.
+The native picker no longer shows effort poses. Each of the 12 regular stock animals has five transparent effort forms (`Companion-<id>-effort-1…5`), generated with the Blend Five Fitness Levels workflow and listed in `effort-forms.json`. Today’s step count picks the live pose on You and fights: under 3k resting, 3-6k soft, 6-10k average, 10-15k fit, 15k+ strong. A later generation operation should take the saved identity and reference artwork and create five consistent sport scenes. Activity changes must select an already saved form; they do not generate another image every time the screen opens.
 
 Store each form against the same companion revision. Activity changes select an already saved form; they do not generate another image every time the screen opens. Preserve the animal, breed, face, clothes and accessories across the set. Partial generation must not replace a complete usable set. These forms are presentation only and do not change Steps scoring.
 
@@ -44,3 +44,27 @@ A third operation uses the participants' saved companion avatars, characteristic
 Before implementation: decide when to generate the scene, what membership or customization changes require a new one, and the allowance per fight/round. Every participant must remain recognizable. Keep ordinary standings available while artwork is pending or unavailable. This case is explicitly planned only.
 
 All three cases need authenticated ownership checks, validated requests and provider responses, persistent generation status, and protection against duplicate paid submissions. Server business logic belongs under `web/`; database access belongs in `web/lib/supabase/queries/`. No app-facing Postgres RPCs and no provider keys in iOS.
+
+## Specials, 20 Sep 2026
+
+Marc supplied 40 individual animal illustrations, including distinct poses of
+Numbat, Serval, Coati, Secretary Bird, and Thorny Devil. Each photo is its own
+Special. `limited-editions.json` records the original filename, stable ID,
+English/French name and caption, source dimensions, and portrait crop in original
+image pixels. Optimized source JPGs remain under `originals/limited/`.
+
+The app uses transparent RGBA PNGs: full images fit within 640 by 960 pixels and
+avatar crops are 300 by 300 pixels. `prepare-limited-assets.py` uses ISNet and
+alpha matting (first run in a disposable cloud CI job, since removed), with a small mask correction to preserve
+the pangolin's pale sock. It extracts the supplied artwork without generating
+new characters. Transparent pixels discard unused RGB data. The cutouts were
+inspected on both Night and Day backgrounds, including clothing, quills, horns,
+feathers, and seated props. They are not an activity-driven pose set.
+
+All and Specials show these images while sales are on. A tap previews the name
+and caption above Buy or Save; it does not change the account. The caption
+appears on You and the shared profile after saving. Each Special is sold once per
+environment and owned permanently; changing companions or deleting the account
+does not release it. Stock animals and custom descriptions remain
+shared/unlimited. The server confirms ownership before the app shows a Special
+as the selected companion.

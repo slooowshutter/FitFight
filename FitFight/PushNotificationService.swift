@@ -14,12 +14,15 @@ final class PushNotificationService: NSObject, ObservableObject {
     private var session: SessionStore?
     private var askedThisSession = false
     private var deviceToken: String?
+    private var registeredInstallation: String?
     private var installationTask: Task<Void, Never>?
     private var isSignedOut = false
+    private var onNotification: @MainActor () -> Void = {}
     private static let declinedPrePromptKey = "ff.push.declinedPrePrompt"
 
-    func configure(session: SessionStore) {
+    func configure(session: SessionStore, onNotification: @escaping @MainActor () -> Void = {}) {
         self.session = session
+        self.onNotification = onNotification
     }
 
     var canPromptForPermission: Bool {
@@ -59,12 +62,6 @@ final class PushNotificationService: NSObject, ObservableObject {
         markPrePromptHandled()
     }
 
-    func declinePrePrompt() {
-        askedThisSession = true
-        showPrePrompt = false
-        markPrePromptHandled()
-    }
-
     func markPromptHandledThisSession() {
         askedThisSession = true
         showPrePrompt = false
@@ -95,16 +92,19 @@ final class PushNotificationService: NSObject, ObservableObject {
         self.deviceToken = token
         guard apnsConfigured, permissionStatus == .authorized, !isSignedOut,
               let session, let userID = session.authSession?.user.id else { return }
-        let locale = Locale.current.language.languageCode?.identifier == "fr" ? "fr" : "en"
+        let locale = AppLocalization.languageCode
         #if DEBUG
         let environment = "sandbox"
         #else
         let environment = "production"
         #endif
+        // Launch and sign-in both ask APNs for the token; send each user, token, and locale once.
+        let installation = "\(userID)|\(token)|\(locale)"
         let previous = installationTask
         let work = Task { @MainActor in
             await previous?.value
-            guard !self.isSignedOut, session.authSession?.user.id == userID else { return }
+            guard !self.isSignedOut, session.authSession?.user.id == userID,
+                  self.registeredInstallation != installation else { return }
             do {
                 let access = try await session.freshAccessToken()
                 guard !self.isSignedOut, session.authSession?.user.id == userID else { return }
@@ -115,16 +115,13 @@ final class PushNotificationService: NSObject, ObservableObject {
                     permissionStatus: "authorized",
                     accessToken: access
                 )
+                self.registeredInstallation = installation
             } catch {
                 // Push registration is best-effort; fights still work without it.
             }
         }
         installationTask = work
         await work.value
-    }
-
-    func handleRegistrationFailure() {
-        // Missing push capability or simulator — no user-facing error.
     }
 
     private var hasHandledPrePrompt: Bool {
@@ -144,6 +141,7 @@ final class PushNotificationService: NSObject, ObservableObject {
         installationTask = Task { @MainActor in
             // A registration already sent to the server must finish before revocation.
             await previous?.value
+            self.registeredInstallation = nil
             do {
                 try await self.api.revokeDeviceInstallation(token: deviceToken, accessToken: access)
             } catch {
@@ -159,7 +157,9 @@ extension PushNotificationService: UNUserNotificationCenterDelegate {
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
         await MainActor.run {
-            self.session?.isSignedIn == true && !self.isSignedOut ? [.banner, .sound] : []
+            guard self.session?.isSignedIn == true, !self.isSignedOut else { return [] }
+            self.onNotification()
+            return [.banner, .sound]
         }
     }
 
@@ -172,6 +172,7 @@ extension PushNotificationService: UNUserNotificationCenterDelegate {
         guard let route else { return }
         await MainActor.run {
             AppModel.storePendingFightRoute(route)
+            self.onNotification()
         }
     }
 }

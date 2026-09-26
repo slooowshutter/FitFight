@@ -25,6 +25,433 @@ enum Changelog {
     /// Newest first. Add a row here whenever we ship a user-facing change.
     static let releases: [ReleaseNote] = [
         ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 26,
+            notes: "Fight charts now show the top four plus you. Tap a name under Line, Bars, Histogram or Pace to add or hide that person. Oval still shows everyone."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 26,
+            notes: "Your animal now changes with today's steps: armchair under 3k, yawning to 6k, relaxed to 10k, fit to 15k and fully muscled after that. Works for all 12 regular animals. Specials and paid characters are hidden for now."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 26,
+            notes: "Steps and fights update right after you open the app instead of waiting for your full Apple Health history to upload, and Fights shows Syncing… until today’s steps arrive. You opens instantly with your last numbers, and Dashboard shows your Steps straight away. Edit profile has Profile visibility and Share Steps history again, so friends you share with see your stats and fighter."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 26,
+            notes: "Choosing a companion is now a big swipeable stage, with a grid button to see them all. Tabs are All, Specials and Yours, and onboarding uses the same stage."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 25,
+            notes: "Animal cards in the picker are all the same size now, whatever the name length."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 25,
+            notes: "Current fights show as cards: your lead or gap, everyone’s avatars, your place, and a gold bar with the day and time left."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 25,
+            notes: "Repeating fights show a trophy next to the previous round’s winner, with ×N for rounds won in a row."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 25,
+            notes: "You shows today’s Steps against your daily average, this week, your record and best day, each Apple Health sport by day, week or month, and your friends. New Dashboard and Settings screens. Friend profiles show both companions with the one-on-one score above them."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 25,
+            notes: "You can comment on open Feedback requests from their detail page. Sort your fights by start, end, or how far ahead you are."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 24,
+            notes: "Create your own animal with one Apple purchase. Its five fitness images change with your daily Steps."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 23,
+            notes: "Apple Health syncs detailed activity and workout history, including late changes and deletions. Fight Steps still use Apple’s merged total."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 23,
+            notes: "A livelier first Fight: choose your companion, reveal your steps, find a Fight, and set reminders in six simple steps."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 23,
+            notes: "40 Specials: one-of-a-kind animal companions, each with its own funny line. Buy one through Apple and keep it, even when you switch animals."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 23,
+            notes: "Tap outside an entry to close the keyboard. Sort Current Fights by end or start time and see each exact deadline."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 23,
+            notes: "Scrolling screens keep a clear top header, so section titles and cards no longer show behind the iPhone status bar or the version line on You."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 23,
+            notes: "If you stay on an older TestFlight build, an update toast returns at most once every three days."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 21,
+            notes: "Long companion names now fit on You, keeping both customization buttons fully visible."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 20,
+            notes: "Choose every notification separately or pause them all. Reactions and optional feed updates arrive in one evening summary. Fight reminders are clearer, use usernames, and can show post photos."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 19,
+            notes: "Generated images stay available in your account, even when you close the app before generation finishes."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 19,
+            notes: "Signing in with Google opens the FitFight account that already uses that email, including Sign in with Apple."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 19,
+            notes: "Google sign-in has a cleaner button with centered text and sizing that matches Sign in with Apple."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 19,
+            notes: "Sign in or create your FitFight account with Google. Sign in with Apple is still available."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 19,
+            notes: "Suggested fights use compact invitation cards. Tap a card to see the details before joining."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 19,
+            notes: "Comments are easier to scan with bold names, lighter text, and tighter spacing. Reactions start on the left, ranked by votes, and the reply bar stays aligned."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 19,
+            notes: "Feed comments are more compact, with hearts to like replies, a simpler composer, and quick emoji reactions without sorting tabs."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 19,
+            notes: "Find feedback with one filter button. See features and bugs together, sort by votes or date, and browse archived posts. Delete your own feedback; admins can archive, reopen, or delete any post."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 19,
+            notes: "The new Details tab shows each fight's schedule, time zone, creator, and participant count. Sharing, invite links, and fight codes are all there too."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 19,
+            notes: "Fight notifications open the exact round they refer to, even when the next round has already started."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 19,
+            notes: "The comment Send button turns green as soon as you type. Empty or spaces-only comments keep it gray and disabled."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 18,
+            notes: "Generate companion avatars, five fitness levels, and group photos. See your credits, return to interrupted generations, and keep your images in your account."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 18,
+            notes: "Fight status labels follow your language immediately, even when a refresh fails. Fight names and user-written stakes stay exactly as entered."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 18,
+            notes: "Language changes keep your iPhone’s regional formats and preserve unfinished fights and posts."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Choose your language and appearance in You → Preferences. Your choices are saved to your account. Find notification settings, beta access, and your installed app details in the same place."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Companion descriptions stay saved when you change animals. Browse habitats and reuse your saved descriptions from Yours."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Type @ to tag someone in a post or comment. They get a FitFight notification with your name."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "A refreshed App Store description explaining how to start a private step challenge and follow the standings."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Make it yours opens your animal description, ready to edit and save. Use Change animal to choose another companion anytime."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Feedback keeps loading correctly when you leave a request while it is being deleted."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Admins can delete a feedback request from its menu after confirming."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Comment refreshes are more reliable after connection errors. Live updates no longer interrupt loading more comments."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "You can open the TestFlight beta or return to the App Store from You → Settings. Before switching, see how installing the beta replaces the app and keeps accounts, fights, and progress in a separate database."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Reactions swipe horizontally, with a visible like button and any emoji. Charts refresh without losing your selection and keep missing history clear. Comments load reliably, and notification failures no longer interrupt saved fights."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "The slide haptics lab has a Custom option for tuning rumble, pulses, ramp shapes, the finishing hit, and confirmation distance. Your settings save automatically on this phone."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Slide to start builds from soft feedback to full-strength vibration, with a heavy finish even on a quick swipe. The 20 haptic tests now have wider ramps and a 0-100 scale."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Feedback no longer shows a duplicate button above the bottom tabs. Use the plus at the top to add a request."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Live feed updates keep loaded comments in place and refresh posts reliably while scrolling. Broadcast posts now update live too."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Comments and reactions refresh live. Feed loads ten posts at a time and loads more as you scroll. Pull down to fetch the latest posts. Notifications open the exact post. You now has Activity with posts, comments, reactions and timestamped membership history."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Website download and invitation links open the App Store. The staging website keeps TestFlight access for beta testers."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 16,
+            notes: "Posts and comments in another language now have a translation icon beside their actions on iOS 17.4 or later."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 18,
+            notes: "Joining a suggested Fight now syncs your steps. Profile history opens the selected round, and Feedback comment counts open the discussion."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 18,
+            notes: "Profiles now show the Fights you both still belong to. Leaving a Fight removes it from Fights together."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Suggested Fight invitations stay joinable, and rematches keep their original number of days across clock changes. Private Fight history protects participant identities."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Profiles now include Friends, private sharing controls, Fight records and head-to-head rivalries. Tap a person to open their profile or challenge them. Suggested public Fights are optional at the end of onboarding."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 16,
+            notes: "Feed comments can be sorted by most comments or most recent. Most comments is the default."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 16,
+            notes: "The Feed can show a post to everyone signed in, not only people in your fights."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 16,
+            notes: "Opening FitFight invites you to the shared Steps fight and any suggested fights. They show on New. You get a notification with the name, no scores, and you can accept when you are ready."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 16,
+            notes: "Bars, line, histogram, and pace now use the same confirmed Fight scores as the oval. A teammate without daily history is a gap, not a blank graph."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Your time zone stays fixed when you travel and can be changed in Edit profile. Custom Fights let you choose their time zone. Profile statistics refresh after Health sync, and Feedback comment counts open the discussion."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Profiles now show your best recorded step day, weekly averages, activity-level distribution and streaks. Shared statistics respect your chosen audience and history period."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Profile history keeps private Fight participants hidden and opens the selected round. Scheduled Fight records and rematch durations are now preserved."
+        ),
+        ReleaseNote(
+            version: "1.1.1",
+            year: 2026,
+            month: 9,
+            day: 17,
+            notes: "Profiles now include Friends, private sharing controls, Fight records and head-to-head rivalries. Tap a person to open their profile or challenge them. Suggested public Fights are optional at the end of onboarding."
+        ),
+        ReleaseNote(
             version: "1.1.1",
             year: 2026,
             month: 9,
@@ -330,7 +757,7 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 13,
-            notes: "Feed photos keep their original shape and fill the post width. A wide photo stays short, a tall one stays tall — nothing is cropped to a fixed frame."
+            notes: "Feed photos keep their original shape and fill the post width. A wide photo stays short, a tall one stays tall. Nothing is cropped to a fixed frame."
         ),
         ReleaseNote(
             version: "1.0.0",
@@ -400,7 +827,7 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 12,
-            notes: "Plus starts with no destination — pick Public or a fight. Public posts and fight posts look different. You can edit or delete your own posts. Tags are people you’ve already finished a fight with."
+            notes: "Plus starts with no destination: pick Public or a fight. Public posts and fight posts look different. You can edit or delete your own posts. Tags are people you’ve already finished a fight with."
         ),
         ReleaseNote(
             version: "1.0.0",
@@ -421,7 +848,7 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 12,
-            notes: "Fights, the challenge page, and stats now show everyone’s photo when they have one — not just initials."
+            notes: "Fights, the challenge page, and stats now show everyone’s photo when they have one, not just initials."
         ),
         ReleaseNote(
             version: "1.0.0",
@@ -967,7 +1394,7 @@ enum Changelog {
             year: 2026,
             month: 8,
             day: 29,
-            notes: "New look, built from the approved design kit. One palette instead of ten accent colours — moss is you and winning, ember is losing and urgent, gold is progress. Nunito replaces Manrope. Every screen rebuilt: a moss hero card on Fights, a head-to-head block and leaderboard on a fight, new form controls on New fight. Look is now Night or Day. You → Settings → Design system shows every token and component in the app."
+            notes: "New look, built from the approved design kit. One palette instead of ten accent colours: moss is you and winning, ember is losing and urgent, gold is progress. Nunito replaces Manrope. Every screen rebuilt: a moss hero card on Fights, a head-to-head block and leaderboard on a fight, new form controls on New fight. Look is now Night or Day. You → Settings → Design system shows every token and component in the app."
         ),
         ReleaseNote(
             version: "0.9.0",
@@ -1002,7 +1429,7 @@ enum Changelog {
             year: 2026,
             month: 8,
             day: 25,
-            notes: "This TestFlight talks to develop. The version at the top includes staging and the date of the last ship. Still 0.9.0 — only the build number and the date change."
+            notes: "This TestFlight talks to develop. The version at the top includes staging and the date of the last ship. Still 0.9.0. Only the build number and the date change."
         ),
         ReleaseNote(
             version: "0.8.0",
@@ -1016,7 +1443,7 @@ enum Changelog {
             year: 2026,
             month: 8,
             day: 25,
-            notes: "Sign in, add friends by handle, start a real Steps fight, Apple Health uploads to the server, standings come from the database. Fights are no longer the fixture people. When the days are up the fight closes on the server — you do not have to leave the app open. Design tab still previews the old mock. Requests is unchanged."
+            notes: "Sign in, add friends by handle, start a real Steps fight, Apple Health uploads to the server, standings come from the database. Fights are no longer the fixture people. When the days are up the fight closes on the server. You do not have to leave the app open. Design tab still previews the old mock. Requests is unchanged."
         ),
         ReleaseNote(
             version: "0.8.0",
@@ -1030,14 +1457,14 @@ enum Changelog {
             year: 2026,
             month: 8,
             day: 23,
-            notes: "Requests has a Talk to the boss button. It opens a private chat with Marc — not the public vote board. What you send is emailed to him; he writes back from his inbox until the app has a server."
+            notes: "Requests has a Talk to the boss button. It opens a private chat with Marc, not the public vote board. What you send is emailed to him; he writes back from his inbox until the app has a server."
         ),
         ReleaseNote(
             version: "0.6.0",
             year: 2026,
             month: 8,
             day: 23,
-            notes: "Ten new looks for the app, plus a Design tab to flip between them. Each one is a real redesign of the fights screen with its own colours and its own idea of what matters: Ring closes an activity ring for every fight, Ledger reads like a betting statement, Arena puts you face to face with whoever is beating you, Soft says it in a sentence, Terminal prints it as monospace, Stack floats it on frosted glass, Podium builds a gold podium, Pulse turns the pot into one stacked bar, Bento lays it out as uneven tiles and Zine sets it like a printed page. Every design shows the same fights and the same money — only the look changes. The tab shows all eleven side by side, live, and one tap swaps the app over."
+            notes: "Ten new looks for the app, plus a Design tab to flip between them. Each one is a real redesign of the fights screen with its own colours and its own idea of what matters: Ring closes an activity ring for every fight, Ledger reads like a betting statement, Arena puts you face to face with whoever is beating you, Soft says it in a sentence, Terminal prints it as monospace, Stack floats it on frosted glass, Podium builds a gold podium, Pulse turns the pot into one stacked bar, Bento lays it out as uneven tiles and Zine sets it like a printed page. Every design shows the same fights and the same money. Only the look changes. The tab shows all eleven side by side, live, and one tap swaps the app over."
         ),
         ReleaseNote(
             version: "0.5.1",
@@ -1051,7 +1478,7 @@ enum Changelog {
             year: 2026,
             month: 8,
             day: 23,
-            notes: "The app was shouting. Measuring the brightness of every line against the mockups showed that most quiet text — the eyebrows over card titles, the line under each screen title, stat labels, handles, timestamps, +2 more — was rendering at 62% white where the design uses 40%. The bell, the Edit pill and the fight nav buttons also had a grey fill the design does not have, and the bell itself was three points too big. Buttons are the mockups' size now, and a part-filled progress bar is no longer two translucent whites stacked up."
+            notes: "The app was shouting. Measuring the brightness of every line against the mockups showed that most quiet text (the eyebrows over card titles, the line under each screen title, stat labels, handles, timestamps, +2 more) was rendering at 62% white where the design uses 40%. The bell, the Edit pill and the fight nav buttons also had a grey fill the design does not have, and the bell itself was three points too big. Buttons are the mockups' size now, and a part-filled progress bar is no longer two translucent whites stacked up."
         ),
         ReleaseNote(
             version: "0.4.2",
@@ -1104,23 +1531,19 @@ enum Changelog {
         ),
     ]
 
-    /// Array is newest-first; same-day rows keep that order.
-    static var newestFirst: [ReleaseNote] {
-        releases.enumerated().sorted { lhs, rhs in
-            if lhs.element.date != rhs.element.date {
-                return lhs.element.date > rhs.element.date
-            }
-            return lhs.offset < rhs.offset
-        }.map(\.element)
-    }
+    /// Array is newest-first; same-day rows keep that order. Sorted once: You and
+    /// Versions read these on every render.
+    static let newestFirst: [ReleaseNote] = releases.enumerated().sorted { lhs, rhs in
+        if lhs.element.date != rhs.element.date {
+            return lhs.element.date > rhs.element.date
+        }
+        return lhs.offset < rhs.offset
+    }.map(\.element)
 
     /// TestFlight keeps the full build history. Production starts at 1.0.
-    static var visible: [ReleaseNote] {
-        guard AppVersion.backend == "prod" else { return newestFirst }
-        return newestFirst.filter { !$0.version.hasPrefix("0.") }
-    }
+    static let visible: [ReleaseNote] = AppVersion.backend == "prod"
+        ? newestFirst.filter { !$0.version.hasPrefix("0.") }
+        : newestFirst
 
-    static var current: ReleaseNote? {
-        newestFirst.first { $0.version == AppVersion.marketing }
-    }
+    static let current: ReleaseNote? = newestFirst.first { $0.version == AppVersion.marketing }
 }

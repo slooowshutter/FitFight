@@ -16,12 +16,6 @@ struct FitFightSnapshot: Decodable {
     let members: [MemberRow]
     let profiles: [FitFightProfile]
     let series: [SeriesRow]
-    let stepDays: [StepDayRow]
-
-    enum CodingKeys: String, CodingKey {
-        case fights, members, profiles, series
-        case stepDays = "step_days"
-    }
 }
 
 struct SeriesRow: Decodable {
@@ -49,18 +43,6 @@ struct SeriesRow: Decodable {
     }
 }
 
-struct StepDayRow: Decodable {
-    let userId: UUID
-    let day: String
-    let steps: Int
-
-    enum CodingKeys: String, CodingKey {
-        case userId = "user_id"
-        case day
-        case steps
-    }
-}
-
 struct FightRow: Decodable {
     let id: UUID
     let ownerId: UUID
@@ -71,6 +53,7 @@ struct FightRow: Decodable {
     let graceEndsAt: String?
     let actionText: String?
     let seriesId: UUID?
+    let timeZone: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -82,32 +65,12 @@ struct FightRow: Decodable {
         case graceEndsAt = "grace_ends_at"
         case actionText = "action_text"
         case seriesId = "series_id"
+        case timeZone = "time_zone"
     }
 
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(UUID.self, forKey: .id)
-        ownerId = try container.decode(UUID.self, forKey: .ownerId)
-        name = try container.decode(String.self, forKey: .name)
-        state = try container.decode(String.self, forKey: .state)
-        startsAt = try container.decode(String.self, forKey: .startsAt)
-        endsAt = try container.decode(String.self, forKey: .endsAt)
-        graceEndsAt = try container.decodeIfPresent(String.self, forKey: .graceEndsAt)
-        actionText = try container.decodeIfPresent(String.self, forKey: .actionText)
-        seriesId = try container.decodeIfPresent(UUID.self, forKey: .seriesId)
-    }
-
-    var startsAtDate: Date { Self.parse(startsAt) ?? Date() }
-    var endsAtDate: Date { Self.parse(endsAt) ?? Date().addingTimeInterval(86400) }
-    var graceEndsAtDate: Date? { graceEndsAt.flatMap(Self.parse) }
-
-    static func parse(_ raw: String) -> Date? {
-        let iso = ISO8601DateFormatter()
-        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let date = iso.date(from: raw) { return date }
-        iso.formatOptions = [.withInternetDateTime]
-        return iso.date(from: raw)
-    }
+    var startsAtDate: Date { parseServerDate(startsAt) ?? Date() }
+    var endsAtDate: Date { parseServerDate(endsAt) ?? Date().addingTimeInterval(86400) }
+    var graceEndsAtDate: Date? { graceEndsAt.flatMap(parseServerDate) }
 }
 
 struct MemberRow: Decodable {
@@ -146,7 +109,7 @@ struct MemberRow: Decodable {
         if let date = try? container.decode(Date.self, forKey: .lastSyncedAt) {
             lastSyncedAt = date
         } else if let raw = try container.decodeIfPresent(String.self, forKey: .lastSyncedAt) {
-            lastSyncedAt = FightRow.parse(raw)
+            lastSyncedAt = parseServerDate(raw)
         } else {
             lastSyncedAt = nil
         }

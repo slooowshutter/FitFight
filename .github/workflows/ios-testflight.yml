@@ -3,7 +3,7 @@
 # Staging TestFlight only: push/merge to preview, or manual
 # workflow_dispatch on that branch. Feature-branch, develop, and cron
 # must not upload. main never uploads to TestFlight.
-# After upload, CI assigns Internal testers, every External group, and Friends Beta.
+# After processing, Internal testers receive the build. External groups stay unchanged.
 name: TestFlight
 
 on:
@@ -12,9 +12,11 @@ on:
             - preview
         paths:
             - "FitFight/**"
+            - "FitFightNotificationService/**"
             - "FitFight.xcodeproj/**"
             - "fastlane/**"
             - "scripts/publish-app-releases.sh"
+            - "scripts/apple-specials-notifications.rb"
             - "Gemfile"
             - "Gemfile.lock"
             - ".github/workflows/ios-testflight.yml"
@@ -185,9 +187,17 @@ jobs:
                       raise SystemExit("Deploy the profile API and backend-reader migration before distributing this native build")
                   PY
 
+            # The sandbox probe calls staging.fitfight.app, so that domain must already alias a backend that returns validation.
+            - name: Configure and verify Sandbox purchase notifications
+              env:
+                  APPLE_IAP_KEY_ID: ${{ secrets.APPLE_IAP_KEY_ID }}
+                  APPLE_IAP_ISSUER_ID: ${{ secrets.APPLE_IAP_ISSUER_ID }}
+                  APPLE_IAP_PRIVATE_KEY: ${{ secrets.APPLE_IAP_PRIVATE_KEY }}
+              run: bundle exec ruby scripts/apple-specials-notifications.rb
+
             - name: Upload to TestFlight
               env:
-                  FITFIGHT_RELEASE_VERSION: "1.1.1"
+                  FITFIGHT_RELEASE_VERSION: "1.1.2"
               run: bundle exec fastlane beta
 
             - name: Publish available app releases

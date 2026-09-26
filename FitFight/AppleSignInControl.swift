@@ -9,29 +9,20 @@ struct AppleSignInControl: View {
     @State private var signInNonce: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            SignInWithAppleButton(.signIn) { request in
-                let nonce = Self.randomNonce()
-                signInNonce = nonce
-                request.nonce = Self.sha256(nonce)
-                request.requestedScopes = [.email, .fullName]
-            } onCompletion: { result in
-                let nonce = signInNonce
-                signInNonce = nil
-                Task { await handle(result, nonce: nonce) }
-            }
-            .signInWithAppleButtonStyle(theme.mode == .day ? .black : .white)
-            .frame(maxWidth: .infinity, minHeight: 44, maxHeight: 44)
-            .disabled(session.isBusy)
-            .accessibilityLabel("Sign in with Apple")
-
-            if let authError = session.authError {
-                Text(authError)
-                    .font(.ff(11))
-                    .foregroundStyle(theme.emberText)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+        SignInWithAppleButton(.signIn) { request in
+            let nonce = Self.randomNonce()
+            signInNonce = nonce
+            request.nonce = Self.sha256(nonce)
+            request.requestedScopes = [.email, .fullName]
+        } onCompletion: { result in
+            let nonce = signInNonce
+            signInNonce = nil
+            Task { await handle(result, nonce: nonce) }
         }
+        .signInWithAppleButtonStyle(theme.mode == .day ? .black : .white)
+        .frame(maxWidth: .infinity, minHeight: 44, maxHeight: 44)
+        .disabled(session.isBusy)
+        .accessibilityLabel("Sign in with Apple")
     }
 
     private func handle(_ result: Result<ASAuthorization, Error>, nonce: String?) async {
@@ -40,7 +31,7 @@ struct AppleSignInControl: View {
             if (error as? ASAuthorizationError)?.code == .canceled {
                 return
             }
-            session.authError = String(localized: "Apple sign-in didn’t finish. Try again.")
+            session.authError = String(appLocalized: "Apple sign-in didn’t finish. Try again.")
         case .success(let authorization):
             guard
                 let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
@@ -50,14 +41,15 @@ struct AppleSignInControl: View {
                 let authorizationCode = String(data: codeData, encoding: .utf8),
                 let nonce
             else {
-                session.authError = String(localized: "Couldn’t sign in. Try again.")
+                session.authError = String(appLocalized: "Couldn’t sign in. Try again.")
                 return
             }
             await session.signInWithApple(
                 idToken: idToken,
                 authorizationCode: authorizationCode,
                 nonce: nonce,
-                fullName: formattedName(credential.fullName)
+                fullName: formattedName(credential.fullName),
+                email: credential.email
             )
         }
     }

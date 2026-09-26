@@ -1,4 +1,5 @@
 import type { Sql } from "postgres";
+import { isFitFightAdmin } from "@/lib/admin/is-fitfight-admin";
 import { ApiError, ERROR_CODES } from "@/lib/http";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import type {
@@ -20,9 +21,17 @@ import type {
     UpdateFightPostRequest,
 } from "@/lib/types/feed/fight-post";
 import { companionIdSchema } from "@/lib/types/companions/companion";
-import { enqueueFightFeedPostNotifications } from "./feed-social-notifications-supabase-query";
+import type { AvatarMediaColumns } from "@/lib/types/media/media";
 import {
+    eligibleMentionUserIds,
+    enqueueFightFeedPostNotifications,
+    enqueueMentionNotifications,
+    mentionHandlesFromBody,
+} from "./feed-social-notifications-supabase-query";
+import {
+    isoUtc,
     loadReadyMedia,
+    mapAvatar,
     mapMedia,
     signMediaUrls,
     type MediaRow,
@@ -35,9 +44,10 @@ export type VisibleFightPost = {
     audience: FeedAudience;
     fight_id: string | null;
     author_id: string;
+    app_wide: boolean;
 };
 
-type PostRow = {
+type PostRow = AvatarMediaColumns & {
     id: string;
     audience: FeedAudience;
     fight_id: string | null;
@@ -49,19 +59,7 @@ type PostRow = {
     author_handle: string;
     author_display_name: string;
     author_companion_id: string | null;
-    avatar_id: string | null;
-    avatar_kind: MediaRow["kind"] | null;
-    avatar_purpose: MediaRow["purpose"] | null;
-    avatar_status: MediaRow["status"] | null;
-    avatar_object_path: string | null;
-    avatar_original_filename: string | null;
-    avatar_content_type: MediaRow["content_type"] | null;
-    avatar_byte_size: string | number | null;
-    avatar_width: number | null;
-    avatar_height: number | null;
-    avatar_duration_ms: number | null;
-    avatar_sha256: string | null;
-    avatar_created_at: Date | string | null;
+    author_companion_image_url: string | null;
 };
 
 type AttachmentRow = MediaRow & { post_id: string };
@@ -85,15 +83,11 @@ type CountRow = {
     n: number;
 };
 
-function isoUtc(value: Date | string): string {
-    return new Date(value).toISOString().replace(/\.\d{3}Z$/, "Z");
+export function cursorStamp(value: Date | string): string {
+    return value instanceof Date ? value.toISOString() : value;
 }
 
-function cursorStamp(value: Date | string): string {
-    return new Date(value).toISOString();
-}
-
-function parseCursor(
+export function parseCursor(
     cursor: string | undefined,
 ): { createdAt: string; id: string } | null {
     if (!cursor) return null;
@@ -139,12 +133,15 @@ export async function loadVisiblePost(
     database: Sql = createDatabaseClient(),
 ): Promise<VisibleFightPost> {
     const [post] = await database<VisibleFightPost[]>`
-        select id, audience::text as audience, fight_id, author_id
+        select id, audience::text as audience, fight_id, author_id, app_wide
         from public.fight_posts
         where id = ${postId}
     `;
     if (!post) {
         throw new ApiError(404, ERROR_CODES.not_found, "Post not found");
+    }
+    if (post.app_wide) {
+        return post;
     }
     if (post.audience === "main") {
         if (post.author_id === userId) return post;
@@ -224,44 +221,6 @@ export async function loadVisiblePost(
     );
 }
 
-function avatarFromPost(row: PostRow, url: string | null) {
-    if (
-        !row.avatar_id ||
-        !row.avatar_kind ||
-        !row.avatar_purpose ||
-        !row.avatar_status ||
-        !row.avatar_object_path ||
-        !row.avatar_original_filename ||
-        !row.avatar_content_type ||
-        row.avatar_byte_size === null ||
-        row.avatar_width === null ||
-        row.avatar_height === null ||
-        !row.avatar_sha256 ||
-        !row.avatar_created_at
-    ) {
-        return null;
-    }
-    return mapMedia(
-        {
-            id: row.avatar_id,
-            owner_id: row.author_id,
-            kind: row.avatar_kind,
-            purpose: row.avatar_purpose,
-            status: row.avatar_status,
-            object_path: row.avatar_object_path,
-            original_filename: row.avatar_original_filename,
-            content_type: row.avatar_content_type,
-            byte_size: row.avatar_byte_size,
-            width: row.avatar_width,
-            height: row.avatar_height,
-            duration_ms: row.avatar_duration_ms,
-            sha256: row.avatar_sha256,
-            created_at: row.avatar_created_at,
-        },
-        url,
-    );
-}
-
 async function mapPosts(
     userId: string,
     rows: PostRow[],
@@ -285,7 +244,7 @@ async function mapPosts(
         select tag.post_id, tag.user_id, profile.handle, profile.display_name
         from public.fight_post_tags as tag
         join public.profiles as profile
-            on profile.user_id = tag.user_id and profile.deleted_at is null
+            on profile.id = tag.user_id and profile.deleted_at is null
         where tag.post_id in ${database(postIds)}
         order by profile.handle
     `;
@@ -398,15 +357,11 @@ async function mapPosts(
             user_id: row.author_id,
             handle: row.author_handle,
             display_name: row.author_display_name,
-            avatar: avatarFromPost(
-                row,
-                row.avatar_object_path
-                    ? (urls.get(row.avatar_object_path) ?? null)
-                    : null,
-            ),
+            avatar: mapAvatar(row, row.author_id, urls),
             companion_id: companionIdSchema
                 .nullable()
                 .parse(row.author_companion_id),
+            ...(row.author_companion_id === "custom" && row.author_companion_image_url ? { companion_image_url: row.author_companion_image_url } : {}),
         },
         media: attachments
             .filter((attachment) => attachment.post_id === row.id)
@@ -436,9 +391,11 @@ export async function listFightPosts(
         ? await database<PostRow[]>`
                 select
                     post.id, post.audience::text as audience, post.fight_id, post.broadcast,
-                    coalesce(fight.name, '') as fight_name, post.body, post.created_at,
+                    coalesce(fight.name, '') as fight_name, post.body,
+                    to_char(post.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as created_at,
                     post.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
                     profile.companion_id as author_companion_id,
+                    profile.companion_image_url as author_companion_image_url,
                     avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
                     avatar.status::text as avatar_status, avatar.object_path as avatar_object_path,
                     avatar.original_filename as avatar_original_filename, avatar.content_type as avatar_content_type,
@@ -448,14 +405,17 @@ export async function listFightPosts(
                 from public.fight_posts as post
                 left join public.fights as fight on fight.id = post.fight_id
                 join public.profiles as profile
-                    on profile.user_id = post.author_id and profile.deleted_at is null
+                    on profile.id = post.author_id and profile.deleted_at is null
                 left join public.media_objects as avatar
                     on avatar.id = profile.avatar_media_id and avatar.status = 'ready'
                 where not exists (
                         select 1 from private.feed_blocks as blocked
                         where blocked.blocker_id = ${userId} and blocked.blocked_id = post.author_id
                     )
-                    and (post.created_at, post.id) < (${cursor.createdAt}::timestamptz, ${cursor.id}::uuid)
+                    and (post.created_at, post.id) < (coalesce(
+                        (select anchor.created_at from public.fight_posts anchor where anchor.id = ${cursor.id}::uuid),
+                        ${cursor.createdAt}::text::timestamptz
+                    ), ${cursor.id}::uuid)
                     and (
                         (
                             ${fightId ?? null}::uuid is not null
@@ -551,6 +511,10 @@ export async function listFightPosts(
                                         )
                                     )
                             )
+                        )
+                        or (
+                            ${fightId ?? null}::uuid is null
+                            and post.app_wide
                         )
                     )
                 order by post.created_at desc, post.id desc
@@ -559,9 +523,11 @@ export async function listFightPosts(
         : await database<PostRow[]>`
                 select
                     post.id, post.audience::text as audience, post.fight_id, post.broadcast,
-                    coalesce(fight.name, '') as fight_name, post.body, post.created_at,
+                    coalesce(fight.name, '') as fight_name, post.body,
+                    to_char(post.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as created_at,
                     post.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
                     profile.companion_id as author_companion_id,
+                    profile.companion_image_url as author_companion_image_url,
                     avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
                     avatar.status::text as avatar_status, avatar.object_path as avatar_object_path,
                     avatar.original_filename as avatar_original_filename, avatar.content_type as avatar_content_type,
@@ -571,7 +537,7 @@ export async function listFightPosts(
                 from public.fight_posts as post
                 left join public.fights as fight on fight.id = post.fight_id
                 join public.profiles as profile
-                    on profile.user_id = post.author_id and profile.deleted_at is null
+                    on profile.id = post.author_id and profile.deleted_at is null
                 left join public.media_objects as avatar
                     on avatar.id = profile.avatar_media_id and avatar.status = 'ready'
                 where not exists (
@@ -673,6 +639,10 @@ export async function listFightPosts(
                                         )
                                     )
                             )
+                        )
+                        or (
+                            ${fightId ?? null}::uuid is null
+                            and post.app_wide
                         )
                     )
                 order by post.created_at desc, post.id desc
@@ -698,11 +668,16 @@ async function insertFightPost(
     tagIds: string[],
     channelIds: string[],
     broadcast: boolean,
+    appWide: boolean,
     database: Sql,
 ): Promise<string> {
     const [created] = await database<{ id: string }[]>`
-        insert into public.fight_posts (fight_id, author_id, body, audience, broadcast)
-        values (${fightId}, ${userId}, ${body}, ${audience}, ${broadcast})
+        insert into public.fight_posts (
+            fight_id, author_id, body, audience, broadcast, app_wide
+        )
+        values (
+            ${fightId}, ${userId}, ${body}, ${audience}, ${broadcast}, ${appWide}
+        )
         returning id
     `;
     if (!created) {
@@ -743,6 +718,7 @@ async function loadPostRows(ids: string[], database: Sql): Promise<PostRow[]> {
             coalesce(fight.name, '') as fight_name, post.body, post.created_at,
             post.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
             profile.companion_id as author_companion_id,
+                    profile.companion_image_url as author_companion_image_url,
             avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
             avatar.status::text as avatar_status, avatar.object_path as avatar_object_path,
             avatar.original_filename as avatar_original_filename, avatar.content_type as avatar_content_type,
@@ -752,7 +728,7 @@ async function loadPostRows(ids: string[], database: Sql): Promise<PostRow[]> {
         from public.fight_posts as post
         left join public.fights as fight on fight.id = post.fight_id
         join public.profiles as profile
-            on profile.user_id = post.author_id and profile.deleted_at is null
+            on profile.id = post.author_id and profile.deleted_at is null
         left join public.media_objects as avatar
             on avatar.id = profile.avatar_media_id and avatar.status = 'ready'
         where post.id in ${database(ids)}
@@ -804,6 +780,30 @@ async function preparePostMedia(
     return uniqueMediaIds;
 }
 
+/** Resolves a notification target independently of the feed's loaded pages. */
+export async function getFightPost(
+    userId: string,
+    postId: string,
+    database: Sql = createDatabaseClient(),
+): Promise<FightPostResponse> {
+    return database.begin("isolation level repeatable read read only", async (sql) => {
+        await loadVisiblePost(userId, postId, sql);
+        const [blocked] = await sql`
+            select 1 from private.feed_blocks as blocked
+            join public.fight_posts as post on post.id = ${postId}
+            where (blocked.blocker_id = ${userId} and blocked.blocked_id = post.author_id)
+                or (blocked.blocked_id = ${userId} and blocked.blocker_id = post.author_id)
+            limit 1
+        `;
+        const [row] = await loadPostRows([postId], sql);
+        if (blocked || !row) {
+            throw new ApiError(404, ERROR_CODES.not_found, "Post not found");
+        }
+        const [post] = await mapPosts(userId, [row], sql);
+        return { post };
+    });
+}
+
 export async function createFightPost(
     userId: string,
     fightId: string,
@@ -827,21 +827,36 @@ export async function createFightPost(
 
     const createdId = await database.begin("read write", async (sql) => {
         const mediaIds = await preparePostMedia(userId, input.media_ids, sql);
+        const mentionIds = await eligibleMentionUserIds(
+            sql,
+            userId,
+            [],
+            mentionHandlesFromBody(input.body),
+            [fightId],
+        );
         const id = await insertFightPost(
             userId,
             "fight",
             fightId,
             input.body,
             mediaIds,
-            [],
+            mentionIds,
             [fightId],
+            false,
             false,
             sql,
         );
+        await enqueueMentionNotifications(sql, {
+            actorId: userId,
+            postId: id,
+            userIds: mentionIds,
+            preferredFightId: fightId,
+        });
         await enqueueFightFeedPostNotifications(sql, {
             fightId,
             postId: id,
             actorId: userId,
+            skipUserIds: mentionIds,
         });
         return id;
     });
@@ -871,11 +886,15 @@ export async function createFeedPosts(
     database: Sql = createDatabaseClient(),
 ): Promise<FightPostBatchResponse> {
     let includeMain = false;
+    let includeBroadcast = false;
     const fightIds: string[] = [];
     for (const destination of input.destinations) {
         switch (destination.type) {
             case "main":
                 includeMain = true;
+                break;
+            case "broadcast":
+                includeBroadcast = true;
                 break;
             case "fight":
                 if (!fightIds.includes(destination.fight_id)) {
@@ -892,12 +911,37 @@ export async function createFeedPosts(
             }
         }
     }
-    if (!includeMain && fightIds.length === 0) {
+    if (includeBroadcast && (includeMain || fightIds.length > 0)) {
+        throw new ApiError(
+            400,
+            ERROR_CODES.validation,
+            "Broadcast is its own post",
+        );
+    }
+    if (!includeBroadcast && !includeMain && fightIds.length === 0) {
         throw new ApiError(
             400,
             ERROR_CODES.validation,
             "Pick at least one place to post",
         );
+    }
+    if (includeBroadcast) {
+        const [profile] = await database<{ handle: string }[]>`
+            select handle
+            from public.profiles
+            where id = ${userId}
+                and deleted_at is null
+        `;
+        if (
+            !profile ||
+            !isFitFightAdmin({ handle: profile.handle, emails: [] })
+        ) {
+            throw new ApiError(
+                403,
+                ERROR_CODES.forbidden,
+                "Only Marc can broadcast",
+            );
+        }
     }
     for (const fightId of fightIds) {
         await requireRosterMember(userId, fightId, database);
@@ -932,82 +976,70 @@ export async function createFeedPosts(
         );
     }
 
-    const broadcast = includeMain;
-    const wantedTags = [...new Set(input.tagged_user_ids)].filter(
-        (id) => id !== userId,
-    );
+    const broadcast = includeMain || includeBroadcast;
+    const wantedTags = includeBroadcast
+        ? []
+        : [...new Set(input.tagged_user_ids)].filter((id) => id !== userId);
     const createdIds = await database.begin("read write", async (sql) => {
         const mediaIds = await preparePostMedia(userId, input.media_ids, sql);
-        const tagIds =
-            wantedTags.length === 0
-                ? []
-                : fightIds.length > 0
-                  ? (
-                        await sql<{ user_id: string }[]>`
-                        select distinct membership.user_id
-                        from public.fight_members as membership
-                        where membership.fight_id in ${sql(fightIds)}
-                            and membership.user_id in ${sql(wantedTags)}
-                            and membership.state in ('accepted', 'deferred')
-                            and exists (
-                                select 1
-                                from public.fight_members as done_me
-                                join public.fight_members as done_them
-                                    on done_them.fight_id = done_me.fight_id
-                                join public.fights as done_fight
-                                    on done_fight.id = done_me.fight_id
-                                where done_me.user_id = ${userId}
-                                    and done_them.user_id = membership.user_id
-                                    and done_me.state = 'accepted'
-                                    and done_them.state = 'accepted'
-                                    and done_fight.state = 'final'
-                            )
-                    `
-                    ).map((row) => row.user_id)
-                  : (
-                        await sql<{ user_id: string }[]>`
-                        select distinct them.user_id
-                        from public.fight_members as me
-                        join public.fight_members as them
-                            on them.fight_id = me.fight_id
-                        join public.fights as fight
-                            on fight.id = me.fight_id
-                        where me.user_id = ${userId}
-                            and them.user_id in ${sql(wantedTags)}
-                            and me.state = 'accepted'
-                            and them.state = 'accepted'
-                            and fight.state = 'final'
-                    `
-                    ).map((row) => row.user_id);
-        const createdId =
-            fightIds.length > 0
-                ? await insertFightPost(
-                      userId,
-                      "fight",
-                      fightIds[0] ?? null,
-                      input.body,
-                      mediaIds,
-                      tagIds,
-                      fightIds,
-                      broadcast,
-                      sql,
-                  )
-                : await insertFightPost(
-                      userId,
-                      "main",
-                      null,
-                      input.body,
-                      mediaIds,
-                      tagIds,
-                      [],
-                      broadcast,
-                      sql,
-                  );
+        const mentionIds = await eligibleMentionUserIds(
+            sql,
+            userId,
+            wantedTags,
+            mentionHandlesFromBody(input.body),
+            fightIds,
+        );
+        const tagIds = includeBroadcast ? [] : mentionIds;
+        const createdId = includeBroadcast
+            ? await insertFightPost(
+                  userId,
+                  "main",
+                  null,
+                  input.body,
+                  mediaIds,
+                  [],
+                  [],
+                  true,
+                  true,
+                  sql,
+              )
+            : fightIds.length > 0
+              ? await insertFightPost(
+                    userId,
+                    "fight",
+                    fightIds[0] ?? null,
+                    input.body,
+                    mediaIds,
+                    tagIds,
+                    fightIds,
+                    broadcast,
+                    false,
+                    sql,
+                )
+              : await insertFightPost(
+                    userId,
+                    "main",
+                    null,
+                    input.body,
+                    mediaIds,
+                    tagIds,
+                    [],
+                    broadcast,
+                    false,
+                    sql,
+                );
+        await enqueueMentionNotifications(sql, {
+            actorId: userId,
+            postId: createdId,
+            userIds: mentionIds,
+            preferredFightId: fightIds[0] ?? null,
+        });
         for (const destinationFightId of fightIds) {
             await enqueueFightFeedPostNotifications(sql, {
                 fightId: destinationFightId,
                 postId: createdId,
                 actorId: userId,
+                skipUserIds: mentionIds,
             });
         }
         return [createdId];
@@ -1051,28 +1083,17 @@ export async function listFeedPeople(
     }
 
     const rows = await database<
-        (MediaRow & {
-            user_id: string;
-            handle: string;
-            display_name: string;
-            companion_id: string | null;
-            avatar_id: string | null;
-            avatar_kind: MediaRow["kind"] | null;
-            avatar_purpose: MediaRow["purpose"] | null;
-            avatar_status: MediaRow["status"] | null;
-            avatar_object_path: string | null;
-            avatar_original_filename: string | null;
-            avatar_content_type: MediaRow["content_type"] | null;
-            avatar_byte_size: string | number | null;
-            avatar_width: number | null;
-            avatar_height: number | null;
-            avatar_duration_ms: number | null;
-            avatar_sha256: string | null;
-            avatar_created_at: Date | string | null;
-        })[]
+        (MediaRow &
+            AvatarMediaColumns & {
+                user_id: string;
+                handle: string;
+                display_name: string;
+                companion_id: string | null;
+                companion_image_url: string | null;
+            })[]
     >`
         select distinct
-            profile.user_id, profile.handle, profile.display_name, profile.companion_id,
+            profile.id as user_id, profile.handle, profile.display_name, profile.companion_id, profile.companion_image_url,
             avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
             avatar.status::text as avatar_status, avatar.object_path as avatar_object_path,
             avatar.original_filename as avatar_original_filename, avatar.content_type as avatar_content_type,
@@ -1083,11 +1104,11 @@ export async function listFeedPeople(
         left join public.media_objects as avatar
             on avatar.id = profile.avatar_media_id and avatar.status = 'ready'
         where profile.deleted_at is null
-            and profile.user_id <> ${userId}
+            and profile.id <> ${userId}
             and not exists (
                 select 1 from private.feed_blocks as blocked
-                where (blocked.blocker_id = ${userId} and blocked.blocked_id = profile.user_id)
-                      or (blocked.blocker_id = profile.user_id and blocked.blocked_id = ${userId})
+                where (blocked.blocker_id = ${userId} and blocked.blocked_id = profile.id)
+                      or (blocked.blocker_id = profile.id and blocked.blocked_id = ${userId})
             )
             and exists (
                 select 1
@@ -1097,7 +1118,7 @@ export async function listFeedPeople(
                 join public.fights as done_fight
                     on done_fight.id = done_me.fight_id
                 where done_me.user_id = ${userId}
-                    and done_them.user_id = profile.user_id
+                    and done_them.user_id = profile.id
                     and done_me.state = 'accepted'
                     and done_them.state = 'accepted'
                     and done_fight.state = 'final'
@@ -1111,7 +1132,7 @@ export async function listFeedPeople(
                         join public.fight_members as them
                             on them.fight_id = me.fight_id
                         where me.user_id = ${userId}
-                            and them.user_id = profile.user_id
+                            and them.user_id = profile.id
                             and me.state in ('accepted', 'deferred')
                             and them.state in ('accepted', 'deferred')
                     )
@@ -1121,7 +1142,7 @@ export async function listFeedPeople(
                     and exists (
                         select 1
                         from public.fight_members as membership
-                        where membership.user_id = profile.user_id
+                        where membership.user_id = profile.id
                             and membership.state in ('accepted', 'deferred')
                             and membership.fight_id in ${database(fightIds.length > 0 ? fightIds : [userId])}
                     )
@@ -1138,47 +1159,13 @@ export async function listFeedPeople(
     );
     const people = [];
     for (const row of rows) {
-        let avatar = null;
-        if (
-            row.avatar_id &&
-            row.avatar_kind &&
-            row.avatar_purpose &&
-            row.avatar_status &&
-            row.avatar_object_path &&
-            row.avatar_original_filename &&
-            row.avatar_content_type &&
-            row.avatar_byte_size !== null &&
-            row.avatar_width !== null &&
-            row.avatar_height !== null &&
-            row.avatar_sha256 &&
-            row.avatar_created_at
-        ) {
-            avatar = mapMedia(
-                {
-                    id: row.avatar_id,
-                    owner_id: row.user_id,
-                    kind: row.avatar_kind,
-                    purpose: row.avatar_purpose,
-                    status: row.avatar_status,
-                    object_path: row.avatar_object_path,
-                    original_filename: row.avatar_original_filename,
-                    content_type: row.avatar_content_type,
-                    byte_size: row.avatar_byte_size,
-                    width: row.avatar_width,
-                    height: row.avatar_height,
-                    duration_ms: row.avatar_duration_ms,
-                    sha256: row.avatar_sha256,
-                    created_at: row.avatar_created_at,
-                },
-                urls.get(row.avatar_object_path) ?? null,
-            );
-        }
         people.push({
             user_id: row.user_id,
             handle: row.handle,
             display_name: row.display_name,
-            avatar,
+            avatar: mapAvatar(row, row.user_id, urls),
             companion_id: companionIdSchema.nullable().parse(row.companion_id),
+            ...(row.companion_id === "custom" && row.companion_image_url ? { companion_image_url: row.companion_image_url } : {}),
         });
     }
     return { people };
@@ -1298,8 +1285,8 @@ export async function blockFeedAuthor(
         );
     }
     const [profile] = await database<{ user_id: string }[]>`
-        select user_id from public.profiles
-        where user_id = ${blockedId} and deleted_at is null
+        select id as user_id from public.profiles
+        where id = ${blockedId} and deleted_at is null
     `;
     if (!profile) {
         throw new ApiError(

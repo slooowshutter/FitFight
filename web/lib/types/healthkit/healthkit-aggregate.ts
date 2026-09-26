@@ -1,6 +1,8 @@
 import { z } from "zod";
+import { timeZoneSchema } from "@/lib/types/time/time-zone";
 import { civilDayBounds, isCivilDay } from "@/lib/scoring/civil-day";
 import { fightStepCheckpointSchema } from "@/lib/types/fights/fight-step-checkpoint";
+import { activityProcessingSchema } from "@/lib/types/healthkit/healthkit-activity-batch";
 import {
     MAX_ACTIVITY_DAYS,
     MAX_ACTIVITY_LOOKBACK_MS,
@@ -25,18 +27,6 @@ const uuidV4Schema = z
     .transform((value) => value.toLowerCase());
 const dateTimeSchema = z.string().datetime({ offset: true });
 const civilDaySchema = z.string().refine(isCivilDay, "must be YYYY-MM-DD");
-const timeZoneSchema = z
-    .string()
-    .min(1)
-    .max(100)
-    .refine((value) => {
-        try {
-            Intl.DateTimeFormat("en-US", { timeZone: value }).format();
-            return true;
-        } catch {
-            return false;
-        }
-    }, "invalid time zone");
 const stepCountSchema = z.number().int().min(0).max(MAX_STEP_COUNT);
 
 const healthKitMergedDaySchema = z
@@ -278,6 +268,8 @@ export const healthKitAggregateSyncResponseSchema = z
         complete_through: dateTimeSchema,
         synced_days: z.number().int().min(0),
         synced_fights: z.number().int().min(0),
+        /** Received data is durable either way; `pending` means scores publish on a later pass. */
+        processing: activityProcessingSchema,
     })
     .strict();
 

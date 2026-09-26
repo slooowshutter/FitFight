@@ -1,7 +1,12 @@
 import type { Sql } from "postgres";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { isFitFightAdmin } from "@/lib/admin/is-fitfight-admin";
 import { ApiError, ERROR_CODES } from "@/lib/http";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
+import { readAdminViewer } from "@/lib/supabase/queries/auth-supabase-query";
 import {
+    isoUtc,
     loadReadyMedia,
     mapMedia,
     signMediaUrls,
@@ -9,11 +14,15 @@ import {
 } from "@/lib/supabase/queries/media-supabase-query";
 import type {
     BlockFeedbackAuthorResponse,
+    FeedbackArchiveRequest,
+    FeedbackArchiveResponse,
+    FeedbackOwnerRow,
     CreateFeedbackCommentRequest,
     CreateFeedbackPostRequest,
     FeedbackComment,
+    FeedbackCommentRow,
     FeedbackCommentResponse,
-    FeedbackKind,
+    FeedbackPostRow,
     FeedbackListResponse,
     FeedbackMetadata,
     FeedbackPostDetail,
@@ -24,38 +33,11 @@ import type {
     ReportFeedbackPostRequest,
     ReportFeedbackPostResponse,
 } from "@/lib/types/feedback/feedback";
-import { feedbackMetadataSchema } from "@/lib/types/feedback/feedback";
+import { feedbackArchiveResponseSchema, feedbackOwnerRowSchema, feedbackCommentRowSchema, feedbackMetadataSchema, feedbackPostRowSchema } from "@/lib/types/feedback/feedback";
 import type { MediaObject } from "@/lib/types/media/media";
 
 const POST_LIMIT_PER_DAY = 8;
 const COMMENT_LIMIT_PER_DAY = 30;
-
-type FeedbackPostRow = {
-    id: string;
-    kind: FeedbackKind;
-    title: string;
-    body: string;
-    vote_count: number;
-    comment_count: number;
-    voted: boolean;
-    author_id: string;
-    author_handle: string;
-    mine: boolean;
-    created_at: Date | string;
-    metadata: unknown;
-};
-
-type FeedbackCommentRow = {
-    id: string;
-    body: string;
-    author_handle: string;
-    created_at: Date | string;
-    metadata: unknown;
-};
-
-function isoUtc(value: Date | string): string {
-    return new Date(value).toISOString().replace(/\.\d{3}Z$/, "Z");
-}
 
 function mapMetadata(value: unknown): FeedbackMetadata {
     const parsed = feedbackMetadataSchema.safeParse(value ?? {});
@@ -63,9 +45,10 @@ function mapMetadata(value: unknown): FeedbackMetadata {
 }
 
 function mapPost(
-    row: FeedbackPostRow,
+    value: FeedbackPostRow,
     media: MediaObject[] = [],
 ): FeedbackPostSummary {
+    const row = feedbackPostRowSchema.parse(value);
     return {
         id: row.id,
         kind: row.kind,
@@ -80,6 +63,8 @@ function mapPost(
         created_at: isoUtc(row.created_at),
         metadata: mapMetadata(row.metadata),
         media,
+        archived: row.archived,
+        archive_reason: row.archive_reason,
     };
 }
 
@@ -153,8 +138,10 @@ async function prepareFeedbackMedia(
     return uniqueMediaIds;
 }
 
-function mapComment(row: FeedbackCommentRow): FeedbackComment {
+function mapComment(value: FeedbackCommentRow): FeedbackComment {
+    const row = feedbackCommentRowSchema.parse(value);
     return {
+        ...(row.author_id ? { author_id: row.author_id } : {}),
         id: row.id,
         body: row.body,
         author_handle: row.author_handle,
@@ -173,6 +160,8 @@ export async function listFeedbackPosts(
     database: Sql = createDatabaseClient(),
 ): Promise<FeedbackListResponse> {
     const kind = query.kind ?? null;
+    const archived = query.status === "archived";
+    const sort = query.sort ?? "votes";
     const rows = await database<FeedbackPostRow[]>`
         select
             post.id,
@@ -199,18 +188,26 @@ export async function listFeedbackPosts(
             profile.handle as author_handle,
             post.author_id = ${userId} as mine,
             post.created_at,
-            coalesce(post.metadata, '{}'::jsonb) as metadata
+            coalesce(post.metadata, '{}'::jsonb) as metadata,
+            post.archived,
+            post.archive_reason
         from public.feedback_posts as post
         join public.profiles as profile
-            on profile.user_id = post.author_id
+            on profile.id = post.author_id
           and profile.deleted_at is null
         where (${kind}::text is null or post.kind::text = ${kind})
+            and post.archived = ${archived}
             and not exists (
                 select 1 from private.feedback_blocks as blocked
                 where blocked.blocker_id = ${userId}
                     and blocked.blocked_id = post.author_id
             )
-        order by vote_count desc, post.created_at desc
+        order by
+            case when ${sort} = 'votes' then (
+                select count(*) from public.feedback_votes where post_id = post.id
+            ) end desc,
+            case when ${sort} = 'oldest' then post.created_at end asc,
+            post.created_at desc, post.id
         limit 100
     `;
     const attachments = await loadFeedbackMedia(
@@ -253,10 +250,12 @@ export async function getFeedbackPost(
             profile.handle as author_handle,
             post.author_id = ${userId} as mine,
             post.created_at,
-            coalesce(post.metadata, '{}'::jsonb) as metadata
+            coalesce(post.metadata, '{}'::jsonb) as metadata,
+            post.archived,
+            post.archive_reason
         from public.feedback_posts as post
         join public.profiles as profile
-            on profile.user_id = post.author_id
+            on profile.id = post.author_id
           and profile.deleted_at is null
         where post.id = ${postId}
             and not exists (
@@ -272,12 +271,13 @@ export async function getFeedbackPost(
         select
             comment.id,
             comment.body,
+            comment.author_id,
             profile.handle as author_handle,
             comment.created_at,
             coalesce(comment.metadata, '{}'::jsonb) as metadata
         from public.feedback_comments as comment
         join public.profiles as profile
-            on profile.user_id = comment.author_id
+            on profile.id = comment.author_id
           and profile.deleted_at is null
         where comment.post_id = ${postId}
             and not exists (
@@ -292,6 +292,53 @@ export async function getFeedbackPost(
         post: mapPost(row, attachments.get(row.id) ?? []),
         comments: comments.map(mapComment),
     };
+}
+
+/** Authors and admins can remove a post and its dependent comments, votes, and attachment links. */
+export async function deleteFeedbackPost(
+    userId: string,
+    postId: string,
+    admin: SupabaseClient = createAdminClient(),
+    database: Sql = createDatabaseClient(),
+): Promise<void> {
+    const viewer = await readAdminViewer(userId, admin);
+    await database.begin("read write", async (sql) => {
+        const [row] = await sql<FeedbackOwnerRow[]>`
+            select author_id from public.feedback_posts where id = ${postId} for update
+        `;
+        if (!row) throw new ApiError(404, ERROR_CODES.not_found, "Request not found");
+        const owner = feedbackOwnerRowSchema.parse(row);
+        if (owner.author_id !== userId && !isFitFightAdmin(viewer)) {
+            throw new ApiError(403, ERROR_CODES.forbidden, "Only the author or FitFight admin can delete feedback.");
+        }
+        await sql`delete from public.feedback_posts where id = ${postId}`;
+    });
+}
+
+export async function archiveFeedbackPost(
+    userId: string,
+    postId: string,
+    input: FeedbackArchiveRequest,
+    admin: SupabaseClient = createAdminClient(),
+    database: Sql = createDatabaseClient(),
+): Promise<FeedbackArchiveResponse> {
+    const viewer = await readAdminViewer(userId, admin);
+    if (!isFitFightAdmin(viewer)) {
+        throw new ApiError(403, ERROR_CODES.forbidden, "Only the FitFight admin can archive feedback.");
+    }
+    const [row] = await database<FeedbackArchiveResponse[]>`
+        update public.feedback_posts as post
+        set archived = ${input.archived},
+            archive_reason = ${input.archived ? input.reason || null : null}
+        where post.id = ${postId}
+            and not exists (
+                select 1 from private.feedback_blocks as blocked
+                where blocked.blocker_id = ${userId} and blocked.blocked_id = post.author_id
+            )
+        returning archived, archive_reason
+    `;
+    if (!row) throw new ApiError(404, ERROR_CODES.not_found, "Request not found");
+    return feedbackArchiveResponseSchema.parse(row);
 }
 
 export async function createFeedbackPost(
@@ -378,12 +425,14 @@ async function insertFeedbackPost(
             (
                 select handle
                 from public.profiles
-                where user_id = ${userId}
+                where id = ${userId}
                     and deleted_at is null
             ) as author_handle,
             true as mine,
             created_at,
-            metadata
+            metadata,
+            archived,
+            archive_reason
     `;
 }
 
@@ -393,11 +442,15 @@ export async function toggleFeedbackVote(
     database: Sql = createDatabaseClient(),
 ): Promise<FeedbackVoteResponse> {
     return database.begin("read write", async (sql) => {
-        const [post] = await sql<{ id: string }[]>`
-            select id from public.feedback_posts where id = ${postId}
+        const [post] = await sql<FeedbackArchiveResponse[]>`
+            select archived, archive_reason from public.feedback_posts where id = ${postId} for update
         `;
         if (!post) {
             throw new ApiError(404, ERROR_CODES.not_found, "Request not found");
+        }
+
+        if (feedbackArchiveResponseSchema.parse(post).archived) {
+            throw new ApiError(409, ERROR_CODES.conflict, "This feedback is archived. Voting is closed.");
         }
 
         const deleted = await sql<{ post_id: string }[]>`
@@ -443,35 +496,46 @@ export async function createFeedbackComment(
         );
     }
 
-    const [comment] = await database<FeedbackCommentRow[]>`
-        insert into public.feedback_comments (post_id, author_id, body, metadata)
-        select ${postId}, ${userId}, ${input.body}, ${database.json(jsonMetadata(input.metadata))}::jsonb
-        where exists (
-            select 1 from public.feedback_posts where id = ${postId}
-        )
-        returning
-            id,
-            body,
-            (
-                select handle
-                from public.profiles
-                where user_id = ${userId}
-                    and deleted_at is null
-            ) as author_handle,
-            created_at,
-            metadata
-    `;
-    if (!comment) {
-        throw new ApiError(404, ERROR_CODES.not_found, "Request not found");
-    }
-    if (!comment.author_handle) {
-        throw new ApiError(
-            400,
-            ERROR_CODES.profile_missing,
-            "Profile is missing",
-        );
-    }
-    return { comment: mapComment(comment) };
+    return database.begin("read write", async (sql) => {
+        // Serialize comments and votes with archival so a successful archive closes both writes.
+        const [post] = await sql<FeedbackArchiveResponse[]>`
+            select archived, archive_reason from public.feedback_posts where id = ${postId} for update
+        `;
+        if (!post) throw new ApiError(404, ERROR_CODES.not_found, "Request not found");
+        if (feedbackArchiveResponseSchema.parse(post).archived) {
+            throw new ApiError(409, ERROR_CODES.conflict, "This feedback is archived. Comments are closed.");
+        }
+        const [comment] = await sql<FeedbackCommentRow[]>`
+            insert into public.feedback_comments (post_id, author_id, body, metadata)
+            select ${postId}, ${userId}, ${input.body}, ${sql.json(jsonMetadata(input.metadata))}::jsonb
+            where exists (
+                select 1 from public.feedback_posts where id = ${postId}
+            )
+            returning
+                id,
+                body,
+                author_id,
+                (
+                    select handle
+                    from public.profiles
+                    where id = ${userId}
+                        and deleted_at is null
+                ) as author_handle,
+                created_at,
+                metadata
+        `;
+        if (!comment) {
+            throw new ApiError(404, ERROR_CODES.not_found, "Request not found");
+        }
+        if (!comment.author_handle) {
+            throw new ApiError(
+                400,
+                ERROR_CODES.profile_missing,
+                "Profile is missing",
+            );
+        }
+        return { comment: mapComment(comment) };
+    });
 }
 
 export async function reportFeedbackPost(
@@ -484,7 +548,7 @@ export async function reportFeedbackPost(
         select post.id, post.author_id
         from public.feedback_posts as post
         join public.profiles as profile
-            on profile.user_id = post.author_id
+            on profile.id = post.author_id
           and profile.deleted_at is null
         where post.id = ${postId}
             and not exists (
@@ -524,8 +588,8 @@ export async function blockFeedbackAuthor(
         );
     }
     const [profile] = await database<{ user_id: string }[]>`
-        select user_id from public.profiles
-        where user_id = ${blockedId} and deleted_at is null
+        select id as user_id from public.profiles
+        where id = ${blockedId} and deleted_at is null
     `;
     if (!profile) {
         throw new ApiError(

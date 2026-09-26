@@ -5,6 +5,7 @@ import postgres from "postgres";
 import { readFightSnapshot } from "./fight-snapshot-supabase-query";
 import { closeDueFightsForUser } from "./close-due-fights-supabase-query";
 import { syncHealthKitAggregates } from "./healthkit-aggregates-supabase-query";
+import type { FightSnapshot } from "@/lib/types/fights/fight-snapshot";
 import { healthKitAggregateSyncSchema } from "@/lib/types/healthkit/healthkit-aggregate";
 
 const databaseURL = process.env.DATABASE_URL;
@@ -224,6 +225,97 @@ test("snapshot handles a DST day without exposing a midnight cutoff day or delet
     );
 });
 
+test("snapshot chart days keep the caller's window and each shared Fight's accepted racers", async (t) => {
+    const f = await fixture(t);
+    const daysOf = (snapshot: FightSnapshot, userId: string) =>
+        snapshot.step_days
+            .filter((day) => day.user_id === userId)
+            .map((day) => day.day);
+
+    const peer = await readFightSnapshot(f.peer, "Europe/Paris", database);
+    assert.deepEqual(daysOf(peer, f.peer), [
+        "2026-03-05",
+        "2026-03-29",
+        "2026-03-30",
+    ]);
+    assert.deepEqual(
+        daysOf(peer, f.owner),
+        ["2026-03-29"],
+        "Owning a Fight without racing it shares no days through it",
+    );
+    assert.deepEqual(daysOf(peer, f.outsider), [
+        "2026-03-05",
+        "2026-03-29",
+        "2026-03-30",
+    ]);
+
+    const solo = randomUUID();
+    await database`
+        insert into public.fights (id, owner_id, name, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy)
+        values (${solo}, ${f.declined}, 'Solo fixture', 'live', '2026-03-01T00:00:00Z', '2026-03-31T00:00:00Z',
+            'Europe/Paris', 'highest_total', 'shared')
+    `;
+    await database`insert into public.step_days (user_id, day, steps) values (${f.declined}, '2026-03-05', 123)`;
+    const soloOwner = await readFightSnapshot(
+        f.declined,
+        "Europe/Paris",
+        database,
+    );
+    assert.deepEqual(
+        soloOwner.fights.map((fight) => fight.id),
+        [solo],
+    );
+    assert.deepEqual(
+        soloOwner.step_days,
+        [],
+        "Without a roster row the caller gets no chart days",
+    );
+
+    // Kiritimati (UTC+14) Fight days are 11-13 Mar; the Pago Pago (UTC-11) chart window is 9-12 Mar.
+    await database`delete from public.fights where id = any(${database.array([f.ownerOnly, f.unrelated, solo])}::uuid[])`;
+    await database`update public.fights set starts_at = '2026-03-10T10:00:00Z', ends_at = '2026-03-13T10:00:00Z',
+        time_zone = 'Pacific/Kiritimati' where id = ${f.shared}`;
+    for (const userId of [f.owner, f.peer, f.invited, f.deferred]) {
+        for (const day of [
+            "2026-03-09",
+            "2026-03-10",
+            "2026-03-11",
+            "2026-03-12",
+            "2026-03-13",
+        ]) {
+            await database`insert into public.step_days (user_id, day, steps) values (${userId}, ${day}, 456)`;
+        }
+    }
+    const owner = await readFightSnapshot(
+        f.owner,
+        "Pacific/Pago_Pago",
+        database,
+    );
+    assert.deepEqual(daysOf(owner, f.owner), [
+        "2026-03-09",
+        "2026-03-10",
+        "2026-03-11",
+        "2026-03-12",
+    ]);
+    assert.deepEqual(daysOf(owner, f.peer), ["2026-03-11", "2026-03-12"]);
+    assert.deepEqual(daysOf(owner, f.invited), []);
+    assert.deepEqual(daysOf(owner, f.deferred), []);
+    const deferred = await readFightSnapshot(
+        f.deferred,
+        "Pacific/Pago_Pago",
+        database,
+    );
+    assert.deepEqual(daysOf(deferred, f.deferred), [
+        "2026-03-09",
+        "2026-03-10",
+        "2026-03-11",
+        "2026-03-12",
+    ]);
+    assert.deepEqual(daysOf(deferred, f.owner), ["2026-03-11", "2026-03-12"]);
+    assert.deepEqual(daysOf(deferred, f.peer), ["2026-03-11", "2026-03-12"]);
+    assert.deepEqual(daysOf(deferred, f.invited), []);
+});
+
 test("refresh maintenance closes only the caller's accepted fights", async (t) => {
     const f = await fixture(t);
     const admin = {
@@ -380,16 +472,23 @@ test("Fight chart and score share a revision through corrections, legacy uploads
         database,
     );
     const afterLegacy = await readFightSnapshot(f.owner, "UTC", database);
-    assert.equal(
-        afterLegacy.members.find((member) => member.user_id === f.owner)
-            ?.current_value,
-        6500,
+    const legacyMember = afterLegacy.members.find(
+        (member) => member.user_id === f.owner,
     );
+    assert.equal(legacyMember?.current_value, 6500);
     assert.equal(
-        afterLegacy.members.find((member) => member.user_id === f.owner)
-            ?.step_checkpoints,
+        legacyMember?.step_checkpoints,
         null,
+        "Score-only uploads keep their total without inventing daily checkpoints",
+    );
+    assert.notDeepEqual(
+        legacyMember?.step_checkpoints,
+        corrected.fight_aggregates[0].step_checkpoints,
         "Older clients keep scoring without attaching stale chart history",
+    );
+    assert.ok(
+        afterLegacy.step_days.every((day) => day.steps === 123),
+        "Legacy calendar days cannot determine Fight history",
     );
 
     await database`update public.fights set state = 'final' where id = ${f.shared}`;
@@ -401,5 +500,71 @@ test("Fight chart and score share a revision through corrections, legacy uploads
             ?.step_checkpoints,
         peerUpload.fight_aggregates[0].step_checkpoints,
         "Final chart history freezes with its total",
+    );
+});
+
+test("legacy uploads on different days retain totals without fabricating daily history", async (t) => {
+    const f = await fixture(t);
+    await database`delete from public.fights where id = any(${database.array([f.ownerOnly, f.unrelated])}::uuid[])`;
+    await database`update public.fights set starts_at = '2026-03-29T10:00:00Z', ends_at = '2026-04-01T10:00:00Z'
+        where id = ${f.shared}`;
+    const first = {
+        complete_through: "2026-03-29T18:00:00Z",
+        time_zone: "America/New_York",
+        merged_days: [],
+        fight_aggregates: [
+            {
+                fight_id: f.shared,
+                starts_at: "2026-03-29T10:00:00Z",
+                ends_at: "2026-04-01T10:00:00Z",
+                cutoff_at: "2026-03-29T18:00:00Z",
+                steps: 10000,
+            },
+        ],
+    };
+    await syncHealthKitAggregates(
+        f.owner,
+        healthKitAggregateSyncSchema.parse(first),
+        database,
+    );
+    const second = structuredClone(first);
+    second.complete_through = "2026-03-30T21:00:00Z";
+    second.fight_aggregates[0].cutoff_at = "2026-03-30T21:00:00Z";
+    second.fight_aggregates[0].steps = 8000;
+    await syncHealthKitAggregates(
+        f.owner,
+        healthKitAggregateSyncSchema.parse(second),
+        database,
+    );
+    const snapshot = await readFightSnapshot(f.owner, "UTC", database);
+    const member = snapshot.members.find((row) => row.user_id === f.owner);
+    assert.equal(member?.current_value, 8000);
+    assert.equal(
+        member?.step_checkpoints,
+        null,
+        "Downward corrections and sparse sync times are not daily activity",
+    );
+    assert.ok(
+        snapshot.step_days.every((day) => day.steps === 123),
+        "Calendar step_days stay unused",
+    );
+    const third = structuredClone(second);
+    third.complete_through = "2026-03-31T12:00:00Z";
+    third.fight_aggregates[0].cutoff_at = third.complete_through;
+    third.fight_aggregates[0].steps = 12000;
+    await syncHealthKitAggregates(
+        f.owner,
+        healthKitAggregateSyncSchema.parse(third),
+        database,
+    );
+    const afterIncrease = await readFightSnapshot(f.owner, "UTC", database);
+    const increased = afterIncrease.members.find(
+        (row) => row.user_id === f.owner,
+    );
+    assert.equal(increased?.current_value, 12000);
+    assert.equal(
+        increased?.step_checkpoints,
+        null,
+        "An increase cannot fill missing day boundaries either",
     );
 });

@@ -14,5 +14,7 @@ For Cursor cloud agents and anyone picking up this repo cold.
 | [history.md](history.md)                                                            | What already shipped and the traps we hit                                                     |
 | [research/pending-final-sync-plan.md](research/pending-final-sync-plan.md)          | Pending **P**, tentative result, 24h forfeit (10 Sep 2026)                                    |
 | [research/apns-remote-push-plan.md](research/apns-remote-push-plan.md)              | Final-sync push reminders (plan only)                                                         |
+| [research/blend-backend-client-proposal.md](research/blend-backend-client-proposal.md) | Reusable Blend workflows, request limits, and app errors (original proposal)                     |
+| [blend-workflows.md](blend-workflows.md) | Blend client, request recovery, configuration, and activation |
 
 Start with [`AGENTS.md`](../AGENTS.md) in the repo root.

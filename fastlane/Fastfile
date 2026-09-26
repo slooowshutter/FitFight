@@ -56,9 +56,9 @@ rescue StandardError => e
     UI.important("Skipping certificate cleanup: #{e.message}")
 end
 
-# After the IPA is on App Store Connect, put this build on every TestFlight
-# group: Internal testers (automatic), every External group, and Friends Beta.
-def report_testflight_groups(version, build_number)
+# App Store Connect Internal testers get every processed build automatically.
+# Do not assign the public join link or any other external group from CI.
+def report_internal_only(version, build_number)
     require "spaceship"
 
     app = Spaceship::ConnectAPI::App.find(BUNDLE_ID)
@@ -77,86 +77,29 @@ def report_testflight_groups(version, build_number)
         return
     end
 
-    UI.message(
-        "Build #{version} (#{build_number}): processing=#{build.processing_state} " \
-        "expired=#{build.expired} external=#{build.build_beta_detail&.external_build_state}"
-    )
+    UI.message("Build #{version} (#{build_number}): processing=#{build.processing_state} expired=#{build.expired}")
 
     groups = app.get_beta_groups
     internals = groups.select(&:is_internal_group)
     externals = groups.reject(&:is_internal_group)
     internals.each do |group|
-        UI.message("Internal group '#{group.name}' has this build after processing.")
+        UI.message("Internal group '#{group.name}' receives this build after processing.")
     end
-    externals.each do |group|
-        UI.message("External group '#{group.name}' was submitted for this build.")
+    if internals.empty?
+        UI.important(
+            "No App Store Connect Internal tester group. Add Marc (and any internals) " \
+            "under Users and Access → TestFlight Internal Testing."
+        )
     end
-    UI.success(
-        "TestFlight #{version} (#{build_number}) is on Internal " \
-        "(#{internals.map(&:name).join(', ')}) and External " \
-        "(#{externals.map(&:name).join(', ')})."
-    )
+    unless externals.empty?
+        UI.message(
+            "External groups left untouched: #{externals.map(&:name).join(', ')}. " \
+            "Promote this build in App Store Connect when Marc asks."
+        )
+    end
+    UI.success("TestFlight upload is internal-only; the public join link was not updated.")
 rescue StandardError => e
     UI.important("Skipping TestFlight group report: #{e.message}")
-end
-
-def assign_all_testflight_groups(version, build_number, api_key:)
-    require "spaceship"
-
-    app = Spaceship::ConnectAPI::App.find(BUNDLE_ID)
-    UI.user_error!("No App Store Connect app for #{BUNDLE_ID}") if app.nil?
-
-    groups = app.get_beta_groups
-    UI.user_error!("This app has no TestFlight groups") if groups.nil? || groups.empty?
-
-    internals = groups.select(&:is_internal_group)
-    externals = groups.reject(&:is_internal_group)
-    if internals.empty?
-        UI.user_error!(
-            "No Internal TestFlight group. Add testers under Users and Access → " \
-            "TestFlight Internal Testing."
-        )
-    end
-    if externals.empty?
-        UI.user_error!("No External TestFlight groups. Create Friends Beta and any other external groups.")
-    end
-    friends = externals.find { |group| group.name == "Friends Beta" }
-    UI.user_error!("No external TestFlight group named 'Friends Beta'") if friends.nil?
-
-    UI.message(
-        "TestFlight groups: " + groups.map { |group|
-            "#{group.name} (#{group.is_internal_group ? 'internal' : 'external'})"
-        }.join(", ")
-    )
-    internals.each do |group|
-        UI.message(
-            "Internal group '#{group.name}' auto-receives #{version} (#{build_number}) " \
-            "after processing. Apple rejects assigning an internal group by hand."
-        )
-    end
-    UI.message(
-        "Adding #{version} (#{build_number}) to every external group: #{externals.map(&:name).join(', ')}"
-    )
-    upload_to_testflight(
-        api_key: api_key,
-        app_identifier: BUNDLE_ID,
-        app_platform: "ios",
-        app_version: version,
-        build_number: build_number.to_s,
-        distribute_only: true,
-        distribute_external: true,
-        groups: externals.map(&:id),
-        skip_waiting_for_build_processing: false,
-        skip_submission: false,
-        submit_beta_review: true,
-        notify_external_testers: true,
-        changelog: "FitFight #{version} (#{build_number})"
-    )
-    UI.success(
-        "Build #{version} (#{build_number}) is assigned to Internal " \
-        "(#{internals.map(&:name).join(', ')}) and External " \
-        "(#{externals.map(&:name).join(', ')})"
-    )
 end
 
 def cloud_signing_flags(key_path, key_id, issuer_id, team_id)
@@ -454,8 +397,7 @@ platform :ios do
         )
 
         record_uploaded_release("staging", version, build_number)
-        assign_all_testflight_groups(version, build_number, api_key: api_key)
-        report_testflight_groups(version, build_number)
+        report_internal_only(version, build_number)
     ensure
         FileUtils.rm_f(key_path) if defined?(key_path) && key_path
     end
@@ -535,7 +477,7 @@ platform :ios do
             skip_metadata: true,
             skip_screenshots: true,
             submit_for_review: false,
-            automatic_release: false,
+            automatic_release: true,
             run_precheck_before_submit: false,
             force: true
         )

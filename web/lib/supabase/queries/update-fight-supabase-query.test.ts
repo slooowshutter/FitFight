@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { createClient } from "@supabase/supabase-js";
 import { ApiError } from "@/lib/http";
 import { updateFightRequestSchema } from "@/lib/types/fights/update-fight";
 
@@ -27,6 +28,8 @@ test("owner update accepts title, action, privacy, roster, and window fields", (
 });
 
 test("owner update rejects an empty patch and a reversed window", () => {
+    assert.equal(updateFightRequestSchema.safeParse({ timeZone: "Nowhere/Invalid" }).success, false);
+    assert.deepEqual(updateFightRequestSchema.parse({ timeZone: "Europe/Paris" }), { timeZone: "Europe/Paris" });
     assert.equal(updateFightRequestSchema.safeParse({}).success, false);
     assert.equal(
         updateFightRequestSchema.safeParse({ inviteHandles: [] }).success,
@@ -39,6 +42,39 @@ test("owner update rejects an empty patch and a reversed window", () => {
         }).success,
         false,
     );
+});
+
+test("saved Fight zones update before the start and cannot change once that instant passes", async () => {
+    const fight = {
+        id: fightId, owner_id: owner, name: "Steps Fight", state: "scheduled",
+        starts_at: startsAt, ends_at: endsAt, action_text: null, series_id: seriesId, time_zone: "UTC",
+    };
+    const patches: string[] = [];
+    const admin = createClient("https://update-fight.example", "test-only-key", {
+        auth: { persistSession: false, autoRefreshToken: false },
+        global: { fetch: async (input, init) => {
+            const request = new Request(input, init);
+            const url = new URL(request.url);
+            if (request.method === "GET") return Response.json([fight]);
+            assert.equal(request.method, "PATCH");
+            assert.deepEqual(await request.json(), { time_zone: "Europe/Paris" });
+            patches.push(url.pathname);
+            return new Response(null, { status: 204 });
+        } },
+    });
+    const { updateFight } = await import("./update-fight-supabase-query");
+    await updateFight(owner, fightId, { timeZone: "Europe/Paris" }, admin, new Date("2026-09-13T12:00:00Z"));
+    assert.deepEqual(patches, ["/rest/v1/fights", "/rest/v1/fight_series"]);
+    await assert.rejects(
+        updateFight(owner, fightId, { timeZone: "Europe/Paris" }, admin, new Date("2026-09-14T12:00:00Z")),
+        (error: unknown) => error instanceof ApiError && error.status === 400,
+    );
+    fight.state = "live";
+    await assert.rejects(
+        updateFight(owner, fightId, { timeZone: "Europe/Paris" }, admin, new Date("2026-09-13T12:00:00Z")),
+        (error: unknown) => error instanceof ApiError && error.status === 400,
+    );
+    assert.equal(patches.length, 2);
 });
 
 test("owner can rename a live fight without touching membership", async (t) => {
@@ -120,6 +156,8 @@ test("owner can rename a live fight without touching membership", async (t) => {
             name: "Office steps",
             visibility: "invite_only",
         }),
+        undefined,
+        new Date("2026-09-15T12:00:00Z"),
     );
     assert.deepEqual(result, { id: fightId, state: "live" });
     assert.equal(fightPatches, 1);

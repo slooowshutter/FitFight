@@ -2,23 +2,7 @@ import { connect, type ClientHttp2Session } from "node:http2";
 import { readApnsEnvironment } from "./apns-config";
 import { getApnsProviderToken } from "./apns-jwt";
 
-export type ApnsSendInput = {
-    deviceToken: string;
-    environment: "sandbox" | "production";
-    topic: string;
-    title: string;
-    body: string;
-    route: string;
-};
-
-export type ApnsSendResult = {
-    httpStatus: number;
-    reason: string | null;
-    apnsId: string | null;
-    unregistered: boolean;
-    retryLater: boolean;
-    invalidProviderToken: boolean;
-};
+import type { ApnsSendInput, ApnsSendResult } from "@/lib/types/notifications/apns";
 
 function apnsHost(environment: "sandbox" | "production"): string {
     return environment === "production"
@@ -36,8 +20,10 @@ function sendOnSession(
             aps: {
                 alert: { title: input.title, body: input.body },
                 sound: "default",
+                ...(input.threadId ? { "thread-id": input.threadId } : {}),
+                ...(input.imageUrl ? { "mutable-content": 1 } : {}),
             },
-            fitfight: { route: input.route },
+            fitfight: { route: input.route, image_url: input.imageUrl },
         });
         const request = session.request({
             ":method": "POST",
@@ -46,6 +32,8 @@ function sendOnSession(
             "apns-topic": input.topic,
             "apns-push-type": "alert",
             "apns-priority": "10",
+            ...(input.collapseId ? { "apns-collapse-id": input.collapseId } : {}),
+            ...(input.expiresAt !== undefined ? { "apns-expiration": String(input.expiresAt) } : {}),
         });
         let responseStatus = 0;
         let reason: string | null = null;

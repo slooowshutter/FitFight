@@ -13,7 +13,10 @@ struct UNNotificationContent { var userInfo: [String: Any] = [:] }
 struct UNNotificationRequest { var content = UNNotificationContent() }
 struct UNNotification { var request = UNNotificationRequest() }
 struct UNNotificationResponse { var notification = UNNotification() }
-@MainActor enum AppModel { static func storePendingFightRoute(_ route: String) {} }
+@MainActor enum AppModel {
+    static var pendingRoute: String?
+    static func storePendingFightRoute(_ route: String) { pendingRoute = route }
+}
 struct PermissionOptions: OptionSet { let rawValue: Int; static let alert = Self(rawValue: 1); static let sound = Self(rawValue: 2) }
 @MainActor final class UNUserNotificationCenter {
     static let shared = UNUserNotificationCenter()
@@ -103,7 +106,8 @@ enum AuthEvent { case initialSession, tokenRefreshed, signedOut }
         let userA = User(id: UUID()), userB = User(id: UUID())
         session.authSession = Session(user: userA, accessToken: "A")
         let push = PushNotificationService()
-        push.configure(session: session)
+        var notifications = 0
+        push.configure(session: session, onNotification: { notifications += 1 })
         await push.refreshServerStatus()
         await push.refreshAuthorizationStatus()
         await push.registerIfAuthorized()
@@ -111,14 +115,18 @@ enum AuthEvent { case initialSession, tokenRefreshed, signedOut }
         await push.handleDeviceToken(Data([0xab]))
 
         let recorder = APIRecorder.shared
+        await push.handleDeviceToken(Data([0xab]))
+        precondition(recorder.events == ["register-start:A", "register-end:A"], "The same user and token must register once per launch: \(recorder.events)")
         recorder.hold = true
-        let registration = Task { await push.handleDeviceToken(Data([0xab])) }
-        while recorder.continuation == nil { await Task.yield() }
+        let registration = Task { await push.handleDeviceToken(Data([0xcd])) }
+        for _ in 0..<1_000 where recorder.continuation == nil { await Task.yield() }
+        precondition(recorder.continuation != nil, "A changed APNs token must register again")
         await push.revokeLocalRegistration()
         precondition(UIApplication.shared.unregisters == 1, "Signout must stop APNs before waiting for the backend")
         precondition(UNUserNotificationCenter.shared.cleared == 1)
         let signedOutPresentation = await push.userNotificationCenter(.current(), willPresent: UNNotification())
         precondition(signedOutPresentation.isEmpty, "A late foreground notification must stay hidden during signout")
+        precondition(notifications == 0, "Signed-out notifications must not refresh content")
         session.authSession = nil
         await push.registerIfAuthorized()
         precondition(UIApplication.shared.registers == 1, "Signed-out state must not register with APNs")
@@ -136,6 +144,25 @@ enum AuthEvent { case initialSession, tokenRefreshed, signedOut }
         precondition(UIApplication.shared.registers == 2)
         let signedInPresentation = await push.userNotificationCenter(.current(), willPresent: UNNotification())
         precondition(signedInPresentation == [.banner, .sound])
+        precondition(notifications == 1, "A foreground notification refreshes the visible feed")
+        let route = "/fights/\(UUID())?post=\(UUID())"
+        await push.userNotificationCenter(.current(), didReceive: UNNotificationResponse(
+            notification: UNNotification(request: UNNotificationRequest(content: UNNotificationContent(userInfo: ["fitfight": ["route": route]])))
+        ))
+        precondition(AppModel.pendingRoute == route && notifications == 2, "A tap while already foregrounded must persist and consume its post route")
+
+        let coldPush = PushNotificationService()
+        for payload in [
+            ["fitfight_route": route],
+            ["fitfight": ["route": route]],
+        ] as [[String: Any]] {
+            AppModel.pendingRoute = nil
+            await coldPush.userNotificationCenter(.current(), didReceive: UNNotificationResponse(
+                notification: UNNotification(request: UNNotificationRequest(content: UNNotificationContent(userInfo: payload)))
+            ))
+            precondition(AppModel.pendingRoute == route,
+                         "Both payload formats must persist the complete destination before startup configures navigation")
+        }
 
         recorder.failRevoke = true
         await push.revokeLocalRegistration()
@@ -144,6 +171,14 @@ enum AuthEvent { case initialSession, tokenRefreshed, signedOut }
         precondition(UIApplication.shared.unregisters == 2)
         precondition(UNUserNotificationCenter.shared.cleared == 2)
         precondition(recorder.events.last == "revoke:B", "Offline signout must still attempt server revocation")
+        session.authSession = Session(user: userB, accessToken: "B2")
+        await push.registerIfAuthorized()
+        await push.handleDeviceToken(Data([0xab]))
+        AppLocalization.apply(AppLocalization.languageCode == "fr" ? .en : .fr)
+        await push.handleDeviceToken(Data([0xab]))
+        AppLocalization.apply(.system)
+        precondition(recorder.events.suffix(5) == ["revoke:B", "register-start:B2", "register-end:B2", "register-start:B2", "register-end:B2"],
+                     "Signing the same account back in and changing language must register again: \(recorder.events)")
         let bootstrap = SessionBootstrap()
         precondition(bootstrap.isRestoringSession && bootstrap.authSession == nil)
         for _ in 0..<10 { await Task.yield() }
@@ -175,5 +210,6 @@ enum AuthEvent { case initialSession, tokenRefreshed, signedOut }
         precondition(!SessionBootstrap(listenForSession: false).isRestoringSession, "Fixtures do not wait for Auth")
         print("PASS: auth restore, refreshed-token startup with suspended profile loading, signed-out startup, fixtures")
         print("PASS: immediate local unregistration, cleared notifications, serial in-flight revoke, account switch, offline signout")
+        print("PASS: one registration per user, token, and language; re-registration after token change, language change, and sign-in")
     }
 }

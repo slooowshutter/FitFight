@@ -1,0 +1,684 @@
+import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import { after, test } from "node:test";
+import postgres from "postgres";
+import { randomJoinCode } from "@/lib/domain/fights/join-code";
+import { ApiError } from "@/lib/http";
+import { databaseTestEnvironmentSchema } from "@/lib/types/testing/database";
+import { defaultProfileSettings, profilePageQuerySchema, type ProfileRivalrySummary } from "@/lib/types/profiles/shared-profile";
+import { friendsQuerySchema } from "@/lib/types/friends/friendship";
+import { readOwnRivalries, readSharedProfile, readProfileHistory, readProfileSettings, updateProfileSettings } from "./shared-profiles-supabase-query";
+import { blockProfile, changeFriendship, listProfileFriends } from "./profile-friends-supabase-query";
+import { pruneProfileEvents, recordProfileView } from "./profile-events-supabase-query";
+import { deleteAccount } from "./delete-account-supabase-query";
+import { departFightMemberships } from "./membership-departure-supabase-query";
+
+const env = databaseTestEnvironmentSchema.parse(process.env);
+process.env.NEXT_PUBLIC_SUPABASE_URL = env.SUPABASE_TEST_URL;
+process.env.SUPABASE_SERVICE_ROLE_KEY = env.SUPABASE_TEST_SERVICE_KEY;
+const database = postgres(env.DATABASE_URL, { max: 5 });
+after(() => database.end());
+
+/** Profiles read resolved day measurements; seed them the way the activity resolver stores them. */
+async function seedStepDays(
+    userId: string,
+    sourceId: string,
+    days: PromiseLike<{ day: string; value: number; time_zone: string; complete: boolean }[]>,
+) {
+    for (const row of await days) {
+        await database`
+            insert into private.activity_metrics(user_id, source_id, scope, scope_key, metric, starts_at, ends_at,
+                observed_through, day, time_zone, value, unit, input_ids, calculation_version)
+            select ${userId}, ${sourceId}, 'day', ${row.day}::date::text, 'steps', bounds.starts_at, bounds.ends_at,
+                case when ${row.complete} then bounds.ends_at else bounds.starts_at + interval '1 hour' end,
+                ${row.day}::date, ${row.time_zone}, ${row.value}, 'steps', array[gen_random_uuid()], 1
+            from (select ${row.day}::date::timestamp at time zone ${row.time_zone} as starts_at,
+                (${row.day}::date + 1)::timestamp at time zone ${row.time_zone} as ends_at) bounds`;
+    }
+}
+
+test("shared activity uses one saved personal time zone across travel", async (t) => {
+    const users = [randomUUID(), randomUUID()];
+    const [owner, friend] = users;
+    const sourceId = randomUUID();
+    t.after(async () => {
+        await database`delete from auth.users where id = any(${database.array(users)}::uuid[])`;
+    });
+    for (const id of users) await database`insert into auth.users(id) values (${id})`;
+    await database`update public.profiles set time_zone = 'Pacific/Kiritimati' where user_id = ${owner}`;
+    await database`insert into public.data_sources(id, user_id, provider, source_label, connection_route)
+        values (${sourceId}, ${owner}, 'apple_health', 'Apple Health', 'healthkit')`;
+    await seedStepDays(owner, sourceId, database`
+        select (now() at time zone 'Pacific/Kiritimati')::date - day as day, 8000 as value,
+            case when day >= 7 then 'Etc/GMT+12' else 'Pacific/Kiritimati' end as time_zone,
+            day > 0 as complete
+        from generate_series(0, 8) day`);
+    await changeFriendship(friend, owner, "request", database);
+    await changeFriendship(owner, friend, "accept", database);
+    await updateProfileSettings(owner, { activity_audience: "friends", activity_days: 7 }, database);
+    const shared = await readSharedProfile(friend, owner, undefined, database);
+    assert.equal(shared.activity?.values.length, 7, "A seven-day grant must not reveal an eighth date from an earlier time zone");
+    const [period] = await database`select ((now() at time zone 'Pacific/Kiritimati')::date - 6)::text first_day`;
+    assert.equal(shared.activity?.values[0].day, period.first_day);
+    assert.deepEqual((await readSharedProfile(owner, owner, "friend", database)).activity, shared.activity);
+});
+
+test("private history IDs and cursors cannot correlate participants across profiles", async (t) => {
+    const users = [randomUUID(), randomUUID(), randomUUID()];
+    const [owner, opponent, stranger] = users;
+    const fightIds: string[] = [randomUUID(), randomUUID()];
+    t.after(async () => {
+        await database`delete from public.fights where owner_id = ${owner}`;
+        await database`delete from auth.users where id = any(${database.array(users)}::uuid[])`;
+    });
+    for (const id of users) await database`insert into auth.users(id) values (${id})`;
+    for (const fightId of fightIds) {
+        await database`insert into public.fights(id, owner_id, name, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy)
+            values (${fightId}, ${owner}, 'Private pair', 'live', now() - interval '1 hour', now() + interval '1 hour', 'UTC', 'highest_total', 'shared')`;
+        for (const userId of [owner, opponent]) {
+            await database`insert into public.fight_members(fight_id, user_id, state, accepted_at)
+                values (${fightId}, ${userId}, 'accepted', now())`;
+        }
+        await database`update public.fight_members set rank = 1, current_value = 1000, final_steps_complete = true where fight_id = ${fightId}`;
+        await database`update public.fights set state = 'final' where id = ${fightId}`;
+    }
+    for (const userId of [owner, opponent]) await updateProfileSettings(userId, { competitive: true, audience: "public" }, database);
+
+    const query = profilePageQuerySchema.parse({ limit: 1 });
+    const first = await readProfileHistory(stranger, owner, query, database);
+    const other = await readProfileHistory(stranger, opponent, query, database);
+    assert.equal(first.results[0].fight_id, null);
+    assert.equal(first.results[0].name, null);
+    assert.equal(first.results[0].field_size, 2);
+    assert.notEqual(first.results[0].id, other.results[0].id);
+    assert.ok(first.next_cursor && other.next_cursor);
+    assert.equal(fightIds.includes(first.results[0].id), false);
+    assert.equal(fightIds.includes(first.next_cursor), false);
+    assert.notEqual(first.next_cursor, other.next_cursor);
+    assert.deepEqual(await readProfileHistory(stranger, owner, query, database), first);
+    const next = await readProfileHistory(stranger, owner, { ...query, cursor: first.next_cursor }, database);
+    assert.equal(next.results.length, 1);
+    assert.notEqual(next.results[0].id, first.results[0].id);
+    assert.equal(next.next_cursor, null);
+    for (const cursor of [other.next_cursor, fightIds[0]]) {
+        await assert.rejects(readProfileHistory(stranger, owner, { ...query, cursor }, database),
+            (error: unknown) => error instanceof ApiError && error.status === 400);
+    }
+    const own = await readProfileHistory(owner, owner, query, database);
+    assert.equal(own.results[0].id, first.results[0].id);
+    assert.ok(own.results[0].fight_id && fightIds.includes(own.results[0].fight_id));
+    assert.equal(own.results[0].name, "Private pair");
+});
+
+test("private profiles require mutual acceptance and enforce sharing on every read", async (t) => {
+    const users = [randomUUID(), randomUUID(), randomUUID()];
+    const [viewer, target, stranger] = users;
+    t.after(async () => { await database`delete from auth.users where id = any(${database.array(users)}::uuid[])`; });
+    for (const id of users) await database`insert into auth.users(id) values (${id})`;
+    assert.deepEqual(await readProfileSettings(target, database), defaultProfileSettings);
+    assert.equal((await readSharedProfile(viewer, target, undefined, database)).access, "private");
+    await updateProfileSettings(target, { competitive: true }, database);
+    await database`insert into public.friendships(requester_id, addressee_id, state) values (${viewer}, ${target}, 'accepted')`;
+    assert.equal((await readSharedProfile(viewer, target, undefined, database)).record, null);
+
+    await assert.rejects(changeFriendship(viewer, viewer, "request", database), (error: unknown) => error instanceof ApiError && error.status === 400);
+    const requests = await Promise.all([
+        changeFriendship(viewer, target, "request", database), changeFriendship(target, viewer, "request", database),
+    ]);
+    assert.deepEqual(requests.map((response) => response.friendship).sort(), ["incoming", "outgoing"]);
+    const first = requests[0].friendship === "outgoing" ? viewer : target;
+    const recipient = first === viewer ? target : viewer;
+    await assert.rejects(changeFriendship(first, recipient, "accept", database), (error: unknown) => error instanceof ApiError && error.status === 403);
+    await changeFriendship(recipient, first, "accept", database);
+    await changeFriendship(recipient, first, "accept", database);
+    const shared = await readSharedProfile(viewer, target, undefined, database);
+    assert.equal(shared.access, "shared");
+    assert.equal(shared.friendship, "friends");
+    assert.equal(shared.record?.played, 0);
+    assert.equal(shared.activity, null);
+    assert.equal("referral_code" in shared.identity, false);
+    assert.equal("companion_prompt" in shared.identity, false);
+    const friends = await listProfileFriends(viewer, friendsQuerySchema.parse({}), database);
+    assert.equal(friends.people.length, 1);
+    assert.equal(friends.people[0].user_id, target);
+
+    for (const competitive of [false, true]) {
+        for (const audience of ["private", "public"] as const) {
+            await updateProfileSettings(target, { competitive, audience }, database);
+            assert.equal((await readSharedProfile(stranger, target, undefined, database)).record !== null, competitive && audience === "public");
+            assert.equal((await readSharedProfile(viewer, target, undefined, database)).record !== null, competitive);
+        }
+    }
+    await updateProfileSettings(target, { activity_audience: "public", activity_days: 30 }, database);
+    assert.equal((await readSharedProfile(stranger, target, undefined, database)).activity?.days, 30);
+    await updateProfileSettings(target, { audience: "private" }, database);
+    assert.equal((await readProfileSettings(target, database)).activity_audience, "off");
+    await assert.rejects(updateProfileSettings(target, { activity_audience: "public" }, database));
+    await assert.rejects(updateProfileSettings(target, { artwork_allowed: true }, database));
+    await changeFriendship(viewer, target, "remove", database);
+    assert.equal((await readSharedProfile(viewer, target, undefined, database)).record, null);
+    await changeFriendship(viewer, target, "request", database);
+    await blockProfile(target, viewer, database);
+    await assert.rejects(changeFriendship(target, viewer, "accept", database));
+    await assert.rejects(readSharedProfile(viewer, target, undefined, database));
+    await assert.rejects(readSharedProfile(target, viewer, undefined, database));
+    assert.equal((await listProfileFriends(viewer, friendsQuerySchema.parse({ kind: "outgoing" }), database)).people.length, 0);
+});
+
+test("step statistics keep owner records private and clip every shared aggregate to its allowed period", async (t) => {
+    const users = [randomUUID(), randomUUID(), randomUUID()];
+    const [owner, friend, stranger] = users;
+    const sourceId = randomUUID();
+    t.after(async () => {
+        await database`delete from auth.users where id = any(${database.array(users)}::uuid[])`;
+    });
+    for (const id of users) await database`insert into auth.users(id) values (${id})`;
+    await database`update public.profiles set time_zone = 'UTC' where user_id = ${owner}`;
+    await database`insert into public.data_sources(id, user_id, provider, source_label, connection_route)
+        values (${sourceId}, ${owner}, 'apple_health', 'Apple Health', 'healthkit')`;
+    await seedStepDays(owner, sourceId, database`
+        select current_date - day as day, case when day = 40 then 50000 else 8000 end as value,
+            'UTC' as time_zone, day > 0 as complete
+        from generate_series(0, 40) day`);
+    const own = await readSharedProfile(owner, owner, undefined, database);
+    assert.equal(own.step_statistics?.scope_days, null);
+    assert.equal(own.step_statistics?.best_day?.steps, 50_000);
+    assert.equal(own.step_statistics?.levels[4].longest_streak, 40);
+    assert.equal(own.activity?.values.length, 7, "Existing owner daily-history contract stays bounded");
+    assert.equal((await readSharedProfile(friend, owner, undefined, database)).step_statistics, null);
+    await changeFriendship(friend, owner, "request", database);
+    await changeFriendship(owner, friend, "accept", database);
+    assert.equal((await readSharedProfile(friend, owner, undefined, database)).step_statistics, null, "Friendship alone does not enable sharing");
+    await updateProfileSettings(owner, { activity_audience: "friends", activity_days: 7 }, database);
+    const shared = await readSharedProfile(friend, owner, undefined, database);
+    assert.equal(shared.step_statistics?.scope_days, 7);
+    assert.equal(shared.step_statistics?.recorded_days, 6);
+    assert.equal(shared.step_statistics?.best_day?.steps, 8_000);
+    assert.equal(shared.step_statistics?.levels[4].longest_streak, 6);
+    assert.deepEqual((await readSharedProfile(owner, owner, "friend", database)).step_statistics, shared.step_statistics);
+    assert.equal((await readSharedProfile(stranger, owner, undefined, database)).step_statistics, null);
+    await updateProfileSettings(owner, { activity_days: 30 }, database);
+    assert.equal((await readSharedProfile(friend, owner, undefined, database)).step_statistics?.recorded_days, 29);
+    await updateProfileSettings(owner, { activity_audience: "off" }, database);
+    assert.equal((await readSharedProfile(friend, owner, undefined, database)).step_statistics, null);
+    await updateProfileSettings(owner, { activity_audience: "friends" }, database);
+    const [legacyDay] = await database<{ day: string }[]>`
+        select (current_date - 1)::text as day
+    `;
+    await database`
+        insert into public.metric_days (
+            user_id, source_id, metric, day, time_zone, value, unit, input_hash,
+            normalization_version, calculation_version, finalized_at, updated_at
+        ) values (
+            ${owner}, ${sourceId}, 'steps', ${legacyDay.day}, 'UTC', 12_345, 'steps',
+            repeat('a', 64), 1, 1, now(), now() + interval '1 minute'
+        )
+    `;
+    assert.equal((await readSharedProfile(owner, owner, undefined, database)).activity?.values
+        .find((day) => day.day === legacyDay.day)?.steps, 12_345,
+        "An old backend write remains visible after the one-time backfill");
+    await database`
+        update private.activity_metrics
+        set value = 13_000, updated_at = now() + interval '2 minutes'
+        where user_id = ${owner} and day = ${legacyDay.day} and metric = 'steps'
+    `;
+    assert.equal((await readSharedProfile(owner, owner, undefined, database)).activity?.values
+        .find((day) => day.day === legacyDay.day)?.steps, 13_000,
+        "A newer activity measurement becomes authoritative");
+    await changeFriendship(owner, friend, "remove", database);
+    assert.equal((await readSharedProfile(friend, owner, undefined, database)).step_statistics, null);
+    await blockProfile(friend, owner, database);
+    await assert.rejects(readSharedProfile(friend, owner, undefined, database), (error) => error instanceof ApiError && error.status === 404);
+    for (const zone of ["Pacific/Kiritimati", "Etc/GMT+12"]) {
+        await database`update public.profiles set time_zone = ${zone} where user_id = ${owner}`;
+        const [expected] = await database`select ((now() at time zone ${zone})::date - 1)::text yesterday`;
+        const local = await readSharedProfile(owner, owner, undefined, database);
+        assert.equal(local.step_statistics?.time_zone, zone, "Use the saved personal time zone even when stored days have another zone");
+        assert.equal(local.step_statistics?.through, expected.yesterday);
+    }
+});
+
+test("new profile tables reject mobile reads and writes; deletion cascades both sides", async (t) => {
+    const users = [randomUUID(), randomUUID()];
+    t.after(async () => { await database`delete from auth.users where id = any(${database.array(users)}::uuid[])`; });
+    for (const id of users) await database`insert into auth.users(id) values (${id})`;
+    await changeFriendship(users[0], users[1], "request", database);
+    for (const role of ["anon", "authenticated"] as const) {
+        await assert.rejects(database.begin(async (sql) => {
+            await sql`set local role ${sql.unsafe(role)}`;
+            await sql`select * from private.profile_friendships`;
+        }));
+        await assert.rejects(database.begin(async (sql) => {
+            await sql`set local role ${sql.unsafe(role)}`;
+            await sql`insert into private.profile_settings(user_id, competitive, audience) values (${users[0]}, true, 'public')`;
+        }));
+    }
+    await database`delete from auth.users where id = ${users[1]}`;
+    const [count] = await database`select count(*)::int n from private.profile_friendships where user_low = ${users[0]} or user_high = ${users[0]}`;
+    assert.equal(count.n, 0);
+    await assert.rejects(readSharedProfile(users[0], users[1], undefined, database));
+});
+
+test("withdrawal is recorded atomically and later visibility edits never reclassify a result", async (t) => {
+    const users = [randomUUID(), randomUUID(), randomUUID()];
+    const [owner, opponent, stranger] = users;
+    const fightId = randomUUID();
+    const seriesId = randomUUID();
+    t.after(async () => {
+        await database`delete from public.fights where id = ${fightId}`;
+        await database`delete from public.fight_series where id = ${seriesId}`;
+        await database`delete from auth.users where id = any(${database.array(users)}::uuid[])`;
+    });
+    for (const id of users) await database`insert into auth.users(id) values (${id})`;
+    await database`insert into public.fight_series(id, owner_id, visibility, duration_seconds, name, time_zone, join_code)
+        values (${seriesId}, ${owner}, 'invite_only', 259200, 'Private title', 'UTC', ${randomJoinCode()})`;
+    await database`insert into public.fights(id, owner_id, name, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy, series_id)
+        values (${fightId}, ${owner}, 'Private title', 'live', now() - interval '1 hour', now() + interval '1 hour', 'UTC', 'highest_total', 'shared', ${seriesId})`;
+    await database`update public.fight_series set current_fight_id = ${fightId} where id = ${seriesId}`;
+    for (const userId of [owner, opponent]) {
+        await database`insert into public.fight_members(fight_id, user_id, state, accepted_at) values (${fightId}, ${userId}, 'accepted', now())`;
+    }
+    await updateProfileSettings(owner, { competitive: true, audience: "public" }, database);
+    assert.equal((await readSharedProfile(opponent, owner, undefined, database)).access, "shared");
+    await departFightMemberships(opponent, fightId, opponent, database);
+    await database.begin(async (sql) => {
+        await sql`select id from public.fights where id = ${fightId} for update`;
+        await sql`update public.fight_members set rank = 1, current_value = 1000, final_value = 1000, final_steps_complete = true, finalized_at = now() where fight_id = ${fightId} and user_id = ${owner}`;
+        await sql`update public.fights set state = 'final' where id = ${fightId}`;
+    });
+    const own = await readSharedProfile(opponent, opponent, undefined, database);
+    assert.equal(own.record?.played, 1);
+    assert.equal(own.record?.wins, 0);
+    assert.equal(own.record?.draws, 0);
+    assert.equal(own.record?.losses, 1);
+    const publicView = await readSharedProfile(stranger, owner, undefined, database);
+    assert.equal(publicView.record?.categories.private.wins, 1);
+    await database`update public.fight_series set visibility = 'joinable' where id = ${seriesId}`;
+    assert.equal((await readSharedProfile(stranger, owner, undefined, database)).record?.categories.private.wins, 1);
+    const history = await readProfileHistory(stranger, owner, profilePageQuerySchema.parse({}), database);
+    assert.equal(history.results[0].fight_id, null);
+    assert.equal(history.results[0].name, null);
+    assert.equal(history.results[0].placement, 1);
+    assert.equal(history.results[0].field_size, 2);
+    await database`update public.fight_members set state = 'withdrawn' where fight_id = ${fightId} and user_id = ${owner}`;
+    assert.equal((await readSharedProfile(owner, owner, undefined, database)).record?.wins, 1);
+});
+
+test("rematches preserve calendar days in the original Fight time zone across both clock changes", async (t) => {
+    const users = [randomUUID(), randomUUID()];
+    const [owner, opponent] = users;
+    const cases = [
+        { start: "2026-03-27T12:00:00+01:00", end: "2026-03-30T12:00:00+02:00", seconds: 71 * 3600, days: 3 },
+        { start: "2026-10-23T12:00:00+02:00", end: "2026-10-26T12:00:00+01:00", seconds: 73 * 3600, days: 3 },
+        { start: "2026-01-10T12:00:00+01:00", end: "2026-01-17T12:00:00+01:00", seconds: 7 * 86400, days: 7 },
+        { start: "2026-10-25T02:45:00+02:00", end: "2026-10-25T02:15:00+01:00", seconds: 1800, days: null },
+    ];
+    const fightId = randomUUID();
+    t.after(async () => {
+        await database`delete from public.fights where id = ${fightId}`;
+        await database`delete from auth.users where id in ${database(users)}`;
+    });
+    for (const userId of users) await database`insert into auth.users(id) values (${userId})`;
+    await updateProfileSettings(owner, { competitive: true, audience: "public" }, database);
+    for (const sample of cases) {
+        await database`insert into public.fights(id, owner_id, name, action_text, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy)
+            values (${fightId}, ${owner}, 'Calendar rematch', 'Make coffee', 'live', ${sample.start}, ${sample.end}, 'Europe/Paris', 'highest_total', 'shared')`;
+        for (const userId of users) {
+            await database`insert into public.fight_members(fight_id, user_id, state, accepted_at)
+                values (${fightId}, ${userId}, 'accepted', ${sample.start})`;
+        }
+        // The capture trigger uses today's clock; this fixture represents the original entry.
+        await database`update private.fight_participation_records set entered_at = ${sample.start} where fight_id = ${fightId}`;
+        await database`update public.fight_members set current_value = case when user_id = ${owner} then 1000 else 500 end,
+            rank = case when user_id = ${owner} then 1 else 2 end, final_steps_complete = true where fight_id = ${fightId}`;
+        await database`update public.fights set state = 'final' where id = ${fightId}`;
+        const profile = await readSharedProfile(opponent, owner, undefined, database);
+        assert.deepEqual(profile.rivalry?.rematch, {
+            duration_seconds: sample.seconds, duration_days: sample.days, action_text: "Make coffee",
+        });
+        await database`delete from public.fights where id = ${fightId}`;
+    }
+});
+
+test("private history identities and cursors cannot link participants across Profiles", async (t) => {
+    const users = [randomUUID(), randomUUID(), randomUUID()];
+    const [owner, opponent, stranger] = users;
+    const fightIds = [randomUUID(), randomUUID()];
+    t.after(async () => {
+        await database`delete from public.fights where id in ${database(fightIds)}`;
+        await database`delete from auth.users where id in ${database(users)}`;
+    });
+    for (const userId of users) await database`insert into auth.users(id) values (${userId})`;
+    for (const fightId of fightIds) {
+        await database`insert into public.fights(id, owner_id, name, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy)
+            values (${fightId}, ${owner}, 'Private match', 'live', now() - interval '1 hour', now() + interval '1 hour', 'UTC', 'highest_total', 'shared')`;
+        for (const userId of [owner, opponent]) {
+            await database`insert into public.fight_members(fight_id, user_id, state, accepted_at)
+                values (${fightId}, ${userId}, 'accepted', now())`;
+        }
+    }
+    for (const userId of [owner, opponent]) {
+        await updateProfileSettings(userId, { competitive: true, audience: "public" }, database);
+    }
+    const query = profilePageQuerySchema.parse({ limit: 1 });
+    const first = await readProfileHistory(stranger, owner, query, database);
+    const other = await readProfileHistory(stranger, opponent, query, database);
+    assert.notEqual(first.results[0].id, other.results[0].id);
+    assert.equal(fightIds.some((id) => id === first.results[0].id), false);
+    assert.equal(first.results[0].fight_id, null);
+    assert.equal(first.results[0].name, null);
+    assert.equal(first.next_cursor, first.results[0].id);
+    assert.notEqual(first.next_cursor, other.next_cursor);
+    assert.deepEqual(await readProfileHistory(stranger, owner, query, database), first);
+    await database`update public.fight_members set state = 'deferred'
+        where fight_id in ${database(fightIds)} and user_id = ${owner}`;
+    assert.deepEqual(await readProfileHistory(stranger, owner, query, database), first);
+    const own = await readProfileHistory(owner, owner, query, database);
+    assert.equal(own.results[0].id, first.results[0].id);
+    assert.ok(fightIds.some((id) => id === own.results[0].fight_id));
+    const nextQuery = profilePageQuerySchema.parse({ limit: 1, cursor: first.next_cursor });
+    const next = await readProfileHistory(stranger, owner, nextQuery, database);
+    assert.equal(next.results.length, 1);
+    assert.notEqual(next.results[0].id, first.results[0].id);
+    assert.equal(next.next_cursor, null);
+    await assert.rejects(readProfileHistory(stranger, opponent, nextQuery, database), { status: 400 });
+});
+
+test("shared Profile history contains only Fights both people still belong to", async (t) => {
+    const users = [randomUUID(), randomUUID(), randomUUID()];
+    const [owner, viewer, target] = users;
+    const cases = [
+        { state: "scheduled", viewer: "accepted", target: "accepted", visible: true },
+        { state: "live", viewer: "accepted", target: "accepted", visible: true },
+        { state: "final", viewer: "accepted", target: "accepted", visible: true },
+        { state: "cancelled", viewer: "accepted", target: "accepted", visible: true },
+        { state: "live", viewer: "withdrawn", target: "accepted", visible: false },
+        { state: "live", viewer: "accepted", target: "withdrawn", visible: false },
+        { state: "live", viewer: "accepted", target: "invited", visible: false },
+        { state: "live", viewer: "invited", target: "accepted", visible: false },
+    ].map((sample) => ({ ...sample, id: randomUUID() }));
+    t.after(async () => {
+        await database`delete from public.fights where id in ${database(cases.map((sample) => sample.id))}`;
+        await database`delete from auth.users where id in ${database(users)}`;
+    });
+    for (const id of users) await database`insert into auth.users(id) values (${id})`;
+    for (const sample of cases) {
+        await database`insert into public.fights(id, owner_id, name, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy)
+            values (${sample.id}, ${owner}, 'Shared Fight', 'live', now() - interval '1 hour', now() + interval '1 day', 'UTC', 'highest_total', 'shared')`;
+        for (const id of users) {
+            await database`insert into public.fight_members(fight_id, user_id, state, accepted_at)
+                values (${sample.id}, ${id}, 'accepted', now())`;
+        }
+        await database`update public.fight_members set state = ${sample.viewer} where fight_id = ${sample.id} and user_id = ${viewer}`;
+        await database`update public.fight_members set state = ${sample.target} where fight_id = ${sample.id} and user_id = ${target}`;
+        await database`update public.fights set state = ${sample.state} where id = ${sample.id}`;
+    }
+    await updateProfileSettings(target, { competitive: true, audience: "public" }, database);
+    const expected = cases.filter((sample) => sample.visible).map((sample) => sample.id).sort();
+    const query = profilePageQuerySchema.parse({ shared: "true", limit: 50 });
+    const page = await readProfileHistory(viewer, target, query, database);
+    assert.deepEqual(page.results.map((fight) => fight.fight_id).sort(), expected);
+    assert.equal(page.next_cursor, null);
+    await updateProfileSettings(target, { competitive: false, audience: "private" }, database);
+    const casual = await readProfileHistory(viewer, target, query, database);
+    assert.deepEqual(casual.results.map((fight) => fight.fight_id).sort(), expected);
+    const first = await readProfileHistory(viewer, target, profilePageQuerySchema.parse({ shared: "true", limit: 2 }), database);
+    assert.ok(first.next_cursor);
+    const second = await readProfileHistory(viewer, target, profilePageQuerySchema.parse({ shared: "true", limit: 2, cursor: first.next_cursor }), database);
+    assert.deepEqual([...first.results, ...second.results].map((fight) => fight.fight_id).sort(), expected);
+    assert.equal(second.next_cursor, null);
+});
+
+test("history pages follow end time, then Fight ID, and reject cursors outside the requested list", async (t) => {
+    const users = [randomUUID(), randomUUID()];
+    const [owner, opponent] = users;
+    const fightIds = Array.from({ length: 5 }, () => randomUUID());
+    t.after(async () => {
+        await database`delete from public.fights where id in ${database(fightIds)}`;
+        await database`delete from auth.users where id in ${database(users)}`;
+    });
+    for (const id of users) await database`insert into auth.users(id) values (${id})`;
+    await updateProfileSettings(owner, { competitive: true, audience: "public" }, database);
+    const [clock] = await database`select now()::text as now`;
+    for (const [index, fightId] of fightIds.entries()) {
+        // Pairs share an end time, so only the Fight ID orders them.
+        await database`insert into public.fights(id, owner_id, name, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy)
+            values (${fightId}, ${owner}, 'Paged Fight', 'live', ${clock.now}::timestamptz - interval '1 hour',
+                ${clock.now}::timestamptz + ${Math.floor(index / 2) + 1} * interval '1 hour', 'UTC', 'highest_total', 'shared')`;
+        for (const userId of users) {
+            await database`insert into public.fight_members(fight_id, user_id, state, accepted_at)
+                values (${fightId}, ${userId}, 'accepted', now())`;
+        }
+    }
+    await database`update public.fight_members set state = 'withdrawn' where fight_id = ${fightIds[1]} and user_id = ${opponent}`;
+    const ordered = (await database`select id from public.fights where id in ${database(fightIds)} order by ends_at desc, id desc`)
+        .map((row) => row.id);
+    const full = await readProfileHistory(owner, owner, profilePageQuerySchema.parse({ limit: 50 }), database);
+    assert.deepEqual(full.results.map((fight) => fight.fight_id), ordered);
+    assert.equal(full.next_cursor, null);
+    for (const [viewer, shared] of [[owner, "false"], [opponent, "false"], [opponent, "true"]] as const) {
+        const expected = await readProfileHistory(viewer, owner, profilePageQuerySchema.parse({ shared, limit: 50 }), database);
+        assert.equal(expected.results.length, shared === "true" ? 4 : 5);
+        // Every cursor, including the last row, continues exactly where the complete list does.
+        for (const limit of [1, 2, 3]) {
+            for (const [start, cursor] of [undefined, ...expected.results.map((fight) => fight.id)].entries()) {
+                const results = expected.results.slice(start, start + limit);
+                assert.deepEqual(await readProfileHistory(viewer, owner, profilePageQuerySchema.parse({ shared, limit, cursor }), database), {
+                    results, next_cursor: start + limit < expected.results.length ? results[results.length - 1].id : null,
+                });
+            }
+        }
+    }
+    const withdrawn = full.results.find((fight) => fight.fight_id === fightIds[1])!.id;
+    await assert.rejects(readProfileHistory(opponent, owner, profilePageQuerySchema.parse({ shared: "true", cursor: withdrawn }), database),
+        (error: unknown) => error instanceof ApiError && error.status === 400);
+});
+
+test("rivalries match each opponent's Profile, newest first, under current sharing and blocks", async (t) => {
+    const viewer = randomUUID();
+    const opponents = Array.from({ length: 11 }, () => randomUUID());
+    const users = [viewer, ...opponents];
+    const fightIds = opponents.map(() => randomUUID());
+    const olderId = randomUUID();
+    t.after(async () => {
+        await database`delete from public.fights where id = any(${database.array([...fightIds, olderId])}::uuid[])`;
+        await database`delete from auth.users where id in ${database(users)}`;
+    });
+    for (const id of users) await database`insert into auth.users(id) values (${id})`;
+    const duels = [
+        ...fightIds.map((id, index) => ({ id, opponent: opponents[index], hours: opponents.length - index, action: "Make coffee", viewerWins: true })),
+        { id: olderId, opponent: opponents[0], hours: 0.5, action: "Older dare", viewerWins: false },
+    ];
+    for (const duel of duels) {
+        await database`insert into public.fights(id, owner_id, name, action_text, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy)
+            values (${duel.id}, ${viewer}, 'Duel', ${duel.action}, 'live', now() - interval '1 hour',
+                now() + ${duel.hours} * interval '1 hour', 'UTC', 'highest_total', 'shared')`;
+        for (const userId of [viewer, duel.opponent]) {
+            await database`insert into public.fight_members(fight_id, user_id, state, accepted_at) values (${duel.id}, ${userId}, 'accepted', now())`;
+        }
+        const winner = duel.viewerWins ? viewer : duel.opponent;
+        await database`update public.fight_members set current_value = case when user_id = ${winner} then 1000 else 500 end,
+            rank = case when user_id = ${winner} then 1 else 2 end, final_steps_complete = true where fight_id = ${duel.id}`;
+        await database`update public.fights set state = 'final' where id = ${duel.id}`;
+    }
+    for (const [index, opponent] of opponents.entries()) {
+        await updateProfileSettings(opponent, { competitive: index !== 2, audience: index === 1 || index === 3 ? "private" : "public" }, database);
+    }
+    await changeFriendship(viewer, opponents[3], "request", database);
+    await changeFriendship(opponents[3], viewer, "accept", database);
+    await blockProfile(viewer, opponents[4], database);
+    await database`update public.profiles set deleted_at = now() where id = ${opponents[5]}`;
+    await database`update public.fight_members set state = 'withdrawn' where fight_id = ${fightIds[6]} and user_id = ${opponents[6]}`;
+
+    const expected: ProfileRivalrySummary[] = [];
+    for (const opponent of opponents) {
+        try {
+            const profile = await readSharedProfile(viewer, opponent, undefined, database);
+            if (profile.rivalry) expected.push({ identity: profile.identity, rivalry: profile.rivalry });
+        } catch (error) {
+            if (!(error instanceof ApiError) || error.status !== 404) throw error;
+        }
+    }
+    const rivalries = await readOwnRivalries(viewer, database);
+    assert.deepEqual(rivalries, expected.slice(0, 6));
+    assert.deepEqual(rivalries.map((rival) => rival.identity.user_id), [0, 3, 6, 7, 8, 9].map((index) => opponents[index]));
+    assert.deepEqual(rivalries[0].rivalry, {
+        wins: 1, losses: 1, draws: 0,
+        rematch: { duration_seconds: 12 * 3600, duration_days: null, action_text: "Make coffee" },
+    });
+    assert.equal(rivalries[2].rivalry.rematch, null, "A departed opponent keeps the score without rematch details");
+    await assert.rejects(readOwnRivalries(opponents[5], database), (error: unknown) => error instanceof ApiError && error.status === 404);
+});
+
+test("leaving a series hides its past rounds and rematch details from both Profiles", async (t) => {
+    const users = [randomUUID(), randomUUID()];
+    const [owner, opponent] = users;
+    const seriesId = randomUUID();
+    const fightIds = [randomUUID(), randomUUID()];
+    const [previousId, currentId] = fightIds;
+    t.after(async () => {
+        await database`delete from public.fights where id in ${database(fightIds)}`;
+        await database`delete from public.fight_series where id = ${seriesId}`;
+        await database`delete from auth.users where id in ${database(users)}`;
+    });
+    for (const id of users) {
+        await database`insert into auth.users(id) values (${id})`;
+        await updateProfileSettings(id, { competitive: true, audience: "public" }, database);
+    }
+    await database`insert into public.fight_series(id, owner_id, visibility, recurring, duration_seconds, name, time_zone, join_code)
+        values (${seriesId}, ${owner}, 'invite_only', true, 86400, 'Weekly Fight', 'UTC', ${randomJoinCode()})`;
+    for (const id of users) {
+        await database`insert into public.fight_series_members(series_id, user_id, state) values (${seriesId}, ${id}, 'accepted')`;
+    }
+    for (const [index, id] of fightIds.entries()) {
+        await database`insert into public.fights(id, owner_id, name, action_text, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy, series_id)
+            values (${id}, ${owner}, 'Weekly Fight', 'Make coffee', 'live', now() - interval '2 days' + ${index} * interval '1 day',
+                now() - interval '1 day' + ${index} * interval '1 day', 'UTC', 'highest_total', 'shared', ${seriesId})`;
+        for (const userId of users) {
+            await database`insert into public.fight_members(fight_id, user_id, state, accepted_at)
+                values (${id}, ${userId}, 'accepted', now() - interval '2 days')`;
+        }
+        // Historical entrants predate the capture trigger's current clock.
+        await database`update private.fight_participation_records member set entered_at = fight.starts_at
+            from public.fights fight where member.fight_id = fight.id and fight.id = ${id}`;
+    }
+    await database`update public.fight_members set rank = case when user_id = ${owner} then 1 else 2 end,
+        current_value = case when user_id = ${owner} then 1000 else 500 end, final_steps_complete = true where fight_id = ${previousId}`;
+    await database`update public.fights set state = 'final' where id = ${previousId}`;
+    await database`update public.fight_series set current_fight_id = ${currentId} where id = ${seriesId}`;
+    const query = profilePageQuerySchema.parse({ shared: "true" });
+    const before = await readSharedProfile(opponent, owner, undefined, database);
+    assert.equal(before.rivalry?.rematch?.action_text, "Make coffee");
+    assert.equal((await readProfileHistory(opponent, owner, query, database)).results.length, 2);
+    await departFightMemberships(opponent, currentId, opponent, database);
+    const [historical] = await database`select state::text from public.fight_members where fight_id = ${previousId} and user_id = ${opponent}`;
+    assert.equal(historical.state, "accepted");
+    for (const [viewer, target] of [[owner, opponent], [opponent, owner]]) {
+        assert.deepEqual((await readProfileHistory(viewer, target, query, database)).results, []);
+        const profile = await readSharedProfile(viewer, target, undefined, database);
+        assert.equal(profile.record?.played, 1);
+        assert.equal(profile.rivalry?.rematch, null);
+    }
+});
+
+test("account deletion preserves a frozen group draw and cannot create a duel", async (t) => {
+    const users = [randomUUID(), randomUUID(), randomUUID()];
+    const [owner, opponent, departing] = users;
+    const fightId = randomUUID();
+    t.after(async () => {
+        await database`delete from public.fights where id = ${fightId}`;
+        await database`delete from auth.users where id = any(${database.array(users)}::uuid[])`;
+    });
+    for (const id of users) await database`insert into auth.users(id) values (${id})`;
+    await database`insert into public.fights(id, owner_id, name, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy)
+        values (${fightId}, ${owner}, 'Group draw', 'live', now() - interval '1 hour', now() + interval '1 hour', 'UTC', 'highest_total', 'shared')`;
+    for (const id of users) {
+        await database`insert into public.fight_members(fight_id, user_id, state, accepted_at) values (${fightId}, ${id}, 'accepted', now())`;
+    }
+    await database`update public.fight_members set current_value = case when user_id = ${opponent} then 500 else 1000 end,
+        rank = case when user_id = ${opponent} then 3 else 1 end, final_steps_complete = true where fight_id = ${fightId}`;
+    await database`update public.fights set state = 'final' where id = ${fightId}`;
+    await updateProfileSettings(owner, { competitive: true, audience: "public" }, database);
+    assert.equal((await readSharedProfile(owner, owner, undefined, database)).record?.wins, 0);
+    await deleteAccount(departing, database);
+    const afterDeletion = await readSharedProfile(opponent, owner, undefined, database);
+    assert.equal(afterDeletion.record?.played, 1);
+    assert.equal(afterDeletion.record?.wins, 0);
+    assert.equal(afterDeletion.rivalry?.wins, 0);
+    assert.equal(afterDeletion.rivalry?.losses, 0);
+    assert.equal(afterDeletion.rivalry?.draws, 0);
+    const history = await readProfileHistory(owner, owner, profilePageQuerySchema.parse({}), database);
+    assert.equal(history.results[0].field_size, 3);
+    assert.equal(history.results[0].result, "draw");
+    const [erased] = await database`select count(*)::int n from private.fight_participation_records where user_id = ${departing}`;
+    assert.equal(erased.n, 0);
+});
+
+test("view replay, rolling qualification, privacy locks, and inactive-user retention", async (t) => {
+    const users = [randomUUID(), randomUUID()];
+    const [viewer, target] = users;
+    process.env.FITFIGHT_PROFILE_MEASUREMENT_ENABLED = "true";
+    t.after(async () => {
+        delete process.env.FITFIGHT_PROFILE_MEASUREMENT_ENABLED;
+        await database`delete from auth.users where id = any(${database.array(users)}::uuid[])`;
+    });
+    for (const id of users) await database`insert into auth.users(id) values (${id})`;
+    const event = { event_id: randomUUID(), source: "friends" as const };
+    assert.equal((await recordProfileView(viewer, viewer, event, database)).recorded, false);
+    assert.equal((await recordProfileView(viewer, target, event, database)).recorded, false);
+    await updateProfileSettings(target, { audience: "public" }, database);
+    await Promise.all([recordProfileView(viewer, target, event, database), recordProfileView(viewer, target, event, database)]);
+    await recordProfileView(viewer, target, { ...event, event_id: randomUUID() }, database);
+    const [count] = await database`select count(*)::int total, count(*) filter (where qualifying)::int qualified from private.profile_events where actor_id = ${viewer}`;
+    assert.equal(count.total, 2);
+    assert.equal(count.qualified, 1);
+    await database`update private.profile_events set created_at = now() - interval '31 minutes' where actor_id = ${viewer}`;
+    await recordProfileView(viewer, target, { ...event, event_id: randomUUID() }, database);
+    const [qualified] = await database`select count(*)::int n from private.profile_events where actor_id = ${viewer} and qualifying`;
+    assert.equal(qualified.n, 2);
+    await database`update private.profile_events set created_at = now() - interval '31 days' where actor_id = ${viewer}`;
+    await pruneProfileEvents(database);
+    const [remaining] = await database`select count(*)::int n from private.profile_events where actor_id = ${viewer}`;
+    assert.equal(remaining.n, 0);
+    const [archived] = await database`select events::int, qualifying::int from private.profile_event_totals where kind = 'view' and source = 'friends'`;
+    assert.ok(archived.events >= 3);
+    assert.ok(archived.qualifying >= 2);
+});
+
+test("only active accepted opponents see private records, with independent bounded activity", async (t) => {
+    const users = Array.from({ length: 5 }, () => randomUUID());
+    const [owner, opponent, invited, deferred, stranger] = users;
+    const fightId = randomUUID();
+    const sourceId = randomUUID();
+    t.after(async () => {
+        await database`delete from public.fights where id = ${fightId}`;
+        await database`delete from auth.users where id = any(${database.array(users)}::uuid[])`;
+    });
+    for (const id of users) await database`insert into auth.users(id) values (${id})`;
+    await database`insert into public.fights(id, owner_id, name, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy)
+        values (${fightId}, ${owner}, 'Opponent access', 'live', now() - interval '1 hour', now() + interval '1 day', 'UTC', 'highest_total', 'shared')`;
+    for (const [id, state] of [[owner, "accepted"], [opponent, "accepted"], [invited, "invited"], [deferred, "deferred"]]) {
+        await database`insert into public.fight_members(fight_id, user_id, state) values (${fightId}, ${id}, ${state})`;
+    }
+    await database`insert into public.data_sources(id, user_id, provider, source_label, connection_route) values (${sourceId}, ${owner}, 'apple_health', 'Apple Health', 'healthkit')`;
+    await seedStepDays(owner, sourceId, database`
+        select current_date - day as day, 1000 as value, 'UTC' as time_zone, false as complete
+        from generate_series(0, 40) day`);
+    await updateProfileSettings(owner, { competitive: true, activity_audience: "opponents", activity_days: 7 }, database);
+    const shared = await readSharedProfile(opponent, owner, undefined, database);
+    assert.equal(shared.access, "shared");
+    assert.equal(shared.activity?.values.length, 7);
+    assert.equal(shared.activity.values[0].time_zone, "UTC");
+    for (const id of [invited, deferred, stranger]) {
+        const profile = await readSharedProfile(id, owner, undefined, database);
+        assert.equal(profile.record, null);
+        assert.equal(profile.activity, null);
+    }
+    await updateProfileSettings(owner, { activity_days: 30 }, database);
+    assert.equal((await readSharedProfile(opponent, owner, undefined, database)).activity?.values.length, 30);
+    await database`update public.fights set starts_at = now() + interval '1 hour' where id = ${fightId}`;
+    assert.equal((await readSharedProfile(opponent, owner, undefined, database)).record, null);
+    await database`update public.fights set starts_at = now() - interval '1 day', ends_at = now() - interval '1 hour', state = 'final' where id = ${fightId}`;
+    assert.equal((await readSharedProfile(opponent, owner, undefined, database)).record, null);
+    assert.equal((await readProfileHistory(opponent, owner, profilePageQuerySchema.parse({ shared: "true" }), database)).results.length, 1);
+});

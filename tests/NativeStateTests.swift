@@ -7,8 +7,11 @@ struct TestSession { let user: TestUser }
 struct TestAuth { var currentUser: TestUser? }
 struct TestClient { var auth: TestAuth }
 enum TestFailure: Error { case offline }
+enum FitFightAPIError: Error { case http(status: Int, code: String?, message: String?) }
 struct UIImage {}
-struct FeedPostDestination {}
+struct FeedPostDestination {
+    var type: String = ""
+}
 struct TestMedia { let id: UUID }
 
 @MainActor enum MediaUploader {
@@ -80,13 +83,44 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
 }
 
 @MainActor final class FitFightAPI {
+    static var commentRequests: [(sort: FightPostCommentSort, cursor: String?)] = []
     static var commentLists: [CheckedContinuation<FitFightFightPostCommentList, Error>] = []
     static var commentCreations: [CheckedContinuation<FitFightFightPostCommentResponse, Error>] = []
     static var commentDeletions: [CheckedContinuation<FitFightFightPostCommentDeletion, Error>] = []
+    static var commentLikes: [CheckedContinuation<FitFightFightPostCommentLike, Error>] = []
+    static var commentLikeRequests: [(postID: UUID, commentID: UUID, liked: Bool)] = []
     static var commentReports: [CheckedContinuation<Void, Error>] = []
+    static var commentPages: [String: FitFightFightPostCommentList]?
+    static var feedbackLists: [CheckedContinuation<FitFightFeedbackList, Error>] = []
+    static var feedbackDetails: [CheckedContinuation<FitFightFeedbackDetail, Error>] = []
+    static var feedbackArchives: [CheckedContinuation<FitFightFeedbackArchive, Error>] = []
+    static var feedbackDeletions: [CheckedContinuation<Void, Error>] = []
 
-    func fightPostComments(postID: UUID, cursor: String?, accessToken: String) async throws -> FitFightFightPostCommentList {
-        try await withCheckedThrowingContinuation { Self.commentLists.append($0) }
+    func listFeedback(kind: String?, status: String = "open", sort: String = "votes", accessToken: String) async throws -> FitFightFeedbackList {
+        try await withCheckedThrowingContinuation { Self.feedbackLists.append($0) }
+    }
+    func feedbackDetail(postID: UUID, accessToken: String) async throws -> FitFightFeedbackDetail {
+        try await withCheckedThrowingContinuation { Self.feedbackDetails.append($0) }
+    }
+    func archiveFeedbackPost(postID: UUID, archived: Bool, reason: String?, accessToken: String) async throws -> FitFightFeedbackArchive {
+        try await withCheckedThrowingContinuation { Self.feedbackArchives.append($0) }
+    }
+    func deleteFeedbackPost(postID: UUID, accessToken: String) async throws {
+        try await withCheckedThrowingContinuation { Self.feedbackDeletions.append($0) }
+    }
+
+    func fightPostComments(
+        postID: UUID,
+        cursor: String?,
+        accessToken: String,
+        sort: FightPostCommentSort = .comments
+    ) async throws -> FitFightFightPostCommentList {
+        Self.commentRequests.append((sort, cursor))
+        if let pages = Self.commentPages {
+            guard let page = pages[cursor ?? ""] else { throw TestFailure.offline }
+            return page
+        }
+        return try await withCheckedThrowingContinuation { Self.commentLists.append($0) }
     }
     func createFightPostComment(postID: UUID, body: String, parentID: UUID?, accessToken: String) async throws -> FitFightFightPostCommentResponse {
         try await withCheckedThrowingContinuation { Self.commentCreations.append($0) }
@@ -94,10 +128,17 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
     func deleteFightPostComment(postID: UUID, commentID: UUID, accessToken: String) async throws -> FitFightFightPostCommentDeletion {
         try await withCheckedThrowingContinuation { Self.commentDeletions.append($0) }
     }
+    func setFightPostCommentLike(postID: UUID, commentID: UUID, liked: Bool, accessToken: String) async throws -> FitFightFightPostCommentLike {
+        Self.commentLikeRequests.append((postID, commentID, liked))
+        return try await withCheckedThrowingContinuation { Self.commentLikes.append($0) }
+    }
     func reportFightPostComment(postID: UUID, commentID: UUID, accessToken: String) async throws {
         try await withCheckedThrowingContinuation { Self.commentReports.append($0) }
     }
     var listRequests = 0
+    var listCursors: [String?] = []
+    var postRequests: [UUID] = []
+    var postResults: [UUID: FitFightFightPost]?
     var reactionRequests = 0
     var lists: [CheckedContinuation<FitFightFightPostList, Error>] = []
     var reactions: [CheckedContinuation<FitFightFightPostReactionList, Error>] = []
@@ -107,11 +148,21 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
 
     func feed(cursor: String?, accessToken: String) async throws -> FitFightFightPostList {
         listRequests += 1
+        listCursors.append(cursor)
         return try await withCheckedThrowingContinuation { lists.append($0) }
     }
 
     func fightPosts(fightID: UUID, cursor: String?, accessToken: String) async throws -> FitFightFightPostList {
         try await feed(cursor: cursor, accessToken: accessToken)
+    }
+
+    func fightPost(postID: UUID, accessToken: String) async throws -> FitFightFightPostResponse {
+        postRequests.append(postID)
+        if let results = postResults {
+            guard let post = results[postID] else { throw TestFailure.offline }
+            return .init(post: post)
+        }
+        return try await withCheckedThrowingContinuation { updates.append($0) }
     }
 
     func reactToFightPost(postID: UUID, emoji: String, accessToken: String) async throws -> FitFightFightPostReactionList {
@@ -141,17 +192,63 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
     func prefetch(_ urls: [URL], kind: Kind) {}
 }
 
+@MainActor final class FeedRequestPaths {
+    var paths: [String] = []
+    func get(path: String, accessToken: String, expected: Set<Int>) async throws -> FitFightFightPostList {
+        paths.append(path)
+        return .init(posts: [], nextCursor: nil)
+    }
+}
+
+@MainActor final class CommentLikeRequestPaths {
+    static let encoder = JSONEncoder()
+    var path: String?
+    var method: String?
+    var body: Data?
+    var expected: Set<Int> = []
+
+    func request<Response: Decodable>(
+        path: String,
+        method: String,
+        accessToken: String,
+        body: Data?,
+        idempotencyKey: String?,
+        expected: Set<Int>
+    ) async throws -> Response {
+        self.path = path
+        self.method = method
+        self.body = body
+        self.expected = expected
+        return try JSONDecoder().decode(Response.self, from: Data("{\"like_count\":4,\"liked_by_me\":true}".utf8))
+    }
+}
+
+@MainActor final class FeedRefreshHarness {
+    let model = AppModel()
+    let session = SessionStore()
+    let steps = HealthKitStepsStore()
+    let feed = FeedStore()
+    var isRefreshingFeed = false
+}
+
 @MainActor final class FeedStore {
+    var revision = 0
     var posts: [FitFightFightPost] = []
     var nextCursor: String?
     var isLoading = false
+    var isLoadingMore = false
     var isSaving = false
     var error: String?
+    var moreError: String?
     var reactingPostIDs: Set<UUID> = []
     let api = FitFightAPI()
     var listLoad = 0
     var lastFightID: UUID?
     var cachedUserID: UUID?
+    var visiblePostIDs: Set<UUID> = []
+    var stalePostIDs: Set<UUID> = []
+    var liveLoad = 0
+    var needsLiveRefresh = false
 }
 
 @MainActor final class FightPostThreadState {
@@ -162,8 +259,14 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
     var replyTo: FitFightFightPostComment?
     var draft = ""
     var nextCursor: String?
+    var loadedCommentPages = 0
     var loading = false
     var loadingComments = false
+    var likingCommentIDs: Set<UUID> = []
+    var open = false
+    var reloadComments = false
+    var commentsVersion = 0
+    var targetCommentID: UUID?
     init(post: FitFightFightPost) { self.post = post }
 }
 
@@ -222,6 +325,184 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
             media: [], tags: [], reactions: [], commentCount: 0, mine: false
         )
         let reactions = FitFightFightPostReactionList(reactions: [.init(emoji: "👍", count: 1, mine: true)])
+        let newerPost = FitFightFightPost(
+            id: UUID(), audience: post.audience, fightId: post.fightId, fightName: post.fightName,
+            body: "Newer", createdAt: "2026-09-16T12:00:00Z", author: post.author,
+            media: [], tags: [], reactions: [], commentCount: 0, mine: false
+        )
+        let pagedFeed = FeedStore()
+        pagedFeed.activate(userID: session.authSession?.user.id)
+        pagedFeed.posts = [post]
+        let refreshPages = Task { await pagedFeed.load(session: session) }
+        while pagedFeed.api.lists.isEmpty { await Task.yield() }
+        pagedFeed.api.lists.removeFirst().resume(returning: .init(posts: [newerPost], nextCursor: "older-page"))
+        for _ in 0..<100 { await Task.yield() }
+        for continuation in pagedFeed.api.lists {
+            continuation.resume(returning: .init(posts: [post.updating(commentCount: 1)], nextCursor: nil))
+        }
+        pagedFeed.api.lists = []
+        await refreshPages.value
+        check(pagedFeed.api.listRequests == 1 && pagedFeed.posts.map(\.id) == [newerPost.id],
+              "pull refresh fetches only the first page instead of refetching all previously loaded pages")
+
+        let paths = FeedRequestPaths()
+        _ = try? await paths.feed(cursor: nil, accessToken: "token")
+        _ = try? await paths.feed(scope: "fights", cursor: "2026-09-16T12:00:00.123456Z|cursor-id", accessToken: "token")
+        _ = try? await paths.fightPosts(fightID: UUID(), cursor: "next-page", accessToken: "token")
+        check(paths.paths.allSatisfy { URLComponents(string: $0)?.queryItems?.contains(URLQueryItem(name: "limit", value: "10")) == true },
+              "initial and paginated feeds request exactly ten posts through the existing API")
+        check(URLComponents(string: paths.paths[1])?.queryItems?.first(where: { $0.name == "cursor" })?.value == "2026-09-16T12:00:00.123456Z|cursor-id",
+              "ten-post pagination preserves the server cursor exactly")
+
+        let commentLikePaths = CommentLikeRequestPaths()
+        let likePostID = UUID()
+        let likeCommentID = UUID()
+        let persistedLike = try? await commentLikePaths.setFightPostCommentLike(
+            postID: likePostID, commentID: likeCommentID, liked: true, accessToken: "token"
+        )
+        let encodedLike = commentLikePaths.body.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Bool] }
+        check(commentLikePaths.path == "posts/\(likePostID.uuidString.lowercased())/comments/\(likeCommentID.uuidString.lowercased())/like"
+                && commentLikePaths.method == "PUT" && commentLikePaths.expected == [200] && encodedLike == ["liked": true],
+              "comment likes persist through the versioned PUT endpoint with the requested state")
+        check(persistedLike?.likeCount == 4 && persistedLike?.likedByMe == true,
+              "the native API decodes the authoritative persisted comment like")
+
+        let firstRevision = pagedFeed.revision
+        pagedFeed.error = "Earlier refresh failed"
+        let nextPage = Task { await pagedFeed.load(session: session, more: true) }
+        while pagedFeed.api.lists.isEmpty { await Task.yield() }
+        await pagedFeed.load(session: session, more: true)
+        check(pagedFeed.api.listRequests == 2 && pagedFeed.api.listCursors.last! == "older-page" && pagedFeed.isLoadingMore,
+              "overlapping infinite-scroll triggers share one next-page request")
+        pagedFeed.api.lists.removeFirst().resume(returning: .init(posts: [newerPost, post], nextCursor: "last-page"))
+        await nextPage.value
+        check(pagedFeed.posts.map(\.id) == [newerPost.id, post.id] && pagedFeed.revision == firstRevision,
+              "pagination appends unique posts without reordering existing cards or reloading their threads")
+        check(pagedFeed.error == "Earlier refresh failed", "appending a page does not change the screen header above existing cards")
+
+        let pull = FeedRefreshHarness()
+        let pulling = Task { await pull.refreshForTest() }
+        for _ in 0..<100 { await Task.yield() }
+        check(pull.feed.api.listRequests == 1 && pull.model.started == 0 && pull.isRefreshingFeed,
+              "pull-to-refresh immediately requests feed data without starting or waiting for HealthKit sync")
+        if pull.feed.api.lists.isEmpty {
+            for continuation in pull.model.continuations { continuation.resume() }
+            pull.model.continuations = []
+        }
+        while pull.feed.api.lists.isEmpty { await Task.yield() }
+        pull.feed.api.lists.removeFirst().resume(returning: .init(posts: [newerPost], nextCursor: nil))
+        await pulling.value
+        check(pull.feed.posts.map(\.id) == [newerPost.id] && !pull.isRefreshingFeed,
+              "the refresh indicator waits for the actual server response")
+
+        let stalePage = Task { await pagedFeed.load(session: session, more: true) }
+        while pagedFeed.api.lists.isEmpty { await Task.yield() }
+        let freshPage = Task { await pagedFeed.load(session: session) }
+        while pagedFeed.api.lists.count < 2 { await Task.yield() }
+        pagedFeed.api.lists.removeLast().resume(returning: .init(posts: [newerPost], nextCursor: "fresh-cursor"))
+        await freshPage.value
+        pagedFeed.api.lists.removeFirst().resume(returning: .init(posts: [post], nextCursor: nil))
+        await stalePage.value
+        check(pagedFeed.posts.map(\.id) == [newerPost.id] && pagedFeed.nextCursor == "fresh-cursor",
+              "pull refresh supersedes an older next-page request and its cursor")
+
+        let failedPage = Task { await pagedFeed.load(session: session, more: true) }
+        while pagedFeed.api.lists.isEmpty { await Task.yield() }
+        pagedFeed.api.lists.removeFirst().resume(throwing: TestFailure.offline)
+        await failedPage.value
+        check(pagedFeed.posts.map(\.id) == [newerPost.id] && pagedFeed.moreError != nil && pagedFeed.error == nil && pagedFeed.nextCursor == "fresh-cursor",
+              "pagination failure retains the reading position and retry cursor without adding an error above the feed")
+        pagedFeed.nextCursor = nil
+        let requestsAtEnd = pagedFeed.api.listRequests
+        await pagedFeed.load(session: session, more: true)
+        check(pagedFeed.api.listRequests == requestsAtEnd && !pagedFeed.isLoadingMore,
+              "an exhausted feed makes no further page requests")
+
+        let visibleFeed = FeedStore()
+        visibleFeed.activate(userID: session.authSession?.user.id)
+        visibleFeed.posts = [newerPost, post]
+        visibleFeed.nextCursor = "keep-cursor"
+        visibleFeed.visiblePostIDs = [post.id]
+        let livePost = Task { await visibleFeed.refreshVisible(session: session) }
+        while visibleFeed.api.updates.isEmpty { await Task.yield() }
+        check(visibleFeed.api.postRequests == [post.id] && visibleFeed.api.listRequests == 0,
+              "a live event fetches the visible older post without replaying feed pages")
+        visibleFeed.api.updates.removeFirst().resume(returning: .init(post: post.updating(commentCount: 2)))
+        await livePost.value
+        check(visibleFeed.posts.map(\.id) == [newerPost.id, post.id] && visibleFeed.posts.last?.commentCount == 2 && visibleFeed.nextCursor == "keep-cursor",
+              "background refresh updates comments in place without changing the pagination cursor")
+        check(visibleFeed.stalePostIDs == [newerPost.id], "offscreen posts remain marked for refresh when they reappear")
+        visibleFeed.visiblePostIDs = [newerPost.id]
+        let reappeared = Task { await visibleFeed.refreshVisible(session: session, invalidate: false) }
+        while visibleFeed.api.updates.isEmpty { await Task.yield() }
+        visibleFeed.api.updates.removeFirst().resume(returning: .init(post: newerPost.updating(commentCount: 1)))
+        await reappeared.value
+        check(visibleFeed.stalePostIDs.isEmpty && visibleFeed.posts.first?.commentCount == 1,
+              "returning to an invalidated cached card gets fresh data")
+
+        let liveDuringPage = Task { await visibleFeed.load(session: session, more: true) }
+        while visibleFeed.api.lists.isEmpty { await Task.yield() }
+        await visibleFeed.refreshVisible(session: session)
+        visibleFeed.api.lists.removeFirst().resume(returning: .init(posts: [], nextCursor: nil))
+        while visibleFeed.api.updates.isEmpty { await Task.yield() }
+        visibleFeed.api.updates.removeFirst().resume(returning: .init(post: newerPost.updating(commentCount: 3)))
+        await liveDuringPage.value
+        check(visibleFeed.posts.first?.commentCount == 3 && !visibleFeed.needsLiveRefresh,
+              "a live event during pagination is reconciled after the page completes")
+
+        for more in [false, true] {
+            let arriving = FeedStore()
+            arriving.activate(userID: session.authSession?.user.id)
+            arriving.posts = more ? [post] : []
+            arriving.nextCursor = more ? "next-page" : nil
+            let page = Task { await arriving.load(session: session, more: more) }
+            while arriving.api.lists.isEmpty { await Task.yield() }
+            await arriving.refreshVisible(session: session)
+            arriving.api.lists.removeFirst().resume(returning: .init(posts: [newerPost], nextCursor: "older-page"))
+            await page.value
+            check(arriving.stalePostIDs.contains(newerPost.id),
+                  "an event during \(more ? "pagination" : "initial load") invalidates posts in the arriving snapshot")
+            arriving.visiblePostIDs = [newerPost.id]
+            arriving.api.postResults = [newerPost.id: newerPost.updating(commentCount: 9)]
+            if arriving.stalePostIDs.contains(newerPost.id) {
+                await arriving.refreshVisible(session: session, invalidate: false)
+            }
+            check(arriving.posts.last?.commentCount == 9 && arriving.nextCursor == "older-page",
+                  "an arriving stale card refreshes on appearance without losing its pagination cursor")
+        }
+
+        for pageFinishesFirst in [false, true] {
+            let overlapping = FeedStore()
+            overlapping.activate(userID: session.authSession?.user.id)
+            overlapping.posts = [post]
+            overlapping.nextCursor = "next-page"
+            overlapping.visiblePostIDs = [post.id]
+            let live = Task { await overlapping.refreshVisible(session: session) }
+            while overlapping.api.updates.isEmpty { await Task.yield() }
+            let page = Task { await overlapping.load(session: session, more: true) }
+            while overlapping.api.lists.isEmpty { await Task.yield() }
+            overlapping.api.postResults = [post.id: post.updating(commentCount: 7)]
+            if pageFinishesFirst {
+                overlapping.api.lists.removeFirst().resume(returning: .init(posts: [newerPost], nextCursor: nil))
+                await page.value
+            }
+            overlapping.api.updates.removeFirst().resume(returning: .init(post: post.updating(commentCount: 7)))
+            await live.value
+            if !pageFinishesFirst {
+                overlapping.api.lists.removeFirst().resume(returning: .init(posts: [newerPost], nextCursor: nil))
+                await page.value
+            }
+            check(overlapping.posts.first?.commentCount == 7 && overlapping.posts.map(\.id) == [post.id, newerPost.id],
+                  "pagination reconciles an earlier live read when \(pageFinishesFirst ? "the page" : "the live read") finishes first")
+        }
+
+        let oldLiveRead = Task { await visibleFeed.refreshVisible(session: session) }
+        while visibleFeed.api.updates.isEmpty { await Task.yield() }
+        visibleFeed.activate(userID: UUID())
+        visibleFeed.api.updates.removeFirst().resume(returning: .init(post: newerPost))
+        await oldLiveRead.value
+        check(visibleFeed.posts.isEmpty && visibleFeed.visiblePostIDs.isEmpty && visibleFeed.stalePostIDs.isEmpty,
+              "an old account's live read cannot restore its cached posts after account change")
         let feed = FeedStore()
         feed.cachedUserID = session.authSession?.user.id
         feed.posts = [post]
@@ -324,6 +605,86 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
         check(mutations.posts == [post.updating(commentCount: 8)], "old-account edit and deletion responses cannot replace the new feed")
         check(mutations.isSaving && mutations.error == "New account error", "old-account completions preserve the new account's saving and error state")
 
+        let sortAuthor = FitFightFightPost.Author(userId: UUID(), handle: "test", displayName: "Test", avatar: nil)
+        let quiet = FitFightFightPostComment(
+            id: UUID(), postId: post.id, parentId: nil, body: "Quiet",
+            createdAt: "2026-09-16T12:00:00Z", author: sortAuthor, mine: false
+        )
+        let busy = FitFightFightPostComment(
+            id: UUID(), postId: post.id, parentId: nil, body: "Busy",
+            createdAt: "2026-09-16T11:00:00Z", author: sortAuthor, mine: false
+        )
+        let reply = FitFightFightPostComment(
+            id: UUID(), postId: post.id, parentId: busy.id, body: "Reply",
+            createdAt: "2026-09-16T11:30:00Z", author: sortAuthor, mine: false
+        )
+        let chronologicalThread = FightPostThreadState(post: post)
+        chronologicalThread.comments = [busy, quiet, reply]
+        check(chronologicalThread.rowsForTest().map(\.0) == [quiet.id, busy.id, reply.id],
+              "comments show the newest root first and keep its replies underneath")
+
+        let likeThread = FightPostThreadState(post: post)
+        let unliked = FitFightFightPostComment(
+            id: UUID(), postId: post.id, parentId: nil, body: "Like this",
+            createdAt: post.createdAt, author: post.author, mine: false,
+            likeCount: 2, likedByMe: false
+        )
+        likeThread.comments = [unliked]
+        let likeRequestsBefore = FitFightAPI.commentLikeRequests.count
+        let savingLike = Task { await likeThread.likeForTest(unliked) }
+        while FitFightAPI.commentLikes.isEmpty { await Task.yield() }
+        check(likeThread.comments[0].likeCount == 3 && likeThread.comments[0].likedByMe == true
+                && likeThread.likingCommentIDs == [unliked.id],
+              "liking a comment updates the heart and count while the request is pending")
+        await likeThread.likeForTest(unliked)
+        check(FitFightAPI.commentLikeRequests.count == likeRequestsBefore + 1
+                && FitFightAPI.commentLikeRequests.last?.postID == post.id
+                && FitFightAPI.commentLikeRequests.last?.commentID == unliked.id
+                && FitFightAPI.commentLikeRequests.last?.liked == true,
+              "a pending comment like blocks duplicate persistence requests")
+        FitFightAPI.commentLikes.removeFirst().resume(returning: .init(likeCount: 4, likedByMe: true))
+        await savingLike.value
+        check(likeThread.comments[0].likeCount == 4 && likeThread.comments[0].likedByMe == true
+                && likeThread.likingCommentIDs.isEmpty,
+              "a successful comment like publishes the authoritative server result")
+        let removingLike = Task { await likeThread.likeForTest(unliked) }
+        while FitFightAPI.commentLikes.isEmpty { await Task.yield() }
+        check(likeThread.comments[0].likeCount == 3 && likeThread.comments[0].likedByMe == false
+                && FitFightAPI.commentLikeRequests.last?.liked == false,
+              "tapping a liked comment optimistically removes exactly one like")
+        FitFightAPI.commentLikes.removeFirst().resume(returning: .init(likeCount: 3, likedByMe: false))
+        await removingLike.value
+
+        let failedLikeThread = FightPostThreadState(post: post)
+        let legacyComment = FitFightFightPostComment(
+            id: UUID(), postId: post.id, parentId: nil, body: "From an older response",
+            createdAt: post.createdAt, author: post.author, mine: false
+        )
+        failedLikeThread.comments = [legacyComment]
+        let failedLike = Task { await failedLikeThread.likeForTest(legacyComment) }
+        while FitFightAPI.commentLikes.isEmpty { await Task.yield() }
+        check(failedLikeThread.comments[0].likeCount == 1 && failedLikeThread.comments[0].likedByMe == true,
+              "a legacy comment without like fields still supports an optimistic first like")
+        FitFightAPI.commentLikes.removeFirst().resume(throwing: TestFailure.offline)
+        await failedLike.value
+        check(failedLikeThread.comments[0].likeCount == nil && failedLikeThread.comments[0].likedByMe == nil
+                && failedLikeThread.likingCommentIDs.isEmpty && failedLikeThread.feed.error != nil,
+              "a failed first like restores the exact legacy state and reports the failure")
+
+        let refreshingLikeThread = FightPostThreadState(post: post)
+        refreshingLikeThread.comments = [unliked]
+        let pendingLike = Task { await refreshingLikeThread.likeForTest(unliked) }
+        while FitFightAPI.commentLikes.isEmpty { await Task.yield() }
+        let refreshDuringLike = Task { await refreshingLikeThread.loadForTest() }
+        while FitFightAPI.commentLists.isEmpty { await Task.yield() }
+        FitFightAPI.commentLists.removeFirst().resume(returning: .init(comments: [unliked], nextCursor: nil))
+        await refreshDuringLike.value
+        check(FitFightAPI.commentRequests.last?.sort == .recent
+                && refreshingLikeThread.comments[0].likeCount == 3 && refreshingLikeThread.comments[0].likedByMe == true,
+              "a comment refresh cannot erase an optimistic like while its request is pending")
+        FitFightAPI.commentLikes.removeFirst().resume(returning: .init(likeCount: 3, likedByMe: true))
+        await pendingLike.value
+
         let thread = FightPostThreadState(post: post)
         let orphan = FitFightFightPostComment(
             id: UUID(), postId: post.id, parentId: UUID(), body: "Visible reply to hidden author",
@@ -338,6 +699,127 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
             createdAt: post.createdAt, author: post.author, mine: false
         )
         thread.comments = [orphan, child, grandchild]
+        let refreshedThread = FightPostThreadState(post: post.updating(commentCount: 2))
+        refreshedThread.comments = [orphan]
+        refreshedThread.open = true
+        refreshedThread.countChangedForTest(previous: 1, count: 2)
+        try? await Task.sleep(for: .milliseconds(30))
+        let requestedComments = !FitFightAPI.commentLists.isEmpty
+        for continuation in FitFightAPI.commentLists {
+            continuation.resume(returning: .init(comments: [orphan, child], nextCursor: nil))
+        }
+        FitFightAPI.commentLists = []
+        try? await Task.sleep(for: .milliseconds(30))
+        check(requestedComments && refreshedThread.comments.contains(child), "a peer comment appears in an already-open thread when its count refreshes")
+        let duringRead = Task { await refreshedThread.loadForTest() }
+        while FitFightAPI.commentLists.isEmpty { await Task.yield() }
+        refreshedThread.countChangedForTest(previous: 2, count: 3)
+        while !refreshedThread.reloadComments { await Task.yield() }
+        FitFightAPI.commentLists.removeFirst().resume(returning: .init(comments: [orphan, child], nextCursor: nil))
+        while FitFightAPI.commentLists.isEmpty { await Task.yield() }
+        FitFightAPI.commentLists.removeFirst().resume(returning: .init(comments: [orphan, child, grandchild], nextCursor: nil))
+        await duringRead.value
+        check(refreshedThread.comments.contains(grandchild), "a comment arriving during a read queues another read")
+
+        for queuedRefresh in [false, true] {
+            let failedThread = FightPostThreadState(post: post.updating(commentCount: 2))
+            failedThread.comments = [orphan]
+            let failingRead = Task { await failedThread.loadForTest() }
+            while FitFightAPI.commentLists.isEmpty { await Task.yield() }
+            if queuedRefresh { await failedThread.loadForTest() }
+            let requestsBeforeFailure = FitFightAPI.commentRequests.count
+            FitFightAPI.commentPages = ["": .init(comments: [orphan, child], nextCursor: nil)]
+            FitFightAPI.commentLists.removeFirst().resume(throwing: TestFailure.offline)
+            await failingRead.value
+            check(FitFightAPI.commentRequests.count == requestsBeforeFailure + (queuedRefresh ? 1 : 0),
+                  "a failed comment read only runs another request when a refresh was already queued")
+            check(failedThread.comments == (queuedRefresh ? [orphan, child] : [orphan]) && !failedThread.loadingComments,
+                  "\(queuedRefresh ? "a queued refresh updates" : "an unqueued failure preserves") the thread after an earlier read fails")
+            check(queuedRefresh ? failedThread.feed.error == nil : failedThread.feed.error != nil,
+                  queuedRefresh ? "a recovered queued refresh does not leave the earlier error visible" : "an unqueued comment failure reports its error")
+            FitFightAPI.commentPages = nil
+        }
+
+        let pagedThread = FightPostThreadState(post: post.updating(commentCount: 3))
+        pagedThread.targetCommentID = grandchild.id
+        let targeted = Task { await pagedThread.loadForTest() }
+        while FitFightAPI.commentLists.isEmpty { await Task.yield() }
+        FitFightAPI.commentLists.removeFirst().resume(returning: .init(comments: [orphan, child], nextCursor: "page-two"))
+        while FitFightAPI.commentLists.isEmpty { await Task.yield() }
+        FitFightAPI.commentLists.removeFirst().resume(returning: .init(comments: [grandchild], nextCursor: nil))
+        await targeted.value
+        check(pagedThread.comments == [orphan, child, grandchild], "a notification loads comments through the targeted page")
+
+        let commentHistory = (0..<45).map { index in
+            FitFightFightPostComment(
+                id: UUID(), postId: post.id, parentId: nil, body: "Comment \(index)",
+                createdAt: post.createdAt, author: post.author, mine: false
+            )
+        }
+        for failedRead in [false, true] {
+            let interruptedPage = FightPostThreadState(post: post.updating(commentCount: 45))
+            let pages: [String: FitFightFightPostCommentList] = [
+                "": .init(comments: Array(commentHistory.prefix(40)), nextCursor: "older-comments"),
+                "older-comments": .init(comments: Array(commentHistory.suffix(5)), nextCursor: nil),
+            ]
+            FitFightAPI.commentPages = pages
+            await interruptedPage.loadForTest()
+            FitFightAPI.commentPages = nil
+            let moreComments = Task { await interruptedPage.loadForTest(more: true) }
+            while FitFightAPI.commentLists.isEmpty { await Task.yield() }
+            check(FitFightAPI.commentRequests.last?.cursor == "older-comments", "More comments requests the next page")
+            await interruptedPage.loadForTest()
+            FitFightAPI.commentPages = pages
+            if failedRead {
+                FitFightAPI.commentLists.removeFirst().resume(throwing: TestFailure.offline)
+            } else {
+                FitFightAPI.commentLists.removeFirst().resume(returning: .init(comments: Array(commentHistory.suffix(5)), nextCursor: nil))
+            }
+            await moreComments.value
+            check(interruptedPage.comments == commentHistory,
+                  "a live update during More comments preserves the requested next page")
+            check(interruptedPage.nextCursor == nil && !interruptedPage.loadingComments,
+                  "interrupted comment pagination settles at the cursor for the displayed pages")
+            FitFightAPI.commentPages = nil
+        }
+
+        let retainedThread = FightPostThreadState(post: post.updating(commentCount: 45))
+        FitFightAPI.commentPages = [
+            "": .init(comments: Array(commentHistory.prefix(40)), nextCursor: "older-comments"),
+            "older-comments": .init(comments: Array(commentHistory.suffix(5)), nextCursor: nil),
+        ]
+        await retainedThread.loadForTest()
+        await retainedThread.loadForTest(more: true)
+        check(retainedThread.comments == commentHistory, "More comments loads both pages before an automatic refresh")
+        FitFightAPI.commentPages?["older-comments"] = .init(comments: Array(commentHistory[40..<44]), nextCursor: nil)
+        await retainedThread.loadForTest()
+        check(retainedThread.comments == Array(commentHistory.prefix(44)) && retainedThread.nextCursor == nil,
+              "automatic refresh preserves older loaded comments and removes a deleted comment")
+
+        let beforeFailedRefresh = retainedThread.comments
+        FitFightAPI.commentPages = ["": .init(comments: Array(commentHistory.prefix(40)), nextCursor: "unavailable-page")]
+        await retainedThread.loadForTest()
+        check(retainedThread.comments == beforeFailedRefresh && retainedThread.nextCursor == nil && retainedThread.feed.error != nil,
+              "a failed later refresh page leaves the complete loaded thread and cursor intact")
+
+        let rankedThread = FightPostThreadState(post: post.updating(commentCount: 45))
+        rankedThread.comments = Array(commentHistory.prefix(40))
+        rankedThread.feed.posts = [post.updating(commentCount: 45)]
+        rankedThread.draft = "A new lower-ranked comment"
+        let rankedSend = Task { await rankedThread.sendForTest() }
+        while FitFightAPI.commentCreations.isEmpty { await Task.yield() }
+        let confirmedComment = commentHistory[44]
+        FitFightAPI.commentCreations.removeFirst().resume(returning: .init(comment: confirmedComment, commentCount: 46))
+        await rankedSend.value
+        FitFightAPI.commentPages = [
+            "": .init(comments: Array(commentHistory.prefix(40)), nextCursor: "lower-ranked"),
+            "lower-ranked": .init(comments: Array(commentHistory.suffix(5)), nextCursor: nil),
+        ]
+        await rankedThread.loadForTest()
+        check(rankedThread.comments.contains(confirmedComment),
+              "automatic ranked refresh retains a confirmed local comment outside the first page")
+        FitFightAPI.commentPages = nil
+
         check(thread.rowsForTest().map { $0.0 } == [orphan.id, child.id, grandchild.id], "visible replies survive when their parent author is hidden")
         check(thread.rowsForTest().map { $0.1 } == [0, 1, 2], "children of a hidden-parent reply retain their nesting")
         thread.replyTo = grandchild
@@ -370,12 +852,16 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
             let load = Task { await stale.loadForTest() }
             let send = Task { await stale.sendForTest() }
             let remove = Task { await stale.deleteForTest(orphan) }
+            let like = Task { await stale.likeForTest(child) }
             let report = Task { await stale.reportForTest(child) }
-            while FitFightAPI.commentLists.isEmpty || FitFightAPI.commentCreations.isEmpty || FitFightAPI.commentDeletions.isEmpty || FitFightAPI.commentReports.isEmpty {
+            while FitFightAPI.commentLists.isEmpty || FitFightAPI.commentCreations.isEmpty || FitFightAPI.commentDeletions.isEmpty
+                    || FitFightAPI.commentLikes.isEmpty || FitFightAPI.commentReports.isEmpty {
                 await Task.yield()
             }
             stale.session.authSession = TestSession(user: TestUser(id: UUID()))
             stale.feed.activate(userID: stale.session.authSession?.user.id)
+            stale.comments = [orphan, child]
+            stale.likingCommentIDs = [grandchild.id]
             stale.feed.posts = [post.updating(commentCount: 8)]
             stale.feed.error = "New account error"
             stale.draft = "New draft"
@@ -385,19 +871,23 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
                 FitFightAPI.commentLists.removeFirst().resume(throwing: TestFailure.offline)
                 FitFightAPI.commentCreations.removeFirst().resume(throwing: TestFailure.offline)
                 FitFightAPI.commentDeletions.removeFirst().resume(throwing: TestFailure.offline)
+                FitFightAPI.commentLikes.removeFirst().resume(throwing: TestFailure.offline)
                 FitFightAPI.commentReports.removeFirst().resume(throwing: TestFailure.offline)
             } else {
                 FitFightAPI.commentLists.removeFirst().resume(returning: .init(comments: [grandchild], nextCursor: "Old cursor"))
                 FitFightAPI.commentCreations.removeFirst().resume(returning: .init(comment: grandchild, commentCount: 3))
                 FitFightAPI.commentDeletions.removeFirst().resume(returning: .init(deleted: true, commentCount: 0))
+                FitFightAPI.commentLikes.removeFirst().resume(returning: .init(likeCount: 9, likedByMe: true))
                 FitFightAPI.commentReports.removeFirst().resume()
             }
             await load.value
             await send.value
             await remove.value
+            await like.value
             await report.value
             check(stale.comments == [orphan, child] && stale.nextCursor == "New cursor", "old-account comment \(fails ? "failures" : "responses") preserve the new thread")
             check(stale.draft == "New draft" && stale.replyTo == child && stale.loading, "old-account comment completions preserve the new account's draft, reply, and loading state")
+            check(stale.likingCommentIDs == [grandchild.id], "old-account like completions preserve the new account's pending likes")
             check(stale.feed.posts[0].commentCount == 8 && stale.feed.error == "New account error", "old-account comment \(fails ? "failures" : "responses") cannot overwrite shared feed state")
         }
 
@@ -407,24 +897,152 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
         let tokenLoad = Task { await tokenSwitch.loadForTest() }
         let tokenSend = Task { await tokenSwitch.sendForTest() }
         let tokenDelete = Task { await tokenSwitch.deleteForTest(child) }
+        tokenSwitch.comments = [child]
+        let tokenLike = Task { await tokenSwitch.likeForTest(child) }
         let tokenReport = Task { await tokenSwitch.reportForTest(child) }
-        while tokenSwitch.session.tokenRequests.count < 4 { await Task.yield() }
+        while tokenSwitch.session.tokenRequests.count < 5 { await Task.yield() }
         tokenSwitch.session.authSession = nil
         for continuation in tokenSwitch.session.tokenRequests { continuation.resume(returning: "old-token") }
         tokenSwitch.session.tokenRequests = []
         try? await Task.sleep(for: .milliseconds(20))
         let sentAfterSignOut = !FitFightAPI.commentLists.isEmpty || !FitFightAPI.commentCreations.isEmpty
-            || !FitFightAPI.commentDeletions.isEmpty || !FitFightAPI.commentReports.isEmpty
+            || !FitFightAPI.commentDeletions.isEmpty || !FitFightAPI.commentLikes.isEmpty || !FitFightAPI.commentReports.isEmpty
         for continuation in FitFightAPI.commentLists { continuation.resume(throwing: TestFailure.offline) }
         for continuation in FitFightAPI.commentCreations { continuation.resume(throwing: TestFailure.offline) }
         for continuation in FitFightAPI.commentDeletions { continuation.resume(throwing: TestFailure.offline) }
+        for continuation in FitFightAPI.commentLikes { continuation.resume(throwing: TestFailure.offline) }
         for continuation in FitFightAPI.commentReports { continuation.resume(throwing: TestFailure.offline) }
         await tokenLoad.value
         await tokenSend.value
         await tokenDelete.value
+        await tokenLike.value
         await tokenReport.value
         check(!sentAfterSignOut, "comment operations stop after sign-out during token refresh")
 
+        let requestA = FitFightFeedbackPost(
+            id: UUID(), kind: "feature", title: "First request", body: "Delete this request",
+            voteCount: 0, commentCount: 0, voted: false,
+            authorId: UUID(), authorHandle: "test", mine: false, createdAt: Date()
+        )
+        var requestB = requestA
+        requestB.id = UUID()
+        requestB.kind = "bug"
+        requestB.createdAt = requestA.createdAt.addingTimeInterval(-1)
+        let requestComment = FitFightFeedbackComment(id: UUID(), body: "Keep this comment", authorHandle: "test", createdAt: Date())
+        for detailFinishesFirst in [false, true] {
+            let feedback = FeedbackStore()
+            feedback.posts = [requestA, requestB]
+            let initialDetail = Task { await feedback.loadDetail(session: session, postID: requestA.id) }
+            while FitFightAPI.feedbackDetails.isEmpty { await Task.yield() }
+            FitFightAPI.feedbackDetails.removeFirst().resume(returning: .init(post: requestA, comments: []))
+            await initialDetail.value
+
+            let deletion = Task { await feedback.delete(session: session, postID: requestA.id) }
+            while FitFightAPI.feedbackDeletions.isEmpty { await Task.yield() }
+            let nextDetail = Task { await feedback.loadDetail(session: session, postID: requestB.id) }
+            while FitFightAPI.feedbackDetails.isEmpty { await Task.yield() }
+            if detailFinishesFirst {
+                FitFightAPI.feedbackDetails.removeFirst().resume(returning: .init(post: requestB, comments: [requestComment]))
+                await nextDetail.value
+                feedback.error = "New request error"
+            }
+            FitFightAPI.feedbackDeletions.removeFirst().resume()
+            check(await deletion.value, "feedback deletion succeeds after navigating to another request")
+            check(feedback.posts == [requestB], "feedback deletion removes only its own board row")
+            if detailFinishesFirst {
+                check(feedback.error == "New request error", "deletion preserves an error on the newly opened request")
+            } else {
+                check(feedback.isLoading, "deletion keeps the new request's pending loading state")
+                FitFightAPI.feedbackDetails.removeFirst().resume(returning: .init(post: requestB, comments: [requestComment]))
+                await nextDetail.value
+            }
+            check(feedback.detail == requestB && feedback.comments == [requestComment], "new request detail and comments survive either deletion completion order")
+            check(feedback.canDelete && feedback.canLaunchFix && !feedback.isLoading, "new request admin actions load and its spinner settles")
+        }
+
+        for deletionFails in [false, true] {
+            let feedback = FeedbackStore()
+            feedback.posts = [requestA]
+            let initialDetail = Task { await feedback.loadDetail(session: session, postID: requestA.id) }
+            while FitFightAPI.feedbackDetails.isEmpty { await Task.yield() }
+            FitFightAPI.feedbackDetails.removeFirst().resume(returning: .init(post: requestA, comments: []))
+            await initialDetail.value
+            let deletion = Task { await feedback.delete(session: session, postID: requestA.id) }
+            let staleDetail = Task { await feedback.loadDetail(session: session, postID: requestA.id) }
+            let listReload = Task { await feedback.load(session: session, kind: nil) }
+            while FitFightAPI.feedbackDeletions.isEmpty || FitFightAPI.feedbackDetails.isEmpty || FitFightAPI.feedbackLists.isEmpty {
+                await Task.yield()
+            }
+            if deletionFails {
+                FitFightAPI.feedbackDeletions.removeFirst().resume(throwing: TestFailure.offline)
+            } else {
+                FitFightAPI.feedbackDeletions.removeFirst().resume()
+            }
+            check(await deletion.value == !deletionFails, "feedback deletion reports its actual result")
+            if deletionFails {
+                check(feedback.detail == requestA && feedback.error != nil, "failed deletion retains the request and shows its error")
+            }
+            FitFightAPI.feedbackDetails.removeFirst().resume(returning: .init(post: requestA, comments: [requestComment]))
+            await staleDetail.value
+            FitFightAPI.feedbackLists.removeFirst().resume(returning: .init(posts: [requestA, requestB]))
+            await listReload.value
+            check(feedback.posts == (deletionFails ? [requestA, requestB] : [requestB]), "list reload excludes a deleted request but still accepts other rows")
+            check(feedback.detail == (deletionFails ? requestA : nil), "stale detail cannot restore a successfully deleted request")
+            check(!feedback.isLoading && !feedback.isDeleting, "feedback loading and deletion flags settle after pending requests finish")
+        }
+
+        for archiveFails in [false, true] {
+            let feedback = FeedbackStore()
+            feedback.posts = [requestA]
+            let initialDetail = Task { await feedback.loadDetail(session: session, postID: requestA.id) }
+            while FitFightAPI.feedbackDetails.isEmpty { await Task.yield() }
+            FitFightAPI.feedbackDetails.removeFirst().resume(returning: .init(post: requestA, comments: [requestComment]))
+            await initialDetail.value
+            let staleList = Task { await feedback.load(session: session, kind: nil) }
+            let staleDetail = Task { await feedback.loadDetail(session: session, postID: requestA.id) }
+            let archive = Task { await feedback.archive(session: session, postID: requestA.id, archived: true, reason: "Resolved") }
+            while FitFightAPI.feedbackArchives.isEmpty || FitFightAPI.feedbackLists.isEmpty || FitFightAPI.feedbackDetails.isEmpty { await Task.yield() }
+            if archiveFails {
+                FitFightAPI.feedbackArchives.removeFirst().resume(throwing: TestFailure.offline)
+            } else {
+                FitFightAPI.feedbackArchives.removeFirst().resume(returning: .init(archived: true, archiveReason: "Resolved"))
+            }
+            check(await archive.value == !archiveFails, "archive reports the server result")
+            if archiveFails { check(feedback.error != nil, "failed archive explains the failure") }
+            FitFightAPI.feedbackLists.removeFirst().resume(returning: .init(posts: [requestA, requestB]))
+            FitFightAPI.feedbackDetails.removeFirst().resume(returning: .init(post: requestA, comments: [requestComment]))
+            await staleList.value
+            await staleDetail.value
+            check(feedback.posts.contains(where: { $0.id == requestA.id }) == archiveFails, "stale list cannot restore an archived post to Open")
+            check(feedback.detail?.archived == !archiveFails, "stale detail cannot undo a successful archive")
+            check(feedback.comments == [requestComment] && feedback.detail?.voteCount == requestA.voteCount, "archive preserves votes and discussion")
+            check(!feedback.isArchiving && !feedback.isLoading, "archive and refresh flags settle")
+            if !archiveFails {
+                let archivedLoad = Task { await feedback.load(session: session, kind: nil, status: "archived") }
+                while FitFightAPI.feedbackLists.isEmpty { await Task.yield() }
+                var archivedPost = requestA
+                archivedPost.archived = true
+                archivedPost.archiveReason = "Resolved"
+                FitFightAPI.feedbackLists.removeFirst().resume(returning: .init(posts: [archivedPost]))
+                await archivedLoad.value
+                let reopen = Task { await feedback.archive(session: session, postID: requestA.id, archived: false, reason: nil) }
+                while FitFightAPI.feedbackArchives.isEmpty { await Task.yield() }
+                FitFightAPI.feedbackArchives.removeFirst().resume(returning: .init(archived: false, archiveReason: nil))
+                check(await reopen.value, "archived feedback can reopen")
+                check(feedback.posts.isEmpty && feedback.detail?.archived == false, "reopen removes the archived row and restores the detail state")
+                check(feedback.detail?.archiveReason == nil && feedback.comments == [requestComment], "reopening clears the reason and keeps discussion")
+            }
+        }
+
         if failures != 0 { exit(1) }
+    }
+}
+
+extension FitFightFeedbackDetail {
+    init(post: FitFightFeedbackPost, comments: [FitFightFeedbackComment]) {
+        self.post = post
+        self.comments = comments
+        canLaunchFix = true
+        canDelete = true
     }
 }

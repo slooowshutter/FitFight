@@ -6,15 +6,13 @@ import UIKit
 /// Only runs when the app is launched with FF_SHOOT=1.
 @MainActor
 enum ScreenshotExport {
-    static var isEnabled: Bool {
-        ProcessInfo.processInfo.environment["FF_SHOOT"] == "1"
-    }
+    static let isEnabled = ProcessInfo.processInfo.environment["FF_SHOOT"] == "1"
 
     static let canvas = CGSize(width: 393, height: 852)
     static let appStoreCanvas = CGSize(width: 440, height: 956)
     static let tallHeight: CGFloat = 1800
     static let designSystemSliceHeight: CGFloat = 2_600
-    static let designSystemSlices = 5
+    static let designSystemSlices = 4
 
     static func exportAll() {
         let themeStore = ThemeStore(transient: .night)
@@ -42,6 +40,12 @@ enum ScreenshotExport {
         let light = ThemeStore(transient: .day)
 
         write(
+            sheet(WelcomeView(), themeStore: light, model: model),
+            name: "light-welcome",
+            height: canvas.height,
+            to: folder
+        )
+        write(
             frame(FightsListView(), tab: .fights, themeStore: light, model: model),
             name: "light-fights",
             height: canvas.height,
@@ -52,6 +56,64 @@ enum ScreenshotExport {
             name: "light-you",
             height: canvas.height,
             to: folder
+        )
+        write(
+            frame(NewFightView(opening: .choose), tab: .newFight, themeStore: light, model: model),
+            name: "light-new",
+            height: canvas.height,
+            to: folder
+        )
+        write(
+            sheet(PreferencesView(), themeStore: light, model: model),
+            name: "light-preferences",
+            height: tallHeight,
+            to: folder
+        )
+
+        write(
+            sheet(RequestsScreenshot.board(), themeStore: light, model: model),
+            name: "light-feedback",
+            height: canvas.height,
+            to: folder
+        )
+        write(
+            sheet(RequestsScreenshot.filters(), themeStore: light, model: model),
+            name: "light-feedback-filters",
+            height: canvas.height,
+            to: folder
+        )
+
+        if var fight = model.fights.first(where: { $0.id == "sweat" }) {
+            fight.id = "details-preview"
+            fight.windowStart = Date(timeIntervalSince1970: 1_789_776_000)
+            fight.windowEnd = fight.windowStart.addingTimeInterval(7 * 86_400)
+            fight.timeZone = "Europe/Paris"
+            fight.joinCode = "WALK742"
+            for store in [themeStore, light] {
+                for size in [DynamicTypeSize.large, .accessibility3] {
+                    write(
+                        frame(
+                            FightDetailView(fight: fight, pane: .details).environment(\.dynamicTypeSize, size),
+                            tab: .fights, themeStore: store, model: model
+                        ),
+                        name: "\(store.mode.rawValue)-details\(size == .large ? "" : "-large-text")",
+                        height: size == .large ? canvas.height : tallHeight,
+                        to: folder
+                    )
+                }
+            }
+            fight.joinCode = nil
+            fight.inviter = nil
+            fight.timeZone = nil
+            write(
+                frame(FightDetailView(fight: fight, pane: .details), tab: .fights, themeStore: themeStore, model: model),
+                name: "night-details-legacy", height: canvas.height, to: folder
+            )
+        }
+
+        write(
+            sheet(NotificationSettingsView(), themeStore: light, model: model),
+            name: "light-notifications", height: tallHeight, to: folder
         )
 
         // The design system page is one long scroll. ImageRenderer returns nil well
@@ -108,6 +170,8 @@ enum ScreenshotExport {
                     .environmentObject(steps)
                     .environmentObject(feed)
                     .environmentObject(companions)
+                    .environmentObject(SpecialPurchases())
+                    .environmentObject(AccountPreferencesStore())
                     .environment(\.ffTheme, store.theme)
                     .environment(\.colorScheme, store.theme.colorScheme)
                     .environment(\.ffStaticRender, true)
@@ -125,12 +189,13 @@ enum ScreenshotExport {
                 ("edit", AnyView(EditFightView(fight: group)), .fights),
                 ("invitation", AnyView(FightDetailView(fight: invite)), .fights),
                 ("history", AnyView(FightDetailView(fight: group, pane: .history)), .fights),
-                ("share", AnyView(FightDetailView(fight: group, pane: .share)), .fights),
+                ("details", AnyView(FightDetailView(fight: group, pane: .details)), .fights),
                 ("fight-feed", AnyView(FightDetailView(fight: group, pane: .feed)), .fights),
                 ("new", AnyView(NewFightView()), .newFight),
                 ("review", AnyView(NewFightView(opening: .create, initialStep: 4)), .newFight),
                 ("you", AnyView(YouView()), .you),
                 ("picker", AnyView(CompanionPicker(selection: .badger)), .you),
+                ("picker-limited", AnyView(CompanionPicker(selection: .limitedPangolin)), .you),
                 ("feed", AnyView(FeedView()), .feed),
                 ("compose", AnyView(FeedComposeSheet()), .feed),
             ]
@@ -139,7 +204,7 @@ enum ScreenshotExport {
             }
             for kind in FightDayChartKind.allCases {
                 let view = AnyView(FFScreen {
-                    FFSection(title: String(localized: "Every day so far")) {
+                    FFSection(title: String(appLocalized: "Every day so far")) {
                         FFCard {
                             FightDayChartsView(days: group.days, standings: group.standings, initialKind: kind) { value in
                                 model.formatScore(value, metric: group.metric)
@@ -149,11 +214,24 @@ enum ScreenshotExport {
                 })
                 write(wrap(view, .fights), name: "\(mode.rawValue)-chart-\(kind.rawValue)", height: canvas.height, to: folder, scale: 1)
             }
-            for (name, view, tab) in shots where ["fights", "group", "new", "you", "picker"].contains(name) {
+            for (name, view, tab) in shots where ["fights", "group", "new", "you", "picker", "picker-limited"].contains(name) {
                 write(
                     AnyView(wrap(view, tab).environment(\.dynamicTypeSize, .accessibility3)),
                     name: "\(mode.rawValue)-\(name)-large-text", height: canvas.height, to: folder, scale: 1
                 )
+            }
+            let longNameCompanions = CompanionStore()
+            longNameCompanions.selection = .limitedSecretaryBirdStride
+            for width in [CGFloat(375), 393] {
+                for size in [DynamicTypeSize.large, .accessibility3] {
+                    write(
+                        AnyView(wrap(AnyView(YouView().environmentObject(longNameCompanions)), .you)
+                            .environment(\.dynamicTypeSize, size)),
+                        name: "\(mode.rawValue)-you-special-\(Int(width))\(size == .large ? "" : "-large-text")",
+                        size: CGSize(width: width, height: size == .large ? canvas.height : tallHeight),
+                        scale: 1, to: folder
+                    )
+                }
             }
             for state in CompanionPreview.DisplayState.allCases where state != .populated && state != .offline {
                 model.showCompanionPreviewState(state)
@@ -208,8 +286,20 @@ enum ScreenshotExport {
             Shot(name: "05-you") { store, model in
                 frame(YouView(), tab: .you, themeStore: store, model: model)
             },
+            Shot(name: "05-preferences") { store, model in
+                sheet(PreferencesView(), themeStore: store, model: model)
+            },
+            Shot(name: "05-notifications") { store, model in
+                sheet(NotificationSettingsView(), themeStore: store, model: model)
+            },
+            Shot(name: "05-notifications-large-text") { store, model in
+                sheet(NotificationSettingsView().environment(\.dynamicTypeSize, .accessibility2), themeStore: store, model: model)
+            },
             Shot(name: "05-feed") { store, model in
                 frame(FeedView(), tab: .feed, themeStore: store, model: model)
+            },
+            Shot(name: "06-feedback-filters") { store, model in
+                sheet(RequestsScreenshot.filters(), themeStore: store, model: model)
             },
             Shot(name: "06-requests") { store, model in
                 sheet(RequestsScreenshot.board(), themeStore: store, model: model)
@@ -290,6 +380,7 @@ enum ScreenshotExport {
                 .environmentObject(themeStore)
                 .environmentObject(model)
                 .environmentObject(CompanionStore())
+                .environmentObject(AccountPreferencesStore())
                 .environmentObject(SessionStore(screenshot: ()))
                 .environmentObject(HealthKitStepsStore())
                 .environment(\.ffTheme, theme)
@@ -317,6 +408,7 @@ enum ScreenshotExport {
             .environmentObject(themeStore)
             .environmentObject(model)
             .environmentObject(CompanionStore())
+            .environmentObject(AccountPreferencesStore())
             .environmentObject(session)
             .environmentObject(HealthKitStepsStore())
             .environmentObject(FeedStore())

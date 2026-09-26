@@ -7,7 +7,7 @@ on:
             - "contracts/**"
             - ".github/workflows/web.yml"
     push:
-        branches: [main, develop, preview]
+        branches: [main, develop, preview, profiles-friends-and-stats, exclusive-animal-avatars]
         paths:
             - "web/**"
             - "contracts/**"
@@ -33,5 +33,19 @@ jobs:
                   cache: npm
                   cache-dependency-path: web/package-lock.json
             - run: npm ci
+            - name: Generate Next.js route signatures
+              run: npx next typegen
             - run: npm run typecheck
             - run: npm test
+            - name: Parse API contracts
+              run: ruby -ryaml -e 'YAML.load_file("../contracts/openapi.yaml"); puts "API contract YAML parsed"'
+            - name: Render Profile privacy disclosures
+              if: github.ref == 'refs/heads/profiles-friends-and-stats'
+              run: node ../scripts/check-profile-privacy-pages.mjs
+            - uses: actions/upload-artifact@v4
+              if: github.ref == 'refs/heads/profiles-friends-and-stats' && always()
+              with:
+                  name: profile-privacy-pages
+                  path: |
+                      ${{ runner.temp }}/profile-privacy-pages/*.png
+                      ${{ runner.temp }}/profile-privacy-pages/next.log

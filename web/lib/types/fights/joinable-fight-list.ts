@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { fightStateValues } from "./membership-decision";
+import { fightStateValues, fightMemberStateValues } from "./membership-decision";
 
 export const joinableFightListFightSchema = z.object({
     id: z.string().uuid(),
@@ -9,7 +9,7 @@ export const joinableFightListFightSchema = z.object({
     time_zone: z.string(),
     action_text: z.string().nullable(),
     roster: z.tuple([z.object({ count: z.number().int().nonnegative() })]),
-    membership: z.array(z.object({ user_id: z.string().uuid() })).max(1),
+    membership: z.array(z.object({ user_id: z.string().uuid(), state: z.enum(fightMemberStateValues) })).max(1),
 });
 
 export const joinableFightListSeriesSchema = z.object({

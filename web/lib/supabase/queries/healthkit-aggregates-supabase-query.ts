@@ -1,27 +1,28 @@
-import { createHash } from "node:crypto";
 import type { Sql } from "postgres";
+import { workoutDayMetricValues } from "@/lib/domain/activity/activity-measurements";
 import { ApiError, ERROR_CODES } from "@/lib/http";
 import { civilDayBounds, civilDayStamp } from "@/lib/scoring/civil-day";
-import { scoreFight } from "@/lib/scoring/score-fight";
-import { MAX_ACTIVITY_LOOKBACK_MS } from "@/lib/types/healthkit/healthkit-activity";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import {
     healthKitAggregateFightSchema,
-    healthKitAggregateMemberSchema,
     healthKitAggregateSourceSchema,
 } from "@/lib/types/healthkit/healthkit-aggregate-database";
 import type {
     HealthKitAggregateSync,
     HealthKitAggregateSyncResponse,
 } from "@/lib/types/healthkit/healthkit-aggregate";
-import { skipGraceNotificationsForMember } from "./notification-intents-supabase-query";
+import {
+    insertActivityRaw,
+    processActivity,
+    workoutPayload,
+} from "./activity-pipeline-supabase-query";
 
 export async function syncHealthKitAggregates(
     userId: string,
     input: HealthKitAggregateSync,
     database: Sql = createDatabaseClient(),
 ): Promise<HealthKitAggregateSyncResponse> {
-    const result = await database.begin("read write", async (sql) => {
+    const intake = await database.begin("read write", async (sql) => {
         const [sourceRow] = await sql`
             insert into public.data_sources (
                 user_id, provider, source_label, connection_route, capabilities,
@@ -110,7 +111,7 @@ export async function syncHealthKitAggregates(
         const fightsById = new Map(
             fights.map((fight) => [fight.fight_id, fight]),
         );
-        const aggregateFights = input.fight_aggregates.map((aggregate) => {
+        for (const aggregate of input.fight_aggregates) {
             const fight = fightsById.get(aggregate.fight_id);
             const expectedCutoff = fight
                 ? Math.min(
@@ -155,25 +156,7 @@ export async function syncHealthKitAggregates(
                     cursor = cutoff;
                 }
             }
-            return {
-                fight_id: aggregate.fight_id,
-                cutoff_at: aggregate.cutoff_at,
-                value: aggregate.steps,
-                step_checkpoints: aggregate.step_checkpoints ?? null,
-                // A later read can return to an earlier value at the same Fight-end cutoff.
-                input_hash: createHash("sha256")
-                    .update(
-                        JSON.stringify({
-                            ...aggregate,
-                            complete_through: input.complete_through,
-                        }),
-                    )
-                    .digest("hex"),
-                final_steps_complete:
-                    Date.parse(input.complete_through) >=
-                    Date.parse(fight.ends_at),
-            };
-        });
+        }
 
         for (const day of input.merged_days) {
             const overlapsSubmittedFight = fights.some(
@@ -194,324 +177,78 @@ export async function syncHealthKitAggregates(
             }
         }
 
-        if (input.merged_days.length > 0) {
-            const completeLocalDay = civilDayStamp(
-                new Date(input.complete_through),
-                input.time_zone,
-            );
-            const dayRows = input.merged_days.map((day) => ({
-                user_id: userId,
-                source_id: source.id,
-                metric: "steps",
-                day: day.day,
-                value: day.steps,
-                unit: "steps",
-                input_hash: createHash("sha256")
-                    .update(
-                        JSON.stringify({
-                            time_zone: input.time_zone,
-                            ...day,
-                        }),
-                    )
-                    .digest("hex"),
-                normalization_version: 1,
-                calculation_version: 1,
-                finalized_at:
-                    day.day < completeLocalDay
-                        ? new Date(input.complete_through)
-                        : null,
-            }));
-            await sql`
-                insert into public.metric_days ${sql(
-                    dayRows,
-                    "user_id",
-                    "source_id",
-                    "metric",
-                    "day",
-                    "value",
-                    "unit",
-                    "input_hash",
-                    "normalization_version",
-                    "calculation_version",
-                    "finalized_at",
-                )}
-                on conflict (user_id, source_id, metric, day) do update
-                set value = excluded.value,
-                    input_hash = excluded.input_hash,
-                    normalization_version = excluded.normalization_version,
-                    calculation_version = excluded.calculation_version,
-                    finalized_at = case
-                        when public.metric_days.finalized_at is not null then public.metric_days.finalized_at
-                        else excluded.finalized_at
-                    end,
-                    updated_at = now()
-                where public.metric_days.finalized_at is null
-            `;
-            await sql`
-                insert into public.step_days (user_id, day, steps, updated_at)
-                select user_id, day, value::integer, updated_at
-                from public.metric_days
-                where user_id = ${userId}
-                    and source_id = ${source.id}
-                    and metric = 'steps'
-                    and day = any(${sql.array(input.merged_days.map((day) => day.day))}::date[])
-                on conflict (user_id, day) do update
-                set steps = excluded.steps, updated_at = excluded.updated_at
-            `;
-        }
-
-        if (aggregateFights.length > 0) {
-            await sql`
-                insert into private.fight_score_snapshots (
-                    fight_id, user_id, source_id, cutoff_at, value,
-                    input_hash, calculation_version, is_final, created_at, step_checkpoints
-                )
-                select aggregate.fight_id, ${userId}, ${source.id}, aggregate.cutoff_at,
-                    aggregate.value, aggregate.input_hash, 1, false, clock_timestamp(), aggregate.step_checkpoints
-                from jsonb_to_recordset(${sql.json(aggregateFights)}::jsonb) as aggregate (
-                    fight_id uuid, cutoff_at timestamptz, value numeric, input_hash text, step_checkpoints jsonb
-                )
-                where true
-                on conflict (fight_id, user_id, cutoff_at, input_hash) do nothing
-            `;
-
-            // A separate statement sees the inserted snapshots, including replayed/corrected totals.
-            const updatedMembers = healthKitAggregateFightSchema
-                .pick({ fight_id: true })
-                .array()
-                .parse(
-                    await sql`
-                with latest as (
-                    select distinct on (fight_id) fight_id, value
-                    from private.fight_score_snapshots
-                    where fight_id = any(${sql.array(fightIds)}::uuid[])
-                        and user_id = ${userId}
-                        and source_id = ${source.id}
-                    order by fight_id, cutoff_at desc, created_at desc, id desc
-                )
-                update public.fight_members as member
-                set current_value = latest.value,
-                    selected_source_id = ${source.id},
-                    source_label = 'Apple Health',
-                    freshness = 'recent',
-                    last_synced_at = now(),
-                    final_steps_complete = member.final_steps_complete or aggregate.final_steps_complete,
-                    input_revision = case
-                        when member.current_value is distinct from latest.value
-                            or member.selected_source_id is distinct from ${source.id}
-                            or member.source_label is distinct from 'Apple Health'
-                            or member.freshness is distinct from 'recent'
-                        then coalesce(member.input_revision, 0) + 1
-                        else member.input_revision
-                    end
-                from latest
-                join jsonb_to_recordset(${sql.json(aggregateFights)}::jsonb) as aggregate (
-                    fight_id uuid, final_steps_complete boolean
-                ) on aggregate.fight_id = latest.fight_id
-                where member.fight_id = latest.fight_id
-                    and member.user_id = ${userId}
-                    and member.state = 'accepted'
-                    and member.finalized_at is null
-                returning member.fight_id
-            `,
-                );
-            if (updatedMembers.length !== fights.length) {
-                throw new ApiError(
-                    500,
-                    ERROR_CODES.db_error,
-                    "Could not save Fight aggregate",
-                );
-            }
-            for (const aggregate of aggregateFights) {
-                if (aggregate.final_steps_complete) {
-                    await skipGraceNotificationsForMember(
-                        sql,
-                        aggregate.fight_id,
-                        userId,
-                    );
-                }
-            }
-            const members = healthKitAggregateMemberSchema.array().parse(
-                await sql`
-                select fight_id, user_id, current_value::text, final_value::text, personal_target::text
-                from public.fight_members
-                where fight_id = any(${sql.array(fightIds)}::uuid[]) and state = 'accepted'
-                order by fight_id, user_id
-                for update
-            `,
-            );
-            const scores = fights.flatMap((fight) =>
-                scoreFight({
-                    outcomeRule: fight.outcome_rule,
-                    stakeMinor: fight.stake_minor,
-                    defaultGoalValue: fight.default_goal_value,
-                    members: members
-                        .filter((member) => member.fight_id === fight.fight_id)
-                        .map((member) => ({
-                            userId: member.user_id,
-                            value:
-                                member.current_value ?? member.final_value ?? 0,
-                            personalTarget: member.personal_target,
-                        })),
-                }).map((score) => ({
-                    fight_id: fight.fight_id,
-                    user_id: score.userId,
-                    rank: score.rank,
-                    outcome_minor: score.outcomeMinor,
+        const derivedMetrics: readonly string[] = workoutDayMetricValues;
+        return insertActivityRaw(sql, userId, source.id, input.complete_through, [
+            ...input.fight_aggregates.map((aggregate) => {
+                const zone =
+                    fightsById.get(aggregate.fight_id)?.time_zone ??
+                    input.time_zone;
+                return {
+                    record_kind: "total" as const,
+                    record_type: "steps",
+                    record_key: `fight:${aggregate.fight_id}`,
+                    starts_at: aggregate.starts_at,
+                    ends_at: aggregate.cutoff_at,
+                    time_zone: zone,
+                    payload: {
+                        fight_id: aggregate.fight_id,
+                        starts_at: new Date(aggregate.starts_at).toISOString(),
+                        ends_at: new Date(aggregate.ends_at).toISOString(),
+                        cutoff_at: new Date(aggregate.cutoff_at).toISOString(),
+                        time_zone: zone,
+                        steps: aggregate.steps,
+                        step_checkpoints: aggregate.step_checkpoints ?? null,
+                    },
+                };
+            }),
+            ...[
+                ...input.merged_days.map((day) => ({
+                    metric: "steps",
+                    day: day.day,
+                    starts_at: day.starts_at,
+                    ends_at: day.ends_at,
+                    value: day.steps,
+                    unit: "steps",
                 })),
-            );
-            if (scores.length > 0) {
-                await sql`
-                    update public.fight_members as member
-                    set rank = score.rank, outcome_minor = score.outcome_minor
-                    from jsonb_to_recordset(${sql.json(scores)}::jsonb) as score (
-                        fight_id uuid, user_id uuid, rank integer, outcome_minor integer
-                    )
-                    where member.fight_id = score.fight_id
-                        and member.user_id = score.user_id
-                        and member.finalized_at is null
-                `;
-            }
-        }
-
-        return {
-            complete_through: input.complete_through,
-            synced_days: input.merged_days.length,
-            synced_fights: input.fight_aggregates.length,
-            sourceId: source.id,
-        };
+                // Workout day totals are derived from workout records, never taken from a client sum.
+                ...(input.activity_days ?? []).filter(
+                    (day) => !derivedMetrics.includes(day.metric),
+                ),
+            ].map((day) => ({
+                record_kind: "total" as const,
+                record_type: day.metric,
+                record_key: `day:${day.day}`,
+                starts_at: day.starts_at,
+                ends_at: day.ends_at,
+                time_zone: input.time_zone,
+                payload: {
+                    metric: day.metric,
+                    day: day.day,
+                    starts_at: new Date(day.starts_at).toISOString(),
+                    ends_at: new Date(day.ends_at).toISOString(),
+                    time_zone: input.time_zone,
+                    value: day.value,
+                    unit: day.unit,
+                },
+            })),
+            // Installed builds send no deletions: a workout missing from their list is not deleted.
+            ...(input.workouts ?? []).map((workout) => ({
+                record_kind: "workout" as const,
+                record_type: "workout",
+                record_key: workout.healthkit_uuid,
+                starts_at: workout.started_at,
+                ends_at: workout.ended_at,
+                time_zone: input.time_zone,
+                payload: workoutPayload(workout),
+            })),
+        ]);
     });
 
-    if (
-        (input.activity_days && input.activity_days.length > 0) ||
-        input.workouts
-    ) {
-        try {
-            await database.begin("read write", async (sql) => {
-                await persistHealthKitExtras(
-                    sql,
-                    userId,
-                    result.sourceId,
-                    input,
-                );
-            });
-        } catch (error) {
-            // Extra movement is not a Fight score. A missing column or check must not
-            // roll back Steps that already committed.
-            console.error(
-                "fitfight_healthkit_extras_failed",
-                error instanceof Error ? error.name : "unknown",
-            );
-        }
-    }
-
     return {
-        complete_through: result.complete_through,
-        synced_days: result.synced_days,
-        synced_fights: result.synced_fights,
+        complete_through: input.complete_through,
+        synced_days: input.merged_days.length,
+        synced_fights: input.fight_aggregates.length,
+        // The activity import resolves its own backlog; a Steps upload waits only for its readings.
+        processing: await processActivity({ userId, rawIds: intake.ids }, database),
     };
-}
-
-async function persistHealthKitExtras(
-    sql: Sql,
-    userId: string,
-    sourceId: string,
-    input: HealthKitAggregateSync,
-): Promise<void> {
-    if (input.activity_days && input.activity_days.length > 0) {
-        const activityRows = input.activity_days.map((day) => ({
-            user_id: userId,
-            source_id: sourceId,
-            metric: day.metric,
-            day: day.day,
-            starts_at: day.starts_at,
-            ends_at: day.ends_at,
-            value: day.value,
-            unit: day.unit,
-        }));
-        await sql`
-            insert into private.healthkit_activity_days ${sql(
-                activityRows,
-                "user_id",
-                "source_id",
-                "metric",
-                "day",
-                "starts_at",
-                "ends_at",
-                "value",
-                "unit",
-            )}
-            on conflict (user_id, source_id, metric, day) do update
-            set starts_at = excluded.starts_at,
-                ends_at = excluded.ends_at,
-                value = excluded.value,
-                unit = excluded.unit,
-                updated_at = now()
-        `;
-    }
-
-    if (!input.workouts) {
-        return;
-    }
-    const lookback = new Date(
-        Date.parse(input.complete_through) - MAX_ACTIVITY_LOOKBACK_MS,
-    ).toISOString();
-    if (input.workouts.length > 0) {
-        const workoutRows = input.workouts.map((workout) => ({
-            user_id: userId,
-            source_id: sourceId,
-            healthkit_uuid: workout.healthkit_uuid,
-            started_at: workout.started_at,
-            ended_at: workout.ended_at,
-            activity_type: workout.activity_type,
-            duration_seconds: workout.duration_seconds,
-            active_minutes: workout.active_minutes ?? null,
-            distance_m: workout.distance_m ?? null,
-            energy_kcal: workout.energy_kcal ?? null,
-            effort: workout.effort ?? null,
-        }));
-        await sql`
-            insert into private.healthkit_workouts ${sql(
-                workoutRows,
-                "user_id",
-                "source_id",
-                "healthkit_uuid",
-                "started_at",
-                "ended_at",
-                "activity_type",
-                "duration_seconds",
-                "active_minutes",
-                "distance_m",
-                "energy_kcal",
-                "effort",
-            )}
-            on conflict (user_id, healthkit_uuid) do update
-            set source_id = excluded.source_id,
-                started_at = excluded.started_at,
-                ended_at = excluded.ended_at,
-                activity_type = excluded.activity_type,
-                duration_seconds = excluded.duration_seconds,
-                active_minutes = excluded.active_minutes,
-                distance_m = excluded.distance_m,
-                energy_kcal = excluded.energy_kcal,
-                effort = excluded.effort,
-                updated_at = now()
-        `;
-        await sql`
-            delete from private.healthkit_workouts
-            where user_id = ${userId}
-                and source_id = ${sourceId}
-                and started_at >= ${lookback}
-                and healthkit_uuid <> all(${sql.array(
-                    input.workouts.map((workout) => workout.healthkit_uuid),
-                )}::uuid[])
-        `;
-        return;
-    }
-    await sql`
-        delete from private.healthkit_workouts
-        where user_id = ${userId}
-            and source_id = ${sourceId}
-            and started_at >= ${lookback}
-    `;
 }

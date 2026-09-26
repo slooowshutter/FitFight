@@ -1,3 +1,4 @@
+import { createFightSchema } from "@/lib/types/fights/create-fight";
 import {
     ApiError,
     ERROR_CODES,
@@ -7,10 +8,9 @@ import {
     readJson,
 } from "@/lib/http";
 import { verifyUser } from "@/lib/supabase/queries/auth-supabase-query";
-import {
-    createFight,
-    createFightSchema,
-} from "@/lib/supabase/queries/create-fight-supabase-query";
+import { createFight } from "@/lib/supabase/queries/create-fight-supabase-query";
+import { createDatabaseClient } from "@/lib/supabase/postgres";
+import { processNotificationOutboxAfterResponse } from "@/lib/notifications/process-notification-outbox-after-response";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,10 +28,10 @@ export const POST = apiRoute(async (request) => {
         );
     }
     const body = createFightSchema.parse(await readJson(request));
-    const fight = await createFight(userId, body);
+    const sql = createDatabaseClient();
+    const fight = await createFight(userId, body, sql);
+    processNotificationOutboxAfterResponse();
     return json(fight, 201);
 });
 
-export function OPTIONS(request: Request) {
-    return corsPreflight(request);
-}
+export const OPTIONS = corsPreflight;

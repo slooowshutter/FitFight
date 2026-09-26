@@ -50,6 +50,7 @@ export const healthKitSyncStageValues = [
     "healthkit_fight",
     "healthkit_activity",
     "upload",
+    "activity_upload",
     "fights_refresh",
 ] as const;
 

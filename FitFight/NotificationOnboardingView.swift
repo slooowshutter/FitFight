@@ -1,79 +1,51 @@
 import SwiftUI
 
-/// First-run notification ask, after Apple Health. Pre-prompt before iPhone’s sheet.
 struct NotificationOnboardingView: View {
-    var skipsIfAlreadyDetermined: Bool = true
-    var onFinished: (() -> Void)? = nil
-
-    @EnvironmentObject private var session: SessionStore
+    let animal: StockCompanion
+    @Binding var busy: Bool
+    let onFinished: () -> Void
     @EnvironmentObject private var push: PushNotificationService
     @Environment(\.ffTheme) private var theme
 
-    @State private var isAsking = false
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Spacer(minLength: 24)
-            Text("Challenge reminders")
-                .ffType(.title)
-                .foregroundStyle(theme.text)
-            Text("FitFight will send challenge reminders. Lock-screen alerts never include step counts.")
-                .ffType(.body)
-                .foregroundStyle(theme.textSecondary)
-                .lineSpacing(3)
-                .padding(.top, 10)
-            FFScreenCTA(
-                title: String(localized: "Continue"),
-                enabled: !isAsking,
-                busy: isAsking
-            ) {
-                Task { await allow() }
+        OnboardingPage {
+            OnboardingHeading(title: String(appLocalized: "onboarding.reminders.title", defaultValue: "A nudge when\nit matters."))
+            FFCard {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "bell").foregroundStyle(theme.emberText)
+                        Text("FitFight").font(.ff(14, 800))
+                        Spacer()
+                        Text(String(appLocalized: "now")).ffType(.caption).foregroundStyle(theme.textSecondary)
+                    }
+                    Text(String(appLocalized: "Your Fight is finishing soon")).font(.ff(16, 800))
+                    Text(String(appLocalized: "Open FitFight to sync your latest steps."))
+                        .ffType(.body).foregroundStyle(theme.textSecondary)
+                }
             }
-            .padding(.top, 28)
-            Button {
-                skip()
-            } label: {
-                Text("Not now")
-                    .ffType(.label)
-                    .foregroundStyle(theme.textSecondary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 16)
+            .modifier(OnboardingEntrance(order: 1))
+            OnboardingSpeech(animal: animal, text: String(appLocalized: "Make that last walk count."))
+        } actions: {
+            FFScreenCTA(title: String(appLocalized: "Turn on reminders"), enabled: !busy, busy: busy) {
+                Task {
+                    guard !busy else { return }
+                    busy = true
+                    defer { busy = false }
+                    await push.requestSystemPermission()
+                    guard !Task.isCancelled else { return }
+                    push.markPromptHandledThisSession()
+                    onFinished()
+                }
             }
-            .buttonStyle(FFHapticPlainStyle())
-            .disabled(isAsking)
-            Spacer(minLength: 24)
+            OnboardingSkip(title: String(appLocalized: "Not now")) {
+                push.markPromptHandledThisSession()
+                onFinished()
+            }
+            .disabled(busy)
         }
-        .padding(.horizontal, theme.space.screenPadding)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .background(theme.bg)
         .task {
             await push.refreshAuthorizationStatus()
-            guard skipsIfAlreadyDetermined else { return }
-            if push.permissionStatus != .notDetermined {
-                push.markPromptHandledThisSession()
-                if push.permissionStatus == .authorized {
-                    await push.registerIfAuthorized()
-                }
-                finish()
-            }
+            await push.registerIfAuthorized()
         }
-    }
-
-    private func allow() async {
-        isAsking = true
-        defer { isAsking = false }
-        await push.requestSystemPermission()
-        finish()
-    }
-
-    private func skip() {
-        push.declinePrePrompt()
-        finish()
-    }
-
-    private func finish() {
-        push.markPromptHandledThisSession()
-        session.finishNotificationOnboarding()
-        onFinished?()
     }
 }

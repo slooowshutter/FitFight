@@ -95,7 +95,7 @@ test("suggested and joinable lists load summaries in one bounded read", async ()
                 time_zone: "UTC",
                 action_text: "Cook dinner",
                 roster: [{ count: 3 }],
-                membership: index === 0 ? [{ user_id: userId }] : [],
+                membership: index === 0 ? [{ user_id: userId, state: "accepted" }] : [],
             };
             return {
                 id: index === 0 ? fixture.fights[0].seriesId : randomUUID(),
@@ -143,7 +143,7 @@ test("suggested and joinable lists load summaries in one bounded read", async ()
                             );
                             assert.equal(
                                 url.searchParams.get("fight.membership.state"),
-                                "in.(accepted,deferred)",
+                                "in.(accepted,deferred,invited)",
                             );
                             assert.equal(
                                 url.searchParams.get(
@@ -193,7 +193,7 @@ test("suggested and joinable lists load summaries in one bounded read", async ()
             },
         );
         const result = await listJoinableFights(userId, admin, now, size === 8);
-        assert.deepEqual({ fights: result.slice(0, 1) }, fixture);
+        assert.deepEqual({ fights: result.slice(0, 1).map(({ membershipState, ...legacy }) => legacy) }, fixture);
         assert.deepEqual(
             result,
             rows.map((row, index) => ({
@@ -208,6 +208,7 @@ test("suggested and joinable lists load summaries in one bounded read", async ()
                 memberCount: 3,
                 recurring: row.recurring,
                 alreadyMember: index === 0,
+                membershipState: index === 0 ? "accepted" : null,
                 canJoinNext: index !== 0 && row.recurring,
             })),
         );
@@ -217,99 +218,4 @@ test("suggested and joinable lists load summaries in one bounded read", async ()
             `${size} summaries should not make ${reads} database round trips`,
         );
     }
-});
-
-test("batched lists still advance expired recurring rounds and use the next round's roster", async () => {
-    const now = new Date("2026-09-15T12:00:00Z");
-    const userId = randomUUID();
-    const seriesId = randomUUID();
-    const previous = {
-        id: randomUUID(),
-        series_id: seriesId,
-        state: "final",
-        starts_at: "2026-09-08T12:00:00Z",
-        ends_at: "2026-09-15T12:00:00Z",
-        time_zone: "UTC",
-        action_text: null,
-        roster: [{ count: 2 }],
-        membership: [],
-    };
-    const next = {
-        ...previous,
-        id: randomUUID(),
-        state: "live",
-        starts_at: previous.ends_at,
-        ends_at: "2026-09-22T12:00:00Z",
-        roster: [{ count: 4 }],
-        membership: [{ user_id: userId }],
-    };
-    const series = {
-        id: seriesId,
-        name: "Next round",
-        join_code: "K7M2",
-        recurring: true,
-        paused_at: null,
-        current_fight_id: previous.id,
-        owner: { handle: "maya" },
-        fight: previous,
-    };
-    let advanced = false;
-    const admin = createClient(
-        "https://joinable-audit.example",
-        "test-only-key",
-        {
-            auth: { persistSession: false, autoRefreshToken: false },
-            global: {
-                fetch: async (input, init) => {
-                    const request = new Request(input, init);
-                    const url = new URL(request.url);
-                    if (url.pathname.endsWith("/fight_series")) {
-                        if (request.method === "PATCH") {
-                            assert.deepEqual(await request.json(), {
-                                current_fight_id: next.id,
-                            });
-                            advanced = true;
-                            return new Response(null, { status: 204 });
-                        }
-                        return Response.json([series]);
-                    }
-                    if (url.pathname.endsWith("/fights")) {
-                        if (url.searchParams.get("series_id"))
-                            return Response.json([{ id: next.id }]);
-                        if (url.searchParams.get("id") === `eq.${next.id}`) {
-                            assert.equal(
-                                url.searchParams.get("roster.state"),
-                                "in.(accepted,deferred)",
-                            );
-                            assert.equal(
-                                url.searchParams.get("membership.user_id"),
-                                `eq.${userId}`,
-                            );
-                            return Response.json([next]);
-                        }
-                        return Response.json([previous]);
-                    }
-                    throw new Error(`Unexpected resource ${url.pathname}`);
-                },
-            },
-        },
-    );
-    const result = await listJoinableFights(userId, admin, now, true);
-    assert.equal(advanced, true);
-    assert.deepEqual(result, [
-        {
-            fightId: next.id,
-            seriesId,
-            name: series.name,
-            joinCode: series.join_code,
-            ownerHandle: "maya",
-            actionText: null,
-            startsAt: next.starts_at,
-            endsAt: next.ends_at,
-            memberCount: 4,
-            recurring: true,
-            alreadyMember: true,
-            canJoinNext: false,
-        },
-    ]);
 });

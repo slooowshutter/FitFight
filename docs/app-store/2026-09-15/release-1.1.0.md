@@ -1,11 +1,19 @@
-# FitFight release preparation: now 1.1.1
+# FitFight release: 1.1.1 submitted
 
-On 15 September 2026, Marc authorized the release PR, preview promotion, and
-App Store listing preparation. At 22:22 UTC he also authorized implementing and
-rehearsing the data transfer. Main promotion and the live production import
-remain on hold.
+Marc authorized the complete production rollout and App Store submission.
+Production **1.1.1 (202)** was submitted at 01:42 Paris time on 16 September 2026.
+Apple confirms **Waiting for Review**, with manual release enabled.
 
-The latest merged fixes select **1.1.1**. Earlier 1.1.0 preparation below is historical; refresh the draft and screenshots for the final 1.1.1 candidate.
+Main is released at `e2783be` through #247. All 40 production migrations are applied,
+the production API and English/French policy pages are live, and the beta import
+is verified: 24 accounts, 36 Fights, 88 memberships, and 52 media files. The fresh
+backup and private import checkpoint are retained; temporary transfer access is
+removed. All twelve screenshots and the privacy disclosures are saved.
+
+See [current production evidence](../../status.md#production-rollout-and-app-store-submission-16-sep-2026).
+The preparation notes below are historical. Before the manual public release,
+repeat the beta catch-up and verify Apple sign-in and Health on the installed
+production binary.
 
 ## Prepared code and listing
 

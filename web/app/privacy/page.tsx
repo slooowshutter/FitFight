@@ -27,7 +27,7 @@ export default function PrivacyPage() {
             <article className="legal-content">
                 <p className="eyebrow">YOUR DATA, IN PLAIN LANGUAGE</p>
                 <h1>Privacy Policy</h1>
-                <p className="legal-updated">Effective 15 September 2026</p>
+                <p className="legal-updated">Effective 23 September 2026</p>
                 <p className="legal-intro">
                     FitFight lets named participants compete on who records the
                     most Steps during a private Fight. This policy explains the
@@ -39,14 +39,14 @@ export default function PrivacyPage() {
                     <h2>Data we collect</h2>
                     <ul>
                         <li>
-                            <strong>Account data:</strong> your Sign in with
-                            Apple identifier, email address (which may be an
-                            Apple private relay address), name when Apple
-                            supplies it, your FitFight username, chosen
-                            companion and optional custom description, and an
-                            encrypted server-only Apple credential used to
-                            disconnect Sign in with Apple when you delete your
-                            account.
+                            <strong>Account data:</strong> your Apple or Google
+                            account identifier, email address (which may be an
+                            Apple private relay address), name and profile image
+                            when your sign-in provider supplies them, your
+                            FitFight username, chosen companion and optional
+                            custom description, and an encrypted server-only
+                            Apple credential used to disconnect Sign in with
+                            Apple when you delete your account.
                         </li>
                         <li>
                             <strong>Referrals:</strong> a random sharing code
@@ -66,12 +66,14 @@ export default function PrivacyPage() {
                         <li>
                             <strong>Apple Health:</strong> with your permission,
                             FitFight reads Step Count and other movement types
-                            (active and resting energy, distance, exercise,
-                            stand, flights, and workouts). Steps fights still
-                            send the merged step total for each exact Fight
-                            window plus the relevant daily step totals used by
-                            Fight charts. Other activity totals stay on your
-                            account and are not shown to other participants.
+                            (energy, distance, exercise, stand, flights, and
+                            workouts). It uploads Apple-merged daily totals
+                            across the history you allow FitFight to read,
+                            exact Fight-window Steps totals and chart
+                            checkpoints, workout summaries, and explicit
+                            workout deletion IDs. Only Steps score current
+                            Fights. Other activity stays private to your
+                            account.
                         </li>
                         <li>
                             <strong>Photos, videos, and posts:</strong> your
@@ -117,15 +119,16 @@ export default function PrivacyPage() {
                 <section>
                     <h2>Apple Health</h2>
                     <p>
-                        Apple Health access is read-only. FitFight does not
-                        write to Apple Health. The current app does not send raw
-                        Health samples, GPS routes, heart rate, or device and
-                        source metadata. It may send merged daily activity
-                        totals and workout summaries (type, time, optional
-                        active minutes, distance, energy, and effort) so
-                        FitFight can prepare later challenge types. Those extra
-                        readings are not used to score today&apos;s Steps fights
-                        and are not shown to other people.
+                        Apple Health access is read-only. FitFight uploads the
+                        supported individual activity samples you allow, with
+                        their HealthKit IDs, times, values, units, source name,
+                        source app identifier, source version, device model when
+                        available, and selected sync identifiers. It also stores
+                        merged daily totals, workout summaries, and explicit
+                        record deletions. FitFight does not read GPS routes or
+                        heart rate. Sync checkpoints stay on your phone. Raw
+                        samples are private and never added to Apple&apos;s
+                        merged Steps score or shown to Fight participants.
                     </p>
                     <p>
                         Participants in the same private Fight can see each
@@ -133,7 +136,113 @@ export default function PrivacyPage() {
                         Fight, relevant daily Steps totals shown in the Fight
                         chart, rank, Fight title, Fight action, and duration.
                         They never receive another participant&apos;s raw Apple
-                        Health samples or unrelated Health history.
+                        Health samples. Daily Steps beyond the Fight are shared
+                        only through the separate choices described below.
+                    </p>
+                </section>
+
+                <section id="profiles">
+                    <h2>Profiles, Friends, and optional sharing</h2>
+                    <p>
+                        Profiles start Private and Casual. Your name, username,
+                        photo and selected companion identify you in the app.
+                        Friendships require the other person to accept. We keep
+                        requests, accepted friendships, blocks and reports to
+                        provide these features and respond to abuse.
+                    </p>
+                    <p>
+                        Competitive shows your Fight record and eligible
+                        head-to-head results. Private limits the shared profile
+                        to accepted friends and current Fight opponents. Public
+                        allows signed-in FitFight users to see what you share.
+                        Turning Competitive off hides profile statistics without
+                        changing Fight results. A past opponent keeps the shared
+                        Fight result, not ongoing access to your private
+                        profile. Private Fight titles, actions, posts and other
+                        members are not revealed through a public profile.
+                    </p>
+                    <p>
+                        Daily Steps sharing is off by default. In You → Edit
+                        profile, you may separately choose friends, friends and
+                        current opponents, or all signed-in users for a Public
+                        profile, and a period of 7 or 30 days. This uses stored
+                        daily Steps, including each available day&apos;s time
+                        zone, freshness and completeness. Missing days are not
+                        treated as zero. It does not expand Apple Health
+                        collection or share other activity types. You can
+                        preview the audience and withdraw sharing at any time.
+                        Changing to Private disables public daily Steps sharing.
+                    </p>
+                    <p>
+                        Removing a friend or blocking a person removes the
+                        corresponding profile access on subsequent requests.
+                        Joining a suggested public Fight is optional and does
+                        not enable profile or daily-history sharing. Existing
+                        participants still see the data shared within that
+                        Fight. Copies someone already viewed or captured cannot
+                        be recalled.
+                    </p>
+                </section>
+
+                <section>
+                    <h2>Profile measurement and pair artwork</h2>
+                    <p>
+                        When profile measurement is enabled, FitFight records
+                        successful profile opens using the viewer and target
+                        account identifiers, entry point, a random event
+                        identifier and server time. Self-views, private lock
+                        screens and duplicate event submissions are excluded.
+                        Repeat visits qualify at most once per 30 minutes in
+                        each direction. We also record friendship requests,
+                        acceptances and shared Fight participation, attributing
+                        them to the most recent profile visit in the preceding
+                        seven days.
+                    </p>
+                    <p>
+                        These internal measurements help assess whether profiles
+                        lead to connections. Users do not receive named visitor
+                        lists or visit counts. Events contain no Health values,
+                        photos or companion descriptions. Raw events are deleted
+                        after 30 days by a daily cleanup, including for inactive
+                        accounts, and when either account is deleted. Exact
+                        username lookup attempts expire after one hour and are
+                        used to limit abuse. Only aggregate measurement reports
+                        are available to the FitFight operator. Anonymous event
+                        totals are retained after the identifiable events
+                        expire.
+                    </p>
+                    <p>
+                        Pair artwork generation is currently unavailable. No
+                        companion inputs are sent to an image-generation
+                        provider. Before enabling it, we will identify the
+                        provider, explain the inputs and obtain the
+                        participants&apos; specific permission. Profile sharing
+                        and Apple Health authorization do not grant permission
+                        for external image processing.
+                    </p>
+                </section>
+
+                <section>
+                    <h2>Special companion purchases</h2>
+                    <p>
+                        Apple processes payments for Specials. FitFight does not
+                        receive your card or bank details. We send Apple a
+                        random purchase account identifier and keep verified
+                        transaction identifiers, the purchased Special, purchase
+                        time, price and currency when provided, and ownership,
+                        refund and reservation status. These records let us
+                        deliver and restore purchases and prevent the same
+                        exclusive companion from being sold twice.
+                    </p>
+                    <p>
+                        A purchase belongs to the FitFight account used at
+                        checkout. Switching companions does not release it.
+                        Deleting that account does not request a refund from
+                        Apple. We remove the link to the deleted profile and
+                        retain the purchase record and retired artwork status
+                        for purchase reconciliation, recovery and disputes.
+                        Contact support for recovery or a review of retained
+                        purchase data. Refund decisions are made by Apple.
                     </p>
                 </section>
 
@@ -243,8 +352,8 @@ export default function PrivacyPage() {
                         <strong>You → Settings → Delete account</strong>. You do
                         not need to contact support. Deletion removes your
                         profile, username, uploaded photos, videos, files, Fight
-                        posts and comments, uploaded Apple Health Fight, daily,
-                        and activity totals and workout summaries, legacy
+                        posts and comments, uploaded Apple Health Fight and
+                        daily totals, individual samples, workout summaries,
                         friendships, invitations, Fight memberships, scores,
                         bugs and feature requests you posted, and every Fight
                         you created. It also removes your participation from
@@ -264,7 +373,11 @@ export default function PrivacyPage() {
                         If automatic revocation is unavailable, the app tells
                         you how to disconnect FitFight in Apple settings.
                         Deletion does not remove information stored in Apple
-                        Health or delete your Apple ID.
+                        Health or delete your Apple ID or Google account. For
+                        Google sign-in, the app also attempts to revoke its
+                        locally saved Google authorization. You can remove
+                        FitFight access in your Google Account&apos;s
+                        third-party connections settings.
                     </p>
                 </section>
 

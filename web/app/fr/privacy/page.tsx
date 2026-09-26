@@ -30,7 +30,7 @@ export default function PrivacyPage() {
             <article className="legal-content">
                 <p className="eyebrow">VOS DONNÉES, EN TOUTE CLARTÉ</p>
                 <h1>Politique de confidentialité</h1>
-                <p className="legal-updated">En vigueur le 15 septembre 2026</p>
+                <p className="legal-updated">En vigueur le 23 septembre 2026</p>
                 <p className="legal-intro">
                     FitFight permet à des participants identifiés de comparer le
                     nombre de pas enregistrés pendant un défi privé. Cette
@@ -68,13 +68,16 @@ export default function PrivacyPage() {
                         </li>
                         <li>
                             <strong>Santé d’Apple :</strong> avec votre
-                            autorisation, FitFight lit les pas, l’énergie active
-                            et au repos, les distances, l’exercice, les périodes
-                            debout, les étages montés et les entraînements. Les
-                            défis de pas envoient le total fusionné pour leur
-                            période exacte et les totaux quotidiens nécessaires
-                            aux graphiques. Les autres mesures restent privées
-                            sur votre compte.
+                            autorisation, FitFight lit les pas et d’autres
+                            activités (énergie, distances, exercice, périodes
+                            debout, étages montés et entraînements). L’app
+                            transmet les totaux quotidiens fusionnés de
+                            l’historique auquel vous lui donnez accès, les
+                            totaux de pas et points du graphique des défis,
+                            les résumés d’entraînement et les identifiants
+                            des entraînements supprimés. Seuls les pas
+                            comptent pour les défis actuels. Les autres
+                            activités restent privées sur votre compte.
                         </li>
                         <li>
                             <strong>Photos, vidéos et publications :</strong>{" "}
@@ -125,23 +128,136 @@ export default function PrivacyPage() {
                     <h2>Santé d’Apple</h2>
                     <p>
                         L’accès à Santé d’Apple est en lecture seule. FitFight
-                        n’écrit aucune donnée dans Santé d’Apple et n’envoie pas
-                        les échantillons bruts, itinéraires GPS, fréquences
-                        cardiaques ni métadonnées d’appareil ou de source. L’app
-                        peut envoyer des totaux d’activité quotidiens et des
-                        résumés d’entraînement : type, horaires, minutes actives
-                        lorsqu’elles sont disponibles, distance, énergie et
-                        effort. Ces mesures préparent de futurs types de défis,
-                        sans compter pour les défis de pas actuels ni être
-                        montrées aux autres participants.
+                        envoie les échantillons individuels autorisés avec leur
+                        identifiant Santé, leurs horaires, valeurs, unités, nom
+                        et identifiant de l’app source, version de la source,
+                        modèle d’appareil si disponible et certains identifiants
+                        de synchronisation. L’app conserve aussi les totaux
+                        quotidiens fusionnés, les résumés d’entraînement et les
+                        suppressions explicites. FitFight ne lit ni itinéraires
+                        GPS ni fréquences cardiaques. Les points de reprise
+                        restent sur votre téléphone. Les échantillons bruts
+                        restent privés et ne sont jamais ajoutés au score de
+                        pas fusionné par Apple ni montrés aux participants.
                     </p>
                     <p>
                         Les participants d’un même défi privé peuvent voir les
                         noms d’utilisateur, le total agrégé de pas du défi, les
                         totaux quotidiens affichés dans le graphique, le
                         classement, le gage et la durée. Ils ne reçoivent jamais
-                        les échantillons Santé bruts ni l’historique Santé sans
-                        rapport avec le défi d’un autre participant.
+                        les échantillons Santé bruts. Les pas quotidiens hors du
+                        Fight ne sont partagés qu’avec les réglages séparés
+                        décrits ci-dessous.
+                    </p>
+                </section>
+
+                <section id="profiles">
+                    <h2>Profils, amis et partage facultatif</h2>
+                    <p>
+                        Les profils sont privés et en mode détente par défaut.
+                        Votre nom, pseudo, photo et compagnon vous identifient
+                        dans l’app. Une amitié nécessite l’acceptation de l’autre
+                        personne. Nous conservons les demandes, amitiés, blocages
+                        et signalements pour fournir ces fonctions et traiter les abus.
+                    </p>
+                    <p>
+                        Le mode Compétitif affiche vos résultats et les duels
+                        admissibles. Un profil privé les réserve aux amis acceptés
+                        et aux adversaires d’un Fight en cours. Un profil public
+                        les partage avec les utilisateurs FitFight connectés.
+                        Désactiver Compétitif masque ces statistiques sans modifier
+                        les résultats. Un ancien adversaire conserve le résultat
+                        du Fight commun, sans accès permanent au profil privé.
+                        Un profil public ne révèle pas les titres, gages,
+                        publications ou autres membres des Fights privés.
+                    </p>
+                    <p>
+                        Le partage des pas quotidiens est désactivé par défaut.
+                        Dans Vous → Modifier le profil, vous pouvez choisir
+                        séparément les amis, les amis et adversaires actuels, ou tous les
+                        utilisateurs connectés avec un profil public, sur 7 ou
+                        30 jours. Ce partage utilise les pas déjà enregistrés,
+                        leur fuseau horaire lorsqu’il est disponible, leur date
+                        de mise à jour et leur complétude. Une journée absente
+                        n’est pas un zéro. Il n’étend ni la collecte Santé ni le
+                        partage aux autres types d’activité. Vous pouvez vérifier
+                        l’aperçu et retirer le partage à tout moment. Passer en
+                        privé désactive le partage public des pas quotidiens.
+                    </p>
+                    <p>
+                        Retirer un ami ou bloquer une personne supprime les accès
+                        correspondants lors des requêtes suivantes. Rejoindre un
+                        Fight public suggéré reste facultatif et n’active pas le
+                        partage du profil ou des journées. Les participants voient
+                        toujours les données partagées dans ce Fight. Les copies
+                        déjà vues ou capturées ne peuvent pas être rappelées.
+                    </p>
+                </section>
+
+                <section>
+                    <h2>Mesure des profils et illustrations de rivalité</h2>
+                    <p>
+                        Lorsque cette mesure est activée, FitFight enregistre les
+                        ouvertures réussies avec les identifiants des deux comptes,
+                        le point d’entrée, un identifiant d’événement aléatoire et
+                        l’heure du serveur. Les visites de son propre profil, les
+                        écrans privés verrouillés et les envois répétés du même
+                        événement sont exclus. Une visite répétée est qualifiée
+                        au maximum toutes les 30 minutes dans chaque sens. Les
+                        demandes d’amitié, acceptations et participations communes
+                        sont aussi enregistrées et attribuées à la dernière visite
+                        du profil dans les sept jours précédents.
+                    </p>
+                    <p>
+                        Ces mesures internes servent à comprendre les rencontres
+                        permises par les profils. Les utilisateurs ne reçoivent
+                        ni liste nominative de visiteurs ni compteur de visites.
+                        Ces événements ne contiennent ni valeurs Santé, ni photos,
+                        ni descriptions de compagnons. Un nettoyage quotidien
+                        supprime les événements de plus de 30 jours, même pour
+                        les comptes inactifs. La suppression de l’un des comptes
+                        efface les événements associés. Les tentatives de recherche
+                        de pseudo expirent après une heure et limitent les abus.
+                        Seuls des rapports agrégés sont accessibles à l’opérateur.
+                    </p>
+                    <p>
+                        Des totaux anonymes sont conservés après la suppression
+                        des événements identifiants.
+                    </p>
+                    <p>
+                        La génération d’illustrations de rivalité est indisponible.
+                        Aucun compagnon n’est envoyé à un fournisseur de génération
+                        d’images. Avant son activation, nous nommerons le fournisseur,
+                        expliquerons les données transmises et demanderons une
+                        autorisation spécifique aux deux participants. Le partage
+                        du profil et l’autorisation Santé ne permettent pas ce
+                        traitement externe.
+                    </p>
+                </section>
+
+                <section>
+                    <h2>Achats de compagnons Spéciaux</h2>
+                    <p>
+                        Apple traite les paiements des Spéciaux. FitFight ne
+                        reçoit pas vos coordonnées bancaires. Nous transmettons
+                        à Apple un identifiant d’achat aléatoire et conservons
+                        les identifiants de transaction vérifiés, le Spécial
+                        acheté, la date, le prix et la devise lorsqu’ils sont
+                        fournis, ainsi que l’état de propriété, de remboursement
+                        et de réservation. Ces données permettent de livrer et
+                        de restaurer les achats, et d’éviter de vendre deux fois
+                        le même compagnon exclusif.
+                    </p>
+                    <p>
+                        L’achat appartient au compte FitFight utilisé lors du
+                        paiement. Changer de compagnon ne le libère pas.
+                        Supprimer ce compte ne demande pas de remboursement à
+                        Apple. Nous supprimons le lien vers le profil supprimé
+                        et conservons le suivi de l’achat et de l’illustration
+                        retirée de la vente pour les vérifications, la
+                        récupération et les litiges. Contactez l’assistance pour
+                        récupérer un achat ou demander un examen des données
+                        conservées. Apple décide des remboursements.
                     </p>
                 </section>
 
@@ -269,8 +385,9 @@ export default function PrivacyPage() {
                         sans contacter l’assistance. La suppression efface votre
                         profil et votre nom d’utilisateur, les photos, vidéos et
                         fichiers envoyés, les publications et commentaires, les
-                        totaux de pas et d’activité et les résumés
-                        d’entraînement, les anciennes relations d’amitié, les
+                        totaux de pas et d’activité, les échantillons
+                        individuels et les résumés d’entraînement, les
+                        relations d’amitié, les
                         invitations, participations et scores, les bugs et
                         demandes que vous avez publiés, ainsi que tous les défis
                         que vous avez créés. Elle vous retire également des

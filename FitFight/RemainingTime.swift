@@ -50,31 +50,31 @@ enum RemainingTime {
         var labels: [String] = []
         if parts.months > 0 {
             labels.append(
-                String(localized: "duration.months", defaultValue: "\(parts.months) months")
+                String(appLocalized: "duration.months", defaultValue: "\(parts.months) months")
             )
         }
         if parts.weeks > 0 {
             labels.append(
-                String(localized: "duration.weeks", defaultValue: "\(parts.weeks) weeks")
+                String(appLocalized: "duration.weeks", defaultValue: "\(parts.weeks) weeks")
             )
         }
         if parts.days > 0 {
             labels.append(
-                String(localized: "duration.days", defaultValue: "\(parts.days) days")
+                String(appLocalized: "duration.days", defaultValue: "\(parts.days) days")
             )
         }
         if parts.hours > 0 {
             labels.append(
-                String(localized: "duration.hours", defaultValue: "\(parts.hours) hours")
+                String(appLocalized: "duration.hours", defaultValue: "\(parts.hours) hours")
             )
         }
         if parts.minutes > 0 {
             labels.append(
-                String(localized: "duration.minutes", defaultValue: "\(parts.minutes) minutes")
+                String(appLocalized: "duration.minutes", defaultValue: "\(parts.minutes) minutes")
             )
         }
         let list = ListFormatter()
-        list.locale = calendar.locale
+        list.locale = AppLocalization.locale
         return list.string(from: labels) ?? labels.joined(separator: ", ")
     }
 }

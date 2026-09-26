@@ -17,6 +17,7 @@ struct EditFightView: View {
     @State private var customSchedule: Bool
     @State private var customStart: Date
     @State private var customEnd: Date
+    @State private var timeZone: TimeZone
     @State private var people: [FightComposerPerson]
     @State private var username = ""
     @State private var usernameError: String?
@@ -27,6 +28,7 @@ struct EditFightView: View {
 
     init(fight: Fight) {
         self.fight = fight
+        _timeZone = State(initialValue: fight.timeZone.flatMap(TimeZone.init(identifier:)) ?? .current)
         let stored = fight.name.trimmingCharacters(in: .whitespacesAndNewlines)
         _fightTitle = State(initialValue: stored == "Steps Fight" || stored == "Défi de pas" ? "" : stored)
         _actionText = State(initialValue: fight.actionText)
@@ -44,7 +46,6 @@ struct EditFightView: View {
                 id: row.person.id,
                 handle: SessionStore.strippedHandle(row.person.handle),
                 name: row.person.name,
-                photoURL: row.person.photoURL,
                 isOwner: row.person.id == ownerID || (row.person.isYou && fight.inviter?.isYou == true),
                 invited: row.invited,
                 deferred: row.deferred,
@@ -65,12 +66,12 @@ struct EditFightView: View {
 
     private var scheduleError: String? {
         let startsAt = durationStart
-        let endsAt = customSchedule ? customEnd : FightComposer.endDate(from: startsAt, days: durationDays)
+        let endsAt = customSchedule ? customEnd : FightComposer.endDate(from: startsAt, days: durationDays, timeZone: timeZone)
         if canEditStart, customSchedule, customStart <= Date() {
-            return String(localized: "Choose a start time in the future.")
+            return String(appLocalized: "Choose a start time in the future.")
         }
-        if endsAt <= startsAt { return String(localized: "The end must be after the start.") }
-        if endsAt <= Date() { return String(localized: "The end must be in the future.") }
+        if endsAt <= startsAt { return String(appLocalized: "The end must be after the start.") }
+        if endsAt <= Date() { return String(appLocalized: "The end must be in the future.") }
         return nil
     }
 
@@ -91,30 +92,30 @@ struct EditFightView: View {
             flowAction
         }
         .confirmationDialog(
-            String(localized: "Delete fight?"),
+            String(appLocalized: "Delete fight?"),
             isPresented: $confirmDelete,
             titleVisibility: .visible
         ) {
-            Button(String(localized: "Delete"), role: .destructive) {
+            Button(String(appLocalized: "Delete"), role: .destructive) {
                 Task { await deleteFight() }
             }
-            Button(String(localized: "Cancel"), role: .cancel) {}
+            Button(String(appLocalized: "Cancel"), role: .cancel) {}
         } message: {
-            Text(String(localized: "This ends the fight for everyone in it. If it repeats, the next windows stop too. This can’t be undone."))
+            Text(String(appLocalized: "This ends the fight for everyone in it. If it repeats, the next windows stop too. This can’t be undone."))
         }
     }
 
     private var header: some View {
         VStack(spacing: 0) {
             ZStack {
-                Text(String(localized: "Edit fight"))
+                Text(String(appLocalized: "Edit fight"))
                     .ffType(.rowTitle)
                     .foregroundStyle(theme.text)
                 HStack {
                     FFNavGlyph(systemName: "xmark") { dismiss() }
                     Spacer()
                     if step != .review {
-                        Button(String(localized: "Done")) { returnToSummary() }
+                        Button(String(appLocalized: "Done")) { returnToSummary() }
                             .ffType(.label)
                             .foregroundStyle(theme.mossText)
                             .buttonStyle(FFHapticPlainStyle())
@@ -122,6 +123,7 @@ struct EditFightView: View {
                 }
             }
             .padding(.horizontal, theme.space.screenPadding)
+            .padding(.top, theme.space.base)
         }
         .background(theme.bg)
     }
@@ -138,6 +140,7 @@ struct EditFightView: View {
                 customStart: $customStart,
                 customEnd: $customEnd,
                 recurring: $recurring,
+                timeZone: $timeZone,
                 canEditStart: canEditStart,
                 startsImmediately: false,
                 constrainEnd: true,
@@ -171,8 +174,9 @@ struct EditFightView: View {
                 customEnd: customEnd,
                 durationStart: durationStart,
                 durationDays: durationDays,
+                timeZone: timeZone,
                 visibilityJoinable: visibilityJoinable,
-                opponentHandles: people.filter { !$0.isOwner }.map(\.handle),
+                opponentHandles: people.filter { !$0.isOwner }.map { $0.handle },
                 recurring: recurring,
                 healthConnected: steps.hasAsked,
                 healthBusy: model.isRefreshingFights,
@@ -186,7 +190,7 @@ struct EditFightView: View {
     private var flowAction: some View {
         if step == .review {
             FFButton(
-                title: model.isUpdatingFight ? String(localized: "Saving…") : String(localized: "Save changes"),
+                title: model.isUpdatingFight ? String(appLocalized: "Saving…") : String(appLocalized: "Save changes"),
                 size: .large,
                 enabled: canSave,
                 busy: model.isUpdatingFight,
@@ -197,7 +201,7 @@ struct EditFightView: View {
 
             if isOwner {
                 FFButton(
-                    title: model.isDeletingFight ? String(localized: "Deleting…") : String(localized: "Delete"),
+                    title: model.isDeletingFight ? String(appLocalized: "Deleting…") : String(appLocalized: "Delete"),
                     kind: .ember,
                     size: .large,
                     enabled: !model.isUpdatingFight && !model.isDeletingFight,
@@ -216,7 +220,7 @@ struct EditFightView: View {
                 FFNotice(text: scheduleError, tone: .ember, systemImage: "calendar")
             }
         } else {
-            FFButton(title: String(localized: "Done"), size: .large, enabled: step != .duration || scheduleError == nil, fullWidth: true) {
+            FFButton(title: String(appLocalized: "Done"), size: .large, enabled: step != .duration || scheduleError == nil, fullWidth: true) {
                 returnToSummary()
             }
         }
@@ -234,16 +238,16 @@ struct EditFightView: View {
         let handle = SessionStore.strippedHandle(username)
         usernameError = nil
         guard SessionStore.isValidHandle(handle) else {
-            usernameError = String(localized: "Use 2–30 letters, numbers, or underscores.")
+            usernameError = String(appLocalized: "Use 2-30 letters, numbers, or underscores.")
             return
         }
         if handle == session.profile?.handle {
-            usernameError = String(localized: "Add someone else’s username.")
+            usernameError = String(appLocalized: "Add someone else’s username.")
             return
         }
         guard !people.contains(where: { $0.handle == handle }) else {
             usernameError = String(
-                localized: "fight.handle-already-added",
+                appLocalized: "fight.handle-already-added",
                 defaultValue: "@\(handle) is already in this fight."
             )
             return
@@ -253,7 +257,6 @@ struct EditFightView: View {
                 id: "handle:\(handle)",
                 handle: handle,
                 name: "@\(handle)",
-                photoURL: nil,
                 isOwner: false,
                 invited: true,
                 deferred: false,
@@ -272,14 +275,14 @@ struct EditFightView: View {
     private func save() {
         guard canSave else { return }
         let startsAt = durationStart
-        let endsAt = customSchedule ? customEnd : FightComposer.endDate(from: startsAt, days: durationDays)
-        let originalIDs = Set(fight.standings.map(\.person.id))
-        let remainingIDs = Set(people.filter { !$0.pendingAdd }.map(\.id))
+        let endsAt = customSchedule ? customEnd : FightComposer.endDate(from: startsAt, days: durationDays, timeZone: timeZone)
+        let originalIDs = Set(fight.standings.map { $0.person.id })
+        let remainingIDs = Set(people.filter { !$0.pendingAdd }.map { $0.id })
         let removeUserIds = originalIDs.subtracting(remainingIDs).filter { id in
             people.first(where: { $0.id == id })?.isOwner != true
                 && fight.standings.first(where: { $0.person.id == id })?.person.isYou != true
         }
-        let inviteHandles = people.filter(\.pendingAdd).map(\.handle)
+        let inviteHandles = people.filter { $0.pendingAdd }.map { $0.handle }
         Task {
             let saved = await model.updateFight(
                 id: fight.id,
@@ -289,6 +292,7 @@ struct EditFightView: View {
                 recurring: recurring,
                 startsAt: canEditStart ? startsAt : nil,
                 endsAt: endsAt,
+                timeZone: canEditStart && timeZone.identifier != fight.timeZone ? timeZone.identifier : nil,
                 inviteHandles: inviteHandles,
                 removeUserIds: Array(removeUserIds)
             )

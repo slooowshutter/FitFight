@@ -24,27 +24,85 @@ The iOS workflows **must** stay GitHub-hosted. Never `self-hosted`. Apple requir
 
 Fastlane: `fastlane/Fastfile` lane `beta` uploads staging TestFlight builds. Lane `app_store_candidate` is CI- and `main`-only, archives Release with production configuration, and uploads the binary to App Store Connect without selecting it or submitting it for review. Both use automatic signing + App Store Connect API key (`-allowProvisioningUpdates`) and share one non-cancelling concurrency group so signing and build-number allocation cannot race. The production lane does not revoke team certificates; it fails safely if automatic signing cannot create one. Do **not** also set `export_xcargs` to the same `-authenticationKeyPath` flags — gym passes `xcargs` into export and duplicates the flag.
 
-Build number is not committed; CI sets `CURRENT_PROJECT_VERSION` at archive time from TestFlight (`latest + 1`). The next prepared marketing version is **1.1.1**, requested by Marc on 15 Sep 2026. The last uploaded TestFlight build remains **1.1.0 (200)**. Apple closed the 1.0.0 train, so do not upload 1.0.0.
+Build number is not committed; CI sets `CURRENT_PROJECT_VERSION` at archive time from TestFlight (`latest + 1`). The next prepared marketing version is **1.1.2**, requested by Marc on 17 Sep 2026 for the App Store description update. See `status.md` for uploaded builds. Apple closed the 1.0.0 train, so do not upload 1.0.0.
+
+## Selective Cursor Bugbot reviews
+
+The prepared policy runs Bugbot for ready PRs targeting `preview` or `main`,
+PRs labeled `origin:cursor`, and same-repository branches beginning `cursor/`.
+Other development PRs leave Bugbot optional. Cursor cloud agents add the label
+when opening an authorized PR, including when using Grok. The workflow also adds
+it to detected Cursor branches. The label identifies the workflow that produced
+the work, not a model inferred from the diff or GitHub author.
+
+`.github/workflows/bugbot-review.yml` uses `pull_request_target` and reads code
+only from the trusted default-branch SHA. It never checks out or executes PR
+code. GitHub runs this event from `main`, so merging only into `develop` does
+not activate it. Its repository variable `BUGBOT_ROUTING_ENABLED` must be
+`true`; otherwise it makes no review requests.
+
+The workflow fetches current PR metadata, skips drafts and closed PRs, and
+serializes requests per PR. A marker records the head commit and base branch
+and commit in the trigger comment. Repeated events for that diff do not post
+again. A new commit or changed destination can request another review. Only
+markers posted by the configured trigger account count as previous requests.
+This deduplicates requests, not successful reviews; a failed Bugbot run can be
+retried with a manual `cursor review` comment by an authorized user.
+
+Activation order for an agent with the required access:
+
+1. Store a dedicated GitHub user token as the `BUGBOT_GITHUB_TOKEN` repository
+   secret. Limit it to FitFight with Pull requests read/write access. The user
+   must have access to Bugbot for this repository. Do not reuse an interactive
+   agent's GitHub credential. The normal Actions token is used only to read
+   unselected PRs when this secret is absent; selected reviews fail without it.
+2. Land the workflow and its script on `main` through separately authorized
+   PRs and merges. Marc's authorization is still required for every merge.
+3. Set Bugbot to manual-only while keeping the repository enabled. For a team,
+   the documented admin setting is `manualTriggerOnly: true`. For a personal
+   account, verify that "Run only when mentioned" covers the actual PR authors.
+4. Set `BUGBOT_ROUTING_ENABLED=true`. Verify a Conductor development PR receives
+   no automatic review, a Cursor PR receives one, both release targets receive
+   one, and a new commit requests a fresh review without duplicate comments.
+5. Activate the prepared `Bugbot before release merges` ruleset only after
+   verifying live trigger delivery. Its payload is
+   `.github/bugbot-release-ruleset.json`; it starts disabled and targets only
+   `preview` and `main`. The expected check is `Cursor Bugbot` from Cursor's
+   GitHub App, ID `1210556`, verified on an existing FitFight check run.
+
+The ruleset requires a PR, the Bugbot check, and resolved review threads.
+Bugbot normally reports findings as `neutral`, which GitHub accepts for required
+checks. Enable Cursor's fail-on-unresolved-issues setting if available and verify
+it before claiming findings block a release. Thread resolution is not proof
+that a finding was fixed, and an internal Bugbot error may also be neutral.
+
+If activation fails, restore Cursor's automatic reviews before disabling
+`BUGBOT_ROUTING_ENABLED`. Do not disable Bugbot for the repository, since that
+also removes the ability to request manual reviews.
+
+References: [Cursor Bugbot configuration and check behavior](https://cursor.com/docs/bugbot),
+[GitHub's default-branch execution for pull_request_target](https://github.blog/changelog/2025-11-07-actions-pull_request_target-and-environment-branch-protections-changes/).
+Current activation evidence is recorded in [status](status.md#selective-bugbot-reviews-prepared-17-sep-2026).
 
 ## Versions vs builds (why friends wait)
 
-External TestFlight builds must be submitted for beta review and distributed to their tester groups. Apple fully reviews the first submitted build; later builds of the same marketing version may receive a shorter review, but approval is not guaranteed or immediate. Stay on **1.1.1**. See [Apple's external testing rules](https://developer.apple.com/help/app-store-connect/test-a-beta-version/invite-external-testers).
+External TestFlight builds must be submitted for beta review and distributed to their tester groups. Apple fully reviews the first submitted build; later builds of the same marketing version may receive a shorter review, but approval is not guaranteed or immediate. Stay on **1.1.2** for follow-up builds. See [Apple's external testing rules](https://developer.apple.com/help/app-store-connect/test-a-beta-version/invite-external-testers).
 
-We used to bump 0.4.1, 0.4.2, 0.5.0 on every feature, so friends waited every time. Stay on **1.1.1** until Marc asks or Apple closes that train.
+We used to bump 0.4.1, 0.4.2, 0.5.0 on every feature, so friends waited every time. Stay on **1.1.2** until Marc asks or Apple closes that train.
 
 | What                        | Who sets it                              | When it changes                                               |
 | --------------------------- | ---------------------------------------- | ------------------------------------------------------------- |
-| Marketing version (`1.1.1`) | `MARKETING_VERSION` in `project.pbxproj` | App Store ship, Apple closed the train, or Marc asked         |
+| Marketing version (`1.1.2`) | `MARKETING_VERSION` in `project.pbxproj` | App Store ship, Apple closed the train, or Marc asked         |
 | Build number (`105`)        | CI / Fastlane at archive time            | Every distribution upload                                     |
 | Versions list               | `FitFight/Changelog.swift`               | Every user-facing change; reuse the current marketing version |
 
-The next version label is `1.1.1 · build N · staging`. Testers tap Update after upload and availability; ordinary follow-up builds keep `1.1.1` and only increment the build number.
+The next version label is `1.1.2 · build N · staging`. Testers tap Update after upload and availability; ordinary follow-up builds keep `1.1.2` and only increment the build number.
 
 ### Everyone: Internal, External, Friends Beta
 
 The beta lane waits for build processing, then assigns **every** TestFlight group: Internal testers (automatic after processing; Apple rejects assigning them by hand), every External group, and **Friends Beta** (`https://testflight.apple.com/join/wcZKdwVZ`). Missing Internal testers, missing Friends Beta, or missing all External groups fails CI. Uploaded builds are registered separately from the latest _installable_ (external) release. The advertised public release advances only after a build is `IN_BETA_TESTING` on every external group. TestFlight update prompts are optional in the prepared 1.1.1 app, so Friends can keep using their installed build.
 
-Marc must be on **Internal Testing** in App Store Connect (Users and Access) to see new preview uploads. External testers and Friends wait for Apple beta review on the first 1.1.1 build, then later 1.1.1 builds of the same version.
+Marc must be on **Internal Testing** in App Store Connect (Users and Access) to see new preview uploads. External testers and Friends wait for Apple beta review on the first 1.1.2 build, then later 1.1.2 builds of the same version.
 
 Apple allows only one build per version in beta review at a time and up to six beta review submissions in 24 hours. Upload limits are separate: the 5 Sep runs failed with `Upload limit reached` after build **153** uploaded successfully. Creating more builds does not release one already waiting for external review.
 
@@ -72,6 +130,21 @@ gh run download <run-id> -n screens -D /tmp/shots
 
 That is the fidelity loop: measure `docs/design/source/screenshots/app/*.png`, change the
 SwiftUI, push, download `screens`, compare the same numbers. Don't ask Marc to eyeball it.
+
+The simulator build also exports `FitFight-Simulator`. Xcode uses the ad-hoc identity
+(`CODE_SIGN_IDENTITY=-`) with signing enabled so it embeds iOS entitlements in the
+simulator executable. `scripts/package_simulator_app.py` verifies these Mach-O sections
+and the signature before archiving. Do not add iOS entitlements to the host Mac code
+signature afterward; that can prevent Simulator from launching the app.
+A raw `CODE_SIGNING_ALLOWED=NO` build lacks the embedded capabilities and can fail
+Google sign-in when the SDK saves credentials. The screenshot workflow checks this
+on a disposable hosted simulator: the probe without embedded capabilities must return
+`-34018`, and add/read/delete must succeed with Xcode's generated simulator entitlements.
+This checks secure storage; a real Google consent and Supabase session exchange still
+need interactive testing. Before that exchange, the app asks the staging or production
+API to attach Google to an existing account with the same verified email, including
+an Apple identity email. Hide My Email addresses do not match a Google inbox. The
+artifact installs only in Simulator, not on an iPhone or through TestFlight.
 
 ## GitHub secrets (already set)
 
@@ -122,9 +195,22 @@ An app change merged to `main` starts `.github/workflows/ios-app-store.yml`. It 
 
 The workflow injects the production Supabase project, its iOS publishable key, and `https://fitfight.app` into `BuildEnv.swift`. Before upload it verifies the production Supabase URL/key, confirms its Apple provider is enabled, and requires the API health check to prove the production database, latest deletion migration, server key, and Apple server credentials are ready. It then checks the signed IPA for HealthKit background delivery, a valid privacy manifest, and the production configuration, and rejects any generated staging configuration. The public defaults match the values already compiled in the app; optional repository variables `SUPABASE_PRODUCTION_URL` and `SUPABASE_PRODUCTION_PUBLISHABLE_KEY` can rotate them, but the URL must remain the documented production project and the key must validate against it.
 
-Fastlane increments only the build number. The workflow requires the project marketing version to equal `FITFIGHT_RELEASE_VERSION` (`1.1.1`) and requires a matching `1.1.1` release note. The reviewed App Store release PR into `develop` carries that version and launch note. Marc then merges `develop` → `preview` when he wants a TestFlight, and `preview` → `main` when he approves the production ship. The workflow does not change `MARKETING_VERSION`, upload metadata or screenshots, submit the build for review, or release it. After it succeeds, the candidate waits in App Store Connect for the separate metadata, review-information, build-selection, and submission steps.
+Fastlane increments only the build number. The workflow requires the project marketing version to equal `FITFIGHT_RELEASE_VERSION` (`1.1.2`) and requires a matching `1.1.2` release note. The reviewed App Store release PR into `develop` carries that version and launch note. Marc then merges `develop` → `preview` when he wants a TestFlight, and `preview` → `main` when he approves the production ship. The workflow does not change `MARKETING_VERSION`, upload metadata or screenshots, submit the build for review, or release it. After it succeeds, the candidate waits in App Store Connect for the separate metadata, review-information, build-selection, and submission steps.
 
-Vercel also needs `CRON_SECRET` (Preview + Production). Vercel Cron sends it as `Authorization: Bearer …` to `/api/internal/close-fights` once daily at **03:00 UTC**, which is compatible with Hobby. **Hosted Supabase Cron** on develop and production should call the same route every **15 minutes** so fight-end sync reminders (T+0, 12h, 6h, 1h left) fire on time; the daily Vercel job stays a backup closer. Opening the app also closes due fights and drains the notification outbox, so neither cron is the only path. Never put this value in git or chat.
+**Automatic publication is the standing default**, requested by Marc on 17 Sep
+2026. For every App Store version, select **Automatically release this version**
+and verify it before submitting. Apple publishes the approved version without a
+manual Release action. See [Apple's release options](https://developer.apple.com/help/app-store-connect/manage-your-apps-availability/select-an-app-store-version-release-option).
+
+`scripts/app-store-release-audit.rb` reads the target version from
+`FITFIGHT_RELEASE_VERSION`. Its authorized `configure`, `prepare`, and `submit`
+modes set `releaseType: AFTER_APPROVAL`; `configure` stops after saving that
+setting. Submission still requires an explicit registered
+production build and a healthy production backend. The script verifies automatic
+publication after submission. The push-triggered release-tools workflow remains
+an audit. Existing PR, merge, and submission authorization rules still apply.
+
+Vercel needs `CRON_SECRET` in Production and Preview. Once `web/vercel.json` reaches `main`, Production Vercel Cron calls `/api/internal/close-fights` every **15 minutes** with `Authorization: Bearer <secret>`; this interval requires Pro or Enterprise. Vercel Cron runs only on Production, so staging Preview needs the separate **hosted Supabase Cron** job in `supabase/deferred-migrations/20260911153000_supabase_cron_15m.sql`, with Vault `cron_secret` matching the Preview value. The protected route closes due fights and drains notification intents for ending reminders, a conditional final-sync request, and evening social summaries. Verify both schedules before the [notification rollout](notifications.md). Cron delivery is best effort; the next scheduled run is the normal target, not an exact-second guarantee. Opening the app also closes due fights and drains the notification outbox. Never put either secret in git or chat.
 
 Vercel Preview + Production also need the FitFight APNs secrets from [`docs/research/apns-remote-push-plan.md`](research/apns-remote-push-plan.md): `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_PRIVATE_KEY`, `APNS_TOPIC`, and `APNS_TOKEN_ENCRYPTION_KEY` (separate from Sign in with Apple). Without them the outbox enqueues intents but send stays a no-op.
 
@@ -152,7 +238,7 @@ After a feature PR merges, CI deletes that branch. `main`, `develop`, `preview`,
 
 A push to `preview` that touches the app or Fastlane starts TestFlight. Feature-branch and `develop` pushes do not. Tell Marc only after that upload: wait for the TestFlight notification, then **Update**. Tester gets it after processing. Friends wait for Apple beta review on a new marketing version. Check the workflow result before promising a build. Do not ask him to Run workflow.
 
-Both staging and production binaries check `/api/app-release` at launch, on foregrounding, and every minute while active. In the prepared 1.1.1 app, TestFlight only offers a newer public `latest`, never an internal/review-only update. Cancel keeps the app usable and dismisses that release across checks and relaunches. Failed checks clear the TestFlight notice, and saved locks from older binaries are ignored. Production keeps its mandatory update gate. The version line remains on You only.
+Both staging and production binaries check `/api/app-release` at launch, on foregrounding, and every minute while active. TestFlight only offers a newer public `latest`, never an internal/review-only update. While the installed build stays behind, the optional toast appears at most once every three days, including after Close or the 10-second timeout. A newer public release does not restart that interval. Installing another build starts a fresh interval for that installed build. Failed checks clear the toast, and saved locks from older binaries are ignored. Production keeps its mandatory update gate. The version line remains on You only.
 
 ## API compatibility for every change
 
@@ -225,7 +311,7 @@ Deployment order:
 1. Publish `releases.json` from the cloud workflow before deploying the new version checks. It initially records the existing installable release with enforcement off if that binary predates the gate. The server selects staging or production from the existing `NEXT_PUBLIC_SUPABASE_URL`; client headers cannot choose another release channel. Deploy `/api/app-release` and the compatible backend before distributing the new native build. GET `/api/app-release` still returns `503` when this environment's channel cannot be read. Authenticated commands fail open on that failure so Feed and other tabs stay usable. Pad two-part App Store versions (`1.0` → `1.0.0`) so a production row cannot invalidate the staging policy. Never advertise a build that is not actually installable.
 2. Database changes must preserve supported API contracts and running backend versions. Internal column renames, constraints, and cleanup do not automatically wait for Apple; stage backend/database changes as needed. During review, preserve the API behavior and information required by both the live app and its candidate. New response fields must be ignored by old decoders; new request fields must not become required for supported clients.
 3. After a production build is selected for submission, verify that `/api/app-release` identifies it as `review` before Apple tests it. The live public app keeps working. This check does not submit or release anything.
-4. When Apple makes the update installable for Friends Beta (every external group), the publisher makes that exact version/build the advertised `latest` automatically. TestFlight shows a cancellable notice only when this release is newer than the installed app. Internal/review builds remain recorded for older clients but are never offered to other testers. Production alone returns `426 update_required` for missing or mismatched version/build headers when enforcement is on, unless they match an admitted release.
+4. When Apple makes the update installable for Friends Beta (every external group), the publisher makes that exact version/build the advertised `latest` automatically. TestFlight shows an optional update toast only when this release is newer than the installed app. Internal/review builds remain recorded for older clients but are never offered to other testers. Production alone returns `426 update_required` for missing or mismatched version/build headers when enforcement is on, unless they match an admitted release.
 5. Retire API behavior needed by an older app only after a separately approved compatibility cutoff. Optional TestFlight updates do not establish that cutoff: preserve installed clients' contracts and do not apply deferred permission removals based on the published `latest`. Production still requires installability and enforcement evidence, including admitted review candidates. Internal database cleanup can happen sooner if supported APIs and running backends remain compatible. The update gate does not secure direct table access or replace RLS. Follow existing migration/merge authorization rules.
 
 For the initial profile migration: apply `20260909132922_backend_profile_reads.sql`, deploy

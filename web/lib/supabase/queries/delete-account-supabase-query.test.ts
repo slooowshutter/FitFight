@@ -14,7 +14,7 @@ function createDatabaseStub(options: {
     const query = ((first: TemplateStringsArray, ..._values: unknown[]) => {
         const sql = first.join("?").replace(/\s+/g, " ").trim();
         queries.push(sql);
-        if (sql.includes("select user_id from public.profiles")) {
+        if (sql.includes("select id as user_id from public.profiles")) {
             return Promise.resolve(
                 options.profileExists ? [{ user_id: "user-id" }] : [],
             );
@@ -64,6 +64,8 @@ test("account deletion removes owned Fights and every user-owned row before the 
         "public.fight_series",
         "public.fight_series_members",
         "private.fight_score_snapshots",
+        "private.activity_metrics",
+        "private.activity_raw",
         "private.metric_observations",
         "private.provider_events",
         "private.provider_uploads",

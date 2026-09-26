@@ -1,8 +1,11 @@
+// Next's server installs AsyncLocalStorage before any route module loads.
+import "next/dist/server/node-environment-baseline";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { after, test } from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 import { createClient, type RealtimeChannel } from "@supabase/supabase-js";
+import { workAsyncStorage } from "next/dist/server/app-render/work-async-storage.external";
 import postgres from "postgres";
 import { databaseTestEnvironmentSchema } from "@/lib/types/testing/database";
 import { readFightSnapshot } from "./fight-snapshot-supabase-query";
@@ -100,6 +103,7 @@ test(
         where fight_id = ${fightId}`;
 
         const received = [0, 0, 0];
+        const feedReceived = [0, 0, 0];
         const replicationReady = new Set<number>();
         const channels = clients.map((client, index) =>
             client
@@ -125,6 +129,10 @@ test(
                         ![fightId, ...users].includes(message.payload.id),
                     );
                     received[index]++;
+                })
+                .on("broadcast", { event: "feed_changed" }, (message) => {
+                    assert.deepEqual(Object.keys(message.payload), ["id"]);
+                    feedReceived[index]++;
                 }),
         );
         await Promise.all(channels.map((channel) => subscribe(channel, true)));
@@ -198,6 +206,56 @@ test(
         where topic = ${"fitfight:fights:" + peer} and event = 'fights_changed'`;
         assert.equal(afterRollback.count, before[0].count);
 
+        const postId = randomUUID();
+        await database`insert into public.fight_posts (id, fight_id, audience, author_id, body)
+            values (${postId}, ${fightId}, 'fight', ${owner}, 'Live comment regression')`;
+        await delay(500);
+        feedReceived.fill(0);
+        await assert.rejects(database.begin(async (sql) => {
+            await sql`insert into public.fight_post_comments (post_id, author_id, body)
+                values (${postId}, ${peer}, 'Rolled back comment')`;
+            throw new Error('rollback comment');
+        }), /rollback comment/);
+        await delay(300);
+        assert.deepEqual(feedReceived, [0, 0, 0]);
+        await database`insert into public.fight_post_comments (post_id, author_id, body)
+            values (${postId}, ${peer}, 'Committed comment')`;
+        for (let attempt = 0; attempt < 100 && (feedReceived[0] === 0 || feedReceived[1] === 0); attempt++) await delay(50);
+        assert.ok(feedReceived[0] > 0 && feedReceived[1] > 0, 'Both phones receive a committed comment invalidation');
+        assert.equal(feedReceived[2], 0, 'Unrelated users receive no comment invalidation');
+
+        const broadcastId = randomUUID();
+        for (const change of ["post", "edit", "comment", "reaction", "delete"]) {
+            feedReceived.fill(0);
+            switch (change) {
+                case "post":
+                    await database`insert into public.fight_posts (id, audience, app_wide, author_id, body)
+                        values (${broadcastId}, 'main', true, ${owner}, 'App-wide live updates')`;
+                    break;
+                case "edit":
+                    await database`update public.fight_posts set body = 'Edited broadcast' where id = ${broadcastId}`;
+                    break;
+                case "comment":
+                    await database`insert into public.fight_post_comments (post_id, author_id, body)
+                        values (${broadcastId}, ${peer}, 'Broadcast reply')`;
+                    break;
+                case "reaction":
+                    await database`insert into public.fight_post_reactions (post_id, user_id, emoji)
+                        values (${broadcastId}, ${outsider}, '🔥')`;
+                    break;
+                case "delete":
+                    await database`delete from public.fight_posts where id = ${broadcastId}`;
+                    break;
+            }
+            for (let attempt = 0; attempt < 100 && feedReceived.some((count) => count === 0); attempt++) {
+                await delay(50);
+            }
+            assert.ok(
+                feedReceived.every((count) => count > 0),
+                `A broadcast ${change} invalidates every signed-in viewer, including users with no shared Fight`,
+            );
+        }
+
         const cutoff = new Date().toISOString();
         await syncHealthKitAggregates(
             owner,
@@ -265,21 +323,37 @@ test(
             { version: "1.0.0", build: "190" },
             { version: "1.1.0", build: "200" },
         ]) {
-            const response = await refresh(
-                new Request("http://localhost/api/v1/fights/refresh", {
-                    method: "POST",
-                    body: JSON.stringify({ time_zone: "UTC" }),
-                    headers: {
-                        Authorization: `Bearer ${session.session.access_token}`,
-                        "X-FitFight-Version": client.version,
-                        "X-FitFight-Build": client.build,
+            const deferred: Array<() => Promise<unknown>> = [];
+            const response: Response = await workAsyncStorage.run(
+                {
+                    afterContext: {
+                        after: (task: () => Promise<unknown>) =>
+                            deferred.push(task),
                     },
-                }),
-                { params: Promise.resolve({}) },
+                } as never,
+                () =>
+                    refresh(
+                        new Request("http://localhost/api/v1/fights/refresh", {
+                            method: "POST",
+                            body: JSON.stringify({ time_zone: "UTC" }),
+                            headers: {
+                                Authorization: `Bearer ${session.session.access_token}`,
+                                "X-FitFight-Version": client.version,
+                                "X-FitFight-Build": client.build,
+                            },
+                        }),
+                        { params: Promise.resolve({}) },
+                    ),
             );
             assert.equal(response.status, 200);
             const contract = fightSnapshotSchema.parse(await response.json());
             assert.deepEqual(contract.members, snapshots[0].members);
+            assert.equal(
+                deferred.length,
+                1,
+                "Notification delivery runs after the refresh response",
+            );
+            await deferred[0]();
         }
         const liveResponse = await snapshot(
             new Request("http://localhost/api/v1/fights/snapshot", {

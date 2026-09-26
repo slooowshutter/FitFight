@@ -361,6 +361,9 @@ html.shot *, html.shot *::before, html.shot *::after { animation-duration: 0.001
 
 .fr-svg { display: block; overflow: visible; }
 .fr-svg text { font-family: inherit; font-size: 10px; font-weight: 800; fill: var(--text-faint); font-variant-numeric: tabular-nums; }
+.fr-svg text.on { fill: var(--text-secondary); }
+.fr-bar.up { fill: var(--moss-edge); }
+.fr-bar.down { fill: var(--ember-fill); }
 
 /* Leader after each day. */
 .fr-strip { display: flex; gap: 4px; }
@@ -583,7 +586,8 @@ const GX = (() => {
     const toggle = (page, id, value) => send({ op: "choice", page, id, who: who(), value: choice(page, id) === value ? null : value });
     const comment = (page, id, text) => send({ op: "comment", page, id, who: who(), text: String(text).trim().slice(0, 2000), at: new Date().toISOString() });
     const uncomment = (page, id, at) => send({ op: "uncomment", page, id, who: who(), at });
-    const fileHref = (file) => preview && location.search.length > 1 ? "?" + location.search.slice(1).replace(/[^/]+\.html.*$/, file) : file;
+    // htmlpreview sets <base> to the raw file, so preview links must be absolute or they open raw text.
+    const fileHref = (file) => preview && location.search.length > 1 ? location.origin + location.pathname + "?" + location.search.slice(1).replace(/[^/]+\.html.*$/, file) : file;
     const open = (file) => { location.href = fileHref(file); };
     const ago = (iso) => {
         const s = (Date.now() - Date.parse(iso)) / 1000;
@@ -1148,10 +1152,11 @@ const gapChart = (s, { w = 309, h = 96, uid = "gap", days = true, label = true }
     const area = `${line} L${x(s.n - 1).toFixed(1)} ${z.toFixed(1)} L${x(0).toFixed(1)} ${z.toFixed(1)} Z`;
     const c = s.mineClose;
     const lx = Math.min(w - 18, Math.max(18, x(c)));
-    const ly = v[c] >= 0 ? y(v[c]) - 12 : y(v[c]) + 20;
+    // Label on the roomier side of the marked point.
+    const ly = y(v[c]) - top > bot - y(v[c]) ? y(v[c]) - 14 : y(v[c]) + 24;
     let g = `<defs><clipPath id="${uid}-a"><rect x="0" y="-20" width="${w}" height="${(z + 20).toFixed(1)}"/></clipPath><clipPath id="${uid}-b"><rect x="0" y="${z.toFixed(1)}" width="${w}" height="${(h - z + 20).toFixed(1)}"/></clipPath></defs>`;
-    g += `<path d="${area}" clip-path="url(#${uid}-a)" style="fill:color-mix(in srgb, var(--moss-fill) 26%, transparent)"/>`;
-    g += `<path d="${area}" clip-path="url(#${uid}-b)" style="fill:color-mix(in srgb, var(--ember-fill) 22%, transparent)"/>`;
+    g += `<path d="${area}" clip-path="url(#${uid}-a)" style="fill:color-mix(in srgb, var(--moss-fill) 24%, transparent)"/>`;
+    g += `<path d="${area}" clip-path="url(#${uid}-b)" style="fill:color-mix(in srgb, var(--ember-fill) 15%, transparent)"/>`;
     g += `<line x1="0" x2="${w}" y1="${z.toFixed(1)}" y2="${z.toFixed(1)}" style="stroke:var(--line)" stroke-dasharray="3 4"/>`;
     g += `<text x="${w}" y="${(z - 5).toFixed(1)}" text-anchor="end">Level</text>`;
     g += `<path d="${line}" fill="none" style="stroke:var(--fr-you)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
@@ -1175,8 +1180,8 @@ const diffBars = (s, a, b, { w = 309, h = 120, hl = -1 } = {}) => {
         const up = d[i] >= 0;
         const y0 = up ? mid - len : mid;
         const on = hl < 0 || hl === i;
-        g += `<rect x="${(cx - bw / 2).toFixed(1)}" y="${y0.toFixed(1)}" width="${bw.toFixed(1)}" height="${len.toFixed(1)}" rx="4" style="fill:${up ? "var(--moss-edge)" : "var(--ember-fill)"};opacity:${on ? 1 : 0.35}"/>`;
-        g += `<text x="${cx.toFixed(1)}" y="${(up ? y0 - 5 : y0 + len + 12).toFixed(1)}" text-anchor="middle" style="fill:${on ? "var(--text-secondary)" : "var(--text-faint)"}">${signed(d[i]).replace(/,(\d)\d\d$/, ".$1K")}</text>`;
+        g += `<rect class="fr-bar ${up ? "up" : "down"}" x="${(cx - bw / 2).toFixed(1)}" y="${y0.toFixed(1)}" width="${bw.toFixed(1)}" height="${len.toFixed(1)}" rx="4" style="opacity:${on ? 1 : 0.35}"/>`;
+        g += `<text class="${on ? "on" : ""}" x="${cx.toFixed(1)}" y="${(up ? y0 - 5 : y0 + len + 12).toFixed(1)}" text-anchor="middle">${signed(d[i]).replace(/,(\d)\d\d$/, ".$1K")}</text>`;
         g += `<text x="${cx.toFixed(1)}" y="${h - 2}" text-anchor="middle">D${i + 1}</text>`;
     });
     return `<svg class="fr-svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true">${g}</svg>`;
@@ -1270,13 +1275,13 @@ const storySlides = (s) => {
     return [
         { tone: "plain", html: `<div class="v3-k">The recap · ${esc(s.round)}</div><h2 class="v3-h">${s.n} days.<br>${s.k} walkers.<br><span class="num">${fmt(s.all)}</span> steps.</h2><p class="v3-s">${esc(s.span)}. ${s.k > 2 ? "Last place" : "The loser"} ${esc(s.actionLower)}.</p>${art("line", lineup)}` },
         { tone: "flat", html: `<div class="v3-k">Who led</div><h2 class="v3-h">${s.changes.length === 0 ? `${esc(s.Nm(s.W))},<br>wire to wire.` : s.changes.length === 1 ? `${esc(s.Nm(s.leader[0]))} first.<br>Then ${esc(s.nm(s.W))}.` : `${s.changes.length} lead<br>changes.`}</h2><p class="v3-s fr-say">${s.say.lead}</p><div class="v3-lead">${strip(s, s.n > 4 ? 34 : 46, (i) => `<b class="num">${short(s.leadBy[i])}</b>`)}<div class="v3-cap">Leader after each day, and by how much</div></div>${art("solo", [[s.W, 200]])}` },
-        { tone: "wash", html: `<div class="v3-k">Closest moment · Day ${s.closest + 1}</div><div class="v3-big num">${fmt(s.closeGap)}</div><h2 class="v3-h sm">${s.closeAhead === s.W ? `${esc(s.Nm(s.R))} got within ${fmt(s.closeGap)} of ${esc(s.nm(s.W))}.` : `${esc(s.Poss(s.R))} lead after day ${s.closest + 1}. As close as it got.`}</h2><p class="v3-s fr-say">${s.say.pull || s.say.moment}</p><div class="v3-chart"><div class="v3-cap">You vs ${esc(pname(s.rival))}, after each day</div>${gapChart(s, { w: 309, h: 112, uid: "v3g" })}</div>` },
+        { tone: "wash", html: `<div class="v3-k">Closest moment · Day ${s.closest + 1}</div><div class="v3-big num">${fmt(s.closeGap)}</div><h2 class="v3-h sm">${s.closeAhead === s.W ? `${esc(s.Nm(s.R))} got within ${fmt(s.closeGap)} of ${esc(s.nm(s.W))}.` : `${esc(s.Poss(s.R))} lead after day ${s.closest + 1}. As close as it got.`}</h2><p class="v3-s fr-say">${s.say.pull || s.say.moment}</p><div class="v3-chart"><div class="v3-cap">You vs ${esc(pname(s.rival))}, after each day</div>${gapChart(s, { w: 309, h: 150, uid: "v3g" })}</div>` },
         { tone: t === s.me ? "fill" : "alt", html: `<div class="v3-k">Biggest day · Day ${s.best[t].i + 1}</div><div class="v3-big num">${fmt(s.best[t].v)}</div><h2 class="v3-h sm">${t === s.me ? "Your best day, and the best of anyone." : `${esc(s.Poss(t))} best day, and the best of anyone.`}</h2><p class="v3-s">${esc(s.Nm(s.foe(t)))} walked <b class="num">${fmt(s.daily[s.foe(t)][s.best[t].i])}</b> that day.</p>${art("solo", [[t, 236]])}` },
         lost
             ? { tone: "plain", html: `<div class="v3-k">Where it slipped</div><h2 class="v3-h">Day ${s.slip[s.me].i + 1} cost you <span class="num fr-down">${fmt(s.slip[s.me].v)}</span>.</h2><p class="v3-s fr-say">${s.say.whatIf}</p><div class="v3-chart"><div class="v3-cap">You minus ${esc(pname(s.W))}, each day</div>${bars}</div><p class="v3-s small fr-say">${s.say.need}</p>` }
             : { tone: "fill", html: `<div class="v3-k">Where you won it</div><h2 class="v3-h">Day ${s.decisive + 1}: <span class="num">${signed(s.swing[s.decisive])}</span>.</h2><p class="v3-s fr-say">${s.say.moment}</p><div class="v3-chart"><div class="v3-cap">You minus ${esc(pname(s.R))}, each day</div>${bars}</div><p class="v3-s small fr-say">${s.say.need}</p>` },
-        { tone: "alt", html: `<div class="v3-k">The awards</div><h2 class="v3-h sm">Everyone gets one.</h2><div class="v3-awards">${s.ids.map((id) => { const a = s.awards[id]; return `<div class="v3-aw${id === s.me ? " you" : ""}">${avatar(id, 44)}<div><b>${esc(a.title)}</b><span>${esc(s.Nm(id))} · ${esc(a.line)}</span></div><i>${icon(a.icon, 18, { stroke: 2.2 })}</i></div>`; }).join("")}</div>` },
-        { tone: s.won ? "fill" : "plain", html: `<div class="v3-k">Final · ${esc(s.endShort)}</div><h2 class="v3-h">${s.won ? "You won" : `${esc(pname(s.W))} won`}<br>by <span class="num">${fmt(s.margin)}</span>.</h2><div class="v3-final">${s.ids.map((id, j) => `<div class="${id === s.me ? "you" : ""}"><span class="num">${j + 1}</span>${avatar(id, 26)}<em>${esc(s.Nm(id))}</em><b class="num">${fmt(s.total[id])}</b></div>`).join("")}</div><div class="v3-foot"><span class="v3-stake${s.last === s.me ? " mine" : ""}">${icon("flag", 18, { stroke: 2.4 })}<span><b>${esc(s.say.stakes)}</b><small>${s.k > 2 ? "Last place" : "The loser"} does the action</small></span></span><button type="button" class="v3-again" data-again aria-label="Watch again">${icon("refresh", 18, { stroke: 2.4 })}</button></div>` },
+        { tone: "alt", html: `<div class="v3-k">The awards</div><h2 class="v3-h sm">Everyone gets one.</h2><div class="v3-awards">${s.ids.map((id) => { const a = s.awards[id]; return `<div class="v3-aw${id === s.me ? " you" : ""}">${avatar(id, 44)}<div><b>${esc(a.title)}</b><span>${esc(s.Nm(id))} · ${esc(a.line)}</span></div><i>${icon(a.icon, 18, { stroke: 2.2 })}</i></div>`; }).join("")}</div>${s.k > 2 ? "" : art("line", s.ids.map((id) => [id, 170]))}` },
+        { tone: s.won ? "fill" : "plain", html: `<div class="v3-k">Final · ${esc(s.endShort)}</div><h2 class="v3-h">${s.won ? "You won" : `${esc(pname(s.W))} won`}<br>by <span class="num">${fmt(s.margin)}</span>.</h2><div class="v3-final">${s.ids.map((id, j) => `<div class="${id === s.me ? "you" : ""}"><span class="num">${j + 1}</span>${avatar(id, 26)}<em>${esc(s.Nm(id))}</em><b class="num">${fmt(s.total[id])}</b></div>`).join("")}</div>${s.k > 2 ? art("final", [[s.W, 150]]) : ""}<div class="v3-foot"><span class="v3-stake${s.last === s.me ? " mine" : ""}">${icon("flag", 18, { stroke: 2.4 })}<span><b>${esc(s.say.stakes)}</b><small>${s.k > 2 ? "Last place" : "The loser"} does the action</small></span></span><button type="button" class="v3-again" data-again aria-label="Watch again">${icon("refresh", 18, { stroke: 2.4 })}</button></div>` },
     ];
 };
 
@@ -1475,6 +1480,10 @@ const VARIANTS = [
 .v3-art.line { left: 0; right: 0; justify-content: center; }
 .v3-art.line span + span { margin-left: -26px; }
 .v3-art.solo { right: -10px; }
+.v3-art.final { right: 14px; bottom: 86px; }
+.v3-slide[data-tone="fill"] .fr-bar.up { fill: var(--moss-on); }
+.v3-slide[data-tone="fill"] .fr-svg text { fill: color-mix(in srgb, var(--moss-on) 72%, transparent); }
+.v3-slide[data-tone="fill"] .fr-svg line { stroke: color-mix(in srgb, var(--moss-on) 30%, transparent); }
 .v3-awards { position: relative; z-index: 1; margin-top: 20px; display: flex; flex-direction: column; gap: 8px; }
 .v3-aw { display: flex; align-items: center; gap: 12px; padding: 10px 14px 10px 10px; border-radius: 18px; background: var(--card); animation: fr-up 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 .v3-aw:nth-child(2) { animation-delay: 0.08s; }

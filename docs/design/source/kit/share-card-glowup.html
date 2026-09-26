@@ -407,6 +407,138 @@ html.shot *, html.shot *::before, html.shot *::after { animation-duration: 0.001
 .sc-live::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--moss-edge); }
 .sc-qr, .sc-bars { display: block; }
 
+/* ===== options 16 to 23: card slideshows ===== */
+.xs-fit { position: relative; flex: none; width: calc(300px * var(--k)); height: calc(533px * var(--k)); }
+.xs-fit > .sc-card { position: absolute; left: 0; top: 0; margin: 0; transform: scale(var(--k)); transform-origin: 0 0; animation: none; }
+.xs-track { position: relative; display: flex; align-items: center; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; cursor: grab; user-select: none; -webkit-user-select: none; touch-action: pan-x; }
+.xs-track::-webkit-scrollbar { display: none; }
+.xs-track.dragging { scroll-snap-type: none; cursor: grabbing; }
+.xs-track img { -webkit-user-drag: none; }
+.xs-slide { flex: none; display: flex; align-items: center; justify-content: center; scroll-snap-align: center; }
+.xs-full { position: absolute; inset: 0; display: flex; flex-direction: column; background: var(--bg); animation: sc-up 0.42s cubic-bezier(0.2, 0.9, 0.25, 1) both; }
+.xs-nav { position: relative; flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 44px; margin-top: 54px; padding: 0 14px 0 8px; }
+.xs-navbtn { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; gap: 2px; padding: 0 8px; border: 0; background: none; color: var(--moss-text); font-size: 15px; font-weight: 800; cursor: pointer; }
+.xs-navt { position: absolute; left: 50%; transform: translateX(-50%); font-size: 16px; font-weight: 800; letter-spacing: -0.01em; white-space: nowrap; }
+.xs-count { flex: none; display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: var(--r-pill); background: var(--chip); border: 1px solid var(--chip-edge); font-size: 12px; font-weight: 800; color: var(--text-dim); }
+.xs-count { white-space: nowrap; }
+.xs-arrow { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border: 0; padding: 0; border-radius: 50%; background: var(--control); color: var(--text); cursor: pointer; transition: opacity 0.2s ease, transform 0.15s ease; }
+.xs-arrow:disabled { opacity: 0.3; cursor: default; }
+.xs-arrow:active:not(:disabled) { transform: scale(0.92); }
+.xs-dots { flex: none; display: flex; align-items: center; justify-content: center; gap: 6px; height: 44px; padding: 0 14px; cursor: pointer; touch-action: none; }
+.xs-dots i { width: 6px; height: 6px; flex: none; border-radius: 3px; background: var(--dot-idle); transition: width 0.25s ease, background 0.25s ease; }
+.xs-dots i.on { width: 18px; background: var(--text); }
+.xs-acts { flex: none; align-self: stretch; display: flex; gap: 10px; padding: 0 20px; }
+.xs-btn { flex: 1; height: 52px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: var(--r-pill); background: var(--control); color: var(--text); font-size: 15px; font-weight: 800; cursor: pointer; transition: transform 0.15s ease; }
+.xs-btn { white-space: nowrap; }
+.xs-btn.go { background: var(--moss-fill); color: var(--moss-on); }
+.xs-btn:active { transform: scale(0.97); }
+.xs-toast { position: absolute; left: 50%; top: 60px; z-index: 60; display: inline-flex; align-items: center; gap: 7px; transform: translate(-50%, -6px); padding: 10px 15px; border-radius: var(--r-pill); background: var(--control-alt); color: var(--text); font-size: 12px; font-weight: 800; opacity: 0; pointer-events: none; transition: opacity 0.2s ease, transform 0.25s ease; }
+.xs-toast { white-space: nowrap; }
+.xs-toast.on { opacity: 1; transform: translate(-50%, 0); }
+.xs-toast svg { color: var(--moss-text); }
+.xs-sysov { position: absolute; inset: 0; z-index: 50; }
+.xs-sysov[hidden] { display: none; }
+.xs-sysov .sc-sys-t1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.xs-sys-thumb { width: 48px; height: 48px; flex: none; display: grid; place-items: center; border-radius: 11px; background: var(--control); }
+.xs-sys-thumb .sc-card { border-radius: 60px; }
+
+/* ===== giant-number cards (slides) ===== */
+.gc { --gc-bg: var(--bg); --gc-ink: var(--text); --gc-dim: var(--text-secondary); --gc-hero: var(--moss-text); --gc-line: var(--line); --gc-chip: var(--chip); --gc-track: var(--track); --gc-bar: var(--moss-fill); --gc-bar-dim: var(--control-alt); --gc-urgent: var(--ember-text); --gc-warn-bg: var(--ember-wash); --gc-warn: var(--ember-text);
+    display: flex; flex-direction: column; padding: 20px 20px 16px; background: var(--gc-bg); color: var(--gc-ink); border-color: var(--gc-line); }
+.gc.l-moss { --gc-bg: var(--moss-fill); --gc-ink: var(--moss-on); --gc-dim: color-mix(in srgb, var(--moss-on) 78%, transparent); --gc-hero: var(--moss-on); --gc-line: color-mix(in srgb, var(--moss-on) 24%, transparent); --gc-chip: color-mix(in srgb, var(--moss-on) 14%, transparent); --gc-track: color-mix(in srgb, var(--moss-on) 18%, transparent); --gc-bar: var(--moss-on); --gc-bar-dim: color-mix(in srgb, var(--moss-on) 38%, transparent); --gc-urgent: var(--moss-on); --gc-warn-bg: var(--ember-fill); --gc-warn: var(--ember-on); border-color: var(--moss-edge); }
+.gc.l-soft { --gc-bg: var(--moss-soft); --gc-chip: color-mix(in srgb, var(--moss-fill) 10%, transparent); --gc-track: color-mix(in srgb, var(--moss-fill) 14%, transparent); --gc-bar-dim: color-mix(in srgb, var(--moss-fill) 26%, transparent); --gc-line: color-mix(in srgb, var(--moss-fill) 22%, transparent); }
+.gc .sc-brand { color: var(--gc-ink); }
+.gc-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; height: 22px; }
+.gc-top > span:last-child { font-size: 11px; font-weight: 800; color: var(--gc-dim); }
+.gc-top > span:last-child { white-space: nowrap; }
+.gc-k { font-size: 17px; font-weight: 800; letter-spacing: -0.01em; color: var(--gc-dim); }
+.gc-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--gc-line); font-size: 11px; font-weight: 700; color: var(--gc-dim); }
+.gc-foot > span:first-child { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gc-foot > span:last-child { flex: none; }
+.gc-foot b { color: var(--gc-ink); font-weight: 800; letter-spacing: 0.06em; }
+
+.gc-lead .gc-k { margin-top: 58px; }
+.gc-lead-n { margin: 2px 0 0 -5px; font-size: 90px; font-weight: 800; letter-spacing: -0.06em; line-height: 0.98; color: var(--gc-hero); }
+.gc-lead-n { white-space: nowrap; }
+.gc-lead-u { margin-top: 0; font-size: 32px; font-weight: 800; letter-spacing: -0.025em; line-height: 1.05; }
+.gc-lead-s { margin-top: 10px; font-size: 14px; font-weight: 700; line-height: 1.4; color: var(--gc-dim); }
+.gc-tug { display: flex; flex-direction: column; gap: 14px; margin: auto 0 18px; }
+.gc-tr { display: grid; grid-template-columns: 1fr auto; row-gap: 7px; align-items: center; }
+.gc-tr > span { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 800; }
+.gc-tr > em { font-style: normal; font-size: 13px; font-weight: 800; color: var(--gc-dim); }
+.gc-tr.me > em { color: var(--gc-ink); }
+.gc-tr > i { grid-column: 1 / -1; position: relative; height: 12px; border-radius: var(--r-pill); background: var(--gc-track); overflow: hidden; }
+.gc-tr > i b { position: absolute; left: 0; top: 0; bottom: 0; border-radius: inherit; background: var(--gc-bar-dim); }
+.gc-tr > i s { position: absolute; top: 0; bottom: 0; right: 0; border-radius: 0 6px 6px 0; background: var(--gc-bar); }
+
+.gc-rank-hero { position: relative; height: 244px; margin-top: 10px; }
+.gc-rank-1 { position: absolute; left: -10px; top: -14px; font-size: 290px; font-weight: 800; letter-spacing: -0.08em; line-height: 1; color: var(--gc-hero); }
+.gc-rank-st { position: absolute; left: 128px; top: 30px; font-size: 56px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; color: var(--gc-hero); }
+.gc-rank-of { position: absolute; left: 132px; top: 92px; font-size: 18px; font-weight: 800; color: var(--gc-dim); }
+.gc-rank-art { position: absolute; right: -30px; bottom: -6px; }
+.gc-rank-t { margin-top: 8px; font-size: 24px; font-weight: 800; letter-spacing: -0.025em; line-height: 1.1; }
+.gc-rank-rest { display: flex; flex-direction: column; margin-top: 12px; }
+.gc-rr { display: flex; align-items: center; gap: 8px; height: 28px; font-size: 12px; font-weight: 800; }
+.gc-rr + .gc-rr { border-top: 1px solid var(--gc-line); }
+.gc-rr > span { width: 10px; color: var(--gc-dim); }
+.gc-rr b { flex: 1; font-weight: 800; }
+.gc-rr em { font-style: normal; color: var(--gc-dim); }
+
+.gc-today .gc-k { margin-top: 44px; }
+.gc-today-n { margin: 0 0 0 -5px; font-size: 96px; font-weight: 800; letter-spacing: -0.06em; line-height: 1; color: var(--gc-hero); }
+.gc-today-n { white-space: nowrap; }
+.gc-pill { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 6px 11px; border-radius: var(--r-pill); background: var(--gc-chip); font-size: 12px; font-weight: 800; }
+.gc-pill svg { color: var(--gc-hero); }
+.gc-hours { position: relative; display: flex; align-items: flex-end; gap: 3px; height: 116px; margin-top: auto; padding-top: 22px; border-bottom: 1px solid var(--gc-line); }
+.gc-hours i { position: relative; flex: 1; border-radius: 3px 3px 1px 1px; background: var(--gc-bar-dim); }
+.gc-hours i.peak { background: var(--gc-hero); }
+.gc-hours i.later { height: 10px; border: 1.5px dashed var(--gc-line); border-bottom: 0; background: none; }
+.gc-hours i span { position: absolute; right: -4px; bottom: 100%; margin-bottom: 4px; font-size: 11px; font-weight: 800; font-style: normal; color: var(--gc-hero); }
+.gc-hours i span { white-space: nowrap; }
+.gc-hx { display: flex; justify-content: space-between; margin-top: 5px; padding-right: 20%; font-size: 10px; font-weight: 800; color: var(--gc-dim); }
+.gc-others { display: flex; align-items: center; gap: 10px; margin: 14px 0 14px; font-size: 11px; font-weight: 800; }
+.gc-others > span { display: inline-flex; align-items: center; gap: 5px; }
+.gc-others em { font-style: normal; }
+.gc-others .gc-ol { margin-left: auto; font-weight: 700; color: var(--gc-dim); }
+
+.gc-days .gc-k { margin-top: 30px; }
+.gc-days-hero { display: flex; align-items: flex-end; gap: 10px; height: 214px; margin-top: 2px; }
+.gc-days-hero b { margin-left: -12px; font-size: 270px; font-weight: 800; letter-spacing: -0.08em; line-height: 0.76; color: var(--gc-urgent); }
+.gc-days-hero span { padding-bottom: 6px; font-size: 48px; font-weight: 800; letter-spacing: -0.035em; line-height: 1; }
+.gc-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 24px; }
+.gc-week div { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 10px; font-weight: 800; color: var(--gc-dim); }
+.gc-week i { align-self: stretch; height: 8px; border-radius: var(--r-pill); background: var(--gc-track); overflow: hidden; }
+.gc-week .full i { background: var(--gold); }
+.gc-week .part i::before { content: ""; display: block; width: 70%; height: 100%; background: var(--gold); }
+.gc-week .part { color: var(--gc-ink); }
+.gc-bell { display: flex; align-items: center; gap: 7px; margin-top: 16px; font-size: 14px; font-weight: 800; }
+.gc-dare { margin-top: 6px; font-size: 14px; font-weight: 700; line-height: 1.4; color: var(--gc-dim); }
+.gc-dare b { color: var(--gc-ink); font-weight: 800; }
+
+.gc-action .gc-k { margin-top: 30px; }
+.gc-act-t { margin-top: 6px; font-size: 42px; font-weight: 800; letter-spacing: -0.035em; line-height: 1.02; }
+.gc-act-t b { display: block; font-size: 52px; letter-spacing: -0.05em; color: var(--gc-hero); }
+.gc-duty { display: flex; align-items: flex-end; gap: 4px; margin: auto -6px 12px -8px; padding: 0 12px 0 0; border-radius: var(--r-card); background: var(--gc-warn-bg); overflow: hidden; }
+.gc-duty-art { flex: none; margin: -6px -6px 0 -2px; }
+.gc-duty > div { padding: 14px 0; }
+.gc-duty span { display: block; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gc-warn); opacity: 0.9; }
+.gc-duty b { display: block; margin-top: 2px; font-size: 32px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; color: var(--gc-warn); }
+.gc-duty em { display: block; margin-top: 4px; font-style: normal; font-size: 12px; font-weight: 800; color: var(--gc-warn); }
+
+.gc-total .gc-k { margin-top: 38px; }
+.gc-total-n { margin: 2px 0 0 -4px; font-size: 84px; font-weight: 800; letter-spacing: -0.06em; line-height: 1; color: var(--gc-hero); }
+.gc-total-n { white-space: nowrap; }
+.gc-total-u { margin-top: 6px; font-size: 20px; font-weight: 800; letter-spacing: -0.015em; }
+.gc-cols { display: grid; grid-template-columns: repeat(7, 1fr); gap: 7px; align-items: end; height: 170px; margin: auto 0 14px; }
+.gc-cols div { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 5px; height: 100%; }
+.gc-cols i { align-self: stretch; border-radius: 7px 7px 3px 3px; background: var(--gc-bar-dim); }
+.gc-cols .now i { background: var(--gc-hero); }
+.gc-cols .later i { height: 36px; border: 1.5px dashed var(--gc-line); background: none; }
+.gc-cols em { font-style: normal; font-size: 10px; font-weight: 800; color: var(--gc-dim); }
+.gc-cols .now em { color: var(--gc-hero); }
+.gc-cols span { font-size: 10px; font-weight: 800; color: var(--gc-dim); }
+.gc-cols .now span { color: var(--gc-ink); }
+
         </style>
         <style id="gx-variant-css"></style>
     </head>
@@ -615,7 +747,8 @@ const GX = (() => {
     const toggle = (page, id, value) => send({ op: "choice", page, id, who: who(), value: choice(page, id) === value ? null : value });
     const comment = (page, id, text) => send({ op: "comment", page, id, who: who(), text: String(text).trim().slice(0, 2000), at: new Date().toISOString() });
     const uncomment = (page, id, at) => send({ op: "uncomment", page, id, who: who(), at });
-    const fileHref = (file) => preview && location.search.length > 1 ? "?" + location.search.slice(1).replace(/[^/]+\.html.*$/, file) : file;
+    // htmlpreview sets <base> to the raw file, so preview links must be absolute or they open raw text.
+    const fileHref = (file) => preview && location.search.length > 1 ? location.origin + location.pathname + "?" + location.search.slice(1).replace(/[^/]+\.html.*$/, file) : file;
     const open = (file) => { location.href = fileHref(file); };
     const ago = (iso) => {
         const s = (Date.now() - Date.parse(iso)) / 1000;
@@ -1138,6 +1271,331 @@ const onDay = (d) => {
 };
 const REPLAY_TOP = 30000;
 const REPLAY_CAPS = ["Four on the start line", "Bertille jumps ahead", "Bertille holds on", "Marc sneaks past", "Bertille strikes back", "Marc takes it back"];
+
+// ===== Options 16 to 23: swipe through many cards, pick one, share it =====
+// Six new giant-number cards. Each takes a look: base follows the app, night and day force a theme, moss and soft are moss grounds.
+const gcCard = (kind, look, inner) => `<div class="sc-card gc gc-${kind} l-${look}"${look === "night" ? ' data-theme="night"' : look === "day" || look === "soft" ? ' data-theme="day"' : ""}>${inner}</div>`;
+const gcTop = (right) => `<div class="gc-top">${brand(20)}<span>${right}</span></div>`;
+const gcFoot = (left) => `<div class="gc-foot"><span>${left}</span><span>Code <b>${F.code}</b></span></div>`;
+const LAST = S[S.length - 1];
+const GC = {
+    lead: (look) => gcCard("lead", look, `
+        ${gcTop(`Day ${LOCAL.day} of ${LOCAL.len} · ${F.timeLeft}`)}
+        <div class="gc-k">Marc is ahead by</div>
+        <div class="gc-lead-n num">${signed(F.gap)}</div>
+        <div class="gc-lead-u">steps</div>
+        <div class="gc-lead-s">over ${esc(RIVAL.person.name)} in ${esc(F.name)}.</div>
+        <div class="gc-tug">${[ME, RIVAL].map((r) => `<div class="gc-tr${r.id === "marc" ? " me" : ""}"><span>${avatar(r.person, 22)}${esc(r.person.name)}</span><em class="num">${fmt(r.total)}</em><i><b style="width:${((r.total / ME.total) * 100).toFixed(1)}%"></b>${r.id === "marc" ? `<s style="left:${((RIVAL.total / ME.total) * 100).toFixed(1)}%"></s>` : ""}</i></div>`).join("")}</div>
+        ${gcFoot(LOCAL.stakes)}`),
+    rank: (look) => gcCard("rank", look, `
+        ${gcTop(`Round ${F.round} · day ${LOCAL.day} of ${LOCAL.len}`)}
+        <div class="gc-rank-hero">
+            <b class="gc-rank-1 num">1</b><span class="gc-rank-st">st</span><span class="gc-rank-of">of ${F.of}</span>
+            ${companionArt("badger", 200, 'class="gc-rank-art"')}
+        </div>
+        <div class="gc-rank-t">Marc is winning<br>${esc(F.name)}.</div>
+        <div class="gc-rank-rest">${S.slice(1).map((r) => `<div class="gc-rr"><span class="num">${r.rank}</span>${avatar(r.person, 20)}<b>${esc(r.person.name)}</b><em class="num">${fmt(r.total)}</em></div>`).join("")}</div>
+        ${gcFoot(LOCAL.stakes)}`),
+    today: (look) => {
+        const peak = Math.max(...FF.hourly);
+        return gcCard("today", look, `
+        ${gcTop("Thu 24 Sep")}
+        <div class="gc-k">Today Marc walked</div>
+        <div class="gc-today-n num">${fmt(ME.today)}</div>
+        <div class="gc-pill">${icon("crown", 13, { stroke: 2.4 })}The most of anyone today</div>
+        <div class="gc-hours">${Array.from({ length: 24 }, (_, h) => {
+            const v = FF.hourly[h];
+            if (v === undefined) return `<i class="later"></i>`;
+            return `<i style="height:${Math.max(3, Math.round((v / peak) * 92))}px"${v === peak ? ' class="peak"' : ""}>${v === peak ? `<span class="num">${fmt(v)}</span>` : ""}</i>`;
+        }).join("")}</div>
+        <div class="gc-hx"><span>0:00</span><span>6:00</span><span>12:00</span><span>18:00</span></div>
+        <div class="gc-others">${S.filter((r) => r.id !== "marc").sort((a, b) => b.today - a.today).map((r) => `<span>${avatar(r.person, 18)}<em class="num">${short(r.today)}</em></span>`).join("")}<span class="gc-ol">the others today</span></div>
+        ${gcFoot(`Day ${LOCAL.day} of ${LOCAL.len} · ${esc(F.name)}`)}`);
+    },
+    days: (look) => gcCard("days", look, `
+        ${gcTop(`Round ${F.round}`)}
+        <div class="gc-k">${esc(F.name)} ends in</div>
+        <div class="gc-days-hero"><b class="num">2</b><span>days</span></div>
+        <div class="gc-week">${Array.from({ length: LOCAL.len }, (_, i) => `<div class="${i < LOCAL.day - 1 ? "full" : i === LOCAL.day - 1 ? "part" : ""}"><i></i><span class="num">${i + 1}</span></div>`).join("")}</div>
+        <div class="gc-bell">${icon("flag", 14, { stroke: 2.4 })}Final bell Sat 26 Sep, 20:00</div>
+        <div class="gc-dare">${esc(RIVAL.person.name)} has two days to find <b class="num">${fmt(F.gap + 1)}</b> steps.</div>
+        ${gcFoot(LOCAL.stakes)}`),
+    action: (look) => gcCard("action", look, `
+        ${gcTop(`Day ${LOCAL.day} of ${LOCAL.len}`)}
+        <div class="gc-k">Whoever finishes last</div>
+        <div class="gc-act-t">brings<b>croissants</b>for everyone.</div>
+        <div class="gc-duty">${companionArt(LAST.person.animal, 124, 'class="gc-duty-art"')}<div><span>On croissant duty right now</span><b>${esc(LAST.person.name)}</b><em class="num">${fmt(S[S.length - 2].total - LAST.total)} steps from safety</em></div></div>
+        ${gcFoot("Final bell Sat 20:00")}`),
+    total: (look) => {
+        const days = F.days.map((d) => d.scores.marc);
+        const top = Math.max(...days);
+        return gcCard("total", look, `
+        ${gcTop(`Day ${LOCAL.day} of ${LOCAL.len}`)}
+        <div class="gc-k">In five days Marc walked</div>
+        <div class="gc-total-n num">${fmt(ME.total)}</div>
+        <div class="gc-total-u">steps · ${LOCAL.ords[ME.rank - 1]} of ${F.of}</div>
+        <div class="gc-cols">${Array.from({ length: LOCAL.len }, (_, i) => {
+            const v = days[i];
+            if (v === undefined) return `<div class="later"><i></i><span>${i + 1}</span></div>`;
+            return `<div${i === LOCAL.day - 1 ? ' class="now"' : ""}><em class="num">${short(v)}</em><i style="height:${Math.round((v / top) * 112)}px"></i><span class="num">${i === LOCAL.day - 1 ? "Today" : i + 1}</span></div>`;
+        }).join("")}</div>
+        ${gcFoot(`${esc(F.name)} · round ${F.round}`)}`);
+    },
+};
+
+// The deck every slideshow shares: giant numbers first, mixed with six cards from the options above, drawn exactly as they are there.
+const DECK = [
+    { id: "g-lead", name: "The lead", look: "moss" },
+    { id: "giant", name: "Giant number" },
+    { id: "g-rank", name: "First place" },
+    { id: "g-today", name: "Today", look: "soft" },
+    { id: "magazine", name: "Magazine cover" },
+    { id: "g-days", name: "Days left" },
+    { id: "names-off", name: "Only my side" },
+    { id: "g-action", name: "Croissant duty" },
+    { id: "poster", name: "Fight poster" },
+    { id: "g-total", name: "Week total" },
+    { id: "standings", name: "Standings" },
+    { id: "race", name: "Race scene" },
+];
+const GIANTS = DECK.filter((d) => d.id.startsWith("g-"));
+const LOOKS = [["night", "Night"], ["day", "Day"], ["moss", "Moss"], ["soft", "Soft moss"]];
+const REUSED = {};
+const deckCard = (d, ctx, look) => {
+    if (d.id.startsWith("g-")) return GC[d.id.slice(2)](look || d.look || "base");
+    const key = d.id + ":" + ctx.theme;
+    if (!REUSED[key]) {
+        const t = document.createElement("template");
+        t.innerHTML = VARIANTS.find((v) => v.id === d.id).render(ctx).overlay;
+        const card = t.content.querySelector("[data-card]");
+        card.removeAttribute("data-card");
+        REUSED[key] = card.outerHTML;
+    }
+    return REUSED[key];
+};
+const reusedCss = () => DECK.filter((d) => !d.id.startsWith("g-")).map((d) => VARIANTS.find((v) => v.id === d.id).css).join("\n");
+
+// Slideshow parts. A card is 300 x 533 (1080 x 1920 at story ratio); `fit` scales it without reflowing it.
+const fit = (card, k) => `<div class="xs-fit" style="--k:${k}">${card}</div>`;
+const arrow = (dir) => `<button type="button" class="xs-arrow" data-${dir} aria-label="${dir === "prev" ? "Previous card" : "Next card"}">${icon(dir === "prev" ? "chevronLeft" : "chevronRight", 20, { stroke: 2.6 })}</button>`;
+const dotsFor = (n, cls = "") => `<div class="xs-dots ${cls}" data-dots role="slider" aria-label="Card" aria-valuemin="1" aria-valuemax="${n}" aria-valuenow="1">${"<i></i>".repeat(n)}</div>`;
+const counter = (n) => `<span class="xs-count num" data-count>1 of ${n}</span>`;
+const saveShare = () => `<div class="xs-acts"><button type="button" class="xs-btn" data-save>${icon("arrowDown", 18, { stroke: 2.4 })}Save to Photos</button><button type="button" class="xs-btn go" data-share>${icon("share", 18, { stroke: 2.4 })}Share</button></div>`;
+const SYS_APPS = [["camera", "Instagram", "Opens Instagram Stories with this card"], ["message", "Messages", "Sends the image with the join link"], ["send", "Mail", "New mail with the image attached"], ["pencil", "Notes", "Added to a new note"], ["ellipsis", "More", "Opens more apps"]];
+// Toast plus the iOS share sheet that rises when Share is tapped, holding the chosen card.
+const sysLayer = () => `
+<div class="xs-toast" data-xtoast role="status"></div>
+<div class="xs-sysov" data-sys hidden>
+    <div class="sc-scrim" data-sys-close></div>
+    <div class="sc-sys" role="dialog" aria-label="Share">
+        <div class="sc-sys-head">
+            <div class="xs-sys-thumb" data-sys-thumb></div>
+            <div class="sc-sys-t"><div class="sc-sys-t1" data-sys-name></div><div class="sc-sys-t2">Story image · 1080 × 1920 · with join link</div></div>
+            <button type="button" class="sc-sys-x" data-sys-close aria-label="Close"><span>${icon("x", 15, { stroke: 2.6 })}</span></button>
+        </div>
+        <div class="sc-sys-apps">${SYS_APPS.map(([ic, t, msg]) => `<button type="button" class="sc-sys-app" data-app="${msg}"><i>${icon(ic, 26, { stroke: 1.9 })}</i>${t}</button>`).join("")}</div>
+        <div class="sc-sys-acts">
+            <button type="button" class="sc-sys-act" data-app="Saved to Photos">Save Image${icon("arrowDown", 19)}</button>
+            <button type="button" class="sc-sys-act" data-app="Image copied">Copy${icon("copy", 19)}</button>
+            <button type="button" class="sc-sys-act" data-app="Join link copied">Copy join link${icon("link", 19)}</button>
+        </div>
+    </div>
+</div>`;
+
+// Scroll-snap carousel. Touch and trackpad swipe are native; a mouse can drag or use its wheel.
+// `ui` holds the arrows [data-prev] [data-next], dots [data-dots], jump buttons [data-go] and the "3 of 12" counter.
+const carousel = (sc, ui, ctx, hooks = {}) => {
+    const slides = [...sc.children].filter((el) => el.hasAttribute("data-slide"));
+    const n = slides.length;
+    let at = -1, raf = 0, drag = null, scrub = null, quiet = 0, swallow = false;
+    const mid = (el) => el.offsetLeft + el.offsetWidth / 2;
+    const paint = () => {
+        ui.querySelectorAll("[data-count]").forEach((el) => { el.textContent = `${at + 1} of ${n}`; });
+        ui.querySelectorAll("[data-dots]").forEach((d) => {
+            d.setAttribute("aria-valuenow", String(at + 1));
+            [...d.children].forEach((dot, i) => { dot.classList.toggle("done", i < at); dot.classList.toggle("on", i === at); });
+        });
+        ui.querySelectorAll("[data-prev]").forEach((b) => { b.disabled = at <= 0; });
+        ui.querySelectorAll("[data-next]").forEach((b) => { b.disabled = at >= n - 1; });
+        ui.querySelectorAll("[data-go]").forEach((b) => b.setAttribute("aria-current", String(Number(b.dataset.go) === at)));
+    };
+    const measure = () => {
+        raf = 0;
+        const c = sc.scrollLeft + sc.clientWidth / 2;
+        let best = 0;
+        slides.forEach((el, i) => { if (Math.abs(mid(el) - c) < Math.abs(mid(slides[best]) - c)) best = i; });
+        if (hooks.scroll) hooks.scroll(sc.scrollLeft, slides);
+        if (best !== at) {
+            at = best;
+            paint();
+            if (hooks.change) hooks.change(at, slides);
+        }
+    };
+    const go = (i, smooth = true) => {
+        const j = Math.max(0, Math.min(n - 1, i));
+        sc.scrollTo({ left: mid(slides[j]) - sc.clientWidth / 2, behavior: smooth && !ctx.reduced ? "smooth" : "auto" });
+        if (!smooth || ctx.reduced) measure();
+    };
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(measure); };
+    const onClick = (e) => {
+        const b = e.target.closest("[data-prev],[data-next],[data-go]");
+        if (!b || !ui.contains(b)) return;
+        if (b.hasAttribute("data-prev")) go(at - 1);
+        else if (b.hasAttribute("data-next")) go(at + 1);
+        else go(Number(b.dataset.go));
+    };
+    // Dots work like an iOS page control: tap one, or slide a finger along them.
+    const nearest = (d, x) => {
+        const kids = [...d.children];
+        const dist = (k) => { const r = k.getBoundingClientRect(); return Math.abs(r.left + r.width / 2 - x); };
+        return kids.reduce((b, k, i) => (dist(k) < dist(kids[b]) ? i : b), 0);
+    };
+    const dotDown = (e) => {
+        scrub = e.currentTarget;
+        scrub.setPointerCapture(e.pointerId);
+        go(nearest(scrub, e.clientX));
+    };
+    const dotMove = (e) => {
+        if (!scrub) return;
+        const i = nearest(scrub, e.clientX);
+        if (i !== at) go(i, false);
+    };
+    const dotUp = () => { scrub = null; };
+    const dots = [...ui.querySelectorAll("[data-dots]")].filter((d) => !d.hasAttribute("data-static"));
+    dots.forEach((d) => {
+        d.addEventListener("pointerdown", dotDown);
+        d.addEventListener("pointermove", dotMove);
+        d.addEventListener("pointerup", dotUp);
+        d.addEventListener("pointercancel", dotUp);
+    });
+    // Mouse: drag like a finger. Snapping pauses during the drag, then lands one card over.
+    const move = (e) => {
+        const dx = (e.clientX - drag.x) / drag.k;
+        if (!drag.moved && Math.abs(dx) < 5) return;
+        if (!drag.moved) sc.classList.add("dragging");
+        drag.moved = true;
+        drag.dx = dx;
+        sc.scrollLeft = drag.left - dx;
+    };
+    const up = () => {
+        window.removeEventListener("pointermove", move);
+        window.removeEventListener("pointerup", up);
+        const d = drag;
+        drag = null;
+        if (!d.moved) return;
+        swallow = true;
+        setTimeout(() => { swallow = false; }, 0);
+        sc.classList.remove("dragging");
+        go(d.from + (Math.abs(d.dx) > 36 ? (d.dx < 0 ? 1 : -1) : 0));
+    };
+    const down = (e) => {
+        if (e.pointerType !== "mouse" || e.button !== 0) return;
+        drag = { x: e.clientX, left: sc.scrollLeft, k: sc.getBoundingClientRect().width / sc.offsetWidth || 1, moved: false, dx: 0, from: at };
+        window.addEventListener("pointermove", move);
+        window.addEventListener("pointerup", up);
+    };
+    const eatClick = (e) => { if (swallow) { e.stopPropagation(); e.preventDefault(); } };
+    const noGhost = (e) => e.preventDefault();
+    // A plain mouse wheel scrolls vertically: turn one notch or one flick into one card.
+    const wheel = (e) => {
+        if (Math.abs(e.deltaX) >= Math.abs(e.deltaY)) return;
+        e.preventDefault();
+        const now = performance.now();
+        const busy = now < quiet;
+        quiet = now + 240;
+        if (!busy) go(at + Math.sign(e.deltaY));
+    };
+    sc.addEventListener("scroll", onScroll, { passive: true });
+    sc.addEventListener("pointerdown", down);
+    sc.addEventListener("click", eatClick, true);
+    sc.addEventListener("dragstart", noGhost);
+    sc.addEventListener("wheel", wheel, { passive: false });
+    ui.addEventListener("click", onClick);
+    measure();
+    return {
+        go,
+        n,
+        slides,
+        get at() { return at; },
+        stop: () => {
+            cancelAnimationFrame(raf);
+            window.removeEventListener("pointermove", move);
+            window.removeEventListener("pointerup", up);
+            sc.removeEventListener("scroll", onScroll);
+            sc.removeEventListener("pointerdown", down);
+            sc.removeEventListener("click", eatClick, true);
+            sc.removeEventListener("dragstart", noGhost);
+            sc.removeEventListener("wheel", wheel);
+            ui.removeEventListener("click", onClick);
+            dots.forEach((d) => {
+                d.removeEventListener("pointerdown", dotDown);
+                d.removeEventListener("pointermove", dotMove);
+                d.removeEventListener("pointerup", dotUp);
+                d.removeEventListener("pointercancel", dotUp);
+            });
+        },
+    };
+};
+
+// Close and reopen, copy, Save to Photos, and Share. `pick()` returns the chosen { card, name }; `opened` runs after Share fight reopens the flow.
+const flowWire = (root, ctx, pick, { extra, opened } = {}) => {
+    const ov = ctx.overlay;
+    let timer = 0;
+    const say = (msg) => {
+        const t = ov.querySelector("[data-xtoast]");
+        t.innerHTML = `${icon("check", 14, { stroke: 2.8 })}${esc(msg)}`;
+        t.classList.add("on");
+        clearTimeout(timer);
+        timer = setTimeout(() => t.classList.remove("on"), 1700);
+    };
+    const onClick = (e) => {
+        const el = e.target.closest("[data-open],[data-close],[data-copy],[data-save],[data-share],[data-sys-close],[data-app]");
+        if (!el) return extra && extra(e);
+        const sys = ov.querySelector("[data-sys]");
+        if (el.hasAttribute("data-open")) {
+            ov.querySelector("[data-ov]").hidden = false;
+            if (opened) opened();
+        } else if (el.hasAttribute("data-close")) ov.querySelector("[data-ov]").hidden = true;
+        else if (el.dataset.copy) {
+            el.textContent = "Copied";
+            setTimeout(() => { el.textContent = el.dataset.copy; }, 1400);
+        } else if (el.hasAttribute("data-save")) say(`${pick().name} saved to Photos`);
+        else if (el.hasAttribute("data-share")) {
+            const p = pick();
+            sys.querySelector("[data-sys-thumb]").innerHTML = fit(p.card, 0.084);
+            sys.querySelector("[data-sys-name]").textContent = `${F.name} · ${p.name}`;
+            sys.hidden = false;
+        } else if (el.hasAttribute("data-sys-close")) sys.hidden = true;
+        else {
+            sys.hidden = true;
+            say(el.dataset.app);
+        }
+    };
+    root.addEventListener("click", onClick);
+    ov.addEventListener("click", onClick);
+    return () => {
+        clearTimeout(timer);
+        root.removeEventListener("click", onClick);
+        ov.removeEventListener("click", onClick);
+    };
+};
+const slidesOf = (cards, k) => cards.map((c) => `<div class="xs-slide" data-slide>${fit(c, k)}</div>`).join("");
+// Option 23: the deck ranked by what just happened in the fight, with the reason shown under each card.
+const BEST = [
+    { id: "g-lead", icon: "crown", chip: "Lead back", title: "Best right now", why: "Marc took the lead back today. Post it before Bertille answers." },
+    { id: "g-today", icon: "flame", chip: "Best day", title: "Your best day", why: "8,432 steps today, the most of anyone in the fight." },
+    { id: "g-days", icon: "clock", chip: "2 days left", title: "Build the hype", why: "Two days to go. A countdown gets replies." },
+    { id: "magazine", icon: "medal", chip: "Cover star", title: "Main character", why: "The badger breaks the masthead. Big week, big cover." },
+    { id: "g-rank", icon: "trophy", chip: "1st of 4", title: "Simple flex", why: "First place, no maths needed." },
+    { id: "g-action", icon: "flag", chip: "Croissant duty", title: "Stir the group", why: "Léa is on croissant duty right now. She will want to reply." },
+    { id: "giant", icon: "trendUp", chip: "The gap", title: "The gap, to scale", why: "+2,840 over Bertille, drawn on one line." },
+    { id: "names-off", icon: "lock", chip: "Private", title: "Only your side", why: "Friends' names and steps stay in the app." },
+    { id: "poster", icon: "swords", chip: "Main event", title: "Fight night", why: "Badger versus fox, like a boxing poster." },
+    { id: "g-total", icon: "steps", chip: "Week total", title: "The week so far", why: "28,430 steps in five days, day by day." },
+    { id: "standings", icon: "users", chip: "Standings", title: "Everyone's in it", why: "All four of you, in the app's own look." },
+    { id: "race", icon: "flag", chip: "Race", title: "The race scene", why: "Four runners, already in finishing order." },
+];
+const sheetHead = (title) => `<div class="sc-grab"></div><div class="sc-head"><h3>${title}</h3><button type="button" class="sc-close" data-close>Close</button></div>`;
 
 const VARIANTS = [
     // 1: faithful replica
@@ -2307,6 +2765,617 @@ button.v13-ic > span { background: var(--bg); border: 1px solid var(--line); }
                 row.querySelector("[data-v]").textContent = fmt(s.cum[row.dataset.row]);
             });
         }),
+    },
+    // 16: full-bleed story preview
+    {
+        id: "swipe-story",
+        name: "Story swipe",
+        when: "When the preview should be the Story itself. Swipe full-size cards, share the one you stop on.",
+        changes: [
+            "Needs a backlog item: a share flow with a dozen story-size card designs to swipe through before sharing.",
+            "Each card fills the screen exactly as friends will see it on Instagram, so there is no guessing.",
+            "Giant numbers first: the lead, first place, today, days left, croissant duty, the week, plus six cards from above.",
+            "Story bars on top track where you are. Arrows, swipe or drag with a mouse; Share raises the iOS sheet with that card.",
+        ],
+        get css() {
+            return reusedCss() + `
+.v16 { background: var(--canvas); }
+.v16-track { position: absolute; left: 0; right: 0; top: 54px; height: 699px; gap: 10px; }
+.v16-track .xs-slide { scroll-snap-stop: always; }
+.v16-top { position: absolute; left: 0; right: 0; top: 54px; z-index: 2; padding: 9px 12px 30px; border-radius: 29px 29px 0 0; background: linear-gradient(color-mix(in srgb, var(--canvas) 74%, transparent), transparent); pointer-events: none; }
+.v16-segs { height: 6px; padding: 0 2px; gap: 3px; cursor: default; }
+.v16-segs i { flex: 1; width: auto; height: 3px; border-radius: 2px; background: color-mix(in srgb, var(--text) 28%, transparent); }
+.v16-segs i.done, .v16-segs i.on { width: auto; background: var(--text); }
+.v16-bar { display: flex; align-items: center; gap: 4px; margin-top: 4px; }
+.v16-x { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border: 0; padding: 0; background: none; color: var(--text); cursor: pointer; pointer-events: auto; }
+.v16-who b { display: block; font-size: 14px; font-weight: 800; letter-spacing: -0.01em; }
+.v16-who span { display: block; font-size: 11px; font-weight: 700; color: var(--text-secondary); }
+.v16-bar .xs-count { margin-left: auto; margin-right: 4px; background: color-mix(in srgb, var(--canvas) 60%, transparent); }
+.v16-side { position: absolute; top: 382px; z-index: 2; }
+.v16-side.l { left: 8px; }
+.v16-side.r { right: 8px; }
+.v16-side .xs-arrow { background: color-mix(in srgb, var(--canvas) 66%, transparent); border: 1px solid var(--overlay-line); }
+.v16-side .xs-arrow:disabled { opacity: 0; }
+.v16-bot { position: absolute; left: 0; right: 0; bottom: 34px; }
+`;
+        },
+        render: (ctx) => ({
+            html: base(),
+            overlay: `<div class="sc-ov" data-ov>
+    <div class="xs-full v16" role="dialog" aria-label="Choose a card" data-ui>
+        <div class="xs-track v16-track" data-track>${slidesOf(DECK.map((d) => deckCard(d, ctx)), 1.31)}</div>
+        <div class="v16-top">
+            ${dotsFor(DECK.length, "v16-segs").replace("data-dots", "data-dots data-static aria-hidden=\"true\"")}
+            <div class="v16-bar">
+                <button type="button" class="v16-x" data-close aria-label="Close">${icon("x", 20, { stroke: 2.6 })}</button>
+                <div class="v16-who"><b data-name>${DECK[0].name}</b><span>Story preview · swipe for more</span></div>
+                ${counter(DECK.length)}
+            </div>
+        </div>
+        <div class="v16-side l">${arrow("prev")}</div>
+        <div class="v16-side r">${arrow("next")}</div>
+        <div class="v16-bot">${saveShare()}</div>
+    </div>
+    ${sysLayer()}
+</div>`,
+        }),
+        mount: (root, ctx) => {
+            const ov = ctx.overlay;
+            const car = carousel(ov.querySelector("[data-track]"), ov.querySelector("[data-ui]"), ctx, {
+                change: (i) => { ov.querySelector("[data-name]").textContent = DECK[i].name; },
+            });
+            const stop = flowWire(root, ctx, () => ({ card: deckCard(DECK[car.at], ctx), name: DECK[car.at].name }), { opened: () => car.go(car.at, false) });
+            return () => { car.stop(); stop(); };
+        },
+    },
+
+    // 17: cover flow, neighbours peeking
+    {
+        id: "peek-flow",
+        name: "Peek carousel",
+        when: "Ship-ready. The composer Marc already knows, with the next and previous cards peeking at the edges.",
+        changes: [
+            "Needs a backlog item: a share flow with a dozen story-size card designs to swipe through before sharing.",
+            "The centre card is full size; neighbours shrink and fade at the edges, so it is obvious there is more to swipe.",
+            "Name and \"3 of 12\" under the card, page dots you can tap or scrub, arrows on both sides.",
+            "Save to Photos or Share. Share raises the iOS sheet with the card in the middle.",
+        ],
+        get css() {
+            return reusedCss() + `
+.v17-track { flex: none; align-self: stretch; height: 492px; margin-top: 4px; gap: 12px; }
+.v17-track::before, .v17-track::after { content: ""; flex: none; width: calc(50% - 147px); }
+.v17-track .xs-fit { will-change: transform; }
+.v17-nav { flex: none; align-self: stretch; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; margin-top: 6px; }
+.v17-mid { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.v17-mid b { font-size: 16px; font-weight: 800; letter-spacing: -0.01em; }
+.v17 .xs-dots { margin-top: 2px; }
+.v17 .xs-acts { margin-top: 8px; }
+`;
+        },
+        render: (ctx) => ({
+            html: base(),
+            overlay: `<div class="sc-ov" data-ov>
+    <div class="sc-scrim" data-close></div>
+    <div class="sc-sheet v17" role="dialog" aria-label="Choose a card" data-ui>
+        ${sheetHead("Choose a card")}
+        <div class="xs-track v17-track" data-track>${slidesOf(DECK.map((d) => deckCard(d, ctx)), 0.9)}</div>
+        <div class="v17-nav">${arrow("prev")}<div class="v17-mid"><b data-name>${DECK[0].name}</b>${counter(DECK.length)}</div>${arrow("next")}</div>
+        ${dotsFor(DECK.length)}
+        ${saveShare()}
+    </div>
+    ${sysLayer()}
+</div>`,
+        }),
+        mount: (root, ctx) => {
+            const ov = ctx.overlay;
+            const sc = ov.querySelector("[data-track]");
+            const car = carousel(sc, ov.querySelector("[data-ui]"), ctx, {
+                change: (i) => { ov.querySelector("[data-name]").textContent = DECK[i].name; },
+                // Neighbours shrink to 86% and fade to half as they leave the centre.
+                scroll: (x, slides) => {
+                    const c = x + sc.clientWidth / 2;
+                    slides.forEach((el) => {
+                        const d = Math.min(1, Math.abs(el.offsetLeft + el.offsetWidth / 2 - c) / (el.offsetWidth + 12));
+                        el.firstElementChild.style.transform = `scale(${(1 - 0.14 * d).toFixed(4)})`;
+                        el.firstElementChild.style.opacity = (1 - 0.5 * d).toFixed(3);
+                    });
+                },
+            });
+            const stop = flowWire(root, ctx, () => ({ card: deckCard(DECK[car.at], ctx), name: DECK[car.at].name }), { opened: () => car.go(car.at, false) });
+            return () => { car.stop(); stop(); };
+        },
+    },
+
+    // 18: big preview over a filmstrip
+    {
+        id: "filmstrip",
+        name: "Filmstrip",
+        when: "When there are many cards and Marc wants to jump, not swipe twelve times. Like the Photos app.",
+        changes: [
+            "Needs a backlog item: a share flow with a dozen story-size card designs to swipe through before sharing.",
+            "Big preview on top, a filmstrip of every card underneath. Tap a thumbnail to jump, or swipe the preview.",
+            "The filmstrip follows the preview and rings the current card, so you always see where you are.",
+            "Full screen with Cancel and \"3 of 12\" in the bar; Save to Photos and Share at the bottom.",
+        ],
+        get css() {
+            return reusedCss() + `
+.v18-track { flex: none; height: 468px; margin-top: 6px; }
+.v18-track .xs-slide { width: 100%; }
+.v18-row { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 20px; margin-top: 8px; }
+.v18-row b { font-size: 16px; font-weight: 800; letter-spacing: -0.01em; }
+.v18-strip { position: relative; flex: none; display: flex; align-items: center; gap: 8px; height: 104px; margin-top: 4px; overflow-x: auto; scrollbar-width: none; }
+.v18-strip::-webkit-scrollbar { display: none; }
+.v18-strip::before, .v18-strip::after { content: ""; flex: none; width: calc(50% - 30px); }
+.v18-th { position: relative; flex: none; padding: 0; border: 0; background: none; border-radius: 7px; cursor: pointer; opacity: 0.55; transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.2, 0.9, 0.25, 1); }
+.v18-th .sc-card { border-radius: 30px; }
+.v18-th[aria-current="true"] { opacity: 1; transform: scale(1.12); }
+.v18-th[aria-current="true"]::after { content: ""; position: absolute; inset: -4px; border-radius: 10px; border: 2px solid var(--text); }
+.v18 .xs-acts { margin: auto 0 34px; }
+`;
+        },
+        render: (ctx) => {
+            const cards = DECK.map((d) => deckCard(d, ctx));
+            return {
+                html: base(),
+                overlay: `<div class="sc-ov" data-ov>
+    <div class="xs-full v18" role="dialog" aria-label="Choose a card" data-ui>
+        <div class="xs-nav"><button type="button" class="xs-navbtn" data-close>Cancel</button><div class="xs-navt">Pick a card</div>${counter(cards.length)}</div>
+        <div class="xs-track v18-track" data-track>${slidesOf(cards, 0.87)}</div>
+        <div class="v18-row">${arrow("prev")}<b data-name>${DECK[0].name}</b>${arrow("next")}</div>
+        <div class="v18-strip" data-strip>${cards.map((c, i) => `<button type="button" class="v18-th" data-go="${i}" aria-label="${DECK[i].name}">${fit(c, 0.2)}</button>`).join("")}</div>
+        ${saveShare()}
+    </div>
+    ${sysLayer()}
+</div>`,
+            };
+        },
+        mount: (root, ctx) => {
+            const ov = ctx.overlay;
+            const strip = ov.querySelector("[data-strip]");
+            const car = carousel(ov.querySelector("[data-track]"), ov.querySelector("[data-ui]"), ctx, {
+                change: (i) => {
+                    ov.querySelector("[data-name]").textContent = DECK[i].name;
+                    const th = strip.querySelector(`[data-go="${i}"]`);
+                    strip.scrollTo({ left: th.offsetLeft + th.offsetWidth / 2 - strip.clientWidth / 2, behavior: ctx.reduced ? "auto" : "smooth" });
+                },
+            });
+            const stop = flowWire(root, ctx, () => ({ card: deckCard(DECK[car.at], ctx), name: DECK[car.at].name }), { opened: () => car.go(car.at, false) });
+            return () => { car.stop(); stop(); };
+        },
+    },
+
+    // 19: a pile you swipe away
+    {
+        id: "swipe-stack",
+        name: "Swipe stack",
+        when: "When choosing should feel like a game. Flick cards off the pile until one makes you grin.",
+        changes: [
+            "Needs a backlog item: a share flow with a dozen story-size card designs to swipe through before sharing.",
+            "The cards sit in a loose pile. Swipe the top one away and it flies off; swipe back and it returns.",
+            "Real scroll-snap under the pile, so a finger, a trackpad or a mouse drag all feel native, with momentum.",
+            "The card on top is the one that gets shared. Dots, arrows and \"3 of 12\" keep count.",
+        ],
+        get css() {
+            return reusedCss() + `
+.v19-stage { position: relative; flex: none; align-self: stretch; height: 486px; margin-top: 4px; overflow: hidden; }
+.v19-card { position: absolute; left: calc(50% - 120px); top: 8px; transform-origin: 50% 100%; pointer-events: none; }
+.v19-card .sc-card { border-color: var(--line); }
+.v19-track { position: absolute; inset: 0; z-index: 40; }
+.v19-track .xs-slide { width: 100%; height: 100%; scroll-snap-stop: always; }
+.v19-hint { flex: none; display: flex; align-items: center; gap: 6px; height: 20px; font-size: 12px; font-weight: 800; color: var(--text-secondary); }
+.v19-nav { flex: none; align-self: stretch; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; margin-top: 4px; }
+.v19-mid { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.v19-mid b { font-size: 16px; font-weight: 800; letter-spacing: -0.01em; }
+.v19 .xs-acts { margin-top: 10px; }
+`;
+        },
+        render: (ctx) => {
+            const n = DECK.length;
+            return {
+                html: base(),
+                overlay: `<div class="sc-ov" data-ov>
+    <div class="sc-scrim" data-close></div>
+    <div class="sc-sheet v19" role="dialog" aria-label="Choose a card" data-ui>
+        ${sheetHead("Choose a card")}
+        <div class="v19-stage">
+            ${DECK.map((d, i) => `<div class="v19-card" data-pc style="z-index:${n - i}">${fit(deckCard(d, ctx), 0.8)}</div>`).join("")}
+            <div class="xs-track v19-track" data-track aria-label="Swipe the pile">${DECK.map(() => `<div class="xs-slide" data-slide></div>`).join("")}</div>
+        </div>
+        <div class="v19-hint">${icon("chevronLeft", 14, { stroke: 2.8 })}Swipe the top card away · swipe back to undo</div>
+        <div class="v19-nav">${arrow("prev")}<div class="v19-mid"><b data-name>${DECK[0].name}</b>${counter(n)}</div>${arrow("next")}</div>
+        ${dotsFor(n)}
+        ${saveShare()}
+    </div>
+    ${sysLayer()}
+</div>`,
+            };
+        },
+        mount: (root, ctx) => {
+            const ov = ctx.overlay;
+            const sc = ov.querySelector("[data-track]");
+            const pile = [...ov.querySelectorAll("[data-pc]")];
+            const car = carousel(sc, ov.querySelector("[data-ui]"), ctx, {
+                change: (i) => { ov.querySelector("[data-name]").textContent = DECK[i].name; },
+                // Scroll progress drives the pile: cards behind step down and shrink, swiped cards fly off to the left, turning.
+                scroll: (x) => {
+                    const p = x / sc.clientWidth;
+                    pile.forEach((el, i) => {
+                        const d = i - p;
+                        if (d < 0) {
+                            const t = Math.max(d, -1.4);
+                            el.style.transform = `translate(${(t * 340).toFixed(1)}px, ${(t * -16).toFixed(1)}px) rotate(${(t * 18).toFixed(2)}deg)`;
+                            el.style.opacity = d < -1.2 ? "0" : "1";
+                        } else {
+                            const t = Math.min(d, 3);
+                            el.style.transform = `translateY(${(t * 14).toFixed(1)}px) scale(${(1 - t * 0.055).toFixed(4)}) rotate(${((i % 2 ? 1 : -1) * Math.min(d, 1) * 2.4).toFixed(2)}deg)`;
+                            el.style.opacity = d > 3.2 ? "0" : "1";
+                        }
+                    });
+                },
+            });
+            const stop = flowWire(root, ctx, () => ({ card: deckCard(DECK[car.at], ctx), name: DECK[car.at].name }), { opened: () => car.go(car.at, false) });
+            return () => { car.stop(); stop(); };
+        },
+    },
+
+    // 20: see them all, tap to expand
+    {
+        id: "grid-pick",
+        name: "Grid picker",
+        when: "When Marc wants to see every option at once, then zoom into the one that jumps out.",
+        changes: [
+            "Needs a backlog item: a share flow with a dozen story-size card designs to swipe through before sharing.",
+            "Opens on a grid of all twelve cards. Tap one and it grows from its spot into a full-size preview.",
+            "In the preview, swipe sideways through the rest; All cards shrinks it back into the grid.",
+            "Save to Photos and Share live in the preview, so the grid stays calm.",
+        ],
+        get css() {
+            return reusedCss() + `
+.v20-grid { position: absolute; inset: 0; display: flex; flex-direction: column; }
+.v20-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 20px 40px; scrollbar-width: none; }
+.v20-scroll::-webkit-scrollbar { display: none; }
+.v20-h { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.025em; }
+.v20-p { margin: 4px 0 16px; font-size: 13px; font-weight: 700; color: var(--text-secondary); }
+.v20-cells { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 10px; }
+.v20-cell { display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 0; border: 0; background: none; color: var(--text-dim); font-size: 11px; font-weight: 800; cursor: pointer; }
+.v20-cell:active .xs-fit { transform: scale(0.96); }
+.v20-cell .xs-fit { transition: transform 0.15s ease; }
+.v20-cell .sc-card { border-radius: 30px; }
+.v20-pager { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; }
+.v20-pager[hidden] { display: none; }
+.v20-bg { position: absolute; inset: 0; z-index: -1; background: var(--bg); }
+.v20-track { flex: none; height: 592px; margin-top: 4px; }
+.v20-track .xs-slide { width: 100%; }
+.v20-row { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; margin-top: 4px; }
+.v20-pager .xs-acts { margin: auto 0 34px; }
+.xs-navbtn.back { padding-left: 0; }
+`;
+        },
+        render: (ctx) => {
+            const cards = DECK.map((d) => deckCard(d, ctx));
+            return {
+                html: base(),
+                overlay: `<div class="sc-ov" data-ov>
+    <div class="xs-full v20" role="dialog" aria-label="Choose a card">
+        <div class="v20-grid">
+            <div class="xs-nav"><button type="button" class="xs-navbtn" data-close>Cancel</button><div class="xs-navt"></div><span></span></div>
+            <div class="v20-scroll" data-gscroll>
+                <h2 class="v20-h">Pick a card</h2>
+                <p class="v20-p">${cards.length} designs for ${esc(F.name)}. Tap one to see it big.</p>
+                <div class="v20-cells">${cards.map((c, i) => `<button type="button" class="v20-cell" data-cell="${i}">${fit(c, 0.36)}${DECK[i].name}</button>`).join("")}</div>
+            </div>
+        </div>
+        <div class="v20-pager" data-pager data-ui hidden>
+            <div class="v20-bg" data-pbg></div>
+            <div class="xs-nav" data-pchrome><button type="button" class="xs-navbtn back" data-grid>${icon("chevronLeft", 22, { stroke: 2.6 })}All cards</button><div class="xs-navt" data-name>${DECK[0].name}</div>${counter(cards.length)}</div>
+            <div class="xs-track v20-track" data-track>${slidesOf(cards, 1.1)}</div>
+            <div class="v20-row" data-pchrome>${arrow("prev")}${dotsFor(cards.length)}${arrow("next")}</div>
+            <div data-pchrome>${saveShare()}</div>
+        </div>
+    </div>
+    ${sysLayer()}
+</div>`,
+            };
+        },
+        mount: (root, ctx) => {
+            const ov = ctx.overlay;
+            const pager = ov.querySelector("[data-pager]");
+            const car = carousel(ov.querySelector("[data-track]"), pager, ctx, {
+                change: (i) => { ov.querySelector("[data-name]").textContent = DECK[i].name; },
+            });
+            const ease = "cubic-bezier(0.2, 0.9, 0.25, 1)";
+            // Move the big card between its slot in the pager and a grid cell, measured in the phone's own pixels.
+            const flip = (cell, reverse) => {
+                const k = ctx.phone.getBoundingClientRect().width / ctx.phone.offsetWidth || 1;
+                const big = car.slides[car.at].firstElementChild;
+                const a = cell.querySelector(".xs-fit").getBoundingClientRect(), b = big.getBoundingClientRect();
+                const from = { transformOrigin: "0 0", transform: `translate(${(a.left - b.left) / k}px, ${(a.top - b.top) / k}px) scale(${a.width / b.width})` };
+                const to = { transformOrigin: "0 0", transform: "none" };
+                const fade = [{ opacity: 0 }, { opacity: 1 }];
+                const o = { duration: 380, easing: ease };
+                pager.querySelectorAll("[data-pchrome],[data-pbg]").forEach((el) => el.animate(reverse ? fade.slice().reverse() : fade, { ...o, duration: 260, fill: "both" }));
+                return big.animate(reverse ? [to, from] : [from, to], o);
+            };
+            const open = (i) => {
+                pager.hidden = false;
+                car.go(i, false);
+                if (!ctx.reduced) flip(ov.querySelector(`[data-cell="${i}"]`), false);
+            };
+            const back = () => {
+                const cell = ov.querySelector(`[data-cell="${car.at}"]`);
+                const gs = ov.querySelector("[data-gscroll]");
+                gs.scrollTop = Math.max(0, cell.offsetTop - gs.clientHeight / 3);
+                if (ctx.reduced) { pager.hidden = true; return; }
+                flip(cell, true).onfinish = () => {
+                    pager.hidden = true;
+                    pager.querySelectorAll("[data-pchrome],[data-pbg]").forEach((el) => el.getAnimations().forEach((a) => a.cancel()));
+                };
+            };
+            const stop = flowWire(root, ctx, () => ({ card: deckCard(DECK[car.at], ctx), name: DECK[car.at].name }), {
+                opened: () => { if (!pager.hidden) car.go(car.at, false); },
+                extra: (e) => {
+                    const cell = e.target.closest("[data-cell]");
+                    if (cell) return open(Number(cell.dataset.cell));
+                    if (e.target.closest("[data-grid]")) back();
+                },
+            });
+            return () => { car.stop(); stop(); };
+        },
+    },
+
+    // 21: layout first, then a colour
+    {
+        id: "colour-step",
+        name: "Colour step",
+        when: "When the number matters first and the look second. Two short swipes: layout, then colour.",
+        changes: [
+            "Needs a backlog item: a two-step share flow, layout then colour, for the giant-number story cards.",
+            "Step 1 swipes through the six giant-number layouts. Step 2 swipes the chosen one through four grounds.",
+            "Grounds are app colours only: Night, Day, Moss and Soft moss. The page dots become colour swatches.",
+            "Back returns to layouts without losing the pick. Save to Photos and Share appear on the colour step.",
+        ],
+        get css() {
+            return `
+.v21 { overflow: hidden; }
+.v21-head { padding-left: 4px; }
+.v21-head h3 { flex: 1; text-align: center; margin-left: 4px; }
+.v21-back { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; padding: 0 10px 0 4px; border: 0; background: none; color: var(--moss-text); font-size: 13px; font-weight: 800; cursor: pointer; }
+.v21[data-step="1"] .v21-back { visibility: hidden; }
+.v21-steps { flex: none; display: flex; align-items: center; gap: 8px; height: 28px; }
+.v21-steps span { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; color: var(--text-tertiary); }
+.v21-steps span b { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--chip); border: 1px solid var(--chip-edge); font-size: 11px; }
+.v21-steps i { width: 28px; height: 2px; border-radius: 1px; background: var(--track); }
+.v21[data-step="1"] .v21-steps span:first-child, .v21[data-step="2"] .v21-steps span:last-child { color: var(--text); }
+.v21[data-step="1"] .v21-steps span:first-child b, .v21[data-step="2"] .v21-steps span:last-child b { background: var(--text); border-color: var(--text); color: var(--bg); }
+.v21[data-step="2"] .v21-steps span:first-child b { background: var(--moss-fill); border-color: var(--moss-fill); color: var(--moss-on); }
+.v21-rail { flex: none; align-self: stretch; display: flex; width: 200%; transition: transform 0.45s cubic-bezier(0.2, 0.9, 0.25, 1); }
+.v21[data-step="2"] .v21-rail { transform: translateX(-50%); }
+.v21-pane { width: 50%; display: flex; flex-direction: column; align-items: center; }
+.v21-track { flex: none; align-self: stretch; height: 438px; margin-top: 6px; gap: 12px; }
+.v21-track::before, .v21-track::after { content: ""; flex: none; width: calc(50% - 132px); }
+.v21-track .xs-fit { transition: opacity 0.2s ease; }
+.v21-nav { flex: none; align-self: stretch; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; margin-top: 8px; }
+.v21-mid { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.v21-mid b { font-size: 16px; font-weight: 800; letter-spacing: -0.01em; }
+.v21-sw { gap: 14px; height: 52px; }
+.v21-sw i { position: relative; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); }
+.v21-sw i::after { content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 2px solid transparent; transition: border-color 0.2s ease; }
+.v21-sw i.on { width: 34px; }
+.v21-sw i.on::after { border-color: var(--text); }
+.v21-foot { flex: none; align-self: stretch; margin-top: auto; margin-bottom: 34px; }
+.v21[data-step="1"] .v21-foot .xs-acts, .v21[data-step="2"] .v21-foot .v21-next { display: none; }
+.v21-next { width: calc(100% - 40px); margin: 0 20px; flex: none; }
+`;
+        },
+        render: (ctx) => ({
+            html: base(),
+            overlay: `<div class="sc-ov" data-ov>
+    <div class="sc-scrim" data-close></div>
+    <div class="sc-sheet v21" role="dialog" aria-label="Make a card" data-step="1">
+        <div class="sc-grab"></div>
+        <div class="sc-head v21-head"><button type="button" class="v21-back" data-back>${icon("chevronLeft", 20, { stroke: 2.6 })}Layout</button><h3 data-title>Pick a layout</h3><button type="button" class="sc-close" data-close>Close</button></div>
+        <div class="v21-steps"><span><b class="num">1</b>Layout</span><i></i><span><b class="num">2</b>Colour</span></div>
+        <div class="v21-rail">
+            <div class="v21-pane" data-pane="1">
+                <div class="xs-track v21-track" data-track="1">${slidesOf(GIANTS.map((d) => deckCard(d, ctx)), 0.78)}</div>
+                <div class="v21-nav">${arrow("prev")}<div class="v21-mid"><b data-name>${GIANTS[0].name}</b>${counter(GIANTS.length)}</div>${arrow("next")}</div>
+                ${dotsFor(GIANTS.length)}
+            </div>
+            <div class="v21-pane" data-pane="2">
+                <div class="xs-track v21-track" data-track="2"></div>
+                <div class="v21-nav">${arrow("prev")}<div class="v21-mid"><b data-look>Moss</b>${counter(LOOKS.length)}</div>${arrow("next")}</div>
+                <div class="xs-dots v21-sw" data-dots role="slider" aria-label="Colour" aria-valuemin="1" aria-valuemax="${LOOKS.length}">${LOOKS.map(([id]) => `<i${id === "night" ? ' data-theme="night" style="background:var(--bg)"' : id === "day" ? ' data-theme="day" style="background:var(--bg)"' : id === "moss" ? ' style="background:var(--moss-fill)"' : ' data-theme="day" style="background:var(--moss-soft)"'}></i>`).join("")}</div>
+            </div>
+        </div>
+        <div class="v21-foot">
+            <button type="button" class="xs-btn go v21-next" data-step2>Next: pick a colour${icon("chevronRight", 18, { stroke: 2.6 })}</button>
+            ${saveShare()}
+        </div>
+    </div>
+    ${sysLayer()}
+</div>`,
+        }),
+        mount: (root, ctx) => {
+            const ov = ctx.overlay;
+            const sheet = ov.querySelector(".v21");
+            const pane2 = ov.querySelector('[data-pane="2"]');
+            const track2 = ov.querySelector('[data-track="2"]');
+            const car1 = carousel(ov.querySelector('[data-track="1"]'), ov.querySelector('[data-pane="1"]'), ctx, {
+                change: (i) => { ov.querySelector("[data-name]").textContent = GIANTS[i].name; },
+            });
+            let car2 = null, chosen = 0;
+            const step = (s) => {
+                sheet.dataset.step = String(s);
+                ov.querySelector("[data-title]").textContent = s === 1 ? "Pick a layout" : "Pick a colour";
+                if (s !== 2) return;
+                const g = GIANTS[car1.at];
+                if (car2 && chosen === car1.at) return;
+                chosen = car1.at;
+                if (car2) car2.stop();
+                track2.innerHTML = slidesOf(LOOKS.map(([id]) => deckCard(g, ctx, id)), 0.78);
+                car2 = carousel(track2, pane2, ctx, { change: (i) => { ov.querySelector("[data-look]").textContent = LOOKS[i][1]; } });
+                const own = g.look === "moss" || g.look === "soft" ? g.look : ctx.theme;
+                car2.go(LOOKS.findIndex(([id]) => id === own), false);
+            };
+            const stop = flowWire(root, ctx, () => {
+                const g = GIANTS[chosen];
+                const [id, t] = LOOKS[car2.at];
+                return { card: deckCard(g, ctx, id), name: `${g.name}, ${t}` };
+            }, {
+                opened: () => { car1.go(car1.at, false); if (car2) car2.go(car2.at, false); },
+                extra: (e) => {
+                    if (e.target.closest("[data-step2]")) step(2);
+                    else if (e.target.closest("[data-back]")) step(1);
+                },
+            });
+            return () => { car1.stop(); if (car2) car2.stop(); stop(); };
+        },
+    },
+
+    // 22: shuffle
+    {
+        id: "shuffle",
+        name: "Shuffle",
+        when: "When Marc cannot decide. One tap deals a random card, like pulling from a deck.",
+        changes: [
+            "Needs a backlog item: a share flow with a dozen story-size card designs to swipe through before sharing.",
+            "One big card at a time, arrows on its sides. Swipe for the next, or hit Shuffle to deal a random one.",
+            "Shuffle riffles through a few cards before it lands, so it feels like a deal, not a jump cut.",
+            "The counter and dots follow every deal. The card showing is the one Share sends.",
+        ],
+        get css() {
+            return reusedCss() + `
+.v22-stage { position: relative; flex: none; align-self: stretch; height: 468px; margin-top: 4px; }
+.v22-track { position: absolute; inset: 0; }
+.v22-track .xs-slide { width: 100%; scroll-snap-stop: always; }
+.v22-side { position: absolute; top: calc(50% - 22px); z-index: 2; }
+.v22-side.l { left: 10px; }
+.v22-side.r { right: 10px; }
+.v22-meta { flex: none; display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.v22-meta b { font-size: 16px; font-weight: 800; letter-spacing: -0.01em; }
+.v22-shuffle { flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; margin: 2px 0 14px; padding: 0 24px; border: 0; border-radius: var(--r-pill); background: var(--text); color: var(--bg); font-size: 15px; font-weight: 800; cursor: pointer; }
+.v22-shuffle:active { transform: scale(0.96); }
+`;
+        },
+        render: (ctx) => ({
+            html: base(),
+            overlay: `<div class="sc-ov" data-ov>
+    <div class="sc-scrim" data-close></div>
+    <div class="sc-sheet v22" role="dialog" aria-label="Choose a card" data-ui>
+        ${sheetHead("Choose a card")}
+        <div class="v22-stage">
+            <div class="xs-track v22-track" data-track>${slidesOf(DECK.map((d) => deckCard(d, ctx)), 0.86)}</div>
+            <div class="v22-side l">${arrow("prev")}</div>
+            <div class="v22-side r">${arrow("next")}</div>
+        </div>
+        <div class="v22-meta"><b data-name>${DECK[0].name}</b>${counter(DECK.length)}</div>
+        ${dotsFor(DECK.length)}
+        <button type="button" class="v22-shuffle" data-shuffle>${icon("refresh", 18, { stroke: 2.6 })}Shuffle</button>
+        ${saveShare()}
+    </div>
+    ${sysLayer()}
+</div>`,
+        }),
+        mount: (root, ctx) => {
+            const ov = ctx.overlay;
+            const car = carousel(ov.querySelector("[data-track]"), ov.querySelector("[data-ui]"), ctx, {
+                change: (i) => { ov.querySelector("[data-name]").textContent = DECK[i].name; },
+            });
+            const R = rng(7);
+            let timers = [];
+            // Five quick hops that slow down, then the card it lands on.
+            const deal = () => {
+                timers.forEach(clearTimeout);
+                let j = car.at;
+                while (j === car.at) j = Math.floor(R() * car.n);
+                if (ctx.reduced) return car.go(j, false);
+                const hops = [0, 1, 2, 3, 4].map(() => Math.floor(R() * car.n)).concat(j);
+                ov.querySelector("[data-shuffle] svg").animate([{ transform: "rotate(0deg)" }, { transform: "rotate(360deg)" }], { duration: 700, easing: "cubic-bezier(0.3, 0.7, 0.3, 1)" });
+                [0, 70, 150, 250, 380, 560].forEach((ms, k) => timers.push(setTimeout(() => {
+                    car.go(hops[k], false);
+                    const last = k === hops.length - 1;
+                    car.slides[hops[k]].firstElementChild.animate([{ transform: `scale(${last ? 0.9 : 0.96})`, opacity: last ? 0.4 : 0.7 }, { transform: "scale(1)", opacity: 1 }], { duration: last ? 420 : 150, easing: "cubic-bezier(0.2, 0.9, 0.25, 1)" });
+                }, ms)));
+            };
+            const stop = flowWire(root, ctx, () => ({ card: deckCard(DECK[car.at], ctx), name: DECK[car.at].name }), {
+                opened: () => car.go(car.at, false),
+                extra: (e) => { if (e.target.closest("[data-shuffle]")) deal(); },
+            });
+            return () => { timers.forEach(clearTimeout); car.stop(); stop(); };
+        },
+    },
+
+    // 23: the app suggests the best card first
+    {
+        id: "best-first",
+        name: "Best first",
+        when: "When Marc wants the right card without browsing. FitFight picks the moment, he confirms.",
+        changes: [
+            "Needs a backlog item: rank share cards by what just happened in the fight and suggest the best one first.",
+            "Today that is The lead, because Marc took it back on day 5. The reason is written under every card.",
+            "A row of moments on top (Lead back, Best day, 2 days left...) jumps straight to a card and follows the swipe.",
+            "Same twelve cards as the other slideshows, only ordered by how shareable they are right now.",
+        ],
+        get css() {
+            return reusedCss() + `
+.v23-chips { position: relative; flex: none; align-self: stretch; display: flex; gap: 8px; padding: 2px 0 6px; overflow-x: auto; scrollbar-width: none; }
+.v23-chips::-webkit-scrollbar { display: none; }
+.v23-chips::before, .v23-chips::after { content: ""; flex: none; width: 12px; }
+.v23-chip { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 14px; border-radius: var(--r-pill); border: 1px solid var(--chip-edge); background: var(--chip); color: var(--text-secondary); font-size: 12px; font-weight: 800; cursor: pointer; transition: background 0.2s ease, color 0.2s ease; }
+.v23-chip { white-space: nowrap; }
+.v23-chip[aria-current="true"] { background: var(--text); border-color: var(--text); color: var(--bg); }
+.v23-track { flex: none; align-self: stretch; height: 438px; gap: 12px; }
+.v23-track::before, .v23-track::after { content: ""; flex: none; width: calc(50% - 132px); }
+.v23-track .xs-slide { position: relative; }
+.v23-track .xs-fit { transition: opacity 0.25s ease; }
+.v23-track .xs-slide:not(.on) .xs-fit { opacity: 0.45; }
+.v23-badge { position: absolute; left: 50%; top: 14px; z-index: 2; display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 11px; transform: translateX(-50%); border-radius: var(--r-pill); background: var(--text); color: var(--bg); font-size: 11px; font-weight: 800; }
+.v23-badge { white-space: nowrap; }
+.v23-why { flex: none; align-self: stretch; display: flex; align-items: center; gap: 12px; min-height: 58px; margin: 8px 20px 0; padding: 8px 14px; border-radius: var(--r-field); background: var(--card); border: 1px solid var(--hairline); }
+.v23-why .ic { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border-radius: var(--r-glyph); background: var(--control); color: var(--text-dim); }
+.v23-why > div { flex: 1; min-width: 0; }
+.v23-why b { display: block; font-size: 14px; font-weight: 800; letter-spacing: -0.01em; }
+.v23-why span { display: block; margin-top: 1px; font-size: 12px; font-weight: 700; line-height: 1.35; color: var(--text-secondary); }
+.v23-why .xs-count { align-self: flex-start; margin-top: 2px; }
+.v23-nav { flex: none; align-self: stretch; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; margin-top: 4px; }
+.v23 .xs-acts { margin-top: 4px; }
+`;
+        },
+        render: (ctx) => ({
+            html: base(),
+            overlay: `<div class="sc-ov" data-ov>
+    <div class="sc-scrim" data-close></div>
+    <div class="sc-sheet v23" role="dialog" aria-label="Suggested cards" data-ui>
+        ${sheetHead("Picked for you")}
+        <div class="v23-chips" data-chips>${BEST.map((b, i) => `<button type="button" class="v23-chip" data-go="${i}">${icon(b.icon, 14, { stroke: 2.4 })}${b.chip}</button>`).join("")}</div>
+        <div class="xs-track v23-track" data-track>${BEST.map((b, i) => `<div class="xs-slide" data-slide>${i === 0 ? `<span class="v23-badge">${icon("check", 12, { stroke: 3 })}Best right now</span>` : ""}${fit(deckCard(DECK.find((d) => d.id === b.id), ctx), 0.78)}</div>`).join("")}</div>
+        <div class="v23-why"><span class="ic" data-why-ic>${icon(BEST[0].icon, 17, { stroke: 2.4 })}</span><div><b data-why-t>${BEST[0].title}</b><span data-why>${BEST[0].why}</span></div>${counter(BEST.length)}</div>
+        <div class="v23-nav">${arrow("prev")}${dotsFor(BEST.length)}${arrow("next")}</div>
+        ${saveShare()}
+    </div>
+    ${sysLayer()}
+</div>`,
+        }),
+        mount: (root, ctx) => {
+            const ov = ctx.overlay;
+            const chips = ov.querySelector("[data-chips]");
+            const car = carousel(ov.querySelector("[data-track]"), ov.querySelector("[data-ui]"), ctx, {
+                change: (i, slides) => {
+                    const b = BEST[i];
+                    slides.forEach((s, j) => s.classList.toggle("on", j === i));
+                    ov.querySelector("[data-why-ic]").innerHTML = icon(b.icon, 17, { stroke: 2.4 });
+                    ov.querySelector("[data-why-t]").textContent = b.title;
+                    ov.querySelector("[data-why]").textContent = b.why;
+                    const c = chips.querySelector(`[data-go="${i}"]`);
+                    chips.scrollTo({ left: c.offsetLeft + c.offsetWidth / 2 - chips.clientWidth / 2, behavior: ctx.reduced ? "auto" : "smooth" });
+                },
+            });
+            const stop = flowWire(root, ctx, () => {
+                const d = DECK.find((x) => x.id === BEST[car.at].id);
+                return { card: deckCard(d, ctx), name: d.name };
+            }, { opened: () => car.go(car.at, false) });
+            return () => { car.stop(); stop(); };
+        },
     },
 ];
 

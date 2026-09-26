@@ -610,7 +610,8 @@ const GX = (() => {
     const toggle = (page, id, value) => send({ op: "choice", page, id, who: who(), value: choice(page, id) === value ? null : value });
     const comment = (page, id, text) => send({ op: "comment", page, id, who: who(), text: String(text).trim().slice(0, 2000), at: new Date().toISOString() });
     const uncomment = (page, id, at) => send({ op: "uncomment", page, id, who: who(), at });
-    const fileHref = (file) => preview && location.search.length > 1 ? "?" + location.search.slice(1).replace(/[^/]+\.html.*$/, file) : file;
+    // htmlpreview sets <base> to the raw file, so preview links must be absolute or they open raw text.
+    const fileHref = (file) => preview && location.search.length > 1 ? location.origin + location.pathname + "?" + location.search.slice(1).replace(/[^/]+\.html.*$/, file) : file;
     const open = (file) => { location.href = fileHref(file); };
     const ago = (iso) => {
         const s = (Date.now() - Date.parse(iso)) / 1000;

@@ -642,7 +642,8 @@ const GX = (() => {
     const toggle = (page, id, value) => send({ op: "choice", page, id, who: who(), value: choice(page, id) === value ? null : value });
     const comment = (page, id, text) => send({ op: "comment", page, id, who: who(), text: String(text).trim().slice(0, 2000), at: new Date().toISOString() });
     const uncomment = (page, id, at) => send({ op: "uncomment", page, id, who: who(), at });
-    const fileHref = (file) => preview && location.search.length > 1 ? "?" + location.search.slice(1).replace(/[^/]+\.html.*$/, file) : file;
+    // htmlpreview sets <base> to the raw file, so preview links must be absolute or they open raw text.
+    const fileHref = (file) => preview && location.search.length > 1 ? location.origin + location.pathname + "?" + location.search.slice(1).replace(/[^/]+\.html.*$/, file) : file;
     const open = (file) => { location.href = fileHref(file); };
     const ago = (iso) => {
         const s = (Date.now() - Date.parse(iso)) / 1000;
@@ -2366,6 +2367,861 @@ html.tall .v11-sheet { bottom: auto; height: 790px; }
             };
         }),
     },
+
+    // 12 =======================================================================
+    {
+        id: "tidy-compact",
+        name: "Tidy sheet: compact",
+        when: "When you open her profile to check one thing and close it again.",
+        changes: [
+            "Tidy sheet, denser: the record, her numbers, her week and four fights fit above the pinned Challenge.",
+            "The 1v1 score, her record and her week share one card, split by hairlines instead of three cards.",
+            "The score reads in one line: 2, You, the split bar, Her, 3.",
+            "Fight rows drop to 52pt with the margin on the right; older results fold behind Show more.",
+        ],
+        css: `
+.v12-body { padding: 0 20px 24px; display: flex; flex-direction: column; gap: 10px; }
+.v12-top { display: flex; align-items: center; gap: 12px; padding: 0 0 2px; }
+.v12-top .ff-avatar { border: 2px solid var(--line); }
+.v12-who { flex: 1; min-width: 0; }
+.v12-name { font-size: 20px; font-weight: 800; letter-spacing: -0.015em; line-height: 1.15; }
+.v12-handle { margin-top: 2px; font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+.v12-top .ps-x { margin-right: -12px; }
+.v12-card { border-radius: var(--r-card); background: var(--card); border: 1px solid var(--hairline); overflow: hidden; }
+.v12-card > div { padding: 14px 16px; }
+.v12-card > div + div { border-top: 1px solid var(--hairline); }
+.v12-k { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.v12-k > span { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); }
+.v12-k em { font-style: normal; font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+.v12-k em b { font-weight: 800; color: var(--text); }
+.v12-score { display: grid; grid-template-columns: auto auto 1fr auto auto; align-items: center; gap: 8px; margin-top: 8px; }
+.v12-score b { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+.v12-score b.you, .v12-score span.you { color: var(--moss-text); }
+.v12-score span { font-size: 12px; font-weight: 800; color: var(--text-secondary); }
+.v12-split { display: flex; gap: 3px; height: 8px; margin: 0 2px; }
+.v12-split i { border-radius: 4px; background: color-mix(in srgb, var(--text) 30%, transparent); }
+.v12-split i:first-child { background: var(--moss-fill); }
+.v12-card > .v12-stats { display: grid; grid-template-columns: repeat(4, 1fr); padding: 12px 0; }
+.v12-stats > div { padding: 0 14px; }
+.v12-stats > div + div { border-left: 1px solid var(--hairline); }
+.v12-stats b { display: block; font-size: 18px; font-weight: 800; letter-spacing: -0.02em; }
+.v12-stats span { font-size: 11px; font-weight: 700; color: var(--text-secondary); }
+.v12-card > .v12-wk { padding-bottom: 6px; }
+.v12-wk .ps-bars { margin: 6px -8px 0; }
+.v12-wk .ps-bar { padding-top: 2px; }
+.v12-sec { margin-top: 6px; }
+.v12-body .ps-fr { min-height: 52px; gap: 10px; padding: 6px 14px 6px 12px; }
+.v12-body .ps-fr-g, .v12-body .ps-fr-g .ff-avatar { width: 28px !important; height: 28px !important; }
+.v12-body .ps-fr-n { font-size: 14px; }
+.v12-body .ps-fr-s { margin-top: 1px; font-size: 11px; }
+.v12-body .ps-fr-v b { font-size: 15px; }
+.v12-body .ps-fr-v span { font-size: 10px; }
+.v12-body .ps-more { min-height: 44px; }
+`,
+        render: (ctx) => {
+            const body = `<div class="v12-body">
+    <div class="v12-top">${avatar(HER, 44)}<div class="v12-who"><div class="v12-name">${esc(HER.name)}</div><div class="v12-handle">${esc(HER.handle)} · Fox</div></div>${closeX()}</div>
+    <div class="v12-card">
+        <div>
+            <div class="v12-k"><span>Your 1v1 record</span><em>${LOCAL.duel.n} duels</em></div>
+            <div class="v12-score" aria-label="You won ${LOCAL.duel.won}, she won ${LOCAL.duel.lost}"><b class="num you">${LOCAL.duel.won}</b><span class="you">You</span><div class="v12-split"><i style="flex:${LOCAL.duel.won}"></i><i style="flex:${LOCAL.duel.lost}"></i></div><span>Her</span><b class="num">${LOCAL.duel.lost}</b></div>
+        </div>
+        <div class="v12-stats">
+            <div><b class="num">${LOCAL.record.played}</b><span>fights</span></div>
+            <div><b class="num">${LOCAL.record.wins}</b><span>wins</span></div>
+            <div><b class="num">${LOCAL.record.rate}%</b><span>win rate</span></div>
+            <div><b class="num">${fmt(LOCAL.herAvg)}</b><span>a day</span></div>
+        </div>
+        <div class="v12-wk">
+            <div class="v12-k"><span>Last 7 days</span><em><b class="num">${fmt(LOCAL.herWeek)}</b> · best ${LOCAL.herBest.d} <span class="num">${fmt(LOCAL.herBest.her)}</span></em></div>
+            ${weekBars({ h: 40 })}
+        </div>
+    </div>
+    <div class="v12-sec">${eyebrow("Fights together", String(LOCAL.live.length + LOCAL.done.length))}</div>
+    ${together({ limit: 4 })}
+    ${links()}
+</div>`;
+            return {
+                html: backdrop(ctx),
+                overlay: shell({ body, foot: `<div class="ps-foot"><button type="button" class="ps-btn pri wide">${icon("swords", 18, { stroke: 2.2 })}Challenge ${esc(HER.name)}</button></div>` }),
+            };
+        },
+        mount: sheetMount(),
+    },
+
+    // 13 =======================================================================
+    {
+        id: "tidy-headline",
+        name: "Tidy sheet: one headline",
+        when: "When the sheet should answer 'who is winning between us' before anything else.",
+        changes: [
+            "Tidy sheet with a clear order: the 1v1 record becomes one big sentence, 'She's one duel up.'",
+            "Her own record shrinks to one line under her name. It is about her, not about you two.",
+            "Right now comes second: the two live fights you share, with your rank and hers.",
+            "Her week and every finished fight follow, in that order. Challenge stays pinned.",
+        ],
+        css: `
+.v13-body { padding: 0 20px 32px; display: flex; flex-direction: column; gap: 12px; }
+.v13-top { display: flex; align-items: center; gap: 14px; padding-bottom: 2px; }
+.v13-top > .ff-avatar { border: 2px solid var(--line); }
+.v13-who { flex: 1; min-width: 0; }
+.v13-name { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
+.v13-meta { margin-top: 3px; font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+.v13-top .ps-x { margin-right: -12px; }
+.v13-hero { padding: 20px 20px 16px; border-radius: var(--r-card); background: var(--card); border: 1px solid var(--hairline); }
+.v13-k { font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); }
+.v13-h { margin: 8px 0 0; font-size: 34px; font-weight: 800; letter-spacing: -0.035em; line-height: 1.02; }
+.v13-score { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; margin-top: 20px; }
+.v13-side { display: flex; align-items: center; gap: 8px; }
+.v13-side b { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; line-height: 1; }
+.v13-side.you b { color: var(--moss-text); }
+.v13-split { display: flex; gap: 3px; height: 10px; }
+.v13-split i { border-radius: 5px; background: color-mix(in srgb, var(--text) 30%, transparent); }
+.v13-split i:first-child { background: var(--moss-fill); }
+.v13-names { display: flex; justify-content: space-between; margin-top: 6px; font-size: 12px; font-weight: 800; color: var(--text-secondary); }
+.v13-names span:first-child { color: var(--moss-text); }
+.v13-sub { margin: 16px 0 0; padding-top: 12px; border-top: 1px solid var(--hairline); font-size: 13px; font-weight: 700; line-height: 1.4; color: var(--text-secondary); }
+.v13-sub b { font-weight: 800; color: var(--text); }
+.v13-sec { margin-top: 12px; }
+.v13-wk { padding: 16px 14px 8px; border-radius: var(--r-card); background: var(--card); border: 1px solid var(--hairline); }
+.v13-wk-h { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin: 0 4px 8px; font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+.v13-wk-h b { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; color: var(--text); }
+`,
+        render: (ctx) => {
+            const live = LOCAL.live.map((l) => `<div class="ps-fr live"${l.id === CR.id ? ` data-close role="button" tabindex="0" aria-label="Back to ${esc(l.name)}"` : ""}>
+            <span class="ps-fr-g"><i class="ps-live"></i></span>
+            <div class="ps-fr-m"><div class="ps-fr-n">${esc(l.name)}</div><div class="ps-fr-s">You ${ord(l.youRank)}, her ${ord(l.herRank)} · ${l.left}</div></div>
+            <div class="ps-fr-v"><b class="num ps-up">${signed(l.margin)}</b><span>you lead</span></div>
+        </div>`).join("");
+            const body = `<div class="v13-body">
+    <div class="v13-top">${avatar(HER, 56)}<div class="v13-who"><div class="v13-name">${esc(HER.name)}</div><div class="v13-meta">${esc(HER.handle)} · ${LOCAL.record.wins} wins in ${LOCAL.record.played} fights</div></div>${closeX()}</div>
+    <section class="v13-hero">
+        <div class="v13-k">Your 1v1 record</div>
+        <h3 class="v13-h">She's one duel up.</h3>
+        <div class="v13-score" aria-label="You ${LOCAL.duel.won}, Bertille ${LOCAL.duel.lost}">
+            <div class="v13-side you">${avatar(YOU, 30)}<b class="num">${LOCAL.duel.won}</b></div>
+            <div class="v13-split"><i style="flex:${LOCAL.duel.won}"></i><i style="flex:${LOCAL.duel.lost}"></i></div>
+            <div class="v13-side"><b class="num">${LOCAL.duel.lost}</b>${avatar(HER, 30)}</div>
+        </div>
+        <p class="v13-sub">Last duel: <b>${esc(LOCAL.rematch.name)}</b>. You won it by <b class="num">${fmt(LOCAL.rematch.margin)}</b>.</p>
+    </section>
+    <div class="v13-sec">${eyebrow("Right now")}</div>
+    <div class="ps-list">${live}</div>
+    <div class="v13-sec">${eyebrow("Her last 7 days")}</div>
+    <div class="v13-wk"><div class="v13-wk-h"><b class="num">${fmt(LOCAL.herWeek)}</b><span><span class="num">${fmt(LOCAL.herAvg)}</span> a day · best ${LOCAL.herBest.d}</span></div>${weekBars({ h: 64, values: true })}</div>
+    <div class="v13-sec">${eyebrow("Every result", String(LOCAL.done.length))}</div>
+    ${together({ limit: 3, live: false })}
+    ${links()}
+</div>`;
+            return {
+                html: backdrop(ctx),
+                overlay: shell({ body, foot: `<div class="ps-foot"><button type="button" class="ps-btn pri wide">${icon("swords", 18, { stroke: 2.2 })}Challenge ${esc(HER.name)}</button></div>` }),
+            };
+        },
+        mount: sheetMount(),
+    },
+
+    // 14 =======================================================================
+    {
+        id: "tidy-half",
+        name: "Tidy sheet: half height",
+        when: "When a tap on her name should be a glance, not a new screen. Pull up for the rest.",
+        changes: [
+            "Tidy sheet at the medium detent: her name, your 1v1 record and her numbers, with the fight still visible above.",
+            "Drag the handle or the header up for the large detent with her week and every fight; drag down to go back or close.",
+            "The round button next to Challenge does the same with one tap, and a scroll up expands it with a mouse.",
+            "The fight behind only shrinks back when the sheet goes large, the way iOS does it.",
+        ],
+        css: `
+.v14-sheet { top: 432px; }
+.v14-sheet.large { top: 62px; }
+.v14-sheet.v14-drag { transition: none; }
+.v14-sheet:not(.large) { touch-action: none; }
+.v14-sheet:not(.large) .ps-scroll { overflow: hidden; }
+.v14-sheet .ps-grab { cursor: grab; }
+.v14-head { flex: none; display: flex; align-items: center; gap: 12px; padding: 8px 8px 12px 20px; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.v14-head .ff-avatar { border: 2px solid var(--line); -webkit-user-drag: none; }
+.v14-who { flex: 1; min-width: 0; }
+.v14-name { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
+.v14-handle { margin-top: 2px; font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+.v14-body { padding: 0 20px 32px; display: flex; flex-direction: column; gap: 12px; }
+.v14-card { padding: 18px 20px 4px; border-radius: var(--r-card); background: var(--card); border: 1px solid var(--hairline); }
+.v14-kr { display: flex; justify-content: space-between; align-items: baseline; }
+.v14-k { font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); }
+.v14-kr em { font-style: normal; font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+.v14-score { display: flex; justify-content: space-between; align-items: flex-end; margin: 10px 0 12px; }
+.v14-score b { display: block; font-size: 40px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+.v14-score span { display: block; margin-top: 4px; font-size: 12px; font-weight: 800; color: var(--text-secondary); }
+.v14-score .you b { color: var(--moss-text); }
+.v14-score .her { text-align: right; }
+.v14-split { display: flex; gap: 3px; height: 8px; }
+.v14-split i { border-radius: 4px; background: color-mix(in srgb, var(--text) 30%, transparent); }
+.v14-split i:first-child { background: var(--moss-fill); }
+.v14-stats { display: grid; grid-template-columns: repeat(3, 1fr); margin: 16px -20px 0; padding: 12px 0 14px; border-top: 1px solid var(--hairline); }
+.v14-stats > div { padding: 0 20px; }
+.v14-stats > div + div { border-left: 1px solid var(--hairline); }
+.v14-stats b { display: block; font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
+.v14-stats span { font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+.v14-sec { margin-top: 8px; }
+.v14-wk { padding: 16px 14px 8px; border-radius: var(--r-card); background: var(--card); border: 1px solid var(--hairline); }
+.v14-wk-h { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 0 4px 8px; }
+.v14-wk-h b { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
+.v14-wk-h span { font-size: 12px; font-weight: 700; color: var(--text-secondary); text-align: right; }
+.v14-foot .ps-btn.pri { flex: 1; }
+.v14-more { width: 50px; flex: none; padding: 0; }
+.v14-more svg { transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1); }
+.v14-sheet.large .v14-more svg { transform: rotate(180deg); }
+.ps-scrim.v14-light { opacity: 0.5; }
+`,
+        render: (ctx) => {
+            const body = `<div class="v14-body">
+    <div class="v14-card">
+        <div class="v14-kr"><span class="v14-k">Your 1v1 record</span><em>${LOCAL.duel.n} duels</em></div>
+        <div class="v14-score"><div class="you"><b class="num">${LOCAL.duel.won}</b><span>You won</span></div><div class="her"><b class="num">${LOCAL.duel.lost}</b><span>She won</span></div></div>
+        <div class="v14-split"><i style="flex:${LOCAL.duel.won}"></i><i style="flex:${LOCAL.duel.lost}"></i></div>
+        <div class="v14-stats"><div><b class="num">${LOCAL.record.played}</b><span>fights</span></div><div><b class="num">${LOCAL.record.wins}</b><span>wins</span></div><div><b class="num">${LOCAL.record.rate}%</b><span>win rate</span></div></div>
+    </div>
+    <div class="v14-sec">${eyebrow("Last 7 days")}</div>
+    <div class="v14-wk">
+        <div class="v14-wk-h"><b class="num">${fmt(LOCAL.herWeek)}</b><span><span class="num">${fmt(LOCAL.herAvg)}</span> a day · best ${LOCAL.herBest.d} <span class="num">${fmt(LOCAL.herBest.her)}</span></span></div>
+        ${weekBars({ h: 84, values: true })}
+    </div>
+    <div class="v14-sec">${eyebrow("Fights together", String(LOCAL.live.length + LOCAL.done.length))}</div>
+    ${together({ limit: 5 })}
+    ${links()}
+</div>`;
+            return {
+                html: backdrop(ctx, { pushed: false, tapped: true }),
+                overlay: shell({
+                    cls: "v14-sheet",
+                    head: `<div class="v14-head" data-drag>${avatar(HER, 48)}<div class="v14-who"><div class="v14-name">${esc(HER.name)}</div><div class="v14-handle">${esc(HER.handle)} · Fox</div></div>${closeX()}</div>`,
+                    body,
+                    foot: `<div class="ps-foot v14-foot"><button type="button" class="ps-btn pri">${icon("swords", 18, { stroke: 2.2 })}Challenge ${esc(HER.name)}</button><button type="button" class="ps-btn sec v14-more" data-detent aria-expanded="false" aria-label="Show her week and every fight">${icon("chevronUp", 20, { stroke: 2.6 })}</button></div>`,
+                }),
+            };
+        },
+        mount: sheetMount((root, ctx, tall) => {
+            const ov = ctx.overlay, phone = ctx.phone;
+            const sheet = ov.querySelector(".v14-sheet");
+            const scroll = sheet.querySelector("[data-scroll]");
+            const scrim = ov.querySelector(".ps-scrim");
+            const bk = root.querySelector(".bk");
+            const btn = sheet.querySelector("[data-detent]");
+            const MED = 432, LARGE = 62;
+            const row = root.querySelector(".bk-row.her");
+            const reveal = () => {
+                if (!tall && row) root.scrollTop = Math.max(0, row.getBoundingClientRect().bottom - root.getBoundingClientRect().top + root.scrollTop - MED + 22);
+            };
+            const set = (large) => {
+                sheet.classList.toggle("large", large);
+                sheet.style.top = "";
+                bk.classList.toggle("pushed", large);
+                scrim.classList.toggle("v14-light", !large);
+                btn.setAttribute("aria-expanded", String(large));
+                btn.setAttribute("aria-label", large ? "Back to half height" : "Show her week and every fight");
+                if (!large) scroll.scrollTop = 0;
+            };
+            let drag = null, swallow = false;
+            const onDown = (e) => {
+                if (e.button > 0) return;
+                const large = sheet.classList.contains("large");
+                if (!e.target.closest("[data-drag], .ps-grab") && (large || !e.target.closest("[data-scroll]"))) return;
+                const scale = phone.getBoundingClientRect().height / phone.offsetHeight || 1;
+                drag = { id: e.pointerId, y: e.clientY, top: sheet.offsetTop, scale, moved: false, lastY: e.clientY, lastT: performance.now(), v: 0 };
+            };
+            const onMove = (e) => {
+                if (!drag || e.pointerId !== drag.id) return;
+                const dy = (e.clientY - drag.y) / drag.scale;
+                if (!drag.moved) {
+                    if (Math.abs(dy) < 6) return;
+                    drag.moved = true;
+                    sheet.classList.add("v14-drag");
+                    if (sheet.setPointerCapture) sheet.setPointerCapture(e.pointerId);
+                }
+                const now = performance.now();
+                drag.v = (e.clientY - drag.lastY) / drag.scale / Math.max(1, now - drag.lastT);
+                drag.lastY = e.clientY;
+                drag.lastT = now;
+                let top = drag.top + dy;
+                if (top < LARGE) top = LARGE - (LARGE - top) * 0.2;
+                sheet.style.top = top + "px";
+            };
+            const onUp = (e) => {
+                if (!drag || e.pointerId !== drag.id) return;
+                const d = drag;
+                drag = null;
+                if (!d.moved) return;
+                swallow = true;
+                setTimeout(() => (swallow = false), 0);
+                sheet.classList.remove("v14-drag");
+                const aim = sheet.offsetTop + d.v * 160;
+                if (aim > MED + 120) {
+                    phone.classList.add("ps-shut");
+                    set(false);
+                } else set(aim < (MED + LARGE) / 2);
+            };
+            const onClickCapture = (e) => {
+                if (!swallow) return;
+                swallow = false;
+                e.stopPropagation();
+                e.preventDefault();
+            };
+            const onClick = (e) => {
+                if (e.target.closest("[data-detent]")) set(!sheet.classList.contains("large"));
+                else if (e.target.closest("[data-close]")) set(false);
+            };
+            const onRoot = (e) => {
+                if (e.target.closest("[data-reopen]")) set(false);
+            };
+            const onWheel = (e) => {
+                if (!sheet.classList.contains("large") && e.deltaY > 6) set(true);
+            };
+            reveal();
+            set(false);
+            ov.addEventListener("click", onClickCapture, true);
+            ov.addEventListener("click", onClick);
+            root.addEventListener("click", onRoot);
+            sheet.addEventListener("pointerdown", onDown);
+            sheet.addEventListener("pointermove", onMove);
+            sheet.addEventListener("pointerup", onUp);
+            sheet.addEventListener("pointercancel", onUp);
+            sheet.addEventListener("wheel", onWheel, { passive: true });
+            return () => {
+                ov.removeEventListener("click", onClickCapture, true);
+                ov.removeEventListener("click", onClick);
+                root.removeEventListener("click", onRoot);
+                sheet.removeEventListener("pointerdown", onDown);
+                sheet.removeEventListener("pointermove", onMove);
+                sheet.removeEventListener("pointerup", onUp);
+                sheet.removeEventListener("pointercancel", onUp);
+                sheet.removeEventListener("wheel", onWheel);
+            };
+        }),
+    },
+
+    // 15 =======================================================================
+    {
+        id: "tidy-paper",
+        name: "Tidy sheet: paper",
+        when: "When Day mode should feel like a well printed page, not cream cards on beige.",
+        changes: [
+            "Tidy sheet, polished for Day: cards give way to ink rules on one paper surface, so nothing reads as cream on cream.",
+            "A masthead: her name at 40pt over a heavy ink rule, her avatar in a thin ink ring.",
+            "Her bars and her side of the split are solid ink, not grey, and hold contrast in sunlight. Yours stay moss.",
+            "Labels use secondary ink, never the faint tone. Night gets the same page in reverse.",
+        ],
+        css: `
+.v15-sheet, .v15-sheet .ps-foot { background: var(--card); }
+.v15-sheet .ps-foot { border-top-color: var(--line); }
+.v15-body { padding: 0 22px 32px; display: flex; flex-direction: column; }
+.v15-mt { display: flex; align-items: center; justify-content: space-between; }
+.v15-mt > span { font-size: 11px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-secondary); }
+.v15-mt .ps-x { margin-right: -12px; }
+.v15-mt .ps-x > span { background: transparent; border-color: var(--line); color: var(--text); }
+.v15-id { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; padding: 0 0 16px; }
+.v15-name { font-size: 40px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+.v15-handle { margin-top: 8px; font-size: 13px; font-weight: 700; color: var(--text-secondary); }
+.v15-id .ff-avatar { padding: 3px; background: var(--card); border: 1.5px solid var(--text); }
+.v15-rule { height: 3px; border-radius: 2px; background: var(--text); }
+.v15-sec { padding: 16px 0 18px; border-bottom: 1px solid var(--line); }
+.v15-h { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text); }
+.v15-h em { font-style: normal; font-size: 12px; font-weight: 700; letter-spacing: 0; text-transform: none; color: var(--text-secondary); }
+.v15-h em b { font-weight: 800; color: var(--text); }
+.v15-score { display: grid; grid-template-columns: auto 1fr auto; align-items: end; gap: 18px; margin-top: 12px; }
+.v15-score b { display: block; font-size: 52px; font-weight: 800; letter-spacing: -0.045em; line-height: 0.95; }
+.v15-score span { display: block; margin-top: 6px; font-size: 12px; font-weight: 800; color: var(--text-secondary); }
+.v15-score .you b, .v15-score .you span { color: var(--moss-text); }
+.v15-score .her { text-align: right; }
+.v15-split { display: flex; gap: 3px; height: 8px; margin-bottom: 26px; }
+.v15-split i { border-radius: 4px; background: var(--text); }
+.v15-split i:first-child { background: var(--moss-fill); }
+.v15-stats { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid var(--line); }
+.v15-stats > div { padding: 14px 0 16px 16px; }
+.v15-stats > div:first-child { padding-left: 0; }
+.v15-stats > div + div { border-left: 1px solid var(--line); }
+.v15-stats b { display: block; font-size: 26px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; }
+.v15-stats span { font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+.v15-wk .ps-bars { margin: 14px -6px -6px; }
+.v15-wk .ps-cols i { background: color-mix(in srgb, var(--text) 82%, transparent); }
+.v15-wk .ps-bar.today .ps-cols i.her { background: transparent; border: 1.5px dashed var(--text); }
+.v15-wk .ps-cols em { color: var(--text); }
+.v15-wk .ps-d { color: var(--text-secondary); }
+.v15-list { padding-top: 16px; }
+.v15-body .ps-list { margin-top: 6px; background: none; border: 0; border-radius: 0; }
+.v15-body .ps-fr { padding-left: 0; padding-right: 0; }
+.v15-body .ps-fr + .ps-fr { border-top-color: var(--line); }
+.v15-body .ps-fr-v span { color: var(--text-secondary); }
+.v15-body .ps-more { border-top-color: var(--line); border-bottom: 1px solid var(--line); }
+.v15-body .ps-links { margin-top: 8px; }
+`,
+        render: (ctx) => {
+            const body = `<div class="v15-body">
+    <div class="v15-mt"><span>Profile</span>${closeX()}</div>
+    <div class="v15-id"><div><div class="v15-name">${esc(HER.name)}</div><div class="v15-handle">${esc(HER.handle)} · Fox · ${esc(LOCAL.line)}</div></div>${avatar(HER, 58)}</div>
+    <div class="v15-rule"></div>
+    <section class="v15-sec">
+        <div class="v15-h"><span>Your 1v1 record</span><em>${LOCAL.duel.n} duels</em></div>
+        <div class="v15-score"><div class="you"><b class="num">${LOCAL.duel.won}</b><span>You won</span></div><div class="v15-split"><i style="flex:${LOCAL.duel.won}"></i><i style="flex:${LOCAL.duel.lost}"></i></div><div class="her"><b class="num">${LOCAL.duel.lost}</b><span>She won</span></div></div>
+    </section>
+    <div class="v15-stats">
+        <div><b class="num">${LOCAL.record.played}</b><span>fights</span></div>
+        <div><b class="num">${LOCAL.record.wins}</b><span>wins</span></div>
+        <div><b class="num">${LOCAL.record.rate}%</b><span>win rate</span></div>
+    </div>
+    <section class="v15-sec v15-wk">
+        <div class="v15-h"><span>Last 7 days</span><em><b class="num">${fmt(LOCAL.herWeek)}</b> · <span class="num">${fmt(LOCAL.herAvg)}</span> a day</em></div>
+        ${weekBars({ h: 80, values: true })}
+    </section>
+    <section class="v15-list">
+        <div class="v15-h"><span>Fights together</span><em>${LOCAL.live.length + LOCAL.done.length}</em></div>
+        ${together({ limit: 5 })}
+    </section>
+    ${links()}
+</div>`;
+            return {
+                html: backdrop(ctx),
+                overlay: shell({ cls: "v15-sheet", body, foot: `<div class="ps-foot"><button type="button" class="ps-btn pri wide">${icon("swords", 18, { stroke: 2.2 })}Challenge ${esc(HER.name)}</button></div>` }),
+            };
+        },
+        mount: sheetMount(),
+    },
+
+    // 16 =======================================================================
+    {
+        id: "tape-animated",
+        name: "Tale of the tape: animated",
+        when: "When opening her profile should feel like the weigh-in: a beat of drama, then the facts.",
+        changes: [
+            "Needs a backlog item: head-to-head that also counts group fights where you both finished.",
+            "The badger and the fox walk in from the ropes and square up, then the score pops and counts to 3 : 4. Her fox hops: she leads.",
+            "Each row weighs in one after another: numbers tick up and the bar swings out from the centre line to whoever leads.",
+            "Tap a row to weigh it again and read the gap in words. Replay runs the whole weigh-in; Reduce Motion shows the result.",
+        ],
+        css: `
+.v16-body { padding: 0 20px 32px; display: flex; flex-direction: column; gap: 12px; }
+.v16-bar { display: flex; align-items: center; }
+.v16-eb { flex: 1; font-size: 12px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--moss-text); }
+.v16-replay { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; font-weight: 800; color: var(--text-secondary); cursor: pointer; }
+.v16-bar .ps-x { margin-right: -12px; }
+.v16-ring { display: grid; grid-template-columns: 1fr auto 1fr; align-items: end; margin: 0 -20px; padding: 14px 24px 0; border-bottom: 1px solid var(--line); overflow: hidden; }
+.v16-f { display: flex; justify-content: center; }
+.v16-f.you { animation: v16-walk-l 0.9s ease-in-out 0.25s backwards; }
+.v16-f.her { animation: v16-walk-r 0.9s ease-in-out 0.25s backwards; }
+.v16-f.her img { transform: scaleX(-1); }
+.v16-hop { display: block; animation: v16-hop 0.6s ease-out 2.05s backwards; }
+@keyframes v16-walk-l { 0% { opacity: 0; transform: translate(-130px, 0); } 20% { opacity: 1; transform: translate(-100px, -7px); } 40% { transform: translate(-70px, 0); } 60% { transform: translate(-40px, -7px); } 80% { transform: translate(-12px, 0); } 90% { transform: translate(-4px, -3px); } }
+@keyframes v16-walk-r { 0% { opacity: 0; transform: translate(130px, 0); } 20% { opacity: 1; transform: translate(100px, -7px); } 40% { transform: translate(70px, 0); } 60% { transform: translate(40px, -7px); } 80% { transform: translate(12px, 0); } 90% { transform: translate(4px, -3px); } }
+@keyframes v16-hop { 30% { transform: translateY(-14px); } 55% { transform: translateY(0); } 75% { transform: translateY(-4px); } }
+.v16-mid { align-self: center; text-align: center; padding-bottom: 20px; animation: v16-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.95s backwards; }
+@keyframes v16-pop { from { opacity: 0; transform: scale(0.5); } }
+.v16-sc { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.v16-sc b { min-width: 28px; font-size: 46px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+.v16-sc b:first-child { text-align: right; }
+.v16-sc b:last-child { text-align: left; }
+.v16-sc i { font-style: normal; font-size: 30px; font-weight: 800; color: var(--text-faint); margin-top: -6px; }
+.v16-sl { margin-top: 6px; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); }
+.v16-names { display: flex; justify-content: space-between; padding: 0 6px; animation: ps-rise 0.4s ease-out 1s backwards; }
+.v16-names div { display: flex; flex-direction: column; }
+.v16-names div:last-child { text-align: right; }
+.v16-names b { font-size: 20px; font-weight: 800; letter-spacing: -0.015em; }
+.v16-names div:first-child b { color: var(--moss-text); }
+.v16-names span { font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+.v16-tape { border-radius: var(--r-card); background: var(--card); border: 1px solid var(--hairline); padding: 4px 16px; }
+.v16-row { display: block; width: 100%; padding: 12px 0 13px; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; animation: v16-row 0.4s ease-out var(--d) backwards; -webkit-tap-highlight-color: transparent; }
+.v16-row + .v16-row { border-top: 1px solid var(--hairline); }
+@keyframes v16-row { from { opacity: 0; transform: translateY(10px); } }
+.v16-vals { display: grid; grid-template-columns: 1fr auto 1fr; align-items: baseline; gap: 8px; }
+.v16-vals b { font-size: 19px; font-weight: 800; letter-spacing: -0.02em; color: var(--text-tertiary); }
+.v16-vals b:last-child { text-align: right; }
+.v16-vals b.win { color: var(--text); }
+.v16-vals b.win.you { color: var(--moss-text); }
+.v16-vals span { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); text-align: center; }
+.v16-tug { position: relative; height: 6px; margin-top: 8px; border-radius: 3px; background: var(--track); }
+.v16-tug i { position: absolute; top: 0; bottom: 0; border-radius: 3px; background: color-mix(in srgb, var(--text) 55%, transparent); animation: v16-grow 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) calc(var(--d) + 0.12s) backwards; }
+.v16-tug i.you { background: var(--moss-fill); }
+.v16-tug::after { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--text-faint); }
+@keyframes v16-grow { from { left: 50%; width: 0; } }
+.v16-why { display: none; margin: 10px 0 0; font-size: 13px; font-weight: 700; line-height: 1.4; text-align: center; color: var(--text-secondary); }
+.v16-row.open .v16-why { display: block; animation: ps-rise 0.25s ease-out; }
+.v16-row.open .v16-vals span { color: var(--text); }
+.v16-hint { margin: -2px 0 0; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-tertiary); }
+.v16-sec { margin-top: 10px; }
+`,
+        render: (ctx) => {
+            const rows = TAPE.map((r, i) => {
+                const you = r.you > r.her;
+                const lean = tapeLean(r.you, r.her);
+                return `<button type="button" class="v16-row" data-row aria-expanded="false" style="--d:${(1.1 + i * 0.12).toFixed(2)}s">
+        <span class="v16-vals"><b class="num${you ? " win you" : ""}" data-to="${r.you}"${r.pct ? " data-pct" : ""} data-at="${(1.1 + i * 0.12).toFixed(2)}">${r.f(r.you)}</b><span>${r.label}</span><b class="num${you ? "" : " win"}" data-to="${r.her}"${r.pct ? " data-pct" : ""} data-at="${(1.1 + i * 0.12).toFixed(2)}">${r.f(r.her)}</b></span>
+        <span class="v16-tug" aria-hidden="true"><i class="${you ? "you" : ""}" style="left:${lean.left.toFixed(1)}%;width:${lean.width.toFixed(1)}%"></i></span>
+        <span class="v16-why">${r.why}</span>
+    </button>`;
+            }).join("");
+            const body = `<div class="v16-body">
+    <div class="v16-bar"><span class="v16-eb">Tale of the tape</span><button type="button" class="v16-replay" data-replay>${icon("refresh", 14, { stroke: 2.6 })}Replay</button>${closeX()}</div>
+    <div class="v16-ring">
+        <div class="v16-f you">${companionArt(YOU.animal, 138)}</div>
+        <div class="v16-mid"><div class="v16-sc" aria-label="Head to head: you ${LOCAL.score.you}, Bertille ${LOCAL.score.her}"><b class="num ps-up" data-to="${LOCAL.score.you}" data-at="0.95">${LOCAL.score.you}</b><i>:</i><b class="num" data-to="${LOCAL.score.her}" data-at="0.95">${LOCAL.score.her}</b></div><div class="v16-sl">Head to head</div></div>
+        <div class="v16-f her"><span class="v16-hop">${companionArt(HER.animal, 138)}</span></div>
+    </div>
+    <div class="v16-names"><div><b>You</b><span>${esc(YOU.handle)}</span></div><div><b>${esc(HER.name)}</b><span>${esc(HER.handle)}</span></div></div>
+    <div class="v16-tape">${rows}</div>
+    <p class="v16-hint">Tap a row to weigh it again.</p>
+    <div class="v16-sec">${eyebrow("Fights together", String(LOCAL.live.length + LOCAL.done.length))}</div>
+    ${together({ limit: 4 })}
+    ${links()}
+</div>`;
+            return {
+                html: backdrop(ctx),
+                overlay: shell({ body, foot: `<div class="ps-foot"><button type="button" class="ps-btn pri wide">${icon("swords", 18, { stroke: 2.2 })}Challenge ${esc(HER.name)}</button></div>` }),
+            };
+        },
+        mount: sheetMount((root, ctx) => {
+            const ov = ctx.overlay;
+            let raf = 0;
+            if (!ctx.reduced) {
+                const els = [...ov.querySelectorAll("[data-to]")];
+                const t0 = performance.now();
+                const show = (el, v) => (el.textContent = el.hasAttribute("data-pct") ? v + "%" : fmt(v));
+                els.forEach((el) => show(el, 0));
+                const tick = (now) => {
+                    let busy = false;
+                    for (const el of els) {
+                        const p = Math.max(0, Math.min(1, (now - t0 - Number(el.dataset.at) * 1000) / 750));
+                        if (p < 1) busy = true;
+                        show(el, Math.round(Number(el.dataset.to) * (1 - Math.pow(1 - p, 3))));
+                    }
+                    if (busy) raf = requestAnimationFrame(tick);
+                };
+                raf = requestAnimationFrame(tick);
+            }
+            const onClick = (e) => {
+                if (e.target.closest("[data-replay]")) return ctx.rerender();
+                const row = e.target.closest("[data-row]");
+                if (!row) return;
+                const open = row.classList.toggle("open");
+                row.setAttribute("aria-expanded", String(open));
+                if (ctx.reduced) return;
+                const bar = row.querySelector(".v16-tug i");
+                bar.style.animation = "none";
+                void bar.offsetWidth;
+                bar.style.animation = "v16-grow 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) backwards";
+            };
+            ov.addEventListener("click", onClick);
+            return () => {
+                cancelAnimationFrame(raf);
+                ov.removeEventListener("click", onClick);
+            };
+        }),
+    },
+
+    // 17 =======================================================================
+    {
+        id: "tape-scorecard",
+        name: "Tale of the tape: scorecard",
+        when: "When you want the verdict round by round, like a judges' card before the bell.",
+        changes: [
+            "Needs a backlog item: head-to-head that also counts group fights where you both finished.",
+            "The companions stand nose to nose on a split floor, your half in moss, the score between the names.",
+            "Each row is a round: the winner's side gets a point, the loser's number steps back.",
+            "The card adds up the rounds and sets them against the real score: you win the tape 4 to 1, she leads the fights 4 to 3.",
+        ],
+        css: `
+.v17-body { padding: 0 20px 32px; display: flex; flex-direction: column; gap: 12px; }
+.v17-bar { display: flex; align-items: center; justify-content: space-between; }
+.v17-eb { font-size: 12px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--moss-text); }
+.v17-bar .ps-x { margin-right: -12px; }
+.v17-bout { border-radius: var(--r-card); border: 1px solid var(--hairline); overflow: hidden; background: var(--card); }
+.v17-stage { position: relative; height: 176px; display: grid; grid-template-columns: 1fr 1fr; }
+.v17-half.you { background: var(--moss-wash); }
+.v17-half.her { background: var(--plate-alt); }
+.v17-stage::after { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; border-left: 2px dashed var(--dash); }
+.v17-duo { position: absolute; left: 0; right: 0; bottom: 0; z-index: 1; display: flex; justify-content: center; align-items: flex-end; }
+.v17-f.you { margin-right: -16px; animation: v17-in-l 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s backwards; }
+.v17-f.her { margin-left: -16px; animation: v17-in-r 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s backwards; }
+.v17-f.her img { transform: scaleX(-1); }
+@keyframes v17-in-l { from { opacity: 0; transform: translateX(-30px); } }
+@keyframes v17-in-r { from { opacity: 0; transform: translateX(30px); } }
+.v17-tag { position: absolute; top: 12px; z-index: 2; font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
+.v17-tag.you { left: 14px; color: var(--moss-text); }
+.v17-tag.her { right: 14px; color: var(--text-secondary); }
+.v17-band { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; padding: 12px 16px 14px; border-top: 1px solid var(--hairline); }
+.v17-band > div { display: flex; flex-direction: column; min-width: 0; }
+.v17-band > div:last-child { text-align: right; }
+.v17-band b { font-size: 18px; font-weight: 800; letter-spacing: -0.01em; }
+.v17-band > div:first-child b { color: var(--moss-text); }
+.v17-band span { font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+.v17-sc { text-align: center; }
+.v17-sc strong { display: block; font-size: 34px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+.v17-sc strong em { font-style: normal; color: var(--moss-text); }
+.v17-sc strong i { font-style: normal; margin: 0 4px; color: var(--text-faint); }
+.v17-sc small { display: block; margin-top: 4px; font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); }
+.v17-card { padding: 6px 16px 16px; border-radius: var(--r-card); background: var(--card); border: 1px solid var(--hairline); }
+.v17-head { display: flex; justify-content: space-between; align-items: center; padding: 8px 0 6px; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); }
+.v17-row { display: grid; grid-template-columns: 24px 1fr auto 1fr 24px; align-items: center; gap: 10px; min-height: 48px; border-top: 1px solid var(--hairline); }
+.v17-row b { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; color: var(--text-faint); }
+.v17-row b.her { text-align: right; }
+.v17-row b.win { color: var(--text); }
+.v17-row b.win.you { color: var(--moss-text); }
+.v17-l { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); text-align: center; }
+.v17-pt { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; border: 1.5px solid var(--line); color: transparent; }
+.v17-pt.on { border-color: transparent; background: var(--text); color: var(--bg); animation: v17-pt 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) backwards; }
+.v17-pt.on.you { background: var(--moss-fill); color: var(--moss-on); }
+.v17-row:nth-child(3) .v17-pt.on { animation-delay: 0.5s; } .v17-row:nth-child(4) .v17-pt.on { animation-delay: 0.6s; } .v17-row:nth-child(5) .v17-pt.on { animation-delay: 0.7s; } .v17-row:nth-child(6) .v17-pt.on { animation-delay: 0.8s; } .v17-row:nth-child(7) .v17-pt.on { animation-delay: 0.9s; }
+@keyframes v17-pt { from { opacity: 0; transform: scale(0.3); } }
+.v17-tally { display: grid; grid-template-columns: 24px 1fr auto 1fr 24px; align-items: center; gap: 10px; padding: 14px 0 4px; border-top: 2px solid var(--line); }
+.v17-tally b { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+.v17-tally b.you { grid-column: 2; color: var(--moss-text); }
+.v17-tally b.her { text-align: right; }
+.v17-tally span { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text); text-align: center; }
+.v17-verdict { margin: 12px 0 0; padding: 12px 14px; border-radius: var(--r-field); background: var(--chip); font-size: 14px; font-weight: 700; line-height: 1.4; text-align: center; color: var(--text-secondary); }
+.v17-verdict b { font-weight: 800; color: var(--text); }
+.v17-verdict b.you { color: var(--moss-text); }
+.v17-sec { margin-top: 10px; }
+`,
+        render: (ctx) => {
+            const youRounds = TAPE.filter((r) => r.you > r.her).length;
+            const rows = TAPE.map((r) => {
+                const you = r.you > r.her;
+                const pt = (on, mine) => `<span class="v17-pt${on ? " on" : ""}${on && mine ? " you" : ""}" aria-hidden="true">${icon("check", 13, { stroke: 3.2 })}</span>`;
+                return `<div class="v17-row" aria-label="${r.label}: ${you ? "your round" : "her round"}">${pt(you, true)}<b class="num${you ? " win you" : ""}">${r.f(r.you)}</b><span class="v17-l">${r.label}</span><b class="num her${you ? "" : " win"}">${r.f(r.her)}</b>${pt(!you, false)}</div>`;
+            }).join("");
+            const body = `<div class="v17-body">
+    <div class="v17-bar"><span class="v17-eb">Tale of the tape</span>${closeX()}</div>
+    <div class="v17-bout">
+        <div class="v17-stage" aria-hidden="true">
+            <span class="v17-half you"></span><span class="v17-half her"></span>
+            <span class="v17-tag you">Your corner</span><span class="v17-tag her">Her corner</span>
+            <div class="v17-duo"><div class="v17-f you">${companionArt(YOU.animal, 150)}</div><div class="v17-f her">${companionArt(HER.animal, 150)}</div></div>
+        </div>
+        <div class="v17-band">
+            <div><b>You</b><span>${esc(YOU.handle)}</span></div>
+            <div class="v17-sc" aria-label="Head to head: you ${LOCAL.score.you}, Bertille ${LOCAL.score.her}"><strong class="num"><em>${LOCAL.score.you}</em><i>:</i>${LOCAL.score.her}</strong><small>Head to head</small></div>
+            <div><b>${esc(HER.name)}</b><span>${esc(HER.handle)}</span></div>
+        </div>
+    </div>
+    <div class="v17-card">
+        <div class="v17-head"><span>Your point</span><span>Round</span><span>Her point</span></div>
+        ${rows}
+        <div class="v17-tally"><b class="num you">${youRounds}</b><span>Rounds won</span><b class="num her">${TAPE.length - youRounds}</b></div>
+        <p class="v17-verdict"><b class="you">You win the tape.</b> <b>She wins the fights, ${LOCAL.score.her} to ${LOCAL.score.you}.</b> Hold both live leads to flip it.</p>
+    </div>
+    <div class="v17-sec">${eyebrow("Fights together", String(LOCAL.live.length + LOCAL.done.length))}</div>
+    ${together({ limit: 4 })}
+    ${links()}
+</div>`;
+            return {
+                html: backdrop(ctx),
+                overlay: shell({ body, foot: `<div class="ps-foot"><button type="button" class="ps-btn pri wide">${icon("swords", 18, { stroke: 2.2 })}Challenge ${esc(HER.name)}</button></div>` }),
+            };
+        },
+        mount: sheetMount(),
+    },
+
+    // 18 =======================================================================
+    {
+        id: "tape-lens",
+        name: "Tale of the tape: pick the stats",
+        when: "When the right comparison depends on the question: this fight, this week, or everything.",
+        changes: [
+            "Needs a backlog item: head-to-head that also counts group fights where you both finished (the All time tab).",
+            "A segmented control swaps the tape between This fight, Last 7 days and All time; each bar slides to its new lean.",
+            "This fight is The croissant run you tapped from. The number between the companions follows the tab: your lead, your week, the rivalry.",
+            "Ties sit on the centre line. A one-line note says what each tab counts.",
+        ],
+        css: `
+.v18-body { padding: 0 20px 32px; display: flex; flex-direction: column; gap: 12px; }
+.v18-bar { display: flex; align-items: center; justify-content: space-between; }
+.v18-eb { font-size: 12px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--moss-text); }
+.v18-bar .ps-x { margin-right: -12px; }
+.v18-ring { display: grid; grid-template-columns: 1fr auto 1fr; align-items: end; padding: 2px 0 0; border-bottom: 1px solid var(--line); }
+.v18-f { display: flex; justify-content: center; }
+.v18-f img { animation: v18-in-l 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) 0.15s backwards; }
+.v18-f.her img { transform: scaleX(-1); animation-name: v18-in-r; }
+@keyframes v18-in-l { from { opacity: 0; translate: -24px 0; } }
+@keyframes v18-in-r { from { opacity: 0; translate: 24px 0; } }
+.v18-mid { align-self: center; min-width: 120px; padding-bottom: 18px; text-align: center; }
+.v18-big { display: block; font-size: 36px; font-weight: 800; letter-spacing: -0.035em; line-height: 1; }
+.v18-big i { font-style: normal; margin: 0 3px; color: var(--text-faint); }
+.v18-big em { font-style: normal; color: var(--moss-text); }
+.v18-sl { display: block; margin-top: 6px; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); }
+.v18-mid.swap > * { animation: v18-swap 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.v18-names { display: flex; justify-content: space-between; padding: 0 6px; }
+.v18-names div { display: flex; flex-direction: column; }
+.v18-names div:last-child { text-align: right; }
+.v18-names b { font-size: 18px; font-weight: 800; letter-spacing: -0.015em; }
+.v18-names div:first-child b { color: var(--moss-text); }
+.v18-names span { font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+.v18-seg { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); padding: 3px; border-radius: 999px; background: var(--chip); border: 1px solid var(--hairline); }
+.v18-thumb { position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc((100% - 6px) / 3); border-radius: 999px; background: var(--control); border: 1px solid var(--line); transform: translateX(calc(var(--at) * 100%)); transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1); }
+.v18-seg button { position: relative; z-index: 1; min-height: 40px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; font-weight: 800; color: var(--text-secondary); cursor: pointer; transition: color 0.2s; -webkit-tap-highlight-color: transparent; }
+.v18-seg button[aria-selected="true"] { color: var(--text); }
+.v18-tape { border-radius: var(--r-card); background: var(--card); border: 1px solid var(--hairline); padding: 4px 16px; }
+.v18-row { padding: 12px 0 13px; }
+.v18-row + .v18-row { border-top: 1px solid var(--hairline); }
+.v18-vals { display: grid; grid-template-columns: 1fr auto 1fr; align-items: baseline; gap: 8px; }
+.v18-vals b { font-size: 19px; font-weight: 800; letter-spacing: -0.02em; color: var(--text-tertiary); }
+.v18-vals b:last-child { text-align: right; }
+.v18-vals b.win, .v18-vals b.even { color: var(--text); }
+.v18-vals b.win.you { color: var(--moss-text); }
+.v18-vals span { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); text-align: center; }
+.v18-tape.swap .v18-vals { animation: v18-swap 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); }
+@keyframes v18-swap { from { opacity: 0; transform: translateY(6px); } }
+.v18-tug { position: relative; height: 6px; margin-top: 8px; border-radius: 3px; background: var(--track); }
+.v18-tug i { position: absolute; top: 0; bottom: 0; border-radius: 3px; background: color-mix(in srgb, var(--text) 55%, transparent); transition: left 0.5s cubic-bezier(0.32, 0.72, 0, 1), width 0.5s cubic-bezier(0.32, 0.72, 0, 1), background 0.3s; }
+.v18-tug i.you { background: var(--moss-fill); }
+.v18-tug::after { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--text-faint); }
+.v18-note { margin: -2px 8px 0; text-align: center; font-size: 12px; font-weight: 700; line-height: 1.4; color: var(--text-tertiary); }
+.v18-sec { margin-top: 10px; }
+`,
+        render: (ctx) => {
+            const body = `<div class="v18-body">
+    <div class="v18-bar"><span class="v18-eb">Tale of the tape</span>${closeX()}</div>
+    <div class="v18-ring">
+        <div class="v18-f">${companionArt(YOU.animal, 124)}</div>
+        <div class="v18-mid" data-head aria-live="polite"></div>
+        <div class="v18-f her">${companionArt(HER.animal, 124)}</div>
+    </div>
+    <div class="v18-names"><div><b>You</b><span>${esc(YOU.handle)}</span></div><div><b>${esc(HER.name)}</b><span>${esc(HER.handle)}</span></div></div>
+    <div class="v18-seg" role="tablist" aria-label="Compare" style="--at:0"><span class="v18-thumb" aria-hidden="true"></span>${LENSES.map((l, i) => `<button type="button" role="tab" data-lens="${i}" aria-selected="${i === 0}">${l.tab}</button>`).join("")}</div>
+    <div class="v18-tape" data-tape role="tabpanel">${LENSES[0].rows.map(() => `<div class="v18-row"><div class="v18-vals"><b class="num"></b><span></span><b class="num"></b></div><div class="v18-tug" aria-hidden="true"><i></i></div></div>`).join("")}</div>
+    <p class="v18-note" data-note></p>
+    <div class="v18-sec">${eyebrow("Fights together", String(LOCAL.live.length + LOCAL.done.length))}</div>
+    ${together({ limit: 3 })}
+    ${links()}
+</div>`;
+            return {
+                html: backdrop(ctx),
+                overlay: shell({ body, foot: `<div class="ps-foot"><button type="button" class="ps-btn pri wide">${icon("swords", 18, { stroke: 2.2 })}Challenge ${esc(HER.name)}</button></div>` }),
+            };
+        },
+        mount: sheetMount((root, ctx) => {
+            const ov = ctx.overlay;
+            const seg = ov.querySelector(".v18-seg");
+            const tape = ov.querySelector("[data-tape]");
+            const head = ov.querySelector("[data-head]");
+            const note = ov.querySelector("[data-note]");
+            const rows = [...tape.querySelectorAll(".v18-row")];
+            const apply = (i, animate) => {
+                const lens = LENSES[i];
+                seg.style.setProperty("--at", i);
+                seg.querySelectorAll("[data-lens]").forEach((b, j) => b.setAttribute("aria-selected", String(j === i)));
+                head.innerHTML = `<span class="v18-big num">${lens.head}</span><span class="v18-sl">${lens.sub}</span>`;
+                note.textContent = lens.note;
+                rows.forEach((row, j) => {
+                    const [label, a, b, f] = lens.rows[j];
+                    const [va, lab, vb] = row.querySelectorAll(".v18-vals > *");
+                    va.textContent = f(a);
+                    vb.textContent = f(b);
+                    lab.textContent = label;
+                    va.className = "num" + (a > b ? " win you" : a === b ? " even" : "");
+                    vb.className = "num" + (b > a ? " win" : a === b ? " even" : "");
+                    const lean = tapeLean(a, b);
+                    const bar = row.querySelector(".v18-tug i");
+                    bar.className = a > b ? "you" : "";
+                    bar.style.left = lean.left + "%";
+                    bar.style.width = lean.width + "%";
+                });
+                if (animate && !ctx.reduced) {
+                    [tape, head].forEach((el) => {
+                        el.classList.remove("swap");
+                        void el.offsetWidth;
+                        el.classList.add("swap");
+                    });
+                }
+            };
+            const onClick = (e) => {
+                const b = e.target.closest("[data-lens]");
+                if (b) apply(Number(b.dataset.lens), true);
+            };
+            apply(0, false);
+            ov.addEventListener("click", onClick);
+            return () => ov.removeEventListener("click", onClick);
+        }),
+    },
+
+    // 19 =======================================================================
+    {
+        id: "tape-poster",
+        name: "Tale of the tape: poster",
+        when: "Bold: when the companions should carry the page, like the poster before a title bout.",
+        changes: [
+            "Needs a backlog item: head-to-head that also counts group fights where you both finished.",
+            "The badger and the fox stand almost twice the size on a plate that fills the top of the sheet, nose to nose.",
+            "The billing sits under them in poster type, each with their companion's line: Quietly competitive against Always a step ahead.",
+            "The five rows tuck under the poster as one tight strip; fights together and Challenge follow.",
+        ],
+        css: `
+.v19-sheet .ps-grab { position: absolute; top: 0; left: 50%; z-index: 3; margin-left: -18px; }
+.v19-body { padding: 0 20px 32px; display: flex; flex-direction: column; gap: 12px; }
+.v19-stage { position: relative; height: 330px; margin: 0 -20px; background: var(--plate-alt); border-bottom: 1px solid var(--line); overflow: hidden; }
+.v19-stage::before { content: ""; position: absolute; left: 50%; bottom: -70px; width: 480px; height: 150px; margin-left: -240px; border-radius: 50%; background: color-mix(in srgb, var(--text) 7%, transparent); }
+.v19-top { position: absolute; top: 12px; left: 20px; right: 8px; z-index: 2; display: flex; align-items: center; justify-content: space-between; }
+.v19-eb { font-size: 12px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-secondary); }
+.v19-top .ps-x > span { background: var(--bg); border-color: var(--line); }
+.v19-score { position: absolute; top: 50px; left: 0; right: 0; z-index: 2; text-align: center; animation: ps-rise 0.4s ease-out 0.55s backwards; }
+.v19-score strong { display: block; font-size: 48px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+.v19-score em { font-style: normal; color: var(--moss-text); }
+.v19-score i { font-style: normal; margin: 0 4px; color: var(--text-faint); }
+.v19-score small { display: block; margin-top: 4px; font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-secondary); }
+.v19-duo { position: absolute; left: 0; right: 0; bottom: 8px; display: flex; justify-content: center; align-items: flex-end; }
+.v19-f.you { margin-right: -34px; animation: v19-in-l 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.15s backwards; }
+.v19-f.her { margin-left: -34px; animation: v19-in-r 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.15s backwards; }
+.v19-f.her img { transform: scaleX(-1); }
+@keyframes v19-in-l { from { opacity: 0; transform: translateX(-60px) scale(0.94); } }
+@keyframes v19-in-r { from { opacity: 0; transform: translateX(60px) scale(0.94); } }
+.v19-bill { display: grid; grid-template-columns: 1fr auto 1fr; align-items: start; gap: 8px; padding: 4px 0 2px; }
+.v19-bill > div { min-width: 0; }
+.v19-bill > div:last-child { text-align: right; }
+.v19-bill b { display: block; font-size: 28px; font-weight: 800; letter-spacing: -0.02em; line-height: 1; text-transform: uppercase; }
+.v19-bill .you b { color: var(--moss-text); }
+.v19-bill span { display: block; margin-top: 6px; font-size: 12px; font-weight: 700; line-height: 1.35; color: var(--text-secondary); }
+.v19-vs { padding-top: 8px; font-size: 13px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-faint); }
+.v19-tape { border-radius: var(--r-card); background: var(--card); border: 1px solid var(--hairline); padding: 2px 16px; }
+.v19-row { display: grid; grid-template-columns: 1fr 110px 1fr; align-items: center; gap: 10px; min-height: 44px; }
+.v19-row + .v19-row { border-top: 1px solid var(--hairline); }
+.v19-row b { font-size: 16px; font-weight: 800; letter-spacing: -0.01em; color: var(--text-tertiary); }
+.v19-row b:last-child { text-align: right; }
+.v19-row b.win { color: var(--text); }
+.v19-row b.win.you { color: var(--moss-text); }
+.v19-mid { display: flex; flex-direction: column; gap: 5px; }
+.v19-mid span { font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; text-align: center; color: var(--text-secondary); }
+.v19-tug { position: relative; height: 4px; border-radius: 2px; background: var(--track); }
+.v19-tug i { position: absolute; top: 0; bottom: 0; border-radius: 2px; background: color-mix(in srgb, var(--text) 55%, transparent); }
+.v19-tug i.you { background: var(--moss-fill); }
+.v19-tug::after { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--text-faint); }
+.v19-sec { margin-top: 10px; }
+`,
+        render: (ctx) => {
+            const youLine = FF.companions.find((c) => c.id === YOU.animal).line;
+            const rows = TAPE.map((r) => {
+                const you = r.you > r.her;
+                const lean = tapeLean(r.you, r.her);
+                return `<div class="v19-row"><b class="num${you ? " win you" : ""}">${r.f(r.you)}</b><div class="v19-mid"><span>${r.label}</span><span class="v19-tug" aria-hidden="true"><i class="${you ? "you" : ""}" style="left:${lean.left.toFixed(1)}%;width:${lean.width.toFixed(1)}%"></i></span></div><b class="num${you ? "" : " win"}">${r.f(r.her)}</b></div>`;
+            }).join("");
+            const body = `<div class="v19-body">
+    <div class="v19-stage">
+        <div class="v19-top"><span class="v19-eb">Tale of the tape</span>${closeX()}</div>
+        <div class="v19-score" aria-label="Head to head: you ${LOCAL.score.you}, Bertille ${LOCAL.score.her}"><strong class="num"><em>${LOCAL.score.you}</em><i>:</i>${LOCAL.score.her}</strong><small>Head to head</small></div>
+        <div class="v19-duo" aria-hidden="true"><div class="v19-f you">${companionArt(YOU.animal, 226)}</div><div class="v19-f her">${companionArt(HER.animal, 226)}</div></div>
+    </div>
+    <div class="v19-bill">
+        <div class="you"><b>You</b><span>Badger<br>${esc(youLine)}</span></div>
+        <span class="v19-vs">vs</span>
+        <div><b>${esc(HER.name)}</b><span>Fox<br>${esc(LOCAL.line)}</span></div>
+    </div>
+    <div class="v19-tape">${rows}</div>
+    <div class="v19-sec">${eyebrow("Fights together", String(LOCAL.live.length + LOCAL.done.length))}</div>
+    ${together({ limit: 3 })}
+    ${links()}
+</div>`;
+            return {
+                html: backdrop(ctx),
+                overlay: shell({ cls: "v19-sheet", body, foot: `<div class="ps-foot"><button type="button" class="ps-btn pri wide">${icon("swords", 18, { stroke: 2.2 })}Challenge ${esc(HER.name)}</button></div>` }),
+            };
+        },
+        mount: sheetMount(),
+    },
 ];
 
 // Option 5 readout for one day of the side-by-side chart.
@@ -2406,6 +3262,48 @@ function v10card(i) {
     const how = s.of === 2 ? `${you ? "You" : "She"} won by ${by}.` : `You ${ord(s.you)}, her ${ord(s.her)}. ${you ? "You beat her" : "She beat you"} by ${by}.`;
     return `<div class="v10-card"><div class="v10-ch"><span>${s.ended} · ${s.of === 2 ? "1v1" : s.of + " people"}${s.round ? ` · round ${s.round}` : ""}</span>${badge}</div><div class="v10-cn">${avatar(you ? YOU : HER, 26)}${esc(s.name)}</div><p>${how}</p><p class="v10-stake">Loser ${esc(lc(s.action))}.</p></div>`;
 }
+
+// Options 16 to 19: option 6's five rows, you on the left and Bertille on the right. why is option 16's tap-to-explain line.
+const TAPE = [
+    { label: "1v1 duels", you: LOCAL.duel.won, her: LOCAL.duel.lost, f: String, why: `She's won ${LOCAL.duel.lost} of your ${LOCAL.duel.n} duels. You took the last one, ${esc(LOCAL.rematch.name)}.` },
+    { label: "Win rate", you: LOCAL.youRecord.rate, her: LOCAL.record.rate, f: (n) => n + "%", pct: true, why: `You've won ${LOCAL.youRecord.wins} of ${LOCAL.youRecord.played} fights. She's won ${LOCAL.record.wins} of ${LOCAL.record.played}.` },
+    { label: "Last 7 days", you: LOCAL.youWeek, her: LOCAL.herWeek, f: fmt, why: `You walked ${fmt(LOCAL.youWeek - LOCAL.herWeek)} more than her since Friday.` },
+    { label: "Best day", you: LOCAL.youBest.you, her: LOCAL.herBest.her, f: fmt, why: `Your ${LOCAL.youBest.full} beat her ${LOCAL.herBest.full} by ${fmt(LOCAL.youBest.you - LOCAL.herBest.her)}.` },
+    { label: "Today so far", you: FF.todaySteps, her: LOCAL.week[6].her, f: fmt, why: `${fmt(FF.todaySteps - LOCAL.week[6].her)} ahead today. She last synced 10 min ago.` },
+];
+
+// A tape bar runs from the centre line toward whoever leads, as left and width in % of the track. Ties stay on the line.
+const tapeLean = (a, b) => {
+    const width = a === b ? 0 : Math.min(50, (Math.abs(a - b) / Math.max(a, b)) * 75);
+    return { left: a > b ? 50 - width : 50, width };
+};
+
+// Option 18: three sets of five rows. The croissant run's averages and days won count full days only (today is still going).
+const LENSES = (() => {
+    const you = CR.daily.marc, her = CR.daily.bertille, full = you.length - 1;
+    const avg = (list) => Math.round(list.slice(0, full).reduce((a, v) => a + v, 0) / full);
+    const won = (a, b) => a.slice(0, full).filter((v, i) => v > b[i]).length;
+    const herTotal = rowOf(CR, "bertille").total;
+    const youLow = LOCAL.week.filter((d) => !d.today).reduce((a, d) => (d.you < a.you ? d : a));
+    const gp = { you: LOCAL.score.you - LOCAL.duel.won, her: LOCAL.score.her - LOCAL.duel.lost };
+    return [
+        {
+            tab: "This fight", head: `<em>${signed(CR.me.total - herTotal)}</em>`, sub: "you lead her",
+            note: `${CR.name}, day 5 of 7. Days won and average count full days only.`,
+            rows: [["Total", CR.me.total, herTotal, fmt], ["Days won", won(you, her), won(her, you), String], ["Daily average", avg(you), avg(her), fmt], ["Best day", Math.max(...you), Math.max(...her), fmt], ["Today so far", you[full], her[full], fmt]],
+        },
+        {
+            tab: "Last 7 days", head: `<em>${signed(LOCAL.youWeek - LOCAL.herWeek)}</em>`, sub: "more than her",
+            note: "Fri 18 Sep to today. Average and quietest day count full days only.",
+            rows: [["Total", LOCAL.youWeek, LOCAL.herWeek, fmt], ["Daily average", LOCAL.youAvg, LOCAL.herAvg, fmt], ["Best day", LOCAL.youBest.you, LOCAL.herBest.her, fmt], ["Quietest day", youLow.you, LOCAL.herLow.her, fmt], ["Today so far", FF.todaySteps, LOCAL.week[6].her, fmt]],
+        },
+        {
+            tab: "All time", head: `<em>${LOCAL.score.you}</em><i>:</i>${LOCAL.score.her}`, sub: "head to head",
+            note: `Every fight since ${LOCAL.since}. Group fights count for whoever finished higher.`,
+            rows: [["Head to head", LOCAL.score.you, LOCAL.score.her, String], ["1v1 duels", LOCAL.duel.won, LOCAL.duel.lost, String], ["Group fights", gp.you, gp.her, String], ["Wins", LOCAL.youRecord.wins, LOCAL.record.wins, String], ["Win rate", LOCAL.youRecord.rate, LOCAL.record.rate, (n) => n + "%"]],
+        },
+    ];
+})();
 
 /* ===== END PAGE ===== */
         </script>

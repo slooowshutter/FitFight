@@ -2,7 +2,7 @@
 
 The selected [Companion HTML](../kit/companion-app-proposal.html) supplies the visual direction. The [native design kit](../kit/FitFight%20Design%20System.dc.html) and [tokens](../tokens.json) remain the foundation. The running native/backend behavior wins over simplified prototype interactions.
 
-`originals/` preserves the five images embedded in the selected HTML, byte-for-byte, plus Marc’s hiking-goat effort strip (`originals/goat-hiking-effort.png`). `manifest.json` records stable animal IDs, image dimensions, crop bounds, real transparency, and intended surfaces. No temporary image-generation paths are required. The five hiking poses are opaque cream canvases, not transparent cutouts.
+`originals/` preserves the five images embedded in the selected HTML, byte-for-byte, plus Marc’s hiking-goat effort strip (`originals/goat-hiking-effort.png`). `manifest.json` records stable animal IDs, image dimensions, crop bounds, real transparency, and intended surfaces. No temporary image-generation paths are required.
 
 The solo atlas has an alpha channel. Race and tennis are **opaque** images with separate Night/Day backgrounds; they are never described as transparent cutouts. Both compositions use aspect fit and retain the complete cast and ground. Race is shown only for the four-person Simulator demo cast. Tennis is available as an artwork study below the picker, never as a fabricated Feed post.
 
@@ -10,7 +10,7 @@ Native full-body assets are padded 352 × 400 PNGs. Avatars use 150 × 150 face 
 
 ```sh
 python3 docs/design/source/companion/prepare-assets.py
-python3 docs/design/source/companion/slice-goat-hiking.py
+python3 docs/design/source/companion/import-effort-forms.py
 ```
 
 Native artwork is bundled in named `Companion-*.imageset` assets. The app contains no HTML, base64 images, or web view. A chosen stock animal is stored on the account and shown as that person’s avatar to everyone in fights, standings, Feed, and comments. Custom generation and saved group artwork belong to later plan stages.
@@ -33,7 +33,7 @@ Before implementation: select the workflow/provider and server credentials, appr
 
 ### 2. Five activity forms of the same companion
 
-The native picker no longer shows effort poses. Hiking goat still has real rest-to-peak artwork on You and fights when that stock animal is selected. Other animals reuse that same animal’s stock body until generation exists. Today’s step count still picks the live pose for those surfaces (under 2k resting, 8k+ peak). A later generation operation should take the saved identity and reference artwork and create five consistent sport scenes. Activity changes must select an already saved form; they do not generate another image every time the screen opens.
+The native picker no longer shows effort poses. Each of the 12 regular stock animals has five transparent effort forms (`Companion-<id>-effort-1…5`), generated with the Blend Five Fitness Levels workflow and listed in `effort-forms.json`. Today’s step count picks the live pose on You and fights: under 3k resting, 3-6k soft, 6-10k average, 10-15k fit, 15k+ strong. A later generation operation should take the saved identity and reference artwork and create five consistent sport scenes. Activity changes must select an already saved form; they do not generate another image every time the screen opens.
 
 Store each form against the same companion revision. Activity changes select an already saved form; they do not generate another image every time the screen opens. Preserve the animal, breed, face, clothes and accessories across the set. Partial generation must not replace a complete usable set. These forms are presentation only and do not change Steps scoring.
 

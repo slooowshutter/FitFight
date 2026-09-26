@@ -2853,7 +2853,7 @@ The native Fight path uses the API to create and join; Apple Health synchronizat
 - Apple may revise its merged total after a Watch sync, edit, or deletion. Live snapshots can change until the exact Fight-end value is finalized; chart buckets never overwrite that exact-window score.
 - Same Apple ID on production vs staging is **two** accounts.
 - `web/` owns Apple Health aggregate ingestion and account deletion. There are no app-facing Postgres RPCs.
-- Companion sport scenes are not generated. Custom descriptions are stored on the account for a later job. Hiking goat still has five distinct images on You and fights for a stock goat.
+- Companion sport scenes are not generated. Custom descriptions are stored on the account for a later job. The 12 regular stock animals have five effort forms each on You and fights, chosen by today's steps (3k / 6k / 10k / 15k).
 
 ---
 

@@ -164,13 +164,10 @@ enum StockCompanion: String, CaseIterable, Identifiable {
         }
     }
 
-    func hasEffortSet(for sport: CompanionSport) -> Bool {
-        self == .goat && sport == .hiking
-    }
-
-    func effortImage(sport: CompanionSport, stage: CompanionEffortStage?) -> String {
-        guard let stage, hasEffortSet(for: sport) else { return image }
-        return "Companion-goat-hiking-\(stage.rawValue)"
+    func effortImage(stage: CompanionEffortStage?) -> String {
+        // Specials have no effort forms yet.
+        guard let stage, !isLimited else { return image }
+        return "\(image)-effort-\(stage.rawValue)"
     }
 }
 
@@ -214,10 +211,10 @@ enum CompanionEffortStage: Int, CaseIterable, Identifiable {
     static func matching(todaySteps: Int?) -> CompanionEffortStage {
         guard let todaySteps else { return .rest }
         switch todaySteps {
-        case ..<2_000: return .rest
-        case ..<4_000: return .headingOut
-        case ..<6_000: return .onTheMove
-        case ..<8_000: return .pushing
+        case ..<3_000: return .rest
+        case ..<6_000: return .headingOut
+        case ..<10_000: return .onTheMove
+        case ..<15_000: return .pushing
         default: return .peak
         }
     }
@@ -228,7 +225,7 @@ enum CompanionEffortStage: Int, CaseIterable, Identifiable {
     }
 }
 
-/// Only restored from older builds that offered a sport picker; the goat has hiking poses.
+/// Only restored from older builds that offered a sport picker.
 enum CompanionSport: String {
     case hiking, running, football, ski, walking
 }
@@ -458,7 +455,6 @@ final class CompanionStore: ObservableObject {
 
 struct CompanionCharacter: View {
     let animal: StockCompanion
-    var sport: CompanionSport = .hiking
     var effort: CompanionEffortStage?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.ffStaticRender) private var staticRender
@@ -469,7 +465,7 @@ struct CompanionCharacter: View {
             guard !reduceMotion, !staticRender, !greeting else { return }
             withAnimation(.easeInOut(duration: 0.18)) { greeting = true }
         } label: {
-            Image(animal.effortImage(sport: sport, stage: effort))
+            Image(animal.effortImage(stage: effort))
                 .resizable()
                 .scaledToFit()
                 .rotationEffect(.degrees(greeting ? -3 : 0), anchor: .bottom)
@@ -736,7 +732,7 @@ struct CompanionIntroduction: View {
         if companions.isCustom {
             RemotePhoto(url: fitnessImages[youEffort.fitnessImageStage] ?? session.profile?.photoURL, contentMode: .fit) { Color.clear }
         } else {
-            CompanionCharacter(animal: companions.selection, sport: companions.sport, effort: youEffort)
+            CompanionCharacter(animal: companions.selection, effort: youEffort)
         }
     }
 
@@ -815,7 +811,6 @@ struct CompanionFightSummary: View {
                     if mine != nil {
                         CompanionCharacter(
                             animal: companions.selection,
-                            sport: companions.sport,
                             effort: CompanionEffortStage.matchingDaily(steps.status)
                         )
                     }
@@ -1398,8 +1393,9 @@ struct CompanionPicker: View {
     }
 
     /// Specials stay hidden while sales are off, except one this account already owns.
+    /// Specials are hidden for now; an account that already owns one still sees it.
     private func shows(_ animal: StockCompanion) -> Bool {
-        !animal.isLimited || CompanionPreview.isEnabled || purchases.snapshot?.purchasesEnabled == true || status(animal) == .yours
+        !animal.isLimited || status(animal) == .yours
     }
 
     private var canSaveCustom: Bool {

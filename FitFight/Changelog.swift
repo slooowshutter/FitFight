@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 26,
+            notes: "Your animal now changes with today's steps: armchair under 3k, yawning to 6k, relaxed to 10k, fit to 15k and fully muscled after that. Works for all 12 regular animals. Specials are hidden for now."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 26,
             notes: "Steps and fights update right after you open the app instead of waiting for your full Apple Health history to upload, and Fights shows Syncing… until today’s steps arrive. You opens instantly with your last numbers, and Dashboard shows your Steps straight away. Edit profile has Profile visibility and Share Steps history again, so friends you share with see your stats and fighter."
         ),
         ReleaseNote(

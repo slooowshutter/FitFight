@@ -266,8 +266,10 @@ test("a processing failure keeps the received page, and the worker resumes it", 
     const [failed] = await database`select processing_state, processing_error is not null as has_error from private.activity_raw where user_id = ${f.owner}`;
     assert.deepEqual(failed, { processing_state: "failed", has_error: true });
     await database`update private.activity_raw set processing_attempts = 5 where user_id = ${f.owner}`;
-    assert.equal(await processActivity({ userId: f.owner }, database), "pending",
-        "Exhausted failures remain unprocessed in the acknowledgement");
+    assert.equal(await processActivity({ userId: f.owner }, database), "processed",
+        "Exhausted failures are never claimed again, so they cannot keep the acknowledgement pending");
+    const [exhausted] = await database`select processing_state from private.activity_raw where user_id = ${f.owner}`;
+    assert.equal(exhausted.processing_state, "failed", "An exhausted failure stays recorded as failed");
     await database`update private.activity_raw set processing_attempts = 1 where user_id = ${f.owner}`;
 
     await database`alter table private.activity_metrics drop constraint activity_metrics_test_block`;
@@ -277,6 +279,59 @@ test("a processing failure keeps the received page, and the worker resumes it", 
     const [processed] = await database`select processing_state from private.activity_raw where user_id = ${f.owner}`;
     assert.equal(processed.processing_state, "processed");
     assert.equal((await metrics(f.owner)).find((row) => row.metric === "active_energy")?.value, 300);
+});
+
+test("a Steps upload resolves only its own readings and leaves the activity import to its worker", async (t) => {
+    const f = await fixture(t);
+    const first = new Date(Date.now() - 60_000).toISOString();
+    const later = new Date(Date.now() - 1_000).toISOString();
+    const upload = (completeThrough: string, steps: number) =>
+        syncHealthKitAggregates(f.owner, healthKitAggregateSyncSchema.parse({
+            complete_through: completeThrough, time_zone: zone, merged_days: [],
+            fight_aggregates: [{ fight_id: f.fightId, starts_at: f.startsAt, ends_at: f.endsAt, cutoff_at: completeThrough, steps }],
+        }), database);
+    assert.equal((await upload(first, 3_000)).processing, "processed");
+    const day = civilDayStamp(new Date(first), zone);
+    const energy = { ...dayTotal("active_energy", day, 610, first), time_zone: zone };
+    const [imported] = await database<{ id: string }[]>`
+        insert into private.activity_raw (user_id, source_id, record_kind, record_type, record_key, starts_at, ends_at,
+            time_zone, payload, payload_hash, collected_at)
+        select ${f.owner}, id, 'total', 'active_energy', ${`day:${day}`}, ${energy.starts_at}, ${energy.ends_at}, ${zone},
+            ${database.json(energy)}, repeat('b', 64), ${first}
+        from public.data_sources where user_id = ${f.owner}
+        returning id
+    `;
+    const importState = async () => (await database<{ processing_state: string }[]>`
+        select processing_state from private.activity_raw where id = ${imported.id}
+    `)[0].processing_state;
+
+    assert.equal((await upload(later, 4_000)).processing, "processed");
+    const [member] = await database`select current_value::float8 as value from public.fight_members
+        where fight_id = ${f.fightId} and user_id = ${f.owner}`;
+    assert.equal(member.value, 4_000);
+    assert.equal(await importState(), "pending", "A Steps upload never claims the activity import's rows");
+
+    const ownReading = database`
+        update private.activity_raw set processing_state = 'processing', lease_expires_at = now() + interval '5 minutes'
+        where user_id = ${f.owner} and record_key = ${`fight:${f.fightId}`} and collected_at = ${later}
+    `;
+    assert.equal((await ownReading).count, 1);
+    assert.equal((await upload(later, 4_000)).processing, "pending",
+        "An exact replay reports its reading while another worker still holds it");
+    await database`
+        update private.activity_raw set processing_state = 'pending', lease_expires_at = null
+        where user_id = ${f.owner} and record_key = ${`fight:${f.fightId}`} and collected_at = ${later}
+    `;
+    assert.equal((await upload(later, 4_000)).processing, "processed",
+        "An exact replay resumes its own interrupted reading");
+    const [replayed] = await database`select processing_state from private.activity_raw
+        where user_id = ${f.owner} and record_key = ${`fight:${f.fightId}`} and collected_at = ${later}`;
+    assert.equal(replayed.processing_state, "processed");
+    assert.equal(await importState(), "pending");
+
+    assert.equal(await processActivity({ userId: f.owner }, database), "processed");
+    assert.equal(await importState(), "processed");
+    assert.equal((await metrics(f.owner)).find((row) => row.metric === "active_energy")?.value, 610);
 });
 
 test("late data cannot change a final Fight, and workouts never add to merged daily totals", async (t) => {

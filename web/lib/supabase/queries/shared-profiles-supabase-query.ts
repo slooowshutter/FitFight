@@ -8,11 +8,11 @@ import { createDatabaseClient } from "@/lib/supabase/postgres";
 import { fightRecordFactSchema, type FightRecordFact, type ProfileHistoryPage } from "@/lib/types/profiles/profile-results";
 import {
     profileCountRowSchema, profileIdentifierRowSchema, profileUserIDSchema, activityDaySchema, defaultProfileSettings, profileAccessRowSchema, profileFeatureConfigSchema,
-    profileSettingsSchema, sharedProfileSchema,
+    profileSettingsSchema, profileSharedFightRowSchema, sharedProfileSchema,
     type ProfilePageQuery, type ProfilePreviewAudience, type ProfileSettings,
     type SharedIdentity, type SharedProfile, type UpdateProfileSettings, type ProfileRivalrySummary,
 } from "@/lib/types/profiles/shared-profile";
-import { signMediaUrl } from "./media-supabase-query";
+import { signMediaUrl, signMediaUrls } from "./media-supabase-query";
 
 /** Profile locks serialize new sharing reads with settings, friendships, blocks, and deletion. */
 export async function loadProfileAccess(sql: TransactionSql, viewerId: string, targetId: string, write = false) {
@@ -24,7 +24,14 @@ export async function loadProfileAccess(sql: TransactionSql, viewerId: string, t
     if (users.length !== (viewerId === targetId ? 1 : 2)) {
         throw new ApiError(404, "not_found", "Profile unavailable");
     }
-    const [row] = await sql`
+    const [result] = await loadProfileAccessRows(sql, viewerId, [targetId]);
+    if (result.relationship.blocked) throw new ApiError(404, "not_found", "Profile unavailable");
+    return result;
+}
+
+/** Callers lock the viewer and every target first, as loadProfileAccess does. */
+async function loadProfileAccessRows(sql: TransactionSql, viewerId: string, targetIds: string[]) {
+    return profileAccessRowSchema.array().parse(await sql`
         select jsonb_build_object('user_id', profile.id, 'handle', profile.handle,
             'display_name', profile.display_name, 'companion_id', profile.companion_id) identity,
             case when profile.companion_id = 'custom' then profile.companion_image_url end companion_image_url,
@@ -37,7 +44,7 @@ export async function loadProfileAccess(sql: TransactionSql, viewerId: string, t
                     select 1 from public.fight_members mine
                     join public.fight_members theirs on theirs.fight_id = mine.fight_id
                     join public.fights fight on fight.id = mine.fight_id
-                    where mine.user_id = ${viewerId} and theirs.user_id = ${targetId}
+                    where mine.user_id = ${viewerId} and theirs.user_id = profile.id
                         and mine.state = 'accepted' and theirs.state = 'accepted'
                         and fight.starts_at <= now()
                         and fight.state in ('live', 'awaiting_final_sync')
@@ -48,8 +55,8 @@ export async function loadProfileAccess(sql: TransactionSql, viewerId: string, t
                         select blocker_id, blocked_id from private.profile_blocks
                         union all select blocker_id, blocked_id from private.feed_blocks
                         union all select blocker_id, blocked_id from private.feedback_blocks
-                    ) blocks where (blocker_id = ${viewerId} and blocked_id = ${targetId})
-                        or (blocker_id = ${targetId} and blocked_id = ${viewerId})
+                    ) blocks where (blocker_id = ${viewerId} and blocked_id = profile.id)
+                        or (blocker_id = profile.id and blocked_id = ${viewerId})
                 )
             ) relationship,
             case when profile.id = ${viewerId} then 'self'
@@ -60,17 +67,19 @@ export async function loadProfileAccess(sql: TransactionSql, viewerId: string, t
         left join private.profile_settings settings on settings.user_id = profile.id
         left join public.media_objects media on media.id = profile.avatar_media_id and media.status = 'ready'
         left join private.profile_friendships friendship
-            on friendship.user_low = least(${viewerId}::uuid, ${targetId}::uuid)
-            and friendship.user_high = greatest(${viewerId}::uuid, ${targetId}::uuid)
-        where profile.id = ${targetId}
-    `;
-    const result = profileAccessRowSchema.parse(row);
-    if (result.relationship.blocked) throw new ApiError(404, "not_found", "Profile unavailable");
-    return result;
+            on friendship.user_low = least(${viewerId}::uuid, profile.id)
+            and friendship.user_high = greatest(${viewerId}::uuid, profile.id)
+        where profile.id = any(${sql.array(targetIds)}::uuid[])
+    `);
 }
 
-/** Captured member facts remain readable after leaving a recurring series. */
-export async function loadProfileFightFacts(sql: TransactionSql, userId: string): Promise<FightRecordFact[]> {
+/**
+ * Captured member facts remain readable after leaving a recurring series. A page starts at its
+ * cursor row, inclusive, so the caller can reject a cursor that is not in the eligible list.
+ */
+export async function loadProfileFightFacts(
+    sql: TransactionSql, userId: string, page?: { fightIds: string[] | null; cursor: string | undefined; rows: number },
+): Promise<FightRecordFact[]> {
     return fightRecordFactSchema.array().parse(await sql`
         select fight.id, mine.history_id, fight.state::text, fight.starts_at::text, fight.ends_at::text,
             extract(epoch from ((fight.ends_at at time zone fight.time_zone)
@@ -85,27 +94,34 @@ export async function loadProfileFightFacts(sql: TransactionSql, userId: string)
                 where member.fight_id = fight.id) members
         from public.fights fight
         join private.fight_record_contexts context on context.fight_id = fight.id
-        join private.fight_participation_records mine on mine.fight_id = fight.id and mine.user_id = ${userId}
+        join private.fight_participation_records mine on mine.fight_id = fight.id
+        where mine.user_id = ${userId}
+            ${page?.fightIds ? sql`and fight.id = any(${sql.array(page.fightIds)}::uuid[])` : sql``}
+            ${page?.cursor ? sql`and (fight.ends_at, fight.id) <= (
+                select cursor_fight.ends_at, cursor_fight.id from private.fight_participation_records cursor_member
+                join public.fights cursor_fight on cursor_fight.id = cursor_member.fight_id
+                where cursor_member.user_id = ${userId} and cursor_member.history_id = ${page.cursor}
+            )` : sql``}
         order by fight.ends_at desc, fight.id desc
+        ${page ? sql`limit ${page.rows}` : sql``}
     `);
 }
 
-async function loadSharedFightIds(sql: TransactionSql, viewerId: string, targetId: string): Promise<Set<string>> {
-    const rows = profileIdentifierRowSchema.array().parse(await sql`
-        select mine.fight_id as id from public.fight_members mine
+async function loadSharedFightIds(sql: TransactionSql, viewerId: string, targetIds: string[]) {
+    return profileSharedFightRowSchema.array().parse(await sql`
+        select theirs.user_id, mine.fight_id as id from public.fight_members mine
         join public.fight_members theirs on theirs.fight_id = mine.fight_id
         join public.fights fight on fight.id = mine.fight_id
-        where mine.user_id = ${viewerId} and theirs.user_id = ${targetId}
+        where mine.user_id = ${viewerId} and theirs.user_id = any(${sql.array(targetIds)}::uuid[])
             and mine.state in ('accepted', 'deferred') and theirs.state in ('accepted', 'deferred')
             and (fight.series_id is null or exists (
                 select 1 from public.fight_series_members my_series
                 join public.fight_series_members their_series on their_series.series_id = my_series.series_id
                 where my_series.series_id = fight.series_id
-                    and my_series.user_id = ${viewerId} and their_series.user_id = ${targetId}
+                    and my_series.user_id = ${viewerId} and their_series.user_id = theirs.user_id
                     and my_series.state in ('accepted', 'deferred') and their_series.state in ('accepted', 'deferred')
             ))
     `);
-    return new Set(rows.map((row) => row.id));
 }
 
 export async function readSharedProfile(
@@ -121,7 +137,7 @@ export async function readSharedProfile(
         const access = profileAccess(row.settings, relationship);
         const facts = access.record ? await loadProfileFightFacts(sql, targetId) : [];
         const rivalry = access.record && !relationship.owner && !preview
-            ? rivalryRecord(facts, viewerId, targetId, await loadSharedFightIds(sql, viewerId, targetId))
+            ? rivalryRecord(facts, viewerId, targetId, new Set((await loadSharedFightIds(sql, viewerId, [targetId])).map((fight) => fight.id)))
             : null;
         const [contextRow] = await sql`
             select (now() at time zone ${row.time_zone})::date::text today, ${row.time_zone}::text time_zone
@@ -199,12 +215,13 @@ export async function readProfileHistory(
         const row = await loadProfileAccess(sql, viewerId, targetId);
         const access = profileAccess(row.settings, row.relationship);
         if (!access.record && query.shared !== "true") throw new ApiError(403, "forbidden", "This record is private");
-        const facts = await loadProfileFightFacts(sql, targetId);
-        const sharedIds = query.shared === "true" ? await loadSharedFightIds(sql, viewerId, targetId) : null;
-        const eligible = sharedIds === null ? facts : facts.filter((fight) => sharedIds.has(fight.id));
-        const cursorIndex = query.cursor ? eligible.findIndex((fight) => fight.history_id === query.cursor) : -1;
-        if (query.cursor && cursorIndex === -1) throw new ApiError(400, "validation", "Invalid history cursor");
-        const page = eligible.slice(cursorIndex + 1, cursorIndex + 1 + query.limit);
+        const sharedIds = query.shared === "true" ? (await loadSharedFightIds(sql, viewerId, [targetId])).map((fight) => fight.id) : null;
+        // A cursor page also returns the cursor row first; one more row shows whether another page follows.
+        const facts = await loadProfileFightFacts(sql, targetId, {
+            fightIds: sharedIds, cursor: query.cursor, rows: query.limit + (query.cursor ? 2 : 1),
+        });
+        if (query.cursor && facts.shift()?.history_id !== query.cursor) throw new ApiError(400, "validation", "Invalid history cursor");
+        const page = facts.slice(0, query.limit);
         const visible = profileIdentifierRowSchema.array().parse(await sql`
             select fight_id as id from public.fight_members
             where user_id = ${viewerId} and state in ('accepted', 'deferred')
@@ -223,7 +240,7 @@ export async function readProfileHistory(
                     complete: fight.members.find((member) => member.user_id === targetId)!.complete,
                 };
             }),
-            next_cursor: cursorIndex + 1 + query.limit < eligible.length ? page[page.length - 1].history_id : null,
+            next_cursor: facts.length > query.limit ? page[page.length - 1].history_id : null,
         };
     });
 }
@@ -272,7 +289,10 @@ export async function lookupSharedProfile(userId: string, handle: string, databa
     });
 }
 
-/** The six most recent eligible opponents, with each target's current sharing checked separately. */
+/**
+ * The six most recent eligible opponents, with each target's current sharing checked as a Profile
+ * read would. A duel's facts are the same from either side, so the viewer's facts score every rivalry.
+ */
 export async function readOwnRivalries(userId: string, database: Sql = createDatabaseClient()): Promise<ProfileRivalrySummary[]> {
     const facts = await database.begin(async (sql) => {
         await loadProfileAccess(sql, userId, userId);
@@ -286,17 +306,30 @@ export async function readOwnRivalries(userId: string, database: Sql = createDat
             if (member.user_id !== userId && classifyFightResult(fight, member.user_id).counted) candidates.add(member.user_id);
         }
     }
-    const summaries: ProfileRivalrySummary[] = [];
-    for (const targetId of candidates) {
-        try {
-            const profile = await readSharedProfile(userId, targetId, undefined, database);
-            if (profile.rivalry && profile.rivalry.wins + profile.rivalry.losses + profile.rivalry.draws > 0) {
-                summaries.push({ identity: profile.identity, rivalry: profile.rivalry });
-            }
-        } catch (error) {
-            if (!(error instanceof ApiError) || error.status !== 404) throw error;
-        }
-        if (summaries.length === 6) break;
-    }
-    return summaries;
+    if (candidates.size === 0) return [];
+    const rivals = await database.begin(async (sql) => {
+        // NOTE: One ordered lock statement cannot deadlock with writers that lock a profile pair in order.
+        const present = new Set(profileIdentifierRowSchema.array().parse(await sql`
+            select id from public.profiles
+            where id = any(${sql.array([userId, ...candidates])}::uuid[]) and deleted_at is null
+            order by id for share
+        `).map((row) => row.id));
+        if (!present.has(userId)) return [];
+        const rows = new Map((await loadProfileAccessRows(sql, userId, [...candidates].filter((id) => present.has(id))))
+            .map((row) => [row.identity.user_id, row]));
+        const eligible = [...candidates].flatMap((id) => {
+            const row = rows.get(id);
+            return row && profileAccess(row.settings, row.relationship).record ? [row] : [];
+        }).slice(0, 6);
+        const shared = await loadSharedFightIds(sql, userId, eligible.map((row) => row.identity.user_id));
+        return eligible.map((row) => ({
+            row,
+            sharedIds: new Set(shared.filter((fight) => fight.user_id === row.identity.user_id).map((fight) => fight.id)),
+        }));
+    });
+    const avatars = await signMediaUrls(rivals.flatMap(({ row }) => !row.companion_image_url && row.avatar_path ? [row.avatar_path] : []));
+    return rivals.map(({ row, sharedIds }) => ({
+        identity: { ...row.identity, avatar_url: row.companion_image_url ?? (row.avatar_path ? avatars.get(row.avatar_path) ?? null : null) },
+        rivalry: rivalryRecord(facts, userId, row.identity.user_id, sharedIds),
+    }));
 }

@@ -346,13 +346,15 @@ final class AppModel: ObservableObject {
     }
 
     /// Winner of the previous round and how many rounds in a row they have won.
-    /// ponytail: only rounds this user was in are in the snapshot; a skipped round ends the streak early.
+    /// ponytail: only rounds this user was in are in the snapshot; a skipped or cancelled round ends the streak early.
     func trophyStreak(for fight: Fight) -> (userId: String, count: Int)? {
         var holder: String?
         var count = 0
+        var nextStart = fight.windowStart
         for round in seriesHistory(for: fight) where round.windowStart < fight.windowStart {
-            if round.serverState == "cancelled" { continue }
-            guard round.serverState == "final" else { break }
+            // The server starts each round at the previous round's end, truncated to milliseconds.
+            guard abs(round.windowEnd.timeIntervalSince(nextStart)) < 1, round.serverState == "final" else { break }
+            nextStart = round.windowStart
             let leaders = round.standings.filter { !$0.invited && !$0.deferred && $0.rank == 1 }
             guard leaders.count == 1, holder == nil || leaders[0].person.id == holder else { break }
             holder = leaders[0].person.id

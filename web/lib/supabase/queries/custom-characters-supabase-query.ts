@@ -156,6 +156,12 @@ export async function prepareCustomCharacterStage(
         let purchase = customCharacterPurchaseRowSchema.parse(raw);
         if (purchase.revoked_at)
             throw new ApiError(403, "character_refunded", "This purchase was refunded");
+        const attempts = customCharacterAttemptSchema.array().parse(
+            await sql`select resource_id, id as request_id, workflow, status, next_poll_at
+                from private.ai_requests where resource_id = ${purchaseId} order by created_at desc`,
+        );
+        const avatar = attempts.find((item) => item.workflow === "avatar");
+        const fitness = attempts.find((item) => item.workflow === "fitness");
         if (purchase.description === null) {
             if (!input.description)
                 throw new ApiError(400, "validation", "Describe your character before generating");
@@ -164,16 +170,16 @@ export async function prepareCustomCharacterStage(
                 where id = ${purchaseId} returning *`;
             purchase = customCharacterPurchaseRowSchema.parse(saved);
         } else if (input.description && input.description !== purchase.description) {
-            throw new ApiError(409, "ai_request_conflict", "This purchase already has a character description");
+            // A portrait that Blend failed or cancelled has no image to keep, so a new description starts a new portrait.
+            if (!avatar || !["failed", "cancelled"].includes(avatar.status))
+                throw new ApiError(409, "ai_request_conflict", "This purchase already has a character description");
+            const key = randomUUID();
+            await sql`update private.custom_character_purchases
+                set description = ${input.description}, avatar_action_key = ${key} where id = ${purchaseId}`;
+            return { kind: "avatar", key, description: input.description };
         }
         const description = purchase.description;
         if (description === null) throw new Error("Character description was not saved");
-        const attempts = customCharacterAttemptSchema.array().parse(
-            await sql`select resource_id, id as request_id, workflow, status, next_poll_at
-                from private.ai_requests where resource_id = ${purchaseId} order by created_at desc`,
-        );
-        const avatar = attempts.find((item) => item.workflow === "avatar");
-        const fitness = attempts.find((item) => item.workflow === "fitness");
         if (fitness) {
             if (!input.retry || !["failed", "cancelled"].includes(fitness.status))
                 return { kind: "existing", requestId: fitness.request_id };
@@ -200,7 +206,11 @@ export async function prepareCustomCharacterStage(
     });
 }
 
-/** Background reconciliation resumes a stage whose inputs were saved but provider start was interrupted. */
+/**
+ * Background reconciliation resumes a stage whose inputs were saved but provider start was interrupted.
+ * Owners with an unresolved request are skipped because reserveAiRequest would return ai_in_progress,
+ * so their purchases cannot fill every batch and starve newer ones.
+ */
 export async function dueCustomCharacterPurchases(database: Sql = createDatabaseClient()) {
     const rows = await database`select purchase.id, account.user_id from private.custom_character_purchases purchase
         join private.special_accounts account on account.id = purchase.account_id
@@ -210,6 +220,9 @@ export async function dueCustomCharacterPurchases(database: Sql = createDatabase
             and (not exists (select 1 from private.ai_requests request where request.resource_id = purchase.id)
                 or exists (select 1 from private.ai_requests request
                     where request.resource_id = purchase.id and request.workflow = 'avatar' and request.status = 'completed'))
+            and not exists (select 1 from private.ai_requests request
+                where request.user_id = account.user_id
+                    and request.status in ('starting', 'pending', 'running', 'start_unconfirmed'))
         order by purchase.updated_at, purchase.id limit 4`;
     return rows.map((row) => ({ id: String(row.id), userId: String(row.user_id) }));
 }

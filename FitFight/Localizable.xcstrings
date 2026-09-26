@@ -1,12 +1,12 @@
 {
     "sourceLanguage": "en",
     "strings": {
-        "Your animal now changes with today's steps: armchair under 3k, yawning to 6k, relaxed to 10k, fit to 15k and fully muscled after that. Works for all 12 regular animals.": {
+        "Your animal now changes with today's steps: armchair under 3k, yawning to 6k, relaxed to 10k, fit to 15k and fully muscled after that. Works for all 12 regular animals. Specials are hidden for now.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Ton animal change maintenant avec tes pas du jour : fauteuil sous 3k, bâillement jusqu’à 6k, détendu jusqu’à 10k, en forme jusqu’à 15k et tout en muscles au-delà. Pour les 12 animaux classiques."
+                        "value": "Ton animal change maintenant avec tes pas du jour : fauteuil sous 3k, bâillement jusqu’à 6k, détendu jusqu’à 10k, en forme jusqu’à 15k et tout en muscles au-delà. Pour les 12 animaux classiques. Les Spéciaux sont masqués pour l’instant."
                     }
                 }
             }

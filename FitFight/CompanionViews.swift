@@ -1393,8 +1393,9 @@ struct CompanionPicker: View {
     }
 
     /// Specials stay hidden while sales are off, except one this account already owns.
+    /// Specials are hidden for now; an account that already owns one still sees it.
     private func shows(_ animal: StockCompanion) -> Bool {
-        !animal.isLimited || CompanionPreview.isEnabled || purchases.snapshot?.purchasesEnabled == true || status(animal) == .yours
+        !animal.isLimited || status(animal) == .yours
     }
 
     private var canSaveCustom: Bool {

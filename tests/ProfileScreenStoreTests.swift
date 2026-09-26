@@ -87,6 +87,13 @@ struct TestSession { let user: TestUser }
         FitFightAPI.histories.removeFirst().resume(returning: history)
         await retry.value
         precondition(store.history.count == 2 && store.error == nil, "Retrying Load more appends the page and clears the error")
+        struct Refused: Error {}
+        let refused = Task { await store.loadMore(userID: shared.identity.userId, session: session) }
+        await until { FitFightAPI.histories.count == 1 }
+        FitFightAPI.histories.removeFirst().resume(throwing: Refused())
+        await refused.value
+        precondition(store.profile == nil && store.history.isEmpty && store.error != nil,
+                     "A refused page (blocked, deleted, invalid cursor) hides the Profile")
 
         let own = Task { await store.load(userID: session.authSession!.user.id, session: session) }
         await until { FitFightAPI.profiles.count == 1 }
